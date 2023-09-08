@@ -16,6 +16,49 @@
 
 namespace Fortran::runtime::io {
 
+// Checks that a list-directed input value has been entirely consumed and
+// doesn't contain unparsed characters before the next value separator.
+static inline bool IsCharValueSeparator(const DataEdit &edit, char32_t ch) {
+  char32_t comma{
+      edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','}};
+  return ch == ' ' || ch == '\t' || ch == '/' || ch == comma;
+}
+
+static inline bool IsListDirectedFieldComplete(
+    IoStatementState &io, const DataEdit &edit) {
+  std::size_t byteCount;
+  if (auto ch{io.GetCurrentChar(byteCount)}) {
+    return IsCharValueSeparator(edit, *ch);
+  } else {
+    return true; // end of record: ok
+  }
+}
+
+static bool CheckCompleteListDirectedField(
+    IoStatementState &io, const DataEdit &edit) {
+  if (edit.IsListDirected()) {
+    std::size_t byteCount;
+    if (auto ch{io.GetCurrentChar(byteCount)}) {
+      if (IsCharValueSeparator(edit, *ch)) {
+        return true;
+      } else {
+        const auto &connection{io.GetConnectionState()};
+        io.GetIoErrorHandler().SignalError(IostatBadListDirectedInputSeparator,
+            "invalid character (0x%x) after list-directed input value, "
+            "at column %d in record %d",
+            static_cast<unsigned>(*ch),
+            static_cast<int>(connection.positionInRecord + 1),
+            static_cast<int>(connection.currentRecordNumber));
+        return false;
+      }
+    } else {
+      return true; // end of record: ok
+    }
+  } else {
+    return true;
+  }
+}
+
 template <int LOG2_BASE>
 static bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
@@ -89,28 +132,29 @@ static bool EditBOZInput(
     *data |= digit << shift;
     shift -= LOG2_BASE;
   }
-  return true;
+  return CheckCompleteListDirectedField(io, edit);
 }
 
 static inline char32_t GetDecimalPoint(const DataEdit &edit) {
   return edit.modes.editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
 }
 
-// Prepares input from a field, and consumes the sign, if any.
-// Returns true if there's a '-' sign.
-static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
+// Prepares input from a field, and returns the sign, if any, else '\0'.
+static char ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
   remaining = io.CueUpInput(edit);
   next = io.NextInField(remaining, edit);
-  bool negative{false};
+  char sign{'\0'};
   if (next) {
-    negative = *next == '-';
-    if (negative || *next == '+') {
-      io.SkipSpaces(remaining);
+    if (*next == '-' || *next == '+') {
+      sign = *next;
+      if (!edit.IsListDirected()) {
+        io.SkipSpaces(remaining);
+      }
       next = io.NextInField(remaining, edit);
     }
   }
-  return negative;
+  return sign;
 }
 
 bool EditIntegerInput(
@@ -141,9 +185,9 @@ bool EditIntegerInput(
   }
   std::optional<int> remaining;
   std::optional<char32_t> next;
-  bool negate{ScanNumericPrefix(io, edit, next, remaining)};
+  char sign{ScanNumericPrefix(io, edit, next, remaining)};
   common::UnsignedInt128 value{0};
-  bool any{negate};
+  bool any{!!sign};
   bool overflow{false};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
@@ -178,13 +222,13 @@ bool EditIntegerInput(
     return false;
   }
   auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
-  overflow |= value >= maxForKind && (value > maxForKind || !negate);
+  overflow |= value >= maxForKind && (value > maxForKind || sign != '-');
   if (overflow) {
     io.GetIoErrorHandler().SignalError(IostatIntegerInputOverflow,
         "Decimal input overflows INTEGER(%d) variable", kind);
     return false;
   }
-  if (negate) {
+  if (sign == '-') {
     value = -value;
   }
   if (any || !io.GetConnectionState().IsAtEOF()) {
@@ -212,13 +256,17 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     }
     ++got;
   }};
-  if (ScanNumericPrefix(io, edit, next, remaining)) {
+  char sign{ScanNumericPrefix(io, edit, next, remaining)};
+  if (sign == '-') {
     Put('-');
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
-  if (!next || (!bzMode && *next == ' ')) { // empty/blank field means zero
-    remaining.reset();
-    if (!io.GetConnectionState().IsAtEOF()) {
+  if (!next || (!bzMode && *next == ' ')) {
+    if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
+      // An empty/blank field means zero when not list-directed.
+      // A fixed-width field containing only a sign is also zero;
+      // this behavior isn't standard-conforming in F'2023 but it is
+      // required to pass FCVS.
       Put('0');
     }
     return got;
@@ -286,6 +334,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       // the FCVS suite.
       Put('0'); // emit at least one digit
     }
+    // In list-directed input, a bad exponent is not consumed.
+    auto nextBeforeExponent{next};
+    auto startExponent{io.GetConnectionState().positionInRecord};
+    bool hasGoodExponent{false};
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
             *next == 'q' || *next == 'Q')) {
@@ -306,11 +358,13 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
       for (exponent = 0; next; next = io.NextInField(remaining, edit)) {
         if (*next >= '0' && *next <= '9') {
+          hasGoodExponent = true;
           if (exponent < 10000) {
             exponent = 10 * exponent + *next - '0';
           }
         } else if (*next == ' ' || *next == '\t') {
           if (bzMode) {
+            hasGoodExponent = true;
             exponent = 10 * exponent;
           }
         } else {
@@ -320,6 +374,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       if (negExpo) {
         exponent = -exponent;
       }
+    }
+    if (!hasGoodExponent) {
+      // There isn't a good exponent; do not consume it.
+      next = nextBeforeExponent;
+      io.HandleAbsolutePosition(startExponent);
     }
     if (decimalPoint) {
       exponent += *decimalPoint;
@@ -339,6 +398,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
   // input value.
   if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
     if (next && (*next == ' ' || *next == '\t')) {
+      io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
     if (!next) { // NextInField fails on separators like ')'
@@ -423,18 +483,25 @@ static bool TryFastPathRealInput(
       return false;
     }
   }
-  for (; p < limit && (*p == ' ' || *p == '\t'); ++p) {
-  }
   if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
-    // Need to consume a trailing ')' and any white space after
-    if (p >= limit || *p != ')') {
+    // Need to consume a trailing ')', possibly with leading spaces
+    for (; p < limit && (*p == ' ' || *p == '\t'); ++p) {
+    }
+    if (p < limit && *p == ')') {
+      ++p;
+    } else {
       return false;
     }
-    for (++p; p < limit && (*p == ' ' || *p == '\t'); ++p) {
+  } else if (edit.IsListDirected()) {
+    if (p < limit && !IsCharValueSeparator(edit, *p)) {
+      return false;
     }
-  }
-  if (edit.width && p < str + *edit.width) {
-    return false; // unconverted characters remain in fixed width field
+  } else {
+    for (; p < limit && (*p == ' ' || *p == '\t'); ++p) {
+    }
+    if (edit.width && p < str + *edit.width) {
+      return false; // unconverted characters remain in fixed width field
+    }
   }
   // Success on the fast path!
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<PRECISION> *>(n) =
@@ -451,7 +518,7 @@ template <int KIND>
 bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
   if (TryFastPathRealInput<binaryPrecision>(io, edit, n)) {
-    return true;
+    return CheckCompleteListDirectedField(io, edit);
   }
   // Fast path wasn't available or didn't work; go the more general route
   static constexpr int maxDigits{
@@ -465,7 +532,11 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     return false;
   }
   if (got == 0) {
-    io.GetIoErrorHandler().SignalError(IostatBadRealInput);
+    const auto &connection{io.GetConnectionState()};
+    io.GetIoErrorHandler().SignalError(IostatBadRealInput,
+        "Bad real input data at column %d of record %d",
+        static_cast<int>(connection.positionInRecord + 1),
+        static_cast<int>(connection.currentRecordNumber));
     return false;
   }
   bool hadExtra{got > maxDigits};
@@ -512,7 +583,11 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
         converted.flags | decimal::Inexact);
   }
   if (*p) { // unprocessed junk after value
-    io.GetIoErrorHandler().SignalError(IostatBadRealInput);
+    const auto &connection{io.GetConnectionState()};
+    io.GetIoErrorHandler().SignalError(IostatBadRealInput,
+        "Trailing characters after real input data at column %d of record %d",
+        static_cast<int>(connection.positionInRecord + 1),
+        static_cast<int>(connection.currentRecordNumber));
     return false;
   }
   *reinterpret_cast<decimal::BinaryFloatingPointNumber<binaryPrecision> *>(n) =
@@ -525,7 +600,7 @@ bool EditCommonRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     }
     RaiseFPExceptions(converted.flags);
   }
-  return true;
+  return CheckCompleteListDirectedField(io, edit);
 }
 
 template <int KIND>
@@ -602,13 +677,13 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
         "Bad character '%lc' in LOGICAL input field", *next);
     return false;
   }
-  if (remaining) { // ignore the rest of the field
+  if (remaining) { // ignore the rest of a fixed-width field
     io.HandleRelativePosition(*remaining);
   } else if (edit.descriptor == DataEdit::ListDirected) {
     while (io.NextInField(remaining, edit)) { // discard rest of field
     }
   }
-  return true;
+  return CheckCompleteListDirectedField(io, edit);
 }
 
 // See 13.10.3.1 paragraphs 7-9 in Fortran 2018
@@ -800,7 +875,7 @@ bool EditCharacterInput(
   }
   // Pad the remainder of the input variable, if any.
   std::fill_n(x, length, ' ');
-  return true;
+  return CheckCompleteListDirectedField(io, edit);
 }
 
 template bool EditRealInput<2>(IoStatementState &, const DataEdit &, void *);
