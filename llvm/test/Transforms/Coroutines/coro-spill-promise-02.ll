@@ -4,7 +4,7 @@
 %"class.task::promise_type" = type { [64 x i8] }
 
 declare void @consume(ptr)
-declare void @consume2(%"class.task::promise_type"*)
+declare void @consume2(ptr)
 
 define ptr @f() presplitcoroutine {
 entry:
