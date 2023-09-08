@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(hardening): remove in LLVM 18.
+// TODO(hardening): remove in LLVM 19.
 // This test ensures that enabling assertions now enables the hardened mode.
 
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers.
