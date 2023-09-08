@@ -606,7 +606,7 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
     index_tree = old_tree
   else:
     with temporary_index_file(new_tree):
-      run('git', 'checkout-index', '-a', '-f')
+      run('git', 'checkout-index', '-f', '--', *changed_files)
   return changed_files
 
 
