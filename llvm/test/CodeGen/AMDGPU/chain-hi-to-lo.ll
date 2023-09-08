@@ -439,7 +439,6 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:6
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_load_ushort v0, v2, s[4:5] offset:4
-; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    buffer_store_short v0, off, s[0:3], 0 offset:8
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
@@ -449,7 +448,7 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX900-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
 ; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_perm_b32 v0, v0, v3, s4
+; GFX900-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX900-NEXT:    s_endpgm
@@ -506,7 +505,7 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10_DEFAULT-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
-; GFX10_DEFAULT-NEXT:    v_perm_b32 v0, v0, v3, 0x5040100
+; GFX10_DEFAULT-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
 ; GFX10_DEFAULT-NEXT:    buffer_load_short_d16_hi v1, off, s[0:3], 0 offset:8
 ; GFX10_DEFAULT-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10_DEFAULT-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
@@ -872,29 +871,16 @@ bb:
 }
 
 define <2 x i16> @chain_hi_to_lo_group_may_alias_store(ptr addrspace(3) %ptr, ptr addrspace(3) %may.alias) {
-; GFX900-LABEL: chain_hi_to_lo_group_may_alias_store:
-; GFX900:       ; %bb.0: ; %bb
-; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v3, 0x7b
-; GFX900-NEXT:    ds_read_u16 v2, v0
-; GFX900-NEXT:    ds_write_b16 v1, v3
-; GFX900-NEXT:    ds_read_u16 v0, v0 offset:2
-; GFX900-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    v_perm_b32 v0, v2, v0, s4
-; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; FLATSCR-LABEL: chain_hi_to_lo_group_may_alias_store:
-; FLATSCR:       ; %bb.0: ; %bb
-; FLATSCR-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FLATSCR-NEXT:    v_mov_b32_e32 v3, 0x7b
-; FLATSCR-NEXT:    ds_read_u16 v2, v0
-; FLATSCR-NEXT:    ds_write_b16 v1, v3
-; FLATSCR-NEXT:    ds_read_u16 v0, v0 offset:2
-; FLATSCR-NEXT:    s_mov_b32 s0, 0x5040100
-; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; FLATSCR-NEXT:    v_perm_b32 v0, v2, v0, s0
-; FLATSCR-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: chain_hi_to_lo_group_may_alias_store:
+; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x7b
+; GCN-NEXT:    ds_read_u16 v2, v0
+; GCN-NEXT:    ds_write_b16 v1, v3
+; GCN-NEXT:    ds_read_u16 v0, v0 offset:2
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: chain_hi_to_lo_group_may_alias_store:
 ; GFX10:       ; %bb.0: ; %bb
@@ -904,7 +890,7 @@ define <2 x i16> @chain_hi_to_lo_group_may_alias_store(ptr addrspace(3) %ptr, pt
 ; GFX10-NEXT:    ds_write_b16 v1, v2
 ; GFX10-NEXT:    ds_read_u16 v0, v0 offset:2
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
+; GFX10-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: chain_hi_to_lo_group_may_alias_store:
@@ -915,7 +901,7 @@ define <2 x i16> @chain_hi_to_lo_group_may_alias_store(ptr addrspace(3) %ptr, pt
 ; GFX11-NEXT:    ds_store_b16 v1, v2
 ; GFX11-NEXT:    ds_load_u16 v0, v0 offset:2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1

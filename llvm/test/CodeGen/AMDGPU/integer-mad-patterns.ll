@@ -6572,29 +6572,20 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: multi_use_mul_mad_i16_var:
-; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v2, v0, v1, v2
-; GFX9-SDAG-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
-; GFX9-SDAG-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-SDAG-NEXT:    v_perm_b32 v0, v0, v2, s4
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-GISEL-LABEL: multi_use_mul_mad_i16_var:
-; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v2, v0, v1, v2
-; GFX9-GISEL-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
-; GFX9-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: multi_use_mul_mad_i16_var:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_mad_legacy_u16 v2, v0, v1, v2
+; GFX9-NEXT:    v_mad_legacy_u16 v0, v0, v1, v3
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SDAG-LABEL: multi_use_mul_mad_i16_var:
 ; GFX10-SDAG:       ; %bb.0: ; %entry
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mad_u16 v2, v0, v1, v2
 ; GFX10-SDAG-NEXT:    v_mad_u16 v0, v0, v1, v3
-; GFX10-SDAG-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
+; GFX10-SDAG-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-GISEL-LABEL: multi_use_mul_mad_i16_var:
@@ -6603,7 +6594,6 @@ define <2 x i16> @multi_use_mul_mad_i16_var(i16 %x, i16 %y, i16 %z0, i16 %z1) {
 ; GFX10-GISEL-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10-GISEL-NEXT:    v_add_nc_u16 v1, v0, v2
 ; GFX10-GISEL-NEXT:    v_add_nc_u16 v0, v0, v3
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:

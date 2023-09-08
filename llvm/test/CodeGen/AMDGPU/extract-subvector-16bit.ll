@@ -111,9 +111,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
 ; GFX9-NEXT:    v_or_b32_e32 v2, 0xffff8000, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
-; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX9-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: vec_8xi16_extract_4xi16:
@@ -143,8 +142,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
 ; GFX11-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   br i1 undef, label %T, label %F
 
@@ -274,9 +273,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
 ; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
-; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
+; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: vec_8xi16_extract_4xi16_2:
@@ -306,8 +304,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
 ; GFX11-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   br i1 undef, label %T, label %F
 
@@ -641,9 +639,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
 ; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
-; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
+; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: vec_16xi16_extract_4xi16:
@@ -677,8 +674,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
 ; GFX11-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   br i1 undef, label %T, label %F
 
@@ -847,9 +844,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v6 op_sel_hi:[0,1]
 ; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v0
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
-; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
+; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: vec_16xi16_extract_4xi16_2:
@@ -883,8 +879,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
 ; GFX11-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   br i1 undef, label %T, label %F
 
@@ -1398,11 +1394,10 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX9-NEXT:    v_cndmask_b32_e32 v9, v0, v1, vcc
 ; GFX9-NEXT:    v_cmp_lt_u16_sdwa vcc, v4, s35 src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GFX9-NEXT:    s_mov_b32 s34, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v9, s34
-; GFX9-NEXT:    v_perm_b32 v1, v5, v8, s34
-; GFX9-NEXT:    v_perm_b32 v2, v6, v2, s34
-; GFX9-NEXT:    v_perm_b32 v3, v7, v3, s34
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v9
+; GFX9-NEXT:    v_lshl_or_b32 v1, v5, 16, v8
+; GFX9-NEXT:    v_lshl_or_b32 v2, v6, 16, v2
+; GFX9-NEXT:    v_lshl_or_b32 v3, v7, 16, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: vec_16xi16_extract_8xi16_0:
@@ -1453,14 +1448,14 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x3900, v1, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 0x3801, v6
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_perm_b32 v0, v0, v2, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x3900, v1, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u16_e32 vcc_lo, 0x3800, v8
-; GFX11-NEXT:    v_perm_b32 v2, v7, v4, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v1, v3, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v2, v7, 16, v4
+; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v6, 0x3d00, v9, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_perm_b32 v3, v6, v5, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v3, v6, 16, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   br i1 %cond, label %T, label %F
 

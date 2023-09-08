@@ -2909,8 +2909,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
-  (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
+  (i32 (or (i32 (zext (i16 VGPR_32:$src0))), (i32 (shl (i32 VGPR_32:$src1), (i32 16))))),
+  (V_LSHL_OR_B32_e64 $src1, (i32 16), $src0)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and
@@ -2941,7 +2941,7 @@ defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$a), (Ty VGPR_32:$b))),
-  (V_PERM_B32_e64 VGPR_32:$b, VGPR_32:$a, (S_MOV_B32 (i32 0x05040100)))
+  (V_LSHL_OR_B32_e64 VGPR_32:$b, (i32 16), VGPR_32:$a)
 >;
 
 

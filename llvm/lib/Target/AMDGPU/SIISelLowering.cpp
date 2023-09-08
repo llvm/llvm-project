@@ -10808,6 +10808,11 @@ static bool isExtendedFrom16Bits(SDValue &Operand) {
     }
     return L->getMemoryVT().getSizeInBits() == 16;
   }
+
+  case ISD::CopyFromReg: {
+    auto RegType = Operand.getOperand(1);
+    return RegType.getValueSizeInBits() == 16;
+  }
   default:
     return false;
   }

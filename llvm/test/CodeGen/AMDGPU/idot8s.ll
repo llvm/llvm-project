@@ -2155,7 +2155,6 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_load_ushort v3, v0, s[2:3]
-; GFX9-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX9-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 4, v1
@@ -2191,9 +2190,9 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v15, 12, v15
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v17, 12, v17
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v2, 12, v2
-; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s0
-; GFX9-NEXT:    v_perm_b32 v8, v13, v12, s0
-; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s0
+; GFX9-NEXT:    v_lshl_or_b32 v7, v8, 16, v7
+; GFX9-NEXT:    v_lshl_or_b32 v8, v13, 16, v12
+; GFX9-NEXT:    v_lshl_or_b32 v5, v6, 16, v5
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v9, 12, v9
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v11, 12, v11
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v16, 12, v16
@@ -2205,11 +2204,11 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v17, 12, v17
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v2, 12, v2
 ; GFX9-NEXT:    v_pk_mul_lo_u16 v5, v5, v8
-; GFX9-NEXT:    v_perm_b32 v2, v2, v4, s0
-; GFX9-NEXT:    v_perm_b32 v1, v1, v11, s0
-; GFX9-NEXT:    v_perm_b32 v4, v17, v16, s0
-; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s0
-; GFX9-NEXT:    v_perm_b32 v10, v15, v14, s0
+; GFX9-NEXT:    v_lshl_or_b32 v2, v2, 16, v4
+; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v11
+; GFX9-NEXT:    v_lshl_or_b32 v4, v17, 16, v16
+; GFX9-NEXT:    v_lshl_or_b32 v9, v10, 16, v9
+; GFX9-NEXT:    v_lshl_or_b32 v10, v15, 16, v14
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_u16_e32 v3, v5, v3
 ; GFX9-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
@@ -2241,7 +2240,6 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX9-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-DL-NEXT:    global_load_ushort v3, v0, s[2:3]
-; GFX9-DL-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX9-DL-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v6, 4, v1
@@ -2277,9 +2275,9 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v15, 12, v15
 ; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v17, 12, v17
 ; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v2, 12, v2
-; GFX9-DL-NEXT:    v_perm_b32 v7, v8, v7, s0
-; GFX9-DL-NEXT:    v_perm_b32 v8, v13, v12, s0
-; GFX9-DL-NEXT:    v_perm_b32 v5, v6, v5, s0
+; GFX9-DL-NEXT:    v_lshl_or_b32 v7, v8, 16, v7
+; GFX9-DL-NEXT:    v_lshl_or_b32 v8, v13, 16, v12
+; GFX9-DL-NEXT:    v_lshl_or_b32 v5, v6, 16, v5
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v9, 12, v9
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v11, 12, v11
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v16, 12, v16
@@ -2291,11 +2289,11 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v17, 12, v17
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v2, 12, v2
 ; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v5, v5, v8
-; GFX9-DL-NEXT:    v_perm_b32 v2, v2, v4, s0
-; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v11, s0
-; GFX9-DL-NEXT:    v_perm_b32 v4, v17, v16, s0
-; GFX9-DL-NEXT:    v_perm_b32 v9, v10, v9, s0
-; GFX9-DL-NEXT:    v_perm_b32 v10, v15, v14, s0
+; GFX9-DL-NEXT:    v_lshl_or_b32 v2, v2, 16, v4
+; GFX9-DL-NEXT:    v_lshl_or_b32 v1, v1, 16, v11
+; GFX9-DL-NEXT:    v_lshl_or_b32 v4, v17, 16, v16
+; GFX9-DL-NEXT:    v_lshl_or_b32 v9, v10, 16, v9
+; GFX9-DL-NEXT:    v_lshl_or_b32 v10, v15, 16, v14
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DL-NEXT:    v_add_u16_e32 v3, v5, v3
 ; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
@@ -2350,8 +2348,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v11, v12, v11, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v11, v12, 16, v11
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 20, v2
@@ -2364,8 +2362,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v8, v12, v8, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v8, v12, 16, v8
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v6, v7, 16, v6
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v4, v3
@@ -2382,8 +2380,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v17
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v4, v4, v11, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v5, v9, v5, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v4, v4, 16, v11
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v5, v9, 16, v5
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v6
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
@@ -2392,8 +2390,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
 ; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v7
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v2, v2, v6, 0x5040100
-; GFX10-DL-XNACK-NEXT:    v_perm_b32 v1, v1, v10, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v2, v2, 16, v6
+; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v1, v1, 16, v10
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v4
 ; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
@@ -2443,8 +2441,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v11, v12, v11, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v11, v12, 16, v11
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v4, v5, 16, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 16, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 20, v0
@@ -2457,8 +2455,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v8, v12, v8, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v8, v12, 16, v8
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v6, v7, 16, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v4, v3
@@ -2475,8 +2473,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v17
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v4, v4, v11, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v5, v9, v5, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v4, v4, 16, v11
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v5, v9, 16, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
@@ -2485,8 +2483,8 @@ define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
 ; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v7
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v0, v0, v6, 0x5040100
-; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v1, v1, v10, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v0, v0, 16, v6
+; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v1, v1, 16, v10
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v0, v1, v0

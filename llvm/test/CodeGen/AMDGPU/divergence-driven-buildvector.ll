@@ -336,21 +336,19 @@ define i32 @divergent_vec_i16_LL(i16 %a, i16 %b) {
 ; GFX9-LABEL: divergent_vec_i16_LL:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_i16_LL:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX906-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX906-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: divergent_vec_i16_LL:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x i16> undef, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %b, i32 1
@@ -624,21 +622,19 @@ define float @divergent_vec_f16_LL(half %a, half %b) {
 ; GFX9-LABEL: divergent_vec_f16_LL:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX906-LABEL: divergent_vec_f16_LL:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX906-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX906-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: divergent_vec_f16_LL:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x half> undef, half %a, i32 0
   %vec = insertelement <2 x half> %tmp, half %b, i32 1

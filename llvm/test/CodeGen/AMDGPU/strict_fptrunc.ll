@@ -29,8 +29,7 @@ define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x flo
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v1, v0, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1011-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
@@ -38,7 +37,7 @@ define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x flo
 ; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX1011-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX1011-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX1011-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX1011-NEXT:    s_setpc_b64 s[30:31]
   %val = call <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
@@ -60,8 +59,7 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v3, v1
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v2
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v3, v0, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1011-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
@@ -69,7 +67,7 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1011-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX1011-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX1011-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX1011-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX1011-NEXT:    v_cvt_f16_f32_e32 v1, v2
 ; GFX1011-NEXT:    s_setpc_b64 s[30:31]
   %val = call <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float> %arg, metadata !"round.tonearest", metadata !"fpexcept.strict")

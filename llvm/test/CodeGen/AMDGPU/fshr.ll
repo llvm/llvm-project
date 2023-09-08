@@ -927,8 +927,7 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX9-NEXT:    v_lshlrev_b16_e32 v0, v3, v0
 ; GFX9-NEXT:    v_lshrrev_b16_e32 v2, v4, v2
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v6, v0, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_fshr_v3i16:
@@ -956,7 +955,7 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_or_b32_e32 v5, v6, v7
 ; GFX10-NEXT:    v_lshlrev_b16 v1, v4, v1
-; GFX10-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
+; GFX10-NEXT:    v_lshl_or_b32 v0, v5, 16, v0
 ; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -982,7 +981,7 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX11-NEXT:    v_or_b32_e32 v5, v6, v7
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_lshlrev_b16 v1, v4, v1
-; GFX11-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v5, 16, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1072,9 +1071,8 @@ define <4 x i16> @v_fshr_v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2
 ; GFX9-NEXT:    v_lshrrev_b16_e32 v2, v4, v2
 ; GFX9-NEXT:    v_or_b32_e32 v7, v7, v9
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v7, v0, s4
-; GFX9-NEXT:    v_perm_b32 v1, v6, v1, s4
+; GFX9-NEXT:    v_lshl_or_b32 v0, v7, 16, v0
+; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_fshr_v4i16:
@@ -1111,8 +1109,8 @@ define <4 x i16> @v_fshr_v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2
 ; GFX10-NEXT:    v_or_b32_e32 v5, v9, v8
 ; GFX10-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
-; GFX10-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
-; GFX10-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
+; GFX10-NEXT:    v_lshl_or_b32 v0, v5, 16, v0
+; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_fshr_v4i16:
@@ -1146,8 +1144,8 @@ define <4 x i16> @v_fshr_v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2
 ; GFX11-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX11-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
-; GFX11-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
+; GFX11-NEXT:    v_lshl_or_b32 v0, v5, 16, v0
+; GFX11-NEXT:    v_lshl_or_b32 v1, v4, 16, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <4 x i16> @llvm.fshr.v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2)
   ret <4 x i16> %ret

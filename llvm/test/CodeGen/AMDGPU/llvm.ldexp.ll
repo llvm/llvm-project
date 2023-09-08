@@ -469,10 +469,8 @@ define <2 x half> @test_ldexp_v2f16_v2i32(<2 x half> %a, <2 x i32> %b) {
 ; GFX11-GISEL-NEXT:    v_med3_i32 v1, 0xffff8000, v1, v3
 ; GFX11-GISEL-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v3
 ; GFX11-GISEL-NEXT:    v_ldexp_f16_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_ldexp_f16_e32 v1, v4, v2
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> %a, <2 x i32> %b)
@@ -555,10 +553,8 @@ define <2 x half> @test_ldexp_v2f16_v2i16(<2 x half> %a, <2 x i16> %b) {
 ; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX11-GISEL-NEXT:    v_ldexp_f16_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_ldexp_f16_e32 v1, v2, v3
-; GFX11-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x half> @llvm.ldexp.v2f16.v2i16(<2 x half> %a, <2 x i16> %b)
