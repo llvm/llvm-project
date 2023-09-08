@@ -143,6 +143,7 @@ foreach(opt IN LISTS global_config)
   message(STATUS "${opt_name}: ${opt_value}")
   set(${opt_name} ${opt_value})
 endforeach()
+generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
 load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/config.json ${cmd_line_conf})
 load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/config.json ${cmd_line_conf})
 
