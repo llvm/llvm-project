@@ -373,14 +373,15 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   if (!VecOperand)
     return std::make_pair(nullptr, nullptr);
 
-  // We can't extract the stride if the arithmetic is done at a different size
-  // than the pointer type. Adding the stride later may not wrap correctly.
-  // Technically we could handle wider indices, but I don't expect that in
-  // practice.
+  // We need the number of significant bits to match the index type.  IF it
+  // doesn't, then adding the stride later may not wrap correctly.
   Value *VecIndex = Ops[*VecOperand];
   Type *VecIntPtrTy = DL->getIntPtrType(GEP->getType());
-  if (VecIndex->getType() != VecIntPtrTy)
-    return std::make_pair(nullptr, nullptr);
+  if (VecIndex->getType()->getScalarSizeInBits() > VecIntPtrTy->getScalarSizeInBits()) {
+    unsigned MaxBits = ComputeMaxSignificantBits(VecIndex, *DL);
+    if (MaxBits > VecIntPtrTy->getScalarSizeInBits())
+      return std::make_pair(nullptr, nullptr);
+  }
 
   // Handle the non-recursive case.  This is what we see if the vectorizer
   // decides to use a scalar IV + vid on demand instead of a vector IV.
@@ -397,7 +398,8 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
     // Convert stride to pointer size if needed.
     Type *IntPtrTy = DL->getIntPtrType(BasePtr->getType());
-    assert(Stride->getType() == IntPtrTy && "Unexpected type");
+    assert(IntPtrTy == VecIntPtrTy->getScalarType());
+    Stride = Builder.CreateSExtOrTrunc(Stride, IntPtrTy);
 
     // Scale the stride by the size of the indexed type.
     if (TypeScale != 1)
@@ -437,7 +439,8 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
   // Convert stride to pointer size if needed.
   Type *IntPtrTy = DL->getIntPtrType(BasePtr->getType());
-  assert(Stride->getType() == IntPtrTy && "Unexpected type");
+  assert(IntPtrTy == VecIntPtrTy->getScalarType());
+  Stride = Builder.CreateSExtOrTrunc(Stride, IntPtrTy);
 
   // Scale the stride by the size of the indexed type.
   if (TypeScale != 1)
