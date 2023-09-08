@@ -14,6 +14,7 @@
 #include "sanitizer_symbolizer_markup.h"
 
 #include "sanitizer_common.h"
+#include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_platform.h"
 #include "sanitizer_stacktrace.h"
@@ -112,7 +113,11 @@ void RenderModulesMarkup(InternalScopedString *buffer,
     renderedModules.push_back({});
     RenderedModule &curModule = renderedModules.back();
     curModule.full_name = internal_strdup(module.full_name());
+
+    // kModuleUUIDSize is the size of curModule.uuid
+    CHECK_GE(kModuleUUIDSize, module.uuid_size());
     internal_memcpy(curModule.uuid, module.uuid(), module.uuid_size());
+
     curModule.base_address = module.base_address();
   }
 }
