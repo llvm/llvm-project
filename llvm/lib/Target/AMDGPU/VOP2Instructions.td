@@ -801,8 +801,7 @@ defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, 
 let SubtargetPredicate = isGFX12_10Plus in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
-defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64_ARITH, DivergentBinFrag<mul>>;
-defm V_MUL_I64 : VOP2Inst <"v_mul_i64", VOP_I64_I64_I64_ARITH>;
+defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End SubtargetPredicate = HasGFX1210Insts
 } // End isReMaterializable = 1
 
@@ -1614,7 +1613,6 @@ let SubtargetPredicate = isGFX12_10Plus in {
 defm V_ADD_U64 : VOP2_Real_FULL<GFX12Gen, 0x28>;
 defm V_SUB_U64 : VOP2_Real_FULL<GFX12Gen, 0x29>;
 defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX12Gen, 0x2a>;
-defm V_MUL_I64 : VOP2_Real_NO_DPP<GFX12Gen, 0x2e>;
 }
 
 //===----------------------------------------------------------------------===//
