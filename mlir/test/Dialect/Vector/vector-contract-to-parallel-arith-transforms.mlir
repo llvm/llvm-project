@@ -60,3 +60,4 @@ transform.sequence failures(propagate) {
     transform.apply_patterns.vector.lower_contraction lowering_strategy = "parallelarith"
   } : !transform.any_op
 }
+
