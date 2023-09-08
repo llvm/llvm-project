@@ -5735,6 +5735,147 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   return Builder.saveIP();
 }
 
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  uint32_t SrcLocStrSize;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+
+  // Splitting a basic block expects a terminator. Hence, creating an
+  // unreachable instruction, which will be deleted later.
+  UnreachableInst *UI = Builder.CreateUnreachable();
+  BasicBlock *CurrentBasicBlock = Builder.GetInsertBlock();
+
+  // The current basic block is split into four basic blocks. After outlining,
+  // they will be mapped as follows:
+  // ```
+  // def current_fn() {
+  //   current_basic_block:
+  //     br label %teams.exit
+  //   teams.exit:
+  //     ; instructions after teams
+  // }
+  // def outlined_fn() {
+  //   teams.alloca:
+  //     br label %teams.body
+  //   teams.body:
+  //     ; instructions within teams body
+  // }
+  // ```
+  BasicBlock *AllocaBB = CurrentBasicBlock->splitBasicBlock(UI, "teams.alloca");
+  BasicBlock *BodyBB = AllocaBB->splitBasicBlock(UI, "teams.body");
+  BasicBlock *ExitBB = BodyBB->splitBasicBlock(UI, "teams.exit");
+
+  UI->eraseFromParent();
+
+  // Generate the body of teams.
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  BodyGenCB(AllocaIP, CodeGenIP);
+
+  OutlineInfo OI;
+  OI.EntryBB = AllocaBB;
+  OI.ExitBB = ExitBB;
+  OI.PostOutlineCB = [this, Ident](Function &OutlinedFn) {
+    // The input IR here looks like the following-
+    // ```
+    // func @current_fn() {
+    //   outlined_fn(%args)
+    // }
+    // func @outlined_fn(%args) {
+    //   ; teams body
+    // }
+    // ```
+    //
+    // This is changed to the following-
+    //
+    // ```
+    // func @current_fn() {
+    //   runtime_call(..., wrapper_fn, ...)
+    // }
+    // func @wrapper_fn(..., %args) {
+    //   ; teams body
+    // }
+    // ```
+
+    // The outlined function has different inputs than what is expected from it.
+    // So, a wrapper function with expected signature is created and the
+    // required arguments are passed to the outlined function. The stale call
+    // instruction in current function will be replaced with a new call
+    // instruction for runtime call with the wrapper function. The outlined
+    // function is then inlined in the wrapper function and the call from the
+    // current function is removed.
+
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    assert(StaleCI && "Error while outlining - no CallInst user found for the "
+                      "outlined function.");
+    OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
+
+    // Create the wrapper function.
+    Builder.SetInsertPoint(StaleCI);
+    SmallVector<Type *> WrapperArgTys{Builder.getPtrTy(), Builder.getPtrTy()};
+    for (auto &Arg : OutlinedFn.args()) {
+      WrapperArgTys.push_back(Arg.getType());
+    }
+    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
+        (Twine(OutlinedFn.getName()) + ".teams").str(),
+        FunctionType::get(Builder.getVoidTy(), WrapperArgTys, false));
+    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
+    WrapperFunc->getArg(0)->setName("global_tid");
+    WrapperFunc->getArg(1)->setName("bound_tid");
+    WrapperFunc->getArg(2)->setName("data");
+
+    // Emit the body of the wrapper function - just a call to outlined function
+    // and return statement.
+    BasicBlock *WrapperEntryBB =
+        BasicBlock::Create(M.getContext(), "entrybb", WrapperFunc);
+    Builder.SetInsertPoint(WrapperEntryBB);
+    SmallVector<Value *> Args;
+    for (size_t ArgIndex = 2; ArgIndex < WrapperFunc->arg_size(); ArgIndex++) {
+      Args.push_back(WrapperFunc->getArg(ArgIndex));
+    }
+    CallInst *OutlinedFnCall = Builder.CreateCall(&OutlinedFn, Args);
+    Builder.CreateRetVoid();
+
+    // Call to the runtime function for teams in the current function.
+    Builder.SetInsertPoint(StaleCI);
+    Args = {Ident, Builder.getInt32(StaleCI->arg_size()), WrapperFunc};
+    for (Use &Arg : StaleCI->args()) {
+      Args.push_back(Arg);
+    }
+    Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
+                           omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
+                       Args);
+    StaleCI->eraseFromParent();
+
+    // Inlining the outlined teams function in the wrapper. This wrapper is the
+    // argument for the runtime call.
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "More than one use for the outlined function found. Expected only "
+           "one use.");
+    InlineFunctionInfo IFI;
+    InlineResult IR = InlineFunction(*OutlinedFnCall, IFI);
+    LLVM_DEBUG(if (!IR.isSuccess()) {
+      dbgs() << "Attempt to merge the outlined function in the wrapper failed: "
+             << IR.getFailureReason() << "\n";
+    });
+    assert(IR.isSuccess() && "Inlining outlined omp teams failed");
+    OutlinedFn.eraseFromParent();
+  };
+
+  addOutlineInfo(std::move(OI));
+
+  Builder.SetInsertPoint(ExitBB);
+
+  return Builder.saveIP();
+}
+
 GlobalVariable *
 OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
                                        std::string VarName) {
