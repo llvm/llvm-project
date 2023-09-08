@@ -151,27 +151,14 @@ define i32 @catch_thing_user() {
 }
 
 define void @two_potential_callees_pos1(i1 %c) {
-; TUNIT: Function Attrs: norecurse
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@two_potential_callees_pos1
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR3:[0-9]+]] {
-; TUNIT-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @scc1_foo
-; TUNIT-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
-; TUNIT-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
-; TUNIT:       2:
-; TUNIT-NEXT:    call void @scc1_foo()
-; TUNIT-NEXT:    br label [[TMP6:%.*]]
-; TUNIT:       3:
-; TUNIT-NEXT:    br i1 true, label [[TMP4:%.*]], label [[TMP5:%.*]]
-; TUNIT:       4:
-; TUNIT-NEXT:    call void @foo1()
-; TUNIT-NEXT:    br label [[TMP6]]
-; TUNIT:       5:
-; TUNIT-NEXT:    unreachable
-; TUNIT:       6:
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    ret void
 ;
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@two_potential_callees_pos1
-; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo1, ptr @scc1_foo
 ; CGSCC-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
 ; CGSCC-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
@@ -193,8 +180,9 @@ define void @two_potential_callees_pos1(i1 %c) {
   ret void
 }
 define void @two_potential_callees_pos2(i1 %c) {
+; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@two_potential_callees_pos2
-; CHECK-SAME: (i1 [[C:%.*]]) {
+; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FP:%.*]] = select i1 [[C]], ptr @foo2, ptr @scc1_foo
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[FP]], @scc1_foo
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP3:%.*]]
@@ -248,8 +236,8 @@ declare void @__cxa_end_catch()
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { nounwind }
 ; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR3]] = { norecurse }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { nounwind }
+; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn }
 ;.
