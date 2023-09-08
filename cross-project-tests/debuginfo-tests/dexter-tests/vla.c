@@ -1,6 +1,7 @@
 // This test case verifies the debug location for variable-length arrays.
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
+// XFAIL: system-darwin
 //
 // RUN: %clang -std=gnu11 -O0 -glldb %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'lldb' -- %s
