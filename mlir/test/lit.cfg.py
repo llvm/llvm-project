@@ -212,18 +212,8 @@ def have_host_jit_feature_support(feature_name):
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
 
-# Find if the host has the required CUDA toolkit tools to run the integration tests.
-# This tools are required for compiling GPU modules into fatbins.
-def have_host_required_cuda_tools():
-    return lit.util.which("ptxas") != None and lit.util.which("fatbinary") != None
-
 if config.run_cuda_tests:
     config.available_features.add("host-supports-nvptx")
-    if have_host_required_cuda_tools():
-        config.available_features.add("host-supports-cuda-runner")
-        config.enable_cuda_runner_tests = True
-    else:
-        config.enable_cuda_runner_tests = False
 
 if config.run_rocm_tests:
     config.available_features.add("host-supports-amdgpu")
