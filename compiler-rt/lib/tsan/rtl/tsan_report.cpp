@@ -12,10 +12,12 @@
 #include "tsan_report.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
+
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
+#include "sanitizer_common/sanitizer_symbolizer_markup.h"
 
 namespace __tsan {
 
@@ -104,12 +106,13 @@ void PrintStack(const ReportStack *ent) {
     return;
   }
 
-  if (const ListOfModules *modules =
-          Symbolizer::GetOrInit()->GetRefreshedListOfModules()) {
-    InternalScopedString modules_res;
-    RenderModules(&modules_res, modules,
-                  common_flags()->enable_symbolizer_markup);
-    Printf("%s", modules_res.data());
+  if (common_flags()->enable_symbolizer_markup) {
+    if (const ListOfModules *modules =
+            Symbolizer::GetOrInit()->GetRefreshedListOfModules()) {
+      InternalScopedString modules_res;
+      RenderModulesMarkup(&modules_res, modules);
+      Printf("%s", modules_res.data());
+    }
   }
 
   SymbolizedStack *frame = ent->frames;

@@ -70,9 +70,6 @@ void RenderData(InternalScopedString *buffer, const char *format,
                 const DataInfo *DI, bool symbolizer_markup,
                 const char *strip_path_prefix = "");
 
-void RenderModules(InternalScopedString *buffer, const ListOfModules *modules,
-                   bool symbolizer_markup);
-
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_STACKTRACE_PRINTER_H

@@ -30,6 +30,7 @@
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+#include "sanitizer_common/sanitizer_symbolizer_markup.h"
 
 using namespace __sanitizer;
 
@@ -263,11 +264,11 @@ static void PrintStackAllocationsMarkup(StackAllocationsRingBuffer *sa) {
   // frames for offline symbolization.
 
   uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
+
   if (const ListOfModules *modules =
           Symbolizer::GetOrInit()->GetRefreshedListOfModules()) {
     InternalScopedString modules_res;
-    RenderModules(&modules_res, modules,
-                  /*symbolizer_markup=*/ true);
+    RenderModulesMarkup(&modules_res, modules);
     Printf("%s", modules_res.data());
   }
 
@@ -280,8 +281,6 @@ static void PrintStackAllocationsMarkup(StackAllocationsRingBuffer *sa) {
       break;
     uptr pc_mask = (1ULL << 48) - 1;
     uptr pc = record & pc_mask;
-    frame_desc.append("  record_addr:0x%zx record:0x%zx",
-                      reinterpret_cast<uptr>(record_addr), record);
     if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
       RenderFrame(&frame_desc, "", 0, frame->info.address, &frame->info,
                   common_flags()->symbolize_vs_style,
@@ -464,9 +463,9 @@ void PrintAddressDescription(
                      ? current_stack_allocations
                      : t->stack_allocations();
       if (common_flags()->enable_symbolizer_markup) {
-        PrintStackAllocations(sa, addr_tag, untagged_addr);
-      } else {
         PrintStackAllocationsMarkup(sa);
+      } else {
+        PrintStackAllocations(sa, addr_tag, untagged_addr);
       }
       num_descriptions_printed++;
     }

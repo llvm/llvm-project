@@ -347,13 +347,4 @@ void RenderModuleLocation(InternalScopedString *buffer, const char *module,
   buffer->append("+0x%zx)", offset);
 }
 
-void RenderModules(InternalScopedString *buffer, const ListOfModules *modules,
-                   bool symbolizer_markup) {
-  // Rendering all the modules is only needed for symbolizer markup
-  if (!symbolizer_markup)
-    return;
-
-  RenderModulesMarkup(buffer, modules);
-}
-
 } // namespace __sanitizer
