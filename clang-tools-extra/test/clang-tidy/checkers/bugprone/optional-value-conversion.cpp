@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-optional-value-conversion %t -- --fix-notes
 // RUN: %check_clang_tidy -check-suffix=CUSTOM -std=c++17-or-later %s bugprone-optional-value-conversion %t -- \
-// RUN: -config="{CheckOptions: [{key: 'bugprone-optional-value-conversion.OptionalTypes', value: 'CustomOptional'}, \
-// RUN:                          {key: 'bugprone-optional-value-conversion.ValueMethods', value: '::Read$;::Ooo$'}]}" --fix-notes
+// RUN: -config="{CheckOptions: {bugprone-optional-value-conversion.OptionalTypes: 'CustomOptional', \
+// RUN:                          bugprone-optional-value-conversion.ValueMethods: '::Read$;::Ooo$'}}" --fix-notes
 
 namespace std {
   template<typename T>

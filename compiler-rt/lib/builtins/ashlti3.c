@@ -30,7 +30,8 @@ COMPILER_RT_ABI ti_int __ashlti3(ti_int a, int b) {
     if (b == 0)
       return a;
     result.s.low = input.s.low << b;
-    result.s.high = (input.s.high << b) | (input.s.low >> (bits_in_dword - b));
+    result.s.high =
+        ((du_int)input.s.high << b) | (input.s.low >> (bits_in_dword - b));
   }
   return result.all;
 }

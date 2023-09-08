@@ -26,6 +26,11 @@ int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 
 //expected-warning@+1 {{unknown tune CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("tune=hiss,tune=woof"))) apple_tree(void) { return 4; }
 
+//expected-warning@+1 {{unsupported 'x86-64' in the 'target' attribute string}}
+void __attribute__((target("x86-64"))) baseline(void) {}
+//expected-warning@+1 {{unsupported 'x86-64-v2' in the 'target' attribute string}}
+void __attribute__((target("x86-64-v2"))) v2(void) {}
+
 #elifdef __aarch64__
 
 int __attribute__((target("sve,arch=armv8-a"))) foo(void) { return 4; }

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only  -triple x86_64-apple-darwin10 -verify %s
-// rdar://16628028
 
 @interface NSObject
 + (void)initialize; // expected-note 2 {{method 'initialize' declared here}}

@@ -75,8 +75,7 @@ define void @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i6
 ; FIXEDLEN-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -252,8 +251,7 @@ define i64 @uniform_load_outside_use(ptr noalias nocapture %a, ptr noalias nocap
 ; FIXEDLEN-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -412,8 +410,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; FIXEDLEN-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -638,8 +635,7 @@ define void @uniform_load_unaligned(ptr noalias nocapture %a, ptr noalias nocapt
 ; FIXEDLEN-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -814,8 +810,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1007,8 +1002,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; FIXEDLEN-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1249,8 +1243,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; FIXEDLEN-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1473,8 +1466,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; FIXEDLEN-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FIXEDLEN-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; FIXEDLEN:       middle.block:
-; FIXEDLEN-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1025, 1024
-; FIXEDLEN-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXEDLEN-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; FIXEDLEN:       scalar.ph:
 ; FIXEDLEN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXEDLEN-NEXT:    br label [[FOR_BODY:%.*]]

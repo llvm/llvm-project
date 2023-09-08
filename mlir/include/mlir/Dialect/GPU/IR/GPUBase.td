@@ -57,7 +57,6 @@ def GPU_Dialect : Dialect {
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -110,17 +109,16 @@ class MMAMatrixOf<list<Type> allowedTypes> :
   "gpu.mma_matrix", "::mlir::gpu::MMAMatrixType">;
 
 // Types for all sparse handles.
-def GPU_SparseDnTensorHandle :
-  DialectType<GPU_Dialect,
-    CPred<"llvm::isa<::mlir::gpu::SparseDnTensorHandleType>($_self)">,
-    "dense tensor handle type">,
-  BuildableType<"mlir::gpu::SparseDnTensorHandleType::get($_builder.getContext())">;
+class GPU_SparseHandle<string typeStr, string description> :
+    DialectType<GPU_Dialect,
+    CPred<"llvm::isa<::mlir::gpu::"#typeStr#">($_self)">,
+    description#" handle type">,
+  BuildableType<"mlir::gpu::"#typeStr#"::get($_builder.getContext())">;
 
-def GPU_SparseSpMatHandle :
-  DialectType<GPU_Dialect,
-    CPred<"llvm::isa<::mlir::gpu::SparseSpMatHandleType>($_self)">,
-    "sparse matrix handle type">,
-  BuildableType<"mlir::gpu::SparseSpMatHandleType::get($_builder.getContext())">;
+def GPU_SparseDnTensorHandle : GPU_SparseHandle<"SparseDnTensorHandleType", "dense tensor">;
+def GPU_SparseSpGEMMOpHandle : GPU_SparseHandle<"SparseSpGEMMOpHandleType", "SpGEMM operation">;
+def GPU_SparseSpMatHandle : GPU_SparseHandle<"SparseSpMatHandleType", "sparse matrix">;
+
 
 //===----------------------------------------------------------------------===//
 // GPU Interfaces.

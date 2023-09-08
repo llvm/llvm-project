@@ -5,10 +5,10 @@
 // RUN: --checks='-*,bad*glob,llvm*,llvm-includeorder,my-made-up-check' --config='{Checks: "readability-else-after-ret", \
 // RUN: HeaderFileExtensions: ["h", "hh", "hpp"], \
 // RUN: ImplementationFileExtensions: ["c", "cc", "hpp"], \
-// RUN: CheckOptions: [{key: "IgnoreMacros", value: "true"}, \
-// RUN:                {key: "StriceMode", value: "true"}, \
-// RUN:                {key: modernize-lop-convert.UseCxx20ReverseRanges, value: true} \
-// RUN:               ]}' 2>&1 | FileCheck %s \
+// RUN: CheckOptions: {IgnoreMacros: true, \
+// RUN:                StriceMode: true, \
+// RUN:                modernize-lop-convert.UseCxx20ReverseRanges: true \
+// RUN:               }}' 2>&1 | FileCheck %s \
 // RUN: -check-prefix=CHECK-VERIFY -implicit-check-not='{{warning|error}}:'
 
 // CHECK-VERIFY-DAG: command-line option '-config': warning: unknown check 'readability-else-after-ret'; did you mean 'readability-else-after-return' [-verify-config]

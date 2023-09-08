@@ -934,7 +934,7 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
 
   auto GV = new llvm::GlobalVariable(
       CGM.getModule(), C->getType(),
-      CGM.isTypeConstant(E->getType(), true, false),
+      E->getType().isConstantStorage(CGM.getContext(), true, false),
       llvm::GlobalValue::InternalLinkage, C, ".compoundliteral", nullptr,
       llvm::GlobalVariable::NotThreadLocal,
       CGM.getContext().getTargetAddressSpace(addressSpace));
@@ -1132,12 +1132,30 @@ public:
         return CGM.GetAddrOfConstantStringFromLiteral(S).getPointer();
       return nullptr;
     case CK_NullToPointer:
-      if (llvm::Constant *C = Visit(subExpr, destType))
+      if (Visit(subExpr, destType))
         return CGM.EmitNullConstant(destType);
       return nullptr;
 
     case CK_IntToOCLSampler:
       llvm_unreachable("global sampler variables are not generated");
+
+    case CK_IntegralCast: {
+      QualType FromType = subExpr->getType();
+      // See also HandleIntToIntCast in ExprConstant.cpp
+      if (FromType->isIntegerType())
+        if (llvm::Constant *C = Visit(subExpr, FromType))
+          if (auto *CI = dyn_cast<llvm::ConstantInt>(C)) {
+            unsigned SrcWidth = CGM.getContext().getIntWidth(FromType);
+            unsigned DstWidth = CGM.getContext().getIntWidth(destType);
+            if (DstWidth == SrcWidth)
+              return CI;
+            llvm::APInt A = FromType->isSignedIntegerType()
+                                ? CI->getValue().sextOrTrunc(DstWidth)
+                                : CI->getValue().zextOrTrunc(DstWidth);
+            return llvm::ConstantInt::get(CGM.getLLVMContext(), A);
+          }
+      return nullptr;
+    }
 
     case CK_Dependent: llvm_unreachable("saw dependent cast!");
 
@@ -1191,7 +1209,6 @@ public:
     case CK_IntegralComplexToFloatingComplex:
     case CK_PointerToIntegral:
     case CK_PointerToBoolean:
-    case CK_IntegralCast:
     case CK_BooleanToSignedIntegral:
     case CK_IntegralToPointer:
     case CK_IntegralToBoolean:
@@ -1361,6 +1378,13 @@ public:
 
   llvm::Constant *VisitUnaryExtension(const UnaryOperator *E, QualType T) {
     return Visit(E->getSubExpr(), T);
+  }
+
+  llvm::Constant *VisitUnaryMinus(UnaryOperator *U, QualType T) {
+    if (llvm::Constant *C = Visit(U->getSubExpr(), T))
+      if (auto *CI = dyn_cast<llvm::ConstantInt>(C))
+        return llvm::ConstantInt::get(CGM.getLLVMContext(), -CI->getValue());
+    return nullptr;
   }
 
   // Utility methods
@@ -1929,7 +1953,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
         if (VD->isLocalVarDecl()) {
           return CGM.getOrCreateStaticVarDecl(
-              *VD, CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false));
+              *VD, CGM.getLLVMLinkageVarDefinition(VD));
         }
       }
     }

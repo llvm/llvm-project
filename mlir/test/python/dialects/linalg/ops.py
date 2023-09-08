@@ -100,7 +100,7 @@ def testNamedStructuredOpGenericForm():
                 init_result = tensor.EmptyOp([4, 8], f32)
                 #      CHECK: "linalg.matmul"(%{{.*}})
                 # CHECK-SAME:    cast = #linalg.type_fn<cast_signed>
-                # CHECK-SAME:    odsOperandSegmentSizes = array<i32: 2, 1>
+                # CHECK-SAME:    operandSegmentSizes = array<i32: 2, 1>
                 # CHECK-NEXT:  ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
                 # CHECK-NEXT:    arith.mulf{{.*}} (f32, f32) -> f32
                 # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32

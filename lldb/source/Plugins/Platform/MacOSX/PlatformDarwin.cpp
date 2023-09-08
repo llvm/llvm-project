@@ -123,8 +123,8 @@ enum {
 
 class PlatformDarwinProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin");
     return g_setting_name;
   }
 

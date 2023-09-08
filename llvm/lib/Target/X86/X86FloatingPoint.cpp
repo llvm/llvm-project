@@ -1617,14 +1617,14 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       }
 
       switch (InlineAsm::getKind(Flags)) {
-      case InlineAsm::Kind_RegUse:
+      case InlineAsm::Kind::RegUse:
         STUses |= (1u << STReg);
         break;
-      case InlineAsm::Kind_RegDef:
-      case InlineAsm::Kind_RegDefEarlyClobber:
+      case InlineAsm::Kind::RegDef:
+      case InlineAsm::Kind::RegDefEarlyClobber:
         STDefs |= (1u << STReg);
         break;
-      case InlineAsm::Kind_Clobber:
+      case InlineAsm::Kind::Clobber:
         STClobbers |= (1u << STReg);
         break;
       default:

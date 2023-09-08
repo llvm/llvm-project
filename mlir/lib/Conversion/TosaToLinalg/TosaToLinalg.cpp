@@ -481,12 +481,14 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
     if (arith::FPToSIOp::areCastCompatible(srcTy, dstTy)) {
       auto intMin = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getF32FloatAttr(
+          loc, rewriter.getFloatAttr(
+                   getElementTypeOrSelf(srcTy),
                    APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getF32FloatAttr(
+          loc, rewriter.getFloatAttr(
+                   getElementTypeOrSelf(srcTy),
                    APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 

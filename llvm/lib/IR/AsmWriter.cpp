@@ -1069,12 +1069,13 @@ int SlotTracker::processIndex() {
 
   // The first block of slots are just the module ids, which start at 0 and are
   // assigned consecutively. Since the StringMap iteration order isn't
-  // guaranteed, use a std::map to order by module ID before assigning slots.
-  std::map<uint64_t, StringRef> ModuleIdToPathMap;
-  for (auto &[ModPath, ModId] : TheIndex->modulePaths())
-    ModuleIdToPathMap[ModId.first] = ModPath;
-  for (auto &ModPair : ModuleIdToPathMap)
-    CreateModulePathSlot(ModPair.second);
+  // guaranteed, order by path string before assigning slots.
+  std::vector<StringRef> ModulePaths;
+  for (auto &[ModPath, _] : TheIndex->modulePaths())
+    ModulePaths.push_back(ModPath);
+  llvm::sort(ModulePaths.begin(), ModulePaths.end());
+  for (auto &ModPath : ModulePaths)
+    CreateModulePathSlot(ModPath);
 
   // Start numbering the GUIDs after the module ids.
   GUIDNext = ModulePathNext;
@@ -2890,12 +2891,11 @@ void AssemblyWriter::printModuleSummaryIndex() {
   std::string RegularLTOModuleName =
       ModuleSummaryIndex::getRegularLTOModuleName();
   moduleVec.resize(TheIndex->modulePaths().size());
-  for (auto &[ModPath, ModId] : TheIndex->modulePaths())
+  for (auto &[ModPath, ModHash] : TheIndex->modulePaths())
     moduleVec[Machine.getModulePathSlot(ModPath)] = std::make_pair(
-        // A module id of -1 is a special entry for a regular LTO module created
-        // during the thin link.
-        ModId.first == -1u ? RegularLTOModuleName : std::string(ModPath),
-        ModId.second);
+        // An empty module path is a special entry for a regular LTO module
+        // created during the thin link.
+        ModPath.empty() ? RegularLTOModuleName : std::string(ModPath), ModHash);
 
   unsigned i = 0;
   for (auto &ModPair : moduleVec) {

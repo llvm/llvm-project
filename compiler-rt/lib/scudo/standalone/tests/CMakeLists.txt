@@ -19,7 +19,10 @@ set(SCUDO_UNITTEST_CFLAGS
   -Wno-mismatched-new-delete)
 
 if(COMPILER_RT_DEBUG)
-  list(APPEND SCUDO_UNITTEST_CFLAGS -DSCUDO_DEBUG=1)
+  list(APPEND SCUDO_UNITTEST_CFLAGS -DSCUDO_DEBUG=1 -DSCUDO_ENABLE_HOOKS=1)
+  if (NOT FUCHSIA)
+    list(APPEND SCUDO_UNITTEST_CFLAGS -DSCUDO_ENABLE_HOOKS_TESTS=1)
+  endif()
 endif()
 
 if(ANDROID)
@@ -137,11 +140,3 @@ set(SCUDO_CXX_UNIT_TEST_SOURCES
 add_scudo_unittest(ScudoCxxUnitTest
   SOURCES ${SCUDO_CXX_UNIT_TEST_SOURCES}
   ADDITIONAL_RTOBJECTS RTScudoStandaloneCWrappers RTScudoStandaloneCxxWrappers)
-
-set(SCUDO_HOOKS_UNIT_TEST_SOURCES
-  scudo_hooks_test.cpp
-  scudo_unit_test_main.cpp
-  )
-
-add_scudo_unittest(ScudoHooksUnitTest
-  SOURCES ${SCUDO_HOOKS_UNIT_TEST_SOURCES})

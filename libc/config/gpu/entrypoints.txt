@@ -1,4 +1,7 @@
 set(TARGET_LIBC_ENTRYPOINTS
+    # assert.h entrypoints
+    libc.src.assert.__assert_fail
+
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
@@ -65,11 +68,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
-
-    # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
+    libc.src.stdlib.abort
 
     # Only implemented in the test suite
     libc.src.stdlib.malloc
@@ -82,10 +84,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.puts
-    libc.src.stdio.fputs
-    libc.src.stdio.fread
-    libc.src.stdio.fclose
     libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fread
+    libc.src.stdio.fputs
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr
@@ -95,6 +97,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
+
+    # time.h entrypoints
+    libc.src.time.clock
+    libc.src.time.nanosleep
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_reset
@@ -150,9 +156,32 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.pow
     libc.src.math.powf
     libc.src.math.sin
+    libc.src.math.modf
+    libc.src.math.modff
+    libc.src.math.nearbyint
+    libc.src.math.nearbyintf
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.remainder
+    libc.src.math.remainderf
+    libc.src.math.remquo
+    libc.src.math.remquof
+    libc.src.math.rint
+    libc.src.math.rintf
     libc.src.math.round
     libc.src.math.roundf
-    libc.src.math.roundl
+    libc.src.math.scalbn
+    libc.src.math.scalbnf
+    libc.src.math.sinh
+    libc.src.math.sinhf
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.tan
+    libc.src.math.tanf
+    libc.src.math.tanh
+    libc.src.math.tanhf
+    libc.src.math.trunc
+    libc.src.math.truncf
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

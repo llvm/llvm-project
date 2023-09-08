@@ -242,19 +242,23 @@ struct PyAttrBuilderMap {
   static py::function dundeGetItemNamed(const std::string &attributeKind) {
     auto builder = PyGlobals::get().lookupAttributeBuilder(attributeKind);
     if (!builder)
-      throw py::key_error();
+      throw py::key_error(attributeKind);
     return *builder;
   }
   static void dundeSetItemNamed(const std::string &attributeKind,
-                                py::function func) {
-    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func));
+                                py::function func, bool replace) {
+    PyGlobals::get().registerAttributeBuilder(attributeKind, std::move(func),
+                                              replace);
   }
 
   static void bind(py::module &m) {
     py::class_<PyAttrBuilderMap>(m, "AttrBuilder", py::module_local())
         .def_static("contains", &PyAttrBuilderMap::dunderContains)
         .def_static("get", &PyAttrBuilderMap::dundeGetItemNamed)
-        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed);
+        .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed,
+                    "attribute_kind"_a, "attr_builder"_a, "replace"_a = false,
+                    "Register an attribute builder for building MLIR "
+                    "attributes from python values.");
   }
 };
 
@@ -1675,28 +1679,28 @@ py::object PyOpView::buildGeneric(
     } else {
       attributes = py::dict();
     }
-    if (attributes->contains("result_segment_sizes") ||
-        attributes->contains("operand_segment_sizes")) {
-      throw py::value_error("Manually setting a 'result_segment_sizes' or "
-                            "'operand_segment_sizes' attribute is unsupported. "
+    if (attributes->contains("resultSegmentSizes") ||
+        attributes->contains("operandSegmentSizes")) {
+      throw py::value_error("Manually setting a 'resultSegmentSizes' or "
+                            "'operandSegmentSizes' attribute is unsupported. "
                             "Use Operation.create for such low-level access.");
     }
 
-    // Add result_segment_sizes attribute.
+    // Add resultSegmentSizes attribute.
     if (!resultSegmentLengths.empty()) {
       MlirAttribute segmentLengthAttr =
           mlirDenseI32ArrayGet(context->get(), resultSegmentLengths.size(),
                                resultSegmentLengths.data());
-      (*attributes)["result_segment_sizes"] =
+      (*attributes)["resultSegmentSizes"] =
           PyAttribute(context, segmentLengthAttr);
     }
 
-    // Add operand_segment_sizes attribute.
+    // Add operandSegmentSizes attribute.
     if (!operandSegmentLengths.empty()) {
       MlirAttribute segmentLengthAttr =
           mlirDenseI32ArrayGet(context->get(), operandSegmentLengths.size(),
                                operandSegmentLengths.data());
-      (*attributes)["operand_segment_sizes"] =
+      (*attributes)["operandSegmentSizes"] =
           PyAttribute(context, segmentLengthAttr);
     }
   }
@@ -2276,6 +2280,9 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_property_readonly("types", [](PyOpResultList &self) {
       return getValueTypes(self, self.operation->getContext());
+    });
+    c.def_property_readonly("owner", [](PyOpResultList &self) {
+      return self.operation->createOpView();
     });
   }
 

@@ -53,29 +53,23 @@ struct S2 {
 //   MEMBER_OF_7 = 0x7000000000000
 
 //.
-// CHECK-PPC64LE: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-// CHECK-PPC64LE: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
-//.
-// CHECK-I386: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-// CHECK-I386: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
-//.
 // CHECK-PPC64LE: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-PPC64LE: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 8193]
+// CHECK-PPC64LE: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x2001]]]
 // CHECK-PPC64LE: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-PPC64LE: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 9221]
+// CHECK-PPC64LE: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2405]]]
 // CHECK-PPC64LE: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-PPC64LE: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 8195]
+// CHECK-PPC64LE: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 [[#0x2003]]]
 // CHECK-PPC64LE: @.offload_sizes.5 = private unnamed_addr constant [11 x i64] [i64 0, i64 4, i64 8, i64 8, i64 4, i64 4, i64 0, i64 4, i64 8, i64 8, i64 4]
-// CHECK-PPC64LE: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 8192, i64 281474976718851, i64 281474976718864, i64 8208, i64 8211, i64 3, i64 8192, i64 1970324836982787, i64 1970324836982800, i64 8208, i64 8211]
+// CHECK-PPC64LE: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002010]], i64 [[#0x2010]], i64 [[#0x2013]], i64 [[#0x3]], i64 [[#0x2000]], i64 [[#0x7000000002003]], i64 [[#0x7000000002010]], i64 [[#0x2010]], i64 [[#0x2013]]]
 //.
 // CHECK-I386: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-I386: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 8193]
+// CHECK-I386: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x2001]]]
 // CHECK-I386: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-I386: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 9221]
+// CHECK-I386: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2405]]]
 // CHECK-I386: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 4]
-// CHECK-I386: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 8195]
+// CHECK-I386: @.offload_maptypes.4 = private unnamed_addr constant [1 x i64] [i64 [[#0x2003]]]
 // CHECK-I386: @.offload_sizes.5 = private unnamed_addr constant [11 x i64] [i64 0, i64 4, i64 4, i64 4, i64 4, i64 4, i64 0, i64 4, i64 4, i64 4, i64 4]
-// CHECK-I386: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 8192, i64 281474976718851, i64 281474976718864, i64 8208, i64 8211, i64 3, i64 8192, i64 1970324836982787, i64 1970324836982800, i64 8208, i64 8211]
+// CHECK-I386: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002010]], i64 [[#0x2010]], i64 [[#0x2013]], i64 [[#0x3]], i64 [[#0x2000]], i64 [[#0x7000000002003]], i64 [[#0x7000000002010]], i64 [[#0x2010]], i64 [[#0x2013]]]
 //.
 // CHECK-PPC64LE-LABEL: @_Z3fooi(
 // CHECK-PPC64LE-NEXT:  entry:
@@ -105,7 +99,7 @@ struct S2 {
 // CHECK-PPC64LE-NEXT:    store ptr null, ptr [[TMP2]], align 8
 // CHECK-PPC64LE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-PPC64LE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK-PPC64LE-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1]], i64 -1, i32 1, ptr [[TMP3]], ptr [[TMP4]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK-PPC64LE-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 1, ptr [[TMP3]], ptr [[TMP4]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
 // CHECK-PPC64LE-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
 // CHECK-PPC64LE-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK-PPC64LE-NEXT:    store i32 [[INC]], ptr [[ARG_ADDR]], align 4
@@ -312,7 +306,7 @@ struct S2 {
 // CHECK-I386-NEXT:    store ptr null, ptr [[TMP2]], align 4
 // CHECK-I386-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-I386-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK-I386-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1]], i64 -1, i32 1, ptr [[TMP3]], ptr [[TMP4]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK-I386-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 1, ptr [[TMP3]], ptr [[TMP4]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
 // CHECK-I386-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
 // CHECK-I386-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK-I386-NEXT:    store i32 [[INC]], ptr [[ARG_ADDR]], align 4
@@ -516,21 +510,3 @@ void foo(int arg) {
 }
 
 #endif
-//.
-// CHECK-PPC64LE: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="-altivec,-bpermd,-crbits,-crypto,-direct-move,-extdiv,-htm,-isa-v206-instructions,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe,-vsx" }
-// CHECK-PPC64LE: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-// CHECK-PPC64LE: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-//.
-// CHECK-I386: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
-// CHECK-I386: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-// CHECK-I386: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-//.
-// CHECK-PPC64LE: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK-PPC64LE: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// CHECK-PPC64LE: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-//.
-// CHECK-I386: [[META0:![0-9]+]] = !{i32 1, !"NumRegisterParameters", i32 0}
-// CHECK-I386: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK-I386: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 51}
-// CHECK-I386: [[META3:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-//.

@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-enum class _LIBCPP_ENUM_VIS perm_options : unsigned char {
+enum class perm_options : unsigned char {
   replace = 1,
   add = 2,
   remove = 4,

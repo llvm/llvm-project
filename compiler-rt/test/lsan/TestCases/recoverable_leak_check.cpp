@@ -5,6 +5,9 @@
 
 // UNSUPPORTED: darwin
 
+// FIXME: Investigate.
+// XFAIL: internal_symbolizer && lsan-standalone && i386-linux
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -25,7 +25,7 @@ static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
   // Inside double quotes, '\' and '"' are special.
   static const char *k_escapable_characters = "\"\\";
   while (true) {
-    // Skip over over regular characters and append them.
+    // Skip over regular characters and append them.
     size_t regular = quoted.find_first_of(k_escapable_characters);
     result += quoted.substr(0, regular);
     quoted = quoted.substr(regular);
@@ -93,7 +93,7 @@ ParseSingleArgument(llvm::StringRef command) {
 
   bool arg_complete = false;
   do {
-    // Skip over over regular characters and append them.
+    // Skip over regular characters and append them.
     size_t regular = command.find_first_of(" \t\r\"'`\\");
     arg += command.substr(0, regular);
     command = command.substr(regular);

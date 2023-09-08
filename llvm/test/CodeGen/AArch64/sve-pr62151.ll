@@ -5,8 +5,8 @@
 define i32 @build_interpolation(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2) {
 ; CHECK-LABEL: build_interpolation:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    mul v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
 ; CHECK-NEXT:    sdiv z0.s, p0/m, z0.s, z2.s
 ; CHECK-NEXT:    mla v0.2s, v1.2s, v0.s[1]

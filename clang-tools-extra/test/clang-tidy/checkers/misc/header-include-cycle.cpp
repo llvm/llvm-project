@@ -5,7 +5,7 @@
 // RUN: cp -r %S/Inputs/system/header-include-cycle* %T/misc-header-include-cycle-headers/system
 // RUN: cp %s %T/header-include-cycle.cpp
 // RUN: clang-tidy %T/header-include-cycle.cpp -checks='-*,misc-header-include-cycle' -header-filter=.* \
-// RUN: -config="{CheckOptions: [{key: misc-header-include-cycle.IgnoredFilesList, value: 'header-include-cycle.self-e.hpp'}]}" \
+// RUN: -config="{CheckOptions: {misc-header-include-cycle.IgnoredFilesList: 'header-include-cycle.self-e.hpp'}}" \
 // RUN: -- -I%T/misc-header-include-cycle-headers -isystem %T/misc-header-include-cycle-headers/system \
 // RUN: --include %T/misc-header-include-cycle-headers/header-include-cycle.self-i.hpp | FileCheck %s \
 // RUN: -check-prefix=CHECK-MESSAGES "-implicit-check-not={{note|warning|error}}:" --dump-input=fail

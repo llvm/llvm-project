@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-enum class _LIBCPP_ENUM_VIS directory_options : unsigned char {
+enum class directory_options : unsigned char {
   none = 0,
   follow_directory_symlink = 1,
   skip_permission_denied = 2

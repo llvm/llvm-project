@@ -1,0 +1,25 @@
+/*===---- __stddef_nullptr_t.h - Definition of nullptr_t -------------------===
+ *
+ * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+ * See https://llvm.org/LICENSE.txt for license information.
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ *
+ *===-----------------------------------------------------------------------===
+ */
+
+#if !defined(_NULLPTR_T) || __has_feature(modules)
+/* Always define nullptr_t when modules are available. */
+#if !__has_feature(modules)
+#define _NULLPTR_T
+#endif
+#ifdef __cplusplus
+#if defined(_MSC_EXTENSIONS) && defined(_NATIVE_NULLPTR_SUPPORTED)
+namespace std {
+typedef decltype(nullptr) nullptr_t;
+}
+using ::std::nullptr_t;
+#endif
+#else
+typedef typeof(nullptr) nullptr_t;
+#endif
+#endif

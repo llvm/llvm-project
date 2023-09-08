@@ -185,6 +185,11 @@ class _LIBCPP_TEMPLATE_VIS basic_istream
     : virtual public basic_ios<_CharT, _Traits>
 {
     streamsize __gc_;
+
+    _LIBCPP_HIDE_FROM_ABI void __inc_gcount() {
+      if (__gc_ < numeric_limits<streamsize>::max())
+        ++__gc_;
+    }
 public:
     // types (inherited from basic_ios (27.5.4)):
     typedef _CharT                         char_type;
@@ -714,7 +719,7 @@ basic_istream<_CharT, _Traits>::operator>>(basic_streambuf<char_type, traits_typ
                             __sb->sputc(traits_type::to_char_type(__i)),
                             traits_type::eof()))
                         break;
-                    ++__gc_;
+                    __inc_gcount();
                     this->rdbuf()->sbumpc();
                 }
                 if (__gc_ == 0)
@@ -806,7 +811,7 @@ basic_istream<_CharT, _Traits>::get(char_type* __s, streamsize __n, char_type __
                     if (traits_type::eq(__ch, __dlm))
                         break;
                     *__s++ = __ch;
-                    ++__gc_;
+                    __inc_gcount();
                      this->rdbuf()->sbumpc();
                 }
                 if (__gc_ == 0)
@@ -867,7 +872,7 @@ basic_istream<_CharT, _Traits>::get(basic_streambuf<char_type, traits_type>& __s
                     break;
                 if (traits_type::eq_int_type(__sb.sputc(__ch), traits_type::eof()))
                     break;
-                ++__gc_;
+                __inc_gcount();
                 this->rdbuf()->sbumpc();
             }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -910,7 +915,7 @@ basic_istream<_CharT, _Traits>::getline(char_type* __s, streamsize __n, char_typ
                 if (traits_type::eq(__ch, __dlm))
                 {
                     this->rdbuf()->sbumpc();
-                    ++__gc_;
+                    __inc_gcount();
                     break;
                 }
                 if (__gc_ >= __n-1)
@@ -920,7 +925,7 @@ basic_istream<_CharT, _Traits>::getline(char_type* __s, streamsize __n, char_typ
                 }
                 *__s++ = __ch;
                 this->rdbuf()->sbumpc();
-                ++__gc_;
+                __inc_gcount();
             }
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
@@ -970,7 +975,7 @@ basic_istream<_CharT, _Traits>::ignore(streamsize __n, int_type __dlm)
                        __state |= ios_base::eofbit;
                        break;
                     }
-                    ++__gc_;
+                    __inc_gcount();
                     if (traits_type::eq_int_type(__i, __dlm))
                         break;
                 }
@@ -985,7 +990,7 @@ basic_istream<_CharT, _Traits>::ignore(streamsize __n, int_type __dlm)
                        __state |= ios_base::eofbit;
                        break;
                     }
-                    ++__gc_;
+                    __inc_gcount();
                     if (traits_type::eq_int_type(__i, __dlm))
                         break;
                 }
@@ -1383,10 +1388,8 @@ struct __is_istreamable<_Stream, _Tp, decltype(
     std::declval<_Stream>() >> std::declval<_Tp>(), void()
 )> : true_type { };
 
-template <class _Stream, class _Tp, class = typename enable_if<
-    _And<is_base_of<ios_base, _Stream>,
-         __is_istreamable<_Stream&, _Tp&&> >::value
->::type>
+template <class _Stream, class _Tp, __enable_if_t<
+    _And<is_base_of<ios_base, _Stream>, __is_istreamable<_Stream&, _Tp&&> >::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
 _Stream&& operator>>(_Stream&& __is, _Tp&& __x)
 {

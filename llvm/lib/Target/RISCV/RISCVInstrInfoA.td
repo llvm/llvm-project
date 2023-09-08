@@ -44,12 +44,6 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
   def _AQ_RL : AMO_rr<funct5, 1, 1, funct3, opcodestr # ".aqrl">;
 }
 
-class AtomicStPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
-                  ValueType vt = XLenVT>
-    : Pat<(StoreOp (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12),
-                   (vt StTy:$rs2)),
-          (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
-
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -123,21 +117,20 @@ let Predicates = [HasAtomicLdSt] in {
   def : LdPat<atomic_load_16, LH>;
   def : LdPat<atomic_load_32, LW>;
 
-  def : AtomicStPat<atomic_store_8,  SB, GPR>;
-  def : AtomicStPat<atomic_store_16, SH, GPR>;
-  def : AtomicStPat<atomic_store_32, SW, GPR>;
+  def : StPat<atomic_store_8,  SB, GPR, XLenVT>;
+  def : StPat<atomic_store_16, SH, GPR, XLenVT>;
+  def : StPat<atomic_store_32, SW, GPR, XLenVT>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
   def : LdPat<atomic_load_64, LD, i64>;
-  def : AtomicStPat<atomic_store_64, SD, GPR, i64>;
+  def : StPat<atomic_store_64, SD, GPR, i64>;
 }
-
-let Predicates = [HasStdExtA] in {
 
 /// AMOs
 
 multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT> {
+let Predicates = [HasStdExtA, NotHasStdExtZtso] in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
                   !cast<RVInst>(BaseInst), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -149,6 +142,21 @@ multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT> {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_seq_cst"),
                   !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
 }
+let Predicates = [HasStdExtA, HasStdExtZtso] in {
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
+                  !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
+                  !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_release"),
+                  !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acq_rel"),
+                  !cast<RVInst>(BaseInst), vt>;
+  def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_seq_cst"),
+                  !cast<RVInst>(BaseInst), vt>;
+}
+}
+
+let Predicates = [HasStdExtA] in {
 
 defm : AMOPat<"atomic_swap_32", "AMOSWAP_W">;
 defm : AMOPat<"atomic_load_add_32", "AMOADD_W">;

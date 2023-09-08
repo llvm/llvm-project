@@ -71,7 +71,8 @@ static uint64_t createRegionId() {
 }
 
 void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
-                                     size_t Size, void *Code) {
+                                     void **TgtPtrBegin, size_t Size,
+                                     void *Code) {
   beginTargetDataOperation();
   if (ompt_callback_target_data_op_emi_fn) {
     // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
@@ -79,7 +80,7 @@ void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_begin, TargetTaskData, &TargetData, &TargetRegionOpId,
         ompt_target_data_alloc, HstPtrBegin,
-        /* SrcDeviceNum */ omp_get_initial_device(), /* TgtPtrBegin */ nullptr,
+        /* SrcDeviceNum */ omp_get_initial_device(), *TgtPtrBegin,
         /* TgtDeviceNum */ DeviceId, Size, Code);
   } else if (ompt_callback_target_data_op_fn) {
     // HostOpId is set by the runtime
@@ -87,13 +88,14 @@ void Interface::beginTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     // Invoke the tool supplied data op callback
     ompt_callback_target_data_op_fn(
         TargetData.value, HostOpId, ompt_target_data_alloc, HstPtrBegin,
-        /* SrcDeviceNum */ omp_get_initial_device(), /* TgtPtrBegin */ nullptr,
+        /* SrcDeviceNum */ omp_get_initial_device(), *TgtPtrBegin,
         /* TgtDeviceNum */ DeviceId, Size, Code);
   }
 }
 
 void Interface::endTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
-                                   size_t Size, void *Code) {
+                                   void **TgtPtrBegin, size_t Size,
+                                   void *Code) {
   // Only EMI callback handles end scope
   if (ompt_callback_target_data_op_emi_fn) {
     // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
@@ -101,7 +103,7 @@ void Interface::endTargetDataAlloc(int64_t DeviceId, void *HstPtrBegin,
     ompt_callback_target_data_op_emi_fn(
         ompt_scope_end, TargetTaskData, &TargetData, &TargetRegionOpId,
         ompt_target_data_alloc, HstPtrBegin,
-        /* SrcDeviceNum */ omp_get_initial_device(), /* TgtPtrBegin */ nullptr,
+        /* SrcDeviceNum */ omp_get_initial_device(), *TgtPtrBegin,
         /* TgtDeviceNum */ DeviceId, Size, Code);
   }
   endTargetDataOperation();

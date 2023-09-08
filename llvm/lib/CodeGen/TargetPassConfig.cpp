@@ -250,6 +250,11 @@ static cl::opt<bool> DisableSelectOptimize(
     "disable-select-optimize", cl::init(true), cl::Hidden,
     cl::desc("Disable the select-optimization pass from running"));
 
+/// Enable garbage-collecting empty basic blocks.
+static cl::opt<bool>
+    GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
+                  cl::desc("Enable garbage-collecting empty basic blocks"));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -1244,6 +1249,9 @@ void TargetPassConfig::addMachinePasses() {
     if (AddOutliner)
       addPass(createMachineOutlinerPass(RunOnAllFunctions));
   }
+
+  if (GCEmptyBlocks)
+    addPass(llvm::createGCEmptyBasicBlocksPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(

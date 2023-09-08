@@ -256,6 +256,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeMSVC:
   case Mangled::eManglingSchemeRustV0:
   case Mangled::eManglingSchemeD:
+  case Mangled::eManglingSchemeSwift:
     return false;
 
   // Don't try and demangle things we can't categorize.
@@ -1285,7 +1286,7 @@ bool Symtab::Encode(DataEncoder &encoder) const {
 
   // Now that all strings have been gathered, we will emit the string table.
   strtab.Encode(encoder);
-  // Followed the the symbol table data.
+  // Followed by the symbol table data.
   encoder.AppendData(symtab_encoder.GetData());
   return true;
 }

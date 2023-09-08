@@ -95,8 +95,15 @@ TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
 TEST_EVALUATE(ForRange, for (auto x : !!){}); // expected-error + {{}}
 TEST_EVALUATE(While, while (!!){});           // expected-error + {{}}
 TEST_EVALUATE(DoWhile, do {} while (!!););    // expected-error + {{}}
+TEST_EVALUATE(DoWhileCond, do {} while (some_cond < 10););    // expected-error {{use of undeclared identifier}}  \
+                                                              // expected-error {{constexpr variable 'forceEvaluateDoWhileCond' must be initialized by a constant expression}}
 TEST_EVALUATE(If, if (!!){};);                // expected-error + {{}}
 TEST_EVALUATE(IfInit, if (auto x = !!; 1){};);// expected-error + {{}}
-TEST_EVALUATE(ForInit, if (!!;;){};);         // expected-error + {{}}
-TEST_EVALUATE(ForCond, if (; !!;){};);        // expected-error + {{}}
-TEST_EVALUATE(ForInc, if (;; !!){};);         // expected-error + {{}}
+TEST_EVALUATE(ForInit, for (!!;;){};);// expected-error + {{}}
+                                      // expected-note@-1 + {{infinite loop}}
+                                      // expected-note@-2 {{in call}}
+TEST_EVALUATE(ForCond, for (; !!;){};);// expected-error + {{}}
+TEST_EVALUATE(ForInc, for (;; !!){};);// expected-error + {{}}
+                                      // expected-note@-1 + {{infinite loop}}
+                                      // expected-note@-2 {{in call}}
+TEST_EVALUATE(ForCondUnDef, for (;some_cond;){};);        // expected-error + {{}}

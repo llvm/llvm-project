@@ -1,6 +1,4 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
-
-// rdar://problem/56586853
 // expected-no-diagnostics
 
 struct Data {

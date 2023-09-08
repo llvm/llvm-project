@@ -61,13 +61,13 @@ template <class T, size_t N> class PODSmallVector {
     if (isInline()) {
       auto *Tmp = static_cast<T *>(std::malloc(NewCap * sizeof(T)));
       if (Tmp == nullptr)
-        std::terminate();
+        std::abort();
       std::copy(First, Last, Tmp);
       First = Tmp;
     } else {
       First = static_cast<T *>(std::realloc(First, NewCap * sizeof(T)));
       if (First == nullptr)
-        std::terminate();
+        std::abort();
     }
     Last = First + S;
     Cap = First + NewCap;

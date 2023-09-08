@@ -143,7 +143,7 @@ public:
   /// The getResources() function above must have been called first.
   ///
   /// These numbers have already been scaled by SchedModel.getResourceFactor().
-  ArrayRef<unsigned> getProcResourceCycles(unsigned MBBNum) const;
+  ArrayRef<unsigned> getProcReleaseAtCycles(unsigned MBBNum) const;
 
   /// A virtual register or regunit required by a basic block or its trace
   /// successors.
@@ -404,9 +404,9 @@ private:
   // Cycles consumed on each processor resource per block.
   // The number of processor resource kinds is constant for a given subtarget,
   // but it is not known at compile time. The number of cycles consumed by
-  // block B on processor resource R is at ProcResourceCycles[B*Kinds + R]
+  // block B on processor resource R is at ProcReleaseAtCycles[B*Kinds + R]
   // where Kinds = SchedModel.getNumProcResourceKinds().
-  SmallVector<unsigned, 0> ProcResourceCycles;
+  SmallVector<unsigned, 0> ProcReleaseAtCycles;
 
   // One ensemble per strategy.
   Ensemble

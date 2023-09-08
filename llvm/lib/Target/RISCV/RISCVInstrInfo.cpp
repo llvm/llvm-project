@@ -330,9 +330,10 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (STI.hasStdExtZfh()) {
       Opc = RISCV::FSGNJ_H;
     } else {
-      assert(STI.hasStdExtF() && STI.hasStdExtZfhmin() &&
+      assert(STI.hasStdExtF() &&
+             (STI.hasStdExtZfhmin() || STI.hasStdExtZfbfmin()) &&
              "Unexpected extensions");
-      // Zfhmin subset doesn't have FSGNJ_H, replaces FSGNJ_H with FSGNJ_S.
+      // Zfhmin/Zfbfmin doesn't have FSGNJ_H, replace FSGNJ_H with FSGNJ_S.
       DstReg = TRI->getMatchingSuperReg(DstReg, RISCV::sub_16,
                                         &RISCV::FPR32RegClass);
       SrcReg = TRI->getMatchingSuperReg(SrcReg, RISCV::sub_16,
@@ -896,6 +897,10 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // We can't handle blocks that end in an indirect branch.
   if (I->getDesc().isIndirectBranch())
+    return true;
+
+  // We can't handle Generic branch opcodes from Global ISel.
+  if (I->isPreISelOpcode())
     return true;
 
   // We can't handle blocks with more than 2 terminators.
@@ -2193,9 +2198,9 @@ std::string RISCVInstrInfo::createMIROperandComment(
   case CASE_VFMA_OPCODE_LMULS_MF4(OP, TYPE)
 
 #define CASE_VFMA_SPLATS(OP)                                                   \
-  CASE_VFMA_OPCODE_LMULS_MF4(OP, VF16):                                        \
-  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VF32):                                   \
-  case CASE_VFMA_OPCODE_LMULS_M1(OP, VF64)
+  CASE_VFMA_OPCODE_LMULS_MF4(OP, VFPR16):                                      \
+  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VFPR32):                                 \
+  case CASE_VFMA_OPCODE_LMULS_M1(OP, VFPR64)
 // clang-format on
 
 bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
@@ -2356,9 +2361,9 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, TYPE)
 
 #define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VF16)                        \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VF32)                        \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VF64)
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64)
 
 MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                      bool NewMI,

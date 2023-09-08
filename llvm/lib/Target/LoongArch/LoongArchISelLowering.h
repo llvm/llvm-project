@@ -110,6 +110,20 @@ enum NodeType : unsigned {
 
   // Read CPU configuration information operation
   CPUCFG,
+
+  // Vector Shuffle
+  VREPLVE,
+
+  // Extended vector element extraction
+  VPICK_SEXT_ELT,
+  VPICK_ZEXT_ELT,
+
+  // Vector comparisons
+  VALL_ZERO,
+  VANY_ZERO,
+  VALL_NONZERO,
+  VANY_NONZERO,
+
   // Intrinsic operations end =============================================
 };
 } // end namespace LoongArchISD

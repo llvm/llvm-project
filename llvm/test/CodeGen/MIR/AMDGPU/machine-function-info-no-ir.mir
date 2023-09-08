@@ -11,6 +11,7 @@
 # FULL-NEXT: gdsSize: 256
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     true
 # FULL-NEXT: waveLimiter:     true
@@ -115,6 +116,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -188,6 +190,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -262,6 +265,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false

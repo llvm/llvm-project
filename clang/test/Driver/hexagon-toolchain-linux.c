@@ -120,8 +120,12 @@
 // CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // CHECK009-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
 
-// RUN: %clang -fdriver-only -Werror -v -L/tmp \
-// RUN:    --target=hexagon-unknown-linux-musl %s 2>&1 \
+// RUN: %clang -Werror -L/tmp \
+// RUN:    --target=hexagon-unknown-linux-musl %s -### 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHECK010 %s
 // CHECK010:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK010-NOT:  "-lstandalone"
+// CHECK010-NOT:  crt0_standalone.o
+// CHECK010:   crt1.o
 // CHECK010:   "-L/tmp"
+// CHECK010-NOT:  "-lstandalone"

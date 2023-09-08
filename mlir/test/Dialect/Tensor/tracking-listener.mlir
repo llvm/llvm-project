@@ -140,3 +140,14 @@ func.func @non_cast_like_extract_slice() {
       {replacement_0 = 0} : tensor<1x5x1x1xf32> to tensor<3xf32>
   return
 }
+
+// -----
+
+func.func @non_cast_like_extract_slice_drop_non_unit_dim() {
+  // expected-error @below {{listener could not find replacement op}}
+  %0 = "test.foo"() {replaced} : () -> (tensor<f32>)
+  %1 = "test.foo"() : () -> (tensor<1x5x1x1xf32>)
+  %2 = tensor.extract_slice %1[0, 0, 0, 0][1, 1, 1, 1][1, 1, 1, 1]
+      {replacement_0 = 0} : tensor<1x5x1x1xf32> to tensor<f32>
+  return
+}

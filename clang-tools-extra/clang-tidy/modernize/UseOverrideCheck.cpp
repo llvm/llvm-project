@@ -85,8 +85,7 @@ parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
 }
 
 static StringRef getText(const Token &Tok, const SourceManager &Sources) {
-  return StringRef(Sources.getCharacterData(Tok.getLocation()),
-                   Tok.getLength());
+  return {Sources.getCharacterData(Tok.getLocation()), Tok.getLength()};
 }
 
 void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {

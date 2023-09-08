@@ -15,37 +15,48 @@
 #error "Invalid file include"
 #endif
 
+#define STORE_IMPL(insns, reg, val)                                            \
+  LIBC_INLINE_ASM(#insns " " #reg ", %0\n\t" : : "m"(val) :)
+
+#ifdef LIBC_TARGET_ARCH_IS_RISCV32
+#define STORE(reg, val) STORE_IMPL(sw, reg, val)
+#define STORE_FP(reg, val) STORE_IMPL(fsw, reg, val)
+#else
+#define STORE(reg, val) STORE_IMPL(sd, reg, val)
+#define STORE_FP(reg, val) STORE_IMPL(fsd, reg, val)
+#endif
+
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
-  LIBC_INLINE_ASM("sd ra, %0\n\t" : : "m"(buf->__pc) :);
-  LIBC_INLINE_ASM("sd s0, %0\n\t" : : "m"(buf->__regs[0]) :);
-  LIBC_INLINE_ASM("sd s1, %0\n\t" : : "m"(buf->__regs[1]) :);
-  LIBC_INLINE_ASM("sd s2, %0\n\t" : : "m"(buf->__regs[2]) :);
-  LIBC_INLINE_ASM("sd s3, %0\n\t" : : "m"(buf->__regs[3]) :);
-  LIBC_INLINE_ASM("sd s4, %0\n\t" : : "m"(buf->__regs[4]) :);
-  LIBC_INLINE_ASM("sd s5, %0\n\t" : : "m"(buf->__regs[5]) :);
-  LIBC_INLINE_ASM("sd s6, %0\n\t" : : "m"(buf->__regs[6]) :);
-  LIBC_INLINE_ASM("sd s7, %0\n\t" : : "m"(buf->__regs[7]) :);
-  LIBC_INLINE_ASM("sd s8, %0\n\t" : : "m"(buf->__regs[8]) :);
-  LIBC_INLINE_ASM("sd s9, %0\n\t" : : "m"(buf->__regs[9]) :);
-  LIBC_INLINE_ASM("sd s10, %0\n\t" : : "m"(buf->__regs[10]) :);
-  LIBC_INLINE_ASM("sd s11, %0\n\t" : : "m"(buf->__regs[11]) :);
-  LIBC_INLINE_ASM("sd sp, %0\n\t" : : "m"(buf->__sp) :);
+  STORE(ra, buf->__pc);
+  STORE(s0, buf->__regs[0]);
+  STORE(s1, buf->__regs[1]);
+  STORE(s2, buf->__regs[2]);
+  STORE(s3, buf->__regs[3]);
+  STORE(s4, buf->__regs[4]);
+  STORE(s5, buf->__regs[5]);
+  STORE(s6, buf->__regs[6]);
+  STORE(s7, buf->__regs[7]);
+  STORE(s8, buf->__regs[8]);
+  STORE(s9, buf->__regs[9]);
+  STORE(s10, buf->__regs[10]);
+  STORE(s11, buf->__regs[11]);
+  STORE(sp, buf->__sp);
 
 #if __riscv_float_abi_double
-  LIBC_INLINE_ASM("fsd fs0, %0\n\t" : : "m"(buf->__fpregs[0]) :);
-  LIBC_INLINE_ASM("fsd fs1, %0\n\t" : : "m"(buf->__fpregs[1]) :);
-  LIBC_INLINE_ASM("fsd fs2, %0\n\t" : : "m"(buf->__fpregs[2]) :);
-  LIBC_INLINE_ASM("fsd fs3, %0\n\t" : : "m"(buf->__fpregs[3]) :);
-  LIBC_INLINE_ASM("fsd fs4, %0\n\t" : : "m"(buf->__fpregs[4]) :);
-  LIBC_INLINE_ASM("fsd fs5, %0\n\t" : : "m"(buf->__fpregs[5]) :);
-  LIBC_INLINE_ASM("fsd fs6, %0\n\t" : : "m"(buf->__fpregs[6]) :);
-  LIBC_INLINE_ASM("fsd fs7, %0\n\t" : : "m"(buf->__fpregs[7]) :);
-  LIBC_INLINE_ASM("fsd fs8, %0\n\t" : : "m"(buf->__fpregs[8]) :);
-  LIBC_INLINE_ASM("fsd fs9, %0\n\t" : : "m"(buf->__fpregs[9]) :);
-  LIBC_INLINE_ASM("fsd fs10, %0\n\t" : : "m"(buf->__fpregs[10]) :);
-  LIBC_INLINE_ASM("fsd fs11, %0\n\t" : : "m"(buf->__fpregs[11]) :);
+  STORE_FP(fs0, buf->__fpregs[0]);
+  STORE_FP(fs1, buf->__fpregs[1]);
+  STORE_FP(fs2, buf->__fpregs[2]);
+  STORE_FP(fs3, buf->__fpregs[3]);
+  STORE_FP(fs4, buf->__fpregs[4]);
+  STORE_FP(fs5, buf->__fpregs[5]);
+  STORE_FP(fs6, buf->__fpregs[6]);
+  STORE_FP(fs7, buf->__fpregs[7]);
+  STORE_FP(fs8, buf->__fpregs[8]);
+  STORE_FP(fs9, buf->__fpregs[9]);
+  STORE_FP(fs10, buf->__fpregs[10]);
+  STORE_FP(fs11, buf->__fpregs[11]);
 #elif defined(__riscv_float_abi_single)
 #error "setjmp implementation not available for the target architecture."
 #endif

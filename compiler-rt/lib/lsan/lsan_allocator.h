@@ -69,6 +69,9 @@ using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 # if SANITIZER_FUCHSIA || defined(__powerpc64__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
+#  elif SANITIZER_RISCV64
+const uptr kAllocatorSpace = ~(uptr)0;
+const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 #  elif SANITIZER_APPLE
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.

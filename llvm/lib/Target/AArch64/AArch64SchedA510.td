@@ -74,14 +74,14 @@ def : WriteRes<WriteIS, [CortexA510UnitALU]> { let Latency = 2; }     // Shift/S
 
 // MAC
 def : WriteRes<WriteIM32, [CortexA510UnitMAC]> { let Latency = 3; }   // 32-bit Multiply
-def : WriteRes<WriteIM64, [CortexA510UnitMAC]> { let Latency = 5; let ResourceCycles = [2];}   // 64-bit Multiply
+def : WriteRes<WriteIM64, [CortexA510UnitMAC]> { let Latency = 5; let ReleaseAtCycles = [2];}   // 64-bit Multiply
 
 // Div
 def : WriteRes<WriteID32, [CortexA510UnitDiv]> {
-  let Latency = 8; let ResourceCycles = [8];
+  let Latency = 8; let ReleaseAtCycles = [8];
 }
 def : WriteRes<WriteID64, [CortexA510UnitDiv]> {
-  let Latency = 16; let ResourceCycles = [16];
+  let Latency = 16; let ReleaseAtCycles = [16];
 }
 
 //===----------------------------------------------------------------------===//
@@ -94,7 +94,7 @@ class CortexA510Write<int n, ProcResourceKind res> : SchedWriteRes<[res]> {
 
 class CortexA510MCWrite<int n, int m, ProcResourceKind res> : SchedWriteRes<[res]> {
   let Latency = n;
-  let ResourceCycles = [m];
+  let ReleaseAtCycles = [m];
   let BeginGroup = 1;
 }
 
@@ -127,15 +127,15 @@ def : WriteRes<WriteLDHi, [CortexA510UnitLd]> { let Latency = 2; }
 def CortexA510WriteVLD1 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 3; }
 def CortexA510WriteVLD1SI : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 3; let SingleIssue = 1; }
 def CortexA510WriteVLD2 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 4;
-                                                  let ResourceCycles = [2]; }
+                                                  let ReleaseAtCycles = [2]; }
 def CortexA510WriteVLD3 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 5;
-                                                  let ResourceCycles = [3]; }
+                                                  let ReleaseAtCycles = [3]; }
 def CortexA510WriteVLD4 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 6;
-                                                  let ResourceCycles = [4]; }
+                                                  let ReleaseAtCycles = [4]; }
 def CortexA510WriteVLD6 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 5;
-                                                  let ResourceCycles = [3]; }
+                                                  let ReleaseAtCycles = [3]; }
 def CortexA510WriteVLD8 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 6;
-                                                  let ResourceCycles = [4]; }
+                                                  let ReleaseAtCycles = [4]; }
 
 def CortexA510WriteLDP1 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 3; }
 def CortexA510WriteLDP2 : SchedWriteRes<[CortexA510UnitLd]> { let Latency = 3; }
@@ -154,14 +154,14 @@ def : WriteRes<WriteSTX, [CortexA510UnitLdSt]> { let Latency = 3; }
 
 // Vector Store - Similar to vector loads, can take 1-3 cycles to issue.
 def : WriteRes<WriteVST, [CortexA510UnitLdSt]> { let Latency = 5;
-                                          let ResourceCycles = [2];}
+                                          let ReleaseAtCycles = [2];}
 def CortexA510WriteVST1 : SchedWriteRes<[CortexA510UnitLdSt]> { let Latency = 4; }
 def CortexA510WriteVST2 : SchedWriteRes<[CortexA510UnitLdSt]> { let Latency = 5;
-                                                  let ResourceCycles = [2]; }
+                                                  let ReleaseAtCycles = [2]; }
 def CortexA510WriteVST3 : SchedWriteRes<[CortexA510UnitLdSt]> { let Latency = 5;
-                                                  let ResourceCycles = [3]; }
+                                                  let ReleaseAtCycles = [3]; }
 def CortexA510WriteVST4 : SchedWriteRes<[CortexA510UnitLdSt]> { let Latency = 5;
-                                                  let ResourceCycles = [4]; }
+                                                  let ReleaseAtCycles = [4]; }
 
 def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
@@ -183,7 +183,7 @@ def : WriteRes<WriteFImm, [CortexA510UnitVALU]> { let Latency = 3; }
 
 class CortexA510VSt<int n> : SchedWriteRes<[CortexA510UnitLdSt]> {
   let RetireOOO = 1;
-  let ResourceCycles = [n];
+  let ReleaseAtCycles = [n];
 }
 
 def CortexA510VSt0      : SchedWriteRes<[CortexA510UnitLdSt]> {
@@ -202,20 +202,20 @@ def : WriteRes<WriteFMul, [CortexA510UnitVMAC]> { let Latency = 4; }
 
 let RetireOOO = 1 in {
 def : WriteRes<WriteFDiv, [CortexA510UnitVMC]> { let Latency = 22;
-                                            let ResourceCycles = [29]; }
+                                            let ReleaseAtCycles = [29]; }
 def CortexA510WriteVMAC : SchedWriteRes<[CortexA510UnitVMAC]> { let Latency = 4; }
 def CortexA510WriteFDivHP : SchedWriteRes<[CortexA510UnitVMC]> { let Latency = 8;
-                                                     let ResourceCycles = [5]; }
+                                                     let ReleaseAtCycles = [5]; }
 def CortexA510WriteFDivSP : SchedWriteRes<[CortexA510UnitVMC]> { let Latency = 13;
-                                                     let ResourceCycles = [10]; }
+                                                     let ReleaseAtCycles = [10]; }
 def CortexA510WriteFDivDP : SchedWriteRes<[CortexA510UnitVMC]> { let Latency = 22;
-                                                     let ResourceCycles = [19]; }
+                                                     let ReleaseAtCycles = [19]; }
 def CortexA510WriteFSqrtHP : SchedWriteRes<[CortexA510UnitVMC]> { let Latency = 8;
-                                                      let ResourceCycles = [5]; }
+                                                      let ReleaseAtCycles = [5]; }
 def CortexA510WriteFSqrtSP : SchedWriteRes<[CortexA510UnitVMC]> { let Latency = 12;
-                                                      let ResourceCycles = [9]; }
+                                                      let ReleaseAtCycles = [9]; }
 def CortexA510WriteFSqrtDP : SchedWriteRes<[CortexA510UnitVMC]> { let Latency = 22;
-                                                      let ResourceCycles = [19]; }
+                                                      let ReleaseAtCycles = [19]; }
 }
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.

@@ -117,8 +117,6 @@ class APIDefaultConstructorTestCase(TestBase):
 
         sb_debugger.fuzz_obj(obj)
 
-    # darwin: This test passes with swig 3.0.2, fails w/3.0.5 other tests fail
-    # with 2.0.12 http://llvm.org/pr23488
     def test_SBError(self):
         obj = lldb.SBError()
         if self.TraceOn():
@@ -225,9 +223,6 @@ class APIDefaultConstructorTestCase(TestBase):
 
         sb_listener.fuzz_obj(obj)
 
-    # Py3 asserts due to a bug in SWIG.  Trying to upstream a patch to fix
-    # this in 3.0.8
-    @skipIf(py_version=[">=", (3, 0)], swig_version=["<", (3, 0, 8)])
     def test_SBModule(self):
         obj = lldb.SBModule()
         if self.TraceOn():

@@ -33,7 +33,7 @@ TEST(LlvmLibcLog10Test, SpecialNumbers) {
 }
 
 TEST(LlvmLibcLog10Test, TrickyInputs) {
-  constexpr int N = 35;
+  constexpr int N = 36;
   constexpr uint64_t INPUTS[N] = {
       0x3ff0000000000000, // x = 1.0
       0x4024000000000000, // x = 10.0
@@ -61,7 +61,8 @@ TEST(LlvmLibcLog10Test, TrickyInputs) {
       0x3fefffffffef06ad, 0x3fefde0f22c7d0eb, 0x225e7812faadb32f,
       0x3fee1076964c2903, 0x3fdfe93fff7fceb0, 0x3ff012631ad8df10,
       0x3fefbfdaa448ed98, 0x44b0c9705a25ce02, 0x2c88d301065c7f9b,
-      0x30160580e7268a99, 0x5ca04103b7eaa345, 0x19ad77dc4a40093f};
+      0x30160580e7268a99, 0x5ca04103b7eaa345, 0x19ad77dc4a40093f,
+      0x0000449fb5c8a96e};
   for (int i = 0; i < N; ++i) {
     double x = double(FPBits(INPUTS[i]));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,

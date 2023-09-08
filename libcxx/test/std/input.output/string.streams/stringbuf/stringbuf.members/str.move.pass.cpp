@@ -31,6 +31,12 @@ static void test() {
     assert(s == STR("testing"));
     assert(buf.view().empty());
   }
+  {
+    std::basic_stringbuf<CharT> buf;
+    std::basic_string<CharT> s = std::move(buf).str();
+    assert(s.empty());
+    assert(buf.view().empty());
+  }
 }
 
 int main(int, char**) {

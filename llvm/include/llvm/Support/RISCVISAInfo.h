@@ -22,6 +22,8 @@ struct RISCVExtensionInfo {
   unsigned MinorVersion;
 };
 
+void riscvExtensionsHelp();
+
 class RISCVISAInfo {
 public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
@@ -85,10 +87,12 @@ public:
 
   static bool isSupportedExtensionFeature(StringRef Ext);
   static bool isSupportedExtension(StringRef Ext);
+  static bool isSupportedExtensionWithVersion(StringRef Ext);
   static bool isSupportedExtension(StringRef Ext, unsigned MajorVersion,
                                    unsigned MinorVersion);
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo);
+  static std::string getTargetFeatureForExtension(StringRef Ext);
 
 private:
   RISCVISAInfo(unsigned XLen)

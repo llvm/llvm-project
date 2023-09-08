@@ -2741,7 +2741,7 @@ void ELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) const {
     return;
 
   std::vector<size_t> ChainLen(NBucket, 0);
-  // Go over all buckets and and note chain lengths of each bucket (total
+  // Go over all buckets and note chain lengths of each bucket (total
   // unique chain lengths).
   for (size_t B = 0; B < NBucket; ++B) {
     BitVector Visited(NChain);
@@ -3775,7 +3775,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
     if (!Fields[4].Str.empty()) {
       if (RelAddend < 0) {
         Addend = " - ";
-        RelAddend = std::abs(RelAddend);
+        RelAddend = -static_cast<uint64_t>(RelAddend);
       } else {
         Addend = " + ";
       }
@@ -7471,7 +7471,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         W.printBoolean("HasTailCall", BBE.hasTailCall());
         W.printBoolean("IsEHPad", BBE.isEHPad());
         W.printBoolean("CanFallThrough", BBE.canFallThrough());
-        W.printBoolean("HasIndirectBranch", BBE.MD.HasIndirectBranch);
+        W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
       }
     }
   }

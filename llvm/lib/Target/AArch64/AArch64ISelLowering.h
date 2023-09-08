@@ -58,13 +58,6 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
-  // Essentially like a normal COPY that works on GPRs, but cannot be
-  // rematerialised by passes like the simple register coalescer. It's
-  // required for SME when lowering calls because we cannot allow frame
-  // index calculations using addvl to slip in between the smstart/smstop
-  // and the bl instruction. The scalable vector length may change across
-  // the smstart/smstop boundary.
-  OBSCURE_COPY,
   SMSTART,
   SMSTOP,
   RESTORE_ZA,
@@ -215,6 +208,9 @@ enum NodeType : unsigned {
   SRSHR_I,
   URSHR_I,
 
+  // Vector narrowing shift by immediate (bottom)
+  RSHRNB_I,
+
   // Vector shift by constant and insert
   VSLI,
   VSRI,
@@ -245,6 +241,9 @@ enum NodeType : unsigned {
   // Only the lower result lane is defined.
   SADDV,
   UADDV,
+
+  // Unsigned sum Long across Vector
+  UADDLV,
 
   // Add Pairwise of two vectors
   ADDP,
@@ -502,8 +501,8 @@ enum Rounding {
 const unsigned RoundingBitsPos = 22;
 
 // Registers used to pass function arguments.
-const ArrayRef<MCPhysReg> getGPRArgRegs();
-const ArrayRef<MCPhysReg> getFPRArgRegs();
+ArrayRef<MCPhysReg> getGPRArgRegs();
+ArrayRef<MCPhysReg> getFPRArgRegs();
 
 } // namespace AArch64
 

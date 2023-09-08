@@ -1,7 +1,8 @@
 // Purpose:
 //      Check that using an undeclared address gives a useful error message.
 //
-// RUN: not %dexter_regression_test -v -- %s | FileCheck %s --match-full-lines
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: not %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s --match-full-lines
 
 
 int main() {

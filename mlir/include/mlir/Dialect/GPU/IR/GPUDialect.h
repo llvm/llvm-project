@@ -16,13 +16,14 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/DLTI/Traits.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -165,7 +166,7 @@ public:
 void addAsyncDependency(Operation *op, Value token);
 
 // Handle types for sparse.
-enum class SparseHandleKind { SpMat, DnTensor };
+enum class SparseHandleKind { SpMat, DnTensor, SpGEMMOp };
 
 template <SparseHandleKind K>
 class SparseHandleType
@@ -178,6 +179,7 @@ public:
 
 using SparseDnTensorHandleType = SparseHandleType<SparseHandleKind::DnTensor>;
 using SparseSpMatHandleType = SparseHandleType<SparseHandleKind::SpMat>;
+using SparseSpGEMMOpHandleType = SparseHandleType<SparseHandleKind::SpGEMMOp>;
 
 } // namespace gpu
 } // namespace mlir

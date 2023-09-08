@@ -335,6 +335,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   Allocator->releaseToOS(scudo::ReleaseToOS::Force);
   scudo::ScopedString Str;
   Allocator->getStats(&Str);
+  Allocator->getFragmentationInfo(&Str);
   Str.output();
 }
 

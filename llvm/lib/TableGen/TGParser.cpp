@@ -35,20 +35,20 @@ namespace llvm {
 
 struct SubClassReference {
   SMRange RefRange;
-  Record *Rec;
+  Record *Rec = nullptr;
   SmallVector<ArgumentInit *, 4> TemplateArgs;
 
-  SubClassReference() : Rec(nullptr) {}
+  SubClassReference() = default;
 
   bool isInvalid() const { return Rec == nullptr; }
 };
 
 struct SubMultiClassReference {
   SMRange RefRange;
-  MultiClass *MC;
+  MultiClass *MC = nullptr;
   SmallVector<ArgumentInit *, 4> TemplateArgs;
 
-  SubMultiClassReference() : MC(nullptr) {}
+  SubMultiClassReference() = default;
 
   bool isInvalid() const { return MC == nullptr; }
   void dump() const;
@@ -593,10 +593,11 @@ bool TGParser::resolveArguments(Record *Rec, ArrayRef<ArgumentInit *> ArgValues,
   for (auto *UnsolvedArgName : UnsolvedArgNames) {
     Init *Default = Rec->getValue(UnsolvedArgName)->getValue();
     if (!Default->isComplete()) {
-      return Error(Loc, "value not specified for template argument (" +
-                            UnsolvedArgName->getAsUnquotedString() +
-                            ") of multiclass '" + Rec->getNameInitAsString() +
-                            "'");
+      std::string Name = UnsolvedArgName->getAsUnquotedString();
+      Error(Loc, "value not specified for template argument '" + Name + "'");
+      PrintNote(Rec->getFieldLoc(Name),
+                "declared in '" + Rec->getNameInitAsString() + "'");
+      return true;
     }
     ArgValueHandler(UnsolvedArgName, Default);
   }

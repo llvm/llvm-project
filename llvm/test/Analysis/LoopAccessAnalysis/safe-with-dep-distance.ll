@@ -4,7 +4,7 @@
 ;   for (i = 0; i < n; i++)
 ;    A[i + 4] = A[i] * 2;
 
-; CHECK: Memory dependences are safe with a maximum dependence distance of 8 bytes
+; CHECK: Memory dependences are safe with a maximum safe vector width of 64 bits
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"

@@ -495,7 +495,6 @@ namespace Elision {
     // CHECK:      call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[X]])
   }
 
-  // rdar://problem/8433352
   // CHECK: define{{.*}} void @_ZN7Elision5test5Ev(ptr noalias sret([[A]]) align 8
   struct B { A a; B(); };
   A test5() {

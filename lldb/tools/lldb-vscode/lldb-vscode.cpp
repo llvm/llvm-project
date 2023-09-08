@@ -53,6 +53,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
@@ -75,11 +76,11 @@ typedef int socklen_t;
 using namespace lldb_vscode;
 
 namespace {
+using namespace llvm::opt;
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -92,12 +93,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr llvm::opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {PREFIX,      NAME,      HELPTEXT,                                           \
-   METAVAR,     OPT_##ID,  llvm::opt::Option::KIND##Class,                     \
-   PARAM,       FLAGS,     OPT_##GROUP,                                        \
-   OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -1742,7 +1738,7 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     // selected target after these commands are run.
     g_vsc.target = g_vsc.debugger.GetSelectedTarget();
     // Make sure the process is launched and stopped at the entry point before
-    // proceeding as the the launch commands are not run using the synchronous
+    // proceeding as the launch commands are not run using the synchronous
     // mode.
     error = g_vsc.WaitForProcessToStop(timeout_seconds);
   }
@@ -3255,7 +3251,7 @@ void request_variables(const llvm::json::Object &request) {
         break;
 
       int64_t var_ref = 0;
-      if (variable.MightHaveChildren()) {
+      if (variable.MightHaveChildren() || variable.IsSynthetic()) {
         var_ref = g_vsc.variables.InsertExpandableVariable(
             variable, /*is_permanent=*/false);
       }
@@ -3268,23 +3264,36 @@ void request_variables(const llvm::json::Object &request) {
     // children.
     lldb::SBValue variable = g_vsc.variables.GetVariable(variablesReference);
     if (variable.IsValid()) {
-      const auto num_children = variable.GetNumChildren();
-      const int64_t end_idx = start + ((count == 0) ? num_children : count);
-      for (auto i = start; i < end_idx; ++i) {
-        lldb::SBValue child = variable.GetChildAtIndex(i);
+      auto addChild = [&](lldb::SBValue child,
+                          std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
-          break;
+          return;
         if (child.MightHaveChildren()) {
           auto is_permanent =
               g_vsc.variables.IsPermanentVariableReference(variablesReference);
           auto childVariablesReferences =
               g_vsc.variables.InsertExpandableVariable(child, is_permanent);
-          variables.emplace_back(CreateVariable(child, childVariablesReferences,
-                                                childVariablesReferences, hex));
+          variables.emplace_back(CreateVariable(
+              child, childVariablesReferences, childVariablesReferences, hex,
+              /*is_name_duplicated=*/false, custom_name));
         } else {
-          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex));
+          variables.emplace_back(CreateVariable(child, 0, INT64_MAX, hex,
+                                                /*is_name_duplicated=*/false,
+                                                custom_name));
         }
-      }
+      };
+      const int64_t num_children = variable.GetNumChildren();
+      int64_t end_idx = start + ((count == 0) ? num_children : count);
+      int64_t i = start;
+      for (; i < end_idx && i < num_children; ++i)
+        addChild(variable.GetChildAtIndex(i));
+
+      // If we haven't filled the count quota from the request, we insert a new
+      // "[raw]" child that can be used to inspect the raw version of a
+      // synthetic member. That eliminates the need for the user to go to the
+      // debug console and type `frame var <variable> to get these values.
+      if (variable.IsSynthetic() && i == num_children)
+        addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
   }
   llvm::json::Object body;

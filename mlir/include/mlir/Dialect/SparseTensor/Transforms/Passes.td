@@ -102,6 +102,19 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
              clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
                         "any-storage-any-loop",
                         "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"gpuDataTransfer", "gpu-data-transfer-strategy", "mlir::GPUDataTransferStrategy",
+            "mlir::GPUDataTransferStrategy::kRegularDMA",
+            "Set the data transfer strategy", [{llvm::cl::values(
+               clEnumValN(mlir::GPUDataTransferStrategy::kRegularDMA,
+                     "regular-dma",
+                     "Default option: malloc on host without additional "
+                     "options or care and then use DMA to copy the data"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kPinnedDMA, "pinned-dma",
+                     "Based on the default option, pin the host memory to "
+                     "accelerate the data transfer"),
+          clEnumValN(mlir::GPUDataTransferStrategy::kZeroCopy, "zero-copy",
+                     "Use zero-copy to perform the data transfer from the host "
+                     "to the GPU"))}]>,
     Option<"enableGPULibgen", "enable-gpu-libgen", "bool",
            "false",
            "Enable GPU acceleration by means of direct library calls (like cuSPARSE)">,
@@ -356,6 +369,25 @@ def StorageSpecifierToLLVM : Pass<"sparse-storage-specifier-to-llvm", "ModuleOp"
   let dependentDialects = [
     "arith::ArithDialect",
     "LLVM::LLVMDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
+def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "ModuleOp"> {
+  let summary = "Mini-pipeline that combines bufferization and sparsifiation";
+  let description = [{
+     This pass forms a mini-pipeline that combines bufferization and sparsifiation.
+  }];
+  let constructor = "mlir::createSparsificationAndBufferizationPass()";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "gpu::GPUDialect",
+    "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }

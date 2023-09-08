@@ -11,7 +11,7 @@ define <8 x i8> @trn1.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.v.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vadd.vi v8, v11, -1
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
@@ -27,7 +27,7 @@ define <8 x i8> @trn2.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vadd.vi v12, v11, 1
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.v.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
@@ -46,7 +46,7 @@ define <16 x i8> @trn1.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; RV32-NEXT:    lui a0, 11
 ; RV32-NEXT:    addi a0, a0, -1366
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.v.x v0, a0
+; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV32-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
@@ -61,7 +61,7 @@ define <16 x i8> @trn1.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; RV64-NEXT:    lui a0, 11
 ; RV64-NEXT:    addiw a0, a0, -1366
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.v.x v0, a0
+; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV64-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; RV64-NEXT:    vmv.v.v v8, v10
@@ -80,7 +80,7 @@ define <16 x i8> @trn2.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; RV32-NEXT:    lui a0, 11
 ; RV32-NEXT:    addi a0, a0, -1366
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:    vmv.v.x v0, a0
+; RV32-NEXT:    vmv.s.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV32-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
@@ -95,7 +95,7 @@ define <16 x i8> @trn2.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; RV64-NEXT:    lui a0, 11
 ; RV64-NEXT:    addiw a0, a0, -1366
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:    vmv.v.x v0, a0
+; RV64-NEXT:    vmv.s.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; RV64-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; RV64-NEXT:    vmv.v.v v8, v10
@@ -141,7 +141,7 @@ define <8 x i16> @trn1.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.v.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vadd.vi v8, v11, -1
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
@@ -157,7 +157,7 @@ define <8 x i16> @trn2.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vadd.vi v12, v11, 1
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.v.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
@@ -355,7 +355,7 @@ define <8 x half> @trn1.v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrgather.vv v10, v8, v11
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.v.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vadd.vi v8, v11, -1
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
@@ -371,7 +371,7 @@ define <8 x half> @trn2.v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vadd.vi v12, v11, 1
 ; CHECK-NEXT:    li a0, 170
-; CHECK-NEXT:    vmv.v.x v0, a0
+; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
 ; CHECK-NEXT:    vrgather.vv v10, v9, v11, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10

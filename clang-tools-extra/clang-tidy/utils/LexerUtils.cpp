@@ -47,11 +47,11 @@ SourceLocation findPreviousTokenStart(SourceLocation Start,
                                       const SourceManager &SM,
                                       const LangOptions &LangOpts) {
   if (Start.isInvalid() || Start.isMacroID())
-    return SourceLocation();
+    return {};
 
   SourceLocation BeforeStart = Start.getLocWithOffset(-1);
   if (BeforeStart.isInvalid() || BeforeStart.isMacroID())
-    return SourceLocation();
+    return {};
 
   return Lexer::GetBeginningOfToken(BeforeStart, SM, LangOpts);
 }
@@ -61,16 +61,16 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
                                      const LangOptions &LangOpts,
                                      tok::TokenKind TK) {
   if (Start.isInvalid() || Start.isMacroID())
-    return SourceLocation();
+    return {};
 
   while (true) {
     SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
     if (L.isInvalid() || L.isMacroID())
-      return SourceLocation();
+      return {};
 
     Token T;
     if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
-      return SourceLocation();
+      return {};
 
     if (T.is(TK))
       return T.getLocation();
@@ -230,7 +230,7 @@ static SourceLocation getSemicolonAfterStmtEndLoc(const SourceLocation &EndLoc,
   if (NextTok && NextTok->is(tok::TokenKind::semi))
     return NextTok->getLocation();
 
-  return SourceLocation();
+  return {};
 }
 
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,

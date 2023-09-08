@@ -66,7 +66,6 @@ int main(void) {
   return 0;
 }
 
-// rdar://problem/7992749
 typedef Root<P1> P1Object;
 int test10(void) {
   return [P1Object maxValue];

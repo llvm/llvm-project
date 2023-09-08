@@ -149,7 +149,7 @@ LogicalResult emitc::ConstantOp::verify() {
 
   // Value must not be empty
   StringAttr strAttr = llvm::dyn_cast<StringAttr>(getValueAttr());
-  if (strAttr && strAttr.getValue().empty())
+  if (strAttr && strAttr.empty())
     return emitOpError() << "value must not be empty";
 
   auto value = cast<TypedAttr>(getValueAttr());
@@ -160,9 +160,7 @@ LogicalResult emitc::ConstantOp::verify() {
   return success();
 }
 
-OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) {
-  return getValue();
-}
+OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
 // IncludeOp
@@ -256,6 +254,12 @@ LogicalResult emitc::VariableOp::verify() {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// EmitC Enums
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/EmitC/IR/EmitCEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // EmitC Attributes

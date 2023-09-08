@@ -116,7 +116,7 @@ template <size_t Bits, bool Signed> struct BigInt {
         return lo;
       }
     } else {
-      return (static_cast<T>(val[1]) << 64) + lo;
+      return static_cast<T>((static_cast<T>(val[1]) << 64) + lo);
     }
   }
 
@@ -381,7 +381,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
     BigInt<Bits, Signed> quotient(0);
     BigInt<Bits, Signed> subtractor = other;
-    int cur_bit = subtractor.clz() - this->clz();
+    int cur_bit = static_cast<int>(subtractor.clz() - this->clz());
     subtractor.shift_left(cur_bit);
 
     for (; cur_bit >= 0 && *this > 0; --cur_bit, subtractor.shift_right(1)) {
@@ -905,6 +905,24 @@ template <size_t Bits> struct is_unsigned<UInt<Bits>> : public cpp::true_type {
 
 template <size_t Bits>
 struct make_unsigned<Int<Bits>> : type_identity<UInt<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_unsigned<UInt<Bits>> : type_identity<UInt<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_signed<Int<Bits>> : type_identity<Int<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
   static_assert(Bits > 0 && Bits % 64 == 0,
                 "Number of bits in Int should be a multiple of 64.");
 };

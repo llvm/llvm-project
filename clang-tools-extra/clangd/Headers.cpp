@@ -286,11 +286,11 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
-  bool IsSystem = false;
+  bool IsAngled = false;
   std::string Suggested;
   if (HeaderSearchInfo) {
     Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
-        InsertedHeader.File, BuildDir, IncludingFile, &IsSystem);
+        InsertedHeader.File, BuildDir, IncludingFile, &IsAngled);
   } else {
     // Calculate include relative to including file only.
     StringRef IncludingDir = llvm::sys::path::parent_path(IncludingFile);
@@ -303,7 +303,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   // FIXME: should we allow (some limited number of) "../header.h"?
   if (llvm::sys::path::is_absolute(Suggested))
     return std::nullopt;
-  if (IsSystem)
+  if (IsAngled)
     Suggested = "<" + Suggested + ">";
   else
     Suggested = "\"" + Suggested + "\"";

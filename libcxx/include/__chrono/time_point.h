@@ -49,13 +49,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit time_point(const duration& __d) : __d_(__d) {}
 
     // conversions
-    template <class _Duration2>
+    template <class _Duration2, __enable_if_t<is_convertible<_Duration2, duration>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
-    time_point(const time_point<clock, _Duration2>& __t,
-        typename enable_if
-        <
-            is_convertible<_Duration2, duration>::value
-        >::type* = nullptr)
+    time_point(const time_point<clock, _Duration2>& __t)
             : __d_(__t.time_since_epoch()) {}
 
     // observer
@@ -93,49 +89,33 @@ time_point_cast(const time_point<_Clock, _Duration>& __t)
 }
 
 #if _LIBCPP_STD_VER >= 17
-template <class _ToDuration, class _Clock, class _Duration>
+template <class _ToDuration, class _Clock, class _Duration, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    time_point<_Clock, _ToDuration>
->::type
+time_point<_Clock, _ToDuration>
 floor(const time_point<_Clock, _Duration>& __t)
 {
     return time_point<_Clock, _ToDuration>{chrono::floor<_ToDuration>(__t.time_since_epoch())};
 }
 
-template <class _ToDuration, class _Clock, class _Duration>
+template <class _ToDuration, class _Clock, class _Duration, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    time_point<_Clock, _ToDuration>
->::type
+time_point<_Clock, _ToDuration>
 ceil(const time_point<_Clock, _Duration>& __t)
 {
     return time_point<_Clock, _ToDuration>{chrono::ceil<_ToDuration>(__t.time_since_epoch())};
 }
 
-template <class _ToDuration, class _Clock, class _Duration>
+template <class _ToDuration, class _Clock, class _Duration, enable_if_t<__is_duration<_ToDuration>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    __is_duration<_ToDuration>::value,
-    time_point<_Clock, _ToDuration>
->::type
+time_point<_Clock, _ToDuration>
 round(const time_point<_Clock, _Duration>& __t)
 {
     return time_point<_Clock, _ToDuration>{chrono::round<_ToDuration>(__t.time_since_epoch())};
 }
 
-template <class _Rep, class _Period>
+template <class _Rep, class _Period, enable_if_t<numeric_limits<_Rep>::is_signed, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if
-<
-    numeric_limits<_Rep>::is_signed,
-    duration<_Rep, _Period>
->::type
+duration<_Rep, _Period>
 abs(duration<_Rep, _Period> __d)
 {
     return __d >= __d.zero() ? +__d : -__d;

@@ -382,6 +382,8 @@ private:
   bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
 
+  bool OptNone;
+
   // S_ENDPGM instructions before which we should insert a DEALLOC_VGPRS
   // message.
   DenseSet<MachineInstr *> ReleaseVGPRInsts;
@@ -588,12 +590,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
                                                  AMDGPU::OpName::data1),
                       CurrScore);
         }
-      } else if (SIInstrInfo::isAtomicRet(Inst) &&
-                 Inst.getOpcode() != AMDGPU::DS_GWS_INIT &&
-                 Inst.getOpcode() != AMDGPU::DS_GWS_SEMA_V &&
-                 Inst.getOpcode() != AMDGPU::DS_GWS_SEMA_BR &&
-                 Inst.getOpcode() != AMDGPU::DS_GWS_SEMA_P &&
-                 Inst.getOpcode() != AMDGPU::DS_GWS_BARRIER &&
+      } else if (SIInstrInfo::isAtomicRet(Inst) && !SIInstrInfo::isGWS(Inst) &&
                  Inst.getOpcode() != AMDGPU::DS_APPEND &&
                  Inst.getOpcode() != AMDGPU::DS_CONSUME &&
                  Inst.getOpcode() != AMDGPU::DS_ORDERED_COUNT) {
@@ -681,7 +678,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       setRegScore(RegNo + NUM_ALL_VGPRS, t, CurrScore);
     }
 #endif
-  } else {
+  } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
     for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
       auto &Op = Inst.getOperand(I);
@@ -692,6 +689,10 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
         if (Interval.first >= NUM_ALL_VGPRS)
           continue;
         if (updateVMCntOnly(Inst)) {
+          // updateVMCntOnly should only leave us with VGPRs
+          // MUBUF, MTBUF, MIMG, FlatGlobal, and FlatScratch only have VGPR/AGPR
+          // defs. That's required for a sane index into `VgprMemTypes` below
+          assert(TRI->isVectorRegister(*MRI, Op.getReg()));
           VmemType V = getVmemType(Inst);
           for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo)
             VgprVmemTypes[RegNo] |= 1 << V;
@@ -1040,7 +1041,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // do this if there are no outstanding scratch stores.
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 &&
+    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !OptNone &&
         ScoreBrackets.getScoreRange(VS_CNT) != 0 &&
         !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
       ReleaseVGPRInsts.insert(&MI);
@@ -1821,6 +1822,9 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   ForceEmitZeroWaitcnts = ForceEmitZeroFlag;
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
+
+  OptNone = MF.getFunction().hasOptNone() ||
+            MF.getTarget().getOptLevel() == CodeGenOpt::None;
 
   HardwareLimits Limits = {};
   Limits.VmcntMax = AMDGPU::getVmcntBitMask(IV);

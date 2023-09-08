@@ -3462,8 +3462,8 @@ struct OmpDeviceTypeClause {
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
-  ENUM_CLASS(DirectiveNameModifier, Parallel, Target, TargetEnterData,
-      TargetExitData, TargetData, TargetUpdate, Taskloop, Task)
+  ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
+      TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
   std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
 };
 
@@ -3544,17 +3544,17 @@ struct OmpInReductionClause {
 //                                   variable-name-list)
 //                allocate-modifier -> allocator | align
 struct OmpAllocateClause {
-  TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   struct AllocateModifier {
-    UNION_CLASS_BOILERPLATE(AllocateModifier);
     WRAPPER_CLASS(Allocator, ScalarIntExpr);
     WRAPPER_CLASS(Align, ScalarIntExpr);
     struct ComplexModifier {
       TUPLE_CLASS_BOILERPLATE(ComplexModifier);
       std::tuple<Allocator, Align> t;
     };
+    UNION_CLASS_BOILERPLATE(AllocateModifier);
     std::variant<Allocator, ComplexModifier, Align> u;
   };
+  TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   std::tuple<std::optional<AllocateModifier>, OmpObjectList> t;
 };
 
@@ -4244,11 +4244,10 @@ struct OpenACCDeclarativeConstruct {
 };
 
 // OpenACC directives enclosing do loop
+EMPTY_CLASS(AccEndLoop);
 struct OpenACCLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCLoopConstruct);
-  OpenACCLoopConstruct(AccBeginLoopDirective &&a)
-      : t({std::move(a), std::nullopt}) {}
-  std::tuple<AccBeginLoopDirective, std::optional<DoConstruct>> t;
+  std::tuple<AccBeginLoopDirective, DoConstruct, std::optional<AccEndLoop>> t;
 };
 
 struct OpenACCStandaloneConstruct {

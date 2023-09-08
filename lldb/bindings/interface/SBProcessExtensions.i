@@ -79,6 +79,8 @@ STRING_EXTENSION_OUTSIDE(SBProcess)
             '''Return the number of threads in a lldb.SBProcess object.'''
             return self.GetNumThreads()
 
+        def __int__(self):
+            return self.GetProcessID()
 
         threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
         thread = property(get_threads_access_object, None, doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')

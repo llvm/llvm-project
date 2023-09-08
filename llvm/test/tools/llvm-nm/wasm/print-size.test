@@ -1,0 +1,46 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-nm --print-size %t.o | FileCheck %s --strict-whitespace
+# RUN: llvm-nm -S %t.o | FileCheck %s --strict-whitespace
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:       []
+        ReturnTypes:      []
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            200008808080800041000B
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   6
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           0
+        Content:         '00000000'
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            a_func
+        Flags:           [  ]
+        Function:        0
+      - Index:           1
+        Kind:            DATA
+        Name:            a_data_symbol
+        Flags:           [  ]
+        Segment:         0
+        Size:            32
+
+# CHECK: 00000000 00000020 D a_data_symbol
+# CHECK: 00000001 00000000 T a_func

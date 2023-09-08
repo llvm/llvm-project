@@ -96,10 +96,10 @@ extern bool Initialized;
 } // namespace omp
 } // namespace llvm
 
+#pragma pop_macro("DEBUG_PREFIX")
+
 #else
 #define performIfOmptInitialized(stmt)
 #endif // OMPT_SUPPORT
-
-#pragma pop_macro("DEBUG_PREFIX")
 
 #endif // _OMPTCALLBACK_H

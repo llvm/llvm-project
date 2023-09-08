@@ -9,10 +9,13 @@
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -219,6 +222,15 @@ static void printAttributesOp(OpAsmPrinter &p, AttributesOp op,
   interleaveComma(llvm::seq<int>(0, attrNames.size()), p,
                   [&](int i) { p << attrNames[i] << " = " << attrArgs[i]; });
   p << '}';
+}
+
+LogicalResult RegionOp::verify() {
+  if (IntegerAttr numberOfBlocks = getNumberOfBlocksAttr())
+    if (int64_t number = numberOfBlocks.getInt(); number <= 0) {
+      return emitOpError("the number of blocks is expected to be >= 1 but got ")
+             << number;
+    }
+  return success();
 }
 
 #include "mlir/Dialect/IRDL/IR/IRDLInterfaces.cpp.inc"

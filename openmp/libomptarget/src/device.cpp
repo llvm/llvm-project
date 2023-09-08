@@ -17,6 +17,8 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "Utilities.h"
+
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -530,6 +532,23 @@ void DeviceTy::init() {
   if (Ret != OFFLOAD_SUCCESS)
     return;
 
+  // Enables recording kernels if set.
+  llvm::omp::target::BoolEnvar OMPX_RecordKernel("LIBOMPTARGET_RECORD", false);
+  if (OMPX_RecordKernel) {
+    // Enables saving the device memory kernel output post execution if set.
+    llvm::omp::target::BoolEnvar OMPX_ReplaySaveOutput(
+        "LIBOMPTARGET_RR_SAVE_OUTPUT", false);
+    // Sets the maximum to pre-allocate device memory.
+    llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
+        "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
+    DP("Activating Record-Replay for Device %d with %lu GB memory\n",
+       RTLDeviceID, OMPX_DeviceMemorySize.get());
+
+    RTL->activate_record_replay(RTLDeviceID,
+                                OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
+                                true, OMPX_ReplaySaveOutput);
+  }
+
   IsInit = true;
 }
 
@@ -561,12 +580,14 @@ __tgt_target_table *DeviceTy::loadBinary(void *Img) {
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
+  void *TargetPtr = nullptr;
   OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
                     RegionInterface.getCallbacks<ompt_target_data_alloc>(),
-                    RTLDeviceID, HstPtr, Size,
+                    RTLDeviceID, HstPtr, &TargetPtr, Size,
                     /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
-  return RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  return TargetPtr;
 }
 
 int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {

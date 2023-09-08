@@ -441,12 +441,12 @@ define void @insert_col_q_v2f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %zn
 define void @test_sink_offset_operand(<vscale x 4 x i1> %pg, i32 %base, i32 %N) {
 ; CHECK-LABEL: test_sink_offset_operand:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:  .LBB28_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    subs w1, w1, #3
 ; CHECK-NEXT:    mov za0h.s[w12, 0], p0/m, z0.s
+; CHECK-NEXT:    subs w1, w1, #3
 ; CHECK-NEXT:    mov za0h.s[w12, 1], p0/m, z0.s
 ; CHECK-NEXT:    mov za0h.s[w12, 2], p0/m, z0.s
 ; CHECK-NEXT:    b.ne .LBB28_1

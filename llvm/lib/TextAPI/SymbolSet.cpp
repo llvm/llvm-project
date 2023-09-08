@@ -29,8 +29,5 @@ Symbol *SymbolSet::addGlobal(SymbolKind Kind, StringRef Name, SymbolFlags Flags,
 }
 
 const Symbol *SymbolSet::findSymbol(SymbolKind Kind, StringRef Name) const {
-  auto It = Symbols.find({Kind, Name});
-  if (It != Symbols.end())
-    return It->second;
-  return nullptr;
+  return Symbols.lookup({Kind, Name});
 }

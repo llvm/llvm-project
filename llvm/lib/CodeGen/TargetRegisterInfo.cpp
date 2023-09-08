@@ -56,12 +56,13 @@ TargetRegisterInfo::TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
                              const LaneBitmask *SRILaneMasks,
                              LaneBitmask SRICoveringLanes,
                              const RegClassInfo *const RCIs,
+                             const MVT::SimpleValueType *const RCVTLists,
                              unsigned Mode)
   : InfoDesc(ID), SubRegIndexNames(SRINames),
     SubRegIndexLaneMasks(SRILaneMasks),
     RegClassBegin(RCB), RegClassEnd(RCE),
     CoveringLanes(SRICoveringLanes),
-    RCInfos(RCIs), HwMode(Mode) {
+    RCInfos(RCIs), RCVTLists(RCVTLists), HwMode(Mode) {
 }
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;

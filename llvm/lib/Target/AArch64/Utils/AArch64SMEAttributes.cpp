@@ -20,9 +20,9 @@ void SMEAttrs::set(unsigned M, bool Enable) {
 
   assert(!(hasStreamingInterface() && hasStreamingCompatibleInterface()) &&
          "SM_Enabled and SM_Compatible are mutually exclusive");
-  assert(!(hasNewZAInterface() && hasSharedZAInterface()) &&
+  assert(!(hasNewZABody() && hasSharedZAInterface()) &&
          "ZA_New and ZA_Shared are mutually exclusive");
-  assert(!(hasNewZAInterface() && preservesZA()) &&
+  assert(!(hasNewZABody() && preservesZA()) &&
          "ZA_New and ZA_Preserved are mutually exclusive");
 }
 

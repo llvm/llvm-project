@@ -33,9 +33,11 @@ define void @test100_nofpelim() "frame-pointer"="all" {
 ; CHECK: sub sp, #508
 ; CHECK: sub sp, #508
 ; CHECK: sub sp, #508
-; CHECK: subs r4, r7, #7
-; CHECK: subs r4, #1
-; CHECK: mov sp, r4
+; CHECK: subs [[SCRATCH:r[0-7]]], r7, #7
+; CHECK: subs [[SCRATCH]], #1
+; CHECK: mov sp, [[SCRATCH]]
+; CHECK: pop
+; CHECK-SAME: [[SCRATCH]]
     %tmp = alloca [ 1524 x i8 ] , align 4
     ret void
 }
@@ -56,9 +58,11 @@ define void @test2_nofpelim() "frame-pointer"="all" {
 ; CHECK-LABEL: test2_nofpelim{{>?}}:
 ; CHECK: ldr [[TEMP:r[0-7]]],
 ; CHECK: add sp, [[TEMP]]
-; CHECK: subs r4, r7, #7
-; CHECK: subs r4, #1
-; CHECK: mov sp, r4
+; CHECK: subs [[SCRATCH:r[0-7]]], r7, #7
+; CHECK: subs [[SCRATCH]], #1
+; CHECK: mov sp, [[SCRATCH]]
+; CHECK: pop
+; CHECK-SAME: [[SCRATCH]]
     %tmp = alloca [ 1528 x i8 ] , align 4
     ret void
 }
@@ -85,8 +89,10 @@ define i32 @test3_nofpelim() "frame-pointer"="all" {
 ; CHECK: add sp, [[TEMP]]
 ; CHECK: ldr [[TEMP2:r[0-7]]],
 ; CHECK: add [[TEMP2]], sp
-; CHECK: subs r4, r7,
-; CHECK: mov sp, r4
+; CHECK: subs [[SCRATCH:r[0-7]]], r7,
+; CHECK: mov sp, [[SCRATCH]]
+; CHECK: pop
+; CHECK-SAME: [[SCRATCH]]
     %retval = alloca i32, align 4
     %tmp = alloca i32, align 4
     %a = alloca [805306369 x i8], align 8

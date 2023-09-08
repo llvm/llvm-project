@@ -249,6 +249,38 @@ func.func @vector_multi_reduction_parallel_middle(%arg0: vector<3x4x5xf32>, %acc
 //  CHECK-SAME:   %[[INPUT:.+]]: vector<3x4x5xf32>, %[[ACC:.+]]: vector<4xf32>
 //       CHECK: vector.transpose %[[INPUT]], [1, 0, 2] : vector<3x4x5xf32> to vector<4x3x5xf32>
 
+func.func private @scalable_dims(%A : vector<8x[4]x2xf32>, %B: vector<8x[4]xf32>) -> vector<8x[4]xf32> {
+  %0 = vector.multi_reduction <add>, %A, %B [2] : vector<8x[4]x2xf32> to vector<8x[4]xf32>
+  return %0 : vector<8x[4]xf32>
+}
+// CHECK-LABEL:   func.func private @scalable_dims(
+// CHECK-SAME:                                     %[[VAL_0:.*]]: vector<8x[4]x2xf32>,
+// CHECK-SAME:                                     %[[VAL_1:.*]]: vector<8x[4]xf32>) -> vector<8x[4]xf32> {
+// CHECK:           %[[VAL_2:.*]] = arith.constant dense<0.000000e+00> : vector<[32]xf32>
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_34:.*]] = arith.constant 31 : index
+
+// CHECK:           %[[VAL_35:.*]] = vector.extract %[[VAL_0]][0, 0] : vector<8x[4]x2xf32>
+// CHECK:           %[[VAL_36:.*]] = vector.extract %[[VAL_1]][0, 0] : vector<8x[4]xf32>
+// CHECK:           %[[VAL_37:.*]] = vector.reduction <add>, %[[VAL_35]], %[[VAL_36]] : vector<2xf32> into f32
+// CHECK:           %[[VAL_38:.*]] = vector.insertelement %[[VAL_37]], %[[VAL_2]]{{\[}}%[[VAL_3]] : index] : vector<[32]xf32>
+
+// CHECK:           %[[VAL_39:.*]] = vector.extract %[[VAL_0]][0, 1] : vector<8x[4]x2xf32>
+// CHECK:           %[[VAL_40:.*]] = vector.extract %[[VAL_1]][0, 1] : vector<8x[4]xf32>
+// CHECK:           %[[VAL_41:.*]] = vector.reduction <add>, %[[VAL_39]], %[[VAL_40]] : vector<2xf32> into f32
+// CHECK:           %[[VAL_42:.*]] = vector.insertelement %[[VAL_41]], %[[VAL_38]]{{\[}}%[[VAL_4]] : index] : vector<[32]xf32>
+
+// (...)
+
+// CHECK:           %[[VAL_159:.*]] = vector.extract %[[VAL_0]][7, 3] : vector<8x[4]x2xf32>
+// CHECK:           %[[VAL_160:.*]] = vector.extract %[[VAL_1]][7, 3] : vector<8x[4]xf32>
+// CHECK:           %[[VAL_161:.*]] = vector.reduction <add>, %[[VAL_159]], %[[VAL_160]] : vector<2xf32> into f32
+// CHECK:           %[[VAL_162:.*]] = vector.insertelement %[[VAL_161]], %{{.*}}{{\[}}%[[VAL_34]] : index] : vector<[32]xf32>
+
+// CHECK:           %[[VAL_163:.*]] = vector.shape_cast %[[VAL_162]] : vector<[32]xf32> to vector<8x[4]xf32>
+// CHECK:           return %[[VAL_163]] : vector<8x[4]xf32>
+
 transform.sequence failures(propagate) {
 ^bb1(%func_op: !transform.op<"func.func">):
   transform.apply_patterns to %func_op {

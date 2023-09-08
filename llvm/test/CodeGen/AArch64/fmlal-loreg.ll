@@ -41,13 +41,13 @@ define void @loop(ptr %out_tile, ptr %lhs_panel, ptr %rhs_panel, i32 noundef %K,
 ; CHECK-LABEL: loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:  .LBB1_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q2, [x1], #2
-; CHECK-NEXT:    ldr q3, [x2], #2
 ; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    ldr q3, [x2], #2
 ; CHECK-NEXT:    fmlal v0.4s, v3.4h, v2.h[0]
 ; CHECK-NEXT:    fmlal2 v1.4s, v3.4h, v2.h[0]
 ; CHECK-NEXT:    b.ne .LBB1_1
@@ -84,8 +84,8 @@ define void @sink(ptr %out_tile, ptr %lhs_panel, ptr %rhs_panel, i32 noundef %K,
 ; CHECK-LABEL: sink:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:  .LBB2_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q3, [x2], #2

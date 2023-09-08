@@ -1,4 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -triple x86_64-apple-darwin13 -Wno-shift-count-overflow -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-disable-checker=core.BitwiseShift -triple x86_64-apple-darwin13 -Wno-shift-count-overflow -verify %s
+
+// NOTE: This test file disables the checker core.BitwiseShift (which would
+// report all undefined behavior connected to bitwise shifts) to verify the
+// behavior of core.UndefinedBinaryOperatorResult (which resports cases when
+// the constant folding in BasicValueFactory produces an "undefined" result
+// from a shift or any other binary operator).
 
 void clang_analyzer_eval(int);
 #define CHECK(expr) if (!(expr)) return; clang_analyzer_eval(expr)
@@ -13,10 +19,6 @@ void testPersistentConstraints(int x, int y) {
 }
 
 int testConstantShifts_PR18073(int which) {
-  // FIXME: We should have a checker that actually specifically checks bitwise
-  // shifts against the width of the LHS's /static/ type, rather than just
-  // having BasicValueFactory return "undefined" when dealing with two constant
-  // operands.
   switch (which) {
   case 1:
     return 0ULL << 63; // no-warning

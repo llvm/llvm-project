@@ -26,11 +26,11 @@
 }>
 
 #SortedCOO2D = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
 }>
 
 #SortedCOO3D = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton_nu", "singleton" ]
 
 }>
 
@@ -40,7 +40,7 @@
 }>
 
 #COOSlice = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimSlices = [ (2, 2, 1), (12, 13, 1) ]
 }>
 

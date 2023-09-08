@@ -103,7 +103,7 @@ func.func @sparse_positions(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xi
 
 // -----
 
-#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed-nu", "singleton"]}>
+#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"]}>
 
 // CHECK-LABEL: func @sparse_indices_buffer(
 //  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #{{.*}}>)

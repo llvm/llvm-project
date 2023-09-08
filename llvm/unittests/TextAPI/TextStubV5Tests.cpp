@@ -197,8 +197,18 @@ TEST(TBDv5, ReadFile) {
       Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 0, 0)),
       Target(AK_arm64, PLATFORM_MACCATALYST, VersionTuple(14, 0)),
   };
+  std::set<Target> FileTargets{File->targets().begin(), File->targets().end()};
   EXPECT_EQ(mapToPlatformSet(AllTargets), File->getPlatforms());
   EXPECT_EQ(mapToArchitectureSet(AllTargets), File->getArchitectures());
+  EXPECT_EQ(FileTargets.size(), AllTargets.size());
+  for (const auto &Targ : AllTargets) {
+    auto FileTarg = FileTargets.find(Targ);
+    EXPECT_FALSE(FileTarg == FileTargets.end());
+    EXPECT_EQ(*FileTarg, Targ);
+    PackedVersion MD = Targ.MinDeployment;
+    PackedVersion FileMD = FileTarg->MinDeployment;
+    EXPECT_EQ(MD, FileMD);
+  }
 
   EXPECT_EQ(PackedVersion(1, 2, 0), File->getCurrentVersion());
   EXPECT_EQ(PackedVersion(1, 1, 0), File->getCompatibilityVersion());
@@ -1149,6 +1159,37 @@ TEST(TBDv5, InvalidMinOS) {
   EXPECT_FALSE(!!Result);
   std::string ErrorMessage = toString(Result.takeError());
   EXPECT_EQ("invalid min_deployment section\n", ErrorMessage);
+}
+
+TEST(TBDv5, SimSupport) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-macos",
+      "min_deployment": "11.1" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ],
+  "flags":[ 
+    { "attributes": ["sim_support"] }
+  ] 
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_arm64, PLATFORM_MACOS, VersionTuple(11, 1));
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+  EXPECT_TRUE(ReadFile->hasSimulatorSupport());
 }
 
 TEST(TBDv5, MergeIF) {

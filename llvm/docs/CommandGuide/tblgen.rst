@@ -507,31 +507,19 @@ llvm-tblgen Options
 
 .. option:: -gen-global-isel-combiner
 
-  (Deprecated, pending removal)
-  Generate legacy GlobalISel combiner.
-
-.. option:: -gen-global-isel-combiner-matchtable
-
-  Generate MatchTable-based GlobalISel combiner.
+  Generate GlobalISel combiner.
 
 .. option:: -combiners=list
 
-  Make -gen-global-isel-combiner and -gen-global-isel-combiner-matchtable
-  emit the specified combiners.
+  Make -gen-global-isel-combiner emit the specified combiners.
 
-.. option:: -gicombiner-show-expansions
+.. option:: -gicombiner-debug-cxxpreds
 
-  Make -gen-global-isel-combiner use C++ comments to indicate occurrences
-  of code expansion.
-
-.. option:: -gicombiner-stop-after-build
-
-  Make -gen-global-isel-combiner stop processing after building the match tree.
+  Add debug comments to all C++ predicates emitted by -gen-global-isel-combiner
 
 .. option:: -gicombiner-stop-after-parse
 
-  Make -gen-global-isel-combiner and -gen-global-isel-combiner-matchtable stop
-  processing after parsing rules and dump state.
+  Make -gen-global-isel-combiner stop processing after parsing rules and dump state.
 
 .. option:: -gen-instr-info
 

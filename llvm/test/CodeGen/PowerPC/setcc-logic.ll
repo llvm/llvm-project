@@ -30,9 +30,9 @@ define zeroext i1 @all_sign_bits_clear(i32 %P, i32 %Q)  {
 define zeroext i1 @all_bits_set(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: all_bits_set:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, -1
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    xor 3, 3, 5
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    blr
@@ -83,9 +83,9 @@ define zeroext i1 @any_sign_bits_set(i32 %P, i32 %Q)  {
 define zeroext i1 @any_bits_clear(i32 %P, i32 %Q)  {
 ; CHECK-LABEL: any_bits_clear:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 5, -1
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    xor 3, 3, 5
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    xori 3, 3, 1
@@ -312,9 +312,9 @@ return:
 define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xxlxor 36, 36, 36
 ; CHECK-NEXT:    xxlor 34, 34, 35
-; CHECK-NEXT:    vcmpequw 2, 2, 4
+; CHECK-NEXT:    xxlxor 35, 35, 35
+; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = icmp eq <4 x i32> %P, zeroinitializer
   %b = icmp eq <4 x i32> %Q, zeroinitializer
@@ -325,7 +325,7 @@ define <4 x i1> @all_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminsw 2, 2, 3
+; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    xxleqv 35, 35, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 3
 ; CHECK-NEXT:    blr
@@ -338,9 +338,9 @@ define <4 x i1> @all_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xxleqv 36, 36, 36
 ; CHECK-NEXT:    xxland 34, 34, 35
-; CHECK-NEXT:    vcmpequw 2, 2, 4
+; CHECK-NEXT:    xxleqv 35, 35, 35
+; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    blr
   %a = icmp eq <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
   %b = icmp eq <4 x i32> %Q, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -351,7 +351,7 @@ define <4 x i1> @all_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: all_sign_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxsw 2, 2, 3
+; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    xxlxor 35, 35, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 3, 2
 ; CHECK-NEXT:    blr
@@ -364,9 +364,9 @@ define <4 x i1> @all_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xxlxor 36, 36, 36
 ; CHECK-NEXT:    xxlor 34, 34, 35
-; CHECK-NEXT:    vcmpequw 2, 2, 4
+; CHECK-NEXT:    xxlxor 35, 35, 35
+; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    xxlnor 34, 34, 34
 ; CHECK-NEXT:    blr
   %a = icmp ne <4 x i32> %P, zeroinitializer
@@ -378,7 +378,7 @@ define <4 x i1> @any_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_set_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminsw 2, 2, 3
+; CHECK-NEXT:    xxlor 34, 34, 35
 ; CHECK-NEXT:    xxlxor 35, 35, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 3, 2
 ; CHECK-NEXT:    blr
@@ -391,9 +391,9 @@ define <4 x i1> @any_sign_bits_set_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xxleqv 36, 36, 36
 ; CHECK-NEXT:    xxland 34, 34, 35
-; CHECK-NEXT:    vcmpequw 2, 2, 4
+; CHECK-NEXT:    xxleqv 35, 35, 35
+; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    xxlnor 34, 34, 34
 ; CHECK-NEXT:    blr
   %a = icmp ne <4 x i32> %P, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -405,7 +405,7 @@ define <4 x i1> @any_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 define <4 x i1> @any_sign_bits_clear_vec(<4 x i32> %P, <4 x i32> %Q) {
 ; CHECK-LABEL: any_sign_bits_clear_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxsw 2, 2, 3
+; CHECK-NEXT:    xxland 34, 34, 35
 ; CHECK-NEXT:    xxleqv 35, 35, 35
 ; CHECK-NEXT:    vcmpgtsw 2, 2, 3
 ; CHECK-NEXT:    blr

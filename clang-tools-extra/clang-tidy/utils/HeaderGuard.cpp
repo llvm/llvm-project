@@ -188,7 +188,7 @@ public:
   void checkEndifComment(StringRef FileName, SourceLocation EndIf,
                          StringRef HeaderGuard,
                          std::vector<FixItHint> &FixIts) {
-    size_t EndIfLen;
+    size_t EndIfLen = 0;
     if (wouldFixEndifComment(FileName, EndIf, HeaderGuard, &EndIfLen)) {
       FixIts.push_back(FixItHint::CreateReplacement(
           CharSourceRange::getCharRange(EndIf,

@@ -21,9 +21,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -98,7 +98,7 @@ static Type getI1SameShape(Type type) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing, parsing and builder for LLVM::CmpOp.
+// Printing, parsing, folding and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
 void ICmpOp::print(OpAsmPrinter &p) {
@@ -173,6 +173,42 @@ ParseResult ICmpOp::parse(OpAsmParser &parser, OperationState &result) {
 
 ParseResult FCmpOp::parse(OpAsmParser &parser, OperationState &result) {
   return parseCmpOp<FCmpPredicate>(parser, result);
+}
+
+/// Returns a scalar or vector boolean attribute of the given type.
+static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
+  auto boolAttr = BoolAttr::get(ctx, value);
+  ShapedType shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType)
+    return boolAttr;
+  return DenseElementsAttr::get(shapedType, boolAttr);
+}
+
+OpFoldResult ICmpOp::fold(FoldAdaptor adaptor) {
+  if (getPredicate() != ICmpPredicate::eq &&
+      getPredicate() != ICmpPredicate::ne)
+    return {};
+
+  // cmpi(eq/ne, x, x) -> true/false
+  if (getLhs() == getRhs())
+    return getBoolAttribute(getType(), getContext(),
+                            getPredicate() == ICmpPredicate::eq);
+
+  // cmpi(eq/ne, alloca, null) -> false/true
+  if (getLhs().getDefiningOp<AllocaOp>() && getRhs().getDefiningOp<NullOp>())
+    return getBoolAttribute(getType(), getContext(),
+                            getPredicate() == ICmpPredicate::ne);
+
+  // cmpi(eq/ne, null, alloca) -> cmpi(eq/ne, alloca, null)
+  if (getLhs().getDefiningOp<NullOp>() && getRhs().getDefiningOp<AllocaOp>()) {
+    Value lhs = getLhs();
+    Value rhs = getRhs();
+    getLhsMutable().assign(rhs);
+    getRhsMutable().assign(lhs);
+    return getResult();
+  }
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -776,6 +812,22 @@ Type GEPOp::getResultPtrElementType() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+void LoadOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), getAddr());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
+  if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
+                         getOrdering() != AtomicOrdering::unordered)) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
 /// Returns true if the given type is supported by atomic operations. All
 /// integer and float types with limited bit width are supported. Additionally,
 /// depending on the operation pointers may be supported as well.
@@ -896,6 +948,22 @@ static void printLoadType(OpAsmPrinter &printer, Operation *op, Type type,
 // StoreOp
 //===----------------------------------------------------------------------===//
 
+void StoreOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Write::get(), getAddr());
+  // Volatile operations can have target-specific read-write effects on
+  // memory besides the one referred to by the pointer operand.
+  // Similarly, atomic operations that are monotonic or stricter cause
+  // synchronization that from a language point-of-view, are arbitrary
+  // read-writes into memory.
+  if (getVolatile_() || (getOrdering() != AtomicOrdering::not_atomic &&
+                         getOrdering() != AtomicOrdering::unordered)) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
+}
+
 LogicalResult StoreOp::verify() {
   Type valueType = getValue().getType();
   return verifyAtomicMemOp(*this, valueType,
@@ -1003,6 +1071,36 @@ Operation::operand_range CallOp::getArgOperands() {
   return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
 }
 
+MutableOperandRange CallOp::getArgOperandsMutable() {
+  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
+                             getCalleeOperands().size());
+}
+
+/// Verify that an inlinable callsite of a debug-info-bearing function in a
+/// debug-info-bearing function has a debug location attached to it. This
+/// mirrors an LLVM IR verifier.
+static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
+  if (callee.isExternal())
+    return success();
+  auto parentFunc = callOp->getParentOfType<FunctionOpInterface>();
+  if (!parentFunc)
+    return success();
+
+  auto hasSubprogram = [](Operation *op) {
+    return op->getLoc()
+               ->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>() !=
+           nullptr;
+  };
+  if (!hasSubprogram(parentFunc) || !hasSubprogram(callee))
+    return success();
+  bool containsLoc = !isa<UnknownLoc>(callOp->getLoc());
+  if (!containsLoc)
+    return callOp.emitError()
+           << "inlinable function call in a function with a DISubprogram "
+              "location must have a debug location";
+  return success();
+}
+
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getNumResults() > 1)
     return emitOpError("must have 0 or 1 result");
@@ -1041,6 +1139,8 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       return emitOpError() << "'" << calleeName.getValue()
                            << "' does not reference a valid LLVM function";
 
+    if (failed(verifyCallOpDebugInfo(*this, fn)))
+      return failure();
     fnType = fn.getFunctionType();
   }
 
@@ -1235,6 +1335,11 @@ void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 
 Operation::operand_range InvokeOp::getArgOperands() {
   return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+}
+
+MutableOperandRange InvokeOp::getArgOperandsMutable() {
+  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
+                             getCalleeOperands().size());
 }
 
 LogicalResult InvokeOp::verify() {
@@ -2406,7 +2511,7 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verification for LLVM::ConstantOp.
+// ConstantOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult LLVM::ConstantOp::verify() {
@@ -2464,6 +2569,25 @@ LogicalResult LLVM::ConstantOp::verify() {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
   return success();
+}
+
+bool LLVM::ConstantOp::isBuildableWith(Attribute value, Type type) {
+  // The value's type must be the same as the provided type.
+  auto typedAttr = dyn_cast<TypedAttr>(value);
+  if (!typedAttr || typedAttr.getType() != type || !isCompatibleType(type))
+    return false;
+  // The value's type must be an LLVM compatible type.
+  if (!isCompatibleType(type))
+    return false;
+  // TODO: Add support for additional attributes kinds once needed.
+  return isa<IntegerAttr, FloatAttr, ElementsAttr>(value);
+}
+
+ConstantOp LLVM::ConstantOp::materialize(OpBuilder &builder, Attribute value,
+                                         Type type, Location loc) {
+  if (isBuildableWith(value, type))
+    return builder.create<LLVM::ConstantOp>(loc, cast<TypedAttr>(value));
+  return nullptr;
 }
 
 // Constant op constant-folds to its value.
@@ -2809,12 +2933,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
               DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
               DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
-              DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,
-              LoopAnnotationAttr, LoopVectorizeAttr, LoopInterleaveAttr,
-              LoopUnrollAttr, LoopUnrollAndJamAttr, LoopLICMAttr,
-              LoopDistributeAttr, LoopPipelineAttr, LoopPeeledAttr,
-              LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
+              DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+              DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
+              DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,
+              LoopInterleaveAttr, LoopUnrollAttr, LoopUnrollAndJamAttr,
+              LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
+              LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
               TBAATypeDescriptorAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
@@ -3060,11 +3184,7 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
-  // TODO: Accept more possible attributes. So far, only IntegerAttr may come
-  // up.
-  if (!isa<IntegerAttr>(value))
-    return nullptr;
-  return builder.create<LLVM::ConstantOp>(loc, type, value);
+  return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 
 //===----------------------------------------------------------------------===//

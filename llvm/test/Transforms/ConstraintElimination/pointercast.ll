@@ -15,19 +15,13 @@ define i1 @gep0_and_cmp(ptr readonly %src, ptr readnone %min, ptr readnone %max)
 ; CHECK:       trap:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       checks:
-; CHECK-NEXT:    [[C_3_MIN:%.*]] = icmp ult ptr [[GEP_3]], [[MIN]]
 ; CHECK-NEXT:    [[C_3_MAX:%.*]] = icmp ult ptr [[GEP_3]], [[MAX]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 false, [[C_3_MAX]]
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[C_1_MIN:%.*]] = icmp ult ptr [[GEP_1]], [[MIN]]
-; CHECK-NEXT:    [[C_1_MAX:%.*]] = icmp ult ptr [[GEP_1]], [[MAX]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[C_2_MIN:%.*]] = icmp ult ptr [[GEP_2]], [[MIN]]
-; CHECK-NEXT:    [[C_2_MAX:%.*]] = icmp ult ptr [[GEP_2]], [[MAX]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, true
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[C_4_MIN:%.*]] = icmp ult ptr [[GEP_4]], [[MIN]]
 ; CHECK-NEXT:    [[C_4_MAX:%.*]] = icmp ult ptr [[GEP_4]], [[MAX]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 false, [[C_4_MAX]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_1]], [[RES_2]]

@@ -107,9 +107,13 @@ static void StoreLengthToDescriptor(
 }
 
 template <int KIND> struct FitsInIntegerKind {
-  bool operator()(std::int64_t value) {
-    return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
-                        Fortran::common::TypeCategory::Integer, KIND>>::max();
+  bool operator()([[maybe_unused]] std::int64_t value) {
+    if constexpr (KIND >= 8) {
+      return true;
+    } else {
+      return value <= std::numeric_limits<Fortran::runtime::CppTypeFor<
+                          Fortran::common::TypeCategory::Integer, KIND>>::max();
+    }
   }
 };
 

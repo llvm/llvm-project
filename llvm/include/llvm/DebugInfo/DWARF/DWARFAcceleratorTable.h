@@ -743,6 +743,28 @@ public:
   const NameIndex *getCUNameIndex(uint64_t CUOffset);
 };
 
+/// If `Name` is the name of a templated function that includes template
+/// parameters, returns a substring of `Name` containing no template
+/// parameters.
+/// E.g.: StripTemplateParameters("foo<int>") = "foo".
+std::optional<StringRef> StripTemplateParameters(StringRef Name);
+
+struct ObjCSelectorNames {
+  /// For "-[A(Category) method:]", this would be "method:"
+  StringRef Selector;
+  /// For "-[A(Category) method:]", this would be "A(category)"
+  StringRef ClassName;
+  /// For "-[A(Category) method:]", this would be "A"
+  std::optional<StringRef> ClassNameNoCategory;
+  /// For "-[A(Category) method:]", this would be "A method:"
+  std::optional<std::string> MethodNameNoCategory;
+};
+
+/// If `Name` is the AT_name of a DIE which refers to an Objective-C selector,
+/// returns an instance of ObjCSelectorNames. The Selector and ClassName fields
+/// are guaranteed to be non-empty in the result.
+std::optional<ObjCSelectorNames> getObjCNamesIfSelector(StringRef Name);
+
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H

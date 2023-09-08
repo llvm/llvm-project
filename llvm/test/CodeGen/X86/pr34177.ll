@@ -50,23 +50,19 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
 ; AVX512VL-NEXT:    kshiftrb $2, %k0, %k1
-; AVX512VL-NEXT:    kshiftrb $1, %k0, %k2
 ; AVX512VL-NEXT:    kmovd %k0, %eax
-; AVX512VL-NEXT:    testb $1, %al
+; AVX512VL-NEXT:    testb $2, %al
 ; AVX512VL-NEXT:    fld1
 ; AVX512VL-NEXT:    fldz
 ; AVX512VL-NEXT:    fld %st(0)
 ; AVX512VL-NEXT:    fcmovne %st(2), %st
-; AVX512VL-NEXT:    kshiftrb $1, %k1, %k0
-; AVX512VL-NEXT:    kmovd %k0, %eax
 ; AVX512VL-NEXT:    testb $1, %al
 ; AVX512VL-NEXT:    fld %st(1)
 ; AVX512VL-NEXT:    fcmovne %st(3), %st
 ; AVX512VL-NEXT:    kmovd %k1, %eax
-; AVX512VL-NEXT:    testb $1, %al
+; AVX512VL-NEXT:    testb $2, %al
 ; AVX512VL-NEXT:    fld %st(2)
 ; AVX512VL-NEXT:    fcmovne %st(4), %st
-; AVX512VL-NEXT:    kmovd %k2, %eax
 ; AVX512VL-NEXT:    testb $1, %al
 ; AVX512VL-NEXT:    fxch %st(3)
 ; AVX512VL-NEXT:    fcmovne %st(4), %st
@@ -81,13 +77,13 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, ptr %c) local_unnamed_addr {
 ; AVX512VL-NEXT:    fstpt 10(%rdi)
 ; AVX512VL-NEXT:    fxch %st(1)
 ; AVX512VL-NEXT:    fadd %st, %st(0)
+; AVX512VL-NEXT:    fstpt 20(%rdi)
+; AVX512VL-NEXT:    fadd %st, %st(0)
 ; AVX512VL-NEXT:    fstpt (%rdi)
 ; AVX512VL-NEXT:    fadd %st, %st(0)
 ; AVX512VL-NEXT:    fstpt 60(%rdi)
 ; AVX512VL-NEXT:    fadd %st, %st(0)
 ; AVX512VL-NEXT:    fstpt 40(%rdi)
-; AVX512VL-NEXT:    fadd %st, %st(0)
-; AVX512VL-NEXT:    fstpt 20(%rdi)
   %1 = icmp eq <4 x i64> <i64 0, i64 1, i64 2, i64 3>, %a
   %2 = select <4 x i1> %1, <4 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000>, <4 x x86_fp80> zeroinitializer
   %3 = fadd <4 x x86_fp80> %2, %2

@@ -19,9 +19,9 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
@@ -241,10 +241,6 @@ public:
 
   void ClearIOHandlers();
 
-  bool GetCloseInputOnEOF() const;
-
-  void SetCloseInputOnEOF(bool b);
-
   bool EnableLog(llvm::StringRef channel,
                  llvm::ArrayRef<const char *> categories,
                  llvm::StringRef log_file, uint32_t log_options,
@@ -320,6 +316,8 @@ public:
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
 
   llvm::StringRef GetAutosuggestionAnsiSuffix() const;
+
+  bool GetShowDontUsePoHint() const;
 
   bool GetUseSourceCache() const;
 

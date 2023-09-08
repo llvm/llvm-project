@@ -85,9 +85,9 @@ define <vscale x 32 x half> @complex_add_v32f16(<vscale x 32 x half> %a, <vscale
 ; CHECK-LABEL: complex_add_v32f16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    fcadd z6.h, p0/m, z6.h, z2.h, #90
 ; CHECK-NEXT:    fcadd z4.h, p0/m, z4.h, z0.h, #90
 ; CHECK-NEXT:    fcadd z5.h, p0/m, z5.h, z1.h, #90
+; CHECK-NEXT:    fcadd z6.h, p0/m, z6.h, z2.h, #90
 ; CHECK-NEXT:    fcadd z7.h, p0/m, z7.h, z3.h, #90
 ; CHECK-NEXT:    mov z0.d, z4.d
 ; CHECK-NEXT:    mov z1.d, z5.d

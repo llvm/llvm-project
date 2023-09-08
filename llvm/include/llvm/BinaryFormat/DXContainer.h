@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 namespace llvm {
+template <typename T> struct EnumEntry;
 
 // The DXContainer file format is arranged as a header and "parts". Semantically
 // parts are similar to sections in other object file formats. The File format
@@ -273,6 +274,27 @@ static_assert(sizeof(PipelinePSVInfo) == 4 * sizeof(uint32_t),
 
 namespace PSV {
 
+#define SEMANTIC_KIND(Val, Enum) Enum = Val,
+enum class SemanticKind : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SemanticKind>> getSemanticKinds();
+
+#define COMPONENT_TYPE(Val, Enum) Enum = Val,
+enum class ComponentType : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ComponentType>> getComponentTypes();
+
+#define INTERPOLATION_MODE(Val, Enum) Enum = Val,
+enum class InterpolationMode : uint8_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<InterpolationMode>> getInterpolationModes();
+
 namespace v0 {
 struct RuntimeInfo {
   PipelinePSVInfo StageInfo;
@@ -302,6 +324,34 @@ struct ResourceBindInfo {
   }
 };
 
+struct SignatureElement {
+  uint32_t NameOffset;
+  uint32_t IndicesOffset;
+
+  uint8_t Rows;
+  uint8_t StartRow;
+  uint8_t Cols : 4;
+  uint8_t StartCol : 2;
+  uint8_t Allocated : 1;
+  uint8_t Unused : 1;
+  SemanticKind Kind;
+
+  ComponentType Type;
+  InterpolationMode Mode;
+  uint8_t DynamicMask : 4;
+  uint8_t Stream : 2;
+  uint8_t Unused2 : 2;
+  uint8_t Reserved;
+
+  void swapBytes() {
+    sys::swapByteOrder(NameOffset);
+    sys::swapByteOrder(IndicesOffset);
+  }
+};
+
+static_assert(sizeof(SignatureElement) == 4 * sizeof(uint32_t),
+              "PSV Signature elements must fit in 16 bytes.");
+
 } // namespace v0
 
 namespace v1 {
@@ -326,7 +376,7 @@ struct RuntimeInfo : public v0::RuntimeInfo {
   // PSVSignatureElement counts
   uint8_t SigInputElements;
   uint8_t SigOutputElements;
-  uint8_t SigPatchConstOrPrimElements;
+  uint8_t SigPatchOrPrimElements;
 
   // Number of packed vectors per signature
   uint8_t SigInputVectors;

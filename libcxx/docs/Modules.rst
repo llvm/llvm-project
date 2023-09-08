@@ -7,7 +7,7 @@ Modules in libc++
 .. warning:: Modules are an experimental feature. It has additional build
              requirements and not all libc++ configurations are supported yet.
 
-             The work is still in an early developement state and not
+             The work is still in an early development state and not
              considered stable nor complete
 
 This page contains information regarding C++23 module support in libc++.
@@ -44,20 +44,33 @@ What works
 
    * ``LIBCXX_ENABLE_LOCALIZATION``
    * ``LIBCXX_ENABLE_WIDE_CHARACTERS``
+   * ``LIBCXX_ENABLE_THREADS``
+   * ``LIBCXX_ENABLE_FILESYSTEM``
+   * ``LIBCXX_ENABLE_RANDOM_DEVICE``
+   * ``LIBCXX_ENABLE_UNICODE``
+   * ``LIBCXX_ENABLE_EXCEPTIONS`` [#note-no-windows]_
+
+ * A C++20 based extension
+
+.. note::
+
+   .. [#note-no-windows] This configuration will probably not work on Windows
+                         due to hard-coded compilation flags.
 
 Some of the current limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  * There is no official build system support, libc++ has experimental CMake support
- * Requires CMake 3.26
+ * Requires CMake 3.26 for C++20 support
+ * Requires CMake 3.26 for C++23 support
+ * Requires CMake 3.27 for C++26 support
  * Requires Ninja 1.11
  * Requires a recent Clang 17
  * The path to the compiler may not be a symlink, ``clang-scan-deps`` does
    not handle that case properly
- * Only C++23 is tested
+ * Only C++23 and C++26 are tested
  * Libc++ is not tested with modules instead of headers
  * The module ``.cppm`` files are not installed
- * The experimental ``PSTL`` library is not supported
  * Clang supports modules using GNU extensions, but libc++ does not work using
    GNU extensions.
  * Clang:
@@ -89,7 +102,7 @@ Using in external projects
 Users need to be able to build their own BMI files.
 
 .. note:: The requirements for users to build their own BMI files will remain
-   true for the forseeable future. For now this needs to be done manually.
+   true for the foreseeable future. For now this needs to be done manually.
    Once libc++'s implementation is more mature we will reach out to build
    system vendors, with the goal that building the BMI files is done by
    the build system.

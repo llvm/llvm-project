@@ -178,7 +178,7 @@ TEST(LlvmLibcMkTime, InvalidYear) {
 }
 
 TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
-  if (sizeof(size_t) != 4)
+  if (sizeof(time_t) != 4)
     return;
   {
     // 2038-01-19 03:14:08 tests overflow of the second in 2038.
@@ -187,8 +187,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
       .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
       .tm_yday = 0
     };
-    EXPECT_THAT(__llvm_libc::mktime(&tm_data),
-                Succeeds(TimeConstants::OUT_OF_RANGE_RETURN_VALUE));
+    EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
   }
 
   {
@@ -198,8 +197,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
       .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
       .tm_yday = 0
     };
-    EXPECT_THAT(__llvm_libc::mktime(&tm_data),
-                Succeeds(TimeConstants::OUT_OF_RANGE_RETURN_VALUE));
+    EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
   }
 
   {
@@ -209,8 +207,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
       .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
       .tm_yday = 0
     };
-    EXPECT_THAT(__llvm_libc::mktime(&tm_data),
-                Succeeds(TimeConstants::OUT_OF_RANGE_RETURN_VALUE));
+    EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
   }
 
   {
@@ -220,8 +217,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
       .tm_mon = Month::JANUARY, .tm_year = tm_year(2038), .tm_wday = 0,
       .tm_yday = 0
     };
-    EXPECT_THAT(__llvm_libc::mktime(&tm_data),
-                Succeeds(TimeConstants::OUT_OF_RANGE_RETURN_VALUE));
+    EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
   }
 
   {
@@ -231,8 +227,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
       .tm_mon = Month::FEBRUARY, .tm_year = tm_year(2038), .tm_wday = 0,
       .tm_yday = 0
     };
-    EXPECT_THAT(__llvm_libc::mktime(&tm_data),
-                Succeeds(TimeConstants::OUT_OF_RANGE_RETURN_VALUE));
+    EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
   }
 
   {
@@ -242,8 +237,7 @@ TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
       .tm_mon = Month::JANUARY, .tm_year = tm_year(2039), .tm_wday = 0,
       .tm_yday = 0
     };
-    EXPECT_THAT(__llvm_libc::mktime(&tm_data),
-                Succeeds(TimeConstants::OUT_OF_RANGE_RETURN_VALUE));
+    EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
   }
 }
 

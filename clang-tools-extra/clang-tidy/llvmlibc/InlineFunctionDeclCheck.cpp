@@ -88,7 +88,7 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
 
   diag(SrcBegin, "%0 must be tagged with the LIBC_INLINE macro; the macro "
                  "should be placed at the beginning of the declaration")
-      << FuncDecl;
+      << FuncDecl << FixItHint::CreateInsertion(Loc, "LIBC_INLINE ");
 }
 
 } // namespace clang::tidy::llvm_libc

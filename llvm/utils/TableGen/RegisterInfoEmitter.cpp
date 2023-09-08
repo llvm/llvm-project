@@ -146,8 +146,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
       OS << "namespace " << Namespace << " {\n";
     OS << "enum {\n";
     for (const auto &RC : RegisterClasses)
-      OS << "  " << RC.getName() << "RegClassID"
-         << " = " << RC.EnumValue << ",\n";
+      OS << "  " << RC.getIdName() << " = " << RC.EnumValue << ",\n";
     OS << "\n};\n";
     if (!Namespace.empty())
       OS << "} // end namespace " << Namespace << "\n\n";
@@ -932,12 +931,6 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     MaskVec &LaneMaskVec = RegUnitLaneMasks[i];
     assert(LaneMaskVec.empty());
     llvm::append_range(LaneMaskVec, RUMasks);
-    // Terminator mask should not be used inside of the list.
-#ifndef NDEBUG
-    for (LaneBitmask M : LaneMaskVec) {
-      assert(!M.all() && "terminator mask should not be part of the list");
-    }
-#endif
     LaneMaskSeqs.add(LaneMaskVec);
   }
 
@@ -957,6 +950,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the shared table of regunit lane mask sequences.
   OS << "extern const LaneBitmask " << TargetName << "LaneMaskLists[] = {\n";
+  // TODO: Omit the terminator since it is never used. The length of this list
+  // is known implicitly from the corresponding reg unit list.
   LaneMaskSeqs.emit(OS, printMask, "LaneBitmask::getAll()");
   OS << "};\n\n";
 
@@ -1072,8 +1067,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", " << RCBitsSize << ", " << RC.getQualifiedName() + "RegClassID"
-       << ", " << RegSize << ", " << RC.CopyCost << ", "
+       << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
+       << RegSize << ", " << RC.CopyCost << ", "
        << (RC.Allocatable ? "true" : "false") << " },\n";
   }
 
@@ -1295,7 +1290,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         for (const ValueTypeByHwMode &VVT : RC.VTs)
           if (VVT.hasDefault() || VVT.hasMode(M))
             VTs.push_back(VVT.get(M).SimpleTy);
-        OS << ", VTLists+" << VTSeqs.get(VTs) << " },    // "
+        OS << ", /*VTLists+*/" << VTSeqs.get(VTs) << " },    // "
            << RC.getName() << '\n';
       }
     }
@@ -1621,8 +1616,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         }
 
         OS << "    "
-           << (BaseRC ? BaseRC->getQualifiedName() + "RegClassID"
-                      : "InvalidRegClassID")
+           << (BaseRC ? BaseRC->getQualifiedIdName() : "InvalidRegClassID")
            << ",  // " << Reg.getName() << "\n";
       }
       OS << "  };\n\n"
@@ -1658,7 +1652,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable,\n"
      << "             ";
   printMask(OS, RegBank.CoveringLanes);
-  OS << ", RegClassInfos, HwMode) {\n"
+  OS << ", RegClassInfos, VTLists, HwMode) {\n"
      << "  InitMCRegisterInfo(" << TargetName << "RegDesc, " << Regs.size() + 1
      << ", RA, PC,\n                     " << TargetName
      << "MCRegisterClasses, " << RegisterClasses.size() << ",\n"

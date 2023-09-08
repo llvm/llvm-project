@@ -356,7 +356,8 @@ void FormatStringConverter::maybeRotateArguments(const PrintfSpecifier &FS) {
     ArgRotates.emplace_back(FS.getArgIndex() + ArgsOffset, ArgCount);
 }
 
-void FormatStringConverter::emitStringArgument(const Expr *Arg) {
+void FormatStringConverter::emitStringArgument(unsigned ArgIndex,
+                                               const Expr *Arg) {
   // If the argument is the result of a call to std::string::c_str() or
   // data() with a return type of char then we can remove that call and
   // pass the std::string directly. We don't want to do so if the return
@@ -386,7 +387,7 @@ void FormatStringConverter::emitStringArgument(const Expr *Arg) {
     // printf is happy to print signed char and unsigned char strings, but
     // std::format only likes char strings.
     if (Pointee->isCharType() && !isRealCharType(Pointee))
-      ArgFixes.emplace_back(Arg, "reinterpret_cast<const char *>(");
+      ArgFixes.emplace_back(ArgIndex, "reinterpret_cast<const char *>(");
   }
 }
 
@@ -409,7 +410,7 @@ bool FormatStringConverter::emitIntegerArgument(
       if (const std::optional<std::string> MaybeCastType =
               castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
         ArgFixes.emplace_back(
-            Arg, (Twine("static_cast<") + *MaybeCastType + ">(").str());
+            ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else
         return conversionNotPossible(
             (Twine("argument ") + Twine(ArgIndex) + " has unexpected enum type")
@@ -423,7 +424,7 @@ bool FormatStringConverter::emitIntegerArgument(
     if (const std::optional<std::string> MaybeCastType =
             castTypeForArgument(ArgKind, ArgType))
       ArgFixes.emplace_back(
-          Arg, (Twine("static_cast<") + *MaybeCastType + ">(").str());
+          ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
     else
       return conversionNotPossible(
           (Twine("argument ") + Twine(ArgIndex) + " cannot be cast to " +
@@ -447,7 +448,7 @@ bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
   ConversionSpecifier::Kind ArgKind = FS.getConversionSpecifier().getKind();
   switch (ArgKind) {
   case ConversionSpecifier::Kind::sArg:
-    emitStringArgument(Arg);
+    emitStringArgument(FS.getArgIndex() + ArgsOffset, Arg);
     break;
   case ConversionSpecifier::Kind::cArg:
     // The type must be "c" to get a character unless the type is exactly
@@ -466,7 +467,8 @@ bool FormatStringConverter::emitType(const PrintfSpecifier &FS, const Expr *Arg,
     const clang::QualType &ArgType = Arg->getType();
     // std::format knows how to format void pointers and nullptrs
     if (!ArgType->isNullPtrType() && !ArgType->isVoidPointerType())
-      ArgFixes.emplace_back(Arg, "static_cast<const void *>(");
+      ArgFixes.emplace_back(FS.getArgIndex() + ArgsOffset,
+                            "static_cast<const void *>(");
     break;
   }
   case ConversionSpecifier::Kind::xArg:
@@ -673,6 +675,15 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
   }
 }
 
+static std::string withoutCStrReplacement(const BoundNodes &CStrRemovalMatch,
+                                          ASTContext &Context) {
+  const auto *Arg = CStrRemovalMatch.getNodeAs<Expr>("arg");
+  const auto *Member = CStrRemovalMatch.getNodeAs<MemberExpr>("member");
+  const bool Arrow = Member->isArrow();
+  return Arrow ? utils::fixit::formatDereference(*Arg, Context)
+               : tooling::fixit::getText(*Arg, Context).str();
+}
+
 /// Called by the check when it is ready to apply the fixes.
 void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
                                        SourceManager &SM) {
@@ -683,34 +694,35 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
         StandardFormatString);
   }
 
-  for (const auto &[Arg, Replacement] : ArgFixes) {
-    SourceLocation AfterOtherSide =
-        Lexer::findNextToken(Arg->getEndLoc(), SM, LangOpts)->getLocation();
-
-    Diag << FixItHint::CreateInsertion(Arg->getBeginLoc(), Replacement)
-         << FixItHint::CreateInsertion(AfterOtherSide, ")");
-  }
-
-  for (const auto &Match : ArgCStrRemovals) {
-    const auto *Call = Match.getNodeAs<CallExpr>("call");
-    const auto *Arg = Match.getNodeAs<Expr>("arg");
-    const auto *Member = Match.getNodeAs<MemberExpr>("member");
-    const bool Arrow = Member->isArrow();
-    const std::string ArgText =
-        Arrow ? utils::fixit::formatDereference(*Arg, *Context)
-              : tooling::fixit::getText(*Arg, *Context).str();
-    if (!ArgText.empty())
-      Diag << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
-  }
-
   // ArgCount is one less than the number of arguments to be rotated.
   for (auto [ValueArgIndex, ArgCount] : ArgRotates) {
     assert(ValueArgIndex < NumArgs);
     assert(ValueArgIndex > ArgCount);
 
-    // First move the value argument to the right place.
-    Diag << tooling::fixit::createReplacement(*Args[ValueArgIndex - ArgCount],
-                                              *Args[ValueArgIndex], *Context);
+    // First move the value argument to the right place. But if there's a
+    // pending c_str() removal then we must do that at the same time.
+    if (const auto CStrRemovalMatch =
+            std::find_if(ArgCStrRemovals.cbegin(), ArgCStrRemovals.cend(),
+                         [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
+                             const BoundNodes &Match) {
+                           // This c_str() removal corresponds to the argument
+                           // being moved if they start at the same location.
+                           const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
+                           return ArgStartPos == CStrArg->getBeginLoc();
+                         });
+        CStrRemovalMatch != ArgCStrRemovals.end()) {
+      const std::string ArgText =
+          withoutCStrReplacement(*CStrRemovalMatch, *Context);
+      assert(!ArgText.empty());
+
+      Diag << FixItHint::CreateReplacement(
+          Args[ValueArgIndex - ArgCount]->getSourceRange(), ArgText);
+
+      // That c_str() removal is now dealt with, so we don't need to do it again
+      ArgCStrRemovals.erase(CStrRemovalMatch);
+    } else
+      Diag << tooling::fixit::createReplacement(*Args[ValueArgIndex - ArgCount],
+                                                *Args[ValueArgIndex], *Context);
 
     // Now shift down the field width and precision (if either are present) to
     // accommodate it.
@@ -718,6 +730,31 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
       Diag << tooling::fixit::createReplacement(
           *Args[ValueArgIndex - Offset], *Args[ValueArgIndex - Offset - 1],
           *Context);
+
+    // Now we need to modify the ArgFix index too so that we fix the right
+    // argument. We don't need to care about the width and precision indices
+    // since they never need fixing.
+    for (auto &ArgFix : ArgFixes) {
+      if (ArgFix.ArgIndex == ValueArgIndex)
+        ArgFix.ArgIndex = ValueArgIndex - ArgCount;
+    }
+  }
+
+  for (const auto &[ArgIndex, Replacement] : ArgFixes) {
+    SourceLocation AfterOtherSide =
+        Lexer::findNextToken(Args[ArgIndex]->getEndLoc(), SM, LangOpts)
+            ->getLocation();
+
+    Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),
+                                       Replacement, true)
+         << FixItHint::CreateInsertion(AfterOtherSide, ")", true);
+  }
+
+  for (const auto &Match : ArgCStrRemovals) {
+    const auto *Call = Match.getNodeAs<CallExpr>("call");
+    const std::string ArgText = withoutCStrReplacement(Match, *Context);
+    if (!ArgText.empty())
+      Diag << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
   }
 }
 } // namespace clang::tidy::utils

@@ -95,6 +95,11 @@ struct IncrementLoopInfo {
     return fir::unwrapRefType(loopVariable.getType());
   }
 
+  bool hasLocalitySpecs() const {
+    return !localSymList.empty() || !localInitSymList.empty() ||
+           !sharedSymList.empty();
+  }
+
   // Data members common to both structured and unstructured loops.
   const Fortran::semantics::Symbol &loopVariableSym;
   const Fortran::lower::SomeExpr *lowerExpr;
@@ -102,6 +107,7 @@ struct IncrementLoopInfo {
   const Fortran::lower::SomeExpr *stepExpr;
   const Fortran::lower::SomeExpr *maskExpr = nullptr;
   bool isUnordered; // do concurrent, forall
+  llvm::SmallVector<const Fortran::semantics::Symbol *> localSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   llvm::SmallVector<const Fortran::semantics::Symbol *> sharedSymList;
   mlir::Value loopVariable = nullptr;
@@ -344,6 +350,8 @@ public:
         fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
                                              bridge.getEnvironmentDefaults());
       });
+
+    finalizeOpenACCLowering();
   }
 
   /// Declare a function.
@@ -375,6 +383,19 @@ public:
       declareFunction(f);
   }
 
+  /// Get the scope that is defining or using \p sym. The returned scope is not
+  /// the ultimate scope, since this helper does not traverse use association.
+  /// This allows capturing module variables that are referenced in an internal
+  /// procedure but whose use statement is inside the host program.
+  const Fortran::semantics::Scope &
+  getSymbolHostScope(const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol *hostSymbol = &sym;
+    while (const auto *details =
+               hostSymbol->detailsIf<Fortran::semantics::HostAssocDetails>())
+      hostSymbol = &details->symbol();
+    return hostSymbol->owner();
+  }
+
   /// Collects the canonical list of all host associated symbols. These bindings
   /// must be aggregated into a tuple which can then be added to each of the
   /// internal procedure declarations and passed at each call site.
@@ -391,12 +412,12 @@ public:
       if (ultimate.has<Fortran::semantics::ObjectEntityDetails>() ||
           Fortran::semantics::IsProcedurePointer(ultimate) ||
           Fortran::semantics::IsDummy(sym) || namelistDetails) {
-        const Fortran::semantics::Scope &ultimateScope = ultimate.owner();
-        if (ultimateScope.kind() ==
+        const Fortran::semantics::Scope &symbolScope = getSymbolHostScope(sym);
+        if (symbolScope.kind() ==
                 Fortran::semantics::Scope::Kind::MainProgram ||
-            ultimateScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
-          if (ultimateScope != *internalScope &&
-              ultimateScope.Contains(*internalScope)) {
+            symbolScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
+          if (symbolScope != *internalScope &&
+              symbolScope.Contains(*internalScope)) {
             if (namelistDetails) {
               // So far, namelist symbols are processed on the fly in IO and
               // the related namelist data structure is not added to the symbol
@@ -493,10 +514,7 @@ public:
   lookupLabel(Fortran::lower::pft::Label label) override final {
     Fortran::lower::pft::FunctionLikeUnit &owningProc =
         *getEval().getOwningProcedure();
-    auto iter = owningProc.labelEvaluationMap.find(label);
-    if (iter == owningProc.labelEvaluationMap.end())
-      return nullptr;
-    return iter->second;
+    return owningProc.labelEvaluationMap.lookup(label);
   }
 
   fir::ExtendedValue
@@ -576,7 +594,7 @@ public:
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
           loc,
-          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
               ? hSymType
               : symType,
           mangleName(sym), toStringRef(sym.GetUltimate().name()),
@@ -818,7 +836,9 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(symbol, scopeBlockIdMap);
+    return Fortran::lower::mangle::mangleName(
+        symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
+        getLoweringOptions().getUnderscoring());
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -946,6 +966,13 @@ private:
       // Do a regular lookup.
       if (Fortran::semantics::IsProcedure(sym))
         return symMap->lookupSymbol(sym);
+
+      // Commonblock names are not variables, but in some lowerings (like
+      // OpenMP) it is useful to maintain the address of the commonblock in an
+      // MLIR value and query it. hlfir.declare need not be created for these.
+      if (sym.detailsIf<Fortran::semantics::CommonBlockDetails>())
+        return symMap->lookupSymbol(sym);
+
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
@@ -1007,10 +1034,13 @@ private:
       if (!shallowLookupSymbol(sym)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
-        auto newVal = builder->createTemporary(loc, genType(sym),
-                                               toStringRef(sym.name()));
-        bindIfNewSymbol(sym, newVal);
-        return newVal;
+        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+        builder->setInsertionPointToStart(builder->getAllocaBlock());
+        mlir::Type tempTy = genType(sym);
+        mlir::Value temp =
+            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+        bindIfNewSymbol(sym, temp);
+        builder->restoreInsertionPoint(insPt);
       }
     }
     auto entry = lookupSymbol(sym);
@@ -1293,6 +1323,30 @@ private:
           return fir::factory::CharacterExprHelper{*builder, loc}
               .createEmboxChar(x.getBuffer(), x.getLen());
         },
+        [&](const fir::MutableBoxValue &x) -> mlir::Value {
+          mlir::Value resultRef = resultSymBox.getAddr();
+          mlir::Value load = builder->create<fir::LoadOp>(loc, resultRef);
+          unsigned rank = x.rank();
+          if (x.isAllocatable() && rank > 0) {
+            // ALLOCATABLE array result must have default lower bounds.
+            // At the call site the result box of a function reference
+            // might be considered having default lower bounds, but
+            // the runtime box should probably comply with this assumption
+            // as well. If the result box has proper lbounds in runtime,
+            // this may improve the debugging experience of Fortran apps.
+            // We may consider removing this, if the overhead of setting
+            // default lower bounds is too big.
+            mlir::Value one =
+                builder->createIntegerConstant(loc, builder->getIndexType(), 1);
+            llvm::SmallVector<mlir::Value> lbounds{rank, one};
+            auto shiftTy = fir::ShiftType::get(builder->getContext(), rank);
+            mlir::Value shiftOp =
+                builder->create<fir::ShiftOp>(loc, shiftTy, lbounds);
+            load = builder->create<fir::ReboxOp>(
+                loc, load.getType(), load, shiftOp, /*slice=*/mlir::Value{});
+          }
+          return load;
+        },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
           mlir::Type resultType = genType(resultSym);
@@ -1514,6 +1568,10 @@ private:
     info.maskExpr = Fortran::semantics::GetExpr(
         std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(header.t));
     for (const Fortran::parser::LocalitySpec &x : localityList) {
+      if (const auto *localList =
+              std::get_if<Fortran::parser::LocalitySpec::Local>(&x.u))
+        for (const Fortran::parser::Name &x : localList->v)
+          info.localSymList.push_back(x.symbol);
       if (const auto *localInitList =
               std::get_if<Fortran::parser::LocalitySpec::LocalInit>(&x.u))
         for (const Fortran::parser::Name &x : localInitList->v)
@@ -1522,10 +1580,36 @@ private:
               std::get_if<Fortran::parser::LocalitySpec::Shared>(&x.u))
         for (const Fortran::parser::Name &x : sharedList->v)
           info.sharedSymList.push_back(x.symbol);
-      if (std::get_if<Fortran::parser::LocalitySpec::Local>(&x.u))
-        TODO(toLocation(), "do concurrent locality specs not implemented");
     }
     return incrementLoopNestInfo;
+  }
+
+  /// Create DO CONCURRENT construct symbol bindings and generate LOCAL_INIT
+  /// assignments.
+  void handleLocalitySpecs(const IncrementLoopInfo &info) {
+    Fortran::semantics::SemanticsContext &semanticsContext =
+        bridge.getSemanticsContext();
+    for (const Fortran::semantics::Symbol *sym : info.localSymList)
+      createHostAssociateVarClone(*sym);
+    for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
+      createHostAssociateVarClone(*sym);
+      const auto *hostDetails =
+          sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+      assert(hostDetails && "missing locality spec host symbol");
+      const Fortran::semantics::Symbol *hostSym = &hostDetails->symbol();
+      Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
+      Fortran::evaluate::Assignment assign{
+          ea.Designate(Fortran::evaluate::DataRef{*sym}).value(),
+          ea.Designate(Fortran::evaluate::DataRef{*hostSym}).value()};
+      if (Fortran::semantics::IsPointer(*sym))
+        assign.u = Fortran::evaluate::Assignment::BoundsSpec{};
+      genAssignment(assign);
+    }
+    for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
+      const auto *hostDetails =
+          sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+      copySymbolBinding(hostDetails->symbol(), *sym);
+    }
   }
 
   /// Generate FIR for a DO construct. There are six variants:
@@ -1656,25 +1740,6 @@ private:
         return builder->createRealConstant(loc, controlType, 1u);
       return builder->createIntegerConstant(loc, controlType, 1); // step
     };
-    auto handleLocalitySpec = [&](IncrementLoopInfo &info) {
-      // Generate Local Init Assignments
-      for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
-        const auto *hostDetails =
-            sym->detailsIf<Fortran::semantics::HostAssocDetails>();
-        assert(hostDetails && "missing local_init variable host variable");
-        const Fortran::semantics::Symbol &hostSym = hostDetails->symbol();
-        (void)hostSym;
-        TODO(loc, "do concurrent locality specs not implemented");
-      }
-      // Handle shared locality spec
-      for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
-        const auto *hostDetails =
-            sym->detailsIf<Fortran::semantics::HostAssocDetails>();
-        assert(hostDetails && "missing shared variable host variable");
-        const Fortran::semantics::Symbol &hostSym = hostDetails->symbol();
-        copySymbolBinding(hostSym, *sym);
-      }
-    };
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
       info.loopVariable =
           genLoopVariableAddress(loc, info.loopVariableSym, info.isUnordered);
@@ -1714,7 +1779,8 @@ private:
                                                  /*withElseRegion=*/false);
           builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
         }
-        handleLocalitySpec(info);
+        if (info.hasLocalitySpecs())
+          handleLocalitySpecs(info);
         continue;
       }
 
@@ -1771,10 +1837,10 @@ private:
         if (&info != &incrementLoopNestInfo.back()) // not innermost
           startBlock(info.bodyBlock); // preheader block of enclosed dimension
       }
-      if (!info.localInitSymList.empty()) {
+      if (info.hasLocalitySpecs()) {
         mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
         builder->setInsertionPointToStart(info.bodyBlock);
-        handleLocalitySpec(info);
+        handleLocalitySpecs(info);
         builder->restoreInsertionPoint(insertPt);
       }
     }
@@ -2228,12 +2294,10 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
-    mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   getEval(), accDecl);
+                                   bridge.fctCtx(), accDecl, accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
-    builder->restoreInsertionPoint(insertPt);
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
@@ -3559,6 +3623,26 @@ private:
                 // to a result variable of one of the other types requires
                 // conversion to the actual type.
                 mlir::Type toTy = genType(assign.lhs);
+
+                // If Cray pointee, need to handle the address
+                // Array is handled in genCoordinateOp.
+                if (sym->test(Fortran::semantics::Symbol::Flag::CrayPointee) &&
+                    sym->Rank() == 0) {
+                  // get the corresponding Cray pointer
+
+                  auto ptrSym = Fortran::lower::getCrayPointer(*sym);
+                  fir::ExtendedValue ptr =
+                      getSymbolExtendedValue(ptrSym, nullptr);
+                  mlir::Value ptrVal = fir::getBase(ptr);
+                  mlir::Type ptrTy = genType(*ptrSym);
+
+                  fir::ExtendedValue pte =
+                      getSymbolExtendedValue(*sym, nullptr);
+                  mlir::Value pteVal = fir::getBase(pte);
+                  mlir::Value cnvrt = Fortran::lower::addCrayPointerInst(
+                      loc, *builder, ptrVal, ptrTy, pteVal.getType());
+                  addr = builder->create<fir::LoadOp>(loc, cnvrt);
+                }
                 mlir::Value cast =
                     isVector ? val
                              : builder->convertWithSemantics(loc, toTy, val);
@@ -4665,6 +4749,13 @@ private:
         expr.u);
   }
 
+  /// Performing OpenACC lowering action that were deferred to the end of
+  /// lowering.
+  void finalizeOpenACCLowering() {
+    Fortran::lower::finalizeOpenACCRoutineAttachment(getModuleOp(),
+                                                     accRoutineInfos);
+  }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -4708,6 +4799,9 @@ private:
 
   /// A counter for uniquing names in `literalNamesMap`.
   std::uint64_t uniqueLitId = 0;
+
+  /// Deferred OpenACC routine attachment.
+  Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
 };
 
 } // namespace

@@ -1,7 +1,12 @@
 add_llvm_component_library(LLVMDWARFLinkerParallel
+  DependencyTracker.cpp
+  DIEAttributeCloner.cpp
   DWARFEmitterImpl.cpp
+  DWARFFile.cpp
   DWARFLinker.cpp
+  DWARFLinkerCompileUnit.cpp
   DWARFLinkerImpl.cpp
+  DWARFLinkerUnit.cpp
   OutputSections.cpp
   StringPool.cpp
 

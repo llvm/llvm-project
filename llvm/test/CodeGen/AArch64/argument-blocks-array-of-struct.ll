@@ -283,8 +283,8 @@ define %T_NESTED_STRUCT_DIFFM @struct_nested_different_field_types() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    ret
   ret %T_NESTED_STRUCT_DIFFM zeroinitializer
 }
@@ -294,8 +294,8 @@ define [ 1 x %T_NESTED_STRUCT_DIFFM ] @array_of_struct_nested_different_field_ty
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    ret
   ret [ 1 x %T_NESTED_STRUCT_DIFFM ] zeroinitializer
 }
@@ -305,12 +305,12 @@ define [ 2 x %T_NESTED_STRUCT_DIFFM ] @array_of_struct_nested_different_field_ty
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    movi d3, #0000000000000000
+; CHECK-NEXT:    mov w1, wzr
 ; CHECK-NEXT:    movi d4, #0000000000000000
 ; CHECK-NEXT:    movi d5, #0000000000000000
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    mov w1, wzr
 ; CHECK-NEXT:    ret
   ret [ 2 x %T_NESTED_STRUCT_DIFFM ] zeroinitializer
 }
@@ -458,16 +458,16 @@ define void @caller_in_memory() {
 ; CHECK-NEXT:    add x8, sp, #8
 ; CHECK-NEXT:    bl return_in_memory
 ; CHECK-NEXT:    ldur q0, [sp, #24]
+; CHECK-NEXT:    ldur q1, [sp, #8]
 ; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store
-; CHECK-NEXT:    ldur q1, [sp, #8]
-; CHECK-NEXT:    ldur q2, [sp, #56]
-; CHECK-NEXT:    ldur q3, [sp, #40]
-; CHECK-NEXT:    ldr d4, [sp, #72]
-; CHECK-NEXT:    stp q1, q0, [x8]
+; CHECK-NEXT:    ldr d2, [sp, #72]
+; CHECK-NEXT:    ldur q3, [sp, #56]
+; CHECK-NEXT:    ldur q4, [sp, #40]
 ; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
-; CHECK-NEXT:    stp q3, q2, [x8, #32]
-; CHECK-NEXT:    str d4, [x8, #64]
+; CHECK-NEXT:    stp q1, q0, [x8]
+; CHECK-NEXT:    str d2, [x8, #64]
+; CHECK-NEXT:    stp q4, q3, [x8, #32]
 ; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret
   %1 = call %T_IN_MEMORY @return_in_memory()
@@ -478,15 +478,16 @@ define void @caller_in_memory() {
 define void @callee_in_memory(%T_IN_MEMORY %a) {
 ; CHECK-LABEL: callee_in_memory:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [sp, #64]
+; CHECK-NEXT:    ldp q1, q2, [sp, #32]
 ; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store
-; CHECK-NEXT:    ldr q3, [sp, #16]
-; CHECK-NEXT:    ldp q1, q2, [sp, #32]
+; CHECK-NEXT:    ldr d0, [sp, #64]
 ; CHECK-NEXT:    str d0, [x8, #64]
-; CHECK-NEXT:    ldr q0, [sp]
-; CHECK-NEXT:    stp q1, q2, [x8, #32]
-; CHECK-NEXT:    stp q0, q3, [x8]
+; CHECK-NEXT:    ldr q0, [sp, #16]
+; CHECK-NEXT:    str q2, [x8, #48]
+; CHECK-NEXT:    ldr q2, [sp]
+; CHECK-NEXT:    stp q0, q1, [x8, #16]
+; CHECK-NEXT:    str q2, [x8]
 ; CHECK-NEXT:    ret
   store %T_IN_MEMORY %a, ptr @in_memory_store
   ret void
@@ -502,11 +503,11 @@ define void @argument_in_memory() {
 ; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store
 ; CHECK-NEXT:    ldp q0, q1, [x8]
-; CHECK-NEXT:    ldp q2, q3, [x8, #32]
 ; CHECK-NEXT:    ldr d4, [x8, #64]
+; CHECK-NEXT:    ldp q2, q3, [x8, #32]
+; CHECK-NEXT:    str d4, [sp, #64]
 ; CHECK-NEXT:    stp q0, q1, [sp]
 ; CHECK-NEXT:    stp q2, q3, [sp, #32]
-; CHECK-NEXT:    str d4, [sp, #64]
 ; CHECK-NEXT:    bl callee_in_memory
 ; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #96

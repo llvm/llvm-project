@@ -971,13 +971,13 @@ struct FormatStyle {
   /// For example:
   /// \code
   ///   x = (char *__capability)&y;
-  ///   int function(void) __ununsed;
+  ///   int function(void) __unused;
   ///   void only_writes_to_buffer(char *__output buffer);
   /// \endcode
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   AttributeMacros: ['__capability', '__output', '__ununsed']
+  ///   AttributeMacros: ['__capability', '__output', '__unused']
   /// \endcode
   ///
   /// \version 12
@@ -2008,6 +2008,8 @@ struct FormatStyle {
   bool BreakAfterJavaFieldAnnotations;
 
   /// Allow breaking string literals when formatting.
+  ///
+  /// In C, C++, and Objective-C:
   /// \code
   ///    true:
   ///    const char* x = "veryVeryVeryVeryVeryVe"
@@ -2016,8 +2018,35 @@ struct FormatStyle {
   ///
   ///    false:
   ///    const char* x =
-  ///      "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
+  ///
+  /// In C#, Java, and JavaScript:
+  /// \code
+  ///    true:
+  ///    var x = "veryVeryVeryVeryVeryVe" +
+  ///            "ryVeryVeryVeryVeryVery" +
+  ///            "VeryLongString";
+  ///
+  ///    false:
+  ///    var x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
+  /// C# and JavaScript interpolated strings are not broken.
+  ///
+  /// In Verilog:
+  /// \code
+  ///    true:
+  ///    string x = {"veryVeryVeryVeryVeryVe",
+  ///                "ryVeryVeryVeryVeryVery",
+  ///                "VeryLongString"};
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
   /// \version 3.9
   bool BreakStringLiterals;
 
@@ -2963,7 +2992,7 @@ struct FormatStyle {
   ///    A(a, b); // will not be expanded.
   /// \endcode
   ///
-  /// \version 17.0
+  /// \version 17
   std::vector<std::string> Macros;
 
   /// The maximum number of consecutive empty lines to keep.
@@ -4015,7 +4044,7 @@ struct FormatStyle {
   ///     AfterFunctionDefinitionName: true
   /// \endcode
   struct SpaceBeforeParensCustom {
-    /// If ``true``, put space betwee control statement keywords
+    /// If ``true``, put space between control statement keywords
     /// (for/if/while...) and opening parentheses.
     /// \code
     ///    true:                                  false:
@@ -4340,17 +4369,15 @@ struct FormatStyle {
           InEmptyParentheses(false), Other(false) {}
 
     SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
-        bool InEmptyParentheses, bool Other)
+                         bool InEmptyParentheses, bool Other)
         : InConditionalStatements(InConditionalStatements),
-          InCStyleCasts(InCStyleCasts),
-          InEmptyParentheses(InEmptyParentheses),
+          InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
       return InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
-             InEmptyParentheses == R.InEmptyParentheses &&
-             Other == R.Other;
+             InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
     }
     bool operator!=(const SpacesInParensCustom &R) const {
       return !(*this == R);

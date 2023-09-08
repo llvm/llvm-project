@@ -29,7 +29,7 @@ public:
   // All returned strings are null-terminated: *save(S).end() == 0.
   StringRef save(const char *S) { return save(StringRef(S)); }
   StringRef save(StringRef S);
-  StringRef save(const Twine &S) { return save(StringRef(S.str())); }
+  StringRef save(const Twine &S);
   StringRef save(const std::string &S) { return save(StringRef(S)); }
 };
 
@@ -51,7 +51,7 @@ public:
   // All returned strings are null-terminated: *save(S).end() == 0.
   StringRef save(const char *S) { return save(StringRef(S)); }
   StringRef save(StringRef S);
-  StringRef save(const Twine &S) { return save(StringRef(S.str())); }
+  StringRef save(const Twine &S);
   StringRef save(const std::string &S) { return save(StringRef(S)); }
 };
 

@@ -461,6 +461,12 @@ class XForm_tlb<bits<10> xo, dag OOL, dag IOL, string asmstr,
   let RST = 0;
 }
 
+class XForm_tlbilx<bits<10> xo, dag OOL, dag IOL, string asmstr,
+      InstrItinClass itin> : XForm_base_r3xo<31, xo, OOL, IOL, asmstr, itin, []> {
+  bits<5> T;
+  let RST = T;
+}
+
 class XForm_attn<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                  InstrItinClass itin>
   : I<opcode, OOL, IOL, asmstr, itin> {

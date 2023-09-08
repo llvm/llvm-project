@@ -14,7 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCEXPR_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCEXPR_H
 
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
@@ -34,6 +36,8 @@ public:
     VK_TPREL    = 0x007,
     VK_TLSDESC  = 0x008,
     VK_SECREL   = 0x009,
+    VK_AUTH     = 0x00a,
+    VK_AUTHADDR = 0x00b,
     VK_SymLocBits = 0x00f,
 
     // Variants specifying which part of the final address calculation is
@@ -116,6 +120,7 @@ private:
   const MCExpr *Expr;
   const VariantKind Kind;
 
+protected:
   explicit AArch64MCExpr(const MCExpr *Expr, VariantKind Kind)
     : Expr(Expr), Kind(Kind) {}
 
@@ -169,6 +174,42 @@ public:
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
+  }
+};
+
+class AArch64AuthMCExpr final : public AArch64MCExpr {
+  uint16_t Discriminator;
+  AArch64PACKey::ID Key;
+
+  explicit AArch64AuthMCExpr(const MCExpr *Expr, uint16_t Discriminator,
+                             AArch64PACKey::ID Key, bool HasAddressDiversity)
+      : AArch64MCExpr(Expr, HasAddressDiversity ? VK_AUTHADDR : VK_AUTH),
+        Discriminator(Discriminator), Key(Key) {}
+
+public:
+  static const AArch64AuthMCExpr *
+  create(const MCExpr *Expr, uint16_t Discriminator, AArch64PACKey::ID Key,
+         bool HasAddressDiversity, MCContext &Ctx);
+
+  AArch64PACKey::ID getKey() const { return Key; }
+  uint16_t getDiscriminator() const { return Discriminator; }
+  bool hasAddressDiversity() const { return getKind() == VK_AUTHADDR; }
+
+  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
+
+  void visitUsedExpr(MCStreamer &Streamer) const override;
+
+  MCFragment *findAssociatedFragment() const override;
+
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+                                 const MCFixup *Fixup) const override;
+
+  static bool classof(const MCExpr *E) {
+    return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));
+  }
+
+  static bool classof(const AArch64MCExpr *E) {
+    return E->getKind() == VK_AUTH || E->getKind() == VK_AUTHADDR;
   }
 };
 } // end namespace llvm

@@ -96,9 +96,11 @@ struct DenormalMode {
   DenormalModeKind Input = DenormalModeKind::Invalid;
 
   constexpr DenormalMode() = default;
+  constexpr DenormalMode(const DenormalMode &) = default;
   constexpr DenormalMode(DenormalModeKind Out, DenormalModeKind In) :
     Output(Out), Input(In) {}
 
+  DenormalMode &operator=(const DenormalMode &) = default;
 
   static constexpr DenormalMode getInvalid() {
     return DenormalMode(DenormalModeKind::Invalid, DenormalModeKind::Invalid);
@@ -195,7 +197,7 @@ parseDenormalFPAttributeComponent(StringRef Str) {
       .Default(DenormalMode::Invalid);
 }
 
-/// Return the name used for the denormal handling mode used by the the
+/// Return the name used for the denormal handling mode used by the
 /// expected names from the denormal-fp-math attribute.
 inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
   switch (Mode) {
@@ -220,7 +222,7 @@ inline DenormalMode parseDenormalFPAttribute(StringRef Str) {
   DenormalMode Mode;
   Mode.Output = parseDenormalFPAttributeComponent(OutputStr);
 
-  // Maintain compatability with old form of the attribute which only specified
+  // Maintain compatibility with old form of the attribute which only specified
   // one component.
   Mode.Input = InputStr.empty() ? Mode.Output  :
                parseDenormalFPAttributeComponent(InputStr);

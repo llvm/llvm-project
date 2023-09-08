@@ -1890,10 +1890,8 @@ public:
   }
   void Unparse(const AccBindClause &x) {
     common::visit(common::visitors{
-                      [&](const Name &y) { Put('('), Walk(y), Put(')'); },
-                      [&](const ScalarDefaultCharExpr &y) {
-                        Put('('), Walk(y), Put(')');
-                      },
+                      [&](const Name &y) { Walk(y); },
+                      [&](const ScalarDefaultCharExpr &y) { Walk(y); },
                   },
         x.u);
   }
@@ -1949,7 +1947,7 @@ public:
     Walk(std::get<AccBeginLoopDirective>(x.t));
     Put("\n");
     EndOpenACC();
-    Walk(std::get<std::optional<DoConstruct>>(x.t));
+    Walk(std::get<DoConstruct>(x.t));
   }
   void Unparse(const AccBeginLoopDirective &x) {
     Walk(std::get<AccLoopDirective>(x.t));

@@ -16,7 +16,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 #include <queue>
-#include <set>
 #include <vector>
 
 namespace clang {
@@ -24,23 +23,25 @@ namespace clang {
 // Intermediate data used in constructing a CFGIntervalNode.
 template <typename Node> struct BuildResult {
   // Use a vector to maintain the insertion order. Given the expected small
-  // number of nodes, vector should be sufficiently efficient.
+  // number of nodes, vector should be sufficiently efficient. Elements must not
+  // be null.
   std::vector<const Node *> Nodes;
+  // Elements must not be null.
   llvm::SmallDenseSet<const Node *> Successors;
 };
 
 namespace internal {
-static unsigned getID(const CFGBlock *B) { return B->getBlockID(); }
-static unsigned getID(const CFGIntervalNode *I) { return I->ID; }
+static unsigned getID(const CFGBlock &B) { return B.getBlockID(); }
+static unsigned getID(const CFGIntervalNode &I) { return I.ID; }
 
 // `Node` must be one of `CFGBlock` or `CFGIntervalNode`.
 template <typename Node>
 BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
                                 const Node *Header) {
-  assert(Header);
+  assert(Header != nullptr);
   BuildResult<Node> Interval;
   Interval.Nodes.push_back(Header);
-  Partitioned.set(getID(Header));
+  Partitioned.set(getID(*Header));
 
   // FIXME: Compare performance against using RPO to consider nodes, rather than
   // following successors.
@@ -50,7 +51,7 @@ BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
   llvm::BitVector Workset(Partitioned.size(), false);
   for (const Node *S : Header->succs())
     if (S != nullptr)
-      if (auto SID = getID(S); !Partitioned.test(SID)) {
+      if (auto SID = getID(*S); !Partitioned.test(SID)) {
         // Successors are unique, so we don't test against `Workset` before
         // adding to `Worklist`.
         Worklist.push(S);
@@ -63,12 +64,12 @@ BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
   // yet. In the latter case, we'll revisit the block through some other path
   // from the interval. At the end of processing the worklist, we filter out any
   // that ended up in the interval to produce the output set of interval
-  // successors.
+  // successors. Elements are never null.
   std::vector<const Node *> MaybeSuccessors;
 
   while (!Worklist.empty()) {
     const auto *B = Worklist.front();
-    auto ID = getID(B);
+    auto ID = getID(*B);
     Worklist.pop();
     Workset.reset(ID);
 
@@ -82,7 +83,7 @@ BuildResult<Node> buildInterval(llvm::BitVector &Partitioned,
       Partitioned.set(ID);
       for (const Node *S : B->succs())
         if (S != nullptr)
-          if (auto SID = getID(S);
+          if (auto SID = getID(*S);
               !Partitioned.test(SID) && !Workset.test(SID)) {
             Worklist.push(S);
             Workset.set(SID);
@@ -116,8 +117,9 @@ void fillIntervalNode(CFGIntervalGraph &Graph,
   // graph. In this case, the new interval has identifier `ID` so all of its
   // nodes (`Result.Nodes`) map to `ID`.
   for (const auto *N : Result.Nodes) {
-    assert(getID(N) < Index.size());
-    Index[getID(N)] = &Interval;
+    assert(N != nullptr);
+    assert(getID(*N) < Index.size());
+    Index[getID(*N)] = &Interval;
   }
 
   if constexpr (std::is_same_v<std::decay_t<Node>, CFGBlock>)
@@ -159,7 +161,8 @@ CFGIntervalGraph partitionIntoIntervalsImpl(unsigned NumBlockIDs,
   while (!Successors.empty()) {
     const auto *B = Successors.front();
     Successors.pop();
-    if (Partitioned.test(getID(B)))
+    assert(B != nullptr);
+    if (Partitioned.test(getID(*B)))
       continue;
 
     // B has not been partitioned, but it has a predecessor that has. Create a
@@ -173,8 +176,11 @@ CFGIntervalGraph partitionIntoIntervalsImpl(unsigned NumBlockIDs,
     // Map input-graph predecessors to output-graph nodes and mark those as
     // predecessors of `N`. Then, mark `N` as a successor of said predecessor.
     for (const Node *P : H->preds()) {
-      assert(getID(P) < NumBlockIDs);
-      CFGIntervalNode *Pred = Index[getID(P)];
+      if (P == nullptr)
+        continue;
+
+      assert(getID(*P) < NumBlockIDs);
+      CFGIntervalNode *Pred = Index[getID(*P)];
       if (Pred == nullptr)
         // Unreachable node.
         continue;
@@ -229,7 +235,7 @@ WTOCompare::WTOCompare(const WeakTopologicalOrdering &WTO) {
     return;
   auto N = WTO[0]->getParent()->getNumBlockIDs();
   BlockOrder.resize(N, 0);
-  for (unsigned I = 0; I < N; ++I)
+  for (unsigned I = 0, S = WTO.size(); I < S; ++I)
     BlockOrder[WTO[I]->getBlockID()] = I + 1;
 }
 } // namespace clang

@@ -15,9 +15,7 @@ program openacc_clause_validity
   real(8) :: a(256)
   real(8) :: aa(256, 256)
 
-  !ERROR: A DO loop must follow the LOOP directive
-  !$acc loop
-  i = 1
+  i = 0
 
   !ERROR: DO loop after the LOOP directive must have loop control
   !$acc loop

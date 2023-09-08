@@ -387,15 +387,9 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
                                        const int32_t shift_amount) {
   constexpr size_t MANT_INT_SIZE = sizeof(MantissaInt) * 8;
   cpp::UInt<MID_INT_SIZE + MANT_INT_SIZE> val(large);
-  // TODO: Find a better way to force __uint128_t to be UInt<128>
-  cpp::UInt<MANT_INT_SIZE> wide_mant(0);
-  wide_mant[0] = static_cast<size_t>(mantissa & (uint64_t(-1)));
-  wide_mant[1] = static_cast<size_t>(mantissa >> 64);
-  val = (val * wide_mant) >> shift_amount;
-
+  val = (val * mantissa) >> shift_amount;
   return static_cast<uint32_t>(
       val.div_uint32_times_pow_2(1000000000, 0).value());
-  // return fast_uint_mod_1e9(val);
 }
 
 } // namespace internal
@@ -429,17 +423,8 @@ class FloatToString {
 public:
   LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.get_sign();
-    exponent = float_bits.get_exponent();
+    exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
-
-    // Handle the exponent for numbers with a 0 exponent.
-    if (exponent == -EXP_BIAS) {
-      if (mantissa > 0) { // Subnormals
-        ++exponent;
-      } else { // Zeroes
-        exponent = 0;
-      }
-    }
 
     // Adjust for the width of the mantissa.
     exponent -= MANT_WIDTH;

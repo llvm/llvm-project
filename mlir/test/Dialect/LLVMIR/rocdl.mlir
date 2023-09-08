@@ -274,3 +274,12 @@ llvm.func @rocdl.raw.buffer.i32(%rsrc : vector<4xi32>,
 
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { rocdl.kernel }
+
+// -----
+
+// Just check these don't emit errors.
+gpu.module @module_1 [#rocdl.target<O = 1, chip = "gfx900", abi = "500", link = ["my_device_lib.bc"], flags = {fast, daz, unsafe_math}>] {
+}
+
+gpu.module @module_2 [#rocdl.target<chip = "gfx900">, #rocdl.target<chip = "gfx90a">] {
+}

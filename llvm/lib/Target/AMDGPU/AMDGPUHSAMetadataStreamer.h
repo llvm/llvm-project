@@ -105,8 +105,8 @@ protected:
                      msgpack::ArrayDocNode Args,
                      MaybeAlign PointeeAlign = std::nullopt,
                      StringRef Name = "", StringRef TypeName = "",
-                     StringRef BaseTypeName = "", StringRef AccQual = "",
-                     StringRef TypeQual = "");
+                     StringRef BaseTypeName = "", StringRef ActAccQual = "",
+                     StringRef AccQual = "", StringRef TypeQual = "");
 
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;

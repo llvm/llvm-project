@@ -10,6 +10,7 @@
 ; AFTER-PEI-NEXT: gdsSize:         0
 ; AFTER-PEI-NEXT: dynLDSAlign:     1
 ; AFTER-PEI-NEXT: isEntryFunction: true
+; AFTER-PEI-NEXT: isChainFunction: false
 ; AFTER-PEI-NEXT: noSignedZerosFPMath: false
 ; AFTER-PEI-NEXT: memoryBound:     false
 ; AFTER-PEI-NEXT: waveLimiter:     false

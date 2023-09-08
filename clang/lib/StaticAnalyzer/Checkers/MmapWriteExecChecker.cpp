@@ -48,8 +48,10 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
                                          CheckerContext &C) const {
   if (matchesAny(Call, MmapFn, MprotectFn)) {
     SVal ProtVal = Call.getArgSVal(2);
-    auto ProtLoc = ProtVal.castAs<nonloc::ConcreteInt>();
-    int64_t Prot = ProtLoc.getValue().getSExtValue();
+    auto ProtLoc = ProtVal.getAs<nonloc::ConcreteInt>();
+    if (!ProtLoc)
+      return;
+    int64_t Prot = ProtLoc->getValue().getSExtValue();
     if (ProtExecOv != ProtExec)
       ProtExec = ProtExecOv;
     if (ProtReadOv != ProtRead)

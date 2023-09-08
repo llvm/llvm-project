@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -Wno-unused-value -triple i686-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// rdar: //8540501
 extern "C" int printf(...);
 extern "C" void abort();
 
@@ -64,7 +63,6 @@ int main()
   return foo(1).i-1;
 }
 
-// rdar: // 8600553
 int a[128];
 int* foo5() {
 // CHECK-NOT: memcpy
@@ -73,7 +71,6 @@ int* foo5() {
   return (({ a; }));
 }
 
-// <rdar://problem/14074868>
 // Make sure this doesn't crash.
 int foo5(bool b) {
   int y = 0;

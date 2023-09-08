@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm %s -o /dev/null
-// Radar 7328944
 
 typedef struct
 {

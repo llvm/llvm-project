@@ -13,7 +13,21 @@ namespace find_all_symbols {
 
 const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
   static const HeaderMapCollector::RegexHeaderMap STLPostfixHeaderMap = {
+      {"include/__stdarg___gnuc_va_list.h$", "<cstdarg>"},
+      {"include/__stdarg___va_copy.h$", "<cstdarg>"},
+      {"include/__stdarg_va_arg.h$", "<cstdarg>"},
+      {"include/__stdarg_va_copy.h$", "<cstdarg>"},
+      {"include/__stdarg_va_list.h$", "<cstdarg>"},
       {"include/__stddef_max_align_t.h$", "<cstddef>"},
+      {"include/__stddef_null.h$", "<cstddef>"},
+      {"include/__stddef_nullptr_t.h$", "<cstddef>"},
+      {"include/__stddef_offsetof.h$", "<cstddef>"},
+      {"include/__stddef_ptrdiff_t.h$", "<cstddef>"},
+      {"include/__stddef_rsize_t.h$", "<cstddef>"},
+      {"include/__stddef_size_t.h$", "<cstddef>"},
+      {"include/__stddef_unreachable.h$", "<cstddef>"},
+      {"include/__stddef_wchar_t.h$", "<cstddef>"},
+      {"include/__stddef_wint_t.h$", "<cstddef>"},
       {"include/__wmmintrin_aes.h$", "<wmmintrin.h>"},
       {"include/__wmmintrin_pclmul.h$", "<wmmintrin.h>"},
       {"include/adxintrin.h$", "<immintrin.h>"},

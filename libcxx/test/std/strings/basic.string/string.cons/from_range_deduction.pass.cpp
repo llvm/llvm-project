@@ -43,7 +43,9 @@ int main(int, char**) {
 
   // Note: defining `value_type` is a workaround because one of the deduction guides will end up instantiating
   // `basic_string`, and that would fail with a hard error if the given allocator doesn't define `value_type`.
-  struct BadAlloc { using value_type = char; };
+  struct BadAlloc {
+    using value_type = char;
+  };
   SequenceContainerDeductionGuidesSfinaeAway<std::basic_string, std::basic_string<char>, BadAlloc>();
 
   return 0;

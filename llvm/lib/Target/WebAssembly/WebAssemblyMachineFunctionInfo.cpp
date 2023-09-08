@@ -35,7 +35,7 @@ MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
 
 void WebAssemblyFunctionInfo::initWARegs(MachineRegisterInfo &MRI) {
   assert(WARegs.empty());
-  unsigned Reg = UnusedReg;
+  unsigned Reg = WebAssembly::UnusedReg;
   WARegs.resize(MRI.getNumVirtRegs(), Reg);
 }
 

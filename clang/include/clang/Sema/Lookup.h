@@ -117,6 +117,17 @@ public:
     /// @endcode
     AmbiguousReference,
 
+    /// Name lookup results in an ambiguity because multiple placeholder
+    /// variables were found in the same scope.
+    /// @code
+    /// void f() {
+    ///    int _ = 0;
+    ///    int _ = 0;
+    ///    return _; // ambiguous use of placeholder variable
+    /// }
+    /// @endcode
+    AmbiguousReferenceToPlaceholderVariable,
+
     /// Name lookup results in an ambiguity because an entity with a
     /// tag name was hidden by an entity with an ordinary name from
     /// a different context.

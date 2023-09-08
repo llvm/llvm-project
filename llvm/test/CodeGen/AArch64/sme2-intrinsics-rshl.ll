@@ -332,15 +332,15 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 @multi_vec_rounding_shl_x4_s8(<vscale x 16 x i8> %dummy, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3, <vscale x 16 x i8> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_s8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1b { z31.b }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    srshl { z24.b - z27.b }, { z24.b - z27.b }, { z28.b - z31.b }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -357,15 +357,15 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 @multi_vec_rounding_shl_x4_s16(<vscale x 8 x i16> %dummy, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4, <vscale x 8 x i16> %zm1, <vscale x 8 x i16> %zm2, <vscale x 8 x i16> %zm3, <vscale x 8 x i16> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_s16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1h { z31.h }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    srshl { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -382,15 +382,15 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 @multi_vec_rounding_shl_x4_s32(<vscale x 4 x i32> %dummy, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4, <vscale x 4 x i32> %zm1, <vscale x 4 x i32> %zm2, <vscale x 4 x i32> %zm3, <vscale x 4 x i32> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_s32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1w { z31.s }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    srshl { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -407,15 +407,15 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 @multi_vec_rounding_shl_x4_s64(<vscale x 2 x i64> %dummy, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4, <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_s64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1d { z31.d }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    srshl { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -496,15 +496,15 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 @multi_vec_rounding_shl_x4_u8(<vscale x 16 x i8> %dummy, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4, <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3, <vscale x 16 x i8> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_u8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1b { z31.b }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    urshl { z24.b - z27.b }, { z24.b - z27.b }, { z28.b - z31.b }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -521,15 +521,15 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 @multi_vec_rounding_shl_x4_u16(<vscale x 8 x i16> %dummy, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4, <vscale x 8 x i16> %zm1, <vscale x 8 x i16> %zm2, <vscale x 8 x i16> %zm3, <vscale x 8 x i16> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_u16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1h { z31.h }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    urshl { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -546,15 +546,15 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 @multi_vec_rounding_shl_x4_u32(<vscale x 4 x i32> %dummy, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4, <vscale x 4 x i32> %zm1, <vscale x 4 x i32> %zm2, <vscale x 4 x i32> %zm3, <vscale x 4 x i32> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_u32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1w { z31.s }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    urshl { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d
@@ -571,15 +571,15 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 @multi_vec_rounding_shl_x4_u64(<vscale x 2 x i64> %dummy, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4, <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4) {
 ; CHECK-LABEL: multi_vec_rounding_shl_x4_u64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z26.d, z3.d
+; CHECK-NEXT:    mov	z30.d, z7.d
+; CHECK-NEXT:    mov	z27.d, z4.d
+; CHECK-NEXT:    mov	z29.d, z6.d
+; CHECK-NEXT:    mov	z26.d, z3.d
+; CHECK-NEXT:    mov	z28.d, z5.d
+; CHECK-NEXT:    mov	z25.d, z2.d
+; CHECK-NEXT:    mov	z24.d, z1.d
 ; CHECK-NEXT:    ld1d { z31.d }, p0/z, [x0]
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    mov z24.d, z1.d
 ; CHECK-NEXT:    urshl { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
 ; CHECK-NEXT:    mov z0.d, z24.d
 ; CHECK-NEXT:    mov z1.d, z25.d

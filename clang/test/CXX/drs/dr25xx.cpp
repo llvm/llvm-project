@@ -81,7 +81,7 @@ using ::dr2521::operator""_div;
 #endif
 } // namespace dr2521
 
-namespace dr2565 { // dr2565: 16 open
+namespace dr2565 { // dr2565: 16
 #if __cplusplus >= 202002L
   template<typename T>
     concept C = requires (typename T::type x) {

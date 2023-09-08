@@ -13,6 +13,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/UnwindTable.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
@@ -494,13 +495,13 @@ public:
 
   /// Some object files may have the number of bits used for addressing
   /// embedded in them, e.g. a Mach-O core file using an LC_NOTE.  These
-  /// object files can return the address mask that should be used in
-  /// the Process.
+  /// object files can return an AddressableBits object that can can be
+  /// used to set the address masks in the Process.
+  ///
   /// \return
-  ///     The mask will have bits set which aren't used for addressing --
-  ///     typically, the high bits.
-  ///     Zero is returned when no address bits mask is available.
-  virtual lldb::addr_t GetAddressMask() { return 0; }
+  ///     Returns an AddressableBits object which can be used to set
+  ///     the address masks in the Process.
+  virtual lldb_private::AddressableBits GetAddressableBits() { return {}; }
 
   /// When the ObjectFile is a core file, lldb needs to locate the "binary" in
   /// the core file.  lldb can iterate over the pages looking for a valid
@@ -653,6 +654,12 @@ public:
   // be larger than what Section::GetFileSize reports.
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
+
+  // Returns the section data size. This is special-cased for PECOFF
+  // due to file alignment.
+  virtual size_t GetSectionDataSize(Section *section) {
+    return section->GetFileSize();
+  }
 
   /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }

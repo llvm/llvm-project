@@ -63,6 +63,12 @@ resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
                                 memref::ExpandShapeOp expandShapeOp,
                                 ValueRange indices,
                                 SmallVectorImpl<Value> &sourceIndices) {
+  // The below implementation uses computeSuffixProduct method, which only
+  // allows int64_t values (i.e., static shape). Bail out if it has dynamic
+  // shapes.
+  if (!expandShapeOp.getResultType().hasStaticShape())
+    return failure();
+
   MLIRContext *ctx = rewriter.getContext();
   for (ArrayRef<int64_t> groups : expandShapeOp.getReassociationIndices()) {
     assert(!groups.empty() && "association indices groups cannot be empty");

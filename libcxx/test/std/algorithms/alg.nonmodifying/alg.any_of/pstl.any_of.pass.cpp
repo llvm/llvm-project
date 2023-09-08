@@ -56,7 +56,7 @@ struct Test {
     // check that a large number of elements works
     std::vector<int> vec(100, 2);
     vec[96] = 3;
-    assert(std::any_of(Iter(vec.data()), Iter(vec.data() + vec.size()), [](int i) { return i == 3; }));
+    assert(std::any_of(policy, Iter(vec.data()), Iter(vec.data() + vec.size()), [](int i) { return i == 3; }));
   }
 };
 

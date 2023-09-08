@@ -1200,7 +1200,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysWait = HeaderSpec<
     "sys/wait.h",
     [], // Macros
-    [PidT, StructRUsage],
+    [PidT, StructRUsage, SigInfoType],
     [], // Enumerations
     [
       FunctionSpec<

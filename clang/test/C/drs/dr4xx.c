@@ -301,16 +301,14 @@ void dr489(void) {
   switch (i) {
   case (int)0.0f: break;    /* okay, a valid ICE */
 
-  /* FIXME: this should be accepted in C2x and up without a diagnostic, as C23
+  /* FIXME: this should be accepted in C23 and up without a diagnostic, as C23
    * added compound literals to the allowed list of things in an ICE. The
    * diagnostic is correct for C17 and earlier though.
    */
   case (int){ 2 }: break;   /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
                                c89only-warning {{compound literals are a C99-specific feature}}
                              */
-  case 12 || main(): break; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
-                               expected-warning {{use of logical '||' with constant operand}} \
-                               expected-note {{use '|' for a bitwise operation}} */
+  case 12 || main(): break; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}} */
   }
 }
 

@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -x objective-c -fsyntax-only -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// rdar://10041908
 
 @interface Bar {
   struct _A *_hardlinkList;

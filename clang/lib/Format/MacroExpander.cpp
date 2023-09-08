@@ -55,7 +55,7 @@ public:
   // Parse the token stream and return the corresponding Definition object.
   // Returns an empty definition object with a null-Name on error.
   MacroExpander::Definition parse() {
-    if (!Current->is(tok::identifier))
+    if (Current->isNot(tok::identifier))
       return {};
     Def.Name = Current->TokenText;
     nextToken();
@@ -191,7 +191,7 @@ MacroExpander::expand(FormatToken *ID,
   auto expandArgument = [&](FormatToken *Tok) -> bool {
     // If the current token references a parameter, expand the corresponding
     // argument.
-    if (!Tok->is(tok::identifier) || ExpandedArgs.contains(Tok->TokenText))
+    if (Tok->isNot(tok::identifier) || ExpandedArgs.contains(Tok->TokenText))
       return false;
     ExpandedArgs.insert(Tok->TokenText);
     auto I = Def.ArgMap.find(Tok->TokenText);

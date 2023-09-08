@@ -377,7 +377,8 @@ public:
     InheritedFrom = getParmOwningDefaultArg(InheritedFrom);
     if (!isSet())
       ValueOrInherited = InheritedFrom;
-    else if (auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+    else if ([[maybe_unused]] auto *D =
+                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
@@ -1373,10 +1374,7 @@ public:
          nullptr;
   }
 
-  void setTypeConstraint(NestedNameSpecifierLoc NNS,
-                         DeclarationNameInfo NameInfo, NamedDecl *FoundDecl,
-                         ConceptDecl *CD,
-                         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  void setTypeConstraint(ConceptReference *CR,
                          Expr *ImmediatelyDeclaredConstraint);
 
   /// Determine whether this template parameter has a type-constraint.

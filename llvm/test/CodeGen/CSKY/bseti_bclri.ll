@@ -13,8 +13,7 @@ define i32 @test_or_128(i32 noundef %0) {
 define i32 @test_or_131072(i32 noundef %0) {
 ; CHECK-LABEL: test_or_131072:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    or16 a0, a1
+; CHECK-NEXT:    bseti16 a0, 17
 ; CHECK-NEXT:    rts16
  %2 = or i32 %0, 131072
  ret i32 %2
@@ -71,9 +70,7 @@ define i32 @test_andnot_128(i32 noundef %0) {
 define i32 @test_andnot_131072(i32 noundef %0) {
 ; CHECK-LABEL: test_andnot_131072:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 65533
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    and16 a0, a1
+; CHECK-NEXT:    bclri16 a0, 17
 ; CHECK-NEXT:    rts16
  %2 = and i32 %0, -131073
  ret i32 %2

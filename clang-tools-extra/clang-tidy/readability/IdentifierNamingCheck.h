@@ -44,7 +44,8 @@ public:
     CT_UpperCase,
     CT_CamelCase,
     CT_CamelSnakeCase,
-    CT_CamelSnakeBack
+    CT_CamelSnakeBack,
+    CT_LeadingUpperSnakeCase
   };
 
   enum HungarianPrefixType {

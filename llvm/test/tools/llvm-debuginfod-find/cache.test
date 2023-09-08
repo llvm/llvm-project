@@ -27,12 +27,12 @@ RUN:     DEBUGINFOD_CACHE_PATH=%t/cache DEBUGINFOD_URLS=file://%t \
 RUN:     llvm-debuginfod-find --debuginfo 0123456789012346 > /dev/null
 RUN: ls %t/cache | FileCheck --check-prefix=BOTH --match-full-lines --implicit-check-not {{.}} %s
 
-FIRST: llvmcache-6663022027345102449
+FIRST: llvmcache-10846399329613630737
 FIRST: llvmcache.timestamp
 
-SECOND: llvmcache-6762748755046480574
+SECOND: llvmcache-10192351353398627645
 SECOND: llvmcache.timestamp
 
-BOTH: llvmcache-6663022027345102449
-BOTH: llvmcache-6762748755046480574
+BOTH: llvmcache-10192351353398627645
+BOTH: llvmcache-10846399329613630737
 BOTH: llvmcache.timestamp

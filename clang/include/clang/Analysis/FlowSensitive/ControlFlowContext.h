@@ -40,15 +40,9 @@ public:
   static llvm::Expected<ControlFlowContext> build(const Decl &D, Stmt &S,
                                                   ASTContext &C);
 
-  /// Builds a ControlFlowContext from an AST node. `D` is the function in which
-  /// `S` resides. `D` must not be null and `D->isTemplated()` must be false.
-  LLVM_DEPRECATED("Use the version that takes a const Decl & instead", "")
-  static llvm::Expected<ControlFlowContext> build(const Decl *D, Stmt &S,
-                                                  ASTContext &C);
-
   /// Returns the `Decl` containing the statement used to construct the CFG, if
   /// available.
-  const Decl *getDecl() const { return ContainingDecl; }
+  const Decl &getDecl() const { return ContainingDecl; }
 
   /// Returns the CFG that is stored in this context.
   const CFG &getCFG() const { return *Cfg; }
@@ -64,9 +58,7 @@ public:
   }
 
 private:
-  // FIXME: Once the deprecated `build` method is removed, mark `D` as "must not
-  // be null" and add an assertion.
-  ControlFlowContext(const Decl *D, std::unique_ptr<CFG> Cfg,
+  ControlFlowContext(const Decl &D, std::unique_ptr<CFG> Cfg,
                      llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
                      llvm::BitVector BlockReachable)
       : ContainingDecl(D), Cfg(std::move(Cfg)),
@@ -74,7 +66,7 @@ private:
         BlockReachable(std::move(BlockReachable)) {}
 
   /// The `Decl` containing the statement used to construct the CFG.
-  const Decl *ContainingDecl;
+  const Decl &ContainingDecl;
   std::unique_ptr<CFG> Cfg;
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
   llvm::BitVector BlockReachable;

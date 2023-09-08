@@ -93,7 +93,7 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
   IgnoredIntegerValues.resize(IgnoredIntegerValuesInput.size());
   llvm::transform(IgnoredIntegerValuesInput, IgnoredIntegerValues.begin(),
                   [](StringRef Value) {
-                    int64_t Res;
+                    int64_t Res = 0;
                     Value.getAsInteger(10, Res);
                     return Res;
                   });

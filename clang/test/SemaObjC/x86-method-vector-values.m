@@ -11,8 +11,6 @@
 
 // RUN: %clang_cc1 -verify -DALLOW -DOTHER -triple=x86_64-apple-macosx10.10 -Wno-objc-root-class %s
 
-// rdar://21662309
-
 typedef __attribute__((__ext_vector_type__(3))) float float3;
 
 typedef float __m128 __attribute__((__vector_size__(16)));

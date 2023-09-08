@@ -50,6 +50,7 @@ target_link_libraries(toyc-ch6
     MLIRCallInterfaces
     MLIRCastInterfaces
     MLIRExecutionEngine
+    MLIRFunctionInterfaces
     MLIRIR
     MLIRLLVMCommonConversion
     MLIRLLVMDialect

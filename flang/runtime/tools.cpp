@@ -110,4 +110,63 @@ void CheckIntegerKind(Terminator &terminator, int kind, const char *intrinsic) {
         "not yet implemented: %s: KIND=%d argument", intrinsic, kind);
   }
 }
+
+void ShallowCopyDiscontiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from) {
+  SubscriptValue toAt[maxRank], fromAt[maxRank];
+  to.GetLowerBounds(toAt);
+  from.GetLowerBounds(fromAt);
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+    std::memcpy(
+        to.Element<char>(toAt), from.Element<char>(fromAt), elementBytes);
+  }
+}
+
+void ShallowCopyDiscontiguousToContiguous(
+    const Descriptor &to, const Descriptor &from) {
+  char *toAt{to.OffsetElement()};
+  SubscriptValue fromAt[maxRank];
+  from.GetLowerBounds(fromAt);
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       toAt += elementBytes, from.IncrementSubscripts(fromAt)) {
+    std::memcpy(toAt, from.Element<char>(fromAt), elementBytes);
+  }
+}
+
+void ShallowCopyContiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from) {
+  SubscriptValue toAt[maxRank];
+  to.GetLowerBounds(toAt);
+  char *fromAt{from.OffsetElement()};
+  std::size_t elementBytes{to.ElementBytes()};
+  for (std::size_t n{to.Elements()}; n-- > 0;
+       to.IncrementSubscripts(toAt), fromAt += elementBytes) {
+    std::memcpy(to.Element<char>(toAt), fromAt, elementBytes);
+  }
+}
+
+void ShallowCopy(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous) {
+  if (toIsContiguous) {
+    if (fromIsContiguous) {
+      std::memcpy(to.OffsetElement(), from.OffsetElement(),
+          to.Elements() * to.ElementBytes());
+    } else {
+      ShallowCopyDiscontiguousToContiguous(to, from);
+    }
+  } else {
+    if (fromIsContiguous) {
+      ShallowCopyContiguousToDiscontiguous(to, from);
+    } else {
+      ShallowCopyDiscontiguousToDiscontiguous(to, from);
+    }
+  }
+}
+
+void ShallowCopy(const Descriptor &to, const Descriptor &from) {
+  ShallowCopy(to, from, to.IsContiguous(), from.IsContiguous());
+}
 } // namespace Fortran::runtime

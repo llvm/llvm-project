@@ -67,11 +67,14 @@ To link a HIP program, use this command:
 
    clang++ --hip-link --offload-arch=gfx906 sample.o -o sample
 
+In the above command, the ``--hip-link`` flag instructs Clang to link the HIP runtime library. However,
+the use of this flag is unnecessary if a HIP input file is already present in your program.
+
 For convenience, Clang also supports compiling and linking in a single step:
 
 .. code-block:: shell
 
-   clang++ --hip-link --offload-arch=gfx906 -xhip sample.cpp -o sample
+   clang++ --offload-arch=gfx906 -xhip sample.cpp -o sample
 
 In the above commands, ``gfx906`` is the GPU architecture that the code is being compiled for. The supported GPU
 architectures can be found in the `AMDGPU Processor Table <https://llvm.org/docs/AMDGPUUsage.html#processors>`_.
@@ -85,7 +88,7 @@ You can use ``--offload-arch=native`` to automatically detect the GPU architectu
 
 .. code-block:: shell
 
-   clang++ --hip-link --offload-arch=native -xhip sample.cpp -o sample
+   clang++ --offload-arch=native -xhip sample.cpp -o sample
 
 
 Path Setting for Dependencies

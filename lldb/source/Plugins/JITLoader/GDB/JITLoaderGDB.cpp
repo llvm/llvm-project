@@ -89,8 +89,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(JITLoaderGDB::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return JITLoaderGDB::GetPluginNameStatic();
   }
 
   PluginProperties() {

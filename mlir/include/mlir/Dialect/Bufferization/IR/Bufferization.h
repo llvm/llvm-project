@@ -58,6 +58,12 @@ FailureOr<Value> castOrReallocMemRefValue(OpBuilder &b, Value value,
 LogicalResult foldToMemrefToTensorPair(RewriterBase &rewriter,
                                        ToMemrefOp toMemref);
 
+/// Add the canonicalization patterns for bufferization.dealloc to the given
+/// pattern set to make them available to other passes (such as
+/// BufferDeallocationSimplification).
+void populateDeallocOpCanonicalizationPatterns(RewritePatternSet &patterns,
+                                               MLIRContext *context);
+
 } // namespace bufferization
 } // namespace mlir
 

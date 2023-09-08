@@ -17,11 +17,11 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <cstdarg>
 
 using namespace llvm;
+using ::testing::EndsWith;
 using ::testing::IsSubsetOf;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
@@ -518,6 +518,119 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_FALSE(HasFrameMappingError)
       << "could not map frame id: " << LastUnmappedFrameId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
+}
+
+TEST_F(InstrProfTest, test_irpgo_function_name) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  // Use Mach-O mangling so that non-private symbols get a `_` prefix.
+  M->setDataLayout(DataLayout("m:o"));
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+
+  std::vector<std::tuple<StringRef, Function::LinkageTypes, StringRef>> Data;
+  Data.emplace_back("ExternalFoo", Function::ExternalLinkage, "_ExternalFoo");
+  Data.emplace_back("InternalFoo", Function::InternalLinkage,
+                    "MyModule.cpp;_InternalFoo");
+  Data.emplace_back("PrivateFoo", Function::PrivateLinkage,
+                    "MyModule.cpp;l_PrivateFoo");
+  Data.emplace_back("WeakODRFoo", Function::WeakODRLinkage, "_WeakODRFoo");
+  // Test Objective-C symbols
+  Data.emplace_back("\01-[C dynamicFoo:]", Function::ExternalLinkage,
+                    "-[C dynamicFoo:]");
+  Data.emplace_back("-<C directFoo:>", Function::ExternalLinkage,
+                    "_-<C directFoo:>");
+  Data.emplace_back("\01-[C internalFoo:]", Function::InternalLinkage,
+                    "MyModule.cpp;-[C internalFoo:]");
+
+  for (auto &[Name, Linkage, ExpectedIRPGOFuncName] : Data)
+    Function::Create(FTy, Linkage, Name, M.get());
+
+  for (auto &[Name, Linkage, ExpectedIRPGOFuncName] : Data) {
+    auto *F = M->getFunction(Name);
+    auto IRPGOFuncName = getIRPGOFuncName(*F);
+    EXPECT_EQ(IRPGOFuncName, ExpectedIRPGOFuncName);
+
+    auto [Filename, ParsedIRPGOFuncName] =
+        getParsedIRPGOFuncName(IRPGOFuncName);
+    StringRef ExpectedParsedIRPGOFuncName = IRPGOFuncName;
+    if (ExpectedParsedIRPGOFuncName.consume_front("MyModule.cpp;")) {
+      EXPECT_EQ(Filename, "MyModule.cpp");
+    } else {
+      EXPECT_EQ(Filename, "");
+    }
+    EXPECT_EQ(ParsedIRPGOFuncName, ExpectedParsedIRPGOFuncName);
+  }
+}
+
+TEST_F(InstrProfTest, test_pgo_function_name) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+
+  std::vector<std::tuple<StringRef, Function::LinkageTypes, StringRef>> Data;
+  Data.emplace_back("ExternalFoo", Function::ExternalLinkage, "ExternalFoo");
+  Data.emplace_back("InternalFoo", Function::InternalLinkage,
+                    "MyModule.cpp:InternalFoo");
+  Data.emplace_back("PrivateFoo", Function::PrivateLinkage,
+                    "MyModule.cpp:PrivateFoo");
+  Data.emplace_back("WeakODRFoo", Function::WeakODRLinkage, "WeakODRFoo");
+  // Test Objective-C symbols
+  Data.emplace_back("\01-[C externalFoo:]", Function::ExternalLinkage,
+                    "-[C externalFoo:]");
+  Data.emplace_back("\01-[C internalFoo:]", Function::InternalLinkage,
+                    "MyModule.cpp:-[C internalFoo:]");
+
+  for (auto &[Name, Linkage, ExpectedPGOFuncName] : Data)
+    Function::Create(FTy, Linkage, Name, M.get());
+
+  for (auto &[Name, Linkage, ExpectedPGOFuncName] : Data) {
+    auto *F = M->getFunction(Name);
+    EXPECT_EQ(getPGOFuncName(*F), ExpectedPGOFuncName);
+  }
+}
+
+TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  // Use Mach-O mangling so that non-private symbols get a `_` prefix.
+  M->setDataLayout(DataLayout("m:o"));
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+  auto *InternalFooF =
+      Function::Create(FTy, Function::InternalLinkage, "InternalFoo", M.get());
+  auto *ExternalFooF =
+      Function::Create(FTy, Function::ExternalLinkage, "ExternalFoo", M.get());
+
+  auto *InternalBarF =
+      Function::Create(FTy, Function::InternalLinkage, "InternalBar", M.get());
+  auto *ExternalBarF =
+      Function::Create(FTy, Function::ExternalLinkage, "ExternalBar", M.get());
+
+  Writer.addRecord({getIRPGOFuncName(*InternalFooF), 0x1234, {1}}, Err);
+  Writer.addRecord({getIRPGOFuncName(*ExternalFooF), 0x5678, {1}}, Err);
+  // Write a record with a deprecated name
+  Writer.addRecord({getPGOFuncName(*InternalBarF), 0x1111, {2}}, Err);
+  Writer.addRecord({getPGOFuncName(*ExternalBarF), 0x2222, {2}}, Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  EXPECT_THAT_EXPECTED(
+      Reader->getInstrProfRecord(getIRPGOFuncName(*InternalFooF), 0x1234,
+                                 getPGOFuncName(*InternalFooF)),
+      Succeeded());
+  EXPECT_THAT_EXPECTED(
+      Reader->getInstrProfRecord(getIRPGOFuncName(*ExternalFooF), 0x5678,
+                                 getPGOFuncName(*ExternalFooF)),
+      Succeeded());
+  // Ensure we can still read this old record name
+  EXPECT_THAT_EXPECTED(
+      Reader->getInstrProfRecord(getIRPGOFuncName(*InternalBarF), 0x1111,
+                                 getPGOFuncName(*InternalBarF)),
+      Succeeded());
+  EXPECT_THAT_EXPECTED(
+      Reader->getInstrProfRecord(getIRPGOFuncName(*ExternalBarF), 0x2222,
+                                 getPGOFuncName(*ExternalBarF)),
+      Succeeded());
 }
 
 static const char callee1[] = "callee1";
@@ -1215,12 +1328,19 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
 
   for (unsigned I = 0; I < std::size(Funcs); I++) {
     Function *F = M->getFunction(Funcs[I]);
-    ASSERT_TRUE(F != nullptr);
+
+    std::string IRPGOName = getIRPGOFuncName(*F);
+    auto IRPGOFuncName =
+        ProfSymtab.getFuncName(IndexedInstrProf::ComputeHash(IRPGOName));
+    EXPECT_EQ(StringRef(IRPGOName), IRPGOFuncName);
+    EXPECT_EQ(StringRef(Funcs[I]),
+              getParsedIRPGOFuncName(IRPGOFuncName).second);
+    // Ensure we can still read this old record name.
     std::string PGOName = getPGOFuncName(*F);
-    uint64_t Key = IndexedInstrProf::ComputeHash(PGOName);
-    ASSERT_EQ(StringRef(PGOName),
-              ProfSymtab.getFuncName(Key));
-    ASSERT_EQ(StringRef(Funcs[I]), ProfSymtab.getOrigFuncName(Key));
+    auto PGOFuncName =
+        ProfSymtab.getFuncName(IndexedInstrProf::ComputeHash(PGOName));
+    EXPECT_EQ(StringRef(PGOName), PGOFuncName);
+    EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
   }
 }
 

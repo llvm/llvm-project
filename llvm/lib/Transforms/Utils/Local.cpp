@@ -414,7 +414,7 @@ bool llvm::wouldInstructionBeTriviallyDeadOnUnusedPaths(
   return wouldInstructionBeTriviallyDead(I, TLI);
 }
 
-bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
+bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
                                            const TargetLibraryInfo *TLI) {
   if (I->isTerminator())
     return false;
@@ -428,7 +428,7 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
   if (isa<DbgVariableIntrinsic>(I))
     return false;
 
-  if (DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
+  if (const DbgLabelInst *DLI = dyn_cast<DbgLabelInst>(I)) {
     if (DLI->getLabel())
       return false;
     return true;
@@ -461,7 +461,7 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
 
   // Special case intrinsics that "may have side effects" but can be deleted
   // when dead.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     // Safe to delete llvm.stacksave and launder.invariant.group if dead.
     if (II->getIntrinsicID() == Intrinsic::stacksave ||
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)

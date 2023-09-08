@@ -58,8 +58,8 @@ entry:
 define <vscale x 32 x i8> @complex_add_v32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b) {
 ; CHECK-LABEL: complex_add_v32i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cadd z2.b, z2.b, z0.b, #90
 ; CHECK-NEXT:    cadd z3.b, z3.b, z1.b, #90
+; CHECK-NEXT:    cadd z2.b, z2.b, z0.b, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    mov z1.d, z3.d
 ; CHECK-NEXT:    ret

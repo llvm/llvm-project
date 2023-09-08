@@ -14,7 +14,7 @@
 // Check that we ensure `other.size() == Extent`.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
+// UNSUPPORTED: libcpp-hardening-mode=unchecked
 // XFAIL: availability-verbose_abort-missing
 
 #include <array>

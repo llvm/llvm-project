@@ -5,8 +5,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -347,11 +345,11 @@ static void test_valid_md_values() {
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::March}});
   check(
-#  if defined(_WIN32) || defined(_AIX)
+#  if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
       SV("%b='avr.'\t%B='avril'\t%h='avr.'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-#  else  // defined(_WIN32) || defined(_AIX)
+#  else  // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
       SV("%b='avril'\t%B='avril'\t%h='avril'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
-#  endif // defined(_WIN32) || defined(_AIX)
+#  endif // defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
       lfmt,
       std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::April}});
   check(SV("%b='mai'\t%B='mai'\t%h='mai'\t%m='05'\t%Om='05'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
@@ -465,6 +463,55 @@ static void test_valid_md_values() {
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::August}});
   check(loc,
         SV("%b='9月'\t%B='9月'\t%h='9月'\t%m='09'\t%Om='09'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::September}});
+  check(loc,
+        SV("%b='10月'\t%B='10月'\t%h='10月'\t%m='10'\t%Om='10'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::October}});
+  check(loc,
+        SV("%b='11月'\t%B='11月'\t%h='11月'\t%m='11'\t%Om='11'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::November}});
+  check(loc,
+        SV("%b='12月'\t%B='12月'\t%h='12月'\t%m='12'\t%Om='12'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::December}});
+#elif defined(__FreeBSD__) // defined(_WIN32)
+  check(loc,
+        SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='01'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::January}});
+  check(loc,
+        SV("%b=' 2月'\t%B='2月'\t%h=' 2月'\t%m='02'\t%Om='02'\t%d='28'\t%e='28'\t%Od='28'\t%Oe='28'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::February}});
+  check(loc,
+        SV("%b=' 3月'\t%B='3月'\t%h=' 3月'\t%m='03'\t%Om='03'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::March}});
+  check(loc,
+        SV("%b=' 4月'\t%B='4月'\t%h=' 4月'\t%m='04'\t%Om='04'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::April}});
+  check(loc,
+        SV("%b=' 5月'\t%B='5月'\t%h=' 5月'\t%m='05'\t%Om='05'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::May}});
+  check(loc,
+        SV("%b=' 6月'\t%B='6月'\t%h=' 6月'\t%m='06'\t%Om='06'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::June}});
+  check(loc,
+        SV("%b=' 7月'\t%B='7月'\t%h=' 7月'\t%m='07'\t%Om='07'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::July}});
+  check(loc,
+        SV("%b=' 8月'\t%B='8月'\t%h=' 8月'\t%m='08'\t%Om='08'\t%d='31'\t%e='31'\t%Od='31'\t%Oe='31'\n"),
+        lfmt,
+        std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::August}});
+  check(loc,
+        SV("%b=' 9月'\t%B='9月'\t%h=' 9月'\t%m='09'\t%Om='09'\t%d='30'\t%e='30'\t%Od='30'\t%Oe='30'\n"),
         lfmt,
         std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::September}});
   check(loc,
@@ -715,14 +762,14 @@ static void test_valid_ymd_values() {
          "%V='05'\t"
          "%w='6'\t"
          "%W='04'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%x='31.01.1970'\t"
 #else
          "%x='31/01/1970'\t"
 #endif
          "%y='70'\t"
          "%Y='1970'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%Ex='31.01.1970'\t"
 #else
          "%Ex='31/01/1970'\t"
@@ -752,14 +799,14 @@ static void test_valid_ymd_values() {
          "%V='23'\t"
          "%w='1'\t"
          "%W='22'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%x='31.05.2004'\t"
 #else
          "%x='31/05/2004'\t"
 #endif
          "%y='04'\t"
          "%Y='2004'\t"
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
          "%Ex='31.05.2004'\t"
 #else
          "%Ex='31/05/2004'\t"
@@ -791,14 +838,14 @@ static void test_valid_ymd_values() {
          "%V='05'\t"
          "%w='6'\t"
          "%W='04'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='1970/01/31'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='1970年01月31日'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%y='70'\t"
          "%Y='1970'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='1970/01/31'\t"
          "%EC='19'\t"
          "%Ey='70'\t"
@@ -809,7 +856,7 @@ static void test_valid_ymd_values() {
          "%Ow='6'\t"
          "%OW='04'\t"
          "%Oy='70'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='昭和45年01月31日'\t"
          "%EC='昭和'\t"
          "%Ey='45'\t"
@@ -820,7 +867,7 @@ static void test_valid_ymd_values() {
          "%Ow='六'\t"
          "%OW='四'\t"
          "%Oy='七十'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "\n"),
       lfmt,
       std::chrono::year_month_day_last{std::chrono::year{1970}, std::chrono::month_day_last{std::chrono::January}});
@@ -838,14 +885,14 @@ static void test_valid_ymd_values() {
          "%V='23'\t"
          "%w='1'\t"
          "%W='22'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='2004/05/31'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%x='2004年05月31日'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%y='04'\t"
          "%Y='2004'\t"
-#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='2004/05/31'\t"
          "%EC='20'\t"
          "%Ey='04'\t"
@@ -856,7 +903,7 @@ static void test_valid_ymd_values() {
          "%Ow='1'\t"
          "%OW='22'\t"
          "%Oy='04'\t"
-#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "%Ex='平成16年05月31日'\t"
          "%EC='平成'\t"
          "%Ey='16'\t"
@@ -867,7 +914,7 @@ static void test_valid_ymd_values() {
          "%Ow='一'\t"
          "%OW='二十二'\t"
          "%Oy='四'\t"
-#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32) || defined(__FreeBSD__)
          "\n"),
       lfmt,
       std::chrono::year_month_day_last{std::chrono::year{2004}, std::chrono::month_day_last{std::chrono::May}});

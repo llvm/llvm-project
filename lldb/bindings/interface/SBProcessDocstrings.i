@@ -209,6 +209,10 @@ SBProcess supports thread iteration. For example (from test/lldbutil.py), ::
     lldb.LLDB_INVALID_ADDRESS if the allocation failed."
 ) lldb::SBProcess::AllocateMemory;
 
+%feature("autodoc", "Get default process broadcaster class name (lldb.process)."
+) lldb::SBProcess::GetBroadcasterClass;
+
+
 %feature("autodoc", "
     Deallocates the block of memory (previously allocated using
     AllocateMemory) given in the argument."

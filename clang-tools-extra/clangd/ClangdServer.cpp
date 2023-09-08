@@ -34,6 +34,7 @@
 #include "support/MemoryTree.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -52,8 +53,8 @@
 #include <optional>
 #include <string>
 #include <type_traits>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -82,7 +83,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
 
     auto &PP = ASTCtx.getPreprocessor();
     auto &CI = ASTCtx.getCompilerInvocation();
-    if (auto Loc = Stdlib->add(*CI.getLangOpts(), PP.getHeaderSearchInfo()))
+    if (auto Loc = Stdlib->add(CI.getLangOpts(), PP.getHeaderSearchInfo()))
       indexStdlib(CI, std::move(*Loc));
 
     // FIndex outlives the UpdateIndexCallbacks.
@@ -104,7 +105,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     // This task is owned by Tasks, which outlives the TUScheduler and
     // therefore the UpdateIndexCallbacks.
     // We must be careful that the references we capture outlive TUScheduler.
-    auto Task = [LO(*CI.getLangOpts()), Loc(std::move(Loc)),
+    auto Task = [LO(CI.getLangOpts()), Loc(std::move(Loc)),
                  CI(std::make_unique<CompilerInvocation>(CI)),
                  // External values that outlive ClangdServer
                  TFS(&TFS),
@@ -112,6 +113,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                  FIndex(FIndex),
                  // shared_ptr extends lifetime
                  Stdlib(Stdlib)]() mutable {
+      clang::noteBottomOfStack();
       IndexFileIn IF;
       IF.Symbols = indexStandardLibrary(std::move(CI), Loc, *TFS);
       if (Stdlib->isBest(LO))
@@ -1117,7 +1119,8 @@ ClangdServer::blockUntilIdleForTest(std::optional<double> TimeoutSeconds) {
 #if defined(__has_feature) &&                                                  \
     (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
      __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
-  (*TimeoutSeconds) *= 10;
+  if (TimeoutSeconds.has_value())
+    (*TimeoutSeconds) *= 10;
 #endif
 
   // Nothing else can schedule work on TUScheduler, because it's not threadsafe

@@ -17,7 +17,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, dup, (int fd)) {
-  long ret = __llvm_libc::syscall_impl(SYS_dup, fd);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_dup, fd);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

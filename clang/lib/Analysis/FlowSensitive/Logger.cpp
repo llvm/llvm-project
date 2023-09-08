@@ -39,11 +39,10 @@ struct TextualLogger final : Logger {
       llvm::WithColor Header(OS, llvm::raw_ostream::Colors::RED, /*Bold=*/true);
       OS << "=== Beginning data flow analysis ===\n";
     }
-    if (auto *D = CFG.getDecl()) {
-      D->print(OS);
-      OS << "\n";
-      D->dump(OS);
-    }
+    auto &D = CFG.getDecl();
+    D.print(OS);
+    OS << "\n";
+    D.dump(OS);
     CurrentCFG = &CFG.getCFG();
     CurrentCFG->print(OS, Analysis.getASTContext().getLangOpts(), ShowColors);
     CurrentAnalysis = &Analysis;

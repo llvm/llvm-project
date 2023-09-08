@@ -282,10 +282,14 @@ static bool findAffine(Merger &merger, TensorId tid, Level lvl, AffineExpr a,
 ///
 /// TODO: constant should be easy to handle.
 static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
-                          AffineExpr a, DimLevelType dlt,
-                          bool isSubExp = false) {
+                          AffineExpr a, DimLevelType dlt, bool isSubExp = false,
+                          int64_t coefficient = 1) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
+    // Only allow positive coefficients on AffineDimExpr.
+    if (coefficient <= 0)
+      return false;
+
     const LoopId ldx = merger.makeLoopId(a.cast<AffineDimExpr>().getPosition());
     if (!isUndefDLT(merger.getLvlType(tensor, ldx)))
       return false; // used more than once, e.g., A[i][i]
@@ -293,8 +297,10 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
     // TODO: Generalizes the following two cases. A[i] (with trivial index
     // expression) can be treated as a special affine index expression. We do
     // not necessarily need to differentiate them.
-    if (!isSubExp)
+    if (!isSubExp) {
+      assert(coefficient == 1);
       merger.setLevelAndType(tensor, ldx, lvl, dlt);
+    }
 
     if (isSubExp) {
       // The current loops appears in more than one affine expressions on the
@@ -312,14 +318,26 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
         // else increase min(d0_1, d0_2).
         return false;
       }
-      merger.setLoopDependentTensorLevel(ldx, tensor, lvl, dlt);
+      merger.setLoopDependentTensorLevel(ldx, tensor, lvl, dlt, coefficient);
     }
     return true;
   }
   case AffineExprKind::Constant:
-  case AffineExprKind::Mul:
-    // TODO: Support Mul and Constant AffineExp for slice-based codegen
-    return false;
+    // TODO: Support Constant AffineExp for slice-based codegen
+  case AffineExprKind::Mul: {
+    // TODO: Support index expression like `2 * d0`, we now only support more
+    // complicated cases like `2 * d0 + d1`.
+    if (!isSubExp)
+      return false;
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto lhs = binOp.getLHS(), rhs = binOp.getRHS();
+    if (rhs.isa<AffineConstantExpr>())
+      std::swap(lhs, rhs);
+    // Must be in form of `constant * d`.
+    assert(lhs.isa<AffineConstantExpr>() && rhs.isa<AffineDimExpr>());
+    int64_t coefficient = lhs.cast<AffineConstantExpr>().getValue();
+    return findDepIdxSet(merger, tensor, lvl, rhs, dlt, isSubExp, coefficient);
+  }
   case AffineExprKind::Add: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
     return findDepIdxSet(merger, tensor, lvl, binOp.getLHS(), dlt, true) &&
@@ -977,17 +995,10 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
   // Direct insertion in lexicographic coordinate order.
   if (!env.isExpand()) {
     const LoopOrd numLoops = op.getRank(t);
-    // TODO: rewrite this to use `env.emitter().getLoopIVs(ivs)`
-    // instead.  We just need to either assert that `numLoops ==
-    // env.emitter().getCurrentDepth()`, or else update the `getLoopIVs`
-    // method to take an optional parameter to restrict to a smaller depth.
-    SmallVector<Value> ivs;
-    ivs.reserve(numLoops);
-    for (LoopOrd n = 0; n < numLoops; n++) {
-      const auto iv = env.emitter().getLoopIV(n);
-      assert(iv);
-      ivs.push_back(iv);
-    }
+    // Retrieves the first `numLoop` induction variables.
+    SmallVector<Value> ivs = llvm::to_vector(
+        llvm::drop_end(env.emitter().getLoopIVsRange(),
+                       env.emitter().getCurrentDepth() - numLoops));
     Value chain = env.getInsertionChain();
     if (!env.getValidLexInsert()) {
       env.updateInsertionChain(builder.create<InsertOp>(loc, rhs, chain, ivs));
@@ -1438,7 +1449,7 @@ static Operation *genLoop(CodegenEnv &env, OpBuilder &builder, LoopOrd at,
 
 /// Generates the induction structure for a while-loop.
 static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder, LoopId idx,
-                            bool needsUniv, scf::WhileOp whileOp) {
+                            bool needsUniv) {
   Location loc = env.op().getLoc();
   // Finalize each else branch of all if statements.
   if (env.isReduc() || env.isExpand() || env.getInsertionChain()) {
@@ -1472,7 +1483,8 @@ static void finalizeWhileOp(CodegenEnv &env, OpBuilder &builder, LoopId idx,
       builder.setInsertionPointAfter(ifOp);
     }
   }
-  builder.setInsertionPointToEnd(&whileOp.getAfter().front());
+  // No need to set the insertion point here as LoopEmitter keeps track of the
+  // basic block where scf::Yield should be inserted.
 }
 
 /// Generates a single if-statement within a while-loop.
@@ -1525,8 +1537,8 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId ldx,
 
 /// Generates end of true branch of if-statement within a while-loop.
 static void endIf(CodegenEnv &env, OpBuilder &builder, scf::IfOp ifOp,
-                  Operation *loop, Value redInput, Value cntInput,
-                  Value insInput, Value validIns) {
+                  Value redInput, Value cntInput, Value insInput,
+                  Value validIns) {
   SmallVector<Value> operands;
   if (env.isReduc()) {
     operands.push_back(env.getReduc());
@@ -1800,7 +1812,7 @@ static bool endLoop(CodegenEnv &env, RewriterBase &rewriter, Operation *loop,
       env.setValidLexInsert(constantI1(rewriter, env.op().getLoc(), true));
   } else if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
     // End a while-loop.
-    finalizeWhileOp(env, rewriter, idx, needsUniv, whileOp);
+    finalizeWhileOp(env, rewriter, idx, needsUniv);
   } else {
     needsUniv = false;
   }
@@ -1875,8 +1887,7 @@ static void genStmt(CodegenEnv &env, RewriterBase &rewriter, ExprId exp,
         if (!isSingleCond) {
           scf::IfOp ifOp = genIf(env, rewriter, idx, lj);
           genStmt(env, rewriter, ej, at + 1);
-          endIf(env, rewriter, ifOp, loop, redInput, cntInput, insInput,
-                validIns);
+          endIf(env, rewriter, ifOp, redInput, cntInput, insInput, validIns);
         } else {
           genStmt(env, rewriter, ej, at + 1);
         }

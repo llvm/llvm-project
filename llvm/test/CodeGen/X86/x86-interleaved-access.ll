@@ -313,10 +313,10 @@ define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15]
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm2
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm5
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm3[2,3],ymm1[2,3]
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm4[2,3],ymm0[2,3]
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm1
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
 ; AVX512-NEXT:    vmovdqa64 %zmm0, 64(%rdi)
 ; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
 ; AVX512-NEXT:    vzeroupper
@@ -1253,10 +1253,9 @@ define void @interleaved_store_vf64_i8_stride3(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm4, %zmm3, %zmm2
 ; AVX512-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5,0,11,6,1,12,7,2,13,8,3,14,9,4,15,10,5]
 ; AVX512-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
-; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm3, %zmm4
-; AVX512-NEXT:    vpshufb %zmm4, %zmm2, %zmm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm6, %zmm5, %zmm5
-; AVX512-NEXT:    vpshufb %zmm4, %zmm5, %zmm4
+; AVX512-NEXT:    vpshufb %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vinserti64x4 $1, %ymm6, %zmm5, %zmm4
+; AVX512-NEXT:    vpshufb %zmm3, %zmm4, %zmm4
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vpshufb %zmm3, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqu64 %zmm0, 128(%rdi)
@@ -1601,22 +1600,22 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} zmm0 = zmm0[4],zmm2[4],zmm0[5],zmm2[5],zmm0[6],zmm2[6],zmm0[7],zmm2[7],zmm0[12],zmm2[12],zmm0[13],zmm2[13],zmm0[14],zmm2[14],zmm0[15],zmm2[15],zmm0[20],zmm2[20],zmm0[21],zmm2[21],zmm0[22],zmm2[22],zmm0[23],zmm2[23],zmm0[28],zmm2[28],zmm0[29],zmm2[29],zmm0[30],zmm2[30],zmm0[31],zmm2[31]
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm2
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm5
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm6 = ymm3[2,3],ymm1[2,3]
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm7 = ymm4[2,3],ymm0[2,3]
-; AVX512-NEXT:    vextracti64x4 $1, %zmm3, %ymm3
-; AVX512-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm8
-; AVX512-NEXT:    vextracti64x4 $1, %zmm4, %ymm4
-; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm9
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm3[2,3],ymm1[2,3]
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm4[2,3],ymm0[2,3]
+; AVX512-NEXT:    vextracti32x4 $2, %zmm1, %xmm6
+; AVX512-NEXT:    vextracti64x4 $1, %zmm3, %ymm7
+; AVX512-NEXT:    vinserti128 $1, %xmm6, %ymm7, %ymm6
+; AVX512-NEXT:    vextracti32x4 $2, %zmm0, %xmm8
+; AVX512-NEXT:    vextracti64x4 $1, %zmm4, %ymm9
+; AVX512-NEXT:    vinserti128 $1, %xmm8, %ymm9, %ymm8
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm7, %zmm6, %zmm3
-; AVX512-NEXT:    vinserti64x4 $1, %ymm9, %zmm8, %zmm4
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, 192(%rdi)
+; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm4
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm3
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm3 = zmm3[2,3,6,7],zmm4[2,3,6,7]
+; AVX512-NEXT:    vinserti64x4 $1, %ymm8, %zmm6, %zmm4
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm9[0,1,2,3],zmm0[4,5,6,7]
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm7[0,1,2,3],zmm1[4,5,6,7]
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
 ; AVX512-NEXT:    vmovdqa64 %zmm3, 64(%rdi)
+; AVX512-NEXT:    vmovdqa64 %zmm0, 192(%rdi)
 ; AVX512-NEXT:    vmovdqa64 %zmm4, 128(%rdi)
 ; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
 ; AVX512-NEXT:    vzeroupper

@@ -199,7 +199,7 @@ public:
   /// \returns true to indicate the preprocessor options are invalid, or false
   /// otherwise.
   virtual bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                                       bool Complain,
+                                       bool ReadMacros, bool Complain,
                                        std::string &SuggestedPredefines) {
     return false;
   }
@@ -274,7 +274,7 @@ public:
                                StringRef SpecificModuleCachePath,
                                bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
-                               bool Complain,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
 
   void ReadCounter(const serialization::ModuleFile &M, unsigned Value) override;
@@ -304,7 +304,8 @@ public:
                          bool AllowCompatibleDifferences) override;
   bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
                              bool Complain) override;
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                StringRef SpecificModuleCachePath,
@@ -325,7 +326,8 @@ class SimpleASTReaderListener : public ASTReaderListener {
 public:
   SimpleASTReaderListener(Preprocessor &PP) : PP(PP) {}
 
-  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts, bool Complain,
+  bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
+                               bool ReadMacros, bool Complain,
                                std::string &SuggestedPredefines) override;
 };
 
@@ -937,7 +939,7 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<serialization::DeclID, 4> DeclsToCheckForDeferredDiags;
 
-public:
+private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
     SourceLocation ImportLoc;
@@ -946,7 +948,6 @@ public:
         : ID(ID), ImportLoc(ImportLoc) {}
   };
 
-private:
   /// A list of modules that were imported by precompiled headers or
   /// any other non-module AST file and have not yet been made visible. If a
   /// module is made visible in the ASTReader, it will be transfered to
@@ -1632,12 +1633,17 @@ public:
   /// capabilities, represented as a bitset of the enumerators of
   /// LoadFailureCapabilities.
   ///
-  /// \param Imported optional out-parameter to append the list of modules
-  /// that were imported by precompiled headers or any other non-module AST file
+  /// \param LoadedModuleFile The optional out-parameter refers to the new
+  /// loaded modules. In case the module specified by FileName is already
+  /// loaded, the module file pointer referred by NewLoadedModuleFile wouldn't
+  /// change. Otherwise if the AST file get loaded successfully,
+  /// NewLoadedModuleFile would refer to the address of the new loaded top level
+  /// module. The state of NewLoadedModuleFile is unspecified if the AST file
+  /// isn't loaded successfully.
   ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
                         unsigned ClientLoadCapabilities,
-                        SmallVectorImpl<ImportedSubmodule> *Imported = nullptr);
+                        ModuleFile **NewLoadedModuleFile = nullptr);
 
   /// Make the entities in the given module and any of its (non-explicit)
   /// submodules visible to name lookup.
@@ -2372,6 +2378,13 @@ public:
 
   /// Loads comments ranges.
   void ReadComments() override;
+
+  /// Visit all the input file infos of the given module file.
+  void visitInputFileInfos(
+      serialization::ModuleFile &MF, bool IncludeSystem,
+      llvm::function_ref<void(const serialization::InputFileInfo &IFI,
+                              bool IsSystem)>
+          Visitor);
 
   /// Visit all the input files of the given module file.
   void visitInputFiles(serialization::ModuleFile &MF,

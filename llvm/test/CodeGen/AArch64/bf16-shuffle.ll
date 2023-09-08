@@ -226,8 +226,8 @@ define <8 x bfloat> @shuffle3step0_bf16(<32 x bfloat> %src) {
 ; CHECK-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    mov v3.16b, v2.16b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    adrp x8, .LCPI16_1
 ; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI16_1]
@@ -244,8 +244,8 @@ define <8 x bfloat> @shuffle3step1_bf16(<32 x bfloat> %src) {
 ; CHECK-NEXT:    adrp x8, .LCPI17_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    mov v3.16b, v2.16b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    adrp x8, .LCPI17_1
 ; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI17_1]
@@ -262,8 +262,8 @@ define <8 x bfloat> @shuffle3step2_bf16(<32 x bfloat> %src) {
 ; CHECK-NEXT:    adrp x8, .LCPI18_0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    mov v3.16b, v2.16b
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    adrp x8, .LCPI18_1
 ; CHECK-NEXT:    tbl v2.16b, { v0.16b, v1.16b }, v4.16b
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI18_1]

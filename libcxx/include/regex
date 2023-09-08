@@ -1459,7 +1459,7 @@ struct __state
     _LIBCPP_INLINE_VISIBILITY
     __state()
         : __do_(0), __first_(nullptr), __current_(nullptr), __last_(nullptr),
-          __node_(nullptr), __flags_() {}
+          __node_(nullptr), __flags_(), __at_first_(false) {}
 };
 
 // __node
@@ -2776,9 +2776,9 @@ public:
                             flag_type __f = regex_constants::ECMAScript)
             {return assign(__s.begin(), __s.end(), __f);}
 
-    template <class _InputIterator>
+    template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if<__has_exactly_input_iterator_category<_InputIterator>::value, basic_regex&>::type
+        basic_regex&
         assign(_InputIterator __first, _InputIterator __last,
                             flag_type __f = regex_constants::ECMAScript)
         {
@@ -2798,13 +2798,9 @@ private:
     }
 public:
 
-    template <class _ForwardIterator>
+    template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-            __has_forward_iterator_category<_ForwardIterator>::value,
-            basic_regex&
-        >::type
+        basic_regex&
         assign(_ForwardIterator __first, _ForwardIterator __last,
                             flag_type __f = regex_constants::ECMAScript)
         {
@@ -3110,8 +3106,7 @@ private:
 
 #if _LIBCPP_STD_VER >= 17
 template <class _ForwardIterator,
-          class = typename enable_if<__has_forward_iterator_category<_ForwardIterator>::value, nullptr_t>::type
->
+          __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
 basic_regex(_ForwardIterator, _ForwardIterator,
             regex_constants::syntax_option_type = regex_constants::ECMAScript)
     -> basic_regex<typename iterator_traits<_ForwardIterator>::value_type>;
@@ -6957,6 +6952,7 @@ _LIBCPP_POP_MACROS
 #  include <cstdlib>
 #  include <iosfwd>
 #  include <iterator>
+#  include <mutex>
 #  include <new>
 #  include <type_traits>
 #  include <typeinfo>

@@ -136,6 +136,7 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("tigerlake");
   (void)__builtin_cpu_is("sapphirerapids");
   (void)__builtin_cpu_is("tremont");
+  (void)__builtin_cpu_is("gracemont");
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");
   (void)__builtin_cpu_is("znver2");

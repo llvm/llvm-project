@@ -2,7 +2,6 @@
 
 // Test that different order of declarations is acceptable and that
 // implementing different redeclarations is acceptable.
-// rdar://problem/34949329
 
 typedef union {
   int i;

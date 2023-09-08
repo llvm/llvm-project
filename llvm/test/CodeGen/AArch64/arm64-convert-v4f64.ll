@@ -6,10 +6,10 @@ define <4 x i16> @fptosi_v4f64_to_v4i16(ptr %ptr) {
 ; CHECK-LABEL: fptosi_v4f64_to_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %ptr
@@ -20,17 +20,17 @@ define <4 x i16> @fptosi_v4f64_to_v4i16(ptr %ptr) {
 define <8 x i8> @fptosi_v4f64_to_v4i8(ptr %ptr) {
 ; CHECK-LABEL: fptosi_v4f64_to_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #32]
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-NEXT:    fcvtzs v3.2d, v3.2d
-; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-NEXT:    xtn v3.2s, v3.2d
+; CHECK-NEXT:    xtn v2.2s, v2.2d
+; CHECK-NEXT:    uzp1 v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    uzp1 v1.4h, v2.4h, v3.4h
 ; CHECK-NEXT:    uzp1 v0.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ret
@@ -70,10 +70,10 @@ define <4 x i16> @fptoui_v4f64_to_v4i16(ptr %ptr) {
 ; CHECK-LABEL: fptoui_v4f64_to_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    xtn v1.2s, v1.2d
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %ptr

@@ -29,6 +29,10 @@ public:
     Expansions.try_emplace(Name, Expansion);
   }
 
+  void redeclare(StringRef Name, StringRef Expansion) {
+    Expansions[Name] = Expansion;
+  }
+
   std::string lookup(StringRef Variable) const {
     return Expansions.lookup(Variable);
   }

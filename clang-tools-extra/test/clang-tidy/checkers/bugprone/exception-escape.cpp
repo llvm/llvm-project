@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-exception-escape %t -- \
-// RUN:     -config="{CheckOptions: [ \
-// RUN:         {key: bugprone-exception-escape.IgnoredExceptions, value: 'ignored1,ignored2'}, \
-// RUN:         {key: bugprone-exception-escape.FunctionsThatShouldNotThrow, value: 'enabled1,enabled2,enabled3'} \
-// RUN:     ]}" \
+// RUN:     -config="{CheckOptions: { \
+// RUN:         bugprone-exception-escape.IgnoredExceptions: 'ignored1,ignored2', \
+// RUN:         bugprone-exception-escape.FunctionsThatShouldNotThrow: 'enabled1,enabled2,enabled3' \
+// RUN:     }}" \
 // RUN:     -- -fexceptions
 // FIXME: Fix the checker to work in C++17 or later mode.
 

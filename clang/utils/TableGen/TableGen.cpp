@@ -31,6 +31,8 @@ enum ActionType {
   GenClangAttrSubjectMatchRulesParserStringSwitches,
   GenClangAttrImpl,
   GenClangAttrList,
+  GenClangAttrCanPrintLeftList,
+  GenClangAttrMustPrintLeftList,
   GenClangAttrDocTable,
   GenClangAttrSubjectMatchRuleList,
   GenClangAttrPCHRead,
@@ -127,6 +129,14 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute implementations"),
         clEnumValN(GenClangAttrList, "gen-clang-attr-list",
                    "Generate a clang attribute list"),
+        clEnumValN(GenClangAttrCanPrintLeftList,
+                   "gen-clang-attr-can-print-left-list",
+                   "Generate list of attributes that can be printed on left "
+                   "side of a decl"),
+        clEnumValN(GenClangAttrMustPrintLeftList,
+                   "gen-clang-attr-must-print-left-list",
+                   "Generate list of attributes that must be printed on left "
+                   "side of a decl"),
         clEnumValN(GenClangAttrDocTable, "gen-clang-attr-doc-table",
                    "Generate a table of attribute documentation"),
         clEnumValN(GenClangAttrSubjectMatchRuleList,
@@ -314,6 +324,12 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenClangAttrList:
     EmitClangAttrList(Records, OS);
+    break;
+  case GenClangAttrCanPrintLeftList:
+    EmitClangAttrPrintList("CanPrintOnLeft", Records, OS);
+    break;
+  case GenClangAttrMustPrintLeftList:
+    EmitClangAttrPrintList("PrintOnLeft", Records, OS);
     break;
   case GenClangAttrDocTable:
     EmitClangAttrDocTable(Records, OS);

@@ -44,4 +44,5 @@ add_clang_library(clangDaemonTweaks OBJECT
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

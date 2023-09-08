@@ -12,4 +12,3 @@ set(LLVM_TARGET_DEFINITIONS SparseTensorTypes.td)
 mlir_tablegen(SparseTensorTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(SparseTensorTypes.cpp.inc -gen-typedef-defs)
 add_public_tablegen_target(MLIRSparseTensorTypesIncGen)
-

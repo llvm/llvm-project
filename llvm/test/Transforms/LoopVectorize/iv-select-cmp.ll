@@ -188,6 +188,172 @@ exit:                                             ; preds = %for.body
 
 ; Negative tests
 
+; This test can theoretically be vectorized without a runtime-check, by
+; pattern-matching on the constructs that are introduced by IndVarSimplify.
+; We can check two things:
+;   %1 = trunc i64 %iv to i32
+; This indicates that the %iv is truncated to i32. We can then check the loop
+; guard is a signed i32:
+;   %cmp.sgt = icmp sgt i32 %n, 0
+; and successfully vectorize the case without a runtime-check.
+define i32 @not_vectorized_select_icmp_const_truncated_iv_widened_exit(ptr nocapture readonly %a, i32 %n) {
+; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_widened_exit
+; CHECK-NOT:   vector.body:
+;
+entry:
+  %cmp.sgt = icmp sgt i32 %n, 0
+  br i1 %cmp.sgt, label %for.body.preheader, label %exit
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %inc, %for.body ]
+  %rdx = phi i32 [ 331, %for.body.preheader ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %arrayidx, align 8
+  %cmp = icmp sgt i64 %0, 3
+  %1 = trunc i64 %iv to i32
+  %spec.select = select i1 %cmp, i32 %1, i32 %rdx
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, %wide.trip.count
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:                                            ; preds = %for.body, %entry
+  %rdx.lcssa = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
+  ret i32 %rdx.lcssa
+}
+
+; This test can theoretically be vectorized without a runtime-check, by
+; pattern-matching on the constructs that are introduced by IndVarSimplify.
+; We can check two things:
+;   %1 = trunc i64 %iv to i32
+; This indicates that the %iv is truncated to i32. We can then check the loop
+; exit condition, which compares to a constant that fits within i32:
+;   %exitcond.not = icmp eq i64 %inc, 20000
+; and successfully vectorize the case without a runtime-check.
+define i32 @not_vectorized_select_icmp_const_truncated_iv_const_exit(ptr nocapture readonly %a) {
+; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_const_exit
+; CHECK-NOT:   vector.body:
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
+  %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %arrayidx, align 8
+  %cmp = icmp sgt i64 %0, 3
+  %1 = trunc i64 %iv to i32
+  %spec.select = select i1 %cmp, i32 %1, i32 %rdx
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, 20000
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:                                           ; preds = %for.body
+  ret i32 %spec.select
+}
+
+; This test can theoretically be vectorized, but only with a runtime-check.
+; The construct that are introduced by IndVarSimplify is:
+;   %1 = trunc i64 %iv to i32
+; However, the loop guard is an i64:
+;   %cmp.sgt = icmp sgt i64 %n, 0
+; We cannot guarantee that %iv won't overflow an i32 value (and hence hit the
+; sentinel value), and need a runtime-check to vectorize this case.
+define i32 @not_vectorized_select_icmp_const_truncated_iv_unwidened_exit(ptr nocapture readonly %a, i64 %n) {
+; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_unwidened_exit
+; CHECK-NOT:   vector.body:
+;
+entry:
+  %cmp.sgt = icmp sgt i64 %n, 0
+  br i1 %cmp.sgt, label %for.body, label %exit
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %inc, %for.body ]
+  %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp = icmp sgt i32 %0, 3
+  %1 = trunc i64 %iv to i32
+  %spec.select = select i1 %cmp, i32 %1, i32 %rdx
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:                                             ; preds = %for.body, %entry
+  %rdx.lcssa = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
+  ret i32 %rdx.lcssa
+}
+
+; This test can theoretically be vectorized, but only with a runtime-check.
+; The construct that are introduced by IndVarSimplify is:
+;   %1 = trunc i64 %iv to i32
+; However, the loop guard is unsigned:
+;   %cmp.not = icmp eq i32 %n, 0
+; We cannot guarantee that %iv won't overflow an i32 value (and hence hit the
+; sentinel value), and need a runtime-check to vectorize this case.
+define i32 @not_vectorized_select_icmp_const_truncated_iv_unsigned_loop_guard(ptr nocapture readonly %a, i32 %n) {
+; CHECK-LABEL: define i32 @not_vectorized_select_icmp_const_truncated_iv_unsigned_loop_guard
+; CHECK-NOT:   vector.body:
+;
+entry:
+  %cmp.not = icmp eq i32 %n, 0
+  br i1 %cmp.not, label %exit, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  %wide.trip.count = zext i32 %n to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %inc, %for.body ]
+  %rdx = phi i32 [ 331, %for.body.preheader ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %0, 3
+  %1 = trunc i64 %iv to i32
+  %spec.select = select i1 %cmp1, i32 %1, i32 %rdx
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, %wide.trip.count
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:                                             ; preds = %for.body, %entry
+  %rdx.lcssa = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
+  ret i32 %rdx.lcssa
+}
+
+; This test cannot be vectorized, even with a runtime check.
+; The construct that are introduced by IndVarSimplify is:
+;   %1 = trunc i64 %iv to i32
+; However, the loop exit condition is a constant that overflows i32:
+;   %exitcond.not = icmp eq i64 %inc, 4294967294
+; Hence, the i32 will most certainly wrap and hit the sentinel value, and we
+; cannot vectorize this case.
+define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr nocapture readonly %a) {
+; CHECK-LABEL: define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound
+; CHECK-NOT:   vector.body:
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 2147483646, %entry ], [ %inc, %for.body ]
+  %rdx = phi i32 [ 331, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp = icmp sgt i32 %0, 3
+  %conv = trunc i64 %iv to i32
+  %spec.select = select i1 %cmp, i32 %conv, i32 %rdx
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, 4294967294
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:                                             ; preds = %for.body
+  ret i32 %spec.select
+}
+
 define float @not_vectorized_select_float_induction_icmp(ptr nocapture readonly %a, ptr nocapture readonly %b, float %rdx.start, i64 %n) {
 ; CHECK-LABEL: @not_vectorized_select_float_induction_icmp
 ; CHECK-NOT:   vector.body:

@@ -547,7 +547,7 @@ inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
   auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
                                  orc::ExecutorAddr(~uint64_t(5)), 1, 0);
-  B.addEdge(Delta32, 2, PointerSymbol, -4);
+  B.addEdge(BranchPCRel32, 2, PointerSymbol, 0);
   return B;
 }
 

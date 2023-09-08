@@ -80,6 +80,21 @@ private:
   MapPlatformData *Data = nullptr;
 };
 
+class FragmentationRecorder {
+public:
+  FragmentationRecorder() = default;
+
+  uptr getReleasedPagesCount() const { return ReleasedPagesCount; }
+
+  void releasePageRangeToOS(uptr From, uptr To) {
+    DCHECK_EQ((To - From) % getPageSizeCached(), 0U);
+    ReleasedPagesCount += (To - From) / getPageSizeCached();
+  }
+
+private:
+  uptr ReleasedPagesCount = 0;
+};
+
 // A buffer pool which holds a fixed number of static buffers for fast buffer
 // allocation. If the request size is greater than `StaticBufferSize`, it'll
 // delegate the allocation to map().

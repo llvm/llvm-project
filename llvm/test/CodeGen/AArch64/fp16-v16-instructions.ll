@@ -5,8 +5,8 @@
 define <16 x half> @sitofp_i32(<16 x i32> %a) #0 {
 ; CHECK-LABEL: sitofp_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v2.4s, v2.4s
 ; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    scvtf v2.4s, v2.4s
 ; CHECK-NEXT:    scvtf v4.4s, v1.4s
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NEXT:    fcvtn v1.4h, v2.4s
@@ -30,16 +30,16 @@ define <16 x half> @sitofp_i64(<16 x i64> %a) #0 {
 ; CHECK-NEXT:    scvtf v6.2d, v6.2d
 ; CHECK-NEXT:    scvtf v5.2d, v5.2d
 ; CHECK-NEXT:    scvtf v3.2d, v3.2d
-; CHECK-NEXT:    scvtf v7.2d, v7.2d
 ; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    fcvtn v4.2s, v4.2d
 ; CHECK-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-NEXT:    fcvtn v6.2s, v6.2d
 ; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NEXT:    scvtf v1.2d, v7.2d
 ; CHECK-NEXT:    fcvtn2 v4.4s, v5.2d
 ; CHECK-NEXT:    fcvtn2 v2.4s, v3.2d
-; CHECK-NEXT:    fcvtn2 v6.4s, v7.2d
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    fcvtn2 v6.4s, v1.2d
 ; CHECK-NEXT:    fcvtn v1.4h, v4.4s
 ; CHECK-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-NEXT:    fcvtn2 v1.8h, v6.4s
@@ -56,8 +56,8 @@ define <16 x half> @sitofp_i64(<16 x i64> %a) #0 {
 define <16 x half> @uitofp_i32(<16 x i32> %a) #0 {
 ; CHECK-LABEL: uitofp_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v2.4s, v2.4s
 ; CHECK-NEXT:    ucvtf v0.4s, v0.4s
+; CHECK-NEXT:    ucvtf v2.4s, v2.4s
 ; CHECK-NEXT:    ucvtf v4.4s, v1.4s
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NEXT:    fcvtn v1.4h, v2.4s
@@ -81,16 +81,16 @@ define <16 x half> @uitofp_i64(<16 x i64> %a) #0 {
 ; CHECK-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-NEXT:    ucvtf v3.2d, v3.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
 ; CHECK-NEXT:    fcvtn v0.2s, v0.2d
 ; CHECK-NEXT:    fcvtn v4.2s, v4.2d
 ; CHECK-NEXT:    fcvtn v2.2s, v2.2d
 ; CHECK-NEXT:    fcvtn v6.2s, v6.2d
 ; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NEXT:    ucvtf v1.2d, v7.2d
 ; CHECK-NEXT:    fcvtn2 v4.4s, v5.2d
 ; CHECK-NEXT:    fcvtn2 v2.4s, v3.2d
-; CHECK-NEXT:    fcvtn2 v6.4s, v7.2d
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    fcvtn2 v6.4s, v1.2d
 ; CHECK-NEXT:    fcvtn v1.4h, v4.4s
 ; CHECK-NEXT:    fcvtn2 v0.8h, v2.4s
 ; CHECK-NEXT:    fcvtn2 v1.8h, v6.4s

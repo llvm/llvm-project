@@ -1180,7 +1180,9 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        while (isalnum(src[index]))
+        // Apparently it's common for underscores to also be accepted. No idea
+        // why, but it's causing fuzz failures.
+        while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {
           ++index;
@@ -1196,7 +1198,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
             if (strtoint_result.has_error()) {
               error = strtoint_result.error;
             }
-            nan_mantissa = strtoint_result.value;
+            nan_mantissa = static_cast<BitsType>(strtoint_result.value);
             if (src[left_paren + 1 + strtoint_result.parsed_len] != ')')
               nan_mantissa = 0;
           }

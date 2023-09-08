@@ -9,8 +9,8 @@
 define i8 @out8_constmask(i8 %x, i8 %y) {
 ; CHECK-LABEL: out8_constmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #85
-; CHECK-NEXT:    mov w9, #-86
+; CHECK-NEXT:    mov w8, #85 // =0x55
+; CHECK-NEXT:    mov w9, #-86 // =0xffffffaa
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    and w9, w1, w9
 ; CHECK-NEXT:    orr w0, w8, w9
@@ -24,8 +24,8 @@ define i8 @out8_constmask(i8 %x, i8 %y) {
 define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-LABEL: out16_constmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #21845
-; CHECK-NEXT:    mov w9, #-21846
+; CHECK-NEXT:    mov w8, #21845 // =0x5555
+; CHECK-NEXT:    mov w9, #-21846 // =0xffffaaaa
 ; CHECK-NEXT:    and w8, w0, w8
 ; CHECK-NEXT:    and w9, w1, w9
 ; CHECK-NEXT:    orr w0, w8, w9
@@ -69,9 +69,9 @@ define i64 @out64_constmask(i64 %x, i64 %y) {
 define i8 @in8_constmask(i8 %x, i8 %y) {
 ; CHECK-LABEL: in8_constmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w0, w1
-; CHECK-NEXT:    mov w9, #85
-; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    mov w8, #85 // =0x55
+; CHECK-NEXT:    eor w9, w0, w1
+; CHECK-NEXT:    and w8, w9, w8
 ; CHECK-NEXT:    eor w0, w8, w1
 ; CHECK-NEXT:    ret
   %n0 = xor i8 %x, %y
@@ -83,9 +83,9 @@ define i8 @in8_constmask(i8 %x, i8 %y) {
 define i16 @in16_constmask(i16 %x, i16 %y) {
 ; CHECK-LABEL: in16_constmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w0, w1
-; CHECK-NEXT:    mov w9, #21845
-; CHECK-NEXT:    and w8, w8, w9
+; CHECK-NEXT:    mov w8, #21845 // =0x5555
+; CHECK-NEXT:    eor w9, w0, w1
+; CHECK-NEXT:    and w8, w9, w8
 ; CHECK-NEXT:    eor w0, w8, w1
 ; CHECK-NEXT:    ret
   %n0 = xor i16 %x, %y
@@ -211,8 +211,8 @@ define i32 @in_multiuse_A_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    eor w8, w0, w1
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    and w20, w8, #0x55555555
 ; CHECK-NEXT:    mov w19, w1
+; CHECK-NEXT:    and w20, w8, #0x55555555
 ; CHECK-NEXT:    mov w0, w20
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
@@ -251,7 +251,7 @@ define i32 @in_multiuse_B_constmask(i32 %x, i32 %y, i32 %z) nounwind {
 define i32 @n0_badconstmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: n0_badconstmask:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    and w9, w0, #0x55555555
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    and w8, w1, w8

@@ -52,7 +52,7 @@ void test3(packedfloat3 *p) {
 
 typedef float __attribute__((vector_size(16), aligned(64))) float4align64;
 
-// rdar://10639962 - Typedef alignment lost in p[]-style dereferencing
+// Typedef alignment lost in p[]-style dereferencing
 void test4(float4align64 *p) {
   p[0] = (float4align64){ 3.2f, 2.3f, 0.1f, 0.0f };
 }

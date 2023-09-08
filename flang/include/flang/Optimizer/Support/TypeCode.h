@@ -13,7 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_TYPECODE_H
 #define FORTRAN_OPTIMIZER_SUPPORT_TYPECODE_H
 
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace fir {

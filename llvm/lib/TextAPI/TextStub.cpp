@@ -1119,6 +1119,8 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
     auto FileOrErr = getInterfaceFileFromJSON(InputBuffer.getBuffer());
     if (!FileOrErr)
       return FileOrErr.takeError();
+
+    (*FileOrErr)->setPath(Ctx.Path);
     return std::move(*FileOrErr);
   }
   yaml::Input YAMLIn(InputBuffer.getBuffer(), &Ctx, DiagHandler, &Ctx);

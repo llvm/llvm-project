@@ -16,6 +16,7 @@
 
 namespace mlir {
 
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
@@ -32,6 +33,8 @@ void populateFuncToLLVMFuncOpConversionPattern(LLVMTypeConverter &converter,
 /// pattern lifetime.
 void populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns);
+
+void registerConvertFuncToLLVMInterface(DialectRegistry &registry);
 
 } // namespace mlir
 

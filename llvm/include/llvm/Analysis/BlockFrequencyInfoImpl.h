@@ -1382,7 +1382,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
   if (ReachableBlocks.empty())
     return;
 
-  // The map is used to to index successors/predecessors of reachable blocks in
+  // The map is used to index successors/predecessors of reachable blocks in
   // the ReachableBlocks vector
   DenseMap<const BlockT *, size_t> BlockIndex;
   // Extract initial frequencies for the reachable blocks
@@ -1580,7 +1580,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
     for (const auto SI : children<const BlockT *>(BB)) {
       // Ignore cold blocks
-      if (BlockIndex.find(SI) == BlockIndex.end())
+      if (!BlockIndex.contains(SI))
         continue;
       // Ignore parallel edges between BB and SI blocks
       if (!UniqueSuccs.insert(SI).second)

@@ -43,7 +43,7 @@ static const MachineMemOperand::Flags MONoClobber =
 
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
-  SIInstrWorklist() : InstrList() {}
+  SIInstrWorklist() = default;
 
   void insert(MachineInstr *MI);
 
@@ -531,6 +531,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DS;
   }
 
+  static bool isGWS(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::GWS;
+  }
+
+  bool isGWS(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::GWS;
+  }
+
   bool isAlwaysGDS(uint16_t Opcode) const;
 
   static bool isMIMG(const MachineInstr &MI) {
@@ -662,7 +670,9 @@ public:
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
-           Opcode == AMDGPU::SI_SPILL_WWM_V32_RESTORE;
+           Opcode == AMDGPU::SI_SPILL_WWM_AV32_SAVE ||
+           Opcode == AMDGPU::SI_SPILL_WWM_V32_RESTORE ||
+           Opcode == AMDGPU::SI_SPILL_WWM_AV32_RESTORE;
   }
 
   static bool isDPP(const MachineInstr &MI) {

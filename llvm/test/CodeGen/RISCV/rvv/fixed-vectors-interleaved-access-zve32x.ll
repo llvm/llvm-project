@@ -21,7 +21,7 @@ define <4 x i1> @load_large_vector(ptr %p) {
 ; ZVE32X-NEXT:    vmv.s.x v8, a4
 ; ZVE32X-NEXT:    vand.vi v8, v8, 1
 ; ZVE32X-NEXT:    vmsne.vi v0, v8, 0
-; ZVE32X-NEXT:    vmv.v.i v8, 0
+; ZVE32X-NEXT:    vmv.s.x v8, zero
 ; ZVE32X-NEXT:    vmerge.vim v9, v8, 1, v0
 ; ZVE32X-NEXT:    xor a0, a0, a7
 ; ZVE32X-NEXT:    snez a0, a0

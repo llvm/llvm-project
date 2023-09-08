@@ -125,7 +125,7 @@ protected:
   bool HasSDWAOutModsVOPC = false;
   bool HasDPP = false;
   bool HasDPP8 = false;
-  bool Has64BitDPP = false;
+  bool HasDPALU_DPP = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -180,6 +180,8 @@ protected:
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
   bool HasArchitectedSGPRs = false;
+  bool HasGDS = false;
+  bool HasGWS = false;
   bool AddNoCarryInsts = false;
   bool HasUnpackedD16VMem = false;
   bool LDSMisalignedBug = false;
@@ -906,12 +908,17 @@ public:
     return HasDPP8;
   }
 
-  bool has64BitDPP() const {
-    return Has64BitDPP;
+  bool hasDPALU_DPP() const {
+    return HasDPALU_DPP;
   }
 
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
+  }
+
+  // Has V_PK_MOV_B32 opcode
+  bool hasPkMovB32() const {
+    return GFX90AInsts;
   }
 
   bool hasFmaakFmamkF32Insts() const {
@@ -1155,6 +1162,12 @@ public:
   /// \returns true if the architected SGPRs are enabled.
   bool hasArchitectedSGPRs() const { return HasArchitectedSGPRs; }
 
+  /// \returns true if Global Data Share is supported.
+  bool hasGDS() const { return HasGDS; }
+
+  /// \returns true if Global Wave Sync is supported.
+  bool hasGWS() const { return HasGWS; }
+
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8
   bool hasMergedShaders() const {
@@ -1163,6 +1176,9 @@ public:
 
   // \returns true if the target supports the pre-NGG legacy geometry path.
   bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
+
+  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
+  bool hasCvtFP8VOP1Bug() const { return true; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

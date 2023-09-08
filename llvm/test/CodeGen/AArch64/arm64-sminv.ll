@@ -1,14 +1,11 @@
-; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s --check-prefix=CHECK --check-prefix=SDAG
-; RUN: llc < %s -global-isel=1 -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s --check-prefix=CHECK --check-prefix=GISEL
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -global-isel=1 -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 
 define signext i8 @test_vminv_s8(<8 x i8> %a1) {
 ; CHECK: test_vminv_s8
 ; CHECK: sminv.8b b[[REGNUM:[0-9]+]], v0
-; SDAG-NEXT: smov.b w0, v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.b w8, v[[REGNUM]][0]
-; GISEL-NEXT: sxtb  w0, w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: smov.b w0, v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %vminv.i = tail call i32 @llvm.aarch64.neon.sminv.i32.v8i8(<8 x i8> %a1)
   %0 = trunc i32 %vminv.i to i8
@@ -18,11 +15,8 @@ entry:
 define signext i16 @test_vminv_s16(<4 x i16> %a1) {
 ; CHECK: test_vminv_s16
 ; CHECK: sminv.4h h[[REGNUM:[0-9]+]], v0
-; SDAG-NEXT: smov.h w0, v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.h w8, v[[REGNUM]][0]
-; GISEL-NEXT: sxth  w0, w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: smov.h w0, v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %vminv.i = tail call i32 @llvm.aarch64.neon.sminv.i32.v4i16(<4 x i16> %a1)
   %0 = trunc i32 %vminv.i to i16
@@ -43,11 +37,8 @@ entry:
 define signext i8 @test_vminvq_s8(<16 x i8> %a1) {
 ; CHECK: test_vminvq_s8
 ; CHECK: sminv.16b b[[REGNUM:[0-9]+]], v0
-; SDAG-NEXT: smov.b w0, v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.b w8, v[[REGNUM]][0]
-; GISEL-NEXT: sxtb  w0, w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: smov.b w0, v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %vminv.i = tail call i32 @llvm.aarch64.neon.sminv.i32.v16i8(<16 x i8> %a1)
   %0 = trunc i32 %vminv.i to i8
@@ -57,11 +48,8 @@ entry:
 define signext i16 @test_vminvq_s16(<8 x i16> %a1) {
 ; CHECK: test_vminvq_s16
 ; CHECK: sminv.8h h[[REGNUM:[0-9]+]], v0
-; SDAG-NEXT: smov.h w0, v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.h w8, v[[REGNUM]][0]
-; GISEL-NEXT: sxth  w0, w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: smov.h w0, v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %vminv.i = tail call i32 @llvm.aarch64.neon.sminv.i32.v8i16(<8 x i16> %a1)
   %0 = trunc i32 %vminv.i to i16
@@ -81,11 +69,8 @@ entry:
 define <8 x i8> @test_vminv_s8_used_by_laneop(<8 x i8> %a1, <8 x i8> %a2) {
 ; CHECK-LABEL: test_vminv_s8_used_by_laneop:
 ; CHECK: sminv.8b b[[REGNUM:[0-9]+]], v1
-; SDAG-NEXT: mov.b v0[3], v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.b  w8, v[[REGNUM]][0]
-; GISEL-NEXT: mov.b v0[3], w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: mov.b v0[3], v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.sminv.i32.v8i8(<8 x i8> %a2)
   %1 = trunc i32 %0 to i8
@@ -96,11 +81,8 @@ entry:
 define <4 x i16> @test_vminv_s16_used_by_laneop(<4 x i16> %a1, <4 x i16> %a2) {
 ; CHECK-LABEL: test_vminv_s16_used_by_laneop:
 ; CHECK: sminv.4h h[[REGNUM:[0-9]+]], v1
-; SDAG-NEXT: mov.h v0[3], v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.h  w8, v[[REGNUM]][0]
-; GISEL-NEXT: mov.h v0[3], w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: mov.h v0[3], v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.sminv.i32.v4i16(<4 x i16> %a2)
   %1 = trunc i32 %0 to i16
@@ -122,11 +104,8 @@ entry:
 define <16 x i8> @test_vminvq_s8_used_by_laneop(<16 x i8> %a1, <16 x i8> %a2) {
 ; CHECK-LABEL: test_vminvq_s8_used_by_laneop:
 ; CHECK: sminv.16b b[[REGNUM:[0-9]+]], v1
-; SDAG-NEXT: mov.b v0[3], v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.b  w8, v[[REGNUM]][0]
-; GISEL-NEXT: mov.b v0[3], w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: mov.b v0[3], v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.sminv.i32.v16i8(<16 x i8> %a2)
   %1 = trunc i32 %0 to i8
@@ -137,11 +116,8 @@ entry:
 define <8 x i16> @test_vminvq_s16_used_by_laneop(<8 x i16> %a1, <8 x i16> %a2) {
 ; CHECK-LABEL: test_vminvq_s16_used_by_laneop:
 ; CHECK: sminv.8h h[[REGNUM:[0-9]+]], v1
-; SDAG-NEXT: mov.h v0[3], v[[REGNUM]][0]
-; SDAG-NEXT: ret
-; GISEL-NEXT: smov.h  w8, v[[REGNUM]][0]
-; GISEL-NEXT: mov.h v0[3], w8
-; GISEL-NEXT: ret
+; CHECK-NEXT: mov.h v0[3], v[[REGNUM]][0]
+; CHECK-NEXT: ret
 entry:
   %0 = tail call i32 @llvm.aarch64.neon.sminv.i32.v8i16(<8 x i16> %a2)
   %1 = trunc i32 %0 to i16

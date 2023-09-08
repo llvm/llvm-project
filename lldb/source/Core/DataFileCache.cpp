@@ -285,7 +285,7 @@ bool ConstStringTable::Encode(DataEncoder &encoder) {
   size_t length_offset = encoder.GetByteSize();
   encoder.AppendU32(0); // Total length of all strings which will be fixed up.
   size_t strtab_offset = encoder.GetByteSize();
-  encoder.AppendU8(0); // Start the string table with with an empty string.
+  encoder.AppendU8(0); // Start the string table with an empty string.
   for (auto s: m_strings) {
     // Make sure all of the offsets match up with what we handed out!
     assert(m_string_to_offset.find(s)->second ==

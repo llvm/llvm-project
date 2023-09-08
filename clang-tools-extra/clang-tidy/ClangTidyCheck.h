@@ -190,7 +190,7 @@ public:
     /// If the corresponding key can't be parsed as a ``T``, emit a
     /// diagnostic and return ``std::nullopt``.
     template <typename T>
-    std::enable_if_t<std::is_integral<T>::value, std::optional<T>>
+    std::enable_if_t<std::is_integral_v<T>, std::optional<T>>
     get(StringRef LocalName) const {
       if (std::optional<StringRef> Value = get(LocalName)) {
         T Result{};
@@ -211,8 +211,8 @@ public:
     /// If the corresponding key can't be parsed as a ``T``, emit a
     /// diagnostic and return \p Default.
     template <typename T>
-    std::enable_if_t<std::is_integral<T>::value, T> get(StringRef LocalName,
-                                                        T Default) const {
+    std::enable_if_t<std::is_integral_v<T>, T> get(StringRef LocalName,
+                                                   T Default) const {
       return get<T>(LocalName).value_or(Default);
     }
 
@@ -227,7 +227,7 @@ public:
     /// If the corresponding key can't be parsed as a ``T``, emit a
     /// diagnostic and return ``std::nullopt``.
     template <typename T>
-    std::enable_if_t<std::is_integral<T>::value, std::optional<T>>
+    std::enable_if_t<std::is_integral_v<T>, std::optional<T>>
     getLocalOrGlobal(StringRef LocalName) const {
       std::optional<StringRef> ValueOr = get(LocalName);
       bool IsGlobal = false;
@@ -256,7 +256,7 @@ public:
     /// If the corresponding key can't be parsed as a ``T``, emit a
     /// diagnostic and return \p Default.
     template <typename T>
-    std::enable_if_t<std::is_integral<T>::value, T>
+    std::enable_if_t<std::is_integral_v<T>, T>
     getLocalOrGlobal(StringRef LocalName, T Default) const {
       return getLocalOrGlobal<T>(LocalName).value_or(Default);
     }
@@ -274,7 +274,7 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum<T>::value, std::optional<T>>
+    std::enable_if_t<std::is_enum_v<T>, std::optional<T>>
     get(StringRef LocalName, bool IgnoreCase = false) const {
       if (std::optional<int64_t> ValueOr =
               getEnumInt(LocalName, typeEraseMapping<T>(), false, IgnoreCase))
@@ -295,8 +295,8 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum<T>::value, T>
-    get(StringRef LocalName, T Default, bool IgnoreCase = false) const {
+    std::enable_if_t<std::is_enum_v<T>, T> get(StringRef LocalName, T Default,
+                                               bool IgnoreCase = false) const {
       return get<T>(LocalName, IgnoreCase).value_or(Default);
     }
 
@@ -314,7 +314,7 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum<T>::value, std::optional<T>>
+    std::enable_if_t<std::is_enum_v<T>, std::optional<T>>
     getLocalOrGlobal(StringRef LocalName, bool IgnoreCase = false) const {
       if (std::optional<int64_t> ValueOr =
               getEnumInt(LocalName, typeEraseMapping<T>(), true, IgnoreCase))
@@ -336,7 +336,7 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum<T>::value, T>
+    std::enable_if_t<std::is_enum_v<T>, T>
     getLocalOrGlobal(StringRef LocalName, T Default,
                      bool IgnoreCase = false) const {
       return getLocalOrGlobal<T>(LocalName, IgnoreCase).value_or(Default);
@@ -350,7 +350,7 @@ public:
     /// Stores an option with the check-local name \p LocalName with
     /// integer value \p Value to \p Options.
     template <typename T>
-    std::enable_if_t<std::is_integral<T>::value>
+    std::enable_if_t<std::is_integral_v<T>>
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           T Value) const {
       storeInt(Options, LocalName, Value);
@@ -362,7 +362,7 @@ public:
     /// \ref clang::tidy::OptionEnumMapping must be specialized for ``T`` to
     /// supply the mapping required to convert between ``T`` and a string.
     template <typename T>
-    std::enable_if_t<std::is_enum<T>::value>
+    std::enable_if_t<std::is_enum_v<T>>
     store(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
           T Value) const {
       ArrayRef<std::pair<T, StringRef>> Mapping =
@@ -383,7 +383,7 @@ public:
                                       bool CheckGlobal, bool IgnoreCase) const;
 
     template <typename T>
-    std::enable_if_t<std::is_enum<T>::value, std::vector<NameAndValue>>
+    std::enable_if_t<std::is_enum_v<T>, std::vector<NameAndValue>>
     typeEraseMapping() const {
       ArrayRef<std::pair<T, StringRef>> Mapping =
           OptionEnumMapping<T>::getEnumMapping();

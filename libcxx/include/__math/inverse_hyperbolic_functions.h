@@ -32,8 +32,8 @@ _LIBCPP_HIDE_FROM_ABI double acosh(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double acosh(long double __x) _NOEXCEPT { return __builtin_acoshl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type acosh(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double acosh(_A1 __x) _NOEXCEPT {
   return __builtin_acosh((double)__x);
 }
 
@@ -48,8 +48,8 @@ _LIBCPP_HIDE_FROM_ABI double asinh(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double asinh(long double __x) _NOEXCEPT { return __builtin_asinhl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type asinh(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double asinh(_A1 __x) _NOEXCEPT {
   return __builtin_asinh((double)__x);
 }
 
@@ -64,8 +64,8 @@ _LIBCPP_HIDE_FROM_ABI double atanh(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double atanh(long double __x) _NOEXCEPT { return __builtin_atanhl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type atanh(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double atanh(_A1 __x) _NOEXCEPT {
   return __builtin_atanh((double)__x);
 }
 

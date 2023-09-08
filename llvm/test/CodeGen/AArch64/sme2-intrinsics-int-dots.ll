@@ -9,9 +9,9 @@ target triple="aarch64-linux-gnu"
 define void @udot_multi_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3) #0 {
 ; CHECK-LABEL: udot_multi_za32_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z6.h, z7.h }, { z4.h, z5.h }
@@ -26,16 +26,16 @@ define void @udot_multi_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @udot_multi_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: udot_multi_za32_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    udot za.s[w8, 7, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    ret
@@ -51,9 +51,9 @@ define void @udot_multi_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @udot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3) #0 {
 ; CHECK-LABEL: udot_multi_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z6.b, z7.b }, { z4.b, z5.b }
@@ -68,16 +68,16 @@ define void @udot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @udot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
 ; CHECK-LABEL: udot_multi_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z28.b - z31.b }, { z24.b - z27.b }
 ; CHECK-NEXT:    udot za.s[w8, 7, vgx4], { z28.b - z31.b }, { z24.b - z27.b }
 ; CHECK-NEXT:    ret
@@ -93,9 +93,9 @@ define void @udot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @udot_multi_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3) #1 {
 ; CHECK-LABEL: udot_multi_za64_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    udot za.d[w8, 0, vgx2], { z6.h, z7.h }, { z4.h, z5.h }
@@ -110,16 +110,16 @@ define void @udot_multi_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @udot_multi_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: udot_multi_za64_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
 ; CHECK-NEXT:    udot za.d[w8, 0, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    udot za.d[w8, 7, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    ret
@@ -135,9 +135,9 @@ define void @udot_multi_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @usdot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3) #0 {
 ; CHECK-LABEL: usdot_multi_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z6.b, z7.b }, { z4.b, z5.b }
@@ -152,16 +152,16 @@ define void @usdot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @usdot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
 ; CHECK-LABEL: usdot_multi_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z28.b - z31.b }, { z24.b - z27.b }
 ; CHECK-NEXT:    usdot za.s[w8, 7, vgx4], { z28.b - z31.b }, { z24.b - z27.b }
 ; CHECK-NEXT:    ret
@@ -180,9 +180,9 @@ define void @usdot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @sdot_multi_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3) #0 {
 ; CHECK-LABEL: sdot_multi_za32_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z6.h, z7.h }, { z4.h, z5.h }
@@ -197,16 +197,16 @@ define void @sdot_multi_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @sdot_multi_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: sdot_multi_za32_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    sdot za.s[w8, 7, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    ret
@@ -222,9 +222,9 @@ define void @sdot_multi_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @sdot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3) #0 {
 ; CHECK-LABEL: sdot_multi_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z6.b, z7.b }, { z4.b, z5.b }
@@ -239,16 +239,16 @@ define void @sdot_multi_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @sdot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3,
 ; CHECK-LABEL: sdot_multi_za32_u8_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1b { z27.b }, p0/z, [x1]
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z28.b - z31.b }, { z24.b - z27.b }
 ; CHECK-NEXT:    sdot za.s[w8, 7, vgx4], { z28.b - z31.b }, { z24.b - z27.b }
 ; CHECK-NEXT:    ret
@@ -264,9 +264,9 @@ define void @sdot_multi_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @sdot_multi_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3) #1 {
 ; CHECK-LABEL: sdot_multi_za64_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    mov z7.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z3.d
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    sdot za.d[w8, 0, vgx2], { z6.h, z7.h }, { z4.h, z5.h }
@@ -281,16 +281,16 @@ define void @sdot_multi_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @sdot_multi_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3,
 ; CHECK-LABEL: sdot_multi_za64_u16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    mov z26.d, z7.d
 ; CHECK-NEXT:    mov z31.d, z4.d
-; CHECK-NEXT:    mov z24.d, z5.d
-; CHECK-NEXT:    mov z30.d, z3.d
-; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z25.d, z6.d
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z30.d, z3.d
+; CHECK-NEXT:    mov z24.d, z5.d
 ; CHECK-NEXT:    mov z29.d, z2.d
 ; CHECK-NEXT:    mov z28.d, z1.d
+; CHECK-NEXT:    ld1h { z27.h }, p0/z, [x1]
 ; CHECK-NEXT:    sdot za.d[w8, 0, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    sdot za.d[w8, 7, vgx4], { z28.h - z31.h }, { z24.h - z27.h }
 ; CHECK-NEXT:    ret
@@ -309,8 +309,8 @@ define void @sdot_multi_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @udot_single_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #0 {
 ; CHECK-LABEL: udot_single_za32_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    udot za.s[w8, 7, vgx2], { z1.h, z2.h }, z3.h
@@ -341,8 +341,8 @@ define void @udot_single_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
 define void @udot_single_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: udot_single_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z1.b, z2.b }, z3.b
 ; CHECK-NEXT:    udot za.s[w8, 7, vgx2], { z1.b, z2.b }, z3.b
@@ -373,8 +373,8 @@ define void @udot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @udot_single_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #1 {
 ; CHECK-LABEL: udot_single_za64_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    udot za.d[w8, 0, vgx2], { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    udot za.d[w8, 7, vgx2], { z1.h, z2.h }, z3.h
@@ -405,8 +405,8 @@ define void @udot_single_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
 define void @usdot_single_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: usdot_single_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z1.b, z2.b }, z3.b
 ; CHECK-NEXT:    usdot za.s[w8, 7, vgx2], { z1.b, z2.b }, z3.b
@@ -440,8 +440,8 @@ define void @usdot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
 define void @sdot_single_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #0 {
 ; CHECK-LABEL: sdot_single_za32_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    sdot za.s[w8, 7, vgx2], { z1.h, z2.h }, z3.h
@@ -472,8 +472,8 @@ define void @sdot_single_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
 define void @sdot_single_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: sdot_single_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z1.b, z2.b }, z3.b
 ; CHECK-NEXT:    sdot za.s[w8, 7, vgx2], { z1.b, z2.b }, z3.b
@@ -504,8 +504,8 @@ define void @sdot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <
 define void @sdot_single_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #1 {
 ; CHECK-LABEL: sdot_single_za64_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    sdot za.d[w8, 0, vgx2], { z1.h, z2.h }, z3.h
 ; CHECK-NEXT:    sdot za.d[w8, 7, vgx2], { z1.h, z2.h }, z3.h
@@ -536,8 +536,8 @@ define void @sdot_single_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
 define void @sudot_single_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: sudot_single_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z1_z2 def $z1_z2
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z1_z2 def $z1_z2
 ; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z1.b, z2.b }, z3.b
 ; CHECK-NEXT:    sudot za.s[w8, 7, vgx2], { z1.b, z2.b }, z3.b
@@ -570,8 +570,8 @@ define void @sudot_single_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, 
 define void @udot_lane_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #0 {
 ; CHECK-LABEL: udot_lane_za32_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z4.h, z5.h }, z3.h[3]
 ; CHECK-NEXT:    udot za.s[w8, 7, vgx2], { z4.h, z5.h }, z3.h[3]
@@ -604,8 +604,8 @@ define void @udot_lane_za32_u16_vg1x4(i32 %slice, <vscale x 8 x i16> %zn0, <vsca
 define void @udot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: udot_lane_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
 ; CHECK-NEXT:    udot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
@@ -638,8 +638,8 @@ define void @udot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vs
 define void @udot_lane_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #1 {
 ; CHECK-LABEL: udot_lane_za64_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    udot za.d[w8, 0, vgx2], { z4.h, z5.h }, z3.h[1]
 ; CHECK-NEXT:    udot za.d[w8, 7, vgx2], { z4.h, z5.h }, z3.h[1]
@@ -672,8 +672,8 @@ define void @udot_lane_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @usdot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: usdot_lane_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
 ; CHECK-NEXT:    usdot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
@@ -709,8 +709,8 @@ define void @usdot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @sdot_lane_za32_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #0 {
 ; CHECK-LABEL: sdot_lane_za32_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z4.h, z5.h }, z3.h[3]
 ; CHECK-NEXT:    sdot za.s[w8, 7, vgx2], { z4.h, z5.h }, z3.h[3]
@@ -743,8 +743,8 @@ define void @sdot_lane_za32_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @sdot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: sdot_lane_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
 ; CHECK-NEXT:    sdot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]
@@ -777,8 +777,8 @@ define void @sdot_lane_za32_u8_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <vs
 define void @sdot_lane_za64_u16_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2) #1 {
 ; CHECK-LABEL: sdot_lane_za64_u16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    sdot za.d[w8, 0, vgx2], { z4.h, z5.h }, z3.h[1]
 ; CHECK-NEXT:    sdot za.d[w8, 7, vgx2], { z4.h, z5.h }, z3.h[1]
@@ -813,8 +813,8 @@ define void @sdot_lane_za64_u16_vg1x4(i32 %slice, <vscale x 16 x i8> %unused, <v
 define void @sudot_lane_za32_u8_vg1x2(i32 %slice, <vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2) #0 {
 ; CHECK-LABEL: sudot_lane_za32_u8_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    sudot za.s[w8, 0, vgx2], { z4.b, z5.b }, z3.b[3]
 ; CHECK-NEXT:    sudot za.s[w8, 7, vgx2], { z4.b, z5.b }, z3.b[3]

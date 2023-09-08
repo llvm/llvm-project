@@ -11,7 +11,6 @@ void test() {
 }
 
 #if __cplusplus < 201703L
-// rdar://8018252
 void f0() {
   extern void f0_1(int*);
   register int x;
@@ -44,9 +43,6 @@ int test2(int x) {
   return x && 4; // expected-warning {{use of logical '&&' with constant operand}} \
                    // expected-note {{use '&' for a bitwise operation}} \
                    // expected-note {{remove constant to silence this warning}}
-  return 4 && x; // expected-warning {{use of logical '&&' with constant operand}} \
-                   // expected-note {{use '&' for a bitwise operation}} \
-                   // expected-note {{remove constant to silence this warning}}
 
   return x && sizeof(int) == 4;  // no warning, RHS is logical op.
   return x && true;
@@ -68,8 +64,6 @@ int test2(int x) {
   return x || -1; // expected-warning {{use of logical '||' with constant operand}} \
                    // expected-note {{use '|' for a bitwise operation}}
   return x || 5; // expected-warning {{use of logical '||' with constant operand}} \
-                   // expected-note {{use '|' for a bitwise operation}}
-  return 5 || x; // expected-warning {{use of logical '||' with constant operand}} \
                    // expected-note {{use '|' for a bitwise operation}}
   return x && 0; // expected-warning {{use of logical '&&' with constant operand}} \
                    // expected-note {{use '&' for a bitwise operation}} \
@@ -144,5 +138,6 @@ void test4() {
   bool r1 = X || Y;
 
   #define Y2 2
-  bool r2 = X || Y2;
+  bool r2 = X || Y2; // expected-warning {{use of logical '||' with constant operand}} \
+                     // expected-note {{use '|' for a bitwise operation}}
 }

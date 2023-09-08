@@ -29,7 +29,6 @@ def Vector_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
   let hasConstantMaterializer = 1;
-  let usePropertiesForAttributes = 1;
   let dependentDialects = ["arith::ArithDialect"];
 }
 
@@ -898,7 +897,7 @@ def Vector_OuterProductOp :
                 TCresVTEtIsSameAsOpBase<0, 1>>,
     DeclareOpInterfaceMethods<MaskableOpInterface>]>,
     Arguments<(ins AnyVector:$lhs, AnyType:$rhs,
-               Variadic<AnyVector>:$acc,
+               Optional<AnyVector>:$acc,
                DefaultValuedAttr<Vector_CombiningKindAttr, "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyVector)> {
   let summary = "vector outerproduct with optional fused add";
@@ -962,9 +961,9 @@ def Vector_OuterProductOp :
       return getRhs().getType();
     }
     VectorType getOperandVectorTypeACC() {
-      return getAcc().empty()
-        ? VectorType()
-        : ::llvm::cast<VectorType>((*getAcc().begin()).getType());
+      return getAcc()
+        ? ::llvm::cast<VectorType>(getAcc().getType())
+        : VectorType();
     }
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
@@ -1201,14 +1200,15 @@ def Vector_TransferReadOp :
     `0` are masked out and replaced with `padding`.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds.
-    While the starting point of the transfer has to be in-bounds, accesses may
-    run out-of-bounds as indices increase. Broadcast dimensions must always be
-    in-bounds. If specified, the `in_bounds` array length has to be equal to the
-    vector rank. In absence of the attribute, accesses along all dimensions
-    (except for broadcasts) may run out-of-bounds. A `vector.transfer_read` can
-    be lowered to a simple load if all dimensions are specified to be within
-    bounds and no `mask` was specified.
+    dimension if the transfer is guaranteed to be within the source bounds. If
+    specified, the `in_bounds` array length has to be equal to the vector rank.
+    If set to "false", accesses (including the starting point) may run
+    out-of-bounds along the respective vector dimension as the index increases.
+    Broadcast dimensions must always be in-bounds. In absence of the attribute,
+    accesses along all vector dimensions (except for broadcasts) may run
+    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
+    all dimensions are specified to be within bounds and no `mask` was
+    specified. Note that non-vector dimensions *must* always be in-bounds.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1446,13 +1446,14 @@ def Vector_TransferWriteOp :
     is `0` are masked out.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds.
-    While the starting point of the transfer has to be in-bounds, accesses may
-    run out-of-bounds as indices increase. If specified, the `in_bounds` array
-    length has to be equal to the vector rank. In absence of the attribute,
-    accesses along all dimensions may run out-of-bounds. A
-    `vector.transfer_write` can be lowered to a simple store if all dimensions
-    are specified to be within bounds and no `mask` was specified.
+    dimension if the transfer is guaranteed to be within the source bounds. If
+    specified, the `in_bounds` array length has to be equal to the vector rank.
+    If set to "false", accesses (including the starting point) may run
+    out-of-bounds along the respective vector dimension as the index increases.
+    In absence of the attribute, accesses along all vector dimensions may run
+    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store if
+    all dimensions are specified to be within bounds and no `mask` was
+    specified. Note that non-vector dimensions *must* always be in-bounds.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -2462,33 +2463,66 @@ def Vector_TransposeOp :
   let hasVerifier = 1;
 }
 
+def PrintPunctuation : I32EnumAttr<"PrintPunctuation",
+                                  "Punctuation for separating vectors or vector elements", [
+  I32EnumAttrCase<"NoPunctuation", 0, "no_punctuation">,
+  I32EnumAttrCase<"NewLine", 1, "newline">,
+  I32EnumAttrCase<"Comma", 2, "comma">,
+  I32EnumAttrCase<"Open", 3, "open">,
+  I32EnumAttrCase<"Close", 4, "close">
+]> {
+  let cppNamespace = "::mlir::vector";
+  let genSpecializedAttr = 0;
+}
+
+def Vector_PrintPunctuation : EnumAttr<Vector_Dialect, PrintPunctuation, "punctuation"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 def Vector_PrintOp :
   Vector_Op<"print", []>,
-  Arguments<(ins Type<Or<[
+  Arguments<(ins Optional<Type<Or<[
     AnyVectorOfAnyRank.predicate,
     AnyInteger.predicate, Index.predicate, AnyFloat.predicate
-  ]>>:$source)> {
+  ]>>>:$source, DefaultValuedAttr<Vector_PrintPunctuation,
+                      "::mlir::vector::PrintPunctuation::NewLine">:$punctuation)
+  > {
   let summary = "print operation (for testing and debugging)";
   let description = [{
-    Prints the source vector (or scalar) to stdout in human readable
-    format (for testing and debugging). No return value.
+    Prints the source vector (or scalar) to stdout in a human-readable format
+    (for testing and debugging). No return value.
 
     Example:
 
     ```mlir
-    %0 = arith.constant 0.0 : f32
-    %1 = vector.broadcast %0 : f32 to vector<4xf32>
-    vector.print %1 : vector<4xf32>
+    %v = arith.constant dense<0.0> : vector<4xf32>
+    vector.print %v : vector<4xf32>
+    ```
 
-    when lowered to LLVM, the vector print is unrolled into
-    elementary printing method calls that at runtime will yield
+    When lowered to LLVM, the vector print is decomposed into elementary
+    printing method calls that at runtime will yield:
 
+    ```
     ( 0.0, 0.0, 0.0, 0.0 )
+    ```
 
-    on stdout when linked with a small runtime support library,
-    which only needs to provide a few printing methods (single
-    value for all data types, opening/closing bracket, comma,
-    newline).
+    This is printed to stdout via a small runtime support library, which only
+    needs to provide a few printing methods (single value for all data
+    types, opening/closing bracket, comma, newline).
+
+    By default `vector.print` adds a newline after the vector, but this can be
+    controlled by the `punctuation` attribute. For example, to print a comma
+    after instead do:
+
+    ```mlir
+    vector.print %v : vector<4xf32> punctuation <comma>
+    ```
+
+    Note that it is possible to use the punctuation attribute alone. The
+    following will print a single newline:
+
+    ```mlir
+    vector.print punctuation <newline>
     ```
   }];
   let extraClassDeclaration = [{
@@ -2496,7 +2530,13 @@ def Vector_PrintOp :
       return getSource().getType();
     }
   }];
-  let assemblyFormat = "$source attr-dict `:` type($source)";
+  let builders = [
+    OpBuilder<(ins "PrintPunctuation":$punctuation), [{
+      build($_builder, $_state, {}, punctuation);
+    }]>,
+  ];
+
+  let assemblyFormat = "($source^ `:` type($source))? (`punctuation` $punctuation^)? attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

@@ -1039,5 +1039,72 @@ entry:
   ret void
 }
 
+define void @Cmpxchg4Arg(ptr %p) {
+; CHECK-LABEL: @Cmpxchg4Arg
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [0,4){{$}}
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 1
+  ret void
+}
+
+define void @AtomicRMW4Arg(ptr %p) {
+; CHECK-LABEL: @AtomicRMW4Arg
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [0,4){{$}}
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: atomicrmw add ptr %p, i32 1 monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  atomicrmw add ptr %p, i32 1 monotonic, align 1
+  ret void
+}
+
+define void @Cmpxchg4Alloca() {
+; CHECK-LABEL: @Cmpxchg4Alloca
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: cmpxchg ptr %x, i32 0, i32 1 monotonic monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  cmpxchg ptr %x, i32 0, i32 1 monotonic monotonic, align 1
+  ret void
+}
+
+define void @AtomicRMW4Alloca() {
+; CHECK-LABEL: @AtomicRMW4Alloca
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT: x[4]: [0,4){{$}}
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: atomicrmw add ptr %x, i32 1 monotonic, align 1
+; CHECK-EMPTY:
+entry:
+  %x = alloca i32, align 4
+  atomicrmw add ptr %x, i32 1 monotonic, align 1
+  ret void
+}
+
+define void @StoreArg(ptr %p) {
+; CHECK-LABEL: @StoreArg
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [0,4){{$}}
+; CHECK-NEXT: allocas uses:
+; GLOBAL-NEXT: safe accesses:
+; GLOBAL-NEXT: store i32 1, ptr %p
+; CHECK-EMPTY:
+entry:
+  store i32 1, ptr %p
+  ret void
+}
+
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)

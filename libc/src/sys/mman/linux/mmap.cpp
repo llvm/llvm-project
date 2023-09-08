@@ -39,7 +39,7 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #error "mmap or mmap2 syscalls not available."
 #endif
 
-  long ret_val =
+  long ret =
       __llvm_libc::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
                                 size, prot, flags, fd, offset);
 
@@ -52,12 +52,12 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret_val < 0 && ret_val > -EXEC_PAGESIZE) {
-    libc_errno = -ret_val;
+  if (ret < 0 && ret > -EXEC_PAGESIZE) {
+    libc_errno = static_cast<int>(-ret);
     return MAP_FAILED;
   }
 
-  return reinterpret_cast<void *>(ret_val);
+  return reinterpret_cast<void *>(ret);
 }
 
 } // namespace __llvm_libc

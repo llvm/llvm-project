@@ -11,6 +11,7 @@ unittest("ClangReplInterpreterTests") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "CodeCompletionTest.cpp",
     "IncrementalProcessingTest.cpp",
     "InterpreterTest.cpp",
   ]

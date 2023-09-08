@@ -130,7 +130,7 @@ bool BaseIndexOffset::computeAliasing(const SDNode *Op0,
       MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
       // If the base are the same frame index but the we couldn't find a
       // constant offset, (indices are different) be conservative.
-      if (A != B && (!MFI.isFixedObjectIndex(A->getIndex()) ||
+      if (A->getIndex() != B->getIndex() && (!MFI.isFixedObjectIndex(A->getIndex()) ||
                      !MFI.isFixedObjectIndex(B->getIndex()))) {
         IsAlias = false;
         return true;

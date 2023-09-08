@@ -3,12 +3,14 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
 ; RUN: llc -march=amdgcn -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GFX11
 
 declare i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 %c, i1 %clamp)
 
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_sdot4_clamp
 ; GFX906: v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 ; GFX10:  v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
+; GFX11:  v_dot4_i32_iu8 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} neg_lo:[1,1,0] clamp{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_sdot4_clamp(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -28,6 +30,7 @@ entry:
 ; GCN-LABEL: {{^}}test_llvm_amdgcn_sdot4_no_clamp
 ; GFX906: v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX10:  v_dot4c_i32_i8_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GF11:   v_dot4_i32_iu8 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}} neg_lo:[1,1,0]{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_sdot4_no_clamp(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,

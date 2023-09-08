@@ -20,27 +20,31 @@ steps:
   - label: "Format"
     commands:
       - "clang/utils/ci/run-buildbot check-format"
-
     agents:
-      queue: "libcxx-builders"
-      os: "linux"
+      queue: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
     timeout_in_minutes: 120
 
-  - wait
-
-  - label: "Building clang"
+  - label: "Building and testing clang (Linux)"
     commands:
       - "clang/utils/ci/run-buildbot build-clang"
-    env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
-      queue: "libcxx-builders"
-      os: "linux"
+      queue: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Building and testing clang (Windows)"
+    commands:
+      - "C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64"
+      - "bash clang/utils/ci/run-buildbot build-clang-windows"
+    agents:
+      queue: "windows"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -49,7 +53,7 @@ steps:
 
   - wait
 
-  - label: "C++03"
+  - label: "Running libc++ test suite in C++03"
     commands:
       - "clang/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:
@@ -59,15 +63,14 @@ steps:
         LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}" # TODO: Should we build that from scratch?
         CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
     agents:
-      queue: "libcxx-builders"
-      os: "linux"
+      queue: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++26"
+  - label: "Running libc++ test suite in C++26"
     commands:
       - "clang/utils/ci/run-buildbot generic-cxx26"
     artifact_paths:
@@ -77,15 +80,14 @@ steps:
         LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}" # TODO: Should we build that from scratch?
         CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
     agents:
-      queue: "libcxx-builders"
-      os: "linux"
+      queue: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Modules"
+  - label: "Running libc++ test suite with Clang Modules"
     commands:
       - "clang/utils/ci/run-buildbot generic-modules"
     artifact_paths:
@@ -95,8 +97,7 @@ steps:
         LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-${LLVM_HEAD_VERSION}" # TODO: Should we build that from scratch?
         CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
     agents:
-      queue: "libcxx-builders"
-      os: "linux"
+      queue: "linux"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost

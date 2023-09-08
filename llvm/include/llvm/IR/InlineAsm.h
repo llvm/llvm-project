@@ -200,14 +200,14 @@ public:
   // in the backend.
   //
   // The encoding of the flag word is currently:
-  //   Bits 2-0 - A Kind_* value indicating the kind of the operand.
+  //   Bits 2-0 - A Kind::* value indicating the kind of the operand.
   //   Bits 15-3 - The number of SDNode operands associated with this inline
   //               assembly operand.
   //   If bit 31 is set:
   //     Bit 30-16 - The operand number that this operand must match.
-  //                 When bits 2-0 are Kind_Mem, the Constraint_* value must be
+  //                 When bits 2-0 are Kind::Mem, the Constraint_* value must be
   //                 obtained from the flags for this operand number.
-  //   Else if bits 2-0 are Kind_Mem:
+  //   Else if bits 2-0 are Kind::Mem:
   //     Bit 30-16 - A Constraint_* value indicating the original constraint
   //                 code.
   //   Else:
@@ -218,12 +218,12 @@ public:
     Op_InputChain = 0,
     Op_AsmString = 1,
     Op_MDNode = 2,
-    Op_ExtraInfo = 3,    // HasSideEffects, IsAlignStack, AsmDialect.
+    Op_ExtraInfo = 3, // HasSideEffects, IsAlignStack, AsmDialect.
     Op_FirstOperand = 4,
 
     // Fixed operands on an INLINEASM MachineInstr.
     MIOp_AsmString = 0,
-    MIOp_ExtraInfo = 1,    // HasSideEffects, IsAlignStack, AsmDialect.
+    MIOp_ExtraInfo = 1, // HasSideEffects, IsAlignStack, AsmDialect.
     MIOp_FirstOperand = 2,
 
     // Interpretation of the MIOp_ExtraInfo bit field.
@@ -233,17 +233,6 @@ public:
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
     Extra_IsConvergent = 32,
-
-    // Inline asm operands map to multiple SDNode / MachineInstr operands.
-    // The first operand is an immediate describing the asm operand, the low
-    // bits is the kind:
-    Kind_RegUse = 1,             // Input register, "r".
-    Kind_RegDef = 2,             // Output register, "=r".
-    Kind_RegDefEarlyClobber = 3, // Early-clobber output register, "=&r".
-    Kind_Clobber = 4,            // Clobbered register, "~r".
-    Kind_Imm = 5,                // Immediate.
-    Kind_Mem = 6,                // Memory operand, "m", or an address, "p".
-    Kind_Func = 7,               // Address operand of function call
 
     // Memory constraint codes.
     // These could be tablegenerated but there's little need to do that since
@@ -290,21 +279,35 @@ public:
     Flag_MatchingOperand = 0x80000000
   };
 
-  static unsigned getFlagWord(unsigned Kind, unsigned NumOps) {
+  // Inline asm operands map to multiple SDNode / MachineInstr operands.
+  // The first operand is an immediate describing the asm operand, the low
+  // bits is the kind:
+  enum class Kind {
+    RegUse = 1,             // Input register, "r".
+    RegDef = 2,             // Output register, "=r".
+    RegDefEarlyClobber = 3, // Early-clobber output register, "=&r".
+    Clobber = 4,            // Clobbered register, "~r".
+    Imm = 5,                // Immediate.
+    Mem = 6,                // Memory operand, "m", or an address, "p".
+    Func = 7,               // Address operand of function call
+  };
+
+  static unsigned getFlagWord(Kind Kind, unsigned NumOps) {
     assert(((NumOps << 3) & ~0xffff) == 0 && "Too many inline asm operands!");
-    assert(Kind >= Kind_RegUse && Kind <= Kind_Func && "Invalid Kind");
-    return Kind | (NumOps << 3);
+    return static_cast<unsigned>(Kind) | (NumOps << 3);
   }
 
-  static bool isRegDefKind(unsigned Flag){ return getKind(Flag) == Kind_RegDef;}
-  static bool isImmKind(unsigned Flag) { return getKind(Flag) == Kind_Imm; }
-  static bool isMemKind(unsigned Flag) { return getKind(Flag) == Kind_Mem; }
-  static bool isFuncKind(unsigned Flag) { return getKind(Flag) == Kind_Func; }
+  static bool isRegDefKind(unsigned Flag) {
+    return getKind(Flag) == Kind::RegDef;
+  }
+  static bool isImmKind(unsigned Flag) { return getKind(Flag) == Kind::Imm; }
+  static bool isMemKind(unsigned Flag) { return getKind(Flag) == Kind::Mem; }
+  static bool isFuncKind(unsigned Flag) { return getKind(Flag) == Kind::Func; }
   static bool isRegDefEarlyClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind_RegDefEarlyClobber;
+    return getKind(Flag) == Kind::RegDefEarlyClobber;
   }
   static bool isClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind_Clobber;
+    return getKind(Flag) == Kind::Clobber;
   }
 
   /// getFlagWordForMatchingOp - Augment an existing flag word returned by
@@ -348,9 +351,7 @@ public:
     return InputFlag & ~(0x7fff << Constraints_ShiftAmount);
   }
 
-  static unsigned getKind(unsigned Flags) {
-    return Flags & 7;
-  }
+  static Kind getKind(unsigned Flags) { return static_cast<Kind>(Flags & 7); }
 
   static unsigned getMemoryConstraintID(unsigned Flag) {
     assert((isMemKind(Flag) || isFuncKind(Flag)) &&
@@ -411,24 +412,23 @@ public:
     return Result;
   }
 
-  static StringRef getKindName(unsigned Kind) {
+  static StringRef getKindName(Kind Kind) {
     switch (Kind) {
-    case InlineAsm::Kind_RegUse:
+    case Kind::RegUse:
       return "reguse";
-    case InlineAsm::Kind_RegDef:
+    case Kind::RegDef:
       return "regdef";
-    case InlineAsm::Kind_RegDefEarlyClobber:
+    case Kind::RegDefEarlyClobber:
       return "regdef-ec";
-    case InlineAsm::Kind_Clobber:
+    case Kind::Clobber:
       return "clobber";
-    case InlineAsm::Kind_Imm:
+    case Kind::Imm:
       return "imm";
-    case InlineAsm::Kind_Mem:
-    case InlineAsm::Kind_Func:
+    case Kind::Mem:
+    case Kind::Func:
       return "mem";
-    default:
-      llvm_unreachable("Unknown operand kind");
     }
+    llvm_unreachable("Unknown operand kind");
   }
 
   static StringRef getMemConstraintName(unsigned Constraint) {

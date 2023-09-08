@@ -67,11 +67,6 @@ BUILTIN(__builtin_amdgcn_sched_group_barrier, "vIiIiIi", "n")
 BUILTIN(__builtin_amdgcn_iglp_opt, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_dcache_inv, "v", "n")
 BUILTIN(__builtin_amdgcn_buffer_wbinvl1, "v", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_init, "vUiUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_barrier, "vUiUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_sema_v, "vUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n")
 BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
 BUILTIN(__builtin_amdgcn_groupstaticsize, "Ui", "n")
 
@@ -171,6 +166,15 @@ BUILTIN(__builtin_amdgcn_fcmpf, "WUiffIi", "nc")
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_is_shared, "bvC*0", "nc")
 BUILTIN(__builtin_amdgcn_is_private, "bvC*0", "nc")
+
+//===----------------------------------------------------------------------===//
+// GWS builtins.
+//===----------------------------------------------------------------------===//
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_init, "vUiUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_barrier, "vUiUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_v, "vUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n", "gws")
 
 //===----------------------------------------------------------------------===//
 // CI+ only builtins.

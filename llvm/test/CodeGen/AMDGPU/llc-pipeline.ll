@@ -186,10 +186,13 @@
 ; GCN-O1-NEXT:        Cycle Info Analysis
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Infer address spaces
+; GCN-O1-NEXT:      Dominator Tree Construction
+; GCN-O1-NEXT:      Cycle Info Analysis
+; GCN-O1-NEXT:      Uniformity Analysis
+; GCN-O1-NEXT:      AMDGPU atomic optimizations
 ; GCN-O1-NEXT:      Expand Atomic instructions
 ; GCN-O1-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-NEXT:      Dominator Tree Construction
-; GCN-O1-NEXT:      SROA
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU IR optimizations
@@ -242,14 +245,11 @@
 ; GCN-O1-NEXT:        Cycle Info Analysis
 ; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        AMDGPU IR late optimizations
-; GCN-O1-NEXT:        AMDGPU atomic optimizations
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:        Natural Loop Information
 ; GCN-O1-NEXT:        Code sinking
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-NEXT:        Cycle Info Analysis
-; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-NEXT:        Lazy Value Information Analysis
 ; GCN-O1-NEXT:        Lower SwitchInst's to branches
@@ -458,10 +458,13 @@
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Infer address spaces
+; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:      Uniformity Analysis
+; GCN-O1-OPTS-NEXT:      AMDGPU atomic optimizations
 ; GCN-O1-OPTS-NEXT:      Expand Atomic instructions
 ; GCN-O1-OPTS-NEXT:      AMDGPU Promote Alloca
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:      SROA
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
@@ -528,14 +531,11 @@
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU IR late optimizations
-; GCN-O1-OPTS-NEXT:        AMDGPU atomic optimizations
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Code sinking
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
-; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-OPTS-NEXT:        Lazy Value Information Analysis
 ; GCN-O1-OPTS-NEXT:        Lower SwitchInst's to branches
@@ -752,10 +752,13 @@
 ; GCN-O2-NEXT:        Cycle Info Analysis
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Infer address spaces
+; GCN-O2-NEXT:      Dominator Tree Construction
+; GCN-O2-NEXT:      Cycle Info Analysis
+; GCN-O2-NEXT:      Uniformity Analysis
+; GCN-O2-NEXT:      AMDGPU atomic optimizations
 ; GCN-O2-NEXT:      Expand Atomic instructions
 ; GCN-O2-NEXT:      AMDGPU Promote Alloca
 ; GCN-O2-NEXT:      Dominator Tree Construction
-; GCN-O2-NEXT:      SROA
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
@@ -830,14 +833,11 @@
 ; GCN-O2-NEXT:        Cycle Info Analysis
 ; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        AMDGPU IR late optimizations
-; GCN-O2-NEXT:        AMDGPU atomic optimizations
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Code sinking
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
-; GCN-O2-NEXT:        Cycle Info Analysis
-; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        Unify divergent function exit nodes
 ; GCN-O2-NEXT:        Lazy Value Information Analysis
 ; GCN-O2-NEXT:        Lower SwitchInst's to branches
@@ -1056,10 +1056,13 @@
 ; GCN-O3-NEXT:        Cycle Info Analysis
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Infer address spaces
+; GCN-O3-NEXT:      Dominator Tree Construction
+; GCN-O3-NEXT:      Cycle Info Analysis
+; GCN-O3-NEXT:      Uniformity Analysis
+; GCN-O3-NEXT:      AMDGPU atomic optimizations
 ; GCN-O3-NEXT:      Expand Atomic instructions
 ; GCN-O3-NEXT:      AMDGPU Promote Alloca
 ; GCN-O3-NEXT:      Dominator Tree Construction
-; GCN-O3-NEXT:      SROA
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
@@ -1146,14 +1149,11 @@
 ; GCN-O3-NEXT:        Cycle Info Analysis
 ; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU IR late optimizations
-; GCN-O3-NEXT:        AMDGPU atomic optimizations
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Code sinking
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
-; GCN-O3-NEXT:        Cycle Info Analysis
-; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Unify divergent function exit nodes
 ; GCN-O3-NEXT:        Lazy Value Information Analysis
 ; GCN-O3-NEXT:        Lower SwitchInst's to branches

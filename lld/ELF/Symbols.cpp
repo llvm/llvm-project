@@ -365,6 +365,8 @@ bool elf::computeIsPreemptible(const Symbol &sym) {
   // in the dynamic list. -Bsymbolic-non-weak-functions is a non-weak subset of
   // -Bsymbolic-functions.
   if (config->symbolic ||
+      (config->bsymbolic == BsymbolicKind::NonWeak &&
+       sym.binding != STB_WEAK) ||
       (config->bsymbolic == BsymbolicKind::Functions && sym.isFunc()) ||
       (config->bsymbolic == BsymbolicKind::NonWeakFunctions && sym.isFunc() &&
        sym.binding != STB_WEAK))

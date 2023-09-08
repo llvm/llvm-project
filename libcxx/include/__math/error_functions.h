@@ -32,8 +32,8 @@ _LIBCPP_HIDE_FROM_ABI double erf(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double erf(long double __x) _NOEXCEPT { return __builtin_erfl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type erf(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double erf(_A1 __x) _NOEXCEPT {
   return __builtin_erf((double)__x);
 }
 
@@ -48,8 +48,8 @@ _LIBCPP_HIDE_FROM_ABI double erfc(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double erfc(long double __x) _NOEXCEPT { return __builtin_erfcl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type erfc(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double erfc(_A1 __x) _NOEXCEPT {
   return __builtin_erfc((double)__x);
 }
 

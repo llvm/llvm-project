@@ -72,7 +72,7 @@ void caller(void (*f)(void)) {
 // CHECK: [[CONT5]]:
 // CHECK:   ret void
 
-// CHECK: define weak void @__cfi_check(i64 %0, ptr %1, ptr %2)
+// CHECK: define weak void @__cfi_check(i64 %[[TYPE:.*]], ptr %[[ADDR:.*]], ptr %[[DATA:.*]]) align 4096
 // CHECK-NOT: }
-// CHECK: call void @llvm.trap()
+// CHECK: call void @__cfi_check_fail(ptr %[[DATA]], ptr %[[ADDR]])
 // CHECK-NEXT: ret void

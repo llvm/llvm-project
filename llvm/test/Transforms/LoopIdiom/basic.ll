@@ -1594,7 +1594,9 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw i32 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [[CLASS_CMSPULOG:%.*]], ptr [[TMP0:%.*]], i64 0, i32 8, i64 [[TMP5]]
-; CHECK-NEXT:    store i32 trunc (i64 and (i64 ptrtoint (ptr @G to i64), i64 16777215) to i32), ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @G to i64), 16777215
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[AND]] to i32
+; CHECK-NEXT:    store i32 [[TRUNC]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP3]], 511
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP2]], label [[TMP8:%.*]]
 ; CHECK:       8:
@@ -1607,7 +1609,9 @@ define noalias ptr @_ZN8CMSPULog9beginImplEja(ptr nocapture writeonly %0) local_
   %4 = add nuw nsw i32 %3, 1
   %5 = zext i32 %3 to i64
   %6 = getelementptr %class.CMSPULog, ptr %0, i64 0, i32 8, i64 %5
-  store i32 trunc (i64 and (i64 ptrtoint (ptr @G to i64), i64 16777215) to i32), ptr %6, align 4
+  %and = and i64 ptrtoint (ptr @G to i64), 16777215
+  %trunc = trunc i64 %and to i32
+  store i32 %trunc, ptr %6, align 4
   %7 = icmp ult i32 %3, 511
   br i1 %7, label %2, label %8
 

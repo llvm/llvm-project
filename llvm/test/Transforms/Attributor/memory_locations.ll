@@ -195,7 +195,7 @@ define dso_local ptr @internal_argmem_only_write(ptr %arg) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 10, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) ptr @malloc(i64 noundef 10)
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias noundef dereferenceable_or_null(10) ptr @malloc(i64 noundef 10)
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 entry:

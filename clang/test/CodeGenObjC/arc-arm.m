@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple armv7-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-ios -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
-// <rdar://12438598>: use an autorelease marker on ARM64.
+// use an autorelease marker on ARM64.
 
 id test0(void) {
   extern id test0_helper(void);
@@ -21,7 +21,6 @@ void test1(void) {
   id x = test1_helper();
 }
 
-// rdar://problem/12133032
 @class A;
 A *test2(void) {
   extern A *test2_helper(void);

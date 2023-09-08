@@ -9,7 +9,7 @@
 // RUN: %clang -### --target=aarch64-none-elf -march=armv9.3-a+noite %s 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 // FEAT_ITE is invalid before v8
-// RUN: %clang -### --target=arm-none-none-eabi -march=armv7-a+ite     %s 2>&1 | FileCheck %s --check-prefix=INVALID
+// RUN: not %clang -### --target=arm-none-none-eabi -march=armv7-a+ite     %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
 // INVALID: error: unsupported argument 'armv7-a+ite' to option '-march='
 // ENABLED: "-target-feature" "+ite"

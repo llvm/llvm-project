@@ -523,14 +523,18 @@ define void @PR39538(ptr %t0, ptr %t1) {
 
 define void @load_combine_constant_expression(ptr %t1) {
 ; CHECK-LABEL: @load_combine_constant_expression(
-; CHECK-NEXT:    store i64 or (i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint (ptr @g2 to i32) to i64)), ptr [[T1:%.*]], align 4
+; CHECK-NEXT:    [[OR1:%.*]] = or i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), zext (i32 ptrtoint (ptr @g2 to i32) to i64)
+; CHECK-NEXT:    store i64 [[OR1]], ptr [[T1:%.*]], align 4
 ; CHECK-NEXT:    [[T3:%.*]] = getelementptr i64, ptr [[T1]], i64 1
-; CHECK-NEXT:    store i64 or (i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint (ptr @g2 to i32) to i64)), ptr [[T3]], align 4
+; CHECK-NEXT:    [[OR2:%.*]] = or i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), zext (i32 ptrtoint (ptr @g2 to i32) to i64)
+; CHECK-NEXT:    store i64 [[OR2]], ptr [[T3]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i64 or (i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint (ptr @g2 to i32) to i64)), ptr %t1, align 4
+  %or1 = or i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), zext (i32 ptrtoint (ptr @g2 to i32) to i64)
+  store i64 %or1, ptr %t1, align 4
   %t3 = getelementptr i64, ptr %t1, i64 1
-  store i64 or (i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), i64 zext (i32 ptrtoint (ptr @g2 to i32) to i64)), ptr %t3, align 4
+  %or2 = or i64 shl (i64 zext (i32 ptrtoint (ptr @g1 to i32) to i64), i64 32), zext (i32 ptrtoint (ptr @g2 to i32) to i64)
+  store i64 %or2, ptr %t3, align 4
   ret void
 }
 

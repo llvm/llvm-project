@@ -19,7 +19,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/ExtensibleDialect.h"
-#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/ODSSupport.h"
 #include "mlir/IR/OperationSupport.h"
@@ -27,6 +26,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -859,7 +859,7 @@ void CustomResultsNameOp::getAsmResultNames(
   ArrayAttr value = getNames();
   for (size_t i = 0, e = value.size(); i != e; ++i)
     if (auto str = dyn_cast<StringAttr>(value[i]))
-      if (!str.getValue().empty())
+      if (!str.empty())
         setNameFn(getResult(i), str.getValue());
 }
 
@@ -931,18 +931,17 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange
-RegionIfOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
-  assert(index && *index < 2 && "invalid region index");
+OperandRange RegionIfOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()}, point) &&
+         "invalid region index");
   return getOperands();
 }
 
 void RegionIfOp::getSuccessorRegions(
-    std::optional<unsigned> index, ArrayRef<Attribute> operands,
-    SmallVectorImpl<RegionSuccessor> &regions) {
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
-  if (index.has_value()) {
-    if (index.value() < 2)
+  if (!point.isParent()) {
+    if (point != getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
       regions.push_back(RegionSuccessor(getResults()));
@@ -965,12 +964,11 @@ void RegionIfOp::getRegionInvocationBounds(
 // AnyCondOp
 //===----------------------------------------------------------------------===//
 
-void AnyCondOp::getSuccessorRegions(std::optional<unsigned> index,
-                                    ArrayRef<Attribute> operands,
+void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The parent op branches into the only region, and the region branches back
   // to the parent op.
-  if (!index)
+  if (point.isParent())
     regions.emplace_back(&getRegion());
   else
     regions.emplace_back(getResults());
@@ -980,6 +978,35 @@ void AnyCondOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<InvocationBounds> &invocationBounds) {
   invocationBounds.emplace_back(1, 1);
+}
+
+//===----------------------------------------------------------------------===//
+// LoopBlockOp
+//===----------------------------------------------------------------------===//
+
+void LoopBlockOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody(), getBody().getArguments());
+  if (point.isParent())
+    return;
+
+  regions.emplace_back((*this)->getResults());
+}
+
+OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(point == getBody());
+  return getInitMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopBlockTerminatorOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange
+LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  if (point.isParent())
+    return getExitArgMutable();
+  return getNextIterArgMutable();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1263,19 +1290,32 @@ Operation::operand_range TestCallAndStoreOp::getArgOperands() {
   return getCalleeOperands();
 }
 
-void TestStoreWithARegion::getSuccessorRegions(
-    std::optional<unsigned> index, ArrayRef<Attribute> operands,
-    SmallVectorImpl<RegionSuccessor> &regions) {
-  if (!index) {
-    regions.emplace_back(&getBody(), getBody().front().getArguments());
-  } else {
-    regions.emplace_back();
-  }
+MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
+  return getCalleeOperandsMutable();
 }
 
-MutableOperandRange TestStoreWithARegionTerminator::getMutableSuccessorOperands(
-    std::optional<unsigned> index) {
-  return MutableOperandRange(getOperation());
+CallInterfaceCallable TestCallOnDeviceOp::getCallableForCallee() {
+  return getCallee();
+}
+
+void TestCallOnDeviceOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  setCalleeAttr(callee.get<SymbolRefAttr>());
+}
+
+Operation::operand_range TestCallOnDeviceOp::getArgOperands() {
+  return getForwardedOperands();
+}
+
+MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
+  return getForwardedOperandsMutable();
+}
+
+void TestStoreWithARegion::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody(), getBody().front().getArguments());
+  else
+    regions.emplace_back();
 }
 
 LogicalResult

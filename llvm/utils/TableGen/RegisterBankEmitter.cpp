@@ -231,9 +231,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
     for (const auto &RCs : RCsGroupedByWord) {
       OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31) << "\n";
       for (const auto &RC : RCs) {
-        std::string QualifiedRegClassID =
-            (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
-        OS << "    (1u << (" << QualifiedRegClassID << " - "
+        OS << "    (1u << (" << RC->getQualifiedIdName() << " - "
            << LowestIdxInWord << ")) |\n";
       }
       OS << "    0,\n";

@@ -1,19 +1,18 @@
-! REQUIRES: aarch64-registered-target && x86-registered-target && arm-registered-target
-! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fno-pie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC,CHECK-STATIC-IR
+! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fno-pie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC,CHECK-STATIC-IR %}
 
-! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR
-! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fpie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL1,CHECK-PIE-LEVEL1-IR
-! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fPIE 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR
+! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR %}
+! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fpie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL1,CHECK-PIE-LEVEL1-IR %}
+! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fPIE 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR %}
 
-! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fpic 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIC-LEVEL1,CHECK-PIC-LEVEL1-IR
-! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fPIC 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIC-LEVEL2,CHECK-PIC-LEVEL2-IR
+! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fpic 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIC-LEVEL1,CHECK-PIC-LEVEL1-IR %}
+! RUN: %if aarch64-registered-target %{ %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fPIC 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIC-LEVEL2,CHECK-PIC-LEVEL2-IR %}
 
-! RUN: %flang -v -### -o - %s --target=i386-apple-darwin -mdynamic-no-pic 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC-NO-PIC-32
-! RUN: %flang -v -### -o - %s --target=x86_64-apple-darwin -mdynamic-no-pic 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC-NO-PIC-64
+! RUN: %if x86-registered-target %{ %flang -v -### -o - %s --target=i386-apple-darwin -mdynamic-no-pic 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC-NO-PIC-32 %}
+! RUN: %if x86-registered-target %{ %flang -v -### -o - %s --target=x86_64-apple-darwin -mdynamic-no-pic 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-DYNAMIC-NO-PIC-64 %}
 
-! RUN: %flang -v -### -o - %s --target=arm-none-eabi -fropi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ROPI
-! RUN: %flang -v -### -o - %s --target=arm-none-eabi -frwpi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-RWPI
-! RUN: %flang -v -### -o - %s --target=arm-none-eabi -fropi -frwpi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ROPI-RWPI
+! RUN: %if arm-registered-target %{ %flang -v -### -o - %s --target=arm-none-eabi -fropi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ROPI %}
+! RUN: %if arm-registered-target %{ %flang -v -### -o - %s --target=arm-none-eabi -frwpi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-RWPI %}
+! RUN: %if arm-registered-target %{ %flang -v -### -o - %s --target=arm-none-eabi -fropi -frwpi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ROPI-RWPI %}
 
 ! CHECK: -fc1
 

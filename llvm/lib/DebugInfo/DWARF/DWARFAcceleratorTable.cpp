@@ -969,3 +969,71 @@ DWARFDebugNames::getCUNameIndex(uint64_t CUOffset) {
   }
   return CUToNameIndex.lookup(CUOffset);
 }
+
+static bool isObjCSelector(StringRef Name) {
+  return Name.size() > 2 && (Name[0] == '-' || Name[0] == '+') &&
+         (Name[1] == '[');
+}
+
+std::optional<ObjCSelectorNames> llvm::getObjCNamesIfSelector(StringRef Name) {
+  if (!isObjCSelector(Name))
+    return std::nullopt;
+  // "-[Atom setMass:]"
+  StringRef ClassNameStart(Name.drop_front(2));
+  size_t FirstSpace = ClassNameStart.find(' ');
+  if (FirstSpace == StringRef::npos)
+    return std::nullopt;
+
+  StringRef SelectorStart = ClassNameStart.drop_front(FirstSpace + 1);
+  if (!SelectorStart.size())
+    return std::nullopt;
+
+  ObjCSelectorNames Ans;
+  Ans.ClassName = ClassNameStart.take_front(FirstSpace);
+  Ans.Selector = SelectorStart.drop_back(); // drop ']';
+
+  // "-[Class(Category) selector :withArg ...]"
+  if (Ans.ClassName.back() == ')') {
+    size_t OpenParens = Ans.ClassName.find('(');
+    if (OpenParens != StringRef::npos) {
+      Ans.ClassNameNoCategory = Ans.ClassName.take_front(OpenParens);
+
+      Ans.MethodNameNoCategory = Name.take_front(OpenParens + 2);
+      // FIXME: The missing space here may be a bug, but dsymutil-classic also
+      // does it this way.
+      append_range(*Ans.MethodNameNoCategory, SelectorStart);
+    }
+  }
+  return Ans;
+}
+
+std::optional<StringRef> llvm::StripTemplateParameters(StringRef Name) {
+  // We are looking for template parameters to strip from Name. e.g.
+  //
+  //  operator<<B>
+  //
+  // We look for > at the end but if it does not contain any < then we
+  // have something like operator>>. We check for the operator<=> case.
+  if (!Name.endswith(">") || Name.count("<") == 0 || Name.endswith("<=>"))
+    return {};
+
+  // How many < until we have the start of the template parameters.
+  size_t NumLeftAnglesToSkip = 1;
+
+  // If we have operator<=> then we need to skip its < as well.
+  NumLeftAnglesToSkip += Name.count("<=>");
+
+  size_t RightAngleCount = Name.count('>');
+  size_t LeftAngleCount = Name.count('<');
+
+  // If we have more < than > we have operator< or operator<<
+  // we to account for their < as well.
+  if (LeftAngleCount > RightAngleCount)
+    NumLeftAnglesToSkip += LeftAngleCount - RightAngleCount;
+
+  size_t StartOfTemplate = 0;
+  while (NumLeftAnglesToSkip--)
+    StartOfTemplate = Name.find('<', StartOfTemplate) + 1;
+
+  return Name.substr(0, StartOfTemplate - 1);
+}

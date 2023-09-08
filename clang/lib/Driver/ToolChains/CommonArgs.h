@@ -40,12 +40,13 @@ bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
 
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
+                              const llvm::opt::ArgList &Args,
                               llvm::opt::ArgStringList &CmdArgs);
 
 bool addXRayRuntime(const ToolChain &TC, const llvm::opt::ArgList &Args,
                     llvm::opt::ArgStringList &CmdArgs);
 
-void linkXRayRuntimeDeps(const ToolChain &TC,
+void linkXRayRuntimeDeps(const ToolChain &TC, const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs);
 
 void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
@@ -138,10 +139,12 @@ void addFortranRuntimeLibraryPath(const ToolChain &TC,
                                   const llvm::opt::ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs);
 
-void addHIPRuntimeLibArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
+                          const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
 
-const char *getAsNeededOption(const ToolChain &TC, bool as_needed);
+void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                       llvm::opt::ArgStringList &CmdArgs, bool as_needed);
 
 llvm::opt::Arg *getLastCSProfileGenerateArg(const llvm::opt::ArgList &Args);
 llvm::opt::Arg *getLastProfileUseArg(const llvm::opt::ArgList &Args);

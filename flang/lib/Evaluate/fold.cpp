@@ -275,11 +275,15 @@ std::optional<Expr<SomeType>> FoldTransfer(
     if (totalBytes < std::size_t{1000000} &&
         (elements == 0 || totalBytes / elements == *sourceBytes)) {
       InitialImage image{*sourceBytes};
-      InitialImage::Result imageResult{
-          image.Add(0, *sourceBytes, *source, context)};
-      CHECK(imageResult == InitialImage::Ok);
-      return image.AsConstant(
-          context, *moldType, moldLength, *extents, true /*pad with 0*/);
+      auto status{image.Add(0, *sourceBytes, *source, context)};
+      if (status == InitialImage::Ok) {
+        return image.AsConstant(
+            context, *moldType, moldLength, *extents, true /*pad with 0*/);
+      } else {
+        // Can fail due to an allocatable or automatic component;
+        // a warning will also have been produced.
+        CHECK(status == InitialImage::NotAConstant);
+      }
     }
   }
   return std::nullopt;

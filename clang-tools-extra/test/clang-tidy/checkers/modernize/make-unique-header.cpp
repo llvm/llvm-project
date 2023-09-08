@@ -1,10 +1,8 @@
 // RUN: %check_clang_tidy %s modernize-make-unique %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:     [{key: modernize-make-unique.MakeSmartPtrFunction, \
-// RUN:       value: 'my::MakeUnique'}, \
-// RUN:      {key: modernize-make-unique.MakeSmartPtrFunctionHeader, \
-// RUN:       value: 'make_unique_util.h'} \
-// RUN:     ]}" \
+// RUN:     {modernize-make-unique.MakeSmartPtrFunction: 'my::MakeUnique', \
+// RUN:      modernize-make-unique.MakeSmartPtrFunctionHeader: 'make_unique_util.h' \
+// RUN:     }}" \
 // RUN:   -- -I %S/Inputs/smart-ptr
 
 #include "unique_ptr.h"

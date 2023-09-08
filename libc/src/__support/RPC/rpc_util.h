@@ -11,14 +11,11 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 
 namespace __llvm_libc {
 namespace rpc {
-
-/// Maximum amount of data a single lane can use.
-constexpr uint64_t MAX_LANE_SIZE = 64;
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 LIBC_INLINE void sleep_briefly() {
@@ -31,16 +28,6 @@ LIBC_INLINE void sleep_briefly() {
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif
-}
-
-/// Get the first active thread inside the lane.
-LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
-  return __builtin_ffsl(lane_mask) - 1;
-}
-
-/// Conditional that is only true for a single thread in a lane.
-LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
-  return gpu::get_lane_id() == get_first_lane_id(lane_mask);
 }
 
 /// Conditional to indicate if this process is running on the GPU.
@@ -66,11 +53,6 @@ template <typename V> LIBC_INLINE V &lane_value(V *val, uint32_t id) {
   if constexpr (is_process_gpu())
     return *val;
   return val[id];
-}
-
-/// Helper to get the maximum value.
-template <typename T> LIBC_INLINE const T &max(const T &x, const T &y) {
-  return x < y ? y : x;
 }
 
 /// Advance the \p p by \p bytes.

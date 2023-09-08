@@ -25,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 // file, and the executable bit is always returned as set. When setting
 // permissions, as long as the write bit is set for either owner, group or
 // others, the readonly flag is cleared.
-enum class _LIBCPP_ENUM_VIS perms : unsigned {
+enum class perms : unsigned {
   none = 0,
 
   owner_read = 0400,

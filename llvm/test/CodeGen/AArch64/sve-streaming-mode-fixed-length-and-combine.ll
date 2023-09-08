@@ -122,8 +122,8 @@ define <16 x i16> @vls_sve_and_16xi16(<16 x i16> %b) nounwind {
 define <2 x i32> @vls_sve_and_2xi32(<2 x i32> %b) nounwind {
 ; CHECK-LABEL: vls_sve_and_2xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    index z1.s, #0, #-1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -164,8 +164,8 @@ define <8 x i32> @vls_sve_and_8xi32(<8 x i32> %b) nounwind {
 define <2 x i64> @vls_sve_and_2xi64(<2 x i64> %b) nounwind {
 ; CHECK-LABEL: vls_sve_and_2xi64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    index z1.d, #0, #-1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -176,9 +176,9 @@ define <2 x i64> @vls_sve_and_2xi64(<2 x i64> %b) nounwind {
 define <4 x i64> @vls_sve_and_4xi64(<4 x i64> %b) nounwind {
 ; CHECK-LABEL: vls_sve_and_4xi64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    index z2.d, #0, #-1
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    index z2.d, #0, #-1
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
 ; CHECK-NEXT:    and z1.d, z1.d, z2.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0

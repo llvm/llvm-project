@@ -10,5 +10,5 @@ int x __attribute((tls_model("global-dynamic"))); // expected-error {{'tls_model
 static __thread int y __attribute((tls_model("global-dynamic"))); // no-warning
 
 static __thread int y __attribute((tls_model("local", "dynamic"))); // expected-error {{'tls_model' attribute takes one argument}}
-static __thread int y __attribute((tls_model(123))); // expected-error {{'tls_model' attribute requires a string}}
+static __thread int y __attribute((tls_model(123))); // expected-error {{expected string literal as argument of 'tls_model' attribute}}
 static __thread int y __attribute((tls_model("foobar"))); // expected-error {{tls_model must be "global-dynamic", "local-dynamic", "initial-exec" or "local-exec"}}

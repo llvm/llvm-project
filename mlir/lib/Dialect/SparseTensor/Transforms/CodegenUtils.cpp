@@ -566,6 +566,8 @@ void sparse_tensor::foreachInSparseConstant(
                   continue;
                 return lhsCoords[l].getInt() < rhsCoords[l].getInt();
               }
+              if (std::addressof(lhs) == std::addressof(rhs))
+                return false;
               llvm_unreachable("no equal coordinate in sparse element attr");
             });
 
@@ -659,6 +661,14 @@ Value sparse_tensor::reshapeValuesToLevels(OpBuilder &builder, Location loc,
   const Type elemTp = getMemRefType(valuesBuffer).getElementType();
   const auto resTp = MemRefType::get(resShape, elemTp);
   return builder.create<memref::ReshapeOp>(loc, resTp, valuesBuffer, lvlCoords);
+}
+
+TypedValue<BaseMemRefType>
+sparse_tensor::genToMemref(OpBuilder &builder, Location loc, Value tensor) {
+  auto tTp = llvm::cast<TensorType>(tensor.getType());
+  auto mTp = MemRefType::get(tTp.getShape(), tTp.getElementType());
+  return builder.create<bufferization::ToMemrefOp>(loc, mTp, tensor)
+      .getResult();
 }
 
 Value sparse_tensor::genToPositions(OpBuilder &builder, Location loc,

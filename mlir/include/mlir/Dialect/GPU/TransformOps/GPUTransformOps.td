@@ -14,6 +14,61 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+//===----------------------------------------------------------------------===//
+// Apply...ConversionPatternsOp
+//===----------------------------------------------------------------------===//
+
+def ApplyGPUToNVVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.gpu.gpu_to_nvvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert GPU dialect ops to NVVM dialect ops. These
+    patterns require an "LLVMTypeConverter".
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyGPUWwmaToNVVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.gpu.gpu_wmma_to_nvvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert GPU dialect ops related to wmma ops
+    to NVVM dialect ops.
+    These patterns require an "LLVMTypeConverter".
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyGPUSubgroupReduceToNVVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.gpu.gpu_subgroup_reduce_to_nvvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert GPU dialect ops related to wmma ops
+    to NVVM dialect ops.
+    These patterns require an "LLVMTypeConverter".
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//
+
+def ApplyGPURewritePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.gpu.gpu_rewrite_patterns",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects GPU rewrite patterns comprising:
+      1. GpuAllReduceRewrite patterns
+      2. GpuGlobalIdRewriter patterns
+      3. GpuShuffleRewriter patterns
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyUnrollVectorsSubgroupMmaOp : Op<Transform_Dialect,
     "apply_patterns.gpu.unroll_vectors_subgroup_mma",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -243,6 +298,8 @@ def MapForallToBlocks :
     attr-dict
     `:` functional-type($target, $result)
   }];
+  let hasVerifier = 1;
+  
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,

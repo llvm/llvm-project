@@ -16,7 +16,7 @@ struct StableSort {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountElements, [](auto& Copy) {
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountBatch, [](auto& Copy) {
       std::stable_sort(Copy.begin(), Copy.end());
     });
   }

@@ -968,11 +968,11 @@ define i1 @icmp() {
 define void @test_callee_is_undef(ptr %fn) {
 ; TUNIT-LABEL: define {{[^@]+}}@test_callee_is_undef
 ; TUNIT-SAME: (ptr nocapture nofree [[FN:%.*]]) {
-; TUNIT-NEXT:    unreachable
+; TUNIT-NEXT:    call void @unknown_calle_arg_is_undef(ptr nocapture nofree noundef [[FN]])
+; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@test_callee_is_undef
-; CGSCC-SAME: (ptr nocapture nofree [[FN:%.*]]) {
-; CGSCC-NEXT:    call void @callee_is_undef()
+; CGSCC-SAME: (ptr nocapture nofree noundef nonnull [[FN:%.*]]) {
 ; CGSCC-NEXT:    call void @unknown_calle_arg_is_undef(ptr nocapture nofree noundef nonnull [[FN]])
 ; CGSCC-NEXT:    ret void
 ;
@@ -982,21 +982,20 @@ define void @test_callee_is_undef(ptr %fn) {
 }
 define internal void @callee_is_undef(ptr %fn) {
 ;
-; CGSCC: Function Attrs: memory(readwrite, argmem: none)
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@callee_is_undef
-; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    call void undef()
-; CGSCC-NEXT:    ret void
+; CGSCC-SAME: () #[[ATTR1]] {
+; CGSCC-NEXT:    unreachable
 ;
   call void %fn()
   ret void
 }
 define internal void @unknown_calle_arg_is_undef(ptr %fn, i32 %arg) {
 ;
-; CGSCC-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull [[FN:%.*]]) {
-; CGSCC-NEXT:    call void [[FN]](i32 undef)
-; CGSCC-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull [[FN:%.*]]) {
+; CHECK-NEXT:    call void [[FN]](i32 undef)
+; CHECK-NEXT:    ret void
 ;
   call void %fn(i32 %arg)
   ret void
@@ -1448,7 +1447,7 @@ define internal void @broker(ptr %ptr) {
 ; TUNIT-LABEL: define {{[^@]+}}@broker
 ; TUNIT-SAME: () #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @indirect()
+; TUNIT-NEXT:    call void @indirect() #[[ATTR16:[0-9]+]]
 ; TUNIT-NEXT:    call void @unknown()
 ; TUNIT-NEXT:    ret void
 ;
@@ -1505,6 +1504,134 @@ define i1 @constexpr_icmp2() {
   ret i1 icmp eq (ptr addrspacecast (ptr addrspace(4) @str to ptr), ptr null)
 }
 
+define i8 @switch(i1 %c1, i1 %c2) {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@switch
+; TUNIT-SAME: (i1 noundef [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR2]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    br i1 [[C1]], label [[T:%.*]], label [[F:%.*]]
+; TUNIT:       t:
+; TUNIT-NEXT:    br label [[M:%.*]]
+; TUNIT:       f:
+; TUNIT-NEXT:    br label [[M]]
+; TUNIT:       m:
+; TUNIT-NEXT:    [[J:%.*]] = phi i32 [ 0, [[T]] ], [ 4, [[F]] ]
+; TUNIT-NEXT:    switch i32 [[J]], label [[DEFAULT1:%.*]] [
+; TUNIT-NEXT:    i32 1, label [[DEAD1:%.*]]
+; TUNIT-NEXT:    i32 2, label [[DEAD2:%.*]]
+; TUNIT-NEXT:    i32 3, label [[DEAD3:%.*]]
+; TUNIT-NEXT:    i32 4, label [[ALIVE1:%.*]]
+; TUNIT-NEXT:    ]
+; TUNIT:       default1:
+; TUNIT-NEXT:    br label [[ALIVE1]]
+; TUNIT:       alive1:
+; TUNIT-NEXT:    [[K:%.*]] = phi i32 [ 1, [[M]] ], [ 4, [[DEFAULT1]] ]
+; TUNIT-NEXT:    switch i32 [[K]], label [[DEAD4:%.*]] [
+; TUNIT-NEXT:    i32 1, label [[END1:%.*]]
+; TUNIT-NEXT:    i32 2, label [[DEAD5:%.*]]
+; TUNIT-NEXT:    i32 4, label [[END2:%.*]]
+; TUNIT-NEXT:    ]
+; TUNIT:       end1:
+; TUNIT-NEXT:    ret i8 -1
+; TUNIT:       end2:
+; TUNIT-NEXT:    ret i8 -2
+; TUNIT:       dead1:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       dead2:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       dead3:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       dead4:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       dead5:
+; TUNIT-NEXT:    unreachable
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@switch
+; CGSCC-SAME: (i1 noundef [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    br i1 [[C1]], label [[T:%.*]], label [[F:%.*]]
+; CGSCC:       t:
+; CGSCC-NEXT:    br label [[M:%.*]]
+; CGSCC:       f:
+; CGSCC-NEXT:    br label [[M]]
+; CGSCC:       m:
+; CGSCC-NEXT:    [[J:%.*]] = phi i32 [ 0, [[T]] ], [ 4, [[F]] ]
+; CGSCC-NEXT:    switch i32 [[J]], label [[DEFAULT1:%.*]] [
+; CGSCC-NEXT:    i32 1, label [[DEAD1:%.*]]
+; CGSCC-NEXT:    i32 2, label [[DEAD2:%.*]]
+; CGSCC-NEXT:    i32 3, label [[DEAD3:%.*]]
+; CGSCC-NEXT:    i32 4, label [[ALIVE1:%.*]]
+; CGSCC-NEXT:    ]
+; CGSCC:       default1:
+; CGSCC-NEXT:    br label [[ALIVE1]]
+; CGSCC:       alive1:
+; CGSCC-NEXT:    [[K:%.*]] = phi i32 [ 1, [[M]] ], [ 4, [[DEFAULT1]] ]
+; CGSCC-NEXT:    switch i32 [[K]], label [[DEAD4:%.*]] [
+; CGSCC-NEXT:    i32 1, label [[END1:%.*]]
+; CGSCC-NEXT:    i32 2, label [[DEAD5:%.*]]
+; CGSCC-NEXT:    i32 4, label [[END2:%.*]]
+; CGSCC-NEXT:    ]
+; CGSCC:       end1:
+; CGSCC-NEXT:    ret i8 -1
+; CGSCC:       end2:
+; CGSCC-NEXT:    ret i8 -2
+; CGSCC:       dead1:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       dead2:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       dead3:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       dead4:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       dead5:
+; CGSCC-NEXT:    unreachable
+;
+entry:
+  br i1 %c1, label %t, label %f
+
+t:
+  br label %m
+
+f:
+  br label %m
+
+m:
+  %j = phi i32 [ 0, %t ], [ 4, %f ]
+  switch i32 %j, label %default1 [
+  i32 1, label %dead1
+  i32 2, label %dead2
+  i32 3, label %dead3
+  i32 4, label %alive1
+  ]
+
+default1:
+  br label %alive1
+
+alive1:
+  %k = phi i32 [ 1, %m ], [ 4, %default1 ]
+  switch i32 %k, label %dead4 [
+  i32 1, label %end1
+  i32 2, label %dead5
+  i32 4, label %end2
+  ]
+
+end1:
+  ret i8 -1
+end2:
+  ret i8 -2
+dead1:
+  ret i8 1
+dead2:
+  ret i8 2
+dead3:
+  ret i8 3
+dead4:
+  ret i8 4
+dead5:
+  ret i8 5
+}
+
 ;.
 ; TUNIT: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR1]] = { memory(readwrite, argmem: none) }
@@ -1522,6 +1649,7 @@ define i1 @constexpr_icmp2() {
 ; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR14]] = { nosync }
 ; TUNIT: attributes #[[ATTR15]] = { nosync nounwind memory(read) }
+; TUNIT: attributes #[[ATTR16]] = { nounwind memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }

@@ -42,7 +42,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
-  initializeBPFMIPeepholeTruncElimPass(PR);
   initializeBPFDAGToDAGISelPass(PR);
 }
 
@@ -155,7 +154,6 @@ void BPFPassConfig::addMachineSSAOptimization() {
   if (!DisableMIPeephole) {
     if (Subtarget->getHasAlu32())
       addPass(createBPFMIPeepholePass());
-    addPass(createBPFMIPeepholeTruncElimPass());
   }
 }
 

@@ -83,8 +83,8 @@ define <8 x i8> @v8i8(<8 x i8> %a) {
 ; CHECK-LABEL: v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8b, #17
-; CHECK-NEXT:    movi v2.8b, #15
 ; CHECK-NEXT:    ushr v0.8b, v0.8b, #3
+; CHECK-NEXT:    movi v2.8b, #15
 ; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    mul v0.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    ret

@@ -234,6 +234,99 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
   // set(Def, Extract, Instance);
   return Extract;
 }
+
+Value *VPTransformState::get(VPValue *Def, unsigned Part) {
+  // If Values have been set for this Def return the one relevant for \p Part.
+  if (hasVectorValue(Def, Part))
+    return Data.PerPartOutput[Def][Part];
+
+  auto GetBroadcastInstrs = [this, Def](Value *V) {
+    bool SafeToHoist = Def->isDefinedOutsideVectorRegions();
+    if (VF.isScalar())
+      return V;
+    // Place the code for broadcasting invariant variables in the new preheader.
+    IRBuilder<>::InsertPointGuard Guard(Builder);
+    if (SafeToHoist) {
+      BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[cast<VPBasicBlock>(
+          Plan->getVectorLoopRegion()->getSinglePredecessor())];
+      if (LoopVectorPreHeader)
+        Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
+    }
+
+    // Place the code for broadcasting invariant variables in the new preheader.
+    // Broadcast the scalar into all locations in the vector.
+    Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
+
+    return Shuf;
+  };
+
+  if (!hasScalarValue(Def, {Part, 0})) {
+    assert(Def->isLiveIn() && "expected a live-in");
+    if (Part != 0)
+      return get(Def, 0);
+    Value *IRV = Def->getLiveInIRValue();
+    Value *B = GetBroadcastInstrs(IRV);
+    set(Def, B, Part);
+    return B;
+  }
+
+  Value *ScalarValue = get(Def, {Part, 0});
+  // If we aren't vectorizing, we can just copy the scalar map values over
+  // to the vector map.
+  if (VF.isScalar()) {
+    set(Def, ScalarValue, Part);
+    return ScalarValue;
+  }
+
+  bool IsUniform = vputils::isUniformAfterVectorization(Def);
+
+  unsigned LastLane = IsUniform ? 0 : VF.getKnownMinValue() - 1;
+  // Check if there is a scalar value for the selected lane.
+  if (!hasScalarValue(Def, {Part, LastLane})) {
+    // At the moment, VPWidenIntOrFpInductionRecipes, VPScalarIVStepsRecipes and
+    // VPExpandSCEVRecipes can also be uniform.
+    assert((isa<VPWidenIntOrFpInductionRecipe>(Def->getDefiningRecipe()) ||
+            isa<VPScalarIVStepsRecipe>(Def->getDefiningRecipe()) ||
+            isa<VPExpandSCEVRecipe>(Def->getDefiningRecipe())) &&
+           "unexpected recipe found to be invariant");
+    IsUniform = true;
+    LastLane = 0;
+  }
+
+  auto *LastInst = cast<Instruction>(get(Def, {Part, LastLane}));
+  // Set the insert point after the last scalarized instruction or after the
+  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+  // will directly follow the scalar definitions.
+  auto OldIP = Builder.saveIP();
+  auto NewIP =
+      isa<PHINode>(LastInst)
+          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
+          : std::next(BasicBlock::iterator(LastInst));
+  Builder.SetInsertPoint(&*NewIP);
+
+  // However, if we are vectorizing, we need to construct the vector values.
+  // If the value is known to be uniform after vectorization, we can just
+  // broadcast the scalar value corresponding to lane zero for each unroll
+  // iteration. Otherwise, we construct the vector values using
+  // insertelement instructions. Since the resulting vectors are stored in
+  // State, we will only generate the insertelements once.
+  Value *VectorValue = nullptr;
+  if (IsUniform) {
+    VectorValue = GetBroadcastInstrs(ScalarValue);
+    set(Def, VectorValue, Part);
+  } else {
+    // Initialize packing with insertelements to start from undef.
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
+    set(Def, Undef, Part);
+    for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
+      packScalarIntoVectorValue(Def, {Part, Lane});
+    VectorValue = get(Def, Part);
+  }
+  Builder.restoreIP(OldIP);
+  return VectorValue;
+}
+
 BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
   VPRegionBlock *LoopRegion = R->getParent()->getEnclosingLoopRegion();
   return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
@@ -267,18 +360,15 @@ void VPTransformState::addMetadata(ArrayRef<Value *> To, Instruction *From) {
   }
 }
 
-void VPTransformState::setDebugLocFromInst(const Value *V) {
-  const Instruction *Inst = dyn_cast<Instruction>(V);
-  if (!Inst) {
-    Builder.SetCurrentDebugLocation(DebugLoc());
-    return;
-  }
-
-  const DILocation *DIL = Inst->getDebugLoc();
+void VPTransformState::setDebugLocFrom(DebugLoc DL) {
+  const DILocation *DIL = DL;
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.
-  if (DIL && Inst->getFunction()->shouldEmitDebugInfoForProfiling() &&
-      !Inst->isDebugOrPseudoInst() && !EnableFSDiscriminator) {
+  if (DIL &&
+      Builder.GetInsertBlock()
+          ->getParent()
+          ->shouldEmitDebugInfoForProfiling() &&
+      !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
@@ -289,6 +379,15 @@ void VPTransformState::setDebugLocFromInst(const Value *V) {
                         << DIL->getFilename() << " Line: " << DIL->getLine());
   } else
     Builder.SetCurrentDebugLocation(DIL);
+}
+
+void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
+                                                 const VPIteration &Instance) {
+  Value *ScalarInst = get(Def, Instance);
+  Value *VectorValue = get(Def, Instance.Part);
+  VectorValue = Builder.CreateInsertElement(
+      VectorValue, ScalarInst, Instance.Lane.getAsRuntimeExpr(Builder, VF));
+  set(Def, VectorValue, Instance.Part);
 }
 
 BasicBlock *
@@ -656,16 +755,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
-                    if (isa<VPScalarIVStepsRecipe>(U) ||
-                        isa<VPDerivedIVRecipe>(U))
-                      return true;
-                    auto *VPI = cast<VPInstruction>(U);
-                    return VPI->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement ||
-                           VPI->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrementNUW;
+                    return isa<VPScalarIVStepsRecipe>(U) ||
+                           isa<VPDerivedIVRecipe>(U) ||
+                           cast<VPInstruction>(U)->getOpcode() ==
+                               VPInstruction::CanonicalIVIncrement;
                   }) &&
-           "the canonical IV should only be used by its increments or "
+           "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
     IV->setOperand(0, VPV);
   }

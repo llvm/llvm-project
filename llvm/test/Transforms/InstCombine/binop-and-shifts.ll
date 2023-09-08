@@ -549,3 +549,421 @@ define i8 @shl_add_and_fail_mismatch_shift(i8 %x, i8 %y) {
   %bw1 = and i8 %shift1, %bw2
   ret i8 %bw1
 }
+
+; Fold (-x >> y) & ((x >> y) ^ -1) -> (-x & ~x) >> y
+
+define i8 @and_ashr_not(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @and_ashr_not(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %and = and i8 %x.shift, %y.shift.not
+  ret i8 %and
+}
+
+define i8 @and_ashr_not_commuted(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @and_ashr_not_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %and = and i8 %y.shift.not, %x.shift
+  ret i8 %and
+}
+
+; Negative test: lshr instead of ashr
+
+define i8 @and_ashr_not_fail_lshr_ashr(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @and_ashr_not_fail_lshr_ashr(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %x.shift = lshr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %and = and i8 %x.shift, %y.shift.not
+  ret i8 %and
+}
+
+; Negative test: lshr instead of ashr
+
+define i8 @and_ashr_not_fail_ashr_lshr(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @and_ashr_not_fail_ashr_lshr(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = lshr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %and = and i8 %x.shift, %y.shift.not
+  ret i8 %and
+}
+
+; Negative test: invalid xor constant
+
+define i8 @and_ashr_not_fail_invalid_xor_constant(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @and_ashr_not_fail_invalid_xor_constant(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[AND]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -2
+  %and = and i8 %x.shift, %y.shift.not
+  ret i8 %and
+}
+
+define <4 x i8> @and_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @and_ashr_not_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %and = and <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %and
+}
+
+define <4 x i8> @and_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @and_ashr_not_vec_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %and = and <4 x i8> %y.shift.not, %x.shift
+  ret <4 x i8> %and
+}
+
+define <4 x i8> @and_ashr_not_vec_undef_1(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @and_ashr_not_vec_undef_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[AND]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 undef, i8 undef, i8 undef>
+  %and = and <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %and
+}
+
+define <4 x i8> @and_ashr_not_vec_undef_2(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @and_ashr_not_vec_undef_2(
+; CHECK-NEXT:    ret <4 x i8> zeroinitializer
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 undef, i8 undef, i8 undef, i8 undef>
+  %and = and <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %and
+}
+
+; Fold (-x >> y) | ((x >> y) ^ -1) -> (-x | ~x) >> y
+
+define i8 @or_ashr_not(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @or_ashr_not(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %or = or i8 %x.shift, %y.shift.not
+  ret i8 %or
+}
+
+define i8 @or_ashr_not_commuted(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @or_ashr_not_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = ashr i8 [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %or = or i8 %y.shift.not, %x.shift
+  ret i8 %or
+}
+
+; Negative test: lshr instead of ashr
+
+define i8 @or_ashr_not_fail_lshr_ashr(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @or_ashr_not_fail_lshr_ashr(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %x.shift = lshr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %or = or i8 %x.shift, %y.shift.not
+  ret i8 %or
+}
+
+; Negative test: lshr instead of ashr
+
+define i8 @or_ashr_not_fail_ashr_lshr(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @or_ashr_not_fail_ashr_lshr(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = lshr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %or = or i8 %x.shift, %y.shift.not
+  ret i8 %or
+}
+
+; Negative test: invalid xor constant
+
+define i8 @or_ashr_not_fail_invalid_xor_constant(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @or_ashr_not_fail_invalid_xor_constant(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -2
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -2
+  %or = or i8 %x.shift, %y.shift.not
+  ret i8 %or
+}
+
+define <4 x i8> @or_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @or_ashr_not_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[OR]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %or = or <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %or
+}
+
+define <4 x i8> @or_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @or_ashr_not_vec_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[OR]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %or = or <4 x i8> %y.shift.not, %x.shift
+  ret <4 x i8> %or
+}
+
+define <4 x i8> @or_ashr_not_vec_undef_1(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @or_ashr_not_vec_undef_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = ashr <4 x i8> [[TMP2]], [[SHAMT:%.*]]
+; CHECK-NEXT:    ret <4 x i8> [[OR]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 undef, i8 undef, i8 undef>
+  %or = or <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %or
+}
+
+define <4 x i8> @or_ashr_not_vec_undef_2(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @or_ashr_not_vec_undef_2(
+; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 undef, i8 undef, i8 undef, i8 undef>
+  %or = or <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %or
+}
+
+; Fold (-x >> y) ^ ((x >> y) ^ -1) -> (-x ^ ~x) >> y
+
+define i8 @xor_ashr_not(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @xor_ashr_not(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr i8 [[TMP1]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[DOTNOT]], -1
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %xor = xor i8 %x.shift, %y.shift.not
+  ret i8 %xor
+}
+
+define i8 @xor_ashr_not_commuted(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @xor_ashr_not_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr i8 [[TMP1]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[DOTNOT]], -1
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %xor = xor i8 %y.shift.not, %x.shift
+  ret i8 %xor
+}
+
+; Negative test: lshr instead of ashr
+
+define i8 @xor_ashr_not_fail_lshr_ashr(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @xor_ashr_not_fail_lshr_ashr(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = lshr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y_SHIFT]], [[X_SHIFT]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %x.shift = lshr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %xor = xor i8 %x.shift, %y.shift.not
+  ret i8 %xor
+}
+
+; Negative test: lshr instead of ashr
+
+define i8 @xor_ashr_not_fail_ashr_lshr(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @xor_ashr_not_fail_ashr_lshr(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = lshr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y_SHIFT]], [[X_SHIFT]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = lshr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %xor = xor i8 %x.shift, %y.shift.not
+  ret i8 %xor
+}
+
+; Negative test: invalid xor constant
+
+define i8 @xor_ashr_not_fail_invalid_xor_constant(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @xor_ashr_not_fail_invalid_xor_constant(
+; CHECK-NEXT:    [[Y_SHIFT1:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[Y_SHIFT1]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[TMP1]], -2
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -2
+  %xor = xor i8 %x.shift, %y.shift.not
+  ret i8 %xor
+}
+
+define <4 x i8> @xor_ashr_not_vec(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @xor_ashr_not_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr <4 x i8> [[TMP1]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <4 x i8> [[DOTNOT]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> [[XOR]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %xor = xor <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %xor
+}
+
+define <4 x i8> @xor_ashr_not_vec_commuted(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @xor_ashr_not_vec_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr <4 x i8> [[TMP1]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <4 x i8> [[DOTNOT]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> [[XOR]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %xor = xor <4 x i8> %y.shift.not, %x.shift
+  ret <4 x i8> %xor
+}
+
+define <4 x i8> @xor_ashr_not_vec_undef_1(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @xor_ashr_not_vec_undef_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr <4 x i8> [[TMP1]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <4 x i8> [[DOTNOT]], <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> [[XOR]]
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 -1, i8 undef, i8 undef, i8 undef>
+  %xor = xor <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %xor
+}
+
+define <4 x i8> @xor_ashr_not_vec_undef_2(<4 x i8> %x, <4 x i8> %y, <4 x i8> %shamt) {
+; CHECK-LABEL: @xor_ashr_not_vec_undef_2(
+; CHECK-NEXT:    ret <4 x i8> undef
+;
+  %x.shift = ashr <4 x i8> %x, %shamt
+  %y.shift = ashr <4 x i8> %y, %shamt
+  %y.shift.not = xor <4 x i8> %y.shift, <i8 undef, i8 undef, i8 undef, i8 undef>
+  %xor = xor <4 x i8> %x.shift, %y.shift.not
+  ret <4 x i8> %xor
+}
+
+; Negative test: invalid binop
+
+define i8 @binop_ashr_not_fail_invalid_binop(i8 %x, i8 %y, i8 %shamt) {
+; CHECK-LABEL: @binop_ashr_not_fail_invalid_binop(
+; CHECK-NEXT:    [[X_SHIFT:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
+; CHECK-NEXT:    [[Y_SHIFT:%.*]] = ashr i8 [[Y:%.*]], [[SHAMT]]
+; CHECK-NEXT:    [[Y_SHIFT_NOT:%.*]] = xor i8 [[Y_SHIFT]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X_SHIFT]], [[Y_SHIFT_NOT]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %x.shift = ashr i8 %x, %shamt
+  %y.shift = ashr i8 %y, %shamt
+  %y.shift.not = xor i8 %y.shift, -1
+  %add = add i8 %x.shift, %y.shift.not
+  ret i8 %add
+}

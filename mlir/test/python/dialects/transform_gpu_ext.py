@@ -10,7 +10,7 @@ def run(f):
         module = Module.create()
         with InsertionPoint(module.body):
             sequence = transform.SequenceOp(
-                transform.FailurePropagationMode.PROPAGATE,
+                transform.FailurePropagationMode.Propagate,
                 [],
                 transform.AnyOpType.get(),
             )
@@ -42,10 +42,10 @@ def testMapForallToBlocksTyped(target):
 
 @run
 def testMapForallToBlocksGridDims(target):
-    gpu.MapForallToBlocks(target, grid_dims=[4, 2])
+    gpu.MapForallToBlocks(target, grid_dims=[4, 2, 1])
     # CHECK-LABEL: TEST: testMapForallToBlocksGridDims
     # CHECK: = transform.gpu.map_forall_to_blocks
-    # CHECK-SAME: grid_dims = [4, 2]
+    # CHECK-SAME: grid_dims = [4, 2, 1]
     # CHECK-SAME: (!transform.any_op) -> !transform.any_op
 
 

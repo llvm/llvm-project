@@ -216,3 +216,41 @@ end subroutine omp_target_device_ptr
    !$omp end target data
    !CHECK: }
 end subroutine omp_target_device_addr
+
+!===============================================================================
+! Target with parallel loop
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_parallel_do() {
+subroutine omp_target_parallel_do
+   !CHECK: %[[VAL_0:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_parallel_doEa"}
+   integer :: a(1024)
+   !CHECK: %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFomp_target_parallel_doEi"}
+   integer :: i
+   !CHECK: omp.target   map((tofrom -> %[[VAL_0]] : !fir.ref<!fir.array<1024xi32>>)) {
+      !CHECK-NEXT: omp.parallel
+      !$omp target parallel do map(tofrom: a)
+         !CHECK: %[[VAL_2:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+         !CHECK: %[[VAL_3:.*]] = arith.constant 1 : i32
+         !CHECK: %[[VAL_4:.*]] = arith.constant 1024 : i32
+         !CHECK: %[[VAL_5:.*]] = arith.constant 1 : i32
+         !CHECK: omp.wsloop   for  (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
+         !CHECK: fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<i32>
+         !CHECK: %[[VAL_7:.*]] = arith.constant 10 : i32
+         !CHECK: %[[VAL_8:.*]] = fir.load %2 : !fir.ref<i32>
+         !CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i32) -> i64
+         !CHECK: %[[VAL_10:.*]] = arith.constant 1 : i64
+         !CHECK: %[[VAL_11:.*]] = arith.subi %[[VAL_9]], %[[VAL_10]] : i64
+         !CHECK: %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_11]] : (!fir.ref<!fir.array<1024xi32>>, i64) -> !fir.ref<i32>
+         !CHECK: fir.store %[[VAL_7]] to %[[VAL_12]] : !fir.ref<i32>
+         do i = 1, 1024
+            a(i) = 10
+         end do
+         !CHECK: omp.yield
+         !CHECK: }
+      !CHECK: omp.terminator
+      !CHECK: }
+   !CHECK: omp.terminator
+   !CHECK: }
+   !$omp end target parallel do
+end subroutine omp_target_parallel_do

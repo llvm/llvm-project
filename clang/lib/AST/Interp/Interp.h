@@ -67,6 +67,10 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK);
 
+/// Checks if Ptr is a one-past-the-end pointer.
+bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                    CheckSubobjectKind CSK);
+
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -148,8 +152,9 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_expr_divide_by_zero);
+    const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
+    S.FFDiag(Op, diag::note_expr_divide_by_zero)
+        << Op->getRHS()->getSourceRange();
     return false;
   }
 
@@ -165,7 +170,7 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-/// Checks if the result is a floating-point operation is valid
+/// Checks if the result of a floating-point operation is valid
 /// in the current context.
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 
@@ -173,7 +178,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F);
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *Call);
 
 enum class ArithOp { Add, Sub };
 
@@ -199,13 +205,14 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
       return false;
   }
 
+  assert(S.Current);
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller) {
     // Certain builtin functions are declared as func-name(...), so the
     // parameters are checked in Sema and only available through the CallExpr.
     // The interp::Function we create for them has 0 parameters, so we need to
     // remove them from the stack by checking the CallExpr.
-    if (S.Current && S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()))
+    if (S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()))
       popBuiltinArgs(S, PC);
     else
       S.Current->popArgs();
@@ -269,7 +276,8 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     SmallString<32> Trunc;
     Value.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   } else {
     S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
@@ -476,7 +484,8 @@ bool Neg(InterpState &S, CodePtr OpPC) {
     SmallString<32> Trunc;
     NegatedValue.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   }
 
@@ -529,7 +538,8 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     SmallString<32> Trunc;
     APResult.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
-    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    S.report(Loc, diag::warn_integer_constant_overflow)
+        << Trunc << Type << E->getSourceRange();
     return true;
   }
 
@@ -991,6 +1001,19 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
   return true;
 }
 
+/// 1) Converts the value on top of the stack to an APValue
+/// 2) Sets that APValue on \Temp
+/// 3) Initialized global with index \I with that
+inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
+                               const LifetimeExtendedTemporaryDecl *Temp) {
+  assert(Temp);
+  const Pointer &P = S.Stk.peek<Pointer>();
+  APValue *Cached = Temp->getOrCreateValue(true);
+
+  *Cached = P.toRValue(S.getCtx());
+  return true;
+}
+
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
   if (S.checkingPotentialConstantExpression())
@@ -1098,6 +1121,9 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+    return false;
+
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1138,9 +1164,21 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
+inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
+  return true;
+}
+
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
@@ -1149,6 +1187,8 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
@@ -1725,7 +1765,15 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
       DynamicDecl, StaticDecl, InitialFunction);
 
   if (Overrider != InitialFunction) {
-    Func = S.P.getFunction(Overrider);
+    // DR1872: An instantiated virtual constexpr function can't be called in a
+    // constant expression (prior to C++20). We can still constant-fold such a
+    // call.
+    if (!S.getLangOpts().CPlusPlus20 && Overrider->isVirtual()) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_virtual_call) << E->getSourceRange();
+    }
+
+    Func = S.getContext().getOrCreateFunction(Overrider);
 
     const CXXRecordDecl *ThisFieldDecl =
         ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
@@ -1740,13 +1788,14 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
   return Call(S, OpPC, Func);
 }
 
-inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
+inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func,
+                   const CallExpr *CE) {
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
 
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func)) {
+  if (InterpretBuiltin(S, PC, Func, CE)) {
     NewFrame.release();
     return true;
   }
@@ -1786,7 +1835,7 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
-      << static_cast<uint8_t>(Kind) << S.Current->getRange(OpPC);
+      << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -1801,6 +1850,12 @@ template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
   } else {
     return OpPC.read<T>();
   }
+}
+
+template <> inline Floating ReadArg<Floating>(InterpState &S, CodePtr &OpPC) {
+  Floating F = Floating::deserialize(*OpPC);
+  OpPC += align(F.bytesToSerialize());
+  return F;
 }
 
 } // namespace interp

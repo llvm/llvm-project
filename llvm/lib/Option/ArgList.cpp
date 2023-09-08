@@ -75,6 +75,13 @@ bool ArgList::hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default) const {
   return Default;
 }
 
+bool ArgList::hasFlagNoClaim(OptSpecifier Pos, OptSpecifier Neg,
+                             bool Default) const {
+  if (Arg *A = getLastArgNoClaim(Pos, Neg))
+    return A->getOption().matches(Pos);
+  return Default;
+}
+
 bool ArgList::hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
                       bool Default) const {
   if (Arg *A = getLastArg(Pos, PosAlias, Neg))

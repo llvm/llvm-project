@@ -18,6 +18,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/Regex.h"
 #include <vector>
 
@@ -42,8 +43,10 @@ public:
 private:
   include_cleaner::RecordedPP RecordedPreprocessor;
   include_cleaner::PragmaIncludes RecordedPI;
-  HeaderSearch *HS;
+  const Preprocessor *PP = nullptr;
   std::vector<StringRef> IgnoreHeaders;
+  // Whether emit only one finding per usage of a symbol.
+  const bool DeduplicateFindings;
   llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
   bool shouldIgnore(const include_cleaner::Header &H);
 };

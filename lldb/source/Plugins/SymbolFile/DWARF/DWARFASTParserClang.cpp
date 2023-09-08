@@ -1023,7 +1023,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           }
         }
       } else if (is_cxx_method) {
-        // Look at the parent of this DIE and see if is is a class or
+        // Look at the parent of this DIE and see if it is a class or
         // struct and see if this is actually a C++ method
         Type *class_type = dwarf->ResolveType(decl_ctx_die);
         if (class_type) {
@@ -2496,7 +2496,162 @@ struct PropertyAttributes {
   /// \see clang::ObjCPropertyAttribute
   uint32_t prop_attributes = 0;
 };
+
+struct DiscriminantValue {
+  explicit DiscriminantValue(const DWARFDIE &die, ModuleSP module_sp);
+
+  uint32_t byte_offset;
+  uint32_t byte_size;
+  DWARFFormValue type_ref;
+};
+
+struct VariantMember {
+  explicit VariantMember(DWARFDIE &die, ModuleSP module_sp);
+  bool IsDefault() const;
+
+  std::optional<uint32_t> discr_value;
+  DWARFFormValue type_ref;
+  ConstString variant_name;
+  uint32_t byte_offset;
+  ConstString GetName() const;
+};
+
+struct VariantPart {
+  explicit VariantPart(const DWARFDIE &die, const DWARFDIE &parent_die,
+                       ModuleSP module_sp);
+
+  std::vector<VariantMember> &members();
+
+  DiscriminantValue &discriminant();
+
+private:
+  std::vector<VariantMember> _members;
+  DiscriminantValue _discriminant;
+};
+
 } // namespace
+
+ConstString VariantMember::GetName() const { return this->variant_name; }
+
+bool VariantMember::IsDefault() const { return !discr_value; }
+
+VariantMember::VariantMember(DWARFDIE &die, lldb::ModuleSP module_sp) {
+  assert(die.Tag() == llvm::dwarf::DW_TAG_variant);
+  this->discr_value =
+      die.GetAttributeValueAsOptionalUnsigned(DW_AT_discr_value);
+
+  for (auto child_die : die.children()) {
+    switch (child_die.Tag()) {
+    case llvm::dwarf::DW_TAG_member: {
+      DWARFAttributes attributes = child_die.GetAttributes();
+      for (std::size_t i = 0; i < attributes.Size(); ++i) {
+        DWARFFormValue form_value;
+        const dw_attr_t attr = attributes.AttributeAtIndex(i);
+        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+          switch (attr) {
+          case DW_AT_name:
+            variant_name = ConstString(form_value.AsCString());
+            break;
+          case DW_AT_type:
+            type_ref = form_value;
+            break;
+
+          case DW_AT_data_member_location:
+            if (form_value.BlockData()) {
+              Value initialValue(0);
+              Value memberOffset(0);
+              const DWARFDataExtractor &debug_info_data = die.GetData();
+              uint32_t block_length = form_value.Unsigned();
+              uint32_t block_offset =
+                  form_value.BlockData() - debug_info_data.GetDataStart();
+              if (DWARFExpression::Evaluate(
+                      nullptr, // ExecutionContext *
+                      nullptr, // RegisterContext *
+                      module_sp,
+                      DataExtractor(debug_info_data, block_offset,
+                                    block_length),
+                      die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
+                      memberOffset, nullptr)) {
+                byte_offset = memberOffset.ResolveValue(nullptr).UInt();
+              }
+            } else {
+              // With DWARF 3 and later, if the value is an integer constant,
+              // this form value is the offset in bytes from the beginning of
+              // the containing entity.
+              byte_offset = form_value.Unsigned();
+            }
+            break;
+
+          default:
+            break;
+          }
+        }
+      }
+      break;
+    }
+    default:
+      break;
+    }
+    break;
+  }
+}
+
+DiscriminantValue::DiscriminantValue(const DWARFDIE &die, ModuleSP module_sp) {
+  auto referenced_die = die.GetReferencedDIE(DW_AT_discr);
+  DWARFAttributes attributes = referenced_die.GetAttributes();
+  for (std::size_t i = 0; i < attributes.Size(); ++i) {
+    const dw_attr_t attr = attributes.AttributeAtIndex(i);
+    DWARFFormValue form_value;
+    if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+      switch (attr) {
+      case DW_AT_type:
+        type_ref = form_value;
+        break;
+      case DW_AT_data_member_location:
+        if (form_value.BlockData()) {
+          Value initialValue(0);
+          Value memberOffset(0);
+          const DWARFDataExtractor &debug_info_data = die.GetData();
+          uint32_t block_length = form_value.Unsigned();
+          uint32_t block_offset =
+              form_value.BlockData() - debug_info_data.GetDataStart();
+          if (DWARFExpression::Evaluate(
+                  nullptr, // ExecutionContext *
+                  nullptr, // RegisterContext *
+                  module_sp,
+                  DataExtractor(debug_info_data, block_offset, block_length),
+                  die.GetCU(), eRegisterKindDWARF, &initialValue, nullptr,
+                  memberOffset, nullptr)) {
+            byte_offset = memberOffset.ResolveValue(nullptr).UInt();
+          }
+        } else {
+          // With DWARF 3 and later, if the value is an integer constant,
+          // this form value is the offset in bytes from the beginning of
+          // the containing entity.
+          byte_offset = form_value.Unsigned();
+        }
+        break;
+      default:
+        break;
+      }
+    }
+  }
+}
+
+VariantPart::VariantPart(const DWARFDIE &die, const DWARFDIE &parent_die,
+                         lldb::ModuleSP module_sp)
+    : _members(), _discriminant(die, module_sp) {
+
+  for (auto child : die.children()) {
+    if (child.Tag() == llvm::dwarf::DW_TAG_variant) {
+      _members.push_back(VariantMember(child, module_sp));
+    }
+  }
+}
+
+std::vector<VariantMember> &VariantPart::members() { return this->_members; }
+
+DiscriminantValue &VariantPart::discriminant() { return this->_discriminant; }
 
 MemberAttributes::MemberAttributes(const DWARFDIE &die,
                                    const DWARFDIE &parent_die,
@@ -2938,7 +3093,7 @@ void DWARFASTParserClang::ParseSingleMember(
   // in our AST. Clang will re-create those articial members and they would
   // otherwise just overlap in the layout with the FieldDecls we add here.
   // This needs to be done after updating FieldInfo which keeps track of where
-  // field start/end so we don't later try to fill the the space of this
+  // field start/end so we don't later try to fill the space of this
   // artificial member with (unnamed bitfield) padding.
   // FIXME: This check should verify that this is indeed an artificial member
   // we are supposed to ignore.
@@ -3019,6 +3174,13 @@ bool DWARFASTParserClang::ParseChildMembers(
     switch (tag) {
     case DW_TAG_APPLE_property:
       ParseObjCProperty(die, parent_die, class_clang_type, delayed_properties);
+      break;
+
+    case DW_TAG_variant_part:
+      if (die.GetCU()->GetDWARFLanguageType() == eLanguageTypeRust) {
+        ParseRustVariantPart(die, parent_die, class_clang_type,
+                             default_accessibility, layout_info);
+      }
       break;
 
     case DW_TAG_member:
@@ -3565,7 +3727,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
     // Make sure this is a declaration and not a concrete instance by looking
     // for DW_AT_declaration set to 1. Sometimes concrete function instances are
     // placed inside the class definitions and shouldn't be included in the list
-    // of things are are tracking here.
+    // of things that are tracking here.
     if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) != 1)
       return;
 
@@ -3727,4 +3889,77 @@ bool DWARFASTParserClang::ShouldCreateUnnamedBitfield(
     return false;
 
   return true;
+}
+
+void DWARFASTParserClang::ParseRustVariantPart(
+    DWARFDIE &die, const DWARFDIE &parent_die, CompilerType &class_clang_type,
+    const lldb::AccessType default_accesibility,
+    ClangASTImporter::LayoutInfo &layout_info) {
+  assert(die.Tag() == llvm::dwarf::DW_TAG_variant_part);
+  assert(SymbolFileDWARF::GetLanguage(*die.GetCU()) ==
+         LanguageType::eLanguageTypeRust);
+
+  ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
+
+  VariantPart variants(die, parent_die, module_sp);
+
+  auto discriminant_type =
+      die.ResolveTypeUID(variants.discriminant().type_ref.Reference());
+
+  auto decl_context = m_ast.GetDeclContextForType(class_clang_type);
+
+  auto inner_holder = m_ast.CreateRecordType(
+      decl_context, OptionalClangModuleID(), lldb::eAccessPublic,
+      std::string(
+          llvm::formatv("{0}$Inner", class_clang_type.GetTypeName(false))),
+      clang::TTK_Union, lldb::eLanguageTypeRust);
+  m_ast.StartTagDeclarationDefinition(inner_holder);
+  m_ast.SetIsPacked(inner_holder);
+
+  for (auto member : variants.members()) {
+
+    auto has_discriminant = !member.IsDefault();
+
+    auto member_type = die.ResolveTypeUID(member.type_ref.Reference());
+
+    auto field_type = m_ast.CreateRecordType(
+        m_ast.GetDeclContextForType(inner_holder), OptionalClangModuleID(),
+        lldb::eAccessPublic,
+        std::string(llvm::formatv("{0}$Variant", member.GetName())),
+        clang::TTK_Struct, lldb::eLanguageTypeRust);
+
+    m_ast.StartTagDeclarationDefinition(field_type);
+    auto offset = member.byte_offset;
+
+    if (has_discriminant) {
+      m_ast.AddFieldToRecordType(
+          field_type, "$discr$", discriminant_type->GetFullCompilerType(),
+          lldb::eAccessPublic, variants.discriminant().byte_offset);
+      offset += discriminant_type->GetByteSize(nullptr).value_or(0);
+    }
+
+    m_ast.AddFieldToRecordType(field_type, "value",
+                               member_type->GetFullCompilerType(),
+                               lldb::eAccessPublic, offset * 8);
+
+    m_ast.CompleteTagDeclarationDefinition(field_type);
+
+    auto name = has_discriminant
+                    ? llvm::formatv("$variant${0}", member.discr_value.value())
+                    : std::string("$variant$");
+
+    auto variant_decl =
+        m_ast.AddFieldToRecordType(inner_holder, llvm::StringRef(name),
+                                   field_type, default_accesibility, 0);
+
+    layout_info.field_offsets.insert({variant_decl, 0});
+  }
+
+  auto inner_field = m_ast.AddFieldToRecordType(class_clang_type,
+                                                llvm::StringRef("$variants$"),
+                                                inner_holder, eAccessPublic, 0);
+
+  m_ast.CompleteTagDeclarationDefinition(inner_holder);
+
+  layout_info.field_offsets.insert({inner_field, 0});
 }

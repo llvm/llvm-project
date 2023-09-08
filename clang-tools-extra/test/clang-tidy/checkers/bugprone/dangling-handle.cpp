@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: bugprone-dangling-handle.HandleClasses, \
-// RUN:               value: 'std::basic_string_view; ::llvm::StringRef;'}]}"
+// RUN:             {bugprone-dangling-handle.HandleClasses: \
+// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
 // FIXME: Fix the checker to work in C++17 or later mode.
 
 namespace std {

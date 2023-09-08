@@ -29,7 +29,6 @@ define i32 @leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; COMPAT-NEXT:    hint #25
 ; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: leaf_sign_all:
@@ -53,7 +52,6 @@ define i64 @leaf_clobbers_lr(i64 %x) "sign-return-address"="non-leaf"  {
 ; COMPAT-NEXT:    //NO_APP
 ; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: leaf_clobbers_lr:
@@ -85,7 +83,6 @@ define i32 @non_leaf_sign_all(i32 %x) "sign-return-address"="all" {
 ; COMPAT-NEXT:    bl foo
 ; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: non_leaf_sign_all:
@@ -113,7 +110,6 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 ; COMPAT-NEXT:    bl foo
 ; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: non_leaf_sign_non_leaf:
@@ -144,7 +140,6 @@ define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstac
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    autiasp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    ldr x30, [x18, #-8]!
 ; CHECK-NEXT:    ret
   %call = call i32 @foo(i32 %x)
@@ -175,7 +170,6 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; COMPAT-NEXT:    //NO_APP
 ; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    b bar
 ;
 ; V83A-LABEL: spill_lr_and_tail_call:
@@ -190,7 +184,6 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
 ; V83A-NEXT:    //NO_APP
 ; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V83A-NEXT:    autiasp
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    b bar
   call void asm sideeffect "mov x30, $0", "r,~{lr}"(i64 %x) #1
   tail call fastcc i64 @bar(i64 %x)
@@ -203,7 +196,6 @@ define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return
 ; COMPAT-NEXT:    hint #25
 ; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: leaf_sign_all_a_key:
@@ -221,7 +213,6 @@ define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return
 ; COMPAT-NEXT:    hint #27
 ; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    hint #31
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: leaf_sign_all_b_key:
@@ -250,7 +241,6 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; COMPAT-NEXT:    hint #25
 ; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    hint #29
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: leaf_sign_all_a_key_bti:
@@ -269,7 +259,6 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "sign-return-address"="all" "sign-re
 ; COMPAT-NEXT:    hint #27
 ; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    hint #31
-; COMPAT-NEXT:    .cfi_negate_ra_state
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: leaf_sign_all_b_key_bti:

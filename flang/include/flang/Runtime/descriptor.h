@@ -18,7 +18,7 @@
 // User C code is welcome to depend on that ISO_Fortran_binding.h file,
 // but should never reference this internal header.
 
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/memory.h"
 #include "flang/Runtime/type-code.h"
 #include <algorithm>
@@ -36,6 +36,7 @@ class DerivedType;
 namespace Fortran::runtime {
 
 using SubscriptValue = ISO::CFI_index_t;
+class Terminator;
 
 RT_VAR_GROUP_BEGIN
 static constexpr RT_CONST_VAR_ATTRS int maxRank{CFI_MAX_RANK};
@@ -369,7 +370,8 @@ public:
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false);
+  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false,
+      Terminator * = nullptr);
 
   RT_API_ATTRS bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};

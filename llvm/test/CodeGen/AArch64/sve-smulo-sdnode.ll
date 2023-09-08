@@ -92,18 +92,19 @@ define <vscale x 32 x i8> @smulo_nxv32i8(<vscale x 32 x i8> %x, <vscale x 32 x i
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    smulh z4.b, p0/m, z4.b, z3.b
-; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z3.b
-; CHECK-NEXT:    movprfx z3, z0
-; CHECK-NEXT:    mul z3.b, p0/m, z3.b, z2.b
-; CHECK-NEXT:    asr z5.b, z1.b, #7
+; CHECK-NEXT:    mul z4.b, p0/m, z4.b, z3.b
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    mul z5.b, p0/m, z5.b, z2.b
+; CHECK-NEXT:    smulh z1.b, p0/m, z1.b, z3.b
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z2.b
-; CHECK-NEXT:    asr z2.b, z3.b, #7
-; CHECK-NEXT:    cmpne p1.b, p0/z, z4.b, z5.b
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, z2.b
-; CHECK-NEXT:    mov z1.b, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.b, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z3.d
+; CHECK-NEXT:    asr z2.b, z4.b, #7
+; CHECK-NEXT:    asr z3.b, z5.b, #7
+; CHECK-NEXT:    cmpne p1.b, p0/z, z1.b, z2.b
+; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, z3.b
+; CHECK-NEXT:    mov z5.b, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.b, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 32 x i8>, <vscale x 32 x i1> } @llvm.smul.with.overflow.nxv32i8(<vscale x 32 x i8> %x, <vscale x 32 x i8> %y)
   %b = extractvalue { <vscale x 32 x i8>, <vscale x 32 x i1> } %a, 0
@@ -119,31 +120,33 @@ define <vscale x 64 x i8> @smulo_nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z24, z3
-; CHECK-NEXT:    smulh z24.b, p0/m, z24.b, z7.b
-; CHECK-NEXT:    mul z3.b, p0/m, z3.b, z7.b
-; CHECK-NEXT:    movprfx z7, z2
-; CHECK-NEXT:    mul z7.b, p0/m, z7.b, z6.b
-; CHECK-NEXT:    smulh z2.b, p0/m, z2.b, z6.b
-; CHECK-NEXT:    asr z6.b, z7.b, #7
-; CHECK-NEXT:    cmpne p2.b, p0/z, z2.b, z6.b
-; CHECK-NEXT:    movprfx z6, z1
-; CHECK-NEXT:    smulh z6.b, p0/m, z6.b, z5.b
-; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z5.b
-; CHECK-NEXT:    asr z25.b, z3.b, #7
-; CHECK-NEXT:    asr z5.b, z1.b, #7
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.b, p0/m, z2.b, z4.b
+; CHECK-NEXT:    mul z24.b, p0/m, z24.b, z7.b
+; CHECK-NEXT:    movprfx z25, z0
+; CHECK-NEXT:    mul z25.b, p0/m, z25.b, z4.b
+; CHECK-NEXT:    movprfx z26, z2
+; CHECK-NEXT:    mul z26.b, p0/m, z26.b, z6.b
+; CHECK-NEXT:    movprfx z27, z1
+; CHECK-NEXT:    mul z27.b, p0/m, z27.b, z5.b
+; CHECK-NEXT:    smulh z3.b, p0/m, z3.b, z7.b
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z4.b
-; CHECK-NEXT:    asr z4.b, z2.b, #7
-; CHECK-NEXT:    cmpne p1.b, p0/z, z24.b, z25.b
-; CHECK-NEXT:    cmpne p3.b, p0/z, z6.b, z5.b
-; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, z4.b
-; CHECK-NEXT:    mov z7.b, p2/m, #0 // =0x0
-; CHECK-NEXT:    mov z2.b, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z1.b, p3/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.b, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, z7.d
+; CHECK-NEXT:    asr z4.b, z25.b, #7
+; CHECK-NEXT:    smulh z2.b, p0/m, z2.b, z6.b
+; CHECK-NEXT:    smulh z1.b, p0/m, z1.b, z5.b
+; CHECK-NEXT:    asr z5.b, z24.b, #7
+; CHECK-NEXT:    asr z6.b, z26.b, #7
+; CHECK-NEXT:    asr z7.b, z27.b, #7
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, z4.b
+; CHECK-NEXT:    cmpne p2.b, p0/z, z3.b, z5.b
+; CHECK-NEXT:    cmpne p3.b, p0/z, z2.b, z6.b
+; CHECK-NEXT:    cmpne p0.b, p0/z, z1.b, z7.b
+; CHECK-NEXT:    mov z25.b, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z24.b, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z27.b, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z26.b, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z3.d, z24.d
+; CHECK-NEXT:    mov z1.d, z27.d
+; CHECK-NEXT:    mov z2.d, z26.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 64 x i8>, <vscale x 64 x i1> } @llvm.smul.with.overflow.nxv64i8(<vscale x 64 x i8> %x, <vscale x 64 x i8> %y)
   %b = extractvalue { <vscale x 64 x i8>, <vscale x 64 x i1> } %a, 0
@@ -222,18 +225,19 @@ define <vscale x 16 x i16> @smulo_nxv16i16(<vscale x 16 x i16> %x, <vscale x 16 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    smulh z4.h, p0/m, z4.h, z3.h
-; CHECK-NEXT:    mul z1.h, p0/m, z1.h, z3.h
-; CHECK-NEXT:    movprfx z3, z0
-; CHECK-NEXT:    mul z3.h, p0/m, z3.h, z2.h
-; CHECK-NEXT:    asr z5.h, z1.h, #15
+; CHECK-NEXT:    mul z4.h, p0/m, z4.h, z3.h
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    mul z5.h, p0/m, z5.h, z2.h
+; CHECK-NEXT:    smulh z1.h, p0/m, z1.h, z3.h
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z2.h
-; CHECK-NEXT:    asr z2.h, z3.h, #15
-; CHECK-NEXT:    cmpne p1.h, p0/z, z4.h, z5.h
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, z2.h
-; CHECK-NEXT:    mov z1.h, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.h, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z3.d
+; CHECK-NEXT:    asr z2.h, z4.h, #15
+; CHECK-NEXT:    asr z3.h, z5.h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, z2.h
+; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, z3.h
+; CHECK-NEXT:    mov z5.h, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.h, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 16 x i16>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i16(<vscale x 16 x i16> %x, <vscale x 16 x i16> %y)
   %b = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i1> } %a, 0
@@ -249,31 +253,33 @@ define <vscale x 32 x i16> @smulo_nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    movprfx z24, z3
-; CHECK-NEXT:    smulh z24.h, p0/m, z24.h, z7.h
-; CHECK-NEXT:    mul z3.h, p0/m, z3.h, z7.h
-; CHECK-NEXT:    movprfx z7, z2
-; CHECK-NEXT:    mul z7.h, p0/m, z7.h, z6.h
-; CHECK-NEXT:    smulh z2.h, p0/m, z2.h, z6.h
-; CHECK-NEXT:    asr z6.h, z7.h, #15
-; CHECK-NEXT:    cmpne p2.h, p0/z, z2.h, z6.h
-; CHECK-NEXT:    movprfx z6, z1
-; CHECK-NEXT:    smulh z6.h, p0/m, z6.h, z5.h
-; CHECK-NEXT:    mul z1.h, p0/m, z1.h, z5.h
-; CHECK-NEXT:    asr z25.h, z3.h, #15
-; CHECK-NEXT:    asr z5.h, z1.h, #15
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z4.h
+; CHECK-NEXT:    mul z24.h, p0/m, z24.h, z7.h
+; CHECK-NEXT:    movprfx z25, z0
+; CHECK-NEXT:    mul z25.h, p0/m, z25.h, z4.h
+; CHECK-NEXT:    movprfx z26, z2
+; CHECK-NEXT:    mul z26.h, p0/m, z26.h, z6.h
+; CHECK-NEXT:    movprfx z27, z1
+; CHECK-NEXT:    mul z27.h, p0/m, z27.h, z5.h
+; CHECK-NEXT:    smulh z3.h, p0/m, z3.h, z7.h
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z4.h
-; CHECK-NEXT:    asr z4.h, z2.h, #15
-; CHECK-NEXT:    cmpne p1.h, p0/z, z24.h, z25.h
-; CHECK-NEXT:    cmpne p3.h, p0/z, z6.h, z5.h
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, z4.h
-; CHECK-NEXT:    mov z7.h, p2/m, #0 // =0x0
-; CHECK-NEXT:    mov z2.h, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z1.h, p3/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.h, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, z7.d
+; CHECK-NEXT:    asr z4.h, z25.h, #15
+; CHECK-NEXT:    smulh z2.h, p0/m, z2.h, z6.h
+; CHECK-NEXT:    smulh z1.h, p0/m, z1.h, z5.h
+; CHECK-NEXT:    asr z5.h, z24.h, #15
+; CHECK-NEXT:    asr z6.h, z26.h, #15
+; CHECK-NEXT:    asr z7.h, z27.h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, z4.h
+; CHECK-NEXT:    cmpne p2.h, p0/z, z3.h, z5.h
+; CHECK-NEXT:    cmpne p3.h, p0/z, z2.h, z6.h
+; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, z7.h
+; CHECK-NEXT:    mov z25.h, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z24.h, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z27.h, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z26.h, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z3.d, z24.d
+; CHECK-NEXT:    mov z1.d, z27.d
+; CHECK-NEXT:    mov z2.d, z26.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 32 x i16>, <vscale x 32 x i1> } @llvm.smul.with.overflow.nxv32i16(<vscale x 32 x i16> %x, <vscale x 32 x i16> %y)
   %b = extractvalue { <vscale x 32 x i16>, <vscale x 32 x i1> } %a, 0
@@ -331,18 +337,19 @@ define <vscale x 8 x i32> @smulo_nxv8i32(<vscale x 8 x i32> %x, <vscale x 8 x i3
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    smulh z4.s, p0/m, z4.s, z3.s
-; CHECK-NEXT:    mul z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    movprfx z3, z0
-; CHECK-NEXT:    mul z3.s, p0/m, z3.s, z2.s
-; CHECK-NEXT:    asr z5.s, z1.s, #31
+; CHECK-NEXT:    mul z4.s, p0/m, z4.s, z3.s
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    mul z5.s, p0/m, z5.s, z2.s
+; CHECK-NEXT:    smulh z1.s, p0/m, z1.s, z3.s
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    asr z2.s, z3.s, #31
-; CHECK-NEXT:    cmpne p1.s, p0/z, z4.s, z5.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, z2.s
-; CHECK-NEXT:    mov z1.s, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.s, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z3.d
+; CHECK-NEXT:    asr z2.s, z4.s, #31
+; CHECK-NEXT:    asr z3.s, z5.s, #31
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, z2.s
+; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, z3.s
+; CHECK-NEXT:    mov z5.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.s, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i32>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i32(<vscale x 8 x i32> %x, <vscale x 8 x i32> %y)
   %b = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i1> } %a, 0
@@ -358,31 +365,33 @@ define <vscale x 16 x i32> @smulo_nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    movprfx z24, z3
-; CHECK-NEXT:    smulh z24.s, p0/m, z24.s, z7.s
-; CHECK-NEXT:    mul z3.s, p0/m, z3.s, z7.s
-; CHECK-NEXT:    movprfx z7, z2
-; CHECK-NEXT:    mul z7.s, p0/m, z7.s, z6.s
-; CHECK-NEXT:    smulh z2.s, p0/m, z2.s, z6.s
-; CHECK-NEXT:    asr z6.s, z7.s, #31
-; CHECK-NEXT:    cmpne p2.s, p0/z, z2.s, z6.s
-; CHECK-NEXT:    movprfx z6, z1
-; CHECK-NEXT:    smulh z6.s, p0/m, z6.s, z5.s
-; CHECK-NEXT:    mul z1.s, p0/m, z1.s, z5.s
-; CHECK-NEXT:    asr z25.s, z3.s, #31
-; CHECK-NEXT:    asr z5.s, z1.s, #31
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z4.s
+; CHECK-NEXT:    mul z24.s, p0/m, z24.s, z7.s
+; CHECK-NEXT:    movprfx z25, z0
+; CHECK-NEXT:    mul z25.s, p0/m, z25.s, z4.s
+; CHECK-NEXT:    movprfx z26, z2
+; CHECK-NEXT:    mul z26.s, p0/m, z26.s, z6.s
+; CHECK-NEXT:    movprfx z27, z1
+; CHECK-NEXT:    mul z27.s, p0/m, z27.s, z5.s
+; CHECK-NEXT:    smulh z3.s, p0/m, z3.s, z7.s
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    asr z4.s, z2.s, #31
-; CHECK-NEXT:    cmpne p1.s, p0/z, z24.s, z25.s
-; CHECK-NEXT:    cmpne p3.s, p0/z, z6.s, z5.s
-; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, z4.s
-; CHECK-NEXT:    mov z7.s, p2/m, #0 // =0x0
-; CHECK-NEXT:    mov z2.s, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z1.s, p3/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.s, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, z7.d
+; CHECK-NEXT:    asr z4.s, z25.s, #31
+; CHECK-NEXT:    smulh z2.s, p0/m, z2.s, z6.s
+; CHECK-NEXT:    smulh z1.s, p0/m, z1.s, z5.s
+; CHECK-NEXT:    asr z5.s, z24.s, #31
+; CHECK-NEXT:    asr z6.s, z26.s, #31
+; CHECK-NEXT:    asr z7.s, z27.s, #31
+; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, z4.s
+; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, z5.s
+; CHECK-NEXT:    cmpne p3.s, p0/z, z2.s, z6.s
+; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, z7.s
+; CHECK-NEXT:    mov z25.s, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z24.s, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z27.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z26.s, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z3.d, z24.d
+; CHECK-NEXT:    mov z1.d, z27.d
+; CHECK-NEXT:    mov z2.d, z26.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 16 x i32>, <vscale x 16 x i1> } @llvm.smul.with.overflow.nxv16i32(<vscale x 16 x i32> %x, <vscale x 16 x i32> %y)
   %b = extractvalue { <vscale x 16 x i32>, <vscale x 16 x i1> } %a, 0
@@ -419,18 +428,19 @@ define <vscale x 4 x i64> @smulo_nxv4i64(<vscale x 4 x i64> %x, <vscale x 4 x i6
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    movprfx z4, z1
-; CHECK-NEXT:    smulh z4.d, p0/m, z4.d, z3.d
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z3.d
-; CHECK-NEXT:    movprfx z3, z0
-; CHECK-NEXT:    mul z3.d, p0/m, z3.d, z2.d
-; CHECK-NEXT:    asr z5.d, z1.d, #63
+; CHECK-NEXT:    mul z4.d, p0/m, z4.d, z3.d
+; CHECK-NEXT:    movprfx z5, z0
+; CHECK-NEXT:    mul z5.d, p0/m, z5.d, z2.d
+; CHECK-NEXT:    smulh z1.d, p0/m, z1.d, z3.d
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z2.d
-; CHECK-NEXT:    asr z2.d, z3.d, #63
-; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, z5.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, z2.d
-; CHECK-NEXT:    mov z1.d, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.d, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z3.d
+; CHECK-NEXT:    asr z2.d, z4.d, #63
+; CHECK-NEXT:    asr z3.d, z5.d, #63
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, z2.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, z3.d
+; CHECK-NEXT:    mov z5.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.d, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 4 x i64>, <vscale x 4 x i1> } @llvm.smul.with.overflow.nxv4i64(<vscale x 4 x i64> %x, <vscale x 4 x i64> %y)
   %b = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i1> } %a, 0
@@ -446,31 +456,33 @@ define <vscale x 8 x i64> @smulo_nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i6
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    movprfx z24, z3
-; CHECK-NEXT:    smulh z24.d, p0/m, z24.d, z7.d
-; CHECK-NEXT:    mul z3.d, p0/m, z3.d, z7.d
-; CHECK-NEXT:    movprfx z7, z2
-; CHECK-NEXT:    mul z7.d, p0/m, z7.d, z6.d
-; CHECK-NEXT:    smulh z2.d, p0/m, z2.d, z6.d
-; CHECK-NEXT:    asr z6.d, z7.d, #63
-; CHECK-NEXT:    cmpne p2.d, p0/z, z2.d, z6.d
-; CHECK-NEXT:    movprfx z6, z1
-; CHECK-NEXT:    smulh z6.d, p0/m, z6.d, z5.d
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z5.d
-; CHECK-NEXT:    asr z25.d, z3.d, #63
-; CHECK-NEXT:    asr z5.d, z1.d, #63
-; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z4.d
+; CHECK-NEXT:    mul z24.d, p0/m, z24.d, z7.d
+; CHECK-NEXT:    movprfx z25, z0
+; CHECK-NEXT:    mul z25.d, p0/m, z25.d, z4.d
+; CHECK-NEXT:    movprfx z26, z2
+; CHECK-NEXT:    mul z26.d, p0/m, z26.d, z6.d
+; CHECK-NEXT:    movprfx z27, z1
+; CHECK-NEXT:    mul z27.d, p0/m, z27.d, z5.d
+; CHECK-NEXT:    smulh z3.d, p0/m, z3.d, z7.d
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z4.d
-; CHECK-NEXT:    asr z4.d, z2.d, #63
-; CHECK-NEXT:    cmpne p1.d, p0/z, z24.d, z25.d
-; CHECK-NEXT:    cmpne p3.d, p0/z, z6.d, z5.d
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, z4.d
-; CHECK-NEXT:    mov z7.d, p2/m, #0 // =0x0
-; CHECK-NEXT:    mov z2.d, p0/m, #0 // =0x0
-; CHECK-NEXT:    mov z1.d, p3/m, #0 // =0x0
-; CHECK-NEXT:    mov z3.d, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.d, z2.d
-; CHECK-NEXT:    mov z2.d, z7.d
+; CHECK-NEXT:    asr z4.d, z25.d, #63
+; CHECK-NEXT:    smulh z2.d, p0/m, z2.d, z6.d
+; CHECK-NEXT:    smulh z1.d, p0/m, z1.d, z5.d
+; CHECK-NEXT:    asr z5.d, z24.d, #63
+; CHECK-NEXT:    asr z6.d, z26.d, #63
+; CHECK-NEXT:    asr z7.d, z27.d, #63
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, z4.d
+; CHECK-NEXT:    cmpne p2.d, p0/z, z3.d, z5.d
+; CHECK-NEXT:    cmpne p3.d, p0/z, z2.d, z6.d
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, z7.d
+; CHECK-NEXT:    mov z25.d, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z24.d, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z27.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z26.d, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    mov z3.d, z24.d
+; CHECK-NEXT:    mov z1.d, z27.d
+; CHECK-NEXT:    mov z2.d, z26.d
 ; CHECK-NEXT:    ret
   %a = call { <vscale x 8 x i64>, <vscale x 8 x i1> } @llvm.smul.with.overflow.nxv8i64(<vscale x 8 x i64> %x, <vscale x 8 x i64> %y)
   %b = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i1> } %a, 0

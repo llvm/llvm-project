@@ -2593,19 +2593,6 @@ class Stoream_pat<PatFrag Store, PatFrag Value, PatFrag Addr, PatFrag ValueMod,
   : Pat<(Store Value:$val, Addr:$addr),
         (MI Addr:$addr, (ValueMod Value:$val))>;
 
-// Regular stores in the DAG have two operands: value and address.
-// Atomic stores also have two, but they are reversed: address, value.
-// To use atomic stores with the patterns, they need to have their operands
-// swapped. This relies on the knowledge that the F.Fragment uses names
-// "ptr" and "val".
-class AtomSt<PatFrag F>
-  : PatFrag<(ops node:$val, node:$ptr), !head(F.Fragments), F.PredicateCode,
-            F.OperandTransform> {
-  let IsAtomic = F.IsAtomic;
-  let MemoryVT = F.MemoryVT;
-}
-
-
 def IMM_BYTE : SDNodeXForm<imm, [{
   // -1 can be represented as 255, etc.
   // assigning to a byte restores our desired signed value.
@@ -2726,15 +2713,15 @@ let AddedComplexity = 120 in {
   def: Storea_pat<store,                    V2I32, addrgp, S2_storerdgp>;
   def: Storea_pat<store,                      F32, addrgp, S2_storerigp>;
   def: Storea_pat<store,                      F64, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_8>,     I32, addrgp, S2_storerbgp>;
-  def: Storea_pat<AtomSt<atomic_store_16>,    I32, addrgp, S2_storerhgp>;
-  def: Storea_pat<AtomSt<atomic_store_32>,    I32, addrgp, S2_storerigp>;
-  def: Storea_pat<AtomSt<atomic_store_32>,   V4I8, addrgp, S2_storerigp>;
-  def: Storea_pat<AtomSt<atomic_store_32>,  V2I16, addrgp, S2_storerigp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,    I64, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,   V8I8, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V4I16, addrgp, S2_storerdgp>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V2I32, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_8,             I32, addrgp, S2_storerbgp>;
+  def: Storea_pat<atomic_store_16,            I32, addrgp, S2_storerhgp>;
+  def: Storea_pat<atomic_store_32,            I32, addrgp, S2_storerigp>;
+  def: Storea_pat<atomic_store_32,           V4I8, addrgp, S2_storerigp>;
+  def: Storea_pat<atomic_store_32,          V2I16, addrgp, S2_storerigp>;
+  def: Storea_pat<atomic_store_64,            I64, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_64,           V8I8, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_64,          V4I16, addrgp, S2_storerdgp>;
+  def: Storea_pat<atomic_store_64,          V2I32, addrgp, S2_storerdgp>;
 
   def: Stoream_pat<truncstorei8,  I64, addrgp, LoReg,    S2_storerbgp>;
   def: Stoream_pat<truncstorei16, I64, addrgp, LoReg,    S2_storerhgp>;
@@ -2755,15 +2742,15 @@ let AddedComplexity = 110 in {
   def: Storea_pat<store,                    V2I32, anyimm3, PS_storerdabs>;
   def: Storea_pat<store,                      F32, anyimm2, PS_storeriabs>;
   def: Storea_pat<store,                      F64, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_8>,     I32, anyimm0, PS_storerbabs>;
-  def: Storea_pat<AtomSt<atomic_store_16>,    I32, anyimm1, PS_storerhabs>;
-  def: Storea_pat<AtomSt<atomic_store_32>,    I32, anyimm2, PS_storeriabs>;
-  def: Storea_pat<AtomSt<atomic_store_32>,   V4I8, anyimm2, PS_storeriabs>;
-  def: Storea_pat<AtomSt<atomic_store_32>,  V2I16, anyimm2, PS_storeriabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,    I64, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,   V8I8, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V4I16, anyimm3, PS_storerdabs>;
-  def: Storea_pat<AtomSt<atomic_store_64>,  V2I32, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_8,             I32, anyimm0, PS_storerbabs>;
+  def: Storea_pat<atomic_store_16,            I32, anyimm1, PS_storerhabs>;
+  def: Storea_pat<atomic_store_32,            I32, anyimm2, PS_storeriabs>;
+  def: Storea_pat<atomic_store_32,           V4I8, anyimm2, PS_storeriabs>;
+  def: Storea_pat<atomic_store_32,          V2I16, anyimm2, PS_storeriabs>;
+  def: Storea_pat<atomic_store_64,            I64, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_64,           V8I8, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_64,          V4I16, anyimm3, PS_storerdabs>;
+  def: Storea_pat<atomic_store_64,          V2I32, anyimm3, PS_storerdabs>;
 
   def: Stoream_pat<truncstorei8,  I64, anyimm0, LoReg,    PS_storerbabs>;
   def: Stoream_pat<truncstorei16, I64, anyimm1, LoReg,    PS_storerhabs>;
@@ -2918,15 +2905,15 @@ let AddedComplexity = 40 in {
   defm: Storexim_pat<truncstorei32, I64, anyimm2, LoReg,   S2_storeri_io>;
   defm: Storexim_pat<store,         I1,  anyimm0, I1toI32, S2_storerb_io>;
 
-  defm: Storexi_pat<AtomSt<atomic_store_8>,     I32, anyimm0, S2_storerb_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_16>,    I32, anyimm1, S2_storerh_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_32>,    I32, anyimm2, S2_storeri_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_32>,   V4I8, anyimm2, S2_storeri_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_32>,  V2I16, anyimm2, S2_storeri_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,    I64, anyimm3, S2_storerd_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,   V8I8, anyimm3, S2_storerd_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,  V4I16, anyimm3, S2_storerd_io>;
-  defm: Storexi_pat<AtomSt<atomic_store_64>,  V2I32, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_8,     I32, anyimm0, S2_storerb_io>;
+  defm: Storexi_pat<atomic_store_16,    I32, anyimm1, S2_storerh_io>;
+  defm: Storexi_pat<atomic_store_32,    I32, anyimm2, S2_storeri_io>;
+  defm: Storexi_pat<atomic_store_32,   V4I8, anyimm2, S2_storeri_io>;
+  defm: Storexi_pat<atomic_store_32,  V2I16, anyimm2, S2_storeri_io>;
+  defm: Storexi_pat<atomic_store_64,    I64, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_64,   V8I8, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_64,  V4I16, anyimm3, S2_storerd_io>;
+  defm: Storexi_pat<atomic_store_64,  V2I32, anyimm3, S2_storerd_io>;
 }
 
 // Reg+Reg
@@ -2977,15 +2964,15 @@ let AddedComplexity = 10 in {
   def: Storexim_base_pat<truncstorei32, I64, LoReg,   S2_storeri_io>;
   def: Storexim_base_pat<store,         I1,  I1toI32, S2_storerb_io>;
 
-  def: Storexi_base_pat<AtomSt<atomic_store_8>,     I32, S2_storerb_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_16>,    I32, S2_storerh_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_32>,    I32, S2_storeri_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_32>,   V4I8, S2_storeri_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_32>,  V2I16, S2_storeri_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,    I64, S2_storerd_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,   V8I8, S2_storerd_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,  V4I16, S2_storerd_io>;
-  def: Storexi_base_pat<AtomSt<atomic_store_64>,  V2I32, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_8,     I32, S2_storerb_io>;
+  def: Storexi_base_pat<atomic_store_16,    I32, S2_storerh_io>;
+  def: Storexi_base_pat<atomic_store_32,    I32, S2_storeri_io>;
+  def: Storexi_base_pat<atomic_store_32,   V4I8, S2_storeri_io>;
+  def: Storexi_base_pat<atomic_store_32,  V2I16, S2_storeri_io>;
+  def: Storexi_base_pat<atomic_store_64,    I64, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_64,   V8I8, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_64,  V4I16, S2_storerd_io>;
+  def: Storexi_base_pat<atomic_store_64,  V2I32, S2_storerd_io>;
 }
 
 

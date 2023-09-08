@@ -21,7 +21,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
   __llvm_libc::kernel_termios kt;
-  long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TCGETS, &kt);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ioctl, fd, TCGETS, &kt);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

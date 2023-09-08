@@ -220,12 +220,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     moduleTranslation.setTBAAMetadata(callOp, call);
     // If the called function has a result, remap the corresponding value.  Note
     // that LLVM IR dialect CallOp has either 0 or 1 result.
-    if (opInst.getNumResults() != 0) {
+    if (opInst.getNumResults() != 0)
       moduleTranslation.mapValue(opInst.getResult(0), call);
-      return success();
-    }
     // Check that LLVM call returns void for 0-result functions.
-    if (!call->getType()->isVoidTy())
+    else if (!call->getType()->isVoidTy())
       return failure();
     moduleTranslation.mapCall(callOp, call);
     return success();

@@ -133,6 +133,16 @@ struct DriverArgs {
       }
     }
 
+    // Downgrade objective-c++-header (used in clangd's fallback flags for .h
+    // files) to c++-header, as some drivers may fail to run the extraction
+    // command if it contains `-xobjective-c++-header` and objective-c++ support
+    // is not installed.
+    // In practice, we don't see different include paths for the two on
+    // clang+mac, which is the most common objectve-c compiler.
+    if (Lang == "objective-c++-header") {
+      Lang = "c++-header";
+    }
+
     // If language is not explicit in the flags, infer from the file.
     // This is important as we want to cache each language separately.
     if (Lang.empty()) {

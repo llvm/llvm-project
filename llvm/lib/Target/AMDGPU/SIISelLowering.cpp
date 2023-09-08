@@ -754,12 +754,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::i8, MVT::i128},
                      Custom);
 
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
+  setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
                        ISD::FADD,
                        ISD::FSUB,
+                       ISD::FDIV,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
@@ -1414,7 +1418,8 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return isLegalMUBUFAddressingMode(AM);
 
-  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
+  if (AS == AMDGPUAS::LOCAL_ADDRESS ||
+      (AS == AMDGPUAS::REGION_ADDRESS && Subtarget->hasGDS())) {
     // Basic, single offset DS instructions allow a 16-bit unsigned immediate
     // field.
     // XXX - If doing a 4-byte aligned 8-byte type access, we effectively have
@@ -3520,6 +3525,94 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
 }
 
+SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
+  if (Op.getValueType() != MVT::i32)
+    return Op; // Defer to cannot select error.
+
+  Register SP = getStackPointerRegisterToSaveRestore();
+  SDLoc SL(Op);
+
+  SDValue CopyFromSP = DAG.getCopyFromReg(Op->getOperand(0), SL, SP, MVT::i32);
+
+  // Convert from wave uniform to swizzled vector address. This should protect
+  // from any edge cases where the stacksave result isn't directly used with
+  // stackrestore.
+  SDValue VectorAddress =
+      DAG.getNode(AMDGPUISD::WAVE_ADDRESS, SL, MVT::i32, CopyFromSP);
+  return DAG.getMergeValues({VectorAddress, CopyFromSP.getValue(1)}, SL);
+}
+
+SDValue SITargetLowering::lowerGET_ROUNDING(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  assert(Op.getValueType() == MVT::i32);
+
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::encodeHwreg(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  SDValue GetRoundBothImm = DAG.getTargetConstant(BothRoundHwReg, SL, MVT::i32);
+
+  SDValue IntrinID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, SL, MVT::i32);
+  SDValue GetReg = DAG.getNode(ISD::INTRINSIC_W_CHAIN, SL, Op->getVTList(),
+                               Op.getOperand(0), IntrinID, GetRoundBothImm);
+
+  // There are two rounding modes, one for f32 and one for f64/f16. We only
+  // report in the standard value range if both are the same.
+  //
+  // The raw values also differ from the expected FLT_ROUNDS values. Nearest
+  // ties away from zero is not supported, and the other values are rotated by
+  // 1.
+  //
+  // If the two rounding modes are not the same, report a target defined value.
+
+  // Mode register rounding mode fields:
+  //
+  // [1:0] Single-precision round mode.
+  // [3:2] Double/Half-precision round mode.
+  //
+  // 0=nearest even; 1= +infinity; 2= -infinity, 3= toward zero.
+  //
+  //             Hardware   Spec
+  // Toward-0        3        0
+  // Nearest Even    0        1
+  // +Inf            1        2
+  // -Inf            2        3
+  //  NearestAway0  N/A       4
+  //
+  // We have to handle 16 permutations of a 4-bit value, so we create a 64-bit
+  // table we can index by the raw hardware mode.
+  //
+  // (trunc (FltRoundConversionTable >> MODE.fp_round)) & 0xf
+
+  SDValue BitTable =
+      DAG.getConstant(AMDGPU::FltRoundConversionTable, SL, MVT::i64);
+
+  SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+  SDValue RoundModeTimesNumBits =
+      DAG.getNode(ISD::SHL, SL, MVT::i32, GetReg, Two);
+
+  // TODO: We could possibly avoid a 64-bit shift and use a simpler table if we
+  // knew only one mode was demanded.
+  SDValue TableValue =
+      DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+  SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
+
+  SDValue EntryMask = DAG.getConstant(0xf, SL, MVT::i32);
+  SDValue TableEntry =
+      DAG.getNode(ISD::AND, SL, MVT::i32, TruncTable, EntryMask);
+
+  // There's a gap in the 4-bit encoded table and actual enum values, so offset
+  // if it's an extended value.
+  SDValue Four = DAG.getConstant(4, SL, MVT::i32);
+  SDValue IsStandardValue =
+      DAG.getSetCC(SL, MVT::i1, TableEntry, Four, ISD::SETULT);
+  SDValue EnumOffset = DAG.getNode(ISD::ADD, SL, MVT::i32, TableEntry, Four);
+  SDValue Result = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
+                               TableEntry, EnumOffset);
+
+  return DAG.getMergeValues({Result, GetReg.getValue(1)}, SL);
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5027,6 +5120,10 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerXMUL_LOHI(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::STACKSAVE:
+    return LowerSTACKSAVE(Op, DAG);
+  case ISD::GET_ROUNDING:
+    return lowerGET_ROUNDING(Op, DAG);
   }
   return SDValue();
 }
@@ -8620,8 +8717,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         IntrinsicID == Intrinsic::amdgcn_struct_ptr_buffer_load_lds;
     unsigned OpOffset = HasVIndex ? 1 : 0;
     SDValue VOffset = Op.getOperand(5 + OpOffset);
-    auto CVOffset = dyn_cast<ConstantSDNode>(VOffset);
-    bool HasVOffset = !CVOffset || !CVOffset->isZero();
+    bool HasVOffset = !isNullConstant(VOffset);
     unsigned Size = Op->getConstantOperandVal(4);
 
     switch (Size) {
@@ -9277,11 +9373,6 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
 
       // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
       // error seems really high at 2^29 ULP.
-
-      // XXX - do we need afn for this or is arcp sufficent?
-      if (RHS.getOpcode() == ISD::FSQRT)
-        return DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0));
-
       // 1.0 / x -> rcp(x)
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
     }
@@ -10436,6 +10527,25 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
     return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
   }
 
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND_INREG: {
+    SDValue NarrowOp = Op->getOperand(0);
+    auto NarrowVT = NarrowOp.getValueType();
+    if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG) {
+      auto *VTSign = cast<VTSDNode>(Op->getOperand(1));
+      NarrowVT = VTSign->getVT();
+    }
+    if (!NarrowVT.isByteSized())
+      return std::nullopt;
+    uint64_t NarrowByteWidth = NarrowVT.getStoreSize();
+
+    if (SrcIndex >= NarrowByteWidth)
+      return std::nullopt;
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
+  }
+
+  case ISD::SRA:
   case ISD::SRL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
@@ -10475,7 +10585,8 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   unsigned BitWidth = Op.getScalarValueSizeInBits();
   if (BitWidth % 8 != 0)
     return std::nullopt;
-  assert(Index < BitWidth / 8 && "invalid index requested");
+  if (Index > BitWidth / 8 - 1)
+    return std::nullopt;
 
   switch (Op.getOpcode()) {
   case ISD::OR: {
@@ -10518,6 +10629,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
   }
 
+  case ISD::SRA:
   case ISD::SRL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!ShiftOp)
@@ -10564,9 +10676,18 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND: {
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND_INREG:
+  case ISD::AssertZext:
+  case ISD::AssertSext: {
     SDValue NarrowOp = Op->getOperand(0);
-    unsigned NarrowBitWidth = NarrowOp.getScalarValueSizeInBits();
+    unsigned NarrowBitWidth = NarrowOp.getValueSizeInBits();
+    if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG ||
+        Op->getOpcode() == ISD::AssertZext ||
+        Op->getOpcode() == ISD::AssertSext) {
+      auto *VTSign = cast<VTSDNode>(Op->getOperand(1));
+      NarrowBitWidth = VTSign->getVT().getSizeInBits();
+    }
     if (NarrowBitWidth % 8 != 0)
       return std::nullopt;
     uint64_t NarrowByteWidth = NarrowBitWidth / 8;
@@ -10580,10 +10701,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::TRUNCATE: {
-    unsigned NarrowBitWidth = Op.getScalarValueSizeInBits();
-    if (NarrowBitWidth % 8 != 0)
-      return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
+    uint64_t NarrowByteWidth = BitWidth / 8;
 
     if (NarrowByteWidth >= Index) {
       return calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
@@ -10594,10 +10712,6 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   }
 
   case ISD::CopyFromReg: {
-    auto BitWidth = Op.getScalarValueSizeInBits();
-    if (BitWidth % 8)
-      llvm_unreachable("Invalid type in CopyFromReg");
-
     if (BitWidth / 8 > Index)
       return calculateSrcByte(Op, StartingIndex, Index);
 
@@ -10631,6 +10745,41 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), BitWidth / 8 - Index - 1,
                                  Depth + 1, StartingIndex);
+
+  case ISD::EXTRACT_VECTOR_ELT: {
+    auto IdxOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!IdxOp)
+      return std::nullopt;
+    auto VecIdx = IdxOp->getZExtValue();
+    auto ScalarSize = Op.getScalarValueSizeInBits();
+    if (ScalarSize != 32) {
+      if ((VecIdx + 1) * ScalarSize > 32)
+        return std::nullopt;
+      Index = ScalarSize == 8 ? VecIdx : VecIdx * 2 + Index;
+    }
+
+    return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
+                            StartingIndex, Index);
+  }
+
+  case AMDGPUISD::PERM: {
+    auto PermMask = dyn_cast<ConstantSDNode>(Op->getOperand(2));
+    if (!PermMask)
+      return std::nullopt;
+
+    auto IdxMask =
+        (PermMask->getZExtValue() & (0xFF << (Index * 8))) >> (Index * 8);
+    if (IdxMask > 0x07 && IdxMask != 0x0c)
+      return std::nullopt;
+
+    auto NextOp = Op.getOperand(IdxMask > 0x03 ? 0 : 1);
+    auto NextIndex = IdxMask > 0x03 ? IdxMask % 4 : IdxMask;
+
+    return IdxMask != 0x0c ? calculateSrcByte(NextOp, StartingIndex, NextIndex)
+                           : ByteProvider<SDValue>(
+                                 ByteProvider<SDValue>::getConstantZero());
+  }
+
   default: {
     return std::nullopt;
   }
@@ -10832,9 +10981,8 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         std::optional<ByteProvider<SDValue>> P =
             calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
         // TODO support constantZero
-        if (!P || P->isConstantZero()) {
+        if (!P || P->isConstantZero())
           return SDValue();
-        }
 
         PermNodes.push_back(*P);
       }
@@ -10870,7 +11018,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
                                               : *PermNodes[FirstSrc].Src;
 
       // Check that we are not just extracting the bytes in order from an op
-      if (Op == OtherOp) {
+      if (Op == OtherOp && Op.getValueSizeInBits() == 32) {
         int Low16 = PermMask & 0xffff;
         int Hi16 = (PermMask & 0xffff0000) >> 16;
 
@@ -10879,23 +11027,21 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
 
         // The perm op would really just produce Op. So combine into Op
         if (WellFormedLow && WellFormedHi)
-          return Op;
+          return DAG.getBitcast(MVT::getIntegerVT(32), Op);
       }
 
       if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
         SDLoc DL(N);
         assert(Op.getValueType().isByteSized() &&
                OtherOp.getValueType().isByteSized());
-        if (Op.getValueSizeInBits() < 32)
-          // If the ultimate src is less than 32 bits, then we will only be
-          // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
-          // CalculateByteProvider would not have returned Op as source if we
-          // used a byte that is outside its ValueType. Thus, we are free to
-          // ANY_EXTEND as the extended bits are dont-cares.
-          Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op);
 
-        if (OtherOp.getValueSizeInBits() < 32)
-          OtherOp = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Op);
+        // If the ultimate src is less than 32 bits, then we will only be
+        // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
+        // CalculateByteProvider would not have returned Op as source if we
+        // used a byte that is outside its ValueType. Thus, we are free to
+        // ANY_EXTEND as the extended bits are dont-cares.
+        Op = DAG.getBitcastedAnyExtOrTrunc(Op, DL, MVT::i32);
+        OtherOp = DAG.getBitcastedAnyExtOrTrunc(OtherOp, DL, MVT::i32);
 
         return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
                            DAG.getConstant(PermMask, DL, MVT::i32));
@@ -11046,10 +11192,8 @@ SDValue SITargetLowering::performClassCombine(SDNode *N,
   SDValue Mask = N->getOperand(1);
 
   // fp_class x, 0 -> false
-  if (const ConstantSDNode *CMask = dyn_cast<ConstantSDNode>(Mask)) {
-    if (CMask->isZero())
-      return DAG.getConstant(0, SDLoc(N), MVT::i1);
-  }
+  if (isNullConstant(Mask))
+    return DAG.getConstant(0, SDLoc(N), MVT::i1);
 
   if (N->getOperand(0).isUndef())
     return DAG.getUNDEF(MVT::i1);
@@ -11074,7 +11218,9 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
                            N->getFlags());
   }
 
-  if ((VT == MVT::f32 || VT == MVT::f16) && N0.getOpcode() == ISD::FSQRT) {
+  // TODO: Could handle f32 + amdgcn.sqrt but probably never reaches here.
+  if ((VT == MVT::f16 && N0.getOpcode() == ISD::FSQRT) &&
+      N->getFlags().hasAllowContract() && N0->getFlags().hasAllowContract()) {
     return DCI.DAG.getNode(AMDGPUISD::RSQ, SDLoc(N), VT,
                            N0.getOperand(0), N->getFlags());
   }
@@ -12229,6 +12375,193 @@ SDValue SITargetLowering::tryFoldToMad64_32(SDNode *N,
   return Accum;
 }
 
+// Collect the ultimate src of each of the mul24 node's operands, and confirm
+// each operand is 8 bytes.
+static std::optional<ByteProvider<SDValue>>
+handleMulOperand(const SDValue &MulOperand) {
+  auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
+  if (!Byte0 || Byte0->isConstantZero()) {
+    return std::nullopt;
+  }
+  auto Byte1 = calculateByteProvider(MulOperand, 1, 0);
+  if (Byte1 && !Byte1->isConstantZero()) {
+    return std::nullopt;
+  }
+  return Byte0;
+}
+
+static unsigned addPermMasks(unsigned First, unsigned Second) {
+  unsigned FirstCs = First & 0x0c0c0c0c;
+  unsigned SecondCs = Second & 0x0c0c0c0c;
+  unsigned FirstNoCs = First & ~0x0c0c0c0c;
+  unsigned SecondNoCs = Second & ~0x0c0c0c0c;
+
+  assert(FirstCs & 0xFF | SecondCs & 0xFF);
+  assert(FirstCs & 0xFF00 | SecondCs & 0xFF00);
+  assert(FirstCs & 0xFF0000 | SecondCs & 0xFF0000);
+  assert(FirstCs & 0xFF000000 | SecondCs & 0xFF000000);
+
+  return (FirstNoCs | SecondNoCs) | (FirstCs & SecondCs);
+}
+
+static void placeSources(ByteProvider<SDValue> &Src0,
+                         ByteProvider<SDValue> &Src1,
+                         SmallVectorImpl<std::pair<SDValue, unsigned>> &Src0s,
+                         SmallVectorImpl<std::pair<SDValue, unsigned>> &Src1s,
+                         int Step) {
+
+  assert(Src0.Src.has_value() && Src1.Src.has_value());
+  // Src0s and Src1s are empty, just place arbitrarily
+  if (Step == 0) {
+    Src0s.push_back({*Src0.Src, (Src0.SrcOffset << 24) + 0x0c0c0c});
+    Src1s.push_back({*Src1.Src, (Src1.SrcOffset << 24) + 0x0c0c0c});
+    return;
+  }
+
+  for (int BPI = 0; BPI < 2; BPI++) {
+    std::pair<ByteProvider<SDValue>, ByteProvider<SDValue>> BPP = {Src0, Src1};
+    if (BPI == 1) {
+      BPP = {Src1, Src0};
+    }
+    unsigned ZeroMask = 0x0c0c0c0c;
+    unsigned FMask = 0xFF << (8 * (3 - Step));
+
+    unsigned FirstMask =
+        BPP.first.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask);
+    unsigned SecondMask =
+        BPP.second.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask);
+    // Attempt to find Src vector which contains our SDValue, if so, add our
+    // perm mask to the existing one. If we are unable to find a match for the
+    // first SDValue, attempt to find match for the second.
+    int FirstGroup = -1;
+    for (int I = 0; I < 2; I++) {
+      SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs =
+          I == 0 ? Src0s : Src1s;
+      auto MatchesFirst = [&BPP](std::pair<SDValue, unsigned> IterElt) {
+        return IterElt.first == *BPP.first.Src;
+      };
+
+      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesFirst);
+      if (Match != Srcs.end()) {
+        Match->second = addPermMasks(FirstMask, Match->second);
+        FirstGroup = I;
+        break;
+      }
+    }
+    if (FirstGroup != -1) {
+      SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs =
+          FirstGroup == 1 ? Src0s : Src1s;
+      auto MatchesSecond = [&BPP](std::pair<SDValue, unsigned> IterElt) {
+        return IterElt.first == *BPP.second.Src;
+      };
+      auto Match = std::find_if(Srcs.begin(), Srcs.end(), MatchesSecond);
+      if (Match != Srcs.end()) {
+        Match->second = addPermMasks(SecondMask, Match->second);
+      } else
+        Srcs.push_back({*BPP.second.Src, SecondMask});
+      return;
+    }
+  }
+
+  // If we have made it here, then we could not find a match in Src0s or Src1s
+  // for either Src0 or Src1, so just place them arbitrarily.
+
+  unsigned ZeroMask = 0x0c0c0c0c;
+  unsigned FMask = 0xFF << (8 * (3 - Step));
+
+  Src0s.push_back(
+      {*Src0.Src, (Src0.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask))});
+  Src1s.push_back(
+      {*Src1.Src, (Src1.SrcOffset << (8 * (3 - Step)) | (ZeroMask & ~FMask))});
+
+  return;
+}
+
+static SDValue
+resolveSources(SelectionDAG &DAG, SDLoc SL,
+               SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs,
+               bool IsSigned, bool IsAny) {
+
+  // If we just have one source, just permute it accordingly.
+  if (Srcs.size() == 1) {
+    auto Elt = Srcs.begin();
+    auto EltVal = DAG.getBitcastedAnyExtOrTrunc(Elt->first, SL, MVT::i32);
+
+    // v_perm will produce the original value
+    if (Elt->second == 0x3020100)
+      return EltVal;
+
+    return DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, EltVal, EltVal,
+                       DAG.getConstant(Elt->second, SL, MVT::i32));
+  }
+
+  auto FirstElt = Srcs.begin();
+  auto SecondElt = std::next(FirstElt);
+
+  SmallVector<SDValue, 2> Perms;
+
+  // If we have multiple sources in the chain, combine them via perms (using
+  // calculated perm mask) and Ors.
+  while (true) {
+    auto FirstMask = FirstElt->second;
+    auto SecondMask = SecondElt->second;
+
+    unsigned FirstCs = FirstMask & 0x0c0c0c0c;
+    unsigned FirstPlusFour = FirstMask | 0x04040404;
+    // 0x0c + 0x04 = 0x10, so anding with 0x0F will produced 0x00 for any
+    // original 0x0C
+    FirstMask = (FirstPlusFour & 0x0F0F0F0F) | FirstCs;
+
+    auto PermMask = addPermMasks(FirstMask, SecondMask);
+    auto FirstVal =
+        DAG.getBitcastedAnyExtOrTrunc(FirstElt->first, SL, MVT::i32);
+    auto SecondVal =
+        DAG.getBitcastedAnyExtOrTrunc(SecondElt->first, SL, MVT::i32);
+
+    Perms.push_back(DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, FirstVal,
+                                SecondVal,
+                                DAG.getConstant(PermMask, SL, MVT::i32)));
+
+    FirstElt = std::next(SecondElt);
+    if (FirstElt == Srcs.end())
+      break;
+
+    SecondElt = std::next(FirstElt);
+    // If we only have a FirstElt, then just combine that into the cumulative
+    // source node
+    if (SecondElt == Srcs.end()) {
+      auto EltVal =
+          DAG.getBitcastedAnyExtOrTrunc(FirstElt->first, SL, MVT::i32);
+
+      Perms.push_back(
+          DAG.getNode(AMDGPUISD::PERM, SL, MVT::i32, EltVal, EltVal,
+                      DAG.getConstant(FirstElt->second, SL, MVT::i32)));
+      break;
+    }
+  }
+
+  assert(Perms.size() == 1 || Perms.size() == 2);
+  return Perms.size() == 2
+             ? DAG.getNode(ISD::OR, SL, MVT::i32, Perms[0], Perms[1])
+             : Perms[0];
+}
+
+static void fixMasks(SmallVectorImpl<std::pair<SDValue, unsigned>> &Srcs,
+                     unsigned ChainLength) {
+  for (auto &[EntryVal, EntryMask] : Srcs) {
+    EntryMask = EntryMask >> ((4 - ChainLength) * 8);
+    auto ZeroMask = ChainLength == 2 ? 0x0c0c0000 : 0x0c000000;
+    EntryMask += ZeroMask;
+  }
+}
+
+static bool isMul(const SDValue Op) {
+  auto Opcode = Op.getOpcode();
+
+  return (Opcode == ISD::MUL || Opcode == AMDGPUISD::MUL_U24 ||
+          Opcode == AMDGPUISD::MUL_I24);
+}
+
 SDValue SITargetLowering::performAddCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -12242,12 +12575,138 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       if (SDValue Folded = tryFoldToMad64_32(N, DCI))
         return Folded;
     }
-
-    return SDValue();
   }
 
   if (SDValue V = reassociateScalarOps(N, DAG)) {
     return V;
+  }
+
+  if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
+      (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
+    SDValue TempNode(N, 0);
+    auto MulIdx = isMul(LHS) ? 0 : 1;
+
+    auto MulOpcode = TempNode.getOperand(MulIdx).getOpcode();
+    bool IsSigned =
+        MulOpcode == AMDGPUISD::MUL_I24 ||
+        (MulOpcode == ISD::MUL &&
+         TempNode->getOperand(MulIdx)->getFlags().hasNoSignedWrap() &&
+         !TempNode->getOperand(MulIdx)->getFlags().hasNoUnsignedWrap());
+    SmallVector<std::pair<SDValue, unsigned>, 4> Src0s;
+    SmallVector<std::pair<SDValue, unsigned>, 4> Src1s;
+    SmallVector<SDValue, 4> Src2s;
+
+    // Match the v_dot4 tree, while collecting src nodes.
+    int ChainLength = 0;
+    for (int I = 0; I < 4; I++) {
+      auto MulIdx = isMul(LHS) ? 0 : isMul(RHS) ? 1 : -1;
+      if (MulIdx == -1)
+        break;
+      auto IterIsSigned =
+          MulOpcode == AMDGPUISD::MUL_I24 ||
+          (MulOpcode == ISD::MUL &&
+           TempNode->getOperand(MulIdx)->getFlags().hasNoSignedWrap() &&
+           !TempNode->getOperand(MulIdx)->getFlags().hasNoUnsignedWrap());
+      if (IterIsSigned != IsSigned) {
+        break;
+      }
+      auto Src0 = handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(0));
+      if (!Src0)
+        break;
+      auto Src1 = handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(1));
+      if (!Src1)
+        break;
+      placeSources(*Src0, *Src1, Src0s, Src1s, I);
+      auto AddIdx = 1 - MulIdx;
+      // Allow the special case where add (add (mul24, 0), mul24) became ->
+      // add (mul24, mul24)
+      if (I == 2 && isMul(TempNode->getOperand(AddIdx))) {
+        Src2s.push_back(TempNode->getOperand(AddIdx));
+        auto Src0 =
+            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(0));
+        if (!Src0)
+          break;
+        auto Src1 =
+            handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(1));
+        if (!Src1)
+          break;
+        placeSources(*Src0, *Src1, Src0s, Src1s, I + 1);
+        Src2s.push_back(DAG.getConstant(0, SL, MVT::i32));
+        ChainLength = I + 2;
+        break;
+      }
+
+      TempNode = TempNode->getOperand(AddIdx);
+      Src2s.push_back(TempNode);
+      ChainLength = I + 1;
+      if (TempNode->getNumOperands() < 2)
+        break;
+      LHS = TempNode->getOperand(0);
+      RHS = TempNode->getOperand(1);
+    }
+
+    if (ChainLength < 2)
+      return SDValue();
+
+    // Masks were constructed with assumption that we would find a chain of
+    // length 4. If not, then we need to 0 out the MSB bits (via perm mask of
+    // 0x0c) so they do not affect dot calculation.
+    if (ChainLength < 4) {
+      fixMasks(Src0s, ChainLength);
+      fixMasks(Src1s, ChainLength);
+    }
+
+    SDValue Src0, Src1;
+
+    // If we are just using a single source for both, and have permuted the
+    // bytes consistently, we can just use the sources without permuting
+    // (commutation)
+    bool UseOriginalSrc = false;
+    if (ChainLength == 4 && Src0s.size() == 1 && Src1s.size() == 1 &&
+        Src0s.begin()->second == Src1s.begin()->second &&
+        Src0s.begin()->first.getValueSizeInBits() == 32 &&
+        Src1s.begin()->first.getValueSizeInBits() == 32) {
+      SmallVector<unsigned, 4> SrcBytes;
+      auto Src0Mask = Src0s.begin()->second;
+      SrcBytes.push_back(Src0Mask & 0xFF000000);
+      bool UniqueEntries = true;
+      for (auto I = 1; I < 4; I++) {
+        auto NextByte = Src0Mask & (0xFF << ((3 - I) * 8));
+
+        if (is_contained(SrcBytes, NextByte)) {
+          UniqueEntries = false;
+          break;
+        }
+        SrcBytes.push_back(NextByte);
+      }
+
+      if (UniqueEntries) {
+        UseOriginalSrc = true;
+        // Must be 32 bits to enter above conditional
+        assert(Src0s.begin()->first.getValueSizeInBits() == 32);
+        assert(Src1s.begin()->first.getValueSizeInBits() == 32);
+        Src0 = DAG.getBitcast(MVT::getIntegerVT(32), Src0s.begin()->first);
+        Src1 = DAG.getBitcast(MVT::getIntegerVT(32), Src1s.begin()->first);
+      }
+    }
+
+    if (!UseOriginalSrc) {
+      Src0 = resolveSources(DAG, SL, Src0s, false, true);
+      Src1 = resolveSources(DAG, SL, Src1s, false, true);
+    }
+
+    SDValue Src2 =
+        DAG.getExtOrTrunc(IsSigned, Src2s[ChainLength - 1], SL, MVT::i32);
+
+    SDValue IID = DAG.getTargetConstant(IsSigned ? Intrinsic::amdgcn_sdot4
+                                                 : Intrinsic::amdgcn_udot4,
+                                        SL, MVT::i64);
+
+    assert(!VT.isVector());
+    auto Dot = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32, IID, Src0,
+                           Src1, Src2, DAG.getTargetConstant(0, SL, MVT::i1));
+
+    return DAG.getExtOrTrunc(IsSigned, Dot, SL, VT);
   }
 
   if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
@@ -12321,8 +12780,7 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
 
   if (LHS.getOpcode() == ISD::USUBO_CARRY) {
     // sub (usubo_carry x, 0, cc), y => usubo_carry x, y, cc
-    auto C = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
-    if (!C || !C->isZero())
+    if (!isNullConstant(LHS.getOperand(1)))
       return SDValue();
     SDValue Args[] = { LHS.getOperand(0), RHS, LHS.getOperand(2) };
     return DAG.getNode(ISD::USUBO_CARRY, SDLoc(N), LHS->getVTList(), Args);
@@ -12436,6 +12894,41 @@ SDValue SITargetLowering::performFSubCombine(SDNode *N,
       if (FusedOp != 0){
         const SDValue NegTwo = DAG.getConstantFP(-2.0, SL, VT);
         return DAG.getNode(FusedOp, SL, VT, A, NegTwo, LHS);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue SITargetLowering::performFDivCombine(SDNode *N,
+                                             DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::f16 || !Subtarget->has16BitInsts())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDNodeFlags Flags = N->getFlags();
+  SDNodeFlags RHSFlags = RHS->getFlags();
+  if (!Flags.hasAllowContract() || !RHSFlags.hasAllowContract() ||
+      !RHS->hasOneUse())
+    return SDValue();
+
+  if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
+    bool IsNegative = false;
+    if (CLHS->isExactlyValue(1.0) ||
+        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+      // fdiv contract 1.0, (sqrt contract x) -> rsq for f16
+      // fdiv contract -1.0, (sqrt contract x) -> fneg(rsq) for f16
+      if (RHS.getOpcode() == ISD::FSQRT) {
+        // TODO: Or in RHS flags, somehow missing from SDNodeFlags
+        SDValue Rsq =
+            DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0), Flags);
+        return IsNegative ? DAG.getNode(ISD::FNEG, SL, VT, Rsq, Flags) : Rsq;
       }
     }
   }
@@ -12706,6 +13199,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performFAddCombine(N, DCI);
   case ISD::FSUB:
     return performFSubCombine(N, DCI);
+  case ISD::FDIV:
+    return performFDivCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::FMAXNUM:
@@ -12969,7 +13464,11 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
         continue;
     } else {
       SDValue Op = DAG.getTargetConstant(Idx, SDLoc(User), MVT::i32);
-      DAG.UpdateNodeOperands(User, SDValue(NewNode, 0), Op);
+      SDNode *NewUser = DAG.UpdateNodeOperands(User, SDValue(NewNode, 0), Op);
+      if (NewUser != User) {
+        DAG.ReplaceAllUsesWith(SDValue(User, 0), SDValue(NewUser, 0));
+        DAG.RemoveDeadNode(User);
+      }
     }
 
     switch (Idx) {

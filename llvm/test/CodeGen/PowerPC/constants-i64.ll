@@ -378,12 +378,12 @@ entry:
 define i64 @imm19() {
 ; CHECK-LABEL: imm19:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  lis 3, -13105
-; CHECK-NEXT:  ori 3, 3, 52479
-; CHECK-NEXT:  rldic 3, 3, 32, 0
-; CHECK-NEXT:  oris 3, 3, 52431
-; CHECK-NEXT:  ori 3, 3, 291
-; CHECK-NEXT:  blr
+; CHECK-NEXT:    lis 3, -13105
+; CHECK-NEXT:    ori 3, 3, 52479
+; CHECK-NEXT:    rldic 3, 3, 32, 0
+; CHECK-NEXT:    oris 3, 3, 52431
+; CHECK-NEXT:    ori 3, 3, 291
+; CHECK-NEXT:    blr
 entry:
   ret i64 14758239902941249827 ;0xCCCFCCFFCCCF0123
 }
@@ -391,11 +391,11 @@ entry:
 define i64 @imm20() {
 ; CHECK-LABEL: imm20:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  lis 3, 291
-; CHECK-NEXT:  ori 3, 3, 52479
-; CHECK-NEXT:  rldimi 3, 3, 32, 0
-; CHECK-NEXT:  rldimi 3, 3, 48, 0
-; CHECK-NEXT:  blr
+; CHECK-NEXT:    lis 3, 291
+; CHECK-NEXT:    ori 3, 3, 52479
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    rldimi 3, 3, 48, 0
+; CHECK-NEXT:    blr
 entry:
   ret i64 14771750698406366463 ;0xCCFFCCFF0123CCFF
 }
@@ -403,11 +403,11 @@ entry:
 define i64 @imm21() {
 ; CHECK-LABEL: imm21:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  lis 3, -13057
-; CHECK-NEXT:  ori 3, 3, 291
-; CHECK-NEXT:  rldimi 3, 3, 32, 0
-; CHECK-NEXT:  rlwimi 3, 3, 16, 16, 31
-; CHECK-NEXT:  blr
+; CHECK-NEXT:    lis 3, -13057
+; CHECK-NEXT:    ori 3, 3, 291
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    rlwimi 3, 3, 16, 16, 31
+; CHECK-NEXT:    blr
 entry:
   ret i64 14771526556073315583 ;0xCCFF0123CCFFCCFF
 }
@@ -415,13 +415,33 @@ entry:
 define i64 @imm22() {
 ; CHECK-LABEL: imm22:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  lis 3, 291
-; CHECK-NEXT:  ori 3, 3, 52479
-; CHECK-NEXT:  rldimi 3, 3, 32, 0
-; CHECK-NEXT:  rlwimi 3, 3, 16, 0, 15
-; CHECK-NEXT:  blr
+; CHECK-NEXT:    lis 3, 291
+; CHECK-NEXT:    ori 3, 3, 52479
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    rlwimi 3, 3, 16, 0, 15
+; CHECK-NEXT:    blr
 entry:
   ret i64 82134617250843903 ;0x0123CCFFCCFFCCFF
+}
+
+define i64 @imm23() {
+; CHECK-LABEL: imm23:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li 3, 32767
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    blr
+entry:
+  ret i64 140733193420799 ;0x00007FFF00007FFF
+}
+
+define i64 @imm24() {
+; CHECK-LABEL: imm24:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lis 3, -9
+; CHECK-NEXT:    rldimi 3, 3, 32, 0
+; CHECK-NEXT:    blr
+entry:
+  ret i64 18444210803213533184 ;0xFFF70000FFF70000
 }
 
 attributes #0 = { nounwind readnone }

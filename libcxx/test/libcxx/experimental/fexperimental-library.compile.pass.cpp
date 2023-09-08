@@ -28,5 +28,9 @@
 #endif
 
 #ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
-#  error "-fexperimental-library should enable the PSTL"
+#  error "-fexperimental-library should enable the stop_token"
+#endif
+
+#ifdef _LIBCPP_HAS_NO_INCOMPLETE_TZDB
+#  error "-fexperimental-library should enable the chrono TZDB"
 #endif

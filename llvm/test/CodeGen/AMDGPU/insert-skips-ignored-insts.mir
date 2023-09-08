@@ -2,7 +2,6 @@
 
 ---
 
-# FIXME: RemoveShortExecBranches should not count dbg_value instructions.
 # CHECK-LABEL: name: no_count_dbg_value
 # CHECK: $vgpr1 = V_MOV_B32_e32 7, implicit $exec
 # CHECK-NOT: S_CBRANCH_EXECZ
@@ -17,6 +16,11 @@ body: |
   bb.1:
     successors: %bb.2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    DBG_VALUE
+    DBG_VALUE
+    DBG_VALUE
+    DBG_VALUE
+    DBG_VALUE
     DBG_VALUE
 
   bb.2:

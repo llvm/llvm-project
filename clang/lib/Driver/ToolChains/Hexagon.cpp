@@ -369,12 +369,12 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
-        linkSanitizerRuntimeDeps(HTC, CmdArgs);
+        linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
 
         CmdArgs.push_back("-lunwind");
       }
       if (NeedsXRayDeps)
-        linkXRayRuntimeDeps(HTC, CmdArgs);
+        linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       CmdArgs.push_back("-lc");
@@ -383,6 +383,11 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (HTC.ShouldLinkCXXStdlib(Args))
         HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
     }
+    const ToolChain::path_list &LibPaths = HTC.getFilePaths();
+    for (const auto &LibPath : LibPaths)
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+    Args.ClaimAllArgs(options::OPT_L);
+    return;
   }
 
   //----------------------------------------------------------------------------

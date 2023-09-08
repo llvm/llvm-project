@@ -65,27 +65,29 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uw
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    punpklo p2.h, p2.b
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpkhi p3.h, p1.b
-; CHECK-NEXT:    punpkhi p4.h, p2.b
 ; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    punpklo p2.h, p2.b
+; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    punpkhi p4.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p5.h, p3.b
-; CHECK-NEXT:    uzp1 p4.s, p4.s, p0.s
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
-; CHECK-NEXT:    uzp1 p2.s, p5.s, p2.s
-; CHECK-NEXT:    punpkhi p5.h, p1.b
+; CHECK-NEXT:    punpkhi p6.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    uzp1 p3.s, p5.s, p3.s
+; CHECK-NEXT:    uzp1 p2.s, p5.s, p2.s
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p3.s, p6.s, p3.s
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    uzp1 p4.s, p4.s, p0.s
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
 ; CHECK-NEXT:    uzp1 p1.h, p2.h, p4.h
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
@@ -556,18 +558,18 @@ define <vscale x 14 x i8> @extract_nxv14i8_nxv28i8_14(<vscale x 28 x i8> %in) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.h, z1.b
+; CHECK-NEXT:    uunpkhi z1.h, z1.b
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z4.s, z2.h
+; CHECK-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    uunpklo z5.d, z4.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    uunpkhi z2.s, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
@@ -580,8 +582,8 @@ define <vscale x 14 x i8> @extract_nxv14i8_nxv28i8_14(<vscale x 28 x i8> %in) {
 ; CHECK-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-NEXT:    uzp1 z3.s, z4.s, z3.s
 ; CHECK-NEXT:    uunpklo z4.d, z2.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z3.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpkhi z3.s, z0.h
@@ -596,8 +598,8 @@ define <vscale x 14 x i8> @extract_nxv14i8_nxv28i8_14(<vscale x 28 x i8> %in) {
 ; CHECK-NEXT:    uunpkhi z4.d, z4.s
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.d, z1.s
-; CHECK-NEXT:    uzp1 z2.h, z2.h, z3.h
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    uzp1 z2.h, z2.h, z3.h
 ; CHECK-NEXT:    uzp1 z2.b, z0.b, z2.b
 ; CHECK-NEXT:    uunpkhi z2.h, z2.b
 ; CHECK-NEXT:    uunpklo z3.s, z2.h

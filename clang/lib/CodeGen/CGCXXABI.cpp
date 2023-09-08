@@ -312,8 +312,7 @@ void CGCXXABI::setCXXDestructorDLLStorage(llvm::GlobalValue *GV,
 llvm::GlobalValue::LinkageTypes CGCXXABI::getCXXDestructorLinkage(
     GVALinkage Linkage, const CXXDestructorDecl *Dtor, CXXDtorType DT) const {
   // Delegate back to CGM by default.
-  return CGM.getLLVMLinkageForDeclarator(Dtor, Linkage,
-                                         /*IsConstantVariable=*/false);
+  return CGM.getLLVMLinkageForDeclarator(Dtor, Linkage);
 }
 
 bool CGCXXABI::NeedsVTTParameter(GlobalDecl GD) {

@@ -604,14 +604,14 @@ def atomic_store_64_glue : PatFrag <
 }
 
 let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
-def atomic_store_8_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_8_glue node:$ptr, node:$val)>;
-def atomic_store_16_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_16_glue node:$ptr, node:$val)>;
-def atomic_store_32_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_32_glue node:$ptr, node:$val)>;
-def atomic_store_64_local_m0 : PatFrag<(ops node:$ptr, node:$val),
-                                       (atomic_store_64_glue node:$ptr, node:$val)>;
+def atomic_store_8_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_8_glue node:$val, node:$ptr)>;
+def atomic_store_16_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_16_glue node:$val, node:$ptr)>;
+def atomic_store_32_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_32_glue node:$val, node:$ptr)>;
+def atomic_store_64_local_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                       (atomic_store_64_glue node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = StoreAddress_local.AddrSpaces
 
 

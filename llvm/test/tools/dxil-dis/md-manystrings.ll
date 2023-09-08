@@ -1,0 +1,74 @@
+; RUN: llc --filetype=obj %s -o - | dxil-dis | FileCheck %s
+; Make sure that DXILBitcodeWriter can handle more than 20 or so strings
+; without crashing.
+
+target triple = "dxil-unknown-shadermodel6.7-library"
+
+!llvm.too_many_strings = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31}
+
+!0 = !{!"String 0"}
+!1 = !{!"String 1"}
+!2 = !{!"String 2"}
+!3 = !{!"String 3"}
+!4 = !{!"String 4"}
+!5 = !{!"String 5"}
+!6 = !{!"String 6"}
+!7 = !{!"String 7"}
+!8 = !{!"String 8"}
+!9 = !{!"String 9"}
+!10 = !{!"String 10"}
+!11 = !{!"String 11"}
+!12 = !{!"String 12"}
+!13 = !{!"String 13"}
+!14 = !{!"String 14"}
+!15 = !{!"String 15"}
+!16 = !{!"String 16"}
+!17 = !{!"String 17"}
+!18 = !{!"String 18"}
+!19 = !{!"String 19"}
+!20 = !{!"String 20"}
+!21 = !{!"String 21"}
+!22 = !{!"String 22"}
+!23 = !{!"String 23"}
+!24 = !{!"String 24"}
+!25 = !{!"String 25"}
+!26 = !{!"String 26"}
+!27 = !{!"String 27"}
+!28 = !{!"String 28"}
+!29 = !{!"String 29"}
+!30 = !{!"String 30"}
+!31 = !{!"String 31"}
+
+; CHECK: !llvm.too_many_strings = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31}
+; CHECK: !0 = !{!"String 0"}
+; CHECK: !1 = !{!"String 1"}
+; CHECK: !2 = !{!"String 2"}
+; CHECK: !3 = !{!"String 3"}
+; CHECK: !4 = !{!"String 4"}
+; CHECK: !5 = !{!"String 5"}
+; CHECK: !6 = !{!"String 6"}
+; CHECK: !7 = !{!"String 7"}
+; CHECK: !8 = !{!"String 8"}
+; CHECK: !9 = !{!"String 9"}
+; CHECK: !10 = !{!"String 10"}
+; CHECK: !11 = !{!"String 11"}
+; CHECK: !12 = !{!"String 12"}
+; CHECK: !13 = !{!"String 13"}
+; CHECK: !14 = !{!"String 14"}
+; CHECK: !15 = !{!"String 15"}
+; CHECK: !16 = !{!"String 16"}
+; CHECK: !17 = !{!"String 17"}
+; CHECK: !18 = !{!"String 18"}
+; CHECK: !19 = !{!"String 19"}
+; CHECK: !20 = !{!"String 20"}
+; CHECK: !21 = !{!"String 21"}
+; CHECK: !22 = !{!"String 22"}
+; CHECK: !23 = !{!"String 23"}
+; CHECK: !24 = !{!"String 24"}
+; CHECK: !25 = !{!"String 25"}
+; CHECK: !26 = !{!"String 26"}
+; CHECK: !27 = !{!"String 27"}
+; CHECK: !28 = !{!"String 28"}
+; CHECK: !29 = !{!"String 29"}
+; CHECK: !30 = !{!"String 30"}
+; CHECK: !31 = !{!"String 31"}

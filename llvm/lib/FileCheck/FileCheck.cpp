@@ -78,18 +78,9 @@ Expected<std::string> ExpressionFormat::getWildcardRegex() const {
 }
 
 Expected<std::string>
-ExpressionFormat::getMatchingString(ExpressionValue IntegerValue) const {
-  APInt IntValue = IntegerValue.getAPIntValue();
-  // Error out for values that cannot be represented by the appropriate 64-bit
-  // integer (e.g. int64_t for a signed format) to keep the getter of
-  // ExpressionValue as an APInt an NFC.
-  if (Value == Kind::Signed) {
-    if (!IntValue.isSignedIntN(64))
-      return make_error<OverflowError>();
-  } else {
-    if (!IntValue.isIntN(64))
-      return make_error<OverflowError>();
-  }
+ExpressionFormat::getMatchingString(APInt IntValue) const {
+  if (Value != Kind::Signed && IntValue.isNegative())
+    return make_error<OverflowError>();
 
   unsigned Radix;
   bool UpperCase = false;
@@ -129,140 +120,122 @@ ExpressionFormat::getMatchingString(ExpressionValue IntegerValue) const {
       .str();
 }
 
-Expected<ExpressionValue>
-ExpressionFormat::valueFromStringRepr(StringRef StrVal,
-                                      const SourceMgr &SM) const {
+static unsigned nextAPIntBitWidth(unsigned BitWidth) {
+  return (BitWidth < APInt::APINT_BITS_PER_WORD) ? APInt::APINT_BITS_PER_WORD
+                                                 : BitWidth * 2;
+}
+
+static APInt toSigned(APInt AbsVal, bool Negative) {
+  if (AbsVal.isSignBitSet())
+    AbsVal = AbsVal.zext(nextAPIntBitWidth(AbsVal.getBitWidth()));
+  APInt Result = AbsVal;
+  if (Negative)
+    Result.negate();
+  return Result;
+}
+
+APInt ExpressionFormat::valueFromStringRepr(StringRef StrVal,
+                                            const SourceMgr &SM) const {
   bool ValueIsSigned = Value == Kind::Signed;
-  // Both the FileCheck utility and library only call this method with a valid
-  // value in StrVal. This is guaranteed by the regex returned by
-  // getWildcardRegex() above. Only underflow and overflow errors can thus
-  // occur. However new uses of this method could be added in the future so
-  // the error message does not make assumptions about StrVal.
-  StringRef IntegerParseErrorStr = "unable to represent numeric value";
-  if (ValueIsSigned) {
-    int64_t SignedValue;
-
-    if (StrVal.getAsInteger(10, SignedValue))
-      return ErrorDiagnostic::get(SM, StrVal, IntegerParseErrorStr);
-
-    return ExpressionValue(SignedValue);
-  }
-
+  bool Negative = StrVal.consume_front("-");
   bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
-  uint64_t UnsignedValue;
-  bool MissingFormPrefix = AlternateForm && !StrVal.consume_front("0x");
+  bool MissingFormPrefix =
+      !ValueIsSigned && AlternateForm && !StrVal.consume_front("0x");
   (void)MissingFormPrefix;
   assert(!MissingFormPrefix && "missing alternate form prefix");
-  if (StrVal.getAsInteger(Hex ? 16 : 10, UnsignedValue))
-    return ErrorDiagnostic::get(SM, StrVal, IntegerParseErrorStr);
-
-  return ExpressionValue(UnsignedValue);
+  APInt ResultValue;
+  [[maybe_unused]] bool ParseFailure =
+      StrVal.getAsInteger(Hex ? 16 : 10, ResultValue);
+  // Both the FileCheck utility and library only call this method with a valid
+  // value in StrVal. This is guaranteed by the regex returned by
+  // getWildcardRegex() above.
+  assert(!ParseFailure && "unable to represent numeric value");
+  return toSigned(ResultValue, Negative);
 }
 
-Expected<ExpressionValue> llvm::operator+(const ExpressionValue &LeftOperand,
-                                          const ExpressionValue &RightOperand) {
-  bool Overflow;
-  APInt Result = LeftOperand.getAPIntValue().sadd_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  if (Overflow ||
-      (Result.isNegative() && !Result.isSignedIntN(Result.getBitWidth() - 1)))
-    return make_error<OverflowError>();
-
-  if (Result.isNegative())
-    return ExpressionValue(Result.getSExtValue());
-  else
-    return ExpressionValue(Result.getZExtValue());
+Expected<APInt> llvm::exprAdd(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  return LeftOperand.sadd_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::operator-(const ExpressionValue &LeftOperand,
-                                          const ExpressionValue &RightOperand) {
-  bool Overflow;
-  APInt Result = LeftOperand.getAPIntValue().ssub_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  if (Overflow ||
-      (Result.isNegative() && !Result.isSignedIntN(Result.getBitWidth() - 1)))
-    return make_error<OverflowError>();
-
-  if (Result.isNegative())
-    return ExpressionValue(Result.getSExtValue());
-  else
-    return ExpressionValue(Result.getZExtValue());
+Expected<APInt> llvm::exprSub(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  return LeftOperand.ssub_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::operator*(const ExpressionValue &LeftOperand,
-                                          const ExpressionValue &RightOperand) {
-  bool Overflow;
-  APInt Result = LeftOperand.getAPIntValue().smul_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  if (Overflow ||
-      (Result.isNegative() && !Result.isSignedIntN(Result.getBitWidth() - 1)))
-    return make_error<OverflowError>();
-
-  if (Result.isNegative())
-    return ExpressionValue(Result.getSExtValue());
-  else
-    return ExpressionValue(Result.getZExtValue());
+Expected<APInt> llvm::exprMul(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  return LeftOperand.smul_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::operator/(const ExpressionValue &LeftOperand,
-                                          const ExpressionValue &RightOperand) {
+Expected<APInt> llvm::exprDiv(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
   // Check for division by zero.
-  if (RightOperand.getAPIntValue().isZero())
+  if (RightOperand.isZero())
     return make_error<OverflowError>();
 
-  bool Overflow;
-  APInt Result = LeftOperand.getAPIntValue().sdiv_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  if (Overflow ||
-      (Result.isNegative() && !Result.isSignedIntN(Result.getBitWidth() - 1)))
-    return make_error<OverflowError>();
-
-  if (Result.isNegative())
-    return ExpressionValue(Result.getSExtValue());
-  else
-    return ExpressionValue(Result.getZExtValue());
+  return LeftOperand.sdiv_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::max(const ExpressionValue &LeftOperand,
-                                    const ExpressionValue &RightOperand) {
-  return LeftOperand.getAPIntValue().slt(RightOperand.getAPIntValue())
-             ? RightOperand
-             : LeftOperand;
+Expected<APInt> llvm::exprMax(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  Overflow = false;
+  return LeftOperand.slt(RightOperand) ? RightOperand : LeftOperand;
 }
 
-Expected<ExpressionValue> llvm::min(const ExpressionValue &LeftOperand,
-                                    const ExpressionValue &RightOperand) {
-  if (cantFail(max(LeftOperand, RightOperand)).getAPIntValue() ==
-      LeftOperand.getAPIntValue())
+Expected<APInt> llvm::exprMin(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  Overflow = false;
+  if (cantFail(exprMax(LeftOperand, RightOperand, Overflow)) == LeftOperand)
     return RightOperand;
 
   return LeftOperand;
 }
 
-Expected<ExpressionValue> NumericVariableUse::eval() const {
-  std::optional<ExpressionValue> Value = Variable->getValue();
+Expected<APInt> NumericVariableUse::eval() const {
+  std::optional<APInt> Value = Variable->getValue();
   if (Value)
     return *Value;
 
   return make_error<UndefVarError>(getExpressionStr());
 }
 
-Expected<ExpressionValue> BinaryOperation::eval() const {
-  Expected<ExpressionValue> LeftOp = LeftOperand->eval();
-  Expected<ExpressionValue> RightOp = RightOperand->eval();
+Expected<APInt> BinaryOperation::eval() const {
+  Expected<APInt> MaybeLeftOp = LeftOperand->eval();
+  Expected<APInt> MaybeRightOp = RightOperand->eval();
 
   // Bubble up any error (e.g. undefined variables) in the recursive
   // evaluation.
-  if (!LeftOp || !RightOp) {
+  if (!MaybeLeftOp || !MaybeRightOp) {
     Error Err = Error::success();
-    if (!LeftOp)
-      Err = joinErrors(std::move(Err), LeftOp.takeError());
-    if (!RightOp)
-      Err = joinErrors(std::move(Err), RightOp.takeError());
+    if (!MaybeLeftOp)
+      Err = joinErrors(std::move(Err), MaybeLeftOp.takeError());
+    if (!MaybeRightOp)
+      Err = joinErrors(std::move(Err), MaybeRightOp.takeError());
     return std::move(Err);
   }
 
-  return EvalBinop(*LeftOp, *RightOp);
+  APInt LeftOp = *MaybeLeftOp;
+  APInt RightOp = *MaybeRightOp;
+  bool Overflow;
+  // Ensure both operands have the same bitwidth.
+  unsigned LeftBitWidth = LeftOp.getBitWidth();
+  unsigned RightBitWidth = RightOp.getBitWidth();
+  unsigned NewBitWidth = std::max(LeftBitWidth, RightBitWidth);
+  LeftOp = LeftOp.sext(NewBitWidth);
+  RightOp = RightOp.sext(NewBitWidth);
+  do {
+    Expected<APInt> MaybeResult = EvalBinop(LeftOp, RightOp, Overflow);
+    if (!MaybeResult)
+      return MaybeResult.takeError();
+
+    if (!Overflow)
+      return MaybeResult;
+
+    NewBitWidth = nextAPIntBitWidth(NewBitWidth);
+    LeftOp = LeftOp.sext(NewBitWidth);
+    RightOp = RightOp.sext(NewBitWidth);
+  } while (true);
 }
 
 Expected<ExpressionFormat>
@@ -295,8 +268,7 @@ BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
 Expected<std::string> NumericSubstitution::getResult() const {
   assert(ExpressionPointer->getAST() != nullptr &&
          "Substituting empty expression");
-  Expected<ExpressionValue> EvaluatedValue =
-      ExpressionPointer->getAST()->eval();
+  Expected<APInt> EvaluatedValue = ExpressionPointer->getAST()->eval();
   if (!EvaluatedValue)
     return EvaluatedValue.takeError();
   ExpressionFormat Format = ExpressionPointer->getFormat();
@@ -466,21 +438,17 @@ Expected<std::unique_ptr<ExpressionAST>> Pattern::parseNumericOperand(
   }
 
   // Otherwise, parse it as a literal.
-  int64_t SignedLiteralValue;
-  uint64_t UnsignedLiteralValue;
+  APInt LiteralValue;
   StringRef SaveExpr = Expr;
-  // Accept both signed and unsigned literal, default to signed literal.
+  bool Negative = Expr.consume_front("-");
   if (!Expr.consumeInteger((AO == AllowedOperand::LegacyLiteral) ? 10 : 0,
-                           UnsignedLiteralValue))
+                           LiteralValue)) {
+    LiteralValue = toSigned(LiteralValue, Negative);
     return std::make_unique<ExpressionLiteral>(SaveExpr.drop_back(Expr.size()),
-                                               UnsignedLiteralValue);
-  Expr = SaveExpr;
-  if (AO == AllowedOperand::Any && !Expr.consumeInteger(0, SignedLiteralValue))
-    return std::make_unique<ExpressionLiteral>(SaveExpr.drop_back(Expr.size()),
-                                               SignedLiteralValue);
-
+                                               LiteralValue);
+  }
   return ErrorDiagnostic::get(
-      SM, Expr,
+      SM, SaveExpr,
       Twine("invalid ") +
           (MaybeInvalidConstraint ? "matching constraint or " : "") +
           "operand format");
@@ -535,10 +503,10 @@ Pattern::parseBinop(StringRef Expr, StringRef &RemainingExpr,
   binop_eval_t EvalBinop;
   switch (Operator) {
   case '+':
-    EvalBinop = operator+;
+    EvalBinop = exprAdd;
     break;
   case '-':
-    EvalBinop = operator-;
+    EvalBinop = exprSub;
     break;
   default:
     return ErrorDiagnostic::get(
@@ -572,12 +540,12 @@ Pattern::parseCallExpr(StringRef &Expr, StringRef FuncName,
   assert(Expr.startswith("("));
 
   auto OptFunc = StringSwitch<binop_eval_t>(FuncName)
-                     .Case("add", operator+)
-                     .Case("div", operator/)
-                     .Case("max", max)
-                     .Case("min", min)
-                     .Case("mul", operator*)
-                     .Case("sub", operator-)
+                     .Case("add", exprAdd)
+                     .Case("div", exprDiv)
+                     .Case("max", exprMax)
+                     .Case("min", exprMin)
+                     .Case("mul", exprMul)
+                     .Case("sub", exprSub)
                      .Default(nullptr);
 
   if (!OptFunc)
@@ -1124,7 +1092,8 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
   if (!Substitutions.empty()) {
     TmpStr = RegExStr;
     if (LineNumber)
-      Context->LineVariable->setValue(ExpressionValue(*LineNumber));
+      Context->LineVariable->setValue(
+          APInt(sizeof(*LineNumber) * 8, *LineNumber));
 
     size_t InsertOffset = 0;
     // Substitute all string variables and expressions whose values are only
@@ -1203,11 +1172,8 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
 
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
-    Expected<ExpressionValue> Value =
-        Format.valueFromStringRepr(MatchedValue, SM);
-    if (!Value)
-      return MatchResult(TheMatch, Value.takeError());
-    DefinedNumericVariable->setValue(*Value, MatchedValue);
+    APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 
   return MatchResult(TheMatch, Error::success());
@@ -2590,7 +2556,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // to, since the expression of a command-line variable definition should
       // only use variables defined earlier on the command-line. If not, this
       // is an error and we report it.
-      Expected<ExpressionValue> Value = Expression->getAST()->eval();
+      Expected<APInt> Value = Expression->getAST()->eval();
       if (!Value) {
         Errs = joinErrors(std::move(Errs), Value.takeError());
         continue;

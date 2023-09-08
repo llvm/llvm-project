@@ -9,13 +9,13 @@
 // extension that allows you to elide the second argument.
 int a;
 _Static_assert(a, ""); // expected-error {{static assertion expression is not an integral constant expression}}
-_Static_assert(1);     // expected-warning {{'_Static_assert' with no message is a C2x extension}}
+_Static_assert(1);     // expected-warning {{'_Static_assert' with no message is a C23 extension}}
 
 // Test functional requirements
 _Static_assert(1, "this works");
 _Static_assert(0, "this fails"); // expected-error {{static assertion failed: this fails}}
 _Static_assert(0); // expected-error {{static assertion failed}} \
-                      expected-warning {{'_Static_assert' with no message is a C2x extension}}
+                      expected-warning {{'_Static_assert' with no message is a C23 extension}}
 
 // Test declaration contexts. We've already demonstrated that file scope works.
 struct S {
@@ -58,9 +58,7 @@ void test(void) {
   _Static_assert(1.0f, "this should not compile"); // expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
 }
 
-// FIXME: This is using the placeholder date Clang produces for the macro in
-// C2x mode; switch to the correct value once it's been published.
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 // The use of a _Static_assert in a K&R C function definition is prohibited per
 // 6.9.1p6 requiring each declaration to have a declarator (which a static
 // assertion does not have) and only declare identifiers from the identifier
@@ -68,7 +66,7 @@ void test(void) {
 // The error about expecting a ';' is due to the static assertion confusing the
 // compiler. It'd be nice if we improved the diagnostics here, but because this
 // involves a K&R C declaration, it's low priority.
-void knr(a, b, c) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+void knr(a, b, c) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
   int a, b; // expected-error {{expected ';' at end of declaration}}
   _Static_assert(1, "this should not compile"); // expected-error {{expected identifier or '('}} \
                                                    expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}}

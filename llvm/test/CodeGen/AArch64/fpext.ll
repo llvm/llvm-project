@@ -180,26 +180,10 @@ entry:
 }
 
 define <3 x float> @fpext_v3f16_v3f32(<3 x half> %a) {
-; CHECK-SD-LABEL: fpext_v3f16_v3f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fpext_v3f16_v3f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
-; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[3], v0.s[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fpext_v3f16_v3f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    ret
 entry:
   %c = fpext <3 x half> %a to <3 x float>
   ret <3 x float> %c

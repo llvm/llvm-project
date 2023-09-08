@@ -15,12 +15,12 @@ namespace mlir {
 
 /// Lowering for memory allocation ops.
 struct AllocationOpLLVMLowering : public ConvertToLLVMPattern {
-  using ConvertToLLVMPattern::createIndexConstant;
+  using ConvertToLLVMPattern::createIndexAttrConstant;
   using ConvertToLLVMPattern::getIndexType;
   using ConvertToLLVMPattern::getVoidPtrType;
 
   explicit AllocationOpLLVMLowering(StringRef opName,
-                                    LLVMTypeConverter &converter,
+                                    const LLVMTypeConverter &converter,
                                     PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(opName, &converter.getContext(), converter,
                              benefit) {}
@@ -43,7 +43,9 @@ protected:
     MemRefType memRefType = op.getType();
     Value alignment;
     if (auto alignmentAttr = op.getAlignment()) {
-      alignment = createIndexConstant(rewriter, loc, *alignmentAttr);
+      Type indexType = getIndexType();
+      alignment =
+          createIndexAttrConstant(rewriter, loc, indexType, *alignmentAttr);
     } else if (!memRefType.getElementType().isSignlessIntOrIndexOrFloat()) {
       // In the case where no alignment is specified, we may want to override
       // `malloc's` behavior. `malloc` typically aligns at the size of the
@@ -105,7 +107,7 @@ private:
 /// Lowering for AllocOp and AllocaOp.
 struct AllocLikeOpLLVMLowering : public AllocationOpLLVMLowering {
   explicit AllocLikeOpLLVMLowering(StringRef opName,
-                                   LLVMTypeConverter &converter,
+                                   const LLVMTypeConverter &converter,
                                    PatternBenefit benefit = 1)
       : AllocationOpLLVMLowering(opName, converter, benefit) {}
 

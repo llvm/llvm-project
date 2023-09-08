@@ -777,8 +777,8 @@ public:
 
     // ~forward_list() = default;
 
-    template <class _InputIterator>
-    __enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>
+    template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
+    void
     _LIBCPP_HIDE_FROM_ABI assign(_InputIterator __f, _InputIterator __l);
 
 #if _LIBCPP_STD_VER >= 23
@@ -872,9 +872,9 @@ public:
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, const value_type& __v);
     _LIBCPP_HIDE_FROM_ABI iterator insert_after(const_iterator __p, size_type __n, const value_type& __v);
-    template <class _InputIterator>
+    template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY
-    __enable_if_t<__has_input_iterator_category<_InputIterator>::value, iterator>
+    iterator
         insert_after(const_iterator __p, _InputIterator __f, _InputIterator __l);
 
 #if _LIBCPP_STD_VER >= 23
@@ -1170,8 +1170,8 @@ forward_list<_Tp, _Alloc>::operator=(initializer_list<value_type> __il)
 #endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
-template <class _InputIterator>
-__enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>
+template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> >
+void
 forward_list<_Tp, _Alloc>::assign(_InputIterator __f, _InputIterator __l)
 {
   __assign_with_sentinel(__f, __l);
@@ -1376,8 +1376,8 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n,
 }
 
 template <class _Tp, class _Alloc>
-template <class _InputIterator>
-__enable_if_t<__has_input_iterator_category<_InputIterator>::value, typename forward_list<_Tp, _Alloc>::iterator>
+template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> >
+typename forward_list<_Tp, _Alloc>::iterator
 forward_list<_Tp, _Alloc>::insert_after(const_iterator __p,
                                         _InputIterator __f, _InputIterator __l)
 {

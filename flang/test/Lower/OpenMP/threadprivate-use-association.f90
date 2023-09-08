@@ -3,7 +3,7 @@
 
 !RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
 
-!CHECK-DAG: fir.global common @_QCblk(dense<0> : vector<24xi8>) : !fir.array<24xi8>
+!CHECK-DAG: fir.global common @blk_(dense<0> : vector<24xi8>) : !fir.array<24xi8>
 !CHECK-DAG: fir.global @_QMtestEy : f32 {
 
 module test
@@ -16,7 +16,7 @@ module test
 contains
   subroutine sub()
 ! CHECK-LABEL: @_QMtestPsub
-!CHECK-DAG:   [[ADDR0:%.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<24xi8>>
+!CHECK-DAG:   [[ADDR0:%.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<24xi8>>
 !CHECK-DAG:   [[NEWADDR0:%.*]] = omp.threadprivate [[ADDR0]] : !fir.ref<!fir.array<24xi8>> -> !fir.ref<!fir.array<24xi8>>
 !CHECK-DAG:   [[ADDR1:%.*]] = fir.address_of(@_QMtestEy) : !fir.ref<f32>
 !CHECK-DAG:   [[NEWADDR1:%.*]] = omp.threadprivate [[ADDR1]] : !fir.ref<f32> -> !fir.ref<f32>
@@ -49,9 +49,9 @@ program main
   call sub()
 
 ! CHECK-LABEL: @_QQmain()
-!CHECK-DAG:  [[ADDR0:%.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<24xi8>>
+!CHECK-DAG:  [[ADDR0:%.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<24xi8>>
 !CHECK-DAG:  [[NEWADDR0:%.*]] = omp.threadprivate [[ADDR0]] : !fir.ref<!fir.array<24xi8>> -> !fir.ref<!fir.array<24xi8>>
-!CHECK-DAG:  [[ADDR1:%.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<24xi8>>
+!CHECK-DAG:  [[ADDR1:%.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<24xi8>>
 !CHECK-DAG:  [[NEWADDR1:%.*]] = omp.threadprivate [[ADDR1]] : !fir.ref<!fir.array<24xi8>> -> !fir.ref<!fir.array<24xi8>>
 !CHECK-DAG:  [[ADDR2:%.*]] = fir.address_of(@_QMtestEy) : !fir.ref<f32>
 !CHECK-DAG:  [[NEWADDR2:%.*]] = omp.threadprivate [[ADDR2]] : !fir.ref<f32> -> !fir.ref<f32>

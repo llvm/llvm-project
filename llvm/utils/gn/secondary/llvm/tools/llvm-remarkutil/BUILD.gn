@@ -9,6 +9,7 @@ executable("llvm-remarkutil") {
   sources = [
     "RemarkConvert.cpp",
     "RemarkCount.cpp",
+    "RemarkSizeDiff.cpp",
     "RemarkUtil.cpp",
     "RemarkUtilHelpers.cpp",
     "RemarkUtilRegistry.cpp",

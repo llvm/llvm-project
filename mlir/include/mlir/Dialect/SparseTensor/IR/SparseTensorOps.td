@@ -762,14 +762,6 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
-    // TODO: May want to extend tablegen with
-    // class NonemptyVariadic<Type type> : Variadic<type> { let minSize = 1; }
-    // and then use NonemptyVariadic<...>:$xs here.
-    //
-    // TODO: Currently tablegen doesn't support the assembly syntax when
-    // `algorithm` is an optional enum attribute. We may want to use an optional
-    // enum attribute when this is fixed in tablegen.
-    //
     Arguments<(ins Index:$n,
                Variadic<StridedMemRefRankOf<[AnyInteger, Index], [1]>>:$xs,
                Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,

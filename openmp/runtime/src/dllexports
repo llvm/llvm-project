@@ -1268,4 +1268,6 @@ kmp_set_disp_num_buffers                    890
 
 %endif
 
+__kmpc_set_thread_limit
+
 # end of file #

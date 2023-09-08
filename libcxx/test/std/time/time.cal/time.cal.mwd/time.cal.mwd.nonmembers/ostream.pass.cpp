@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -175,7 +173,7 @@ static void test() {
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_weekday{
                  std::chrono::month{3}, std::chrono::weekday_indexed{std::chrono::weekday{3}, 3}}),
              SV("mars/mer.[3]"));
-#  if defined(_WIN32) || defined(_AIX)
+#  if defined(_WIN32) || defined(_AIX) || defined(__FreeBSD__)
   TEST_EQUAL(stream_fr_FR_locale<CharT>(std::chrono::month_weekday{
                  std::chrono::month{4}, std::chrono::weekday_indexed{std::chrono::weekday{4}, 4}}),
              SV("avr./jeu.[4]"));

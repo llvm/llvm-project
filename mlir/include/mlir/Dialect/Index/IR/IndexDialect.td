@@ -83,7 +83,6 @@ def IndexDialect : Dialect {
 
   let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
 }
 
 #endif // INDEX_DIALECT

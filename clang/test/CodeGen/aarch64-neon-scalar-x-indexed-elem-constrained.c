@@ -103,7 +103,7 @@ float64x1_t test_vfms_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
 // COMMONIR:        [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 // UNCONSTRAINED:   [[TMP6:%.*]] = call double @llvm.fma.f64(double [[TMP4]], double [[EXTRACT]], double [[TMP3]])
 // CONSTRAINED:     [[TMP6:%.*]] = call double @llvm.experimental.constrained.fma.f64(double [[TMP4]], double [[EXTRACT]], double [[TMP3]], metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CHECK-ASM:       fmla d{{[0-9]+}}, d{{[0-9]+}}, v{{[0-9]+}}.d[{{[0-9]+}}]
+// CHECK-ASM:       fmadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
 // COMMONIR:        [[TMP7:%.*]] = bitcast double [[TMP6]] to <1 x double>
 // COMMONIR:        ret <1 x double> [[TMP7]]
 float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
@@ -122,7 +122,7 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {
 // COMMONIR:        [[EXTRACT:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
 // UNCONSTRAINED:   [[TMP6:%.*]] = call double @llvm.fma.f64(double [[TMP4]], double [[EXTRACT]], double [[TMP3]])
 // CONSTRAINED:     [[TMP6:%.*]] = call double @llvm.experimental.constrained.fma.f64(double [[TMP4]], double [[EXTRACT]], double [[TMP3]], metadata !"round.tonearest", metadata !"fpexcept.strict")
-// CHECK-ASM:       fmla d{{[0-9]+}}, d{{[0-9]+}}, v{{[0-9]+}}.d[{{[0-9]+}}]
+// CHECK-ASM:       fmadd d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}, d{{[0-9]+}}
 // COMMONIR:        [[TMP7:%.*]] = bitcast double [[TMP6]] to <1 x double>
 // COMMONIR:        ret <1 x double> [[TMP7]]
 float64x1_t test_vfms_laneq_f64(float64x1_t a, float64x1_t b, float64x2_t v) {

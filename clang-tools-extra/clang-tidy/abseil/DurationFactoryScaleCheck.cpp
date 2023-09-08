@@ -159,7 +159,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   DurationScale Scale = *MaybeScale;
-  const Expr *Remainder;
+  const Expr *Remainder = nullptr;
   std::optional<DurationScale> NewScale;
 
   // We next handle the cases of multiplication and division.

@@ -4,7 +4,6 @@ void test0(void) __attribute__((visibility("default")));
 void test1(void) __attribute__((visibility("hidden")));
 void test2(void) __attribute__((visibility("internal")));
 
-// rdar://problem/10753392
 void test3(void) __attribute__((visibility("protected"))); // expected-warning {{target does not support 'protected' visibility; using 'default'}}
 
 struct __attribute__((visibility("hidden"))) test4; // expected-note {{previous attribute is here}}

@@ -55,6 +55,31 @@
 
 thread_local static int32_t defaultDevice = 0;
 
+const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
+
+/// Helper method that checks environment value for debugging.
+bool isDebugEnabled() {
+  static bool isInitialized = false;
+  static bool isEnabled = false;
+  if (!isInitialized)
+    isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
+  return isEnabled;
+}
+
+#define debug_print(fmt, ...)                                                  \
+  do {                                                                         \
+    if (isDebugEnabled())                                                      \
+      fprintf(stderr, "%s:%d:%s(): " fmt, "CudaRuntimeWrappers.cpp", __LINE__, \
+              __func__, __VA_ARGS__);                                          \
+  } while (0)
+
+// Returns default CUdevice
+CUdevice getDefaultCuDevice() {
+  CUdevice device;
+  CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
+  return device;
+}
+
 // Make the primary context of the current default device current for the
 // duration
 //  of the instance and restore the previous context on destruction.
@@ -65,11 +90,10 @@ public:
     // defaultDevice.
     static CUcontext context = [] {
       CUDA_REPORT_IF_ERROR(cuInit(/*flags=*/0));
-      CUdevice device;
-      CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
       CUcontext ctx;
       // Note: this does not affect the current context.
-      CUDA_REPORT_IF_ERROR(cuDevicePrimaryCtxRetain(&ctx, device));
+      CUDA_REPORT_IF_ERROR(
+          cuDevicePrimaryCtxRetain(&ctx, getDefaultCuDevice()));
       return ctx;
     }();
 
@@ -122,6 +146,24 @@ mgpuLaunchKernel(CUfunction function, intptr_t gridX, intptr_t gridY,
                  intptr_t blockZ, int32_t smem, CUstream stream, void **params,
                  void **extra) {
   ScopedContext scopedContext;
+  int32_t maxShmem = 0;
+  CUdevice device = getDefaultCuDevice();
+  CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
+  CUDA_REPORT_IF_ERROR(cuDeviceGetAttribute(
+      &maxShmem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
+      device));
+  if (maxShmem < smem) {
+    fprintf(stderr,
+            "Requested shared memory (%dkb) is larger than maximum allowed "
+            "shared memory (%dkb) for this device\n",
+            smem, maxShmem);
+  }
+  CUDA_REPORT_IF_ERROR(cuFuncSetAttribute(
+      function, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, smem));
+  debug_print("Launching kernel, grid=%ld,%ld,%ld, "
+              "threads: %ld, %ld, %ld, "
+              "smem: %dkb\n",
+              gridX, gridY, gridZ, blockX, blockY, blockZ, smem);
   CUDA_REPORT_IF_ERROR(cuLaunchKernel(function, gridX, gridY, gridZ, blockX,
                                       blockY, blockZ, smem, stream, params,
                                       extra));
@@ -254,6 +296,12 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
 }
 
+///
+/// Runtime methods using CUDA 12.0+ driver
+///
+
+#if (CUDA_VERSION >= 12000)
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuTensorMapEncodeTiled(
     CUtensorMap *tensorMap,             // Tensor map object
     CUtensorMapDataType tensorDataType, // Tensor data type
@@ -273,6 +321,24 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuTensorMapEncodeTiled(
       tensorMap, tensorDataType, tensorRank, globalAddress, globalDim,
       globalStrides, boxDim, elementStrides, interleave, swizzle, l2Promotion,
       oobFill));
+  debug_print("Created TMA descriptor\n Addr: %p\n"
+              "data type : %d\n"
+              "rank : %d\n"
+              "globalDim[5]: %zu, %zu, %zu, %zu, %zu\n"
+              "globalStrides[5]: %zu, %zu, %zu, %zu, %zu\n"
+              "boxDim[5]: %u, %u, %u, %u, %u\n"
+              "elementStrides[5]: %u, %u, %u, %u, %u\n"
+              "interleave: %u \n"
+              "swizzle: %u \n"
+              "l2Promotion: %u \n"
+              "oobFill: %u \n",
+              (void *)&tensorMap, tensorDataType, tensorRank, globalDim[0],
+              globalDim[1], globalDim[2], globalDim[3], globalDim[4],
+              globalStrides[0], globalStrides[1], globalStrides[2],
+              globalStrides[3], globalStrides[4], boxDim[0], boxDim[1],
+              boxDim[2], boxDim[3], boxDim[4], elementStrides[0],
+              elementStrides[1], elementStrides[2], elementStrides[3],
+              elementStrides[4], interleave, swizzle, l2Promotion, oobFill);
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
@@ -318,6 +384,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
                                 sizeof(CUtensorMap)));
   return reinterpret_cast<void *>(dTensorMap);
 }
+#endif
 
 #ifdef MLIR_ENABLE_CUDA_CUSPARSE
 
@@ -326,6 +393,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
 ///
 
 // Some macro magic to get float/double alpha and beta on host.
+// TODO: add support to passing alpha and beta as arguments
 #define ALPHABETA(dtp, alpha, beta)                                            \
   __nv_bfloat16(alpha##16bf) = 1.0f;                                           \
   __nv_bfloat16(beta##16bf) = 1.0f;                                            \
@@ -507,7 +575,6 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSpMM(int32_t ma, int32_t mb,
                                         CUSPARSE_SPMM_ALG_DEFAULT, buf))
 }
 
-// TODO: add support to passing alpha and beta as arguments
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
 mgpuSDDMMBufferSize(int32_t ma, int32_t mb, void *a, void *b, void *c,
                     int32_t ctp, CUstream /*stream*/) {
@@ -541,6 +608,87 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSDDMM(int32_t ma, int32_t mb,
   CUSPARSE_REPORT_IF_ERROR(cusparseSDDMM(cusparse_env, modeA, modeB, alphap,
                                          matA, matB, betap, matC, cTp,
                                          CUSPARSE_SDDMM_ALG_DEFAULT, buf))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
+mgpuSpGEMMCreateDescr(CUstream /*stream*/) {
+  cusparseSpGEMMDescr_t spgemmDesc = nullptr;
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_createDescr(&spgemmDesc))
+  return reinterpret_cast<void *>(spgemmDesc);
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuSpGEMMDestroyDescr(void *s, CUstream /*stream*/) {
+  cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_destroyDescr(spgemmDesc))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMWorkEstimation(
+    void *s, int32_t ma, int32_t mb, void *a, void *b, void *c, int32_t ctp,
+    intptr_t bs, void *buf, CUstream /*stream*/) {
+  cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
+  cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
+  cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
+  cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
+  auto cTp = static_cast<cudaDataType_t>(ctp);
+  ALPHABETA(cTp, alpha, beta)
+  size_t newBufferSize = bs;
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_workEstimation(
+      cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
+      CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, &newBufferSize, buf))
+  return newBufferSize == 0 ? 1 : newBufferSize; // avoid zero-alloc
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t
+mgpuSpGEMMCompute(void *s, int32_t ma, int32_t mb, void *a, void *b, void *c,
+                  int32_t ctp, intptr_t bsz2, void *buf2, CUstream /*stream*/) {
+  cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
+  cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
+  cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
+  cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
+  auto cTp = static_cast<cudaDataType_t>(ctp);
+  ALPHABETA(cTp, alpha, beta)
+  size_t newBufferSize2 = bsz2;
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpGEMM_compute(
+      cusparse_env, modeA, modeB, alphap, matA, matB, betap, matC, cTp,
+      CUSPARSE_SPGEMM_DEFAULT, spgemmDesc, &newBufferSize2, buf2))
+  return newBufferSize2 == 0 ? 1 : newBufferSize2; // avoid zero-alloc
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuSpGEMMCopy(void *s, int32_t ma, int32_t mb, void *a, void *b, void *c,
+               int32_t ctp, CUstream /*stream*/) {
+  cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
+  cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
+  cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
+  cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
+  cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
+  cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
+  auto cTp = static_cast<cudaDataType_t>(ctp);
+  ALPHABETA(cTp, alpha, beta)
+  CUSPARSE_REPORT_IF_ERROR(
+      cusparseSpGEMM_copy(cusparse_env, modeA, modeB, alphap, matA, matB, betap,
+                          matC, cTp, CUSPARSE_SPGEMM_DEFAULT, spgemmDesc))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuSpMatGetSize(void *m, void *r, void *c, void *n, CUstream /*stream*/) {
+  cusparseConstSpMatDescr_t matDescr =
+      reinterpret_cast<cusparseConstSpMatDescr_t>(m);
+  int64_t *rows = reinterpret_cast<int64_t *>(r);
+  int64_t *cols = reinterpret_cast<int64_t *>(c);
+  int64_t *nnz = reinterpret_cast<int64_t *>(n);
+  CUSPARSE_REPORT_IF_ERROR(cusparseSpMatGetSize(matDescr, rows, cols, nnz));
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuSetCsrPointers(void *m, void *p, void *c, void *v, CUstream /*stream*/) {
+  cusparseSpMatDescr_t matDescr = reinterpret_cast<cusparseSpMatDescr_t>(m);
+  CUSPARSE_REPORT_IF_ERROR(cusparseCsrSetPointers(matDescr, p, c, v));
 }
 
 #ifdef MLIR_ENABLE_CUDA_CUSPARSELT
@@ -630,9 +778,13 @@ mgpuDestroyCuSparseLtSpMat(void *sh, CUstream /*stream*/) {
 
 // Several things are being done in this stage, algorithm selection, planning,
 // and returning workspace and compressed matrices data buffer sizes.
+// The parameter prune_flag is used to indicate whether pruning and pruning
+// check will happen 0 means not prune or prune check, 1 means prune, 2 means
+// prune & prune check
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
-                             void *c, int32_t ctp, CUstream stream) {
+                             void *c, int32_t ctp, int32_t prune_flag,
+                             CUstream stream) {
   assert(cusparseLt_initiated && "client did not call mgpuCreateSparseLtEnv()");
   // TODO: support more advanced settings, e.g., the input right operand is a
   // sparse matrix assuming matA is the sparse matrix
@@ -662,23 +814,26 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
       &cusparseLt_env, &(matA->plan), &(matA->matmul), &(matA->alg_sel)))
 
   // Pruning step (in-place).
-  CUSPARSE_REPORT_IF_ERROR(
-      cusparseLtSpMMAPrune(&cusparseLt_env, &(matA->matmul), matA->values,
-                           matA->values, CUSPARSELT_PRUNE_SPMMA_STRIP, stream))
+  if (prune_flag > 0)
+    CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPrune(
+        &cusparseLt_env, &(matA->matmul), matA->values, matA->values,
+        CUSPARSELT_PRUNE_SPMMA_STRIP, stream))
 
   // Check structure of A.
   // Note that this adds a synchronization on the stream.
   // TODO: Do we want that?
-  int *dvalid = (int *)mgpuMemAlloc(sizeof(int), stream);
-  CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPruneCheck(
-      &cusparseLt_env, &(matA->matmul), matA->values, dvalid, stream))
-  int valid = 0;
-  mgpuMemcpy(&valid, dvalid, sizeof(int), stream);
-  mgpuStreamSynchronize(stream);
-  mgpuMemFree(dvalid, stream);
-  if (valid != 0)
-    fprintf(stderr, "CUPARSE-LT: sparse matrix is not 2:4; computed results "
-                    "will be invalid\n");
+  if (prune_flag == 2) {
+    int *dvalid = (int *)mgpuMemAlloc(sizeof(int), stream);
+    CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPruneCheck(
+        &cusparseLt_env, &(matA->matmul), matA->values, dvalid, stream))
+    int valid = 0;
+    mgpuMemcpy(&valid, dvalid, sizeof(int), stream);
+    mgpuStreamSynchronize(stream);
+    mgpuMemFree(dvalid, stream);
+    if (valid != 0)
+      fprintf(stderr, "CUPARSE-LT: sparse matrix is not 2:4; computed results "
+                      "will be invalid\n");
+  }
 
   CUSPARSE_REPORT_IF_ERROR(cusparseLtMatmulGetWorkspace(
       &cusparseLt_env, &(matA->plan), &workspace_size_))

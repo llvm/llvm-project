@@ -54,6 +54,13 @@ namespace llvm {
   /// the entry block.
   FunctionPass *createUnreachableBlockEliminationPass();
 
+  /// createGCEmptyBasicblocksPass - Empty basic blocks (basic blocks without
+  /// real code) appear as the result of optimization passes removing
+  /// instructions. These blocks confuscate profile analysis (e.g., basic block
+  /// sections) since they will share the address of their fallthrough blocks.
+  /// This pass garbage-collects such basic blocks.
+  MachineFunctionPass *createGCEmptyBasicBlocksPass();
+
   /// createBasicBlockSections Pass - This pass assigns sections to machine
   /// basic blocks and is enabled with -fbasic-block-sections.
   MachineFunctionPass *createBasicBlockSectionsPass();

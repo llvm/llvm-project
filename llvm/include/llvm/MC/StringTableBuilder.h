@@ -32,7 +32,8 @@ public:
     MachO64Linked,
     RAW,
     DWARF,
-    XCOFF
+    XCOFF,
+    DXContainer
   };
 
 private:

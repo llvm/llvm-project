@@ -24,6 +24,10 @@ namespace tblgen {
 std::vector<llvm::Record *>
 getRequestedOpDefinitions(const llvm::RecordKeeper &recordKeeper);
 
+/// Checks whether `str` is a Python keyword or would shadow builtin function.
+/// Regenerate using python -c"print(set(sorted(__import__('keyword').kwlist)))"
+bool isPythonReserved(llvm::StringRef str);
+
 } // namespace tblgen
 } // namespace mlir
 

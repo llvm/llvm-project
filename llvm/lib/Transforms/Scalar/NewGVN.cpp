@@ -774,7 +774,7 @@ private:
 
   // Symbolic evaluation.
   ExprResult checkExprResults(Expression *, Instruction *, Value *) const;
-  ExprResult performSymbolicEvaluation(Value *,
+  ExprResult performSymbolicEvaluation(Instruction *,
                                        SmallPtrSetImpl<Value *> &) const;
   const Expression *performSymbolicLoadCoercion(Type *, Value *, LoadInst *,
                                                 Instruction *,
@@ -1961,95 +1961,88 @@ NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
   return createExpression(I);
 }
 
-// Substitute and symbolize the value before value numbering.
+// Substitute and symbolize the instruction before value numbering.
 NewGVN::ExprResult
-NewGVN::performSymbolicEvaluation(Value *V,
+NewGVN::performSymbolicEvaluation(Instruction *I,
                                   SmallPtrSetImpl<Value *> &Visited) const {
 
   const Expression *E = nullptr;
-  if (auto *C = dyn_cast<Constant>(V))
-    E = createConstantExpression(C);
-  else if (isa<Argument>(V) || isa<GlobalVariable>(V)) {
-    E = createVariableExpression(V);
-  } else {
-    // TODO: memory intrinsics.
-    // TODO: Some day, we should do the forward propagation and reassociation
-    // parts of the algorithm.
-    auto *I = cast<Instruction>(V);
-    switch (I->getOpcode()) {
-    case Instruction::ExtractValue:
-    case Instruction::InsertValue:
-      E = performSymbolicAggrValueEvaluation(I);
-      break;
-    case Instruction::PHI: {
-      SmallVector<ValPair, 3> Ops;
-      auto *PN = cast<PHINode>(I);
-      for (unsigned i = 0; i < PN->getNumOperands(); ++i)
-        Ops.push_back({PN->getIncomingValue(i), PN->getIncomingBlock(i)});
-      // Sort to ensure the invariant createPHIExpression requires is met.
-      sortPHIOps(Ops);
-      E = performSymbolicPHIEvaluation(Ops, I, getBlockForValue(I));
-    } break;
-    case Instruction::Call:
-      return performSymbolicCallEvaluation(I);
-      break;
-    case Instruction::Store:
-      E = performSymbolicStoreEvaluation(I);
-      break;
-    case Instruction::Load:
-      E = performSymbolicLoadEvaluation(I);
-      break;
-    case Instruction::BitCast:
-    case Instruction::AddrSpaceCast:
-    case Instruction::Freeze:
-      return createExpression(I);
-      break;
-    case Instruction::ICmp:
-    case Instruction::FCmp:
-      return performSymbolicCmpEvaluation(I);
-      break;
-    case Instruction::FNeg:
-    case Instruction::Add:
-    case Instruction::FAdd:
-    case Instruction::Sub:
-    case Instruction::FSub:
-    case Instruction::Mul:
-    case Instruction::FMul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::FDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::FRem:
-    case Instruction::Shl:
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Xor:
-    case Instruction::Trunc:
-    case Instruction::ZExt:
-    case Instruction::SExt:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::PtrToInt:
-    case Instruction::IntToPtr:
-    case Instruction::Select:
-    case Instruction::ExtractElement:
-    case Instruction::InsertElement:
-    case Instruction::GetElementPtr:
-      return createExpression(I);
-      break;
-    case Instruction::ShuffleVector:
-      // FIXME: Add support for shufflevector to createExpression.
-      return ExprResult::none();
-    default:
-      return ExprResult::none();
-    }
+  // TODO: memory intrinsics.
+  // TODO: Some day, we should do the forward propagation and reassociation
+  // parts of the algorithm.
+  switch (I->getOpcode()) {
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+    E = performSymbolicAggrValueEvaluation(I);
+    break;
+  case Instruction::PHI: {
+    SmallVector<ValPair, 3> Ops;
+    auto *PN = cast<PHINode>(I);
+    for (unsigned i = 0; i < PN->getNumOperands(); ++i)
+      Ops.push_back({PN->getIncomingValue(i), PN->getIncomingBlock(i)});
+    // Sort to ensure the invariant createPHIExpression requires is met.
+    sortPHIOps(Ops);
+    E = performSymbolicPHIEvaluation(Ops, I, getBlockForValue(I));
+  } break;
+  case Instruction::Call:
+    return performSymbolicCallEvaluation(I);
+    break;
+  case Instruction::Store:
+    E = performSymbolicStoreEvaluation(I);
+    break;
+  case Instruction::Load:
+    E = performSymbolicLoadEvaluation(I);
+    break;
+  case Instruction::BitCast:
+  case Instruction::AddrSpaceCast:
+  case Instruction::Freeze:
+    return createExpression(I);
+    break;
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+    return performSymbolicCmpEvaluation(I);
+    break;
+  case Instruction::FNeg:
+  case Instruction::Add:
+  case Instruction::FAdd:
+  case Instruction::Sub:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::FDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Trunc:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::Select:
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+  case Instruction::GetElementPtr:
+    return createExpression(I);
+    break;
+  case Instruction::ShuffleVector:
+    // FIXME: Add support for shufflevector to createExpression.
+    return ExprResult::none();
+  default:
+    return ExprResult::none();
   }
   return ExprResult::some(E);
 }
@@ -2624,42 +2617,14 @@ bool NewGVN::OpIsSafeForPHIOfOps(Value *V, const BasicBlock *PHIBlock,
     }
 
     auto *OrigI = cast<Instruction>(I);
-    
-    if (MemoryAccess *OriginalAccess = getMemoryAccess(OrigI)) {
-      SmallVector<MemoryAccess *, 4> MemAccessWorkList;
-      MemAccessWorkList.push_back(
-          MSSAWalker->getClobberingMemoryAccess(OriginalAccess));
-
-      // We only want memory defs/phis that might alias with the original
-      // access, so if we can, pass the location to the walker.
-      MemoryLocation Loc =
-          MemoryLocation::getOrNone(OrigI).value_or(MemoryLocation());
-      while (!MemAccessWorkList.empty()) {
-        auto *MemAccess = MemAccessWorkList.pop_back_val();
-        if (MSSA->isLiveOnEntryDef(MemAccess))
-          continue;
-
-        // Phi block is dominated - safe.
-        if (DT->properlyDominates(MemAccess->getBlock(), PHIBlock)) {
-          OpSafeForPHIOfOps.insert({I, true});
-          continue;
-        }
-
-        // Clobbering MemoryPhi - unsafe.
-        // Note : Only checking memory phis allows us to skip redundant stores
-        if (isa<MemoryPhi>(MemAccess) &&
-            MemAccess ==
-                MSSAWalker->getClobberingMemoryAccess(MemAccess, Loc)) {
-          OpSafeForPHIOfOps.insert({I, false});
-          return false;
-        }
-
-        // Add potential clobber of the original access.
-        MemAccessWorkList.push_back(MSSAWalker->getClobberingMemoryAccess(
-            cast<MemoryUseOrDef>(MemAccess)));
-        continue;
-      }
-    }
+    // When we hit an instruction that reads memory (load, call, etc), we must
+    // consider any store that may happen in the loop. For now, we assume the
+    // worst: there is a store in the loop that alias with this read.
+    // The case where the load is outside the loop is already covered by the
+    // dominator check above.
+    // TODO: relax this condition
+    if (OrigI->mayReadFromMemory())
+      return false;
 
     // Check the operands of the current instruction.
     for (auto *Op : OrigI->operand_values()) {
@@ -3570,7 +3535,7 @@ struct NewGVN::ValueDFS {
     // the second. We only want it to be less than if the DFS orders are equal.
     //
     // Each LLVM instruction only produces one value, and thus the lowest-level
-    // differentiator that really matters for the stack (and what we use as as a
+    // differentiator that really matters for the stack (and what we use as a
     // replacement) is the local dfs number.
     // Everything else in the structure is instruction level, and only affects
     // the order in which we will replace operands of a given instruction.

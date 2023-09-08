@@ -36,7 +36,6 @@ void uses_abc() {
   C c;
 }
 
-// <rdar://problem/9979458>
 class Parent {
 public:
   Parent() {}

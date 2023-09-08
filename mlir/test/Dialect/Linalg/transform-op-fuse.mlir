@@ -118,3 +118,51 @@ transform.sequence failures(propagate) {
   %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [16, 32], tile_interchange = [0, 1]}
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
+
+// -----
+
+// CHECK-LABEL: func.func @pack_elemwise
+// CHECK:         %[[RES:.*]] = scf.for
+// CHECK:           scf.for
+// CHECK:             tensor.pack
+// CHECK:             linalg.elemwise_unary
+// CHECK:         return %[[RES]]
+func.func @pack_elemwise(%arg0: tensor<128x384xf32>, %arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32> {
+  %0 = tensor.empty() : tensor<16x48x8x8xf32>
+  %1 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+      : tensor<128x384xf32> -> tensor<16x48x8x8xf32>
+  %2 = linalg.elemwise_unary ins(%1: tensor<16x48x8x8xf32>)
+                             outs(%arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32>
+  return %2 : tensor<16x48x8x8xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [3, 5, 0, 0]}
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+// -----
+
+// CHECK-LABEL: func.func @nofuse_pack_elemwise
+// CHECK:         tensor.pack
+// CHECK:         %[[RES:.*]] = scf.for
+// CHECK:           scf.for
+// CHECK:             linalg.elemwise_unary
+// CHECK:         return %[[RES]]
+func.func @nofuse_pack_elemwise(%arg0: tensor<128x384xf32>, %arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32> {
+  %0 = tensor.empty() : tensor<16x48x8x8xf32>
+  %1 = tensor.pack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %0
+      : tensor<128x384xf32> -> tensor<16x48x8x8xf32>
+  %2 = linalg.elemwise_unary ins(%1: tensor<16x48x8x8xf32>)
+                             outs(%arg1: tensor<16x48x8x8xf32>) -> tensor<16x48x8x8xf32>
+  return %2 : tensor<16x48x8x8xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1, %loops:3 = transform.structured.fuse %0 {tile_sizes = [3, 5, 2, 0]}
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+}

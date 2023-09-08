@@ -148,7 +148,6 @@ void test_inference(void) {
 + (NSString *)newString { return @"blah"; }
 @end
 
-// <rdar://problem/9340699>
 @interface G 
 - (id)_ABC_init __attribute__((objc_method_family(init))); // expected-note {{method '_ABC_init' declared here}}
 @end
@@ -179,14 +178,10 @@ void test_inference(void) {
 }
 @end
 
-// <rdar://problem/11460990>
-
 @interface WeirdNSString : NSString
 - (id)initWithCString:(const char*)string, void *blah;
 @end
 
-
-// rdar://14121570
 @protocol PMFilterManager
 @end
 

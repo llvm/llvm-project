@@ -564,7 +564,7 @@ class DataFlowSanitizer {
   /// getShadowTy([n x T]) = [n x getShadowTy(T)]
   /// getShadowTy(other type) = i16
   Type *getShadowTy(Type *OrigTy);
-  /// Returns the shadow type of of V's type.
+  /// Returns the shadow type of V's type.
   Type *getShadowTy(Value *V);
 
   const uint64_t NumOfElementsInArgOrgTLS = ArgTLSSize / OriginWidthBytes;

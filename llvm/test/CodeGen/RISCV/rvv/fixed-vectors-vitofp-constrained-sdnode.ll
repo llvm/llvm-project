@@ -9,7 +9,7 @@ define <1 x half> @vsitofp_v1i1_v1f16(<1 x i1> %va) strictfp {
 ; CHECK-LABEL: vsitofp_v1i1_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmerge.vim v9, v8, -1, v0
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v9
 ; CHECK-NEXT:    ret
@@ -22,7 +22,7 @@ define <1 x half> @vuitofp_v1i1_v1f16(<1 x i1> %va) strictfp {
 ; CHECK-LABEL: vuitofp_v1i1_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9
 ; CHECK-NEXT:    ret
@@ -35,7 +35,7 @@ define <1 x float> @vsitofp_v1i1_v1f32(<1 x i1> %va) strictfp {
 ; CHECK-LABEL: vsitofp_v1i1_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmerge.vim v9, v8, -1, v0
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v9
 ; CHECK-NEXT:    ret
@@ -48,7 +48,7 @@ define <1 x float> @vuitofp_v1i1_v1f32(<1 x i1> %va) strictfp {
 ; CHECK-LABEL: vuitofp_v1i1_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9
 ; CHECK-NEXT:    ret
@@ -61,7 +61,7 @@ define <1 x double> @vsitofp_v1i1_v1f64(<1 x i1> %va) strictfp {
 ; CHECK-LABEL: vsitofp_v1i1_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmerge.vim v9, v8, -1, v0
 ; CHECK-NEXT:    vfwcvt.f.x.v v8, v9
 ; CHECK-NEXT:    ret
@@ -74,7 +74,7 @@ define <1 x double> @vuitofp_v1i1_v1f64(<1 x i1> %va) strictfp {
 ; CHECK-LABEL: vuitofp_v1i1_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v8, zero
 ; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9
 ; CHECK-NEXT:    ret

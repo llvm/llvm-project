@@ -20,6 +20,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -37,11 +38,13 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -329,23 +332,16 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
   ParmVarDecl *Param = cast<ParmVarDecl>(param);
   UnparsedDefaultArgLocs.erase(Param);
 
-  auto Fail = [&] {
-    Param->setInvalidDecl();
-    Param->setDefaultArg(new (Context) OpaqueValueExpr(
-        EqualLoc, Param->getType().getNonReferenceType(), VK_PRValue));
-  };
-
   // Default arguments are only permitted in C++
   if (!getLangOpts().CPlusPlus) {
     Diag(EqualLoc, diag::err_param_default_argument)
       << DefaultArg->getSourceRange();
-    return Fail();
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
   }
 
   // Check for unexpanded parameter packs.
-  if (DiagnoseUnexpandedParameterPack(DefaultArg, UPPC_DefaultArgument)) {
-    return Fail();
-  }
+  if (DiagnoseUnexpandedParameterPack(DefaultArg, UPPC_DefaultArgument))
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   // C++11 [dcl.fct.default]p3
   //   A default argument expression [...] shall not be specified for a
@@ -360,14 +356,14 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
 
   ExprResult Result = ConvertParamDefaultArgument(Param, DefaultArg, EqualLoc);
   if (Result.isInvalid())
-    return Fail();
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   DefaultArg = Result.getAs<Expr>();
 
   // Check that the default argument is well-formed
   CheckDefaultArgumentVisitor DefaultArgChecker(*this, DefaultArg);
   if (DefaultArgChecker.Visit(DefaultArg))
-    return Fail();
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   SetParamDefaultArgument(Param, DefaultArg, EqualLoc);
 }
@@ -389,16 +385,23 @@ void Sema::ActOnParamUnparsedDefaultArgument(Decl *param,
 
 /// ActOnParamDefaultArgumentError - Parsing or semantic analysis of
 /// the default argument for the parameter param failed.
-void Sema::ActOnParamDefaultArgumentError(Decl *param,
-                                          SourceLocation EqualLoc) {
+void Sema::ActOnParamDefaultArgumentError(Decl *param, SourceLocation EqualLoc,
+                                          Expr *DefaultArg) {
   if (!param)
     return;
 
   ParmVarDecl *Param = cast<ParmVarDecl>(param);
   Param->setInvalidDecl();
   UnparsedDefaultArgLocs.erase(Param);
-  Param->setDefaultArg(new (Context) OpaqueValueExpr(
-      EqualLoc, Param->getType().getNonReferenceType(), VK_PRValue));
+  ExprResult RE;
+  if (DefaultArg) {
+    RE = CreateRecoveryExpr(EqualLoc, DefaultArg->getEndLoc(), {DefaultArg},
+                            Param->getType().getNonReferenceType());
+  } else {
+    RE = CreateRecoveryExpr(EqualLoc, EqualLoc, {},
+                            Param->getType().getNonReferenceType());
+  }
+  Param->setDefaultArg(RE.get());
 }
 
 /// CheckExtraCXXDefaultArguments - Check for any extra default
@@ -723,6 +726,12 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   return Invalid;
 }
 
+void Sema::DiagPlaceholderVariableDefinition(SourceLocation Loc) {
+  Diag(Loc, getLangOpts().CPlusPlus26
+                ? diag::warn_cxx23_placeholder_var_definition
+                : diag::ext_placeholder_var_definition);
+}
+
 NamedDecl *
 Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
                                    MultiTemplateParamsArg TemplateParamLists) {
@@ -878,6 +887,9 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   for (auto &B : D.getDecompositionDeclarator().bindings()) {
     // Check for name conflicts.
     DeclarationNameInfo NameInfo(B.Name, B.NameLoc);
+    IdentifierInfo *VarName = B.Name;
+    assert(VarName && "Cannot have an unnamed binding declaration");
+
     LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                           ForVisibleRedeclaration);
     LookupName(Previous, S,
@@ -891,7 +903,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       Previous.clear();
     }
 
-    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name);
+    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, VarName);
 
     // Find the shadowed declaration before filtering for scope.
     NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
@@ -903,10 +915,24 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     FilterLookupForScope(Previous, DC, S, ConsiderLinkage,
                          /*AllowInlineNamespace*/false);
 
+    bool IsPlaceholder = DS.getStorageClassSpec() != DeclSpec::SCS_static &&
+                         DC->isFunctionOrMethod() && VarName->isPlaceholder();
     if (!Previous.empty()) {
-      auto *Old = Previous.getRepresentativeDecl();
-      Diag(B.NameLoc, diag::err_redefinition) << B.Name;
-      Diag(Old->getLocation(), diag::note_previous_definition);
+      if (IsPlaceholder) {
+        bool sameDC = (Previous.end() - 1)
+                          ->getDeclContext()
+                          ->getRedeclContext()
+                          ->Equals(DC->getRedeclContext());
+        if (sameDC &&
+            isDeclInScope(*(Previous.end() - 1), CurContext, S, false)) {
+          Previous.clear();
+          DiagPlaceholderVariableDefinition(B.NameLoc);
+        }
+      } else {
+        auto *Old = Previous.getRepresentativeDecl();
+        Diag(B.NameLoc, diag::err_redefinition) << B.Name;
+        Diag(Old->getLocation(), diag::note_previous_definition);
+      }
     } else if (ShadowedDecl && !D.isRedeclaration()) {
       CheckShadow(BD, ShadowedDecl, Previous);
     }
@@ -3703,10 +3729,20 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation())) {
       // Remember all explicit private FieldDecls that have a name, no side
       // effects and are not part of a dependent type declaration.
+
+      auto DeclHasUnusedAttr = [](const QualType &T) {
+        if (const TagDecl *TD = T->getAsTagDecl())
+          return TD->hasAttr<UnusedAttr>();
+        if (const TypedefType *TDT = T->getAs<TypedefType>())
+          return TDT->getDecl()->hasAttr<UnusedAttr>();
+        return false;
+      };
+
       if (!FD->isImplicit() && FD->getDeclName() &&
           FD->getAccess() == AS_private &&
           !FD->hasAttr<UnusedAttr>() &&
           !FD->getParent()->isDependentContext() &&
+          !DeclHasUnusedAttr(FD->getType()) &&
           !InitializationHasSideEffects(*FD))
         UnusedPrivateFields.insert(FD);
     }
@@ -4327,16 +4363,57 @@ private:
 
 }
 
+bool Sema::DiagRedefinedPlaceholderFieldDecl(SourceLocation Loc,
+                                             RecordDecl *ClassDecl,
+                                             const IdentifierInfo *Name) {
+  DeclContextLookupResult Result = ClassDecl->lookup(Name);
+  DeclContextLookupResult::iterator Found =
+      llvm::find_if(Result, [this](const NamedDecl *Elem) {
+        return isa<FieldDecl, IndirectFieldDecl>(Elem) &&
+               Elem->isPlaceholderVar(getLangOpts());
+      });
+  // We did not find a placeholder variable
+  if (Found == Result.end())
+    return false;
+  Diag(Loc, diag::err_using_placeholder_variable) << Name;
+  for (DeclContextLookupResult::iterator It = Found; It != Result.end(); It++) {
+    const NamedDecl *ND = *It;
+    if (ND->getDeclContext() != ND->getDeclContext())
+      break;
+    if (isa<FieldDecl, IndirectFieldDecl>(ND) &&
+        ND->isPlaceholderVar(getLangOpts()))
+      Diag(ND->getLocation(), diag::note_reference_placeholder) << ND;
+  }
+  return true;
+}
+
+ValueDecl *
+Sema::tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
+                                    const IdentifierInfo *MemberOrBase) {
+  ValueDecl *ND = nullptr;
+  for (auto *D : ClassDecl->lookup(MemberOrBase)) {
+    if (isa<FieldDecl, IndirectFieldDecl>(D)) {
+      bool IsPlaceholder = D->isPlaceholderVar(getLangOpts());
+      if (ND) {
+        if (IsPlaceholder && D->getDeclContext() == ND->getDeclContext())
+          return nullptr;
+        break;
+      }
+      if (!IsPlaceholder)
+        return cast<ValueDecl>(D);
+      ND = cast<ValueDecl>(D);
+    }
+  }
+  return ND;
+}
+
 ValueDecl *Sema::tryLookupCtorInitMemberDecl(CXXRecordDecl *ClassDecl,
                                              CXXScopeSpec &SS,
                                              ParsedType TemplateTypeTy,
                                              IdentifierInfo *MemberOrBase) {
   if (SS.getScopeRep() || TemplateTypeTy)
     return nullptr;
-  for (auto *D : ClassDecl->lookup(MemberOrBase))
-    if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D))
-      return cast<ValueDecl>(D);
-  return nullptr;
+  return tryLookupUnambiguousFieldDecl(ClassDecl, MemberOrBase);
 }
 
 /// Handle a C++ member initializer.
@@ -17983,6 +18060,16 @@ bool Sema::CheckOverridingFunctionAttributes(const CXXMethodDecl *New,
         Diag(Old->getParamDecl(I)->getLocation(),
              diag::note_overridden_marked_noescape);
       }
+  }
+
+  // SME attributes must match when overriding a function declaration.
+  if (IsInvalidSMECallConversion(
+          Old->getType(), New->getType(),
+          AArch64SMECallConversionKind::MayAddPreservesZA)) {
+    Diag(New->getLocation(), diag::err_conflicting_overriding_attributes)
+        << New << New->getType() << Old->getType();
+    Diag(Old->getLocation(), diag::note_overridden_virtual_function);
+    return true;
   }
 
   // Virtual overrides must have the same code_seg.

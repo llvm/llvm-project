@@ -123,8 +123,8 @@ define void @test_void_vararg() gc "statepoint-example" {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w0, #42
-; CHECK-NEXT:    mov w1, #43
+; CHECK-NEXT:    mov w0, #42 // =0x2a
+; CHECK-NEXT:    mov w1, #43 // =0x2b
 ; CHECK-NEXT:    bl varargf
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -177,7 +177,7 @@ define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-
 ; CHECK-NEXT:    bl consume
 ; CHECK-NEXT:    b .LBB8_3
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    mov w19, #1
+; CHECK-NEXT:    mov w19, #1 // =0x1
 ; CHECK-NEXT:  .LBB8_3: // %common.ret
 ; CHECK-NEXT:    and w0, w19, #0x1
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -208,13 +208,13 @@ define void @test_attributes(ptr byval(%struct2) %s) gc "statepoint-example" {
 ; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov x18, xzr
-; CHECK-NEXT:    ldr q0, [sp, #48]
 ; CHECK-NEXT:    ldr x8, [sp, #64]
-; CHECK-NEXT:    mov w0, #42
-; CHECK-NEXT:    mov w1, #17
-; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    ldr q0, [sp, #48]
+; CHECK-NEXT:    mov x18, xzr
+; CHECK-NEXT:    mov w0, #42 // =0x2a
+; CHECK-NEXT:    mov w1, #17 // =0x11
 ; CHECK-NEXT:    str x8, [sp, #16]
+; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    bl consume_attributes
 ; CHECK-NEXT:  .Ltmp9:
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload

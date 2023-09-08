@@ -25,13 +25,13 @@ from the C++ Core Guidelines.
 
 Please note, that this check does not enforce this latter rule for
 initializations already implemented as member initializers. For that purpose
-see check `modernize-use-default-member-init <../modernize/use-default-member-init.html>`_.
+see check :doc:`modernize-use-default-member-init <../modernize/use-default-member-init>`.
 
 .. note::
 
   Enforcement of rule C.48 in this check is deprecated, to be removed in
   :program:`clang-tidy` version 19 (only C.49 will be enforced by this check then).
-  Please use `cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init.html>`_
+  Please use :doc:`cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init>`
   to enforce rule C.48.
 
 Example 1
@@ -65,6 +65,7 @@ Here ``n`` can be initialized using a default member initializer, unlike
         return;
       m = 1;
     }
+  };
 
 Example 2
 ---------
@@ -98,12 +99,12 @@ Here ``n`` can be initialized in the constructor initialization list, unlike
 
    Note: this option is deprecated, to be removed in :program:`clang-tidy`
    version 19. Please use the `UseAssignment` option from
-   `cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init.html>`_
+   :doc:`cppcoreguidelines-use-default-member-init <../cppcoreguidelines/use-default-member-init>`
    instead.
 
    If this option is set to `true` (by default `UseAssignment` from
-   `modernize-use-default-member-init
-   <../modernize/use-default-member-init.html>`_ will be used),
+   :doc:`modernize-use-default-member-init
+   <../modernize/use-default-member-init>` will be used),
    the check will initialize members with an assignment.
    In this case the fix of the first example looks like this:
 

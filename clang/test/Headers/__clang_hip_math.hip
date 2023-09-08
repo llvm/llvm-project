@@ -231,8 +231,8 @@ extern "C" __device__ uint64_t test___make_mantissa(const char *p) {
 
 // CHECK-LABEL: @test_abs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SUB_I:%.*]] = tail call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
-// CHECK-NEXT:    ret i32 [[SUB_I]]
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+// CHECK-NEXT:    ret i32 [[ABS_I]]
 //
 extern "C" __device__ int test_abs(int x) {
   return abs(x);
@@ -240,8 +240,8 @@ extern "C" __device__ int test_abs(int x) {
 
 // CHECK-LABEL: @test_labs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SUB_I:%.*]] = tail call i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
-// CHECK-NEXT:    ret i64 [[SUB_I]]
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
+// CHECK-NEXT:    ret i64 [[ABS_I]]
 //
 extern "C" __device__ long test_labs(long x) {
   return labs(x);
@@ -249,8 +249,8 @@ extern "C" __device__ long test_labs(long x) {
 
 // CHECK-LABEL: @test_llabs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SUB_I:%.*]] = tail call i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
-// CHECK-NEXT:    ret i64 [[SUB_I]]
+// CHECK-NEXT:    [[ABS_I:%.*]] = tail call i64 @llvm.abs.i64(i64 [[X:%.*]], i1 true)
+// CHECK-NEXT:    ret i64 [[ABS_I]]
 //
 extern "C" __device__ long long test_llabs(long x) {
   return llabs(x);
@@ -1461,8 +1461,9 @@ extern "C" __device__ int test_ilogb(double x) {
 
 // DEFAULT-LABEL: @test___finitef(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 504)
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___finitef(
@@ -1471,8 +1472,9 @@ extern "C" __device__ int test_ilogb(double x) {
 //
 // APPROX-LABEL: @test___finitef(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 504)
-// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
+// APPROX-NEXT:    [[TMP1:%.*]] = fcmp one float [[TMP0]], 0x7FF0000000000000
+// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___finitef(float x) {
@@ -1481,8 +1483,9 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 
 // DEFAULT-LABEL: @test___finite(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X:%.*]], i32 504)
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = fcmp one double [[TMP0]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___finite(
@@ -1491,8 +1494,9 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 //
 // APPROX-LABEL: @test___finite(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X:%.*]], i32 504)
-// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+// APPROX-NEXT:    [[TMP1:%.*]] = fcmp one double [[TMP0]], 0x7FF0000000000000
+// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___finite(double x) {
@@ -1501,8 +1505,9 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 
 // DEFAULT-LABEL: @test___isinff(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 516)
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[TMP0]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isinff(
@@ -1511,8 +1516,9 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 //
 // APPROX-LABEL: @test___isinff(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 516)
-// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X:%.*]])
+// APPROX-NEXT:    [[TMP1:%.*]] = fcmp oeq float [[TMP0]], 0x7FF0000000000000
+// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___isinff(float x) {
@@ -1521,8 +1527,9 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
 
 // DEFAULT-LABEL: @test___isinf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X:%.*]], i32 516)
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[TMP0]], 0x7FF0000000000000
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isinf(
@@ -1531,8 +1538,9 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
 //
 // APPROX-LABEL: @test___isinf(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X:%.*]], i32 516)
-// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
+// APPROX-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[TMP0]], 0x7FF0000000000000
+// APPROX-NEXT:    [[CONV:%.*]] = zext i1 [[TMP1]] to i32
 // APPROX-NEXT:    ret i32 [[CONV]]
 //
 extern "C" __device__ BOOL_TYPE test___isinf(double x) {

@@ -169,7 +169,6 @@ namespace test12 {
   }
 }
 
-// rdar://problem/12072531
 // Test the boundary condition of minimal signed integers.
 namespace test13 {
   template <char c> char returnChar() { return c; }

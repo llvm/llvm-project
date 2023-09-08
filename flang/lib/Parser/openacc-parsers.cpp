@@ -150,8 +150,13 @@ TYPE_PARSER(sourced(construct<AccLoopDirective>(
 TYPE_PARSER(construct<AccBeginLoopDirective>(
     sourced(Parser<AccLoopDirective>{}), Parser<AccClauseList>{}))
 
-TYPE_PARSER(
-    construct<OpenACCLoopConstruct>(sourced(Parser<AccBeginLoopDirective>{})))
+TYPE_PARSER(construct<AccEndLoop>(startAccLine >> "END LOOP"_tok))
+
+TYPE_PARSER(construct<OpenACCLoopConstruct>(
+    sourced(Parser<AccBeginLoopDirective>{} / endAccLine),
+    withMessage("A DO loop must follow the loop construct"_err_en_US,
+        Parser<DoConstruct>{}),
+    maybe(Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
 TYPE_PARSER(sourced(construct<OpenACCRoutineConstruct>(verbatim("ROUTINE"_tok),

@@ -4,7 +4,7 @@
 // RUN: mlir-opt \
 // RUN: --pass-pipeline="builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm,affine-expand-index-ops,lower-affine,convert-arith-to-llvm),convert-vector-to-llvm,canonicalize,cse,gpu.module(gpu-to-cubin{chip=sm_80 features=+ptx71}))" \
 // RUN: %s \
-// RUN: | mlir-opt --convert-scf-to-cf -convert-cf-to-llvm --convert-vector-to-llvm \
+// RUN: | mlir-opt --convert-vector-to-scf --convert-scf-to-cf -convert-cf-to-llvm --convert-vector-to-llvm \
 // RUN:            --convert-arith-to-llvm --gpu-to-llvm --reconcile-unrealized-casts \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \

@@ -174,7 +174,6 @@ D: WebAssembly Backend
 
 N: Renato Golin
 E: rengolin@systemcall.eu
-E: renato.golin@linaro.org
 E: rengolin@gmail.com
 D: ARM/AArch64 back-end improvements
 D: Loop Vectorizer improvements

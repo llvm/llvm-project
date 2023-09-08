@@ -286,7 +286,7 @@ Relevant standard
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
-  Release only provides a semantic guarantee when paired with a Acquire
+  Release only provides a semantic guarantee when paired with an Acquire
   operation.
 
 Notes for optimizers

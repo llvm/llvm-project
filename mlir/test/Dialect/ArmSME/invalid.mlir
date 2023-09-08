@@ -71,3 +71,21 @@ func.func @arm_sme_get_tile_id__bad_type() -> i1 {
   %0 = arm_sme.get_tile_id : i1
   return %0 : i1
 }
+
+// -----
+
+func.func @arm_sme_move_vector_to_tile_slice_i8__bad_vector_type(%vector : vector<[8]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> vector<[16]x[16]xi8> {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that type of 'vector' matches type of 'tile' slice}}
+  %0 = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xi8> into vector<[16]x[16]xi8>
+  return %0 : vector<[16]x[16]xi8>
+}
+
+// -----
+
+func.func @arm_sme_move_vector_to_tile_slice_f32__bad_vector_type(%vector : vector<[8]xf32>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that type of 'vector' matches type of 'tile' slice}}
+  %0 = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xf32> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}

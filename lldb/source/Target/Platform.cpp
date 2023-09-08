@@ -19,7 +19,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -73,8 +72,8 @@ enum {
 
 } // namespace
 
-ConstString PlatformProperties::GetSettingName() {
-  static ConstString g_setting_name("platform");
+llvm::StringRef PlatformProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("platform");
   return g_setting_name;
 }
 

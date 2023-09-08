@@ -14,11 +14,36 @@
 // RUN:         -triple armv7--darwin -Oz -emit-llvm %s -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK-ARM
 
+// RUN: %clang_cc1 -x c++ -std=c++11 \
+// RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
+// RUN:         -triple x86_64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++11 \
+// RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
+// RUN:         -triple x86_64--linux -Oz -emit-llvm %s -o - \
+// RUN:         | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++11 \
+// RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
+// RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         | FileCheck %s --check-prefix=CHECK-ARM-ARM64
+// RUN: %clang_cc1 -x c++ -std=c++11 \
+// RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
+// RUN:         -triple aarch64--darwin -Oz -emit-llvm %s -o - \
+// RUN:         | FileCheck %s --check-prefix=CHECK-ARM
+// RUN: %clang_cc1 -x c++ -std=c++11 \
+// RUN:         -ffreestanding -fms-extensions -Wno-implicit-function-declaration \
+// RUN:         -triple armv7--darwin -Oz -emit-llvm %s -o - \
+// RUN:         | FileCheck %s --check-prefix=CHECK-ARM
+
 // LP64 targets use 'long' as 'int' for MS intrinsics (-fms-extensions)
 #ifdef __LP64__
 #define LONG int
 #else
 #define LONG long
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 unsigned char test_BitScanForward(unsigned LONG *Index, unsigned LONG Mask) {
@@ -415,4 +440,37 @@ LONG test_InterlockedDecrement_nf(LONG volatile *Addend) {
 // CHECK-ARM: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK-ARM: ret i32 [[RESULT]]
 // CHECK-ARM: }
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
+char popcnt16_0[__popcnt16(0x0000) == 0 ? 1 : -1];
+char popcnt16_1[__popcnt16(0x10F0) == 5 ? 1 : -1];
+
+char popcnt_0[__popcnt(0x00000000) == 0 ? 1 : -1];
+char popcnt_1[__popcnt(0x100000F0) == 5 ? 1 : -1];
+
+char popcnt64_0[__popcnt64(0x0000000000000000ULL) == 0 ? 1 : -1];
+char popcnt64_1[__popcnt64(0xF00000F000000001ULL) == 9 ? 1 : -1];
+
+#define BITSIZE(x) (sizeof(x) * 8)
+char lzcnt16_0[__lzcnt16(1) == BITSIZE(short) - 1 ? 1 : -1];
+char lzcnt16_1[__lzcnt16(1 << (BITSIZE(short) - 1)) == 0 ? 1 : -1];
+char lzcnt16_2[__lzcnt16(0) == BITSIZE(short) ? 1 : -1];
+
+char lzcnt_0[__lzcnt(1) == BITSIZE(int) - 1 ? 1 : -1];
+char lzcnt_1[__lzcnt(1 << (BITSIZE(int) - 1)) == 0 ? 1 : -1];
+char lzcnt_2[__lzcnt(0) == BITSIZE(int) ? 1 : -1];
+
+char lzcnt64_0[__lzcnt64(1ULL) == BITSIZE(__int64) - 1 ? 1 : -1];
+char lzcnt64_1[__lzcnt64(1ULL << (BITSIZE(__int64) - 1)) == 0 ? 1 : -1];
+char lzcnt64_2[__lzcnt64(0ULL) == BITSIZE(__int64) ? 1 : -1];
+#undef BITSIZE
+
 #endif

@@ -679,12 +679,26 @@ static void readMemprof(Module &M, Function &F,
                         const TargetLibraryInfo &TLI) {
   auto &Ctx = M.getContext();
 
-  auto FuncName = getPGOFuncName(F);
+  auto FuncName = getIRPGOFuncName(F);
   auto FuncGUID = Function::getGUID(FuncName);
-  Expected<memprof::MemProfRecord> MemProfResult =
-      MemProfReader->getMemProfRecord(FuncGUID);
-  if (Error E = MemProfResult.takeError()) {
-    handleAllErrors(std::move(E), [&](const InstrProfError &IPE) {
+  std::optional<memprof::MemProfRecord> MemProfRec;
+  auto Err = MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec);
+  if (Err) {
+    // If we don't find getIRPGOFuncName(), try getPGOFuncName() to handle
+    // profiles built by older compilers
+    Err = handleErrors(std::move(Err), [&](const InstrProfError &IE) -> Error {
+      if (IE.get() != instrprof_error::unknown_function)
+        return make_error<InstrProfError>(IE);
+      auto FuncName = getPGOFuncName(F);
+      auto FuncGUID = Function::getGUID(FuncName);
+      if (auto Err =
+              MemProfReader->getMemProfRecord(FuncGUID).moveInto(MemProfRec))
+        return Err;
+      return Error::success();
+    });
+  }
+  if (Err) {
+    handleAllErrors(std::move(Err), [&](const InstrProfError &IPE) {
       auto Err = IPE.get();
       bool SkipWarning = false;
       LLVM_DEBUG(dbgs() << "Error in reading profile for Func " << FuncName
@@ -722,15 +736,14 @@ static void readMemprof(Module &M, Function &F,
   // the frame array (see comments below where the map entries are added).
   std::map<uint64_t, std::set<std::pair<const SmallVector<Frame> *, unsigned>>>
       LocHashToCallSites;
-  const auto MemProfRec = std::move(MemProfResult.get());
-  for (auto &AI : MemProfRec.AllocSites) {
+  for (auto &AI : MemProfRec->AllocSites) {
     // Associate the allocation info with the leaf frame. The later matching
     // code will match any inlined call sequences in the IR with a longer prefix
     // of call stack frames.
     uint64_t StackId = computeStackId(AI.CallStack[0]);
     LocHashToAllocInfo[StackId].insert(&AI);
   }
-  for (auto &CS : MemProfRec.CallSites) {
+  for (auto &CS : MemProfRec->CallSites) {
     // Need to record all frames from leaf up to and including this function,
     // as any of these may or may not have been inlined at this point.
     unsigned Idx = 0;

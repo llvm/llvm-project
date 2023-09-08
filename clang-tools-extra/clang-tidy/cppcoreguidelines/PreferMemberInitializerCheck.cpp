@@ -141,10 +141,11 @@ void PreferMemberInitializerCheck::storeOptions(
 }
 
 void PreferMemberInitializerCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      cxxConstructorDecl(hasBody(compoundStmt()), unless(isInstantiated()))
-          .bind("ctor"),
-      this);
+  Finder->addMatcher(cxxConstructorDecl(hasBody(compoundStmt()),
+                                        unless(isInstantiated()),
+                                        unless(isDelegatingConstructor()))
+                         .bind("ctor"),
+                     this);
 }
 
 void PreferMemberInitializerCheck::check(
@@ -174,8 +175,8 @@ void PreferMemberInitializerCheck::check(
         return;
     }
 
-    const FieldDecl *Field;
-    const Expr *InitValue;
+    const FieldDecl *Field = nullptr;
+    const Expr *InitValue = nullptr;
     std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
     if (Field) {
       if (IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&

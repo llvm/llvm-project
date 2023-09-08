@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, sigaction,
   }
 
   KernelSigaction kernel_old;
-  int ret = __llvm_libc::syscall_impl(
+  int ret = __llvm_libc::syscall_impl<int>(
       SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
       libc_old ? &kernel_old : nullptr, sizeof(sigset_t));
   if (ret) {

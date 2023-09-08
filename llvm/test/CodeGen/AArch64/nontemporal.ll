@@ -439,43 +439,43 @@ entry:
 define void @test_stnp_v17f32(<17 x float> %v, ptr %ptr) {
 ; CHECK-LABEL: test_stnp_v17f32:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldr s16, [sp, #16]
-; CHECK-NEXT:    add x8, sp, #20
-; CHECK-NEXT:    ldr s17, [sp]
-; CHECK-NEXT:    add x9, sp, #4
 ; CHECK-NEXT:    ; kill: def $s4 killed $s4 def $q4
 ; CHECK-NEXT:    ; kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    ldr s16, [sp, #16]
 ; CHECK-NEXT:    ; kill: def $s5 killed $s5 def $q5
 ; CHECK-NEXT:    ; kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    add x8, sp, #20
 ; CHECK-NEXT:    ; kill: def $s6 killed $s6 def $q6
 ; CHECK-NEXT:    ; kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    ; kill: def $s7 killed $s7 def $q7
 ; CHECK-NEXT:    ; kill: def $s3 killed $s3 def $q3
-; CHECK-NEXT:    ld1.s { v16 }[1], [x8]
-; CHECK-NEXT:    add x8, sp, #24
-; CHECK-NEXT:    ld1.s { v17 }[1], [x9]
-; CHECK-NEXT:    add x9, sp, #8
 ; CHECK-NEXT:    mov.s v4[1], v5[0]
 ; CHECK-NEXT:    mov.s v0[1], v1[0]
-; CHECK-NEXT:    ld1.s { v16 }[2], [x8]
-; CHECK-NEXT:    add x8, sp, #28
-; CHECK-NEXT:    ld1.s { v17 }[2], [x9]
-; CHECK-NEXT:    add x9, sp, #12
+; CHECK-NEXT:    ldr s5, [sp]
+; CHECK-NEXT:    ld1.s { v16 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #4
+; CHECK-NEXT:    ld1.s { v5 }[1], [x8]
+; CHECK-NEXT:    add x8, sp, #24
 ; CHECK-NEXT:    mov.s v4[2], v6[0]
+; CHECK-NEXT:    ld1.s { v16 }[2], [x8]
 ; CHECK-NEXT:    mov.s v0[2], v2[0]
+; CHECK-NEXT:    add x8, sp, #8
+; CHECK-NEXT:    ld1.s { v5 }[2], [x8]
+; CHECK-NEXT:    add x8, sp, #28
 ; CHECK-NEXT:    ld1.s { v16 }[3], [x8]
-; CHECK-NEXT:    ld1.s { v17 }[3], [x9]
+; CHECK-NEXT:    add x8, sp, #12
 ; CHECK-NEXT:    mov.s v4[3], v7[0]
 ; CHECK-NEXT:    mov.s v0[3], v3[0]
+; CHECK-NEXT:    ld1.s { v5 }[3], [x8]
 ; CHECK-NEXT:    mov d1, v16[1]
-; CHECK-NEXT:    mov d2, v17[1]
+; CHECK-NEXT:    mov d2, v5[1]
 ; CHECK-NEXT:    mov d3, v4[1]
-; CHECK-NEXT:    mov d5, v0[1]
+; CHECK-NEXT:    mov d6, v0[1]
 ; CHECK-NEXT:    stnp d16, d1, [x0, #48]
 ; CHECK-NEXT:    ldr s1, [sp, #32]
-; CHECK-NEXT:    stnp d17, d2, [x0, #32]
+; CHECK-NEXT:    stnp d5, d2, [x0, #32]
 ; CHECK-NEXT:    stnp d4, d3, [x0, #16]
-; CHECK-NEXT:    stnp d0, d5, [x0]
+; CHECK-NEXT:    stnp d0, d6, [x0]
 ; CHECK-NEXT:    str s1, [x0, #64]
 ; CHECK-NEXT:    ret
 
@@ -486,8 +486,8 @@ entry:
 define void @test_stnp_v16i32_invalid_offset(<16 x i32> %v, ptr %ptr) {
 ; CHECK-LABEL: test_stnp_v16i32_invalid_offset:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov w8, #32032
-; CHECK-NEXT:    mov w9, #32000
+; CHECK-NEXT:    mov w8, #32032 ; =0x7d20
+; CHECK-NEXT:    mov w9, #32000 ; =0x7d00
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    add x9, x0, x9
 ; CHECK-NEXT:    stnp q2, q3, [x8]

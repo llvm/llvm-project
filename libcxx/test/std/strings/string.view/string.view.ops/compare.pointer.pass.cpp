@@ -18,25 +18,22 @@
 #include "test_macros.h"
 #include "constexpr_char_traits.h"
 
-int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
+int sign(int x) { return x > 0 ? 1 : (x < 0 ? -1 : 0); }
 
-template<typename CharT>
-void test1 ( std::basic_string_view<CharT> sv1, const CharT *s, int expected ) {
-    assert ( sign( sv1.compare(s)) == sign(expected));
+template <typename CharT>
+void test1(std::basic_string_view<CharT> sv1, const CharT* s, int expected) {
+  assert(sign(sv1.compare(s)) == sign(expected));
 }
 
-template<typename CharT>
-void
-test( const CharT *s1, const CharT *s2, int expected)
-{
-    typedef std::basic_string_view<CharT> string_view_t;
-    string_view_t sv1 ( s1 );
-    test1 ( sv1, s2, expected );
+template <typename CharT>
+void test(const CharT* s1, const CharT* s2, int expected) {
+  typedef std::basic_string_view<CharT> string_view_t;
+  string_view_t sv1(s1);
+  test1(sv1, s2, expected);
 }
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     test("", "", 0);
     test("", "abcde", -5);
     test("", "abcdefghij", -10);
@@ -53,10 +50,10 @@ int main(int, char**)
     test("abcdefghijklmnopqrst", "abcde", 15);
     test("abcdefghijklmnopqrst", "abcdefghij", 10);
     test("abcdefghijklmnopqrst", "abcdefghijklmnopqrst", 0);
-    }
+  }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    {
+  {
     test(L"", L"", 0);
     test(L"", L"abcde", -5);
     test(L"", L"abcdefghij", -10);
@@ -73,11 +70,11 @@ int main(int, char**)
     test(L"abcdefghijklmnopqrst", L"abcde", 15);
     test(L"abcdefghijklmnopqrst", L"abcdefghij", 10);
     test(L"abcdefghijklmnopqrst", L"abcdefghijklmnopqrst", 0);
-    }
+  }
 #endif
 
 #if TEST_STD_VER >= 11
-    {
+  {
     test(U"", U"", 0);
     test(U"", U"abcde", -5);
     test(U"", U"abcdefghij", -10);
@@ -94,9 +91,9 @@ int main(int, char**)
     test(U"abcdefghijklmnopqrst", U"abcde", 15);
     test(U"abcdefghijklmnopqrst", U"abcdefghij", 10);
     test(U"abcdefghijklmnopqrst", U"abcdefghijklmnopqrst", 0);
-    }
+  }
 
-    {
+  {
     test(u"", u"", 0);
     test(u"", u"abcde", -5);
     test(u"", u"abcdefghij", -10);
@@ -113,19 +110,19 @@ int main(int, char**)
     test(u"abcdefghijklmnopqrst", u"abcde", 15);
     test(u"abcdefghijklmnopqrst", u"abcdefghij", 10);
     test(u"abcdefghijklmnopqrst", u"abcdefghijklmnopqrst", 0);
-    }
+  }
 #endif
 
 #if TEST_STD_VER > 11
-    {
+  {
     typedef std::basic_string_view<char, constexpr_char_traits<char>> SV;
-    constexpr SV  sv1;
-    constexpr SV  sv2 { "abcde", 5 };
-    static_assert ( sv1.compare("") == 0, "" );
-    static_assert ( sv1.compare("abcde") < 0, "" );
-    static_assert ( sv2.compare("") > 0, "" );
-    static_assert ( sv2.compare("abcde") == 0, "" );
-    }
+    constexpr SV sv1;
+    constexpr SV sv2{"abcde", 5};
+    static_assert(sv1.compare("") == 0, "");
+    static_assert(sv1.compare("abcde") < 0, "");
+    static_assert(sv2.compare("") > 0, "");
+    static_assert(sv2.compare("abcde") == 0, "");
+  }
 #endif
 
   return 0;

@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP7:%.*]] = load i64, ptr [[ARGC_CASTED]], align 8
 // CHECK4-NEXT:    store i32 0, ptr [[DOTZERO_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP5]], ptr [[DOTTHREADID_TEMP_]], align 4
-// CHECK4-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTZERO_ADDR]], ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP7]], ptr [[TMP3]]) #[[ATTR5:[0-9]+]]
+// CHECK4-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTZERO_ADDR]], ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP7]], ptr [[TMP3]]) #[[ATTR4:[0-9]+]]
 // CHECK4-NEXT:    call void @__kmpc_target_deinit()
 // CHECK4-NEXT:    ret void
 // CHECK4:       worker.exit:
@@ -370,7 +370,7 @@ int main(int argc, char **argv) {
 // CHECK5-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARGC_CASTED]], align 4
 // CHECK5-NEXT:    store i32 0, ptr [[DOTZERO_ADDR]], align 4
 // CHECK5-NEXT:    store i32 [[TMP5]], ptr [[DOTTHREADID_TEMP_]], align 4
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTZERO_ADDR]], ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i32 [[TMP7]], ptr [[TMP3]]) #[[ATTR5:[0-9]+]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l19_omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTZERO_ADDR]], ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i32 [[TMP7]], ptr [[TMP3]]) #[[ATTR4:[0-9]+]]
 // CHECK5-NEXT:    call void @__kmpc_target_deinit()
 // CHECK5-NEXT:    ret void
 // CHECK5:       worker.exit:

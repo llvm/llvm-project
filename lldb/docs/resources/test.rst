@@ -1,9 +1,6 @@
 Testing
 =======
 
-.. contents::
-   :local:
-
 Test Suite Structure
 --------------------
 
@@ -408,6 +405,21 @@ for example, in test/API/terminal/TestSTTYBeforeAndAfter.py:
 The 'child_send1.txt' file gets generated during the test run, so it makes sense to explicitly spell out the action in the same
 TestSTTYBeforeAndAfter.py file to do the cleanup instead of artificially adding it as part of the default cleanup action which serves to
 cleanup those intermediate and a.out files.
+
+CI
+--
+
+LLVM Buildbot is the place where volunteers provide machines for building and
+testing. Everyone can `add a buildbot for LLDB <https://llvm.org/docs/HowToAddABuilder.html>`_.
+
+An overview of all LLDB builders can be found here:
+
+`https://lab.llvm.org/buildbot/#/builders?tags=lldb <https://lab.llvm.org/buildbot/#/builders?tags=lldb>`_
+
+Building and testing for macOS uses a different platform called GreenDragon. It
+has a dedicated tab for LLDB: `https://green.lab.llvm.org/green/view/LLDB/
+<https://green.lab.llvm.org/green/view/LLDB/>`_
+
 
 Running The Tests
 -----------------

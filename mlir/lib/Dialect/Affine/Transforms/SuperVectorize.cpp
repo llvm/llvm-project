@@ -929,8 +929,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
                              int fastestVaryingMemRefDimension) {
   return [&parallelLoops, fastestVaryingMemRefDimension](Operation &forOp) {
     auto loop = cast<AffineForOp>(forOp);
-    auto parallelIt = parallelLoops.find(loop);
-    if (parallelIt == parallelLoops.end())
+    if (!parallelLoops.contains(loop))
       return false;
     int memRefDim = -1;
     auto vectorizableBody =

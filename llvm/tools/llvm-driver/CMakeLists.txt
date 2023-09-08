@@ -25,6 +25,12 @@ target_sources(llvm-driver PRIVATE llvm-driver.cpp)
 set_target_properties(llvm-driver PROPERTIES OUTPUT_NAME llvm)
 
 target_link_libraries(llvm-driver PUBLIC ${LLVM_DRIVER_OBJLIBS})
+target_link_libraries(llvm-driver PUBLIC LLVMDebuginfod)
+
+if(LLVM_HAVE_LIBXAR)
+  # used by llvm-objdump
+  target_link_libraries(llvm-driver PUBLIC ${XAR_LIB})
+endif()
 
 if(APPLE)
   # dsymutil uses some CoreFoundation stuff on Darwin...

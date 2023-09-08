@@ -508,6 +508,7 @@ void LookupResult::resolveKind() {
   llvm::SmallDenseMap<QualType, unsigned, 16> UniqueTypes;
 
   bool Ambiguous = false;
+  bool ReferenceToPlaceHolderVariable = false;
   bool HasTag = false, HasFunction = false;
   bool HasFunctionTemplate = false, HasUnresolved = false;
   const NamedDecl *HasNonFunction = nullptr;
@@ -537,7 +538,7 @@ void LookupResult::resolveKind() {
     if (HideTags && isa<TagDecl>(D)) {
       bool Hidden = false;
       for (auto *OtherDecl : Decls) {
-        if (canHideTag(OtherDecl) &&
+        if (canHideTag(OtherDecl) && !OtherDecl->isInvalidDecl() &&
             getContextForScopeMatching(OtherDecl)->Equals(
                 getContextForScopeMatching(Decls[I]))) {
           RemovedDecls.set(I);
@@ -567,7 +568,7 @@ void LookupResult::resolveKind() {
 
     // For non-type declarations, check for a prior lookup result naming this
     // canonical declaration.
-    if (!ExistingI) {
+    if (!D->isPlaceholderVar(getSema().getLangOpts()) && !ExistingI) {
       auto UniqueResult = Unique.insert(std::make_pair(D, I));
       if (!UniqueResult.second) {
         // We've seen this entity before.
@@ -610,7 +611,11 @@ void LookupResult::resolveKind() {
           RemovedDecls.set(I);
           continue;
         }
-
+        if (D->isPlaceholderVar(getSema().getLangOpts()) &&
+            getContextForScopeMatching(D) ==
+                getContextForScopeMatching(Decls[I])) {
+          ReferenceToPlaceHolderVariable = true;
+        }
         Ambiguous = true;
       }
       HasNonFunction = D;
@@ -634,7 +639,9 @@ void LookupResult::resolveKind() {
       (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
     Ambiguous = true;
 
-  if (Ambiguous)
+  if (Ambiguous && ReferenceToPlaceHolderVariable)
+    setAmbiguous(LookupResult::AmbiguousReferenceToPlaceholderVariable);
+  else if (Ambiguous)
     setAmbiguous(LookupResult::AmbiguousReference);
   else if (HasUnresolved)
     ResultKind = LookupResult::FoundUnresolvedValue;
@@ -2859,6 +2866,18 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
         F.erase();
     }
     F.done();
+    break;
+  }
+
+  case LookupResult::AmbiguousReferenceToPlaceholderVariable: {
+    Diag(NameLoc, diag::err_using_placeholder_variable) << Name << LookupRange;
+    DeclContext *DC = nullptr;
+    for (auto *D : Result) {
+      Diag(D->getLocation(), diag::note_reference_placeholder) << D;
+      if (DC != nullptr && DC != D->getDeclContext())
+        break;
+      DC = D->getDeclContext();
+    }
     break;
   }
 
@@ -5682,10 +5701,10 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
 /// suggesting the addition of a #include of the specified file.
 static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
                                           llvm::StringRef IncludingFile) {
-  bool IsSystem = false;
+  bool IsAngled = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
-      E, IncludingFile, &IsSystem);
-  return (IsSystem ? '<' : '"') + Path + (IsSystem ? '>' : '"');
+      E, IncludingFile, &IsAngled);
+  return (IsAngled ? '<' : '"') + Path + (IsAngled ? '>' : '"');
 }
 
 void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,

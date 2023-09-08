@@ -74,7 +74,7 @@ union ResourceInitHelper {
     __null_memory_resource_imp       null_res;
   } resources;
   char dummy;
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 ResourceInitHelper() : resources() {}
+  constexpr ResourceInitHelper() : resources() {}
   ~ResourceInitHelper() {}
 };
 

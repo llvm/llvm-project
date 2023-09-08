@@ -1,0 +1,10 @@
+# Test that we can just use --opcode-index=-1 to generate snippets for
+# all supported opcodes and gracefully handle unsupported ones.
+
+# RUN: llvm-exegesis --mtriple=aarch64-linux-gnu --mcpu=cortex-a55 --benchmark-phase=prepare-and-assemble-snippet \
+# RUN:               --mode=latency --opcode-index=-1 | FileCheck %s
+# RUN: llvm-exegesis --mtriple=aarch64-linux-gnu --mcpu=cortex-a55 --benchmark-phase=prepare-and-assemble-snippet \
+# RUN:               --mode=uops --opcode-index=-1 | FileCheck %s
+
+# 100 means "quite a lot"
+# CHECK-COUNT-100: assembled_snippet: {{.*}}

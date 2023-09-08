@@ -11,9 +11,9 @@ void foo(int device) {
     device(device) thread_limit(2) num_teams(5)
   for (int i = 0; i < 1000; ++i) {
     if (i == 42) {
-      tid = ompx_thread_dim_x();
+      tid = ompx_block_dim_x();
       bid = ompx_block_id_x();
-      bdim = ompx_block_dim_x();
+      bdim = ompx_grid_dim_x();
     }
   }
   // CHECK: tid: 2, bid: 1, bdim: 5

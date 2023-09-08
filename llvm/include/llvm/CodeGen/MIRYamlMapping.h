@@ -137,6 +137,8 @@ template <> struct ScalarEnumerationTraits<MachineJumpTableInfo::JTEntryKind> {
                 MachineJumpTableInfo::EK_GPRel32BlockAddress);
     IO.enumCase(EntryKind, "label-difference32",
                 MachineJumpTableInfo::EK_LabelDifference32);
+    IO.enumCase(EntryKind, "label-difference64",
+                MachineJumpTableInfo::EK_LabelDifference64);
     IO.enumCase(EntryKind, "inline", MachineJumpTableInfo::EK_Inline);
     IO.enumCase(EntryKind, "custom32", MachineJumpTableInfo::EK_Custom32);
   }

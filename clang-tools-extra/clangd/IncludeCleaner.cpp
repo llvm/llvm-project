@@ -68,21 +68,25 @@ bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
   return false;
 }
 
-bool mayConsiderUnused(
-    const Inclusion &Inc, ParsedAST &AST,
-    const include_cleaner::PragmaIncludes *PI) {
-  if (PI && PI->shouldKeep(Inc.HashLine + 1))
-      return false;
-  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
-  // System headers are likely to be standard library headers.
-  // Until we have good support for umbrella headers, don't warn about them.
-  if (Inc.Written.front() == '<')
-    return tooling::stdlib::Header::named(Inc.Written).has_value();
+bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
+                       const include_cleaner::PragmaIncludes *PI) {
   assert(Inc.HeaderID);
   auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
+  if (FE->getDir() == AST.getPreprocessor()
+                  .getHeaderSearchInfo()
+                  .getModuleMap()
+                  .getBuiltinDir()) 
+    return false;
+  if (PI && PI->shouldKeep(*FE))
+    return false;
+  // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
+  // System headers are likely to be standard library headers.
+  // Until we have good support for umbrella headers, don't warn about them.
+  if (Inc.Written.front() == '<')
+    return tooling::stdlib::Header::named(Inc.Written).has_value();
   if (PI) {
     // Check if main file is the public interface for a private header. If so we
     // shouldn't diagnose it as unused.
@@ -393,15 +397,20 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
   llvm::DenseSet<IncludeStructure::HeaderID> Used;
   trace::Span Tracer("include_cleaner::walkUsed");
+  const DirectoryEntry *ResourceDir = AST.getPreprocessor()
+                                .getHeaderSearchInfo()
+                                .getModuleMap()
+                                .getBuiltinDir();
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), /*MacroRefs=*/Macros,
-      AST.getPragmaIncludes().get(), SM,
+      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         bool Satisfied = false;
         for (const auto &H : Providers) {
           if (H.kind() == include_cleaner::Header::Physical &&
-              (H.physical() == MainFile || H.physical() == PreamblePatch)) {
+              (H.physical() == MainFile || H.physical() == PreamblePatch ||
+               H.physical()->getLastRef().getDir() == ResourceDir)) {
             Satisfied = true;
             continue;
           }

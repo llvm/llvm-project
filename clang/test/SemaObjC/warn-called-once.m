@@ -1194,7 +1194,6 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   escape(handler);
 }
 
-// rdar://74441906
 typedef void (^DeferredBlock)(void);
 static inline void DefferedCallback(DeferredBlock *inBlock) { (*inBlock)(); }
 #define _DEFERCONCAT(a, b) a##b

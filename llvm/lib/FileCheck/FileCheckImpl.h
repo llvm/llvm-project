@@ -32,8 +32,6 @@ namespace llvm {
 // Numeric substitution handling code.
 //===----------------------------------------------------------------------===//
 
-class ExpressionValue;
-
 /// Type representing the format an expression value should be textualized into
 /// for matching. Used to represent both explicit format specifiers as well as
 /// implicit format from using numeric variables.
@@ -95,14 +93,11 @@ public:
   /// \returns the string representation of \p Value in the format represented
   /// by this instance, or an error if conversion to this format failed or the
   /// format is NoFormat.
-  Expected<std::string> getMatchingString(ExpressionValue Value) const;
+  Expected<std::string> getMatchingString(APInt Value) const;
 
   /// \returns the value corresponding to string representation \p StrVal
-  /// according to the matching format represented by this instance or an error
-  /// with diagnostic against \p SM if \p StrVal does not correspond to a valid
-  /// and representable value.
-  Expected<ExpressionValue> valueFromStringRepr(StringRef StrVal,
-                                                const SourceMgr &SM) const;
+  /// according to the matching format represented by this instance.
+  APInt valueFromStringRepr(StringRef StrVal, const SourceMgr &SM) const;
 };
 
 /// Class to represent an overflow error that might result when manipulating a
@@ -118,33 +113,14 @@ public:
   void log(raw_ostream &OS) const override { OS << "overflow error"; }
 };
 
-/// Class representing a numeric value.
-class ExpressionValue {
-private:
-  APInt Value;
-
-public:
-  // Store signed and unsigned 64-bit integers in a signed 65-bit APInt.
-  template <class T>
-  explicit ExpressionValue(T Val) : Value(65, Val, /*isSigned=*/Val < 0) {}
-
-  APInt getAPIntValue() const { return Value; }
-};
-
 /// Performs operation and \returns its result or an error in case of failure,
 /// such as if an overflow occurs.
-Expected<ExpressionValue> operator+(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> operator-(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> operator*(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> operator/(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> max(const ExpressionValue &Lhs,
-                              const ExpressionValue &Rhs);
-Expected<ExpressionValue> min(const ExpressionValue &Lhs,
-                              const ExpressionValue &Rhs);
+Expected<APInt> exprAdd(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+Expected<APInt> exprSub(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+Expected<APInt> exprMul(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+Expected<APInt> exprDiv(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+Expected<APInt> exprMax(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
+Expected<APInt> exprMin(const APInt &Lhs, const APInt &Rhs, bool &Overflow);
 
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
@@ -160,7 +136,7 @@ public:
 
   /// Evaluates and \returns the value of the expression represented by this
   /// AST or an error if evaluation fails.
-  virtual Expected<ExpressionValue> eval() const = 0;
+  virtual Expected<APInt> eval() const = 0;
 
   /// \returns either the implicit format of this AST, a diagnostic against
   /// \p SM if implicit formats of the AST's components conflict, or NoFormat
@@ -176,15 +152,14 @@ public:
 class ExpressionLiteral : public ExpressionAST {
 private:
   /// Actual value of the literal.
-  ExpressionValue Value;
+  APInt Value;
 
 public:
-  template <class T>
-  explicit ExpressionLiteral(StringRef ExpressionStr, T Val)
+  explicit ExpressionLiteral(StringRef ExpressionStr, APInt Val)
       : ExpressionAST(ExpressionStr), Value(Val) {}
 
   /// \returns the literal's value.
-  Expected<ExpressionValue> eval() const override { return Value; }
+  Expected<APInt> eval() const override { return Value; }
 };
 
 /// Class to represent an undefined variable error, which quotes that
@@ -243,7 +218,7 @@ private:
   ExpressionFormat ImplicitFormat;
 
   /// Value of numeric variable, if defined, or std::nullopt otherwise.
-  std::optional<ExpressionValue> Value;
+  std::optional<APInt> Value;
 
   /// The input buffer's string from which Value was parsed, or std::nullopt.
   /// See comments on getStringValue for a discussion of the std::nullopt case.
@@ -270,7 +245,7 @@ public:
   ExpressionFormat getImplicitFormat() const { return ImplicitFormat; }
 
   /// \returns this variable's value.
-  std::optional<ExpressionValue> getValue() const { return Value; }
+  std::optional<APInt> getValue() const { return Value; }
 
   /// \returns the input buffer's string from which this variable's value was
   /// parsed, or std::nullopt if the value is not yet defined or was not parsed
@@ -282,7 +257,7 @@ public:
   /// Sets value of this numeric variable to \p NewValue, and sets the input
   /// buffer string from which it was parsed to \p NewStrValue.  See comments on
   /// getStringValue for a discussion of when the latter can be std::nullopt.
-  void setValue(ExpressionValue NewValue,
+  void setValue(APInt NewValue,
                 std::optional<StringRef> NewStrValue = std::nullopt) {
     Value = NewValue;
     StrValue = NewStrValue;
@@ -311,7 +286,7 @@ public:
   NumericVariableUse(StringRef Name, NumericVariable *Variable)
       : ExpressionAST(Name), Variable(Variable) {}
   /// \returns the value of the variable referenced by this instance.
-  Expected<ExpressionValue> eval() const override;
+  Expected<APInt> eval() const override;
 
   /// \returns implicit format of this numeric variable.
   Expected<ExpressionFormat>
@@ -321,8 +296,7 @@ public:
 };
 
 /// Type of functions evaluating a given binary operation.
-using binop_eval_t = Expected<ExpressionValue> (*)(const ExpressionValue &,
-                                                   const ExpressionValue &);
+using binop_eval_t = Expected<APInt> (*)(const APInt &, const APInt &, bool &);
 
 /// Class representing a single binary operation in the AST of an expression.
 class BinaryOperation : public ExpressionAST {
@@ -349,7 +323,7 @@ public:
   /// using EvalBinop on the result of recursively evaluating the operands.
   /// \returns the expression value or an error if an undefined numeric
   /// variable is used in one of the operands.
-  Expected<ExpressionValue> eval() const override;
+  Expected<APInt> eval() const override;
 
   /// \returns the implicit format of this AST, if any, a diagnostic against
   /// \p SM if the implicit formats of the AST's components conflict, or no

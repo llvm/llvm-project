@@ -8,9 +8,11 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class Mode(Enum):
     SVE = 0
     SSVE = 1
+
 
 class RegisterCommandsTestCase(TestBase):
     def check_sve_register_size(self, set, name, expected):
@@ -104,7 +106,9 @@ class RegisterCommandsTestCase(TestBase):
         currentFrame = thread.GetFrameAtIndex(0)
 
         registerSets = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters()
-        sve_registers = registerSets.GetFirstValueByName("Scalable Vector Extension Registers")
+        sve_registers = registerSets.GetFirstValueByName(
+            "Scalable Vector Extension Registers"
+        )
         self.assertTrue(sve_registers)
 
         vg_reg_value = sve_registers.GetChildMemberWithName("vg").GetValueAsUnsigned()
@@ -157,7 +161,9 @@ class RegisterCommandsTestCase(TestBase):
         process = target.GetProcess()
 
         registerSets = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters()
-        sve_registers = registerSets.GetFirstValueByName("Scalable Vector Extension Registers")
+        sve_registers = registerSets.GetFirstValueByName(
+            "Scalable Vector Extension Registers"
+        )
         self.assertTrue(sve_registers)
 
         vg_reg_value = sve_registers.GetChildMemberWithName("vg").GetValueAsUnsigned()
@@ -168,9 +174,13 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("expression expr_eval_func", substrs=["= 0x"])
 
         # Evaluate expression call function expr_eval_func.
-        self.expect_expr("expr_eval_func({})".format(
-            "true" if (eval_mode == Mode.SSVE) else "false"), result_type="int",
-            result_value="1")
+        self.expect_expr(
+            "expr_eval_func({})".format(
+                "true" if (eval_mode == Mode.SSVE) else "false"
+            ),
+            result_type="int",
+            result_value="1",
+        )
 
         # We called a jitted function above which must not have changed SVE
         # vector length or register values.

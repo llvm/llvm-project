@@ -45,7 +45,7 @@ public:
   /// The ORC runtime requires access to a number of symbols in libc++, and
   /// requires access to symbols in libobjc, and libswiftCore to support
   /// Objective-C and Swift code. It is up to the caller to ensure that the
-  /// requried symbols can be referenced by code added to PlatformJD. The
+  /// required symbols can be referenced by code added to PlatformJD. The
   /// standard way to achieve this is to first attach dynamic library search
   /// generators for either the given process, or for the specific required
   /// libraries, to PlatformJD, then to create the platform instance:

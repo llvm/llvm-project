@@ -1,5 +1,5 @@
-Fuzzing LLDB
-============
+Fuzzing
+=======
 
 Overview
 --------

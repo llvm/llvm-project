@@ -42,8 +42,8 @@ define void @build_vector_0_dec3_v8i32(ptr %a) #0 {
 define void @build_vector_minus2_dec32_v4i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_minus2_dec32_v4i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #-32
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #-32
 ; VBITS_GE_256-NEXT:    index z0.d, #-2, x8
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
@@ -60,9 +60,9 @@ define void @build_vector_no_stride_v4i64(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    .xword  8
 ; VBITS_GE_256-LABEL: build_vector_no_stride_v4i64:
 ; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    adrp x8, .LCPI4_0
 ; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI4_0
-; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret

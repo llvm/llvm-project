@@ -58,9 +58,9 @@ enum {
 
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(thread_id,
                                       omp_get_ancestor_thread_num(Dim + 1))
-_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(thread_dim, omp_get_team_size(Dim + 1))
+_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(block_dim, omp_get_team_size(Dim + 1))
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(block_id, 0)
-_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(block_dim, 1)
+_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(grid_dim, 1)
 #undef _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C
 ///}
 
@@ -100,9 +100,9 @@ _TGT_KERNEL_LANGUAGE_DECL_SYNC_C(void, sync_block_divergent, int Ordering);
   static inline int ompx_##NAME##_z() { return ompx_##NAME(ompx_dim_z); }
 
 _TGT_KERNEL_LANGUAGE_DECL_GRID_C(thread_id)
-_TGT_KERNEL_LANGUAGE_DECL_GRID_C(thread_dim)
-_TGT_KERNEL_LANGUAGE_DECL_GRID_C(block_id)
 _TGT_KERNEL_LANGUAGE_DECL_GRID_C(block_dim)
+_TGT_KERNEL_LANGUAGE_DECL_GRID_C(block_id)
+_TGT_KERNEL_LANGUAGE_DECL_GRID_C(grid_dim)
 #undef _TGT_KERNEL_LANGUAGE_DECL_GRID_C
 ///}
 
@@ -137,9 +137,9 @@ enum {
   static inline int NAME##_z() noexcept { return NAME(ompx_dim_z); }
 
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(thread_id)
-_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(thread_dim)
-_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(block_id)
 _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(block_dim)
+_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(block_id)
+_TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX(grid_dim)
 #undef _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_CXX
 ///}
 

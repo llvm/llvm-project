@@ -56,7 +56,7 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
   while (Curr < End) {
 
     const char *Prev = Curr;
-    UTF32 CodePoint;
+    UTF32 CodePoint = 0;
     ConversionResult Result = convertUTF8Sequence(
         reinterpret_cast<const UTF8 **>(&Curr),
         reinterpret_cast<const UTF8 *>(End), &CodePoint, strictConversion);
@@ -161,7 +161,7 @@ ConfusableIdentifierCheck::getContextInfo(const DeclContext *DC) {
     DC = DC->getParent();
   }
 
-  if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(PrimaryContext)) {
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(PrimaryContext)) {
     RD = RD->getDefinition();
     if (RD) {
       Info.Bases.push_back(RD);

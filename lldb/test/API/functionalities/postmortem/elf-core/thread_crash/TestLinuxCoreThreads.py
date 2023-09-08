@@ -41,7 +41,7 @@ class LinuxCoreThreadsTestCase(TestBase):
 
         # The fs_base/gs_base registers in linux-x86_64.core are parsed by
         # using "eu-readelf -n linux-x86_64.core" to verify.
-        fs_base_values = [0x00007fc295017700, 0x00007fc294fff740, 0x00007fc29501f700]
+        fs_base_values = [0x00007FC295017700, 0x00007FC294FFF740, 0x00007FC29501F700]
         gs_base_values = [0, 0, 0]
 
         for i in range(process.GetNumThreads()):
@@ -57,14 +57,17 @@ class LinuxCoreThreadsTestCase(TestBase):
             self.assertTrue(reg_gs_base.IsValid(), "gs_base is not available")
 
             self.assertEqual(
-                reg_fs_base.GetValueAsSigned(-1), fs_base_values[i], f"fs_base read is different from expected"
+                reg_fs_base.GetValueAsSigned(-1),
+                fs_base_values[i],
+                f"fs_base read is different from expected",
             )
 
             self.assertEqual(
-                reg_gs_base.GetValueAsSigned(-1), gs_base_values[i], f"gs_base read is different from expected"
+                reg_gs_base.GetValueAsSigned(-1),
+                gs_base_values[i],
+                f"gs_base read is different from expected",
             )
         self.dbg.DeleteTarget(target)
-
 
     def do_test(self, filename, pid, tid):
         target = self.dbg.CreateTarget("")

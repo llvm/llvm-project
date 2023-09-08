@@ -36,7 +36,7 @@
 // CHECK: "-stack-protector" "2"
 // CHECK-AARCH64: "-target-feature" "+outline-atomics"
 // CHECK-NOT: "-fcommon"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
@@ -71,7 +71,7 @@
 // CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf"
 // CHECK-FP-NONE: "-mframe-pointer=none"
 
-// RUN: %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \
+// RUN: not %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
 // CHECK-RTLIB: error: invalid runtime library name in argument '-rtlib=libgcc'
 

@@ -86,8 +86,8 @@ TARGET_BUILTIN(__builtin_riscv_sm3p0, "UiUi", "nc", "zksh")
 TARGET_BUILTIN(__builtin_riscv_sm3p1, "UiUi", "nc", "zksh")
 
 // Zihintntl extension
-TARGET_BUILTIN(__builtin_riscv_ntl_load, "v.", "t", "experimental-zihintntl")
-TARGET_BUILTIN(__builtin_riscv_ntl_store, "v.", "t", "experimental-zihintntl")
+TARGET_BUILTIN(__builtin_riscv_ntl_load, "v.", "t", "zihintntl")
+TARGET_BUILTIN(__builtin_riscv_ntl_store, "v.", "t", "zihintntl")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

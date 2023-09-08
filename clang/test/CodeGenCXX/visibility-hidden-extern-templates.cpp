@@ -12,7 +12,6 @@ extern template struct X<int>;
 template struct X<int>;
 extern template struct X<char>;
 
-// <rdar://problem/8109763>
 void test_X(X<int> xi, X<char> xc) {
   // CHECK-LABEL: define weak_odr hidden {{.*}}void @_ZN1XIiE1fEv
   xi.f();

@@ -92,7 +92,7 @@ E: llvm@sunfishcode.online
 D: WebAssembly Backend (lib/Target/WebAssembly/*)
 
 N: Renato Golin
-E: renato.golin@linaro.org
+E: rengolin@systemcall.eu
 D: ARM Linux support
 
 N: Venkatraman Govindaraju

@@ -250,6 +250,10 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   *((void **)&RTL.data_notify_unmapped) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
 
+  // Record Replay RTL
+  *((void **)&RTL.activate_record_replay) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_initialize_record_replay");
+
   RTL.LibraryHandler = std::move(DynLibrary);
 
   // Successfully loaded
@@ -299,6 +303,10 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
     Device.HasPendingGlobals = true;
     for (__tgt_offload_entry *Entry = Img->EntriesBegin;
          Entry != Img->EntriesEnd; ++Entry) {
+      // Globals are not callable and use a different set of flags.
+      if (Entry->size != 0)
+        continue;
+
       if (Entry->flags & OMP_DECLARE_TARGET_CTOR) {
         DP("Adding ctor " DPxMOD " to the pending list.\n",
            DPxPTR(Entry->addr));

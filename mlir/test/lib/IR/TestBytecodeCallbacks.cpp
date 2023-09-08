@@ -108,7 +108,6 @@ private:
     // Print the module to the output stream, so that we can filecheck the
     // result.
     newModuleOp->print(llvm::outs());
-    return;
   }
 
   // Test0: let's assume that versions older than 2.0 were relying on a special
@@ -184,7 +183,6 @@ private:
           return success();
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
-    return;
   }
 
   // Test1: When writing bytecode, we override the encoding of TestI32Type with
@@ -216,7 +214,6 @@ private:
     // We natively parse the attribute as a builtin, so no callback needed.
     ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/true);
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
-    return;
   }
 
   // Test2: When writing bytecode, we write standard builtin IntegerTypes. At
@@ -244,7 +241,6 @@ private:
           return success();
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
-    return;
   }
 
   // Test3: When writing bytecode, we override the encoding of
@@ -280,7 +276,6 @@ private:
     // We natively parse the attribute as a builtin, so no callback needed.
     ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/false);
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
-    return;
   }
 
   // Test4: When writing bytecode, we write standard builtin
@@ -318,7 +313,6 @@ private:
           return success();
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
-    return;
   }
 
   // Test5: When writing bytecode, we want TestDialect to use nothing else than
@@ -360,7 +354,6 @@ private:
           return success();
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
-    return;
   }
 };
 } // namespace

@@ -31,8 +31,8 @@ define <2 x i8> @out_v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %mask) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d3, #0x0000ff000000ff
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    eor v3.8b, v2.8b, v3.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %mx = and <2 x i8> %x, %mask
@@ -63,8 +63,8 @@ define <4 x i8> @out_v4i8(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d3, #0xff00ff00ff00ff
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    eor v3.8b, v2.8b, v3.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %mx = and <4 x i8> %x, %mask
@@ -79,8 +79,8 @@ define <4 x i8> @out_v4i8_undef(<4 x i8> %x, <4 x i8> %y, <4 x i8> %mask) nounwi
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d3, #0xff00ff00ff00ff
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    eor v3.8b, v2.8b, v3.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %mx = and <4 x i8> %x, %mask
@@ -95,8 +95,8 @@ define <2 x i16> @out_v2i16(<2 x i16> %x, <2 x i16> %y, <2 x i16> %mask) nounwin
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi d3, #0x00ffff0000ffff
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    eor v3.8b, v2.8b, v3.8b
+; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
 ; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %mx = and <2 x i16> %x, %mask

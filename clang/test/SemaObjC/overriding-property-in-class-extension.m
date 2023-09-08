@@ -1,6 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Weverything %s
 // expected-no-diagnostics
-// rdar://12103434
 
 @class NSString;
 

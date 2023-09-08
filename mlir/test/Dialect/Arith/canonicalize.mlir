@@ -2567,3 +2567,75 @@ func.func @foldOrXor6(%arg0: index) -> index {
   %2 = arith.ori %arg0, %1 : index
   return %2 : index
 }
+
+// CHECK-LABEL: @selectOfPoison
+// CHECK-SAME: %[[ARG:[[:alnum:]]+]]: i32
+// CHECK: %[[UB:.*]] = ub.poison : i32
+// CHECK: return %[[ARG]], %[[ARG]], %[[UB]], %[[ARG]]
+func.func @selectOfPoison(%cond : i1, %arg: i32) -> (i32, i32, i32, i32) {
+  %poison = ub.poison : i32
+  %select1 = arith.select %cond, %poison, %arg : i32
+  %select2 = arith.select %cond, %arg, %poison : i32
+
+  // Check that constant folding is applied prior to poison handling.
+  %true = arith.constant true
+  %false = arith.constant false
+  %select3 = arith.select %true, %poison, %arg : i32
+  %select4 = arith.select %false, %poison, %arg : i32
+  return %select1, %select2, %select3, %select4 : i32, i32, i32, i32
+}
+
+// CHECK-LABEL: @addi_poison1
+//       CHECK:   %[[P:.*]] = ub.poison : i32
+//       CHECK:   return %[[P]]
+func.func @addi_poison1(%arg: i32) -> i32 {
+  %0 = ub.poison : i32
+  %1 = arith.addi %0, %arg : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @addi_poison2
+//       CHECK:   %[[P:.*]] = ub.poison : i32
+//       CHECK:   return %[[P]]
+func.func @addi_poison2(%arg: i32) -> i32 {
+  %0 = ub.poison : i32
+  %1 = arith.addi %arg, %0 : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @addf_poison1
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @addf_poison1(%arg: f32) -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.addf %0, %arg : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @addf_poison2
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @addf_poison2(%arg: f32) -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.addf %arg, %0 : f32
+  return %1 : f32
+}
+
+
+// CHECK-LABEL: @negf_poison
+//       CHECK:   %[[P:.*]] = ub.poison : f32
+//       CHECK:   return %[[P]]
+func.func @negf_poison() -> f32 {
+  %0 = ub.poison : f32
+  %1 = arith.negf %0 : f32
+  return %1 : f32
+}
+
+// CHECK-LABEL: @extsi_poison
+//       CHECK:   %[[P:.*]] = ub.poison : i64
+//       CHECK:   return %[[P]]
+func.func @extsi_poison() -> i64 {
+  %0 = ub.poison : i32
+  %1 = arith.extsi %0 : i32 to i64
+  return %1 : i64
+}

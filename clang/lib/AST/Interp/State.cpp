@@ -129,13 +129,13 @@ void State::addCallStack(unsigned Limit) {
   const Frame *Top = getCurrentFrame();
   const Frame *Bottom = getBottomFrame();
   for (const Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
-    SourceLocation CallLocation = F->getCallLocation();
+    SourceRange CallRange = F->getCallRange();
 
     // Skip this call?
     if (CallIdx >= SkipStart && CallIdx < SkipEnd) {
       if (CallIdx == SkipStart) {
         // Note that we're skipping calls.
-        addDiag(CallLocation, diag::note_constexpr_calls_suppressed)
+        addDiag(CallRange.getBegin(), diag::note_constexpr_calls_suppressed)
             << unsigned(ActiveCalls - Limit);
       }
       continue;
@@ -146,7 +146,8 @@ void State::addCallStack(unsigned Limit) {
     if (const auto *CD =
             dyn_cast_if_present<CXXConstructorDecl>(F->getCallee());
         CD && CD->isInheritingConstructor()) {
-      addDiag(CallLocation, diag::note_constexpr_inherited_ctor_call_here)
+      addDiag(CallRange.getBegin(),
+              diag::note_constexpr_inherited_ctor_call_here)
           << CD->getParent();
       continue;
     }
@@ -154,6 +155,7 @@ void State::addCallStack(unsigned Limit) {
     SmallString<128> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
     F->describe(Out);
-    addDiag(CallLocation, diag::note_constexpr_call_here) << Out.str();
+    addDiag(CallRange.getBegin(), diag::note_constexpr_call_here)
+        << Out.str() << CallRange;
   }
 }

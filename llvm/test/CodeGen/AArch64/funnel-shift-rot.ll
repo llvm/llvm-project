@@ -40,12 +40,12 @@ define i16 @rotl_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotl_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg w8, w1
-; CHECK-NEXT:    and w9, w1, #0xf
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    and w10, w1, #0xf
 ; CHECK-NEXT:    and w8, w8, #0xf
-; CHECK-NEXT:    and w10, w0, #0xffff
-; CHECK-NEXT:    lsl w9, w0, w9
-; CHECK-NEXT:    lsr w8, w10, w8
-; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    lsl w10, w0, w10
+; CHECK-NEXT:    lsr w8, w9, w8
+; CHECK-NEXT:    orr w0, w10, w8
 ; CHECK-NEXT:    ret
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 %z)
   ret i16 %f
@@ -94,9 +94,9 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 define <4 x i32> @rotl_v4i32_rotl_const_shift(<4 x i32> %x) {
 ; CHECK-LABEL: rotl_v4i32_rotl_const_shift:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v1.4s, v0.4s, #29
-; CHECK-NEXT:    shl v0.4s, v0.4s, #3
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    shl v1.4s, v0.4s, #3
+; CHECK-NEXT:    usra v1.4s, v0.4s, #29
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f
@@ -132,10 +132,10 @@ define i16 @rotr_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotr_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    neg w8, w1
-; CHECK-NEXT:    and w9, w1, #0xf
+; CHECK-NEXT:    and w9, w0, #0xffff
+; CHECK-NEXT:    and w10, w1, #0xf
 ; CHECK-NEXT:    and w8, w8, #0xf
-; CHECK-NEXT:    and w10, w0, #0xffff
-; CHECK-NEXT:    lsr w9, w10, w9
+; CHECK-NEXT:    lsr w9, w9, w10
 ; CHECK-NEXT:    lsl w8, w0, w8
 ; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
@@ -169,8 +169,8 @@ define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK-NEXT:    movi v2.4s, #31
 ; CHECK-NEXT:    neg v3.4s, v1.4s
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    and v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    ushl v2.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v2.16b
@@ -185,8 +185,8 @@ define <4 x i32> @rotr_v4i32_const_shift(<4 x i32> %x) {
 ; CHECK-LABEL: rotr_v4i32_const_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v1.4s, v0.4s, #29
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #3
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    usra v1.4s, v0.4s, #3
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f

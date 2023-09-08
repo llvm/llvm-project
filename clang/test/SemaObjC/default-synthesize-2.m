@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c -fsyntax-only -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://8843851
 
 @interface StopAccessingIvarsDirectlyExample
 @property(strong) id name, rank, serialNumber;
@@ -46,7 +45,6 @@
 @property (readwrite, assign) id uid;  // expected-note {{property declared here}}
 @end
 
-// rdar://11671080
 @implementation Test3 // expected-warning {{autosynthesized property 'uid' will use synthesized instance variable '_uid', not existing instance variable 'uid'}}
 // Oops, forgot to write @synthesize! will be default synthesized
 - (void) myMethod { 
@@ -115,7 +113,6 @@ int* _object;
 } 
 @end
 
-// rdar://11671080
 @interface Test8
 {
   id _y;

@@ -74,6 +74,7 @@ add_llvm_unittest(SupportTests
   ScaledNumberTest.cpp
   ScopedPrinterTest.cpp
   SHA256.cpp
+  SignalsTest.cpp
   SourceMgrTest.cpp
   SpecialCaseListTest.cpp
   SuffixTreeTest.cpp

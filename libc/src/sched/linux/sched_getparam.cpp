@@ -18,7 +18,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, sched_getparam,
                    (pid_t tid, struct sched_param *param)) {
-  long ret = __llvm_libc::syscall_impl(SYS_sched_getparam, tid, param);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_sched_getparam, tid, param);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

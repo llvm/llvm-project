@@ -161,7 +161,7 @@ struct FunctionOutliningInfo {
   // The dominating block of the region to be outlined.
   BasicBlock *NonReturnBlock = nullptr;
 
-  // The set of blocks in Entries that that are predecessors to ReturnBlock
+  // The set of blocks in Entries that are predecessors to ReturnBlock
   SmallVector<BasicBlock *, 4> ReturnBlockPreds;
 };
 

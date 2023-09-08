@@ -19,9 +19,10 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, access, (const char *path, int mode)) {
 #ifdef SYS_access
-  long ret = __llvm_libc::syscall_impl(SYS_access, path, mode);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_access, path, mode);
 #elif defined(SYS_faccessat)
-  long ret = __llvm_libc::syscall_impl(SYS_faccessat, AT_FDCWD, path, mode, 0);
+  int ret =
+      __llvm_libc::syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
 #else
 #error "access and faccessat syscalls not available."
 #endif

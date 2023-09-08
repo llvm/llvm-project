@@ -524,7 +524,7 @@ entry:
 define protected amdgpu_kernel void @may_alias_atomic_rmw(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; CHECK-LABEL: @may_alias_atomic_rmw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(1) [[OUT:%.*]], i32 5 seq_cst, align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = atomicrmw add ptr addrspace(1) [[OUT:%.*]], i32 5 syncscope("agent") seq_cst, align 4
 ; CHECK-NEXT:    fence syncscope("workgroup") release
 ; CHECK-NEXT:    tail call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    fence syncscope("workgroup") acquire
@@ -533,7 +533,7 @@ define protected amdgpu_kernel void @may_alias_atomic_rmw(ptr addrspace(1) %in, 
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %unused = atomicrmw add ptr addrspace(1) %out, i32 5 seq_cst
+  %unused = atomicrmw add ptr addrspace(1) %out, i32 5 syncscope("agent") seq_cst
   fence syncscope("workgroup") release
   tail call void @llvm.amdgcn.s.barrier()
   fence syncscope("workgroup") acquire

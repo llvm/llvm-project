@@ -395,7 +395,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     return getDoNothingSummary();
   } else if (FName.startswith("NS") && FName.contains("Insert")) {
     // Allowlist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
-    // be deallocated by NSMapRemove. (radar://11152419)
+    // be deallocated by NSMapRemove.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
     ScratchArgs = AF.add(ScratchArgs, 2, ArgEffect(StopTracking));
     return getPersistentSummary(RetEffect::MakeNoRet(),

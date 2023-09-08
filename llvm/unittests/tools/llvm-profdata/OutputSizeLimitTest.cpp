@@ -126,7 +126,7 @@ static ExpectedErrorOr<void *> RunTest(StringRef Input, size_t SizeLimit,
   // For every sample in the new profile, confirm it is in the old profile and
   // unchanged.
   for (auto Sample : NewProfiles) {
-    auto FindResult = OldProfiles.find(Sample.first);
+    auto FindResult = OldProfiles.find(Sample.second.getContext());
     EXPECT_NE(FindResult, OldProfiles.end());
     if (FindResult != OldProfiles.end()) {
       EXPECT_EQ(Sample.second.getHeadSamples(),

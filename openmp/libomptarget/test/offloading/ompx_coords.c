@@ -2,6 +2,8 @@
 //
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: aarch64-unknown-linux-gnu
+// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 
 #include <omp.h>
 #include <ompx.h>
@@ -31,7 +33,7 @@ int main(int argc, char **argv) {
     {
       int tid = ompx_thread_id_x();
       int bid = ompx_block_id_x();
-      int tdim = ompx_thread_dim_x();
+      int tdim = ompx_block_dim_x();
       int gid = tid + bid * tdim;
       if (gid < N) {
         X[gid].tid = tid;

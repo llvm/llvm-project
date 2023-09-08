@@ -113,6 +113,7 @@ cc_binary(
         "//mlir:FuncDialect",
         "//mlir:FuncExtensions",
         "//mlir:FuncToLLVM",
+        "//mlir:FunctionInterfaces",
         "//mlir:IR",
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t -- -config="{CheckOptions: [{key: readability-static-accessed-through-instance.NameSpecifierNestingThreshold, value: 4}]}" --
+// RUN: %check_clang_tidy %s readability-static-accessed-through-instance %t -- -config="{CheckOptions: {readability-static-accessed-through-instance.NameSpecifierNestingThreshold: 4}}" --
 
 // Nested specifiers
 namespace M {

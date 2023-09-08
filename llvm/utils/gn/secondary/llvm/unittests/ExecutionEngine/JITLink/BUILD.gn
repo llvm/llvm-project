@@ -19,5 +19,6 @@ unittest("JITLinkTests") {
     "JITLinkMocks.cpp",
     "LinkGraphTests.cpp",
     "MemoryManagerErrorTests.cpp",
+    "StubsTests.cpp",
   ]
 }

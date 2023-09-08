@@ -1,10 +1,8 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -triple x86_64-apple-darwin9 %s
 
 int x __attribute__((section(
-   42)));  // expected-error {{'section' attribute requires a string}}
+   42)));  // expected-error {{expected string literal as argument of 'section' attribute}}
 
-
-// rdar://4341926
 int y __attribute__((section(
    "sadf"))); // expected-error {{mach-o section specifier requires a segment and section separated by a comma}}
 
@@ -27,6 +25,9 @@ extern int a __attribute__((section("foo,zed"))); // expected-warning {{section 
 // Not a warning.
 int c;
 int c __attribute__((section("seg1,sec1")));
+
+const int with_init __attribute__((section("init_mix,x"))) = 1;
+const int no_init __attribute__((section("init_mix,x")));
 
 // Also OK.
 struct r_debug {};

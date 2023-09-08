@@ -119,7 +119,7 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
     auto i = __sanitizer::InternalLowerBound(params->allocator_caches, begin);
     if (i < params->allocator_caches.size() &&
         params->allocator_caches[i] >= begin &&
-        end - params->allocator_caches[i] <= sizeof(AllocatorCache)) {
+        end - params->allocator_caches[i] >= sizeof(AllocatorCache)) {
       // Split the range in two and omit the allocator cache within.
       ScanRangeForPointers(begin, params->allocator_caches[i],
                            &params->argument->frontier, "TLS", kReachable);

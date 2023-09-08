@@ -676,14 +676,14 @@ HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     switch (InlineAsm::getKind(Flags)) {
       default:
         llvm_unreachable("Bad flags!");
-      case InlineAsm::Kind_RegUse:
-      case InlineAsm::Kind_Imm:
-      case InlineAsm::Kind_Mem:
+      case InlineAsm::Kind::RegUse:
+      case InlineAsm::Kind::Imm:
+      case InlineAsm::Kind::Mem:
         i += NumVals;
         break;
-      case InlineAsm::Kind_Clobber:
-      case InlineAsm::Kind_RegDef:
-      case InlineAsm::Kind_RegDefEarlyClobber: {
+      case InlineAsm::Kind::Clobber:
+      case InlineAsm::Kind::RegDef:
+      case InlineAsm::Kind::RegDefEarlyClobber: {
         for (; NumVals; --NumVals, ++i) {
           Register Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
           if (Reg != LR)
@@ -2717,12 +2717,11 @@ HexagonTargetLowering::extractVectorPred(SDValue VecV, SDValue IdxV,
   assert(VecWidth == 8 || VecWidth == 4 || VecWidth == 2);
 
   // Check if this is an extract of the lowest bit.
-  if (auto *IdxN = dyn_cast<ConstantSDNode>(IdxV)) {
+  if (isNullConstant(IdxV) && ValTy.getSizeInBits() == 1) {
     // Extracting the lowest bit is a no-op, but it changes the type,
     // so it must be kept as an operation to avoid errors related to
     // type mismatches.
-    if (IdxN->isZero() && ValTy.getSizeInBits() == 1)
-      return DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, VecV);
+    return DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, VecV);
   }
 
   // If the value extracted is a single bit, use tstbit.
@@ -3847,11 +3846,6 @@ Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                    : Intrinsic::hexagon_L4_loadd_locked;
   Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
-  auto PtrTy = cast<PointerType>(Addr->getType());
-  PointerType *NewPtrTy =
-      Builder.getIntNTy(SZ)->getPointerTo(PtrTy->getAddressSpace());
-  Addr = Builder.CreateBitCast(Addr, NewPtrTy);
-
   Value *Call = Builder.CreateCall(Fn, Addr, "larx");
 
   return Builder.CreateBitCast(Call, ValueTy);
@@ -3873,8 +3867,6 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
                                    : Intrinsic::hexagon_S4_stored_locked;
   Function *Fn = Intrinsic::getDeclaration(M, IntID);
 
-  unsigned AS = Addr->getType()->getPointerAddressSpace();
-  Addr = Builder.CreateBitCast(Addr, CastTy->getPointerTo(AS));
   Val = Builder.CreateBitCast(Val, CastTy);
 
   Value *Call = Builder.CreateCall(Fn, {Addr, Val}, "stcx");

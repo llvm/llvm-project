@@ -163,6 +163,8 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr);
 
+  bool isExtPartOfAvgExpr(const Instruction *ExtUser, Type *Dst, Type *Src);
+
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,

@@ -101,8 +101,8 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-NEXT:    mov v1.b[9], w8
 ; CHECK-NEXT:    mov v1.b[10], w8
 ; CHECK-NEXT:    mov v1.b[11], w8
@@ -165,8 +165,8 @@ define i24 @test_v4i24(<4 x i24> %a) nounwind {
 define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ; CHECK-LABEL: test_v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x0, x0, x2
 ; CHECK-NEXT:    and x1, x1, x3
+; CHECK-NEXT:    and x0, x0, x2
 ; CHECK-NEXT:    ret
   %b = call i128 @llvm.vector.reduce.and.v2i128(<2 x i128> %a)
   ret i128 %b

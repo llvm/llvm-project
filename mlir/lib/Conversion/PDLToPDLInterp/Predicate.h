@@ -450,7 +450,7 @@ struct AttributeQuestion
 /// Apply a parameterized constraint to multiple position values.
 struct ConstraintQuestion
     : public PredicateBase<ConstraintQuestion, Qualifier,
-                           std::tuple<StringRef, ArrayRef<Position *>>,
+                           std::tuple<StringRef, ArrayRef<Position *>, bool>,
                            Predicates::ConstraintQuestion> {
   using Base::Base;
 
@@ -460,11 +460,20 @@ struct ConstraintQuestion
   /// Return the arguments of the constraint.
   ArrayRef<Position *> getArgs() const { return std::get<1>(key); }
 
+  /// Return the negation status of the constraint.
+  bool getIsNegated() const { return std::get<2>(key); }
+
   /// Construct an instance with the given storage allocator.
   static ConstraintQuestion *construct(StorageUniquer::StorageAllocator &alloc,
                                        KeyTy key) {
     return Base::construct(alloc, KeyTy{alloc.copyInto(std::get<0>(key)),
-                                        alloc.copyInto(std::get<1>(key))});
+                                        alloc.copyInto(std::get<1>(key)),
+                                        std::get<2>(key)});
+  }
+
+  /// Returns a hash suitable for the given keytype.
+  static llvm::hash_code hashKey(const KeyTy &key) {
+    return llvm::hash_value(key);
   }
 };
 
@@ -664,9 +673,11 @@ public:
   }
 
   /// Create a predicate that applies a generic constraint.
-  Predicate getConstraint(StringRef name, ArrayRef<Position *> pos) {
-    return {ConstraintQuestion::get(uniquer, std::make_tuple(name, pos)),
-            TrueAnswer::get(uniquer)};
+  Predicate getConstraint(StringRef name, ArrayRef<Position *> pos,
+                          bool isNegated) {
+    return {
+        ConstraintQuestion::get(uniquer, std::make_tuple(name, pos, isNegated)),
+        TrueAnswer::get(uniquer)};
   }
 
   /// Create a predicate comparing a value with null.

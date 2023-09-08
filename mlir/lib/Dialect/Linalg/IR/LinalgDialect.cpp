@@ -20,7 +20,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -63,7 +63,7 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 
-/// Attribute name used to to memoize indexing maps for named ops.
+/// Attribute name used to memoize indexing maps for named ops.
 constexpr const ::llvm::StringLiteral
     LinalgDialect::kMemoizedIndexingMapsAttrName;
 

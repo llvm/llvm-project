@@ -81,6 +81,12 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
     return Sentinel;
   }
 
+  static ASTFileSignature createDummy() {
+    ASTFileSignature Dummy;
+    Dummy.fill(0x00);
+    return Dummy;
+  }
+
   template <typename InputIt>
   static ASTFileSignature create(InputIt First, InputIt Last) {
     assert(std::distance(First, Last) == size &&

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CTYPE_UTILS_H
 #define LLVM_LIBC_SRC_SUPPORT_CTYPE_UTILS_H
 
+#include "src/__support/macros/attributes.h"
+
 namespace __llvm_libc {
 namespace internal {
 
@@ -18,25 +20,35 @@ namespace internal {
 // of a function call by inlining them.
 // ------------------------------------------------------
 
-static constexpr bool isalpha(unsigned ch) { return (ch | 32) - 'a' < 26; }
+LIBC_INLINE static constexpr bool isalpha(unsigned ch) {
+  return (ch | 32) - 'a' < 26;
+}
 
-static constexpr bool isdigit(unsigned ch) { return (ch - '0') < 10; }
+LIBC_INLINE static constexpr bool isdigit(unsigned ch) {
+  return (ch - '0') < 10;
+}
 
-static constexpr bool isalnum(unsigned ch) {
+LIBC_INLINE static constexpr bool isalnum(unsigned ch) {
   return isalpha(ch) || isdigit(ch);
 }
 
-static constexpr bool isgraph(unsigned ch) { return 0x20 < ch && ch < 0x7f; }
+LIBC_INLINE static constexpr bool isgraph(unsigned ch) {
+  return 0x20 < ch && ch < 0x7f;
+}
 
-static constexpr bool islower(unsigned ch) { return (ch - 'a') < 26; }
+LIBC_INLINE static constexpr bool islower(unsigned ch) {
+  return (ch - 'a') < 26;
+}
 
-static constexpr bool isupper(unsigned ch) { return (ch - 'A') < 26; }
+LIBC_INLINE static constexpr bool isupper(unsigned ch) {
+  return (ch - 'A') < 26;
+}
 
-static constexpr bool isspace(unsigned ch) {
+LIBC_INLINE static constexpr bool isspace(unsigned ch) {
   return ch == ' ' || (ch - '\t') < 5;
 }
 
-static constexpr int tolower(int ch) {
+LIBC_INLINE static constexpr int tolower(int ch) {
   if (isupper(ch))
     return ch + ('a' - 'A');
   return ch;

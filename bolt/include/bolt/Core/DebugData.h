@@ -313,9 +313,6 @@ public:
   /// Adds Address to map.
   uint32_t getIndexFromAddress(uint64_t Address, DWARFUnit &CU);
 
-  /// Adds {\p Address, \p Index} to \p CU.
-  void addIndexAddress(uint64_t Address, uint32_t Index, DWARFUnit &CU);
-
   /// Write out entries in to .debug_addr section for CUs.
   virtual void update(DIEBuilder &DIEBlder, DWARFUnit &CUs);
 

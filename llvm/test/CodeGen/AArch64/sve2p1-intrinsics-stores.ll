@@ -9,9 +9,9 @@ define void @st1_x2_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vsc
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1b { z2.b, z3.b }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -27,9 +27,9 @@ define void @st1_x2_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1h { z2.h, z3.h }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -45,9 +45,9 @@ define void @st1_x2_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1w { z2.s, z3.s }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -63,9 +63,9 @@ define void @st1_x2_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1d { z2.d, z3.d }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -81,9 +81,9 @@ define void @st1_x2_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1h { z2.h, z3.h }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -99,9 +99,9 @@ define void @st1_x2_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn0,
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1h { z2.h, z3.h }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -117,9 +117,9 @@ define void @st1_x2_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1w { z2.s, z3.s }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -135,9 +135,9 @@ define void @st1_x2_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st1d { z2.d, z3.d }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -153,10 +153,10 @@ define void @st1_x4_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <vsc
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1b { z4.b - z7.b }, pn8, [x0]
@@ -173,10 +173,10 @@ define void @st1_x4_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1h { z4.h - z7.h }, pn8, [x0]
@@ -193,10 +193,10 @@ define void @st1_x4_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1w { z4.s - z7.s }, pn8, [x0]
@@ -213,10 +213,10 @@ define void @st1_x4_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1d { z4.d - z7.d }, pn8, [x0]
@@ -233,10 +233,10 @@ define void @st1_x4_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1h { z4.h - z7.h }, pn8, [x0]
@@ -253,10 +253,10 @@ define void @st1_x4_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn0,
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1h { z4.h - z7.h }, pn8, [x0]
@@ -273,10 +273,10 @@ define void @st1_x4_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1w { z4.s - z7.s }, pn8, [x0]
@@ -293,10 +293,10 @@ define void @st1_x4_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    st1d { z4.d - z7.d }, pn8, [x0]
@@ -315,9 +315,9 @@ define void @stnt1_x2_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1b { z2.b, z3.b }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -333,9 +333,9 @@ define void @stnt1_x2_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1h { z2.h, z3.h }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -351,9 +351,9 @@ define void @stnt1_x2_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1w { z2.s, z3.s }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -369,9 +369,9 @@ define void @stnt1_x2_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1d { z2.d, z3.d }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -387,9 +387,9 @@ define void @stnt1_x2_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1h { z2.h, z3.h }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -405,9 +405,9 @@ define void @stnt1_x2_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1h { z2.h, z3.h }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -423,9 +423,9 @@ define void @stnt1_x2_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0,
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1w { z2.s, z3.s }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -441,9 +441,9 @@ define void @stnt1_x2_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z3.d, z2.d
 ; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    stnt1d { z2.d, z3.d }, pn8, [x0]
 ; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -459,10 +459,10 @@ define void @stnt1_x4_i8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zn0, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1b { z4.b - z7.b }, pn8, [x0]
@@ -479,10 +479,10 @@ define void @stnt1_x4_i16(<vscale x 16 x i8> %unused, <vscale x 8 x i16> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1h { z4.h - z7.h }, pn8, [x0]
@@ -499,10 +499,10 @@ define void @stnt1_x4_i32(<vscale x 16 x i8> %unused, <vscale x 4 x i32> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1w { z4.s - z7.s }, pn8, [x0]
@@ -519,10 +519,10 @@ define void @stnt1_x4_i64(<vscale x 16 x i8> %unused, <vscale x 2 x i64> %zn0, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1d { z4.d - z7.d }, pn8, [x0]
@@ -539,10 +539,10 @@ define void @stnt1_x4_f16(<vscale x 16 x i8> %unused, <vscale x 8 x half> %zn0, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1h { z4.h - z7.h }, pn8, [x0]
@@ -559,10 +559,10 @@ define void @stnt1_x4_bf16(<vscale x 16 x i8> %unused, <vscale x 8 x bfloat> %zn
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1h { z4.h - z7.h }, pn8, [x0]
@@ -579,10 +579,10 @@ define void @stnt1_x4_f32(<vscale x 16 x i8> %unused, <vscale x 4 x float> %zn0,
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1w { z4.s - z7.s }, pn8, [x0]
@@ -599,10 +599,10 @@ define void @stnt1_x4_f64(<vscale x 16 x i8> %unused, <vscale x 2 x double> %zn0
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z7.d, z4.d
 ; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    mov z6.d, z3.d
 ; CHECK-NEXT:    mov z5.d, z2.d
 ; CHECK-NEXT:    mov z4.d, z1.d
 ; CHECK-NEXT:    stnt1d { z4.d - z7.d }, pn8, [x0]

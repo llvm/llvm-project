@@ -235,7 +235,7 @@ AffineMap StridedLayoutAttr::getAffineMap() const {
 LogicalResult
 StridedLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                           int64_t offset, ArrayRef<int64_t> strides) {
-  if (llvm::any_of(strides, [&](int64_t stride) { return stride == 0; }))
+  if (llvm::is_contained(strides, 0))
     return emitError() << "strides must not be zero";
 
   return success();
@@ -607,7 +607,7 @@ DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
 Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
   auto owner = llvm::cast<DenseElementsAttr>(getFromOpaquePointer(base));
   Type eltTy = owner.getElementType();
-  if (auto intEltTy = llvm::dyn_cast<IntegerType>(eltTy))
+  if (llvm::dyn_cast<IntegerType>(eltTy))
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));
   if (llvm::isa<IndexType>(eltTy))
     return IntegerAttr::get(eltTy, *IntElementIterator(owner, index));

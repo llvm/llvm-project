@@ -1,8 +1,7 @@
 // RUN: c-index-test -write-pch %t.ast %s
 // RUN: c-index-test -test-load-tu %t.ast all
 
-// rdar://8956193 - We would blow the thread stack because of nested calls due
-//                  to redeclarations.
+// We would blow the thread stack because of nested calls due to redeclarations.
 
 void socrates(void);
 void socrates(void);

@@ -2,7 +2,7 @@
 // RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 module {

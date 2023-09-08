@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRSCFDialect
   MLIRArithDialect
   MLIRBufferizationDialect
   MLIRControlFlowDialect
+  MLIRFunctionInterfaces
   MLIRIR
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces

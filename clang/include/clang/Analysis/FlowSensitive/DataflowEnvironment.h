@@ -76,7 +76,7 @@ public:
     virtual ComparisonResult compare(QualType Type, const Value &Val1,
                                      const Environment &Env1, const Value &Val2,
                                      const Environment &Env2) {
-      // FIXME: Consider adding QualType to StructValue and removing the Type
+      // FIXME: Consider adding QualType to RecordValue and removing the Type
       // argument here.
       return ComparisonResult::Unknown;
     }
@@ -254,17 +254,10 @@ public:
   /// Requirements:
   ///
   ///  `D` must not already have a storage location in the environment.
-  ///
-  ///  If `D` has reference type, `Loc` must refer directly to the referenced
-  ///  object (if any), not to a `ReferenceValue`, and it is not permitted to
-  ///  later change `Loc` to refer to a `ReferenceValue.`
   void setStorageLocation(const ValueDecl &D, StorageLocation &Loc);
 
   /// Returns the storage location assigned to `D` in the environment, or null
   /// if `D` isn't assigned a storage location in the environment.
-  ///
-  /// Note that if `D` has reference type, the storage location that is returned
-  /// refers directly to the referenced object, not a `ReferenceValue`.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
@@ -276,31 +269,18 @@ public:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   void setStorageLocation(const Expr &E, StorageLocation &Loc);
 
-  /// Deprecated synonym for `setStorageLocation()`.
-  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc) {
-    setStorageLocation(E, Loc);
-  }
-
   /// Returns the storage location assigned to the glvalue `E` in the
   /// environment, or null if `E` isn't assigned a storage location in the
   /// environment.
-  ///
-  /// If the storage location for `E` is associated with a
-  /// `ReferenceValue RefVal`, returns `RefVal.getReferentLoc()` instead.
   ///
   /// Requirements:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   StorageLocation *getStorageLocation(const Expr &E) const;
 
-  /// Deprecated synonym for `getStorageLocation()`.
-  StorageLocation *getStorageLocationStrict(const Expr &E) const {
-    return getStorageLocation(E);
-  }
-
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  AggregateStorageLocation *getThisPointeeStorageLocation() const;
+  RecordStorageLocation *getThisPointeeStorageLocation() const;
 
   /// Returns the location of the result object for a record-type prvalue.
   ///
@@ -325,7 +305,7 @@ public:
   ///
   /// Requirements:
   ///  `E` must be a prvalue of record type.
-  AggregateStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
+  RecordStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -385,8 +365,8 @@ public:
   /// non-pointer/non-reference type.
   ///
   /// If `Type` is a class, struct, or union type, calls `setValue()` to
-  /// associate the `StructValue` with its storage location
-  /// (`StructValue::getAggregateLoc()`).
+  /// associate the `RecordValue` with its storage location
+  /// (`RecordValue::getLoc()`).
   ///
   /// If `Type` is one of the following types, this function will always return
   /// a non-null pointer:
@@ -447,15 +427,11 @@ public:
   /// Requirements:
   ///
   ///  `E` must be a prvalue
-  ///  `Val` must not be a `ReferenceValue`
-  ///  If `Val` is a `StructValue`, its `AggregateStorageLocation` must be the
-  ///  same as that of any `StructValue` that has already been associated with
+  ///  If `Val` is a `RecordValue`, its `RecordStorageLocation` must be the
+  ///  same as that of any `RecordValue` that has already been associated with
   ///  `E`. This is to guarantee that the result object initialized by a prvalue
-  ///  `StructValue` has a durable storage location.
+  ///  `RecordValue` has a durable storage location.
   void setValue(const Expr &E, Value &Val);
-
-  /// Deprecated synonym for `setValue()`.
-  void setValueStrict(const Expr &E, Value &Val) { setValue(E, Val); }
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
@@ -662,16 +638,19 @@ private:
   StorageLocation *ReturnLoc = nullptr;
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
-  AggregateStorageLocation *ThisPointeeLoc = nullptr;
+  RecordStorageLocation *ThisPointeeLoc = nullptr;
 
-  // Maps from program declarations and statements to storage locations that are
+  // Maps from declarations and glvalue expression to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
   // include only storage locations that are in scope for a particular basic
   // block.
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
+  // Maps from prvalue expressions and storage locations to the values that
+  // are assigned to them.
   // We preserve insertion order so that join/widen process values in
   // deterministic sequence. This in turn produces deterministic SAT formulas.
+  llvm::MapVector<const Expr *, Value *> ExprToVal;
   llvm::MapVector<const StorageLocation *, Value *> LocToVal;
 
   Atom FlowConditionToken;
@@ -681,36 +660,35 @@ private:
 /// `CXXMemberCallExpr`, or null if none is defined in the environment.
 /// Dereferences the pointer if the member call expression was written using
 /// `->`.
-AggregateStorageLocation *
-getImplicitObjectLocation(const CXXMemberCallExpr &MCE, const Environment &Env);
+RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
+                                                 const Environment &Env);
 
 /// Returns the storage location for the base object of a `MemberExpr`, or null
 /// if none is defined in the environment. Dereferences the pointer if the
 /// member expression was written using `->`.
-AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
-                                                const Environment &Env);
+RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+                                             const Environment &Env);
 
 /// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
 /// order in which they appear in `InitListExpr::inits()`.
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
 
-/// Associates a new `StructValue` with `Loc` and returns the new value.
+/// Associates a new `RecordValue` with `Loc` and returns the new value.
 /// It is not defined whether the field values remain the same or not.
 ///
 /// This function is primarily intended for use by checks that set custom
-/// properties on `StructValue`s to model the state of these values. Such checks
-/// should avoid modifying the properties of an existing `StructValue` because
+/// properties on `RecordValue`s to model the state of these values. Such checks
+/// should avoid modifying the properties of an existing `RecordValue` because
 /// these changes would be visible to other `Environment`s that share the same
-/// `StructValue`. Instead, call `refreshStructValue()`, then set the properties
-/// on the new `StructValue` that it returns. Typical usage:
+/// `RecordValue`. Instead, call `refreshRecordValue()`, then set the properties
+/// on the new `RecordValue` that it returns. Typical usage:
 ///
-///   refreshStructValue(Loc, Env).setProperty("my_prop", MyPropValue);
-StructValue &refreshStructValue(AggregateStorageLocation &Loc,
-                                Environment &Env);
+///   refreshRecordValue(Loc, Env).setProperty("my_prop", MyPropValue);
+RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 
-/// Associates a new `StructValue` with `Expr` and returns the new value.
+/// Associates a new `RecordValue` with `Expr` and returns the new value.
 /// See also documentation for the overload above.
-StructValue &refreshStructValue(const Expr &Expr, Environment &Env);
+RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

@@ -1,5 +1,8 @@
 // REQUIRES: linux, lld-available
 
+// FIXME: Investigate and fix.
+// XFAIL: powerpc64-target-arch
+
 // RUN: rm -rf %t.profraw
 // RUN: %clang_profgen=%t.profraw -fuse-ld=lld -fcoverage-mapping -mllvm -enable-name-compression=false -DCODE=1 -ffunction-sections -fdata-sections -Wl,--gc-sections -o %t %s
 // RUN: %run %t

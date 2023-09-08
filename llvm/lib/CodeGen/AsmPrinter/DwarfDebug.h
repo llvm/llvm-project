@@ -100,12 +100,63 @@ public:
   }
 };
 
+/// Helper class to model a DbgVariable whose location is derived from an
+/// EntryValue.
+/// TODO: split the current implementation of `DbgVariable` into a class per
+/// variant of location that it can represent, and make `DbgVariableEntryValue`
+/// a subclass.
+class DbgVariableEntryValue {
+  struct EntryValueInfo {
+    MCRegister Reg;
+    const DIExpression &Expr;
+
+    /// Operator enabling sorting based on fragment offset.
+    bool operator<(const EntryValueInfo &Other) const {
+      return getFragmentOffsetInBits() < Other.getFragmentOffsetInBits();
+    }
+
+  private:
+    uint64_t getFragmentOffsetInBits() const {
+      std::optional<DIExpression::FragmentInfo> Fragment =
+          Expr.getFragmentInfo();
+      return Fragment ? Fragment->OffsetInBits : 0;
+    }
+  };
+
+  std::set<EntryValueInfo> EntryValues;
+
+public:
+  DbgVariableEntryValue(MCRegister Reg, const DIExpression &Expr) {
+    addExpr(Reg, Expr);
+  };
+
+  // Add the pair Reg, Expr to the list of entry values describing the variable.
+  // If multiple expressions are added, it is the callers responsibility to
+  // ensure they are all non-overlapping fragments.
+  void addExpr(MCRegister Reg, const DIExpression &Expr) {
+    std::optional<const DIExpression *> NonVariadicExpr =
+        DIExpression::convertToNonVariadicExpression(&Expr);
+    assert(NonVariadicExpr && *NonVariadicExpr);
+
+    EntryValues.insert({Reg, **NonVariadicExpr});
+  }
+
+  /// Returns the set of EntryValueInfo.
+  const std::set<EntryValueInfo> &getEntryValuesInfo() const {
+    return EntryValues;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 /// This class is used to track local variable information.
 ///
 /// Variables can be created from allocas, in which case they're generated from
 /// the MMI table.  Such variables can have multiple expressions and frame
 /// indices.
+///
+/// Variables can be created from the entry value of registers, in which case
+/// they're generated from the MMI table. Such variables can have either a
+/// single expression or multiple *fragment* expressions.
 ///
 /// Variables can be created from \c DBG_VALUE instructions.  Those whose
 /// location changes over time use \a DebugLocListIndex, while those with a
@@ -128,6 +179,8 @@ class DbgVariable : public DbgEntity {
   mutable SmallVector<FrameIndexExpr, 1>
       FrameIndexExprs; /// Frame index + expression.
 
+  std::optional<DbgVariableEntryValue> EntryValue;
+
 public:
   /// Construct a DbgVariable.
   ///
@@ -136,10 +189,13 @@ public:
   DbgVariable(const DILocalVariable *V, const DILocation *IA)
       : DbgEntity(V, IA, DbgVariableKind) {}
 
+  bool isInitialized() const {
+    return !FrameIndexExprs.empty() || ValueLoc || EntryValue;
+  }
+
   /// Initialize from the MMI table.
   void initializeMMI(const DIExpression *E, int FI) {
-    assert(FrameIndexExprs.empty() && "Already initialized?");
-    assert(!ValueLoc.get() && "Already initialized?");
+    assert(!isInitialized() && "Already initialized?");
 
     assert((!E || E->isValid()) && "Expected valid expression");
     assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
@@ -149,8 +205,7 @@ public:
 
   // Initialize variable's location.
   void initializeDbgValue(DbgValueLoc Value) {
-    assert(FrameIndexExprs.empty() && "Already initialized?");
-    assert(!ValueLoc && "Already initialized?");
+    assert(!isInitialized() && "Already initialized?");
     assert(!Value.getExpression()->isFragment() && "Fragments not supported.");
 
     ValueLoc = std::make_unique<DbgValueLoc>(Value);
@@ -158,6 +213,17 @@ public:
       if (E->getNumElements())
         FrameIndexExprs.push_back({0, E});
   }
+
+  void initializeEntryValue(MCRegister Reg, const DIExpression &Expr) {
+    assert(!isInitialized() && "Already initialized?");
+    EntryValue = DbgVariableEntryValue(Reg, Expr);
+  }
+
+  const std::optional<DbgVariableEntryValue> &getEntryValue() const {
+    return EntryValue;
+  }
+
+  std::optional<DbgVariableEntryValue> &getEntryValue() { return EntryValue; }
 
   /// Initialize from a DBG_VALUE instruction.
   void initializeDbgValue(const MachineInstr *DbgValue);

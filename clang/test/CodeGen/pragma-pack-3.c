@@ -4,7 +4,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck -check-prefix CHECK-X64 %s
 // CHECK-X64: %union.command = type <{ ptr, [2 x i8] }>
 
-// <rdar://problem/7184250>
 #pragma pack(push, 2)
 typedef union command {
   void *windowRef;

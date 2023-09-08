@@ -3720,10 +3720,11 @@ define void @truncstore_v8i32_v8i8(<8 x i32> %x, ptr %p, <8 x i32> %mask) {
 ; SSE4-LABEL: truncstore_v8i32_v8i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm4, %xmm4
-; SSE4-NEXT:    movdqa {{.*#+}} xmm5 = <0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u>
-; SSE4-NEXT:    pshufb %xmm5, %xmm1
-; SSE4-NEXT:    pshufb %xmm5, %xmm0
-; SSE4-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm5 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
+; SSE4-NEXT:    pand %xmm5, %xmm1
+; SSE4-NEXT:    pand %xmm5, %xmm0
+; SSE4-NEXT:    packusdw %xmm1, %xmm0
+; SSE4-NEXT:    packuswb %xmm4, %xmm0
 ; SSE4-NEXT:    pcmpeqd %xmm4, %xmm3
 ; SSE4-NEXT:    pcmpeqd %xmm4, %xmm2
 ; SSE4-NEXT:    packssdw %xmm3, %xmm2

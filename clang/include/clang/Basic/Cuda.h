@@ -117,7 +117,7 @@ enum class CudaArch {
            // public one.
   LAST,
 
-  CudaDefault = CudaArch::SM_35,
+  CudaDefault = CudaArch::SM_52,
   HIPDefault = CudaArch::GFX803,
 };
 

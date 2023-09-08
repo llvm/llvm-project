@@ -12,16 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanTransforms.h"
-#include "VPlanDominatorTree.h"
 #include "VPRecipeBuilder.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+
+using namespace llvm::PatternMatch;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -479,13 +482,43 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
-            return V->getNumUsers() > 0;
-          }))
+      // A user keeps R alive:
+      if (any_of(R.definedValues(),
+                 [](VPValue *V) { return V->getNumUsers(); }))
         continue;
+
+      // Having side effects keeps R alive, but do remove conditional assume
+      // instructions as their conditions may be flattened.
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      bool IsConditionalAssume =
+          RepR && RepR->isPredicated() &&
+          match(RepR->getUnderlyingInstr(), m_Intrinsic<Intrinsic::assume>());
+      if (R.mayHaveSideEffects() && !IsConditionalAssume)
+        continue;
+
       R.eraseFromParent();
     }
   }
+}
+
+static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
+                                    ScalarEvolution &SE, Instruction *TruncI,
+                                    Type *IVTy, VPValue *StartV,
+                                    VPValue *Step) {
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  auto IP = HeaderVPBB->getFirstNonPhi();
+  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  Type *TruncTy = TruncI ? TruncI->getType() : IVTy;
+  VPValue *BaseIV = CanonicalIV;
+  if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step, TruncTy)) {
+    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step,
+                                   TruncI ? TruncI->getType() : nullptr);
+    HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
+  }
+
+  VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
+  HeaderVPBB->insert(Steps, IP);
+  return Steps;
 }
 
 void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
@@ -501,23 +534,10 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         }))
       continue;
 
-    auto IP = HeaderVPBB->getFirstNonPhi();
-    VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-    Type *ResultTy = WideIV->getPHINode()->getType();
-    if (Instruction *TruncI = WideIV->getTruncInst())
-      ResultTy = TruncI->getType();
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Step = WideIV->getStepValue();
-    VPValue *BaseIV = CanonicalIV;
-    if (!CanonicalIV->isCanonical(ID.getKind(), WideIV->getStartValue(), Step,
-                                  ResultTy)) {
-      BaseIV = new VPDerivedIVRecipe(ID, WideIV->getStartValue(), CanonicalIV,
-                                     Step, ResultTy);
-      HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
-    }
-
-    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
-    HeaderVPBB->insert(Steps, IP);
+    VPValue *Steps = createScalarIVSteps(
+        Plan, ID, SE, WideIV->getTruncInst(), WideIV->getPHINode()->getType(),
+        WideIV->getStartValue(), WideIV->getStepValue());
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure
     // the list of users doesn't contain duplicates.
@@ -777,4 +797,17 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
       }
     }
   }
+}
+
+void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
+  removeRedundantCanonicalIVs(Plan);
+  removeRedundantInductionCasts(Plan);
+
+  optimizeInductions(Plan, SE);
+  removeDeadRecipes(Plan);
+
+  createAndOptimizeReplicateRegions(Plan);
+
+  removeRedundantExpandSCEVRecipes(Plan);
+  mergeBlocksIntoPredecessors(Plan);
 }

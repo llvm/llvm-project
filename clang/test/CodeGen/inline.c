@@ -87,7 +87,6 @@ void (*P1)() = gnu_inline;
 extern __inline __attribute__((gnu_inline)) void gnu_ei_inline() {}
 void (*P)() = gnu_ei_inline;
 
-// <rdar://problem/6818429>
 int test1();
 __inline int test1() { return 4; }
 __inline int test2() { return 5; }

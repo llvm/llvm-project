@@ -169,7 +169,7 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
   const Symbol &ultimate{original.GetUltimate()};
   if (flags.test(DefinabilityFlag::PointerDefinition)) {
     if (flags.test(DefinabilityFlag::AcceptAllocatable)) {
-      if (!IsAllocatableOrPointer(ultimate)) {
+      if (!IsAllocatableOrObjectPointer(&ultimate)) {
         return BlameSymbol(
             at, "'%s' is neither a pointer nor an allocatable"_en_US, original);
       }

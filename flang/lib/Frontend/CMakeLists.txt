@@ -1,12 +1,6 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
-check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
-check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
-if(FOUND_QUADMATH_HEADER AND FOUND_QUADMATH_LIB)
-  set(QUADMATHLIB quadmath)
-endif()
-
 add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
@@ -48,7 +42,6 @@ add_flang_library(flangFrontend
   MLIRTargetLLVMIRImport
   ${dialect_libs}
   ${extension_libs}
-  ${QUADMATHLIB}
 
   LINK_COMPONENTS
   Passes

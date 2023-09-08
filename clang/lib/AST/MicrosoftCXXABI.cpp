@@ -30,14 +30,12 @@ namespace {
 /// Typically these are things like static locals, lambdas, or blocks.
 class MicrosoftNumberingContext : public MangleNumberingContext {
   llvm::DenseMap<const Type *, unsigned> ManglingNumbers;
-  unsigned LambdaManglingNumber;
-  unsigned StaticLocalNumber;
-  unsigned StaticThreadlocalNumber;
+  unsigned LambdaManglingNumber = 0;
+  unsigned StaticLocalNumber = 0;
+  unsigned StaticThreadlocalNumber = 0;
 
 public:
-  MicrosoftNumberingContext()
-      : LambdaManglingNumber(0), StaticLocalNumber(0),
-        StaticThreadlocalNumber(0) {}
+  MicrosoftNumberingContext() = default;
 
   unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
     return ++LambdaManglingNumber;

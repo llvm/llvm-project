@@ -1,4 +1,3 @@
-// rdar://13840148
 // REQUIRES: x86-registered-target
 // RUN: rm -rf %t
 // RUN: %clang -fsyntax-only -isysroot %S/Inputs/System/usr/include -fmodules -fmodules-cache-path=%t \

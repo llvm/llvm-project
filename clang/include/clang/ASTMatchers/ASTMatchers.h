@@ -2519,6 +2519,10 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr>
     chooseExpr;
 
+/// Matches builtin function __builtin_convertvector.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
+    convertVectorExpr;
+
 /// Matches GNU __null expression.
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, GNUNullExpr>
     gnuNullExpr;
@@ -3924,7 +3928,7 @@ AST_MATCHER_P(CallExpr, callee, internal::Matcher<Stmt>,
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     callee, AST_POLYMORPHIC_SUPPORTED_TYPES(ObjCMessageExpr, CallExpr),
     internal::Matcher<Decl>, InnerMatcher, 1) {
-  if (const auto *CallNode = dyn_cast<CallExpr>(&Node))
+  if (isa<CallExpr>(&Node))
     return callExpr(hasDeclaration(InnerMatcher))
         .matches(Node, Finder, Builder);
   else {
@@ -6934,9 +6938,24 @@ AST_POLYMORPHIC_MATCHER_P(hasSize,
 ///     T data[Size];
 ///   };
 /// \endcode
-/// dependentSizedArrayType
+/// dependentSizedArrayType()
 ///   matches "T data[Size]"
 extern const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+
+/// Matches C++ extended vector type where either the type or size is
+/// dependent.
+///
+/// Given
+/// \code
+///   template<typename T, int Size>
+///   class vector {
+///     typedef T __attribute__((ext_vector_type(Size))) type;
+///   };
+/// \endcode
+/// dependentSizedExtVectorType()
+///   matches "T __attribute__((ext_vector_type(Size)))"
+extern const AstTypeMatcher<DependentSizedExtVectorType>
+    dependentSizedExtVectorType;
 
 /// Matches C arrays with unspecified size.
 ///
@@ -7238,6 +7257,18 @@ AST_TYPELOC_TRAVERSE_MATCHER_DECL(
 /// typedefType()
 ///   matches "typedef int X"
 extern const AstTypeMatcher<TypedefType> typedefType;
+
+/// Matches qualified types when the qualifier is applied via a macro.
+///
+/// Given
+/// \code
+///   #define CDECL __attribute__((cdecl))
+///   typedef void (CDECL *X)();
+///   typedef void (__attribute__((cdecl)) *Y)();
+/// \endcode
+/// macroQualifiedType()
+///   matches the type of the typedef declaration of \c X but not \c Y.
+extern const AstTypeMatcher<MacroQualifiedType> macroQualifiedType;
 
 /// Matches enum types.
 ///

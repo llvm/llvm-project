@@ -32,7 +32,7 @@ using namespace taint;
 namespace {
 class ArrayBoundCheckerV2 :
     public Checker<check::Location> {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
   mutable std::unique_ptr<BugType> TaintBT;
 
   enum OOB_Kind { OOB_Precedes, OOB_Excedes };
@@ -172,13 +172,18 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     return;
 
   NonLoc ByteOffset = RawOffset->getByteOffset();
+  const SubRegion *Reg = RawOffset->getRegion();
 
   // CHECK LOWER BOUND
-  const MemSpaceRegion *SR = RawOffset->getRegion()->getMemorySpace();
-  if (!llvm::isa<UnknownSpaceRegion>(SR)) {
-    // A pointer to UnknownSpaceRegion may point to the middle of
-    // an allocated region.
-
+  const MemSpaceRegion *Space = Reg->getMemorySpace();
+  if (!(isa<SymbolicRegion>(Reg) && isa<UnknownSpaceRegion>(Space))) {
+    // A symbolic region in unknown space represents an unknown pointer that
+    // may point into the middle of an array, so we don't look for underflows.
+    // Both conditions are significant because we want to check underflows in
+    // symbolic regions on the heap (which may be introduced by checkers like
+    // MallocChecker that call SValBuilder::getConjuredHeapSymbolVal()) and
+    // non-symbolic regions (e.g. a field subregion of a symbolic region) in
+    // unknown space.
     auto [state_precedesLowerBound, state_withinLowerBound] =
         compareValueToThreshold(state, ByteOffset,
                                 svalBuilder.makeZeroArrayIndex(), svalBuilder);
@@ -194,8 +199,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
   }
 
   // CHECK UPPER BOUND
-  DefinedOrUnknownSVal Size =
-      getDynamicExtent(state, RawOffset->getRegion(), svalBuilder);
+  DefinedOrUnknownSVal Size = getDynamicExtent(state, Reg, svalBuilder);
   if (auto KnownSize = Size.getAs<NonLoc>()) {
     auto [state_withinUpperBound, state_exceedsUpperBound] =
         compareValueToThreshold(state, ByteOffset, *KnownSize, svalBuilder);
@@ -254,7 +258,7 @@ void ArrayBoundCheckerV2::reportOOB(CheckerContext &checkerContext,
     return;
 
   if (!BT)
-    BT.reset(new BuiltinBug(this, "Out-of-bound access"));
+    BT.reset(new BugType(this, "Out-of-bound access"));
 
   // FIXME: This diagnostics are preliminary.  We should get far better
   // diagnostics for explaining buffer overruns.

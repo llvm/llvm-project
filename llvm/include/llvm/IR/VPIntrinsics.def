@@ -490,6 +490,10 @@ END_REGISTER_VP_INTRINSIC(vp_icmp)
 
 ///// } Comparisons
 
+// llvm.vp.is.fpclass(on_true,on_false,mask,vlen)
+BEGIN_REGISTER_VP(vp_is_fpclass, 2, 3, VP_IS_FPCLASS, 0)
+END_REGISTER_VP(vp_is_fpclass, VP_IS_FPCLASS)
+
 ///// Memory Operations {
 // llvm.vp.store(val,ptr,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_store, 2, 3)

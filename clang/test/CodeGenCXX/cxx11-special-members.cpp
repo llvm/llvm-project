@@ -28,7 +28,6 @@ void f2(B &x, B &y) {
 // CHECK: define {{.*}} @_ZN1BaSEOS_(
 // CHECK: call {{.*}} @_ZN1AaSERKS_(
 
-// rdar://18309639 {
 template<int> struct C { C() = default; };
 struct D {
   C<0> c;

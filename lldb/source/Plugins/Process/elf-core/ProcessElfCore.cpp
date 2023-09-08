@@ -53,7 +53,7 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
                                                bool can_connect) {
   lldb::ProcessSP process_sp;
   if (crash_file && !can_connect) {
-    // Read enough data for a ELF32 header or ELF64 header Note: Here we care
+    // Read enough data for an ELF32 header or ELF64 header Note: Here we care
     // about e_type field only, so it is safe to ignore possible presence of
     // the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
@@ -131,7 +131,7 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
       m_core_aranges.Append(range_entry);
     }
   }
-  // Keep a separate map of permissions that that isn't coalesced so all ranges
+  // Keep a separate map of permissions that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =
       ((header.p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |

@@ -5,7 +5,7 @@
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  lvlTypes = [ "compressed_nu", "singleton" ]
 }>
 
 #DCSR = #sparse_tensor.encoding<{
@@ -13,7 +13,7 @@
 }>
 
 #Slice = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ],
+  lvlTypes = [ "compressed_nu", "singleton" ],
   dimSlices = [ (?, 1, 1), (?, 3, 1) ]
 }>
 

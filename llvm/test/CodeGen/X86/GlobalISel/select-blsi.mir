@@ -27,9 +27,9 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
-    ; CHECK-NEXT: [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[MOV32r0_]], [[COPY]], implicit-def $eflags
-    ; CHECK-NEXT: [[AND32rr:%[0-9]+]]:gr32 = AND32rr [[SUB32rr]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: [[SUB32rr:%[0-9]+]]:gr32 = SUB32rr [[MOV32r0_]], [[COPY]], implicit-def dead $eflags
+    ; CHECK-NEXT: [[AND32rr:%[0-9]+]]:gr32 = AND32rr [[SUB32rr]], [[COPY]], implicit-def dead $eflags
     ; CHECK-NEXT: $edi = COPY [[AND32rr]]
     %0(s32) = COPY $edi
     %1(s32) = G_CONSTANT i32 0
@@ -57,9 +57,9 @@ body:             |
     ; CHECK: liveins: $edi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi
-    ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def $eflags
-    ; CHECK-NEXT: [[SUB32ri:%[0-9]+]]:gr32 = SUB32ri [[MOV32r0_]], 0, implicit-def $eflags
-    ; CHECK-NEXT: [[AND32rr:%[0-9]+]]:gr32 = AND32rr [[SUB32ri]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: [[SUB32ri:%[0-9]+]]:gr32 = SUB32ri [[MOV32r0_]], 0, implicit-def dead $eflags
+    ; CHECK-NEXT: [[AND32rr:%[0-9]+]]:gr32 = AND32rr [[SUB32ri]], [[COPY]], implicit-def dead $eflags
     ; CHECK-NEXT: $edi = COPY [[AND32rr]]
     %0(s32) = COPY $edi
     %1(s32) = G_CONSTANT i32 0

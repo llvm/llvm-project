@@ -29,9 +29,9 @@ define void @vla_emergency_spill(i32 %n) {
 ; CHECK-NEXT:    ldr r0, [r6]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    subs r4, r7, #7
-; CHECK-NEXT:    subs r4, #5
-; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    subs r6, r7, #7
+; CHECK-NEXT:    subs r6, #5
+; CHECK-NEXT:    mov sp, r6
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
@@ -176,18 +176,13 @@ define void @arg_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, ptr byval([2
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    str r0, [sp]
-; CHECK-NEXT:    ldr r0, .LCPI3_0
-; CHECK-NEXT:    add r0, sp
-; CHECK-NEXT:    str r5, [r0]
+; CHECK-NEXT:    add r0, sp, #904
+; CHECK-NEXT:    str r5, [r0, #124]
 ; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 1028 @ 0x404
 entry:
   %asm1 = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm "", "={r0},={r1},={r2},={r3},={r4},={r5},={r6},={r7},0,1,2,3,4,5,6,7"(ptr %p, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef)
   %asmresult = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm1, 0
@@ -258,9 +253,9 @@ define void @aligned_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, ptr byva
 ; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    subs r4, r7, #7
-; CHECK-NEXT:    subs r4, #5
-; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    subs r6, r7, #7
+; CHECK-NEXT:    subs r6, #5
+; CHECK-NEXT:    mov sp, r6
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
@@ -305,9 +300,9 @@ define void @aligned_no_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, ptr b
 ; CHECK-NEXT:    str r5, [r7, #124]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    subs r4, r7, #7
-; CHECK-NEXT:    subs r4, #5
-; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    subs r6, r7, #7
+; CHECK-NEXT:    subs r6, #5
+; CHECK-NEXT:    mov sp, r6
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %y = alloca [4 x i32], align 16
@@ -355,9 +350,9 @@ define void @aligned_out_of_range_access(i32 %n, i32 %n2, i32 %n3, i32 %n4, ptr 
 ; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
-; CHECK-NEXT:    subs r4, r7, #7
-; CHECK-NEXT:    subs r4, #5
-; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    subs r6, r7, #7
+; CHECK-NEXT:    subs r6, #5
+; CHECK-NEXT:    mov sp, r6
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
   %y = alloca [4 x i32], align 16

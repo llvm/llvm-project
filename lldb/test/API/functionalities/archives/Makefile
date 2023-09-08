@@ -18,7 +18,7 @@ libbar.a: c.o
 
 libfoo-thin.a: a.o b.o
 	$(eval LLVM_AR := $(LLVM_TOOLS_DIR)/llvm-ar)
-	$(eval LLVM_ARFLAGS := -rcsDT)
+	$(eval LLVM_ARFLAGS := -rcsUT)
 	$(LLVM_AR) $(LLVM_ARFLAGS) $@ $^
 
 include Makefile.rules

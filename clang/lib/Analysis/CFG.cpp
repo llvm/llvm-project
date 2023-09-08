@@ -1070,16 +1070,41 @@ private:
     }
   }
 
-  /// Find a pair of comparison expressions with or without parentheses
+  /// There are two checks handled by this function:
+  /// 1. Find a law-of-excluded-middle or law-of-noncontradiction expression
+  /// e.g. if (x || !x), if (x && !x)
+  /// 2. Find a pair of comparison expressions with or without parentheses
   /// with a shared variable and constants and a logical operator between them
   /// that always evaluates to either true or false.
   /// e.g. if (x != 3 || x != 4)
   TryResult checkIncorrectLogicOperator(const BinaryOperator *B) {
     assert(B->isLogicalOp());
-    const BinaryOperator *LHS =
-        dyn_cast<BinaryOperator>(B->getLHS()->IgnoreParens());
-    const BinaryOperator *RHS =
-        dyn_cast<BinaryOperator>(B->getRHS()->IgnoreParens());
+    const Expr *LHSExpr = B->getLHS()->IgnoreParens();
+    const Expr *RHSExpr = B->getRHS()->IgnoreParens();
+
+    auto CheckLogicalOpWithNegatedVariable = [this, B](const Expr *E1,
+                                                       const Expr *E2) {
+      if (const auto *Negate = dyn_cast<UnaryOperator>(E1)) {
+        if (Negate->getOpcode() == UO_LNot &&
+            Expr::isSameComparisonOperand(Negate->getSubExpr(), E2)) {
+          bool AlwaysTrue = B->getOpcode() == BO_LOr;
+          if (BuildOpts.Observer)
+            BuildOpts.Observer->logicAlwaysTrue(B, AlwaysTrue);
+          return TryResult(AlwaysTrue);
+        }
+      }
+      return TryResult();
+    };
+
+    TryResult Result = CheckLogicalOpWithNegatedVariable(LHSExpr, RHSExpr);
+    if (Result.isKnown())
+        return Result;
+    Result = CheckLogicalOpWithNegatedVariable(RHSExpr, LHSExpr);
+    if (Result.isKnown())
+        return Result;
+
+    const auto *LHS = dyn_cast<BinaryOperator>(LHSExpr);
+    const auto *RHS = dyn_cast<BinaryOperator>(RHSExpr);
     if (!LHS || !RHS)
       return {};
 

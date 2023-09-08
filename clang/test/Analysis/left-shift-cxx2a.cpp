@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -triple x86_64-apple-darwin13 -Wno-shift-count-overflow -verify=expected,cxx17 -std=c++17 %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -triple x86_64-apple-darwin13 -Wno-shift-count-overflow -verify=expected,cxx2a -std=c++2a %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-disable-checker core.BitwiseShift -triple x86_64-apple-darwin13 -Wno-shift-count-overflow -verify=expected,cxx17 -std=c++17 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-disable-checker core.BitwiseShift -triple x86_64-apple-darwin13 -Wno-shift-count-overflow -verify=expected,cxx2a -std=c++2a %s
 
 int testNegativeShift(int a) {
   if (a == -5) {

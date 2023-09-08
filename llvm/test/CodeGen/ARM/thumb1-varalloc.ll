@@ -33,9 +33,9 @@ bb2:
 	
 bb3:
 	%.0 = phi ptr [ %0, %entry ], [ %5, %bb2 ], [ %2, %bb1 ]
-; CHECK:      subs    r4, r7, #7
-; CHECK-NEXT: subs    r4, #1
-; CHECK-NEXT: mov     sp, r4
+; CHECK:      subs    r6, r7, #7
+; CHECK-NEXT: subs    r6, #1
+; CHECK-NEXT: mov     sp, r6
 ; CHECK-NEXT: pop     {r4, r6, r7, pc}
 	ret ptr %.0
 }

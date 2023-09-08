@@ -635,11 +635,11 @@ TEST_F(X86Core2TargetTest, GenerateExitSyscallTest) {
 #define MAP_FIXED_NOREPLACE MAP_FIXED
 #endif
 
-// 32 bit ARM doesn't have mmap and uses mmap2 instead. The only difference
-// between the two syscalls is that mmap2's offset parameter is in terms 4096
-// byte offsets rather than individual bytes, so for our purposes they are
-// effectively the same as all ofsets here are set to 0.
-#ifdef __arm__
+// Some 32-bit architectures don't have mmap and define mmap2 instead. The only
+// difference between the two syscalls is that mmap2's offset parameter is in
+// terms 4096 byte offsets rather than individual bytes, so for our purposes
+// they are effectively the same as all ofsets here are set to 0.
+#if defined(SYS_mmap2) && !defined(SYS_mmap)
 #define SYS_mmap SYS_mmap2
 #endif
 

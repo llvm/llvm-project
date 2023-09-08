@@ -796,7 +796,7 @@ void LLVMOrcDisposeSymbols(LLVMOrcSymbolStringPoolEntryRef *Symbols);
  * method returns an error then clients should log it and call
  * LLVMOrcMaterializationResponsibilityFailMaterialization. If no dependencies
  * have been registered for the symbols covered by this
- * MaterializationResponsibiility then this method is guaranteed to return
+ * MaterializationResponsibility then this method is guaranteed to return
  * LLVMErrorSuccess.
  */
 LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyResolved(
@@ -813,7 +813,7 @@ LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyResolved(
  * method returns an error then clients should log it and call
  * LLVMOrcMaterializationResponsibilityFailMaterialization.
  * If no dependencies have been registered for the symbols covered by this
- * MaterializationResponsibiility then this method is guaranteed to return
+ * MaterializationResponsibility then this method is guaranteed to return
  * LLVMErrorSuccess.
  */
 LLVMErrorRef LLVMOrcMaterializationResponsibilityNotifyEmitted(
@@ -839,7 +839,7 @@ LLVMErrorRef LLVMOrcMaterializationResponsibilityDefineMaterializing(
 /**
  * Notify all not-yet-emitted covered by this MaterializationResponsibility
  * instance that an error has occurred.
- * This will remove all symbols covered by this MaterializationResponsibilty
+ * This will remove all symbols covered by this MaterializationResponsibility
  * from the target JITDylib, and send an error to any queries waiting on
  * these symbols.
  */

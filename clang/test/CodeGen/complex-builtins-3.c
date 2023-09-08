@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -O1 -emit-llvm -o - | FileCheck %s
-// rdar://8315199
 
 /* Test for builtin conj, creal, cimag.  */
 /* Origin: Joseph Myers <jsm28@cam.ac.uk> */

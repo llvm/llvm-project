@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-apple-darwin %s -o - | FileCheck %s
 //
 // Test that indirect field decls are handled gracefully.
-// rdar://problem/16348575
-//
 template <class T, int T::*ptr> class Foo {  };
 
 struct Bar {

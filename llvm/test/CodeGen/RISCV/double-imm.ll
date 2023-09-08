@@ -66,3 +66,32 @@ define double @double_imm_op(double %a) nounwind {
   %1 = fadd double %a, 1.0
   ret double %1
 }
+
+define double @double_positive_zero(ptr %pd) nounwind {
+; CHECKRV32ZDINX-LABEL: double_positive_zero:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    li a0, 0
+; CHECKRV32ZDINX-NEXT:    li a1, 0
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: double_positive_zero:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    li a0, 0
+; CHECKRV64ZDINX-NEXT:    ret
+  ret double 0.0
+}
+
+define double @double_negative_zero(ptr %pd) nounwind {
+; CHECKRV32ZDINX-LABEL: double_negative_zero:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    lui a1, 524288
+; CHECKRV32ZDINX-NEXT:    li a0, 0
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: double_negative_zero:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    li a0, -1
+; CHECKRV64ZDINX-NEXT:    slli a0, a0, 63
+; CHECKRV64ZDINX-NEXT:    ret
+  ret double -0.0
+}

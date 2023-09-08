@@ -163,14 +163,14 @@ private:
 RuntimeTableBuilder::RuntimeTableBuilder(
     SemanticsContext &c, RuntimeDerivedTypeTables &t)
     : context_{c}, tables_{t}, derivedTypeSchema_{GetSchema("derivedtype")},
-      componentSchema_{GetSchema("component")}, procPtrSchema_{GetSchema(
-                                                    "procptrcomponent")},
-      valueSchema_{GetSchema("value")}, bindingSchema_{GetSchema(
-                                            bindingDescCompName)},
-      specialSchema_{GetSchema("specialbinding")}, deferredEnum_{GetEnumValue(
-                                                       "deferred")},
-      explicitEnum_{GetEnumValue("explicit")}, lenParameterEnum_{GetEnumValue(
-                                                   "lenparameter")},
+      componentSchema_{GetSchema("component")},
+      procPtrSchema_{GetSchema("procptrcomponent")},
+      valueSchema_{GetSchema("value")},
+      bindingSchema_{GetSchema(bindingDescCompName)},
+      specialSchema_{GetSchema("specialbinding")},
+      deferredEnum_{GetEnumValue("deferred")},
+      explicitEnum_{GetEnumValue("explicit")},
+      lenParameterEnum_{GetEnumValue("lenparameter")},
       scalarAssignmentEnum_{GetEnumValue("scalarassignment")},
       elementalAssignmentEnum_{GetEnumValue("elementalassignment")},
       readFormattedEnum_{GetEnumValue("readformatted")},
@@ -202,7 +202,8 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
   if (x.empty()) {
     return SomeExpr{evaluate::NullPointer{}};
   } else {
-    const auto &derivedType{x.front().GetType().GetDerivedTypeSpec()};
+    auto dyType{x.front().GetType()};
+    const auto &derivedType{dyType.GetDerivedTypeSpec()};
     ObjectEntityDetails object;
     DeclTypeSpec typeSpec{DeclTypeSpec::TypeDerived, derivedType};
     if (const DeclTypeSpec * spec{scope.FindType(typeSpec)}) {
@@ -427,9 +428,12 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       (typeName.front() == '.' && !context_.IsTempName(typeName))) {
     return nullptr;
   }
+  bool isPDTDefinitionWithKindParameters{
+      !derivedTypeSpec && dtScope.IsDerivedTypeWithKindParameter()};
+  bool isPDTInstantiation{derivedTypeSpec && &dtScope != dtSymbol->scope()};
   const SymbolVector *parameters{GetTypeParameters(*dtSymbol)};
   std::string distinctName{typeName};
-  if (&dtScope != dtSymbol->scope() && derivedTypeSpec) {
+  if (isPDTInstantiation) {
     // Only create new type descriptions for different kind parameter values.
     // Type with different length parameters/same kind parameters can all
     // share the same type description available in the current scope.
@@ -437,6 +441,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
             GetSuffixIfTypeKindParameters(*derivedTypeSpec, parameters)}) {
       distinctName += *suffix;
     }
+  } else if (isPDTDefinitionWithKindParameters) {
+    return nullptr;
   }
   std::string dtDescName{".dt."s + distinctName};
   Scope *dtSymbolScope{const_cast<Scope *>(dtSymbol->scope())};
@@ -454,9 +460,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
   evaluate::StructureConstructorValues dtValues;
   AddValue(dtValues, derivedTypeSchema_, "name"s,
       SaveNameAsPointerTarget(scope, typeName));
-  bool isPDTdefinitionWithKindParameters{
-      !derivedTypeSpec && dtScope.IsDerivedTypeWithKindParameter()};
-  if (!isPDTdefinitionWithKindParameters) {
+  if (!isPDTDefinitionWithKindParameters) {
     auto sizeInBytes{static_cast<common::ConstantSubscript>(dtScope.size())};
     if (auto alignment{dtScope.alignment().value_or(0)}) {
       sizeInBytes += alignment - 1;
@@ -466,10 +470,10 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     AddValue(
         dtValues, derivedTypeSchema_, "sizeinbytes"s, IntToExpr(sizeInBytes));
   }
-  bool isPDTinstantiation{derivedTypeSpec && &dtScope != dtSymbol->scope()};
-  if (isPDTinstantiation) {
-    const Symbol *uninstDescObject{
-        DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())))};
+  if (const Symbol *
+      uninstDescObject{isPDTInstantiation
+              ? DescribeType(DEREF(const_cast<Scope *>(dtSymbol->scope())))
+              : nullptr}) {
     AddValue(dtValues, derivedTypeSchema_, "uninstantiated"s,
         evaluate::AsGenericExpr(evaluate::Expr<evaluate::SomeDerived>{
             evaluate::Designator<evaluate::SomeDerived>{
@@ -488,22 +492,24 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
     // by their instantiated (or default) values, while LEN= type
     // parameters are described by their INTEGER kinds.
     for (SymbolRef ref : *parameters) {
-      const auto &tpd{ref->get<TypeParamDetails>()};
-      if (tpd.attr() == common::TypeParamAttr::Kind) {
-        auto value{evaluate::ToInt64(tpd.init()).value_or(0)};
-        if (derivedTypeSpec) {
-          if (const auto *pv{derivedTypeSpec->FindParameter(ref->name())}) {
-            if (pv->GetExplicit()) {
-              if (auto instantiatedValue{
-                      evaluate::ToInt64(*pv->GetExplicit())}) {
-                value = *instantiatedValue;
+      if (const auto *inst{dtScope.FindComponent(ref->name())}) {
+        const auto &tpd{inst->get<TypeParamDetails>()};
+        if (tpd.attr() == common::TypeParamAttr::Kind) {
+          auto value{evaluate::ToInt64(tpd.init()).value_or(0)};
+          if (derivedTypeSpec) {
+            if (const auto *pv{derivedTypeSpec->FindParameter(inst->name())}) {
+              if (pv->GetExplicit()) {
+                if (auto instantiatedValue{
+                        evaluate::ToInt64(*pv->GetExplicit())}) {
+                  value = *instantiatedValue;
+                }
               }
             }
           }
+          kinds.emplace_back(value);
+        } else { // LEN= parameter
+          lenKinds.emplace_back(GetIntegerKind(*inst));
         }
-        kinds.emplace_back(value);
-      } else { // LEN= parameter
-        lenKinds.emplace_back(GetIntegerKind(*ref));
       }
     }
   }
@@ -514,7 +520,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
       SaveNumericPointerTarget<Int1>(
           scope, SaveObjectName(".lpk."s + distinctName), std::move(lenKinds)));
   // Traverse the components of the derived type
-  if (!isPDTdefinitionWithKindParameters) {
+  if (!isPDTDefinitionWithKindParameters) {
     std::vector<const Symbol *> dataComponentSymbols;
     std::vector<evaluate::StructureConstructor> procPtrComponents;
     for (const auto &pair : dtScope) {
@@ -588,8 +594,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           DescribeSpecialGenerics(dtScope, dtScope, derivedTypeSpec)};
       if (derivedTypeSpec) {
         for (auto &ref : FinalsForDerivedTypeInstantiation(*derivedTypeSpec)) {
-          DescribeSpecialProc(specials, *ref, false /*!isAssignment*/, true,
-              std::nullopt, nullptr, derivedTypeSpec, true);
+          DescribeSpecialProc(specials, *ref, /*isAssignment-*/ false,
+              /*isFinal=*/true, std::nullopt, nullptr, derivedTypeSpec,
+              /*isTypeBound=*/true);
         }
         IncorporateDefinedIoGenericInterfaces(specials,
             common::DefinedIo::ReadFormatted, &scope, derivedTypeSpec);
@@ -1039,8 +1046,9 @@ void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
           [&](const GenericKind::OtherKind &k) {
             if (k == GenericKind::OtherKind::Assignment) {
               for (auto ref : generic.specificProcs()) {
-                DescribeSpecialProc(specials, *ref, true, false /*!final*/,
-                    std::nullopt, &dtScope, derivedTypeSpec, true);
+                DescribeSpecialProc(specials, *ref, /*isAssignment=*/true,
+                    /*isFinal=*/false, std::nullopt, &dtScope, derivedTypeSpec,
+                    /*isTypeBound=*/true);
               }
             }
           },
@@ -1051,8 +1059,9 @@ void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
             case common::DefinedIo::WriteFormatted:
             case common::DefinedIo::WriteUnformatted:
               for (auto ref : generic.specificProcs()) {
-                DescribeSpecialProc(specials, *ref, false, false /*!final*/, io,
-                    &dtScope, derivedTypeSpec, true);
+                DescribeSpecialProc(specials, *ref, /*isAssignment=*/false,
+                    /*isFinal=*/false, io, &dtScope, derivedTypeSpec,
+                    /*isTypeBound=*/true);
               }
               break;
             }
@@ -1076,6 +1085,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
   if (auto proc{evaluate::characteristics::Procedure::Characterize(
           specific, context_.foldingContext())}) {
     std::uint8_t isArgDescriptorSet{0};
+    std::uint8_t isArgContiguousSet{0};
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
     if (isAssignment) {
@@ -1115,10 +1125,10 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       if (proc->IsElemental()) {
         which = elementalFinalEnum_;
       } else {
-        const auto &typeAndShape{
+        const auto &dummyData{
             std::get<evaluate::characteristics::DummyDataObject>(
-                proc->dummyArguments.at(0).u)
-                .type};
+                proc->dummyArguments.at(0).u)};
+        const auto &typeAndShape{dummyData.type};
         if (typeAndShape.attrs().test(
                 evaluate::characteristics::TypeAndShape::Attr::AssumedRank)) {
           which = assumedRankFinalEnum_;
@@ -1126,8 +1136,16 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         } else {
           which = scalarFinalEnum_;
           if (int rank{evaluate::GetRank(typeAndShape.shape())}; rank > 0) {
-            argThatMightBeDescriptor = 1;
             which = IntExpr<1>(ToInt64(which).value() + rank);
+            if (!proc->dummyArguments[0].CanBePassedViaImplicitInterface()) {
+              argThatMightBeDescriptor = 1;
+            }
+            if (!typeAndShape.attrs().test(evaluate::characteristics::
+                        TypeAndShape::Attr::AssumedShape) ||
+                dummyData.attrs.test(evaluate::characteristics::
+                        DummyDataObject::Attr::Contiguous)) {
+              isArgContiguousSet |= 1;
+            }
           }
         }
       }
@@ -1176,6 +1194,8 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         IntExpr<1>(isArgDescriptorSet));
     AddValue(values, specialSchema_, "istypebound"s,
         IntExpr<1>(isTypeBound ? 1 : 0));
+    AddValue(values, specialSchema_, "isargcontiguousset"s,
+        IntExpr<1>(isArgContiguousSet));
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
@@ -1219,9 +1239,7 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
 // dummy argument.  Returns a non-null DeclTypeSpec pointer only if that
 // dtv argument exists and is a derived type.
 static const DeclTypeSpec *GetDefinedIoSpecificArgType(const Symbol &specific) {
-  const Symbol *interface {
-    &specific.GetUltimate()
-  };
+  const Symbol *interface{&specific.GetUltimate()};
   if (const auto *procEntity{specific.detailsIf<ProcEntityDetails>()}) {
     interface = procEntity->procInterface();
   }

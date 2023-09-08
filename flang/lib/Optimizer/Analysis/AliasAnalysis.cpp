@@ -10,14 +10,18 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
+
+#define DEBUG_TYPE "fir-alias-analysis"
 
 //===----------------------------------------------------------------------===//
 // AliasAnalysis: alias
@@ -67,6 +71,13 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
+  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
+  LLVM_DEBUG(llvm::dbgs() << "AliasAnalysis::alias\n";
+             llvm::dbgs() << "  lhs: " << lhs << "\n";
+             llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
+             llvm::dbgs() << "  rhs: " << rhs << "\n";
+             llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
+             llvm::dbgs() << "\n";);
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
@@ -76,8 +87,11 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
 
   if (lhsSrc.kind == rhsSrc.kind) {
-    if (lhsSrc.u == rhsSrc.u)
+    if (lhsSrc.u == rhsSrc.u) {
+      if (approximateSource)
+        return AliasResult::MayAlias;
       return AliasResult::MustAlias;
+    }
 
     // Allocate and global memory address cannot physically alias
     if (lhsSrc.kind == SourceKind::Allocate ||
@@ -185,6 +199,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   SourceKind type{SourceKind::Unknown};
   mlir::Type ty;
   bool breakFromLoop{false};
+  bool approximateSource{false};
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   while (defOp && !breakFromLoop) {
@@ -219,6 +234,24 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
+        .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          // Track further through the operand
+          v = op.getMemref();
+          defOp = v.getDefiningOp();
+        })
+        .Case<hlfir::DesignateOp>([&](auto op) {
+          // Track further through the memory indexed into
+          // => if the source arrays/structures don't alias then nor do the
+          //    results of hlfir.designate
+          v = op.getMemref();
+          defOp = v.getDefiningOp();
+          // TODO: there will be some cases which provably don't alias if one
+          // takes into account the component or indices, which are currently
+          // ignored here - leading to false positives
+          // because of this limitation, we need to make sure we never return
+          // MustAlias after going through a designate operation
+          approximateSource = true;
+        })
         .Default([&](auto op) {
           defOp = nullptr;
           breakFromLoop = true;
@@ -237,9 +270,9 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
     }
 
   if (type == SourceKind::Global)
-    return {global, type, ty, attributes};
+    return {global, type, ty, attributes, approximateSource};
 
-  return {v, type, ty, attributes};
+  return {v, type, ty, attributes, approximateSource};
 }
 
 } // namespace fir

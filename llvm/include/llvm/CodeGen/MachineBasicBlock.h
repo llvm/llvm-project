@@ -233,7 +233,7 @@ public:
   /// Return a formatted string to identify this block and its parent function.
   std::string getFullName() const;
 
-  /// Test whether this block is used as as something other than the target
+  /// Test whether this block is used as something other than the target
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
@@ -634,12 +634,6 @@ public:
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
   std::optional<unsigned> getBBID() const { return BBID; }
-
-  /// Returns the BBID of the block when BBAddrMapVersion >= 2, otherwise
-  /// returns `MachineBasicBlock::Number`.
-  /// TODO: Remove this function when version 1 is deprecated and replace its
-  /// uses with `getBBID()`.
-  unsigned getBBIDOrNumber() const;
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }

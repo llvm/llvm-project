@@ -803,6 +803,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nomerge ";
   if (MI.getFlag(MachineInstr::Unpredictable))
     OS << "unpredictable ";
+  if (MI.getFlag(MachineInstr::NoConvergent))
+    OS << "noconvergent ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

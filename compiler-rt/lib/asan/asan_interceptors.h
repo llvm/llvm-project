@@ -42,12 +42,10 @@ void InitializePlatformInterceptors();
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #if !SANITIZER_WINDOWS
-# define ASAN_INTERCEPT_ATOLL_AND_STRTOLL 1
 # define ASAN_INTERCEPT__LONGJMP 1
 # define ASAN_INTERCEPT_INDEX 1
 # define ASAN_INTERCEPT_PTHREAD_CREATE 1
 #else
-# define ASAN_INTERCEPT_ATOLL_AND_STRTOLL 0
 # define ASAN_INTERCEPT__LONGJMP 0
 # define ASAN_INTERCEPT_INDEX 0
 # define ASAN_INTERCEPT_PTHREAD_CREATE 0

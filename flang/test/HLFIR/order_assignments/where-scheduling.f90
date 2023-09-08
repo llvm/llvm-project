@@ -103,6 +103,30 @@ subroutine internal
 end subroutine
 end subroutine
 
+subroutine where_construct_unknown_conflict(x, mask)
+  real :: x(:)
+  logical :: mask(:)
+  interface
+     real function f()
+     end function f
+  end interface
+  where (mask) x = f()
+end subroutine
+
+subroutine elsewhere_construct_unknown_conflict(x, y, mask1, mask2)
+  real :: x(:), y(:)
+  logical :: mask1(:), mask2(:)
+  interface
+     real function f()
+     end function f
+  end interface
+  where (mask1)
+     x = 1.0
+  elsewhere (mask2)
+     y = f()
+  end where
+end subroutine
+
 !CHECK-LABEL: ------------ scheduling where in _QPno_conflict ------------
 !CHECK-NEXT: run 1 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPfake_conflict ------------
@@ -110,13 +134,13 @@ end subroutine
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPonly_once ------------
-!CHECK-NEXT: unknown effect: %9 = fir.call @llvm.stacksave() fastmath<contract> : () -> !fir.ref<i8>
+!CHECK-NEXT: unknown effect: %9 = fir.call @llvm.stacksave.p0() fastmath<contract> : () -> !fir.ref<i8>
 !CHECK-NEXT: run 1 save  (w): where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-NEXT: run 3 evaluate: where/region_assign2
 !CHECK-LABEL: ------------ scheduling where in _QPrhs_lhs_conflict ------------
-!CHECK-NEXT: unknown effect: %2 = hlfir.transpose %0#0 : (!fir.box<!fir.array<?x?xf32>>) -> !hlfir.expr<?x?xf32>
-!CHECK-NEXT: run 1 save  (w): where/region_assign1/rhs
+!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
+!CHECK-NEXT: run 1 save    : where/region_assign1/rhs
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_no_conflict ------------
 !CHECK-NEXT: run 1 evaluate: where/region_assign1
@@ -151,3 +175,20 @@ end subroutine
 !CHECK-NEXT: conflict: R/W: %7 = fir.load %6 : !fir.llvm_ptr<!fir.ref<i32>> W:%13 = fir.load %12 : !fir.ref<!fir.box<!fir.array<?x?xi32>>>
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-NEXT: ------------ scheduling where in _QPwhere_construct_unknown_conflict ------------
+!CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
+!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFwhere_construct_unknown_conflictEmask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
+!CHECK-NEXT: run 1 save    : where/mask
+!CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
+!CHECK-NEXT: run 2 save  (w): where/region_assign1/rhs
+!CHECK-NEXT: run 3 evaluate: where/region_assign1
+!CHECK-NEXT: ------------ scheduling where in _QPelsewhere_construct_unknown_conflict ------------
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
+!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFelsewhere_construct_unknown_conflictEmask1"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
+!CHECK-NEXT: run 2 save    : where/mask
+!CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFelsewhere_construct_unknown_conflictEmask2"} : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
+!CHECK-NEXT: run 2 save    : where/elsewhere1/mask
+!CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
+!CHECK-NEXT: run 3 save  (w): where/elsewhere1/region_assign1/rhs
+!CHECK-NEXT: run 4 evaluate: where/elsewhere1/region_assign1

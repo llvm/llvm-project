@@ -165,8 +165,8 @@ define void @test_revwv8i32v8i32(ptr %a, ptr %b) #0 {
 define void @test_revhv32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: test_revhv32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
@@ -204,14 +204,14 @@ define void @test_rev_elts_fail(ptr %a) #1 {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.d, z0.d[2]
-; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov x9, v0.d[1]
 ; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    mov z1.d, z0.d[3]
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    mov x10, v0.d[1]
-; CHECK-NEXT:    stp x9, x8, [sp, #16]
+; CHECK-NEXT:    fmov x10, d2
+; CHECK-NEXT:    stp x10, x8, [sp, #16]
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    stp x9, x8, [sp]
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    stp x10, x11, [sp]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
@@ -272,22 +272,22 @@ define void @test_revv8i32(ptr %a) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    fmov w10, s0
 ; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w11, v0.s[3]
+; CHECK-NEXT:    mov w10, v0.s[3]
+; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    mov z1.s, z0.s[4]
 ; CHECK-NEXT:    mov z2.s, z0.s[5]
 ; CHECK-NEXT:    mov z3.s, z0.s[6]
 ; CHECK-NEXT:    mov z0.s, z0.s[7]
-; CHECK-NEXT:    stp w8, w10, [sp, #24]
-; CHECK-NEXT:    fmov w10, s1
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    stp w11, w9, [sp, #16]
-; CHECK-NEXT:    fmov w9, s3
-; CHECK-NEXT:    fmov w11, s0
-; CHECK-NEXT:    stp w8, w10, [sp, #8]
+; CHECK-NEXT:    stp w8, w11, [sp, #24]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    stp w10, w9, [sp, #16]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    stp w9, w8, [sp, #8]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    stp w9, w8, [sp]
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    stp w11, w9, [sp]
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
@@ -390,45 +390,45 @@ define void @test_rev_fail(ptr %a) #1 {
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.h, z0.h[8]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z4.h, z0.h[11]
-; CHECK-NEXT:    mov z5.h, z0.h[12]
 ; CHECK-NEXT:    mov z2.h, z0.h[9]
-; CHECK-NEXT:    strh w8, [sp, #14]
-; CHECK-NEXT:    fmov w8, s4
 ; CHECK-NEXT:    mov z3.h, z0.h[10]
-; CHECK-NEXT:    strh w9, [sp, #30]
-; CHECK-NEXT:    fmov w9, s5
-; CHECK-NEXT:    mov z16.h, z0.h[15]
-; CHECK-NEXT:    fmov w11, s2
-; CHECK-NEXT:    fmov w12, s3
-; CHECK-NEXT:    strh w8, [sp, #24]
-; CHECK-NEXT:    fmov w8, s16
-; CHECK-NEXT:    mov z6.h, z0.h[13]
-; CHECK-NEXT:    mov z7.h, z0.h[14]
-; CHECK-NEXT:    umov w10, v0.h[1]
-; CHECK-NEXT:    strh w9, [sp, #22]
-; CHECK-NEXT:    umov w9, v0.h[2]
-; CHECK-NEXT:    strh w11, [sp, #28]
-; CHECK-NEXT:    fmov w11, s6
-; CHECK-NEXT:    strh w12, [sp, #26]
-; CHECK-NEXT:    fmov w12, s7
-; CHECK-NEXT:    strh w8, [sp, #16]
-; CHECK-NEXT:    umov w8, v0.h[5]
-; CHECK-NEXT:    strh w10, [sp, #12]
-; CHECK-NEXT:    strh w11, [sp, #20]
-; CHECK-NEXT:    umov w11, v0.h[3]
-; CHECK-NEXT:    strh w12, [sp, #18]
-; CHECK-NEXT:    umov w12, v0.h[4]
-; CHECK-NEXT:    umov w10, v0.h[6]
-; CHECK-NEXT:    strh w9, [sp, #10]
-; CHECK-NEXT:    umov w9, v0.h[7]
-; CHECK-NEXT:    strh w8, [sp, #4]
+; CHECK-NEXT:    mov z4.h, z0.h[11]
+; CHECK-NEXT:    strh w8, [sp, #14]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    mov z1.h, z0.h[12]
+; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    mov z2.h, z0.h[13]
+; CHECK-NEXT:    strh w8, [sp, #30]
+; CHECK-NEXT:    fmov w8, s3
+; CHECK-NEXT:    mov z3.h, z0.h[14]
+; CHECK-NEXT:    strh w9, [sp, #28]
+; CHECK-NEXT:    fmov w9, s4
+; CHECK-NEXT:    mov z4.h, z0.h[15]
+; CHECK-NEXT:    fmov w10, s2
+; CHECK-NEXT:    strh w8, [sp, #26]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov w11, s3
+; CHECK-NEXT:    strh w9, [sp, #24]
+; CHECK-NEXT:    umov w9, v0.h[1]
+; CHECK-NEXT:    fmov w12, s4
+; CHECK-NEXT:    strh w10, [sp, #20]
+; CHECK-NEXT:    umov w10, v0.h[3]
+; CHECK-NEXT:    strh w8, [sp, #22]
+; CHECK-NEXT:    umov w8, v0.h[2]
+; CHECK-NEXT:    strh w11, [sp, #18]
+; CHECK-NEXT:    umov w11, v0.h[4]
+; CHECK-NEXT:    strh w12, [sp, #16]
+; CHECK-NEXT:    umov w12, v0.h[5]
+; CHECK-NEXT:    strh w9, [sp, #12]
+; CHECK-NEXT:    umov w9, v0.h[6]
+; CHECK-NEXT:    strh w8, [sp, #10]
+; CHECK-NEXT:    umov w8, v0.h[7]
+; CHECK-NEXT:    strh w10, [sp, #8]
+; CHECK-NEXT:    strh w11, [sp, #6]
+; CHECK-NEXT:    strh w12, [sp, #4]
+; CHECK-NEXT:    strh w9, [sp, #2]
+; CHECK-NEXT:    strh w8, [sp]
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    strh w11, [sp, #8]
-; CHECK-NEXT:    strh w12, [sp, #6]
-; CHECK-NEXT:    strh w10, [sp, #2]
-; CHECK-NEXT:    strh w9, [sp]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    mov sp, x29
@@ -453,40 +453,40 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ldr q0, [x1]
+; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    orr x9, x8, #0x1e
 ; CHECK-NEXT:    orr x10, x8, #0x1c
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    orr x11, x8, #0x18
-; CHECK-NEXT:    orr x12, x8, #0x10
-; CHECK-NEXT:    str h0, [sp, #22]
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    st1 { v0.h }[4], [x9]
+; CHECK-NEXT:    orr x9, x8, #0x18
+; CHECK-NEXT:    st1 { v0.h }[7], [x9]
 ; CHECK-NEXT:    orr x9, x8, #0xe
-; CHECK-NEXT:    st1 { v0.h }[5], [x10]
-; CHECK-NEXT:    orr x10, x8, #0xc
-; CHECK-NEXT:    st1 { v0.h }[7], [x11]
-; CHECK-NEXT:    orr x11, x8, #0x8
 ; CHECK-NEXT:    st1 { v1.h }[4], [x9]
+; CHECK-NEXT:    orr x9, x8, #0xc
+; CHECK-NEXT:    st1 { v1.h }[5], [x9]
+; CHECK-NEXT:    orr x9, x8, #0x8
+; CHECK-NEXT:    st1 { v0.h }[5], [x10]
+; CHECK-NEXT:    orr x10, x8, #0x10
+; CHECK-NEXT:    st1 { v1.h }[7], [x9]
 ; CHECK-NEXT:    orr x9, x8, #0x4
-; CHECK-NEXT:    st1 { v1.h }[5], [x10]
+; CHECK-NEXT:    st1 { v0.h }[3], [x10]
 ; CHECK-NEXT:    mov w10, #26 // =0x1a
-; CHECK-NEXT:    orr x10, x8, x10
-; CHECK-NEXT:    st1 { v0.h }[3], [x12]
 ; CHECK-NEXT:    st1 { v1.h }[1], [x9]
 ; CHECK-NEXT:    orr x9, x8, #0x2
-; CHECK-NEXT:    st1 { v1.h }[7], [x11]
-; CHECK-NEXT:    mov w11, #20 // =0x14
-; CHECK-NEXT:    mov w12, #18 // =0x12
-; CHECK-NEXT:    st1 { v0.h }[6], [x10]
-; CHECK-NEXT:    mov w10, #10 // =0xa
-; CHECK-NEXT:    orr x11, x8, x11
 ; CHECK-NEXT:    st1 { v1.h }[2], [x9]
-; CHECK-NEXT:    orr x9, x8, x12
-; CHECK-NEXT:    orr x10, x8, x10
-; CHECK-NEXT:    st1 { v1.h }[3], [x8]
-; CHECK-NEXT:    st1 { v0.h }[1], [x11]
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    orr x9, x8, x10
+; CHECK-NEXT:    mov w10, #20 // =0x14
+; CHECK-NEXT:    st1 { v0.h }[6], [x9]
+; CHECK-NEXT:    orr x9, x8, x10
+; CHECK-NEXT:    mov w10, #18 // =0x12
+; CHECK-NEXT:    st1 { v0.h }[1], [x9]
+; CHECK-NEXT:    orr x9, x8, x10
 ; CHECK-NEXT:    st1 { v0.h }[2], [x9]
-; CHECK-NEXT:    st1 { v1.h }[6], [x10]
+; CHECK-NEXT:    mov w9, #10 // =0xa
+; CHECK-NEXT:    orr x9, x8, x9
+; CHECK-NEXT:    st1 { v1.h }[3], [x8]
+; CHECK-NEXT:    st1 { v1.h }[6], [x9]
+; CHECK-NEXT:    str h0, [sp, #22]
 ; CHECK-NEXT:    str h1, [sp, #6]
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]

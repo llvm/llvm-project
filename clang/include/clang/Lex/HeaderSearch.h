@@ -670,9 +670,6 @@ public:
 
   /// Retrieve all the modules corresponding to the given file.
   ///
-  /// \param AllowCreation Whether to allow inference of a new submodule, or to
-  ///        only return existing known modules.
-  ///
   /// \ref findModuleForHeader should typically be used instead of this.
   ArrayRef<ModuleMap::KnownHeader>
   findAllModulesForHeader(FileEntryRef File) const;
@@ -871,11 +868,11 @@ public:
   /// MainFile location, if none of the include search directories were prefix
   /// of File.
   ///
-  /// \param IsSystem If non-null, filled in to indicate whether the suggested
-  ///        path is relative to a system header directory.
+  /// \param IsAngled If non-null, filled in to indicate whether the suggested
+  ///        path should be referenced as <Header.h> instead of "Header.h".
   std::string suggestPathToFileForDiagnostics(const FileEntry *File,
                                               llvm::StringRef MainFile,
-                                              bool *IsSystem = nullptr) const;
+                                              bool *IsAngled = nullptr) const;
 
   /// Suggest a path by which the specified file could be found, for use in
   /// diagnostics to suggest a #include. Returned path will only contain forward
@@ -889,7 +886,7 @@ public:
   std::string suggestPathToFileForDiagnostics(llvm::StringRef File,
                                               llvm::StringRef WorkingDir,
                                               llvm::StringRef MainFile,
-                                              bool *IsSystem = nullptr) const;
+                                              bool *IsAngled = nullptr) const;
 
   void PrintStats();
 

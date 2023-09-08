@@ -28,113 +28,94 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S str, unsigned pos)
-{
-    typedef typename S::traits_type T;
-    typedef typename S::allocator_type A;
+TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
+  typedef typename S::traits_type T;
+  typedef typename S::allocator_type A;
 
-    if (pos <= str.size())
-    {
-        S s2(str, pos);
-        LIBCPP_ASSERT(s2.__invariants());
-        typename S::size_type rlen = str.size() - pos;
-        assert(s2.size() == rlen);
-        assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-        assert(s2.get_allocator() == A());
-        assert(s2.capacity() >= s2.size());
-    }
+  if (pos <= str.size()) {
+    S s2(str, pos);
+    LIBCPP_ASSERT(s2.__invariants());
+    typename S::size_type rlen = str.size() - pos;
+    assert(s2.size() == rlen);
+    assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
+    assert(s2.get_allocator() == A());
+    assert(s2.capacity() >= s2.size());
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            S s2(str, pos);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > str.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      S s2(str, pos);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > str.size());
     }
+  }
 #endif
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S str, unsigned pos, unsigned n)
-{
-    typedef typename S::traits_type T;
-    typedef typename S::allocator_type A;
-    if (pos <= str.size())
-    {
-        S s2(str, pos, n);
-        LIBCPP_ASSERT(s2.__invariants());
-        typename S::size_type rlen = std::min<typename S::size_type>(str.size() - pos, n);
-        assert(s2.size() == rlen);
-        assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-        assert(s2.get_allocator() == A());
-        assert(s2.capacity() >= s2.size());
-    }
+TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos, unsigned n) {
+  typedef typename S::traits_type T;
+  typedef typename S::allocator_type A;
+  if (pos <= str.size()) {
+    S s2(str, pos, n);
+    LIBCPP_ASSERT(s2.__invariants());
+    typename S::size_type rlen = std::min<typename S::size_type>(str.size() - pos, n);
+    assert(s2.size() == rlen);
+    assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
+    assert(s2.get_allocator() == A());
+    assert(s2.capacity() >= s2.size());
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            S s2(str, pos, n);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > str.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      S s2(str, pos, n);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > str.size());
     }
+  }
 #endif
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S str, unsigned pos, unsigned n, const typename S::allocator_type& a)
-{
-    typedef typename S::traits_type T;
+TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos, unsigned n, const typename S::allocator_type& a) {
+  typedef typename S::traits_type T;
 
-    if (pos <= str.size())
-    {
-        S s2(str, pos, n, a);
-        LIBCPP_ASSERT(s2.__invariants());
-        typename S::size_type rlen = std::min<typename S::size_type>(str.size() - pos, n);
-        assert(s2.size() == rlen);
-        assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-        assert(s2.get_allocator() == a);
-        assert(s2.capacity() >= s2.size());
-    }
+  if (pos <= str.size()) {
+    S s2(str, pos, n, a);
+    LIBCPP_ASSERT(s2.__invariants());
+    typename S::size_type rlen = std::min<typename S::size_type>(str.size() - pos, n);
+    assert(s2.size() == rlen);
+    assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
+    assert(s2.get_allocator() == a);
+    assert(s2.capacity() >= s2.size());
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            S s2(str, pos, n, a);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > str.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      S s2(str, pos, n, a);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > str.size());
     }
+  }
 #endif
 }
 
-void test_lwg2583()
-{
+void test_lwg2583() {
 #if TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
-    typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> StringA;
-    std::vector<StringA, std::scoped_allocator_adaptor<test_allocator<StringA>>> vs;
-    StringA s{"1234"};
-    vs.emplace_back(s, 2);
+  typedef std::basic_string<char, std::char_traits<char>, test_allocator<char>> StringA;
+  std::vector<StringA, std::scoped_allocator_adaptor<test_allocator<StringA>>> vs;
+  StringA s{"1234"};
+  vs.emplace_back(s, 2);
 
-    try { vs.emplace_back(s, 5); }
-    catch (const std::out_of_range&) { return; }
-    assert(false);
+  try {
+    vs.emplace_back(s, 5);
+  } catch (const std::out_of_range&) {
+    return;
+  }
+  assert(false);
 #endif
 }
 
@@ -221,8 +202,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

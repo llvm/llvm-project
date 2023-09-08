@@ -997,6 +997,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
     IO.mapOptional("MacroBlockEnd", Style.MacroBlockEnd);
+    IO.mapOptional("Macros", Style.Macros);
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
@@ -1094,7 +1095,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.VerilogBreakBetweenInstancePorts);
     IO.mapOptional("WhitespaceSensitiveMacros",
                    Style.WhitespaceSensitiveMacros);
-    IO.mapOptional("Macros", Style.Macros);
 
     // If AlwaysBreakAfterDefinitionReturnType was specified but
     // AlwaysBreakAfterReturnType was not, initialize the latter from the
@@ -2417,7 +2417,7 @@ private:
     for (const AnnotatedLine *Line : Lines) {
       AlignmentDiff += countVariableAlignments(Line->Children);
       for (FormatToken *Tok = Line->First; Tok && Tok->Next; Tok = Tok->Next) {
-        if (!Tok->is(TT_PointerOrReference))
+        if (Tok->isNot(TT_PointerOrReference))
           continue;
         // Don't treat space in `void foo() &&` as evidence.
         if (const auto *Prev = Tok->getPreviousNonComment()) {
@@ -2688,7 +2688,7 @@ private:
                    bool DeleteLeft) {
     auto NextNotDeleted = [this](const FormatToken &Tok) -> FormatToken * {
       for (auto *Res = Tok.Next; Res; Res = Res->Next) {
-        if (!Res->is(tok::comment) &&
+        if (Res->isNot(tok::comment) &&
             DeletedTokens.find(Res) == DeletedTokens.end()) {
           return Res;
         }

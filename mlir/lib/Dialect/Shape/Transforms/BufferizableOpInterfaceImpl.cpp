@@ -28,7 +28,7 @@ struct AssumingOpInterface
     : public BufferizableOpInterface::ExternalModel<AssumingOpInterface,
                                                     shape::AssumingOp> {
   AliasingOpOperandList
-  getAliasingOpOperands(Operation *op, OpResult opResult,
+  getAliasingOpOperands(Operation *op, Value value,
                         const AnalysisState &state) const {
     // AssumingOps do not have tensor OpOperands. The yielded value can be any
     // SSA value that is in scope. To allow for use-def chain traversal through
@@ -36,7 +36,7 @@ struct AssumingOpInterface
     // to be aliasing with the result.
     auto assumingOp = cast<shape::AssumingOp>(op);
     size_t resultNum = std::distance(op->getOpResults().begin(),
-                                     llvm::find(op->getOpResults(), opResult));
+                                     llvm::find(op->getOpResults(), value));
     // TODO: Support multiple blocks.
     assert(assumingOp.getDoRegion().getBlocks().size() == 1 &&
            "expected exactly 1 block");
@@ -94,8 +94,8 @@ struct AssumingYieldOpInterface
     return false;
   }
 
-  AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
+  AliasingValueList getAliasingValues(Operation *op, OpOperand &opOperand,
+                                      const AnalysisState &state) const {
     assert(isa<shape::AssumingOp>(op->getParentOp()) &&
            "expected that parent is an AssumingOp");
     OpResult opResult =

@@ -172,6 +172,10 @@ private:
   /// if a pass manager has already been initialized.
   LogicalResult initialize(MLIRContext *context, unsigned newInitGeneration);
 
+  /// Compute a hash of the pipeline, so that we can detect changes (a pass is
+  /// added...).
+  llvm::hash_code hash();
+
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
 
@@ -439,8 +443,10 @@ private:
   /// generate reproducers.
   std::unique_ptr<detail::PassCrashReproducerGenerator> crashReproGenerator;
 
-  /// A hash key used to detect when reinitialization is necessary.
+  /// Hash keys used to detect when reinitialization is necessary.
   llvm::hash_code initializationKey =
+      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+  llvm::hash_code pipelineInitializationKey =
       DenseMapInfo<llvm::hash_code>::getTombstoneKey();
 
   /// Flag that specifies if pass timing is enabled.

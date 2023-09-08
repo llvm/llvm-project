@@ -27,23 +27,24 @@ COMPILER_RT_ABI fp_t __floatsisf(si_int a) {
 
   // All other cases begin by extracting the sign and absolute value of a
   rep_t sign = 0;
+  su_int aAbs = (su_int)a;
   if (a < 0) {
     sign = signBit;
-    a = -a;
+    aAbs = -aAbs;
   }
 
   // Exponent of (fp_t)a is the width of abs(a).
-  const int exponent = (aWidth - 1) - clzsi(a);
+  const int exponent = (aWidth - 1) - clzsi(aAbs);
   rep_t result;
 
   // Shift a into the significand field, rounding if it is a right-shift
   if (exponent <= significandBits) {
     const int shift = significandBits - exponent;
-    result = (rep_t)a << shift ^ implicitBit;
+    result = (rep_t)aAbs << shift ^ implicitBit;
   } else {
     const int shift = exponent - significandBits;
-    result = (rep_t)a >> shift ^ implicitBit;
-    rep_t round = (rep_t)a << (typeWidth - shift);
+    result = (rep_t)aAbs >> shift ^ implicitBit;
+    rep_t round = (rep_t)aAbs << (typeWidth - shift);
     if (round > signBit)
       result++;
     if (round == signBit)

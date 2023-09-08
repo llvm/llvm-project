@@ -58,6 +58,7 @@ add_clang_library(clangTidyReadabilityModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyReadabilityModule

@@ -18,7 +18,6 @@ static void test(void) {
   int *i;
 }
 
-// <rdar://problem/8237491>
 void test2(void) {
     int a;
     short b;

@@ -16,9 +16,7 @@
 using namespace clang::ast_matchers;
 using namespace llvm;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static constexpr llvm::StringLiteral OptionNameReportMoreUnsafeFunctions =
     "ReportMoreUnsafeFunctions";
@@ -233,6 +231,4 @@ void UnsafeFunctionsCheck::onEndOfTranslationUnit() {
   IsAnnexKAvailable.reset();
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

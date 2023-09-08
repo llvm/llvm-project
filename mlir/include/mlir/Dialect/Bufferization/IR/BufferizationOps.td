@@ -95,7 +95,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool resultBufferizesToMemoryWrite(OpResult opResult,
                                        const AnalysisState &state);
 
-    bool bufferizesToAllocation(OpResult opResult) { return true; }
+    bool bufferizesToAllocation(Value value) { return true; }
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
@@ -103,12 +103,12 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
     FailureOr<BaseMemRefType> getBufferType(
         Value value, const BufferizationOptions &options,
-        const DenseMap<Value, BaseMemRefType> &fixedTypes);
+        SmallVector<Value> &invocationStack);
 
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
@@ -167,7 +167,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
 def Bufferization_CloneOp : Bufferization_Op<"clone", [
     CopyOpInterface,
-    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    MemoryEffectsOpInterface,
     DeclareOpInterfaceMethods<AllocationOpInterface, ["buildDealloc", "buildClone"]>
   ]> {
   let builders = [
@@ -191,8 +191,11 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
     behavior.
   }];
 
-  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "", []>:$input);
-  let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
+  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "",
+                           [MemRead<DefaultResource>]>:$input);
+  let results = (outs Res<AnyRankedOrUnrankedMemRef, "",
+                          [MemWrite<DefaultResource>,
+                           MemAlloc<DefaultResource>]>:$output);
 
   let extraClassDeclaration = [{
     Value getSource() { return getInput(); }
@@ -234,7 +237,7 @@ def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
     RankedTensorType getType() {
@@ -292,7 +295,7 @@ def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
       return false;
     }
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }
@@ -385,7 +388,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     FailureOr<BaseMemRefType> getBufferType(
         Value value, const BufferizationOptions &options,
-        const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+        SmallVector<Value> &invocationStack) {
       return ::llvm::cast<BaseMemRefType>(getMemref().getType());
     }
   }];
@@ -456,7 +459,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
       return !getReadOnly();
     }
 
-    AliasingOpResultList getAliasingOpResults(
+    AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }
@@ -485,22 +488,48 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     deallocating that memref). If two memrefs alias each other, only one will be
     deallocated to avoid double free situations.
 
-    The memrefs to be deallocated must be the originally allocated memrefs,
-    however, the memrefs to be retained may be arbitrary memrefs.
+    The number of variadic `memref` operands (the memrefs to be deallocated)
+    must equal the number of variadic `condition` operands and correspond to
+    each other element-wise.
 
-    Returns a list of conditions corresponding to the list of memrefs which
-    indicates the new ownerships, i.e., if the memref was deallocated the
-    ownership was dropped (set to 'false') and otherwise will be the same as the
-    input condition.
+    The `memref` operands must be the originally allocated memrefs, however, the
+    `retained` memref operands may be arbitrary memrefs.
+
+    This operation returns a variadic number of `updatedConditions` operands,
+    one updated condition per retained memref. An updated condition indicates
+    the ownership of the respective retained memref. It is computed as the
+    disjunction of all `conditions` operands where the corresponding to
+    `memrefs` operand aliases with the retained memref. If the retained memref
+    has no aliases among `memrefs`, the resulting updated condition is 'false'.
+    This is because all memrefs that need to be deallocated within one basic
+    block should be added to the same `bufferization.dealloc` operation at the
+    end of the block; if no aliasing memref is present, then it does not have to
+    be deallocated and thus we don't need to claim ownership. If the memrefs to
+    be deallocated are split over multiple dealloc operations (e.g., to avoid
+    aliasing checks at runtime between the `memref` operands), then the results
+    have to be manually combined using an `arith.ori` operation and all of them
+    still require the same list of `retained` memref operands unless the
+    (potentially empty) set of aliasing memrefs can be determined statically. In
+    that case, the `updatedCondition` operand can be replaced accordingly (e.g.,
+    by a canonicalizer).
 
     Example:
     ```mlir
-    %0:2 = bufferization.dealloc %a0, %a1 if %cond0, %cond1 retain %r0, %r1 :
-      memref<2xf32>, memref<4xi32> retain memref<?xf32>, memref<f64>
+    %0:3 = bufferization.dealloc (%a0, %a1 : memref<2xf32>, memref<4xi32>)
+      if (%cond0, %cond1) retain (%r0, %r1, %r2 : memref<?xf32>, memref<f64>,
+      memref<2xi32>)
     ```
-    Deallocation will be called on `%a0` if `%cond0` is 'true' and neither `%r0`
-    or `%r1` are aliases of `%a0`. `%a1` will be deallocated when `%cond1` is
-    set to 'true' and none of `%r0`, %r1` and `%a0` are aliases.
+    Deallocation will be called on `%a0` if `%cond0` is 'true' and neither
+    `%r0`, `%r1`, or `%r2` are aliases of `%a0`. `%a1` will be deallocated when
+    `%cond1` is set to 'true' and none of `%r0`, %r1`, `%r2`, and `%a0` are
+    aliases.
+
+    Note that this can be an expensive operation if there are many operands that
+    cannot be optimized away. The runtime cost of this operation (assuming that
+    nothing is optimized away) is `O(|memrefs|^2+|memrefs|*|retained|)`. The
+    cost in terms of memory space is `O(|memrefs|+|retained|)`. As a result, it
+    is recommended to place it carefully in the IR such that most operands can
+    be optimized away by running the `buffer-deallocation-simplification` pass.
   }];
 
   let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,

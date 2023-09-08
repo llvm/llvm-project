@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -E %s -o %t.mm
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc %t.mm -o - | FileCheck %s 
-// rdar://10803676
 
 extern "C" void *sel_registerName(const char *);
 

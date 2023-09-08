@@ -288,6 +288,7 @@ class LLDB(DebuggerBase):
                 "use of undeclared identifier",
                 "no member named",
                 "Couldn't lookup symbols",
+                "Couldn't look up symbols",
                 "reference to local variable",
                 "invalid use of 'this' outside of a non-static member function",
             ]

@@ -47,7 +47,6 @@ Clang-Repl data flow can be divided into roughly 8 phases:
 
 8. The machine code is then executed.
 
-===================
 Build Instructions:
 ===================
 
@@ -75,7 +74,6 @@ Build Instructions:
    clang-repl>
 
 
-================
 Clang-Repl Usage
 ================
 

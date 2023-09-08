@@ -419,26 +419,18 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
         op, "don't support ops with multiple results for now");
   SmallVector<utils::IteratorType> iterators =
       tilingInterfaceOp.getLoopIteratorTypes();
-  int64_t numReductionDims = llvm::count(
-      tilingInterfaceOp.getLoopIteratorTypes(), utils::IteratorType::reduction);
-  if (numReductionDims != 1)
-    return b.notifyMatchFailure(
-        op, "only support ops with one reduction dimension.");
-  int reductionDim;
+
+  SmallVector<int> reductionDims;
   for (auto [idx, iteratorType] :
        llvm::enumerate(tilingInterfaceOp.getLoopIteratorTypes())) {
-    if (iteratorType == utils::IteratorType::reduction) {
-      reductionDim = idx;
-      break;
-    }
+    if (iteratorType == utils::IteratorType::reduction)
+      reductionDims.push_back(idx);
   }
-  if (static_cast<size_t>(reductionDim) >= tileSize.size())
-    return b.notifyMatchFailure(op, "reduction dimension must be tiled");
 
   // 1. create the inital tensor value.
   FailureOr<Operation *> identityTensor =
       op.generateInitialTensorForPartialReduction(b, loc, tileSize,
-                                                  reductionDim);
+                                                  reductionDims);
   if (failed(identityTensor))
     return b.notifyMatchFailure(op,
                                 "cannot create a tensor of identity value.");
@@ -450,7 +442,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
   // 3. Generate the tiled implementation within the inner most loop.
   b.setInsertionPoint(loops.back().getBody()->getTerminator());
   Operation *parallelOp = op.tileToPartialReduction(
-      b, loc, (*identityTensor)->getResults(), offsets, sizes, reductionDim);
+      b, loc, (*identityTensor)->getResults(), offsets, sizes, reductionDims);
 
   SmallVector<OpFoldResult> resultSizesList;
   for (size_t i = 0; i < offsets.size(); i++)
@@ -472,7 +464,7 @@ mlir::scf::tileReductionUsingScf(RewriterBase &b,
 
   // 4. Apply the merge reduction to combine all the partial values.
   b.setInsertionPointAfter(*loops.begin());
-  Operation *mergeOp = op.mergeReductions(b, loc, replacements, reductionDim);
+  Operation *mergeOp = op.mergeReductions(b, loc, replacements, reductionDims);
   b.replaceOp(op, mergeOp->getResults());
 
   SCFReductionTilingResult results;

@@ -559,6 +559,38 @@ PrototypeDescriptor::parsePrototypeDescriptor(
         return std::nullopt;
       }
 
+    } else if (ComplexTT.first == "SEFixedLog2LMUL") {
+      int32_t Log2LMUL;
+      if (ComplexTT.second.getAsInteger(10, Log2LMUL)) {
+        llvm_unreachable("Invalid SEFixedLog2LMUL value!");
+        return std::nullopt;
+      }
+      switch (Log2LMUL) {
+      case -3:
+        VTM = VectorTypeModifier::SEFixedLog2LMULN3;
+        break;
+      case -2:
+        VTM = VectorTypeModifier::SEFixedLog2LMULN2;
+        break;
+      case -1:
+        VTM = VectorTypeModifier::SEFixedLog2LMULN1;
+        break;
+      case 0:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL0;
+        break;
+      case 1:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL1;
+        break;
+      case 2:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL2;
+        break;
+      case 3:
+        VTM = VectorTypeModifier::SEFixedLog2LMUL3;
+        break;
+      default:
+        llvm_unreachable("Invalid LFixedLog2LMUL value, should be [-3, 3]");
+        return std::nullopt;
+      }
     } else if (ComplexTT.first == "Tuple") {
       unsigned NF = 0;
       if (ComplexTT.second.getAsInteger(10, NF)) {
@@ -726,6 +758,27 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
   case VectorTypeModifier::SFixedLog2LMUL3:
     applyFixedLog2LMUL(3, FixedLMULType::SmallerThan);
     break;
+  case VectorTypeModifier::SEFixedLog2LMULN3:
+    applyFixedLog2LMUL(-3, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMULN2:
+    applyFixedLog2LMUL(-2, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMULN1:
+    applyFixedLog2LMUL(-1, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL0:
+    applyFixedLog2LMUL(0, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL1:
+    applyFixedLog2LMUL(1, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL2:
+    applyFixedLog2LMUL(2, FixedLMULType::SmallerOrEqual);
+    break;
+  case VectorTypeModifier::SEFixedLog2LMUL3:
+    applyFixedLog2LMUL(3, FixedLMULType::SmallerOrEqual);
+    break;
   case VectorTypeModifier::Tuple2:
   case VectorTypeModifier::Tuple3:
   case VectorTypeModifier::Tuple4:
@@ -741,6 +794,10 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
   case VectorTypeModifier::NoModifier:
     break;
   }
+
+  // Early return if the current type modifier is already invalid.
+  if (ScalarType == Invalid)
+    return;
 
   for (unsigned TypeModifierMaskShift = 0;
        TypeModifierMaskShift <= static_cast<unsigned>(TypeModifier::MaxOffset);
@@ -803,12 +860,18 @@ void RVVType::applyFixedSEW(unsigned NewSEW) {
 void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
   switch (Type) {
   case FixedLMULType::LargerThan:
-    if (Log2LMUL < LMUL.Log2LMUL) {
+    if (Log2LMUL <= LMUL.Log2LMUL) {
       ScalarType = ScalarTypeKind::Invalid;
       return;
     }
     break;
   case FixedLMULType::SmallerThan:
+    if (Log2LMUL >= LMUL.Log2LMUL) {
+      ScalarType = ScalarTypeKind::Invalid;
+      return;
+    }
+    break;
+  case FixedLMULType::SmallerOrEqual:
     if (Log2LMUL > LMUL.Log2LMUL) {
       ScalarType = ScalarTypeKind::Invalid;
       return;

@@ -232,11 +232,11 @@ Merger::Merger(unsigned numInputOutputTensors, unsigned numNativeLoops,
                 std::vector<std::optional<Level>>(numLoops, std::nullopt)),
       lvlToLoop(numTensors,
                 std::vector<std::optional<LoopId>>(maxLvlRank, std::nullopt)),
-      loopToDependencies(
-          numLoops, std::vector<std::optional<std::pair<Level, DimLevelType>>>(
-                        numTensors, std::nullopt)),
-      levelToDependentLoop(numTensors, std::vector<std::vector<LoopId>>(
-                                           maxLvlRank, std::vector<LoopId>())),
+      loopToUnresolvedLvls(numLoops, std::vector<std::optional<LvlDLTPair>>(
+                                         numTensors, std::nullopt)),
+      levelToDependentLoop(numTensors,
+                           std::vector<std::vector<LoopCoeffPair>>(
+                               maxLvlRank, std::vector<LoopCoeffPair>())),
       loopBounds(numLoops, std::make_pair(numTensors, numLoops)) {}
 
 //===----------------------------------------------------------------------===//

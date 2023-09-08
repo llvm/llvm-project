@@ -72,7 +72,7 @@ define void @f4(ptr %p) {
 define void @remangle_intrinsic() {
 ; CHECK-LABEL: define {{[^@]+}}@remangle_intrinsic() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave()
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    call void @llvm.stackprotector(ptr null, ptr [[A]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.expandload.v2i64(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret void

@@ -1071,30 +1071,28 @@ defm LXADD : ATOMIC_RMW_BINOP<0xc0, 0xc1, "xadd", "atomic_load_add">, TB, LOCK;
  * (see below the RELEASE_MOV* / ACQUIRE_MOV* pseudo-instructions)
  */
 multiclass RELEASE_BINOP_MI<string Name, SDNode op> {
-  def : Pat<(atomic_store_8 addr:$dst,
-             (op (atomic_load_8 addr:$dst), (i8 imm:$src))),
+  def : Pat<(atomic_store_8 (op (atomic_load_8 addr:$dst), (i8 imm:$src)),
+                            addr:$dst),
             (!cast<Instruction>(Name#"8mi") addr:$dst, imm:$src)>;
-  def : Pat<(atomic_store_16 addr:$dst,
-             (op (atomic_load_16 addr:$dst), (i16 imm:$src))),
+  def : Pat<(atomic_store_16 (op (atomic_load_16 addr:$dst), (i16 imm:$src)),
+                             addr:$dst),
             (!cast<Instruction>(Name#"16mi") addr:$dst, imm:$src)>;
-  def : Pat<(atomic_store_32 addr:$dst,
-             (op (atomic_load_32 addr:$dst), (i32 imm:$src))),
+  def : Pat<(atomic_store_32 (op (atomic_load_32 addr:$dst), (i32 imm:$src)),
+                             addr:$dst),
             (!cast<Instruction>(Name#"32mi") addr:$dst, imm:$src)>;
-  def : Pat<(atomic_store_64 addr:$dst,
-             (op (atomic_load_64 addr:$dst), (i64immSExt32:$src))),
+  def : Pat<(atomic_store_64 (op (atomic_load_64 addr:$dst), (i64immSExt32:$src)),
+                             addr:$dst),
             (!cast<Instruction>(Name#"64mi32") addr:$dst, (i64immSExt32:$src))>;
-
-  def : Pat<(atomic_store_8 addr:$dst,
-             (op (atomic_load_8 addr:$dst), (i8 GR8:$src))),
+  def : Pat<(atomic_store_8 (op (atomic_load_8 addr:$dst), (i8 GR8:$src)), addr:$dst),
             (!cast<Instruction>(Name#"8mr") addr:$dst, GR8:$src)>;
-  def : Pat<(atomic_store_16 addr:$dst,
-             (op (atomic_load_16 addr:$dst), (i16 GR16:$src))),
+  def : Pat<(atomic_store_16 (op (atomic_load_16 addr:$dst), (i16 GR16:$src)),
+                             addr:$dst),
             (!cast<Instruction>(Name#"16mr") addr:$dst, GR16:$src)>;
-  def : Pat<(atomic_store_32 addr:$dst,
-             (op (atomic_load_32 addr:$dst), (i32 GR32:$src))),
+  def : Pat<(atomic_store_32 (op (atomic_load_32 addr:$dst), (i32 GR32:$src)),
+                             addr:$dst),
             (!cast<Instruction>(Name#"32mr") addr:$dst, GR32:$src)>;
-  def : Pat<(atomic_store_64 addr:$dst,
-             (op (atomic_load_64 addr:$dst), (i64 GR64:$src))),
+  def : Pat<(atomic_store_64 (op (atomic_load_64 addr:$dst), (i64 GR64:$src)),
+                             addr:$dst),
             (!cast<Instruction>(Name#"64mr") addr:$dst, GR64:$src)>;
 }
 defm : RELEASE_BINOP_MI<"ADD", add>;
@@ -1131,13 +1129,13 @@ defm : ATOMIC_LOAD_FP_BINOP_MI<"ADD", fadd>;
 
 multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
                         dag dag64> {
-  def : Pat<(atomic_store_8 addr:$dst, dag8),
+  def : Pat<(atomic_store_8 dag8, addr:$dst),
             (!cast<Instruction>(Name#8m) addr:$dst)>;
-  def : Pat<(atomic_store_16 addr:$dst, dag16),
+  def : Pat<(atomic_store_16 dag16, addr:$dst),
             (!cast<Instruction>(Name#16m) addr:$dst)>;
-  def : Pat<(atomic_store_32 addr:$dst, dag32),
+  def : Pat<(atomic_store_32 dag32, addr:$dst),
             (!cast<Instruction>(Name#32m) addr:$dst)>;
-  def : Pat<(atomic_store_64 addr:$dst, dag64),
+  def : Pat<(atomic_store_64 dag64, addr:$dst),
             (!cast<Instruction>(Name#64m) addr:$dst)>;
 }
 
@@ -1165,22 +1163,22 @@ defm : RELEASE_UNOP<"NOT",
     (not (i32 (atomic_load_32 addr:$dst))),
     (not (i64 (atomic_load_64 addr:$dst)))>;
 
-def : Pat<(atomic_store_8 addr:$dst, (i8 imm:$src)),
+def : Pat<(atomic_store_8 (i8 imm:$src), addr:$dst),
           (MOV8mi addr:$dst, imm:$src)>;
-def : Pat<(atomic_store_16 addr:$dst, (i16 imm:$src)),
+def : Pat<(atomic_store_16 (i16 imm:$src), addr:$dst),
           (MOV16mi addr:$dst, imm:$src)>;
-def : Pat<(atomic_store_32 addr:$dst, (i32 imm:$src)),
+def : Pat<(atomic_store_32 (i32 imm:$src), addr:$dst),
           (MOV32mi addr:$dst, imm:$src)>;
-def : Pat<(atomic_store_64 addr:$dst, (i64immSExt32:$src)),
+def : Pat<(atomic_store_64 (i64immSExt32:$src), addr:$dst),
           (MOV64mi32 addr:$dst, i64immSExt32:$src)>;
 
-def : Pat<(atomic_store_8 addr:$dst, GR8:$src),
+def : Pat<(atomic_store_8 GR8:$src, addr:$dst),
           (MOV8mr addr:$dst, GR8:$src)>;
-def : Pat<(atomic_store_16 addr:$dst, GR16:$src),
+def : Pat<(atomic_store_16 GR16:$src, addr:$dst),
           (MOV16mr addr:$dst, GR16:$src)>;
-def : Pat<(atomic_store_32 addr:$dst, GR32:$src),
+def : Pat<(atomic_store_32 GR32:$src, addr:$dst),
           (MOV32mr addr:$dst, GR32:$src)>;
-def : Pat<(atomic_store_64 addr:$dst, GR64:$src),
+def : Pat<(atomic_store_64 GR64:$src, addr:$dst),
           (MOV64mr addr:$dst, GR64:$src)>;
 
 def : Pat<(i8  (atomic_load_8 addr:$src)),  (MOV8rm addr:$src)>;
@@ -1189,18 +1187,18 @@ def : Pat<(i32 (atomic_load_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_64 addr:$src)), (MOV64rm addr:$src)>;
 
 // Floating point loads/stores.
-def : Pat<(atomic_store_32 addr:$dst, (i32 (bitconvert (f32 FR32:$src)))),
+def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
-def : Pat<(atomic_store_32 addr:$dst, (i32 (bitconvert (f32 FR32:$src)))),
+def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (VMOVSSmr addr:$dst, FR32:$src)>, Requires<[UseAVX]>;
-def : Pat<(atomic_store_32 addr:$dst, (i32 (bitconvert (f32 FR32:$src)))),
+def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (VMOVSSZmr addr:$dst, FR32:$src)>, Requires<[HasAVX512]>;
 
-def : Pat<(atomic_store_64 addr:$dst, (i64 (bitconvert (f64 FR64:$src)))),
+def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
           (MOVSDmr addr:$dst, FR64:$src)>, Requires<[UseSSE2]>;
-def : Pat<(atomic_store_64 addr:$dst, (i64 (bitconvert (f64 FR64:$src)))),
+def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
           (VMOVSDmr addr:$dst, FR64:$src)>, Requires<[UseAVX]>;
-def : Pat<(atomic_store_64 addr:$dst, (i64 (bitconvert (f64 FR64:$src)))),
+def : Pat<(atomic_store_64 (i64 (bitconvert (f64 FR64:$src))), addr:$dst),
           (VMOVSDmr addr:$dst, FR64:$src)>, Requires<[HasAVX512]>;
 
 def : Pat<(f32 (bitconvert (i32 (atomic_load_32 addr:$src)))),

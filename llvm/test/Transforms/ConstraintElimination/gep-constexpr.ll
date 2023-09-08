@@ -12,7 +12,6 @@ define i1 @gep_constexpr_index_lt_upper(i32 noundef %i) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i16, ptr @arr1, i64 [[IDXPROM]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[UPPER]], getelementptr inbounds ([3 x i16], ptr @arr1, i64 1, i64 0)
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:

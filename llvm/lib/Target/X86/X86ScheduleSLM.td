@@ -66,7 +66,7 @@ multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ResourceCycles = Res;
+    let ReleaseAtCycles = Res;
     let NumMicroOps = UOps;
   }
 
@@ -74,7 +74,7 @@ multiclass SLMWriteResPair<X86FoldableSchedWrite SchedRW,
   // the latency (default = 3).
   def : WriteRes<SchedRW.Folded, !listconcat([SLM_MEC_RSV], ExePorts)> {
     let Latency = !add(Lat, LoadLat);
-    let ResourceCycles = !listconcat([1], Res);
+    let ReleaseAtCycles = !listconcat([1], Res);
     let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
@@ -139,7 +139,7 @@ defm : X86WriteRes<WriteFCMOV, [SLM_FPC_RSV1], 3, [1], 1>; // x87 conditional mo
 def  : WriteRes<WriteSETCC, [SLM_IEC_RSV01]>;
 def  : WriteRes<WriteSETCCStore, [SLM_IEC_RSV01, SLM_MEC_RSV]> {
   // FIXME Latency and NumMicrOps?
-  let ResourceCycles = [2,1];
+  let ReleaseAtCycles = [2,1];
 }
 defm : X86WriteRes<WriteLAHFSAHF,        [SLM_IEC_RSV01], 1, [1], 1>;
 defm : X86WriteRes<WriteBitTest,         [SLM_IEC_RSV0, SLM_IEC_RSV1], 1, [1,1], 1>;
@@ -413,7 +413,7 @@ def  : WriteRes<WriteVecExtract, [SLM_FPC_RSV0]> {
 def  : WriteRes<WriteVecExtractSt, [SLM_FPC_RSV0, SLM_MEC_RSV]> {
   let Latency = 4;
   let NumMicroOps = 5;
-  let ResourceCycles = [1, 2];
+  let ReleaseAtCycles = [1, 2];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -465,7 +465,7 @@ def : WriteRes<WriteNop, []>;
 def SLMWriteResGroup1rr : SchedWriteRes<[SLM_FPC_RSV01]> {
   let Latency = 4;
   let NumMicroOps = 2;
-  let ResourceCycles = [8];
+  let ReleaseAtCycles = [8];
 }
 def: InstRW<[SLMWriteResGroup1rr], (instrs MMX_PADDQrr, PADDQrr,
                                            MMX_PSUBQrr, PSUBQrr,
@@ -474,14 +474,14 @@ def: InstRW<[SLMWriteResGroup1rr], (instrs MMX_PADDQrr, PADDQrr,
 def SLMWriteResGroup2rr : SchedWriteRes<[SLM_FPC_RSV0]> {
   let Latency = 5;
   let NumMicroOps = 1;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
 }
 def: InstRW<[SLMWriteResGroup2rr], (instrs PCMPGTQrr)>;
 
 def SLMWriteResGroup1rm : SchedWriteRes<[SLM_MEC_RSV,SLM_FPC_RSV01]> {
   let Latency = 7;
   let NumMicroOps = 3;
-  let ResourceCycles = [1,8];
+  let ReleaseAtCycles = [1,8];
 }
 
 def: InstRW<[SLMWriteResGroup1rm], (instrs MMX_PADDQrm, PADDQrm,
@@ -491,7 +491,7 @@ def: InstRW<[SLMWriteResGroup1rm], (instrs MMX_PADDQrm, PADDQrm,
 def SLMWriteResGroup2rm : SchedWriteRes<[SLM_MEC_RSV,SLM_FPC_RSV0]> {
   let Latency = 8;
   let NumMicroOps = 2;
-  let ResourceCycles = [1,2];
+  let ReleaseAtCycles = [1,2];
 }
 def: InstRW<[SLMWriteResGroup2rm], (instrs PCMPGTQrm)>;
 

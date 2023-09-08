@@ -60,6 +60,9 @@ public:
     }
   }
 
+  IdDeclInfoMap(const IdDeclInfoMap &) = delete;
+  IdDeclInfoMap &operator=(const IdDeclInfoMap &) = delete;
+
   /// Returns the IdDeclInfo associated to the DeclarationName.
   /// It creates a new IdDeclInfo if one was not created before for this id.
   IdDeclInfo &operator[](DeclarationName Name);

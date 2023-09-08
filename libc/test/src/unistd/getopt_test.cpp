@@ -34,27 +34,25 @@ void set_state(FILE *errstream) {
       &test_globals::optpos, &test_globals::opterr, errstream);
 }
 
+static void my_memcpy(char *dest, const char *src, size_t size) {
+  for (size_t i = 0; i < size; i++)
+    dest[i] = src[i];
+}
+
+ssize_t cookie_write(void *cookie, const char *buf, size_t size) {
+  char **pos = static_cast<char **>(cookie);
+  my_memcpy(*pos, buf, size);
+  *pos += size;
+  return size;
+}
+
+static cookie_io_functions_t cookie{nullptr, &cookie_write, nullptr, nullptr};
+
 // TODO: <stdio> could be either llvm-libc's or the system libc's. The former
 // doesn't currently support fmemopen but does have fopencookie. In the future
 // just use that instead. This memopen does no error checking for the size
 // of the buffer, etc.
-FILE *memopen(char **pos) {
-  static auto memcpy = [](char *dest, const char *src, size_t size) {
-    for (size_t i = 0; i < size; i++)
-      dest[i] = src[i];
-  };
-
-  static auto *write =
-      +[](void *cookie, const char *buf, size_t size) -> ssize_t {
-    char **pos = static_cast<char **>(cookie);
-    memcpy(*pos, buf, size);
-    *pos += size;
-    return size;
-  };
-
-  static cookie_io_functions_t cookie{nullptr, write, nullptr, nullptr};
-  return __llvm_libc::fopencookie(pos, "w", cookie);
-}
+FILE *memopen(char **pos) { return __llvm_libc::fopencookie(pos, "w", cookie); }
 
 struct LlvmLibcGetoptTest : public __llvm_libc::testing::Test {
   FILE *errstream;

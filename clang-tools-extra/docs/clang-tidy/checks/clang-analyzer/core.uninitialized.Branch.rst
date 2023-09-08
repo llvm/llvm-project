@@ -5,6 +5,9 @@
 clang-analyzer-core.uninitialized.Branch
 ========================================
 
-The clang-analyzer-core.uninitialized.Branch check is an alias, please see
-`Clang Static Analyzer Available Checkers <https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-branch>`_
+Check for uninitialized values used as branch conditions.
+
+The `clang-analyzer-core.uninitialized.Branch` check is an alias, please see
+`Clang Static Analyzer Available Checkers
+<https://clang.llvm.org/docs/analyzer/checkers.html#core-uninitialized-branch>`_
 for more information.

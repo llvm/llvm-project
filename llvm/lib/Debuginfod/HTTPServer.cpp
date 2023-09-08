@@ -51,7 +51,7 @@ bool llvm::streamFile(HTTPServerRequest &Request, StringRef FilePath) {
     Request.setResponse({404u, "text/plain", "Could not memory-map file.\n"});
     return false;
   }
-  // Lambdas are copied on conversion to to std::function, preventing use of
+  // Lambdas are copied on conversion to std::function, preventing use of
   // smart pointers.
   MemoryBuffer *MB = MBOrErr->release();
   Request.setResponse({200u, "application/octet-stream", MB->getBufferSize(),

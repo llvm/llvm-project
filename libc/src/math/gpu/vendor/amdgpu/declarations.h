@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
 #define LLVM_LIBC_SRC_MATH_GPU_AMDGPU_DECLARATIONS_H
 
+#include "src/__support/GPU/utils.h"
+
 namespace __llvm_libc {
 
 extern "C" {
@@ -34,13 +36,26 @@ int __ocml_ilogb_f64(double);
 int __ocml_ilogb_f32(float);
 float __ocml_ldexp_f32(float, int);
 double __ocml_ldexp_f64(double, int);
+float __ocml_nextafter_f32(float, float);
+double __ocml_nextafter_f64(double, double);
 float __ocml_pow_f32(float, float);
 double __ocml_pow_f64(double, double);
 double __ocml_rint_f64(double);
 float __ocml_rint_f32(float);
 double __ocml_round_f64(double);
 float __ocml_round_f32(float);
+float __ocml_sin_f32(float);
 double __ocml_sin_f64(double);
+float __ocml_sincos_f32(float, float *);
+double __ocml_sincos_f64(double, double *);
+float __ocml_sinh_f32(float);
+double __ocml_sinh_f64(double);
+float __ocml_tan_f32(float);
+double __ocml_tan_f64(double);
+float __ocml_tanh_f32(float);
+double __ocml_tanh_f64(double);
+float __ocml_remquo_f32(float, float, gpu::Private<int> *);
+double __ocml_remquo_f64(double, double, gpu::Private<int> *);
 }
 
 } // namespace __llvm_libc

@@ -100,7 +100,7 @@ mlirAffineMapMinorIdentityGet(MlirContext ctx, intptr_t dims, intptr_t results);
 /// context. The permutation expression is a non-empty vector of integers.
 /// The elements of the permutation vector must be continuous from 0 and cannot
 /// be repeated (i.e. `[1,2,0]` is a valid permutation. `[2,0]` or `[1,1,2]` is
-/// an invalid invalid permutation.) The affine map is owned by the context.
+/// an invalid permutation.) The affine map is owned by the context.
 MLIR_CAPI_EXPORTED MlirAffineMap mlirAffineMapPermutationGet(
     MlirContext ctx, intptr_t size, unsigned *permutation);
 

@@ -610,7 +610,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
         OF.createShortImport(*Name, E.Ordinal, ImportType, NameType));
   }
 
-  return writeArchive(Path, Members, /*WriteSymtab*/ true,
+  return writeArchive(Path, Members, SymtabWritingMode::NormalSymtab,
                       MinGW ? object::Archive::K_GNU : object::Archive::K_COFF,
                       /*Deterministic*/ true, /*Thin*/ false);
 }

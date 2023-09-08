@@ -46,6 +46,31 @@ if (NOT DEFINED LIBCXX_TEST_DEPS)
   message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
 endif()
 
+if (MSVC)
+  # Shared code for initializing some parameters used by all
+  # llvm-libc++-*-clangcl.cfg.in test configs.
+  set(dbg_include "")
+
+  if (NOT CMAKE_MSVC_RUNTIME_LIBRARY OR CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$")
+    set(crt_lib "msvcrt")
+    set(cxx_lib "msvcprt")
+  else()
+    set(crt_lib "libcmt")
+    set(cxx_lib "libcpmt")
+  endif()
+
+  if ((NOT CMAKE_MSVC_RUNTIME_LIBRARY AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+      OR (CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "Debug"))
+    set(dbg_include " -D_DEBUG -include set_windows_crt_report_mode.h")
+    set(crt_lib "${crt_lib}d")
+    set(cxx_lib "${cxx_lib}d")
+  endif()
+
+  serialize_lit_param(dbg_include "\"${dbg_include}\"")
+  serialize_lit_param(crt_lib "\"${crt_lib}\"")
+  serialize_lit_param(cxx_lib "\"${cxx_lib}\"")
+endif()
+
 if (LIBCXX_INCLUDE_TESTS)
   include(AddLLVM) # for configure_lit_site_cfg and add_lit_testsuite
 

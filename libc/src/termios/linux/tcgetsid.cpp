@@ -20,7 +20,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(pid_t, tcgetsid, (int fd)) {
   pid_t sid;
-  long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TIOCGSID, &sid);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ioctl, fd, TIOCGSID, &sid);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

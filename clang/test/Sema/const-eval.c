@@ -58,7 +58,7 @@ EVAL_EXPR(28, (_Complex double)1 ? 1 : -1)
 EVAL_EXPR(29, (_Complex int)1 ? 1 : -1)
 
 
-// PR4027 + rdar://6808859
+// PR4027
 struct a { int x, y; };
 static struct a V2 = (struct a)(struct a){ 1, 2};
 static const struct a V1 = (struct a){ 1, 2};
@@ -85,7 +85,6 @@ EVAL_EXPR(40, __imag__(1.f) == 0 ? 1 : -1)
 // From gcc testsuite
 EVAL_EXPR(41, (int)(1+(_Complex unsigned)2))
 
-// rdar://8875946
 void rdar8875946(void) {
   double _Complex  P;
   float _Complex  P2 = 3.3f + P;
@@ -119,7 +118,6 @@ float varfloat;
 const float constfloat = 0;
 EVAL_EXPR(43, varfloat && constfloat) // expected-error {{not an integer constant expression}}
 
-// <rdar://problem/10962435>
 EVAL_EXPR(45, ((char*)-1) + 1 == 0 ? 1 : -1)
 EVAL_EXPR(46, ((char*)-1) + 1 < (char*) -1 ? 1 : -1)
 EVAL_EXPR(47, &x < &x + 1 ? 1 : -1)
@@ -129,7 +127,6 @@ EVAL_EXPR(49, &x < &x - 100 ? 1 : -1) // expected-error {{not an integer constan
 extern struct Test50S Test50;
 EVAL_EXPR(50, &Test50 < (struct Test50S*)((unsigned long)&Test50 + 10)) // expected-error {{not an integer constant expression}}
 
-// <rdar://problem/11874571>
 EVAL_EXPR(51, 0 != (float)1e99)
 
 // PR21945

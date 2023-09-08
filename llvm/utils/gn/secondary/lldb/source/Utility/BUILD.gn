@@ -7,6 +7,7 @@ static_library("Utility") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",
     "Baton.cpp",

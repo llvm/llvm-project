@@ -44,7 +44,7 @@ test7;
 void test8(int, x);
 
 typedef int sometype;
-int a(sometype, y) {return 0;}  /* expected-warning {{omitting the parameter name in a function definition is a C2x extension}}*/
+int a(sometype, y) {return 0;}  /* expected-warning {{omitting the parameter name in a function definition is a C23 extension}}*/
 
 void bar (void *);
 void f11 (z)       /* expected-error {{may not have 'void' type}} */

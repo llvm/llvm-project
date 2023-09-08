@@ -315,7 +315,8 @@ static bool FormattedDerivedTypeIO(IoStatementState &io,
         typeInfo::SpecialBinding special{DIR == Direction::Input
                 ? typeInfo::SpecialBinding::Which::ReadFormatted
                 : typeInfo::SpecialBinding::Which::WriteFormatted,
-            definedIo->subroutine, definedIo->isDtvArgPolymorphic, false};
+            definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
+            false};
         if (std::optional<bool> wasDefined{
                 DefinedFormattedIo(io, descriptor, *type, special)}) {
           return *wasDefined;
@@ -359,7 +360,8 @@ static bool UnformattedDescriptorIO(IoStatementState &io,
           typeInfo::SpecialBinding special{DIR == Direction::Input
                   ? typeInfo::SpecialBinding::Which::ReadUnformatted
                   : typeInfo::SpecialBinding::Which::WriteUnformatted,
-              definedIo->subroutine, definedIo->isDtvArgPolymorphic, false};
+              definedIo->subroutine, definedIo->isDtvArgPolymorphic, false,
+              false};
           if (std::optional<bool> wasDefined{
                   DefinedUnformattedIo(io, descriptor, *type, special)}) {
             return *wasDefined;

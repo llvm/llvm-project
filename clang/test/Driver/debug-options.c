@@ -1,5 +1,4 @@
 // Check to make sure clang is somewhat picky about -g options.
-// rdar://10383444
 
 // Linux.
 // RUN: %clang -### -c -g %s -target x86_64-linux-gnu 2>&1 \
@@ -82,6 +81,11 @@
 // RUN:                         -check-prefix=G_DWARF2 %s
 // RUN: %clang -### -c -g %s -target x86_64-pc-freebsd12.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB \
+// RUN:                         -check-prefix=G_DWARF4 %s
+
+// Haiku.
+// RUN: %clang -### -c -g %s --target=x86_64-unknown-haiku 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
 // RUN:                         -check-prefix=G_DWARF4 %s
 
 // Windows.
@@ -194,8 +198,8 @@
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-tables-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-tables-only -g %s -target i386-pc-solaris 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
+// RUN: %clang -### -c -gline-tables-only -g %s --target=i386-pc-solaris 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-tables-only -g0 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_NO %s
 //
@@ -213,8 +217,8 @@
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
-// RUN: %clang -### -c -gline-directives-only -g %s -target i386-pc-solaris 2>&1 \
-// RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
+// RUN: %clang -### -c -gline-directives-only -g %s --target=i386-pc-solaris 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_ONLY %s
 // RUN: %clang -### -c -gline-directives-only -g0 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLIO_NO %s
 
@@ -241,8 +245,9 @@
 // RUN: %clang -### -c -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -gpubnames -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
-//
-// RUN: %clang -### -c -gsplit-dwarf -g -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
+
+/// Specify --target= so that %clang doesn't exit with code 1 even if LLVM_DEFAULT_TARGET_TRIPLE specifies a RISC-V target triple.
+// RUN: %clang -### --target=x86_64 -c -gsplit-dwarf -g -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
 // RUN: %clang -### -c -fdebug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=RNGBSE %s
 // RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
@@ -262,7 +267,7 @@
 // RUN: %clang -### -fdebug-types-section -target wasm32-unknown-unknown %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTS %s
 //
-// RUN: %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
+// RUN: not %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTSE %s
 //
 // RUN: %clang -### -fdebug-types-section -fno-debug-types-section -target x86_64-apple-darwin %s 2>&1 \
@@ -417,7 +422,7 @@
 // NOMACRO-NOT: "-debug-info-macro"
 //
 // RUN: %clang -### -gdwarf-5 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_5 %s
-// RUN: %clang -### -gdwarf-2 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_2 %s
+// RUN: not %clang -### -gdwarf-2 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_2 %s
 // RUN: %clang -### -gdwarf-5 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_5 %s
 // RUN: %clang -### -gdwarf-2 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_2 %s
 //
@@ -440,12 +445,12 @@
 // RUN: %clang -### -c -gdwarf-5 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
 // RUN: %clang -### -c -gdwarf-3 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
-// RUN: %clang -### -c -gdwarf-2 -gdwarf64 --target=x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
+// RUN: not %clang -### -c -gdwarf-2 -gdwarf64 --target=x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 -target x86_64 %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_ON %s
-// RUN: %clang -### -c -gdwarf-4 -gdwarf64 --target=i386-linux-gnu %s 2>&1 \
+// RUN: not %clang -### -c -gdwarf-4 -gdwarf64 --target=i386-linux-gnu %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_32ARCH %s
-// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64-apple-darwin %s 2>&1 \
+// RUN: not %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64-apple-darwin %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_ELF %s
 //
 // GDWARF64_ON:  "-gdwarf64"

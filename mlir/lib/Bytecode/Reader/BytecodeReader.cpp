@@ -926,7 +926,7 @@ public:
     // bytecode version from the version buffer if it wasn't already processed.
     // Return failure if either of those two actions could not be completed.
     if (failed(dialectEntry->getValue()->load(*this, getLoc().getContext())) ||
-        dialectEntry->getValue()->loadedVersion.get() == nullptr)
+        dialectEntry->getValue()->loadedVersion == nullptr)
       return failure();
     return dialectEntry->getValue()->loadedVersion.get();
   }

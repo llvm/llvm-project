@@ -159,14 +159,15 @@ int Descriptor::Allocate() {
   return 0;
 }
 
-int Descriptor::Destroy(bool finalize, bool destroyPointers) {
+int Descriptor::Destroy(
+    bool finalize, bool destroyPointers, Terminator *terminator) {
   if (!destroyPointers && raw_.attribute == CFI_attribute_pointer) {
     return StatOk;
   } else {
     if (auto *addendum{Addendum()}) {
       if (const auto *derived{addendum->derivedType()}) {
         if (!derived->noDestructionNeeded()) {
-          runtime::Destroy(*this, finalize, *derived);
+          runtime::Destroy(*this, finalize, *derived, terminator);
         }
       }
     }

@@ -55,6 +55,7 @@ struct TestVectorToVectorLowering
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect>();
+    registry.insert<vector::VectorDialect>();
   }
 
   Option<bool> unroll{*this, "unroll", llvm::cl::desc("Include unrolling"),

@@ -402,8 +402,8 @@ llvm::Error checkDataflowWithNoopAnalysis(
     std::function<
         void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
              ASTContext &)>
-        VerifyResults,
-    DataflowAnalysisOptions Options,
+        VerifyResults = [](const auto &, auto &) {},
+    DataflowAnalysisOptions Options = {BuiltinOptions()},
     LangStandard::Kind Std = LangStandard::lang_cxx17,
     llvm::StringRef TargetFun = "target");
 
@@ -453,7 +453,7 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
 
 /// Returns the value of a `Field` on the record referenced by `Loc.`
 /// Returns null if `Loc` is null.
-inline Value *getFieldValue(const AggregateStorageLocation *Loc,
+inline Value *getFieldValue(const RecordStorageLocation *Loc,
                             const ValueDecl &Field, const Environment &Env) {
   if (Loc == nullptr)
     return nullptr;
@@ -465,11 +465,7 @@ inline Value *getFieldValue(const AggregateStorageLocation *Loc,
 
 /// Returns the value of a `Field` on a `Struct.
 /// Returns null if `Struct` is null.
-///
-/// Note: This function currently does not use the `Env` parameter, but it will
-/// soon be needed to look up the `Value` when `setChild()` changes to return a
-/// `StorageLocation *`.
-inline Value *getFieldValue(const StructValue *Struct, const ValueDecl &Field,
+inline Value *getFieldValue(const RecordValue *Struct, const ValueDecl &Field,
                             const Environment &Env) {
   if (Struct == nullptr)
     return nullptr;

@@ -12,7 +12,7 @@
 #include <__algorithm/for_each.h>
 #include <__algorithm/pstl_backends/cpu_backends/backend.h>
 #include <__config>
-#include <__iterator/iterator_traits.h>
+#include <__iterator/concepts.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/terminate_on_exception.h>
 
@@ -37,7 +37,7 @@ template <class _ExecutionPolicy, class _ForwardIterator, class _Functor>
 _LIBCPP_HIDE_FROM_ABI void
 __pstl_for_each(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, _Functor __func) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __has_random_access_iterator_category<_ForwardIterator>::value) {
+                __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
     std::__terminate_on_exception([&] {
       std::__par_backend::__parallel_for(
           __first, __last, [__func](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -46,7 +46,7 @@ __pstl_for_each(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __
           });
     });
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __has_random_access_iterator_category<_ForwardIterator>::value) {
+                       __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
     std::__simd_walk_1(__first, __last - __first, __func);
   } else {
     std::for_each(__first, __last, __func);

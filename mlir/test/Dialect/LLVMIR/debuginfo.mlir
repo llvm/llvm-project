@@ -102,10 +102,17 @@
   file = #file, subprogramFlags = "Definition", type = #spType1
 >
 
-// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[FILE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
+// CHECK-DAG: #[[MODULE:.*]] = #llvm.di_module<file = #[[FILE]], scope = #[[FILE]], name = "module", configMacros = "bar", includePath = "/", apinotes = "/", line = 42, isDecl = true>
+#module = #llvm.di_module<
+  file = #file, scope = #file, name = "module",
+  configMacros = "bar", includePath = "/",
+  apinotes = "/", line = 42, isDecl = true
+>
+
+// CHECK-DAG: #[[SP2:.*]] = #llvm.di_subprogram<compileUnit = #[[CU]], scope = #[[MODULE]], name = "value", file = #[[FILE]], subprogramFlags = Definition, type = #[[SPTYPE2]]>
 #sp2 = #llvm.di_subprogram<
   // Omit the optional linkageName parameter.
-  compileUnit = #cu, scope = #file, name = "value",
+  compileUnit = #cu, scope = #module, name = "value",
   file = #file, subprogramFlags = "Definition", type = #spType2
 >
 

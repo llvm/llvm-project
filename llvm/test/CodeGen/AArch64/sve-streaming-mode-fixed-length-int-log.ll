@@ -34,10 +34,10 @@ define <16 x i8> @and_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @and_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: and_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
@@ -74,10 +74,10 @@ define <8 x i16> @and_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @and_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: and_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
@@ -114,10 +114,10 @@ define <4 x i32> @and_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @and_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: and_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
@@ -154,10 +154,10 @@ define <2 x i64> @and_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @and_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: and_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    and z0.d, z1.d, z0.d
+; CHECK-NEXT:    and z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
@@ -198,10 +198,10 @@ define <16 x i8> @or_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @or_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: or_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
@@ -238,10 +238,10 @@ define <8 x i16> @or_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @or_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: or_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
@@ -278,10 +278,10 @@ define <4 x i32> @or_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @or_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: or_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
@@ -318,10 +318,10 @@ define <2 x i64> @or_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @or_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: or_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    orr z0.d, z0.d, z2.d
-; CHECK-NEXT:    orr z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
@@ -362,10 +362,10 @@ define <16 x i8> @xor_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @xor_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: xor_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
@@ -402,10 +402,10 @@ define <8 x i16> @xor_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @xor_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: xor_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
@@ -442,10 +442,10 @@ define <4 x i32> @xor_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @xor_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: xor_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
@@ -482,10 +482,10 @@ define <2 x i64> @xor_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @xor_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: xor_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x1]
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
-; CHECK-NEXT:    eor z1.d, z1.d, z3.d
+; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    eor z0.d, z1.d, z0.d
+; CHECK-NEXT:    eor z1.d, z2.d, z3.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a

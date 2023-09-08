@@ -35,12 +35,10 @@ void f(Test *t) {
   [t test:"Foo"]; // expected-error {{string literal must be prefixed by '@'}}
   t.property = "Foo"; // expected-error {{string literal must be prefixed by '@'}}
 
-  // <rdar://problem/6896493>
   [t test:@"Foo"]]; // expected-error{{extraneous ']' before ';'}}
   g(@"Foo")); // expected-error{{extraneous ')' before ';'}}
 }
 
-// rdar://7861841
 @interface Radar7861841 {
 @public
   int x;

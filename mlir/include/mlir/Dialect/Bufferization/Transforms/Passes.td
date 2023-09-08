@@ -88,6 +88,49 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createBufferDeallocationPass()";
 }
 
+def BufferDeallocationSimplification :
+    Pass<"buffer-deallocation-simplification", "func::FuncOp"> {
+  let summary = "Optimizes `bufferization.dealloc` operation for more "
+                "efficient codegen";
+  let description = [{
+    This pass uses static alias analysis to reduce the number of alias checks
+    required at runtime. Such checks are sometimes necessary to make sure that
+    memrefs aren't deallocated before their last usage (use after free) or that
+    some memref isn't deallocated twice (double free).
+  }];
+
+  let constructor =
+    "mlir::bufferization::createBufferDeallocationSimplificationPass()";
+
+  let dependentDialects = [
+    "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
+    "mlir::memref::MemRefDialect"
+  ];
+}
+
+def LowerDeallocations : Pass<"bufferization-lower-deallocations"> {
+  let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
+                "operations";
+  let description = [{
+    This pass lowers `bufferization.dealloc` operations to the `memref` dialect.
+    It can be applied to a `builtin.module` or operations implementing the
+    `FunctionOpInterface`. For the latter, only simple `dealloc` operations can
+    be lowered because the library function necessary for the fully generic
+    lowering cannot be inserted. In this case, an error will be emitted.
+    Next to `memref.dealloc` operations, it may also emit operations from the
+    `arith`, `scf`, and `func` dialects to build conditional deallocations and
+    library functions to avoid code-size blow-up.
+  }];
+
+  let constructor =
+    "mlir::bufferization::createLowerDeallocationsPass()";
+
+  let dependentDialects = [
+    "arith::ArithDialect", "memref::MemRefDialect", "scf::SCFDialect",
+    "func::FuncDialect"
+  ];
+}
+
 def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";

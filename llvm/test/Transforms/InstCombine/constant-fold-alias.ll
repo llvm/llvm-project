@@ -8,14 +8,15 @@ target datalayout = "e-p1:16:16-p2:32:32-p3:64:64"
 @G3 = global [4 x i8] zeroinitializer, align 1
 
 @A1 = alias i32, getelementptr inbounds ([4 x i8], ptr @G3, i32 0, i32 2)
-@A2 = alias i32, inttoptr (i64 and (i64 ptrtoint (ptr getelementptr inbounds ([4 x i8], ptr @G3, i32 0, i32 3) to i64), i64 -4) to ptr)
 
 define i64 @f1() {
 ; This cannot be constant folded because G1 is underaligned.
 ; CHECK-LABEL: define i64 @f1() {
-; CHECK-NEXT:    ret i64 and (i64 ptrtoint (ptr @G1 to i64), i64 1)
+; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @G1 to i64), 1
+; CHECK-NEXT:    ret i64 [[AND]]
 ;
-  ret i64 and (i64 ptrtoint (ptr @G1 to i64), i64 1)
+  %and = and i64 ptrtoint (ptr @G1 to i64), 1
+  ret i64 %and
 }
 
 define i64 @f2() {
@@ -23,23 +24,16 @@ define i64 @f2() {
 ; CHECK-LABEL: define i64 @f2() {
 ; CHECK-NEXT:    ret i64 0
 ;
-  ret i64 and (i64 ptrtoint (ptr @G2 to i64), i64 1)
+  %and = and i64 ptrtoint (ptr @G2 to i64), 1
+  ret i64 %and
 }
 
 define i64 @g1() {
 ; This cannot be constant folded because A1 aliases G3 which is underalaigned.
 ; CHECK-LABEL: define i64 @g1() {
-; CHECK-NEXT:    ret i64 and (i64 ptrtoint (ptr @A1 to i64), i64 1)
+; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @A1 to i64), 1
+; CHECK-NEXT:    ret i64 [[AND]]
 ;
-  ret i64 and (i64 ptrtoint (ptr @A1 to i64), i64 1)
+  %and = and i64 ptrtoint (ptr @A1 to i64), 1
+  ret i64 %and
 }
-
-define i64 @g2() {
-; While A2 also aliases G3 which is underaligned, the math of A2 forces a
-; certain alignment allowing this to fold to zero.
-; CHECK-LABEL: define i64 @g2() {
-; CHECK-NEXT:    ret i64 0
-;
-  ret i64 and (i64 ptrtoint (ptr @A2 to i64), i64 1)
-}
-

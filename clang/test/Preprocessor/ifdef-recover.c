@@ -20,13 +20,13 @@
 #endif
 
 /* expected-error@+3 {{macro name missing}} */
-/* expected-warning@+2 {{use of a '#elifdef' directive is a C2x extension}} */
+/* expected-warning@+2 {{use of a '#elifdef' directive is a C23 extension}} */
 #ifdef FOO
 #elifdef
 #endif
 
 /* expected-error@+3 {{macro name must be an identifier}} */
-/* expected-warning@+2 {{use of a '#elifdef' directive is a C2x extension}} */
+/* expected-warning@+2 {{use of a '#elifdef' directive is a C23 extension}} */
 #ifdef FOO
 #elifdef !
 #endif

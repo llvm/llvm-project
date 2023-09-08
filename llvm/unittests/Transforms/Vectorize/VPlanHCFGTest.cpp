@@ -121,12 +121,12 @@ compound=true
     N2 [label =
       "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\> ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%res\> = add ir\<%l1\> ir\<10\>\l" +
-      "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
+      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT branch-on-cond ir\<%exitcond\>\l" +
       "No successors\l"
     ]

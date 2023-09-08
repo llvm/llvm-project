@@ -1184,12 +1184,16 @@ const Symbol *GetMainEntry(const Symbol *);
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);
 bool IsFunction(const Scope &);
 bool IsProcedure(const Symbol &);
 bool IsProcedure(const Scope &);
+bool IsProcedurePointer(const Symbol *);
 bool IsProcedurePointer(const Symbol &);
+bool IsObjectPointer(const Symbol *);
+bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);

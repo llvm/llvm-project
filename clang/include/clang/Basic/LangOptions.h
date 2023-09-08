@@ -34,6 +34,7 @@ namespace clang {
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
   friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
 
 public:
   // Define simple language options (with no accessors).
@@ -577,7 +578,7 @@ public:
   /// Returns true if functions without prototypes or functions with an
   /// identifier list (aka K&R C functions) are not allowed.
   bool requiresStrictPrototypes() const {
-    return CPlusPlus || C2x || DisableKNRFunctions;
+    return CPlusPlus || C23 || DisableKNRFunctions;
   }
 
   /// Returns true if implicit function declarations are allowed in the current
@@ -590,7 +591,7 @@ public:
   bool isImplicitIntRequired() const { return !CPlusPlus && !C99; }
 
   /// Returns true if implicit int is supported at all.
-  bool isImplicitIntAllowed() const { return !CPlusPlus && !C2x; }
+  bool isImplicitIntAllowed() const { return !CPlusPlus && !C23; }
 
   /// Check if return address signing is enabled.
   bool hasSignReturnAddress() const {
@@ -746,7 +747,7 @@ public:
   RoundingMode getRoundingMode() const {
     RoundingMode RM = getConstRoundingMode();
     if (RM == RoundingMode::Dynamic) {
-      // C2x: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is
+      // C23: 7.6.2p3  If the FE_DYNAMIC mode is specified and FENV_ACCESS is
       // "off", the translator may assume that the default rounding mode is in
       // effect.
       if (!getAllowFEnvAccess() && !getRoundingMath())
@@ -854,6 +855,7 @@ public:
     setNoSignedZeroOverride(!Value);
     setAllowReciprocalOverride(!Value);
     setAllowApproxFuncOverride(!Value);
+    setMathErrnoOverride(Value);
     if (Value)
       /* Precise mode implies fp_contract=on and disables ffast-math */
       setAllowFPContractWithinStatement();

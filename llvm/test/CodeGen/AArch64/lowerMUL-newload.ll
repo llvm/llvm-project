@@ -86,9 +86,9 @@ define <4 x i32> @addmuli16_and(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec
 ; CHECK-LABEL: addmuli16_and:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v1.4s, v1.4h, v2.4h
-; CHECK-NEXT:    movi v3.2d, #0x00ffff0000ffff
 ; CHECK-NEXT:    smlal v1.4s, v0.4h, v2.4h
-; CHECK-NEXT:    and v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %v0 = sext <4 x i16> %vec0 to <4 x i32>
@@ -214,9 +214,9 @@ define <2 x i64> @addmuli32_and(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec
 ; CHECK-LABEL: addmuli32_and:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    smull v1.2d, v1.2s, v2.2s
-; CHECK-NEXT:    movi v3.2d, #0x000000ffffffff
 ; CHECK-NEXT:    smlal v1.2d, v0.2s, v2.2s
-; CHECK-NEXT:    and v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
+; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
 entry:
   %v0 = sext <2 x i32> %vec0 to <2 x i64>

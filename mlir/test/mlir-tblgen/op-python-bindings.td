@@ -39,7 +39,7 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK: def variadic1(self):
   // CHECK:   operand_range = _ods_segmented_accessor(
   // CHECK:       self.operation.operands,
-  // CHECK:       self.operation.attributes["operand_segment_sizes"], 0)
+  // CHECK:       self.operation.attributes["operandSegmentSizes"], 0)
   // CHECK:   return operand_range
   // CHECK-NOT: if len(operand_range)
   //
@@ -47,14 +47,14 @@ def AttrSizedOperandsOp : TestOp<"attr_sized_operands",
   // CHECK: def non_variadic(self):
   // CHECK:   operand_range = _ods_segmented_accessor(
   // CHECK:       self.operation.operands,
-  // CHECK:       self.operation.attributes["operand_segment_sizes"], 1)
+  // CHECK:       self.operation.attributes["operandSegmentSizes"], 1)
   // CHECK:   return operand_range[0]
   //
   // CHECK: @builtins.property
   // CHECK: def variadic2(self):
   // CHECK:   operand_range = _ods_segmented_accessor(
   // CHECK:       self.operation.operands,
-  // CHECK:       self.operation.attributes["operand_segment_sizes"], 2)
+  // CHECK:       self.operation.attributes["operandSegmentSizes"], 2)
   // CHECK:   return operand_range[0] if len(operand_range) > 0 else None
   let arguments = (ins Variadic<AnyType>:$variadic1, AnyType:$non_variadic,
                    Optional<AnyType>:$variadic2);
@@ -83,21 +83,21 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
   // CHECK: def variadic1(self):
   // CHECK:   result_range = _ods_segmented_accessor(
   // CHECK:       self.operation.results,
-  // CHECK:       self.operation.attributes["result_segment_sizes"], 0)
+  // CHECK:       self.operation.attributes["resultSegmentSizes"], 0)
   // CHECK:   return result_range[0] if len(result_range) > 0 else None
   //
   // CHECK: @builtins.property
   // CHECK: def non_variadic(self):
   // CHECK:   result_range = _ods_segmented_accessor(
   // CHECK:       self.operation.results,
-  // CHECK:       self.operation.attributes["result_segment_sizes"], 1)
+  // CHECK:       self.operation.attributes["resultSegmentSizes"], 1)
   // CHECK:   return result_range[0]
   //
   // CHECK: @builtins.property
   // CHECK: def variadic2(self):
   // CHECK:   result_range = _ods_segmented_accessor(
   // CHECK:       self.operation.results,
-  // CHECK:       self.operation.attributes["result_segment_sizes"], 2)
+  // CHECK:       self.operation.attributes["resultSegmentSizes"], 2)
   // CHECK:   return result_range
   // CHECK-NOT: if len(result_range)
   let results = (outs Optional<AnyType>:$variadic1, AnyType:$non_variadic,

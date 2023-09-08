@@ -19,4 +19,19 @@
 #include "generic/utils.h"
 #endif
 
+namespace __llvm_libc {
+namespace gpu {
+/// Get the first active thread inside the lane.
+LIBC_INLINE uint64_t get_first_lane_id(uint64_t lane_mask) {
+  return __builtin_ffsl(lane_mask) - 1;
+}
+
+/// Conditional that is only true for a single thread in a lane.
+LIBC_INLINE bool is_first_lane(uint64_t lane_mask) {
+  return gpu::get_lane_id() == get_first_lane_id(lane_mask);
+}
+
+} // namespace gpu
+} // namespace __llvm_libc
+
 #endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_IO_H

@@ -7,7 +7,6 @@
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -fixit -x objective-c++ %t -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -Werror -x objective-c++ %t  -std=c++11
-// rdar://9603056
 
 @interface S @end
 

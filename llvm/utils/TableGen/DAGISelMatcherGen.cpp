@@ -710,7 +710,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode *N,
       const CodeGenRegisterClass &RC =
           CGP.getTargetInfo().getRegisterClass(Def);
       if (RC.EnumValue <= 127) {
-        std::string Value = getQualifiedName(Def) + "RegClassID";
+        std::string Value = RC.getQualifiedIdName();
         AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32));
         ResultOps.push_back(NextRecordedOperandNo++);
       } else {

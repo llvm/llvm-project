@@ -14,8 +14,7 @@ define i64 @test_vleff_nxv8i8(<vscale x 8 x i8> *%p, i64 %vl) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[PseudoVLE8FF_V_M1_:%[0-9]+]]:vr, [[PseudoVLE8FF_V_M1_1:%[0-9]+]]:gpr = PseudoVLE8FF_V_M1 [[DEF]], [[COPY1]], [[COPY]], 3 /* e8 */, 2 /* tu, ma */, implicit-def dead $vl :: (load unknown-size from %ir.p, align 1)
+  ; CHECK-NEXT:   [[PseudoVLE8FF_V_M1_:%[0-9]+]]:vr, [[PseudoVLE8FF_V_M1_1:%[0-9]+]]:gpr = PseudoVLE8FF_V_M1 $noreg, [[COPY1]], [[COPY]], 3 /* e8 */, 2 /* tu, ma */, implicit-def dead $vl :: (load unknown-size from %ir.p, align 1)
   ; CHECK-NEXT:   $x10 = COPY [[PseudoVLE8FF_V_M1_1]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
 entry:

@@ -520,12 +520,12 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
+#  if HWASAN_WITH_INTERCEPTORS
   InitializeCommonInterceptors();
 
   (void)(read_iovec);
   (void)(write_iovec);
 
-#  if HWASAN_WITH_INTERCEPTORS
 #    if defined(__linux__)
   INTERCEPT_FUNCTION(__libc_longjmp);
   INTERCEPT_FUNCTION(longjmp);

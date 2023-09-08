@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -Wlarge-by-value-copy=100 %s
 
-// rdar://8548050
 namespace rdar8548050 {
 
 struct S100 {

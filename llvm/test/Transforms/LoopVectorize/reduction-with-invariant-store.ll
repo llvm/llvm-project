@@ -25,8 +25,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[GEP_DST:%.*]], align 4
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 define void @reduc_store(ptr %dst, ptr readonly %src) {
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
@@ -221,8 +220,7 @@ for.end:
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP36:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP34]])
 ; CHECK-NEXT:    store i32 [[TMP36]], ptr [[GEP_DST:%.*]], align 4
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 500, 500
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH:%.*]]
 define void @reduc_store_inside_unrolled(ptr %dst, ptr readonly %src) {
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
@@ -491,8 +489,7 @@ define void @test_drop_poison_generating_dead_recipe(ptr %dst) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP0]])
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[DST:%.*]], align 8
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 363, 360
-; CHECK-NEXT:    br i1 [[CMP_N]], label %exit, label %scalar.ph
+; CHECK-NEXT:    br i1 false, label %exit, label %scalar.ph
 ; CHECK:       scalar.ph:
 ;
 entry:
@@ -558,4 +555,123 @@ for.body:                                         ; preds = %for.body, %entry
 exit:                                             ; preds = %for.body
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
+}
+
+; Make sure that if there are several reductions in the loop, the order of invariant stores sank outside of the loop is preserved
+; See https://github.com/llvm/llvm-project/issues/64047
+define void @reduc_add_mul_store_same_ptr(ptr %dst, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_add_mul_store_same_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @reduc_mul_add_store_same_ptr(ptr %dst, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_mul_add_store_same_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Same as above but storing is done to two different pointers and they can be aliased
+define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_add_mul_store_different_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst2, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst1, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @reduc_mul_add_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_mul_add_store_different_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst2, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst1, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
 }

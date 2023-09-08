@@ -95,3 +95,61 @@ define half @half_imm_op(half %a) nounwind {
   %1 = fadd half %a, 1.0
   ret half %1
 }
+
+define half @half_positive_zero(ptr %pf) nounwind {
+; CHECK-LABEL: half_positive_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.h.x fa0, zero
+; CHECK-NEXT:    ret
+;
+; RV32IZHINX-LABEL: half_positive_zero:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    li a0, 0
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: half_positive_zero:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    li a0, 0
+; RV64IZHINX-NEXT:    ret
+;
+; CHECKIZFHMIN-LABEL: half_positive_zero:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, zero
+; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: half_positive_zero:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    li a0, 0
+; CHECKIZHINXMIN-NEXT:    ret
+  ret half 0.0
+}
+
+define half @half_negative_zero(ptr %pf) nounwind {
+; CHECK-LABEL: half_negative_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 1048568
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
+;
+; RV32IZHINX-LABEL: half_negative_zero:
+; RV32IZHINX:       # %bb.0:
+; RV32IZHINX-NEXT:    lui a0, 1048568
+; RV32IZHINX-NEXT:    ret
+;
+; RV64IZHINX-LABEL: half_negative_zero:
+; RV64IZHINX:       # %bb.0:
+; RV64IZHINX-NEXT:    lui a0, 1048568
+; RV64IZHINX-NEXT:    ret
+;
+; CHECKIZFHMIN-LABEL: half_negative_zero:
+; CHECKIZFHMIN:       # %bb.0:
+; CHECKIZFHMIN-NEXT:    lui a0, 1048568
+; CHECKIZFHMIN-NEXT:    fmv.h.x fa0, a0
+; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: half_negative_zero:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    lui a0, 1048568
+; CHECKIZHINXMIN-NEXT:    ret
+  ret half -0.0
+}

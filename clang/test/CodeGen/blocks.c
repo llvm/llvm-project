@@ -5,7 +5,6 @@
 
 void (^f)(void) = ^{};
 
-// rdar://6768379
 int f0(int (^a0)()) {
   return a0(1, 2, 3);
 }
@@ -21,7 +20,7 @@ struct s0 f2(struct s0 a0) {
   return ^(struct s0 a1){ return a1; }(a0);
 }
 
-// This should not crash: rdar://6808051
+// This should not crash.
 void *P = ^{
   void *Q = __func__;
 };
@@ -60,14 +59,12 @@ ftype ^test2 = ^ftype {
   return 0;
 };
 
-// rdar://problem/8605032
 void f3_helper(void (^)(void));
 void f3(void) {
   _Bool b = 0;
   f3_helper(^{ if (b) {} });
 }
 
-// rdar://problem/11322251
 // The bool can fill in between the header and the long long.
 // Add the appropriate amount of padding between them.
 void f4_helper(long long (^)(void));
@@ -79,7 +76,6 @@ void f4(void) {
   f4_helper(^{ if (b) return ll; return 0LL; });
 }
 
-// rdar://problem/11354538
 // The alignment after rounding up to the align of F5 is actually
 // greater than the required alignment.  Don't assert.
 struct F5 {
@@ -93,7 +89,6 @@ void f5(void) {
   f5_helper(^(struct F5 *slot) { *slot = value; });
 }
 
-// rdar://14085217
 void (^b)() = ^{};
 int main(void) {
    (b?: ^{})();

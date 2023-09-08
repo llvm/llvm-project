@@ -22,7 +22,7 @@ namespace __llvm_libc {
 namespace {
 
 bool getcwd_syscall(char *buf, size_t size) {
-  int ret = __llvm_libc::syscall_impl(SYS_getcwd, buf, size);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_getcwd, buf, size);
   if (ret < 0) {
     libc_errno = -ret;
     return false;

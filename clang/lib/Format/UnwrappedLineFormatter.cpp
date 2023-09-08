@@ -386,11 +386,14 @@ private:
           // Reduce indent level for bodies of namespaces which were compacted,
           // but only if their content was indented in the first place.
           auto *ClosingLine = AnnotatedLines.begin() + ClosingLineIndex + 1;
-          auto OutdentBy = I[J]->Level - TheLine->Level;
+          const int OutdentBy = I[J]->Level - TheLine->Level;
+          assert(OutdentBy >= 0);
           for (auto *CompactedLine = I + J; CompactedLine <= ClosingLine;
                ++CompactedLine) {
-            if (!(*CompactedLine)->InPPDirective)
-              (*CompactedLine)->Level -= OutdentBy;
+            if (!(*CompactedLine)->InPPDirective) {
+              const int Level = (*CompactedLine)->Level;
+              (*CompactedLine)->Level = std::max(Level - OutdentBy, 0);
+            }
           }
         }
         return J - 1;
@@ -405,7 +408,8 @@ private:
                openingLine == I[i + 1]->MatchingOpeningBlockLineIndex;
              i++, --openingLine) {
           // No space between consecutive braces.
-          I[i + 1]->First->SpacesRequiredBefore = !I[i]->Last->is(tok::r_brace);
+          I[i + 1]->First->SpacesRequiredBefore =
+              I[i]->Last->isNot(tok::r_brace);
 
           // Indent like the outer-most namespace.
           IndentTracker.nextLine(*I[i + 1]);
@@ -622,12 +626,12 @@ private:
     }
     Limit = limitConsideringMacros(I + 1, E, Limit);
     AnnotatedLine &Line = **I;
-    if (!Line.First->is(tok::kw_do) && !Line.First->is(tok::kw_else) &&
-        !Line.Last->is(tok::kw_else) && Line.Last->isNot(tok::r_paren)) {
+    if (Line.First->isNot(tok::kw_do) && Line.First->isNot(tok::kw_else) &&
+        Line.Last->isNot(tok::kw_else) && Line.Last->isNot(tok::r_paren)) {
       return 0;
     }
     // Only merge `do while` if `do` is the only statement on the line.
-    if (Line.First->is(tok::kw_do) && !Line.Last->is(tok::kw_do))
+    if (Line.First->is(tok::kw_do) && Line.Last->isNot(tok::kw_do))
       return 0;
     if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
@@ -754,21 +758,21 @@ private:
       if (!Style.AllowShortIfStatementsOnASingleLine &&
           Line.First->isOneOf(tok::kw_if, tok::kw_else) &&
           !Style.BraceWrapping.AfterControlStatement &&
-          !I[1]->First->is(tok::r_brace)) {
+          I[1]->First->isNot(tok::r_brace)) {
         return 0;
       }
       if (!Style.AllowShortIfStatementsOnASingleLine &&
           Line.First->isOneOf(tok::kw_if, tok::kw_else) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always &&
-          I + 2 != E && !I[2]->First->is(tok::r_brace)) {
+          I + 2 != E && I[2]->First->isNot(tok::r_brace)) {
         return 0;
       }
       if (!Style.AllowShortLoopsOnASingleLine &&
           Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for,
                               TT_ForEachMacro) &&
           !Style.BraceWrapping.AfterControlStatement &&
-          !I[1]->First->is(tok::r_brace)) {
+          I[1]->First->isNot(tok::r_brace)) {
         return 0;
       }
       if (!Style.AllowShortLoopsOnASingleLine &&
@@ -776,7 +780,7 @@ private:
                               TT_ForEachMacro) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always &&
-          I + 2 != E && !I[2]->First->is(tok::r_brace)) {
+          I + 2 != E && I[2]->First->isNot(tok::r_brace)) {
         return 0;
       }
       // FIXME: Consider an option to allow short exception handling clauses on
@@ -886,7 +890,7 @@ private:
                          SmallVectorImpl<AnnotatedLine *>::const_iterator E,
                          unsigned Limit) {
     if (I[0]->InPPDirective && I + 1 != E &&
-        !I[1]->First->HasUnescapedNewline && !I[1]->First->is(tok::eof)) {
+        !I[1]->First->HasUnescapedNewline && I[1]->First->isNot(tok::eof)) {
       return Limit < 2 ? 0 : Limit - 2;
     }
     return Limit;
@@ -1494,8 +1498,10 @@ static auto computeNewlines(const AnnotatedLine &Line,
         previousToken = PreviousLine->Last->getPreviousNonComment();
       else
         previousToken = PreviousLine->Last;
-      if ((!previousToken || !previousToken->is(tok::l_brace)) && Newlines <= 1)
+      if ((!previousToken || previousToken->isNot(tok::l_brace)) &&
+          Newlines <= 1) {
         Newlines = 2;
+      }
     } break;
     }
   }

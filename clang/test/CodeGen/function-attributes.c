@@ -62,7 +62,7 @@ void f13(void) __attribute__((pure)) __attribute__((const));
 void f13(void){}
 
 
-// <rdar://problem/7102668> [irgen] clang isn't setting the optsize bit on functions
+// [irgen] clang isn't setting the optsize bit on functions
 // CHECK-LABEL: define{{.*}} void @f15
 // CHECK: [[NUW]]
 // CHECK: {

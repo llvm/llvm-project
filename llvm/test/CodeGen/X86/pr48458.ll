@@ -9,7 +9,7 @@ define i1 @foo(ptr %0) {
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
 top:
-  %1 = load i64, ptr %0, !range !0
+  %1 = load i64, ptr %0, !range !0, !noundef !{}
   %2 = icmp ult i64 %1, 2147483648
   ret i1 %2
 }

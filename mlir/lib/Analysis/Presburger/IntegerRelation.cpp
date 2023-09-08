@@ -80,6 +80,30 @@ bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
+bool IntegerRelation::isPlainEqual(const IntegerRelation &other) const {
+  if (!space.isEqual(other.getSpace()))
+    return false;
+  if (getNumEqualities() != other.getNumEqualities())
+    return false;
+  if (getNumInequalities() != other.getNumInequalities())
+    return false;
+
+  unsigned cols = getNumCols();
+  for (unsigned i = 0, eqs = getNumEqualities(); i < eqs; ++i) {
+    for (unsigned j = 0; j < cols; ++j) {
+      if (atEq(i, j) != other.atEq(i, j))
+        return false;
+    }
+  }
+  for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
+    for (unsigned j = 0; j < cols; ++j) {
+      if (atIneq(i, j) != other.atIneq(i, j))
+        return false;
+    }
+  }
+  return true;
+}
+
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
   assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));

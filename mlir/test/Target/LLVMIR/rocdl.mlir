@@ -66,6 +66,22 @@ llvm.func @rocdl.lane_id() -> i32 {
   llvm.return %3 : i32
 }
 
+llvm.func @rocdl.swizzle(%src : i32) -> i32 {
+  // CHECK-LABEL: rocdl.swizzle
+  // CHECK: call i32 @llvm.amdgcn.ds.swizzle
+  %offset = llvm.mlir.constant(100 : i32) : i32
+  %0 = rocdl.ds_swizzle %src, %offset : (i32, i32) -> i32
+  llvm.return %0 : i32
+}
+
+llvm.func @rocdl.bpermute(%src : i32) -> i32 {
+  // CHECK-LABEL: rocdl.bpermute
+  // CHECK: call i32 @llvm.amdgcn.ds.bpermute
+  %index = llvm.mlir.constant(10 : i32) : i32
+  %0 = rocdl.ds_bpermute %index, %src : (i32, i32) -> i32
+  llvm.return %0 : i32
+}
+
 llvm.func @rocdl.barrier() {
   // CHECK:      fence syncscope("workgroup") release
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()

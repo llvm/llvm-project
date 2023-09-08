@@ -253,7 +253,7 @@ std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
   StringRef Text = tooling::fixit::getText(ExprNode, Context);
 
   if (Text.empty())
-    return std::string();
+    return {};
 
   // Remove remaining '->' from overloaded operator call
   Text.consume_back("->");

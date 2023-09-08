@@ -214,7 +214,7 @@ static inline void radar11111210(OSQueueHead *pool) {
     OSAtomicEnqueue(pool, newItem, 4);
 }
 
-// Pointer might escape through CGDataProviderCreateWithData (radar://11187558).
+// Pointer might escape through CGDataProviderCreateWithData
 typedef struct CGDataProvider *CGDataProviderRef;
 typedef void (*CGDataProviderReleaseDataCallback)(void *info, const void *data,
     size_t size);
@@ -235,7 +235,7 @@ void testCGDataProviderCreateWithData() {
 
 // Assume that functions which take a function pointer can free memory even if
 // they are defined in system headers and take the const pointer to the
-// allocated memory. (radar://11160612)
+// allocated memory.
 extern CGDataProviderRef UnknownFunWithCallback(void *info,
     const void *data, size_t size,
     CGDataProviderReleaseDataCallback releaseData)
@@ -258,7 +258,7 @@ void testCallWithBlockCallbackInSystem() {
   SystemHeaderFunctionWithBlockParam(l, ^(void *i) { free(i); }, sizeof(char *));
 }
 
-// Test escape into NSPointerArray. radar://11691035, PR13140
+// Test escape into NSPointerArray. PR13140
 void foo(NSPointerArray* pointerArray) {
   
   void* p1 = malloc (1024);

@@ -40,7 +40,7 @@ class DeleteWithNonVirtualDtorChecker
 
   class DeleteBugVisitor : public BugReporterVisitor {
   public:
-    DeleteBugVisitor() : Satisfied(false) {}
+    DeleteBugVisitor() = default;
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int X = 0;
       ID.AddPointer(&X);
@@ -50,7 +50,7 @@ class DeleteWithNonVirtualDtorChecker
                                      PathSensitiveBugReport &BR) override;
 
   private:
-    bool Satisfied;
+    bool Satisfied = false;
   };
 
 public:

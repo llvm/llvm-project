@@ -114,6 +114,7 @@ contains
   end function
   function f5(x) result(r)
     real :: x
+    !PORTABILITY: Procedure pointer 'r' should not have an ELEMENTAL intrinsic as its interface
     procedure(acos), pointer :: r
     r => acos
     !ERROR: Actual argument for 'x=' may not be a procedure

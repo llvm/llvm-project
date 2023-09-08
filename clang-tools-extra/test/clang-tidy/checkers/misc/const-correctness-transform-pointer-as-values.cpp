@@ -1,9 +1,9 @@
 // RUN: %check_clang_tidy %s misc-const-correctness %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: "misc-const-correctness.AnalyzeValues", value: true},\
-// RUN:   {key: "misc-const-correctness.WarnPointersAsValues", value: true}, \
-// RUN:   {key: "misc-const-correctness.TransformPointersAsValues", value: true},\
-// RUN:  ]}' -- -fno-delayed-template-parsing
+// RUN:  {misc-const-correctness.AnalyzeValues: true,\
+// RUN:   misc-const-correctness.WarnPointersAsValues: true, \
+// RUN:   misc-const-correctness.TransformPointersAsValues: true}\
+// RUN:  }' -- -fno-delayed-template-parsing
 
 void potential_const_pointer() {
   double np_local0[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};

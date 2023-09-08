@@ -22,13 +22,11 @@ namespace printf_core {
 LIBC_INLINE int convert_write_int(Writer *writer,
                                   const FormatSection &to_conv) {
 
-  // This is an additional check added by LLVM-libc. The reason it returns -3 is
-  // because printf uses negative return values for errors, and -1 and -2 are
-  // already in use by the file_writer class for file errors.
-  // TODO: Remove this. It's better to crash than to provide an incorrect
-  // result.
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+  // This is an additional check added by LLVM-libc.
   if (to_conv.conv_val_ptr == nullptr)
     return NULLPTR_WRITE_ERROR;
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   int written = writer->get_chars_written();
 

@@ -125,7 +125,7 @@ bool ByteCodeStmtGen<Emitter>::emitLambdaStaticInvokerBody(
     // We do the lvalue-to-rvalue conversion manually here, so no need
     // to care about references.
     PrimType ParamType = this->classify(PVD->getType()).value_or(PT_Ptr);
-    if (!this->emitGetParam(ParamType, It->second, MD))
+    if (!this->emitGetParam(ParamType, It->second.Offset, MD))
       return false;
   }
 
@@ -341,7 +341,7 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
     return IS->getElse() ? visitStmt(IS->getElse()) : true;
 
   if (auto *CondInit = IS->getInit())
-    if (!visitStmt(IS->getInit()))
+    if (!visitStmt(CondInit))
       return false;
 
   if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())

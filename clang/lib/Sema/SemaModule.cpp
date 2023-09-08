@@ -531,6 +531,12 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   if (!Mod)
     return true;
 
+  if (!Mod->isInterfaceOrPartition() && !ModuleName.empty()) {
+    Diag(ImportLoc, diag::err_module_import_non_interface_nor_parition)
+        << ModuleName;
+    return true;
+  }
+
   return ActOnModuleImport(StartLoc, ExportLoc, ImportLoc, Mod, Path);
 }
 

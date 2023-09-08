@@ -40,7 +40,7 @@
 // CHECK-RISCV64: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}riscv64-unknown-fuchsia{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
-// CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments"
+// CHECK: {{.*}}ld.lld{{.*}}" "-z" "now" "-z" "start-stop-visibility=hidden" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
 // CHECK: "-pie"
 // CHECK: "--build-id"
@@ -61,7 +61,7 @@
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
 
-// RUN: %clangxx -### %s --target=x86_64-unknown-fuchsia -stdlib=libstdc++ 2>&1 \
+// RUN: not %clangxx -### %s --target=x86_64-unknown-fuchsia -stdlib=libstdc++ 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STDLIB
 // CHECK-STDLIB: error: invalid library name in argument '-stdlib=libstdc++'
 

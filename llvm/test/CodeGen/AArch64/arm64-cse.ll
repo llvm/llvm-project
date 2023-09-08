@@ -15,8 +15,8 @@ define ptr @t1(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %if.end
-; CHECK-NEXT:    sub w9, w9, w8
 ; CHECK-NEXT:    add x0, x0, w8, sxtw
+; CHECK-NEXT:    sub w9, w9, w8
 ; CHECK-NEXT:    str w9, [x1]
 ; CHECK-NEXT:    ret
 entry:

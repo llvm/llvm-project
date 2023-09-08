@@ -115,7 +115,7 @@ Memory reclaiming
 Primary and Secondary allocators have different behaviors with regard to
 reclaiming. While Secondary mapped allocations can be unmapped on deallocation,
 it isn't the case for the Primary, which could lead to a steady growth of the
-RSS of a process. To counteracty this, if the underlying OS allows it, pages
+RSS of a process. To counteract this, if the underlying OS allows it, pages
 that are covered by contiguous free memory blocks in the Primary can be
 released: this generally means they won't count towards the RSS of a process and
 be zero filled on subsequent accesses). This is done in the deallocation path,

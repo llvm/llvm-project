@@ -36,7 +36,6 @@ struct ListOfGlobals {
 };
 
 static Mutex mu_for_globals;
-static LowLevelAllocator allocator_for_globals;
 static ListOfGlobals *list_of_all_globals;
 
 static const int kDynamicInitGlobalsInitialCapacity = 512;
@@ -225,13 +224,13 @@ static void RegisterGlobal(const Global *g) {
   }
   if (CanPoisonMemory())
     PoisonRedZones(*g);
-  ListOfGlobals *l = new(allocator_for_globals) ListOfGlobals;
+  ListOfGlobals *l = new (GetGlobalLowLevelAllocator()) ListOfGlobals;
   l->g = g;
   l->next = list_of_all_globals;
   list_of_all_globals = l;
   if (g->has_dynamic_init) {
     if (!dynamic_init_globals) {
-      dynamic_init_globals = new (allocator_for_globals) VectorOfGlobals;
+      dynamic_init_globals = new (GetGlobalLowLevelAllocator()) VectorOfGlobals;
       dynamic_init_globals->reserve(kDynamicInitGlobalsInitialCapacity);
     }
     DynInitGlobal dyn_global = { *g, false };
@@ -367,7 +366,7 @@ void __asan_register_globals(__asan_global *globals, uptr n) {
   Lock lock(&mu_for_globals);
   if (!global_registration_site_vector) {
     global_registration_site_vector =
-        new (allocator_for_globals) GlobalRegistrationSiteVector;
+        new (GetGlobalLowLevelAllocator()) GlobalRegistrationSiteVector;
     global_registration_site_vector->reserve(128);
   }
   GlobalRegistrationSite site = {stack_id, &globals[0], &globals[n - 1]};

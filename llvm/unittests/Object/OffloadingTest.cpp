@@ -43,8 +43,8 @@ TEST(OffloadingTest, checkOffloadingBinary) {
   Data.StringData = StringData;
   Data.Image = std::move(ImageData);
 
-  auto BinaryBuffer = OffloadBinary::write(Data);
-
+  auto BinaryBuffer =
+      MemoryBuffer::getMemBufferCopy(OffloadBinary::write(Data));
   auto BinaryOrErr = OffloadBinary::create(*BinaryBuffer);
   if (!BinaryOrErr)
     FAIL();

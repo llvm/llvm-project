@@ -16,19 +16,46 @@ using namespace mlir::sparse_tensor::ir_detail;
 // `DimLvlExpr` implementation.
 //===----------------------------------------------------------------------===//
 
+Var DimLvlExpr::castAnyVar() const {
+  assert(expr && "uninitialized DimLvlExpr");
+  const auto var = dyn_castAnyVar();
+  assert(var && "expected DimLvlExpr to be a Var");
+  return *var;
+}
+
+std::optional<Var> DimLvlExpr::dyn_castAnyVar() const {
+  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+    return SymVar(s);
+  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+    return Var(getAllowedVarKind(), x);
+  return std::nullopt;
+}
+
 SymVar DimLvlExpr::castSymVar() const {
   return SymVar(expr.cast<AffineSymbolExpr>());
+}
+
+std::optional<SymVar> DimLvlExpr::dyn_castSymVar() const {
+  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+    return SymVar(s);
+  return std::nullopt;
 }
 
 Var DimLvlExpr::castDimLvlVar() const {
   return Var(getAllowedVarKind(), expr.cast<AffineDimExpr>());
 }
 
+std::optional<Var> DimLvlExpr::dyn_castDimLvlVar() const {
+  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+    return Var(getAllowedVarKind(), x);
+  return std::nullopt;
+}
+
 int64_t DimLvlExpr::castConstantValue() const {
   return expr.cast<AffineConstantExpr>().getValue();
 }
 
-std::optional<int64_t> DimLvlExpr::tryGetConstantValue() const {
+std::optional<int64_t> DimLvlExpr::dyn_castConstantValue() const {
   const auto k = expr.dyn_cast_or_null<AffineConstantExpr>();
   return k ? std::make_optional(k.getValue()) : std::nullopt;
 }
@@ -71,6 +98,12 @@ void DimLvlExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+std::string DimLvlExpr::str() const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os);
+  return os.str();
+}
 void DimLvlExpr::print(AsmPrinter &printer) const {
   print(printer.getStream());
 }
@@ -98,7 +131,7 @@ static std::optional<MatchNeg> matchNeg(DimLvlExpr expr) {
       return MatchNeg{DimLvlExpr{expr.getExprKind(), AffineExpr()}, val};
   }
   if (op == AffineExprKind::Mul)
-    if (const auto rval = rhs.tryGetConstantValue(); rval && *rval < 0)
+    if (const auto rval = rhs.dyn_castConstantValue(); rval && *rval < 0)
       return MatchNeg{lhs, *rval};
   return std::nullopt;
 }
@@ -193,6 +226,12 @@ void DimSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
 }
+std::string DimSpec::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
+}
 void DimSpec::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
 }
@@ -233,6 +272,12 @@ void LvlSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
 }
+std::string LvlSpec::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
+}
 void LvlSpec::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
 }
@@ -249,7 +294,8 @@ void LvlSpec::print(llvm::raw_ostream &os, bool wantElision) const {
 
 DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
                      ArrayRef<LvlSpec> lvlSpecs)
-    : symRank(symRank), dimSpecs(dimSpecs), lvlSpecs(lvlSpecs) {
+    : symRank(symRank), dimSpecs(dimSpecs), lvlSpecs(lvlSpecs),
+      mustPrintLvlVars(false) {
   // First, check integrity of the variable-binding structure.
   // NOTE: This establishes the invariant that calls to `VarSet::add`
   // below cannot cause OOB errors.
@@ -261,10 +307,8 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
   // needs to happen before the code for setting every `LvlSpec::elideVar`,
   // since if the LvlVar is only used in elided DimExpr, then the
   // LvlVar should also be elided.
-  // NOTE: Whenever we set a new DimExpr, we must make sure to validate it
-  // against our ranks, to restore the invariant established by `isWF` above.
-  // TODO(wrengr): We might should adjust the `DimLvlExpr` ctor to take a
-  // `Ranks` argument and perform the validation then.
+  // NOTE: Be sure to use `DimLvlMap::setDimExpr` for setting the new exprs,
+  // to ensure that we maintain the invariant established by `isWF` above.
 
   // Third, we set every `LvlSpec::elideVar` according to whether that
   // LvlVar occurs in a non-elided DimExpr (TODO: or CountingExpr).
@@ -274,8 +318,14 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
   for (const auto &dimSpec : dimSpecs)
     if (!dimSpec.canElideExpr())
       usedVars.add(dimSpec.getExpr());
-  for (auto &lvlSpec : this->lvlSpecs)
-    lvlSpec.setElideVar(!usedVars.contains(lvlSpec.getBoundVar()));
+  for (auto &lvlSpec : this->lvlSpecs) {
+    // Is this LvlVar used in any overt expression?
+    const bool isUsed = usedVars.contains(lvlSpec.getBoundVar());
+    // This LvlVar can be elided iff it isn't overtly used.
+    lvlSpec.setElideVar(!isUsed);
+    // If any LvlVar cannot be elided, then must forward-declare all LvlVars.
+    mustPrintLvlVars = mustPrintLvlVars || isUsed;
+  }
 }
 
 bool DimLvlMap::isWF() const {
@@ -293,9 +343,31 @@ bool DimLvlMap::isWF() const {
   return true;
 }
 
+AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
+  SmallVector<AffineExpr> lvlAffines;
+  lvlAffines.reserve(getLvlRank());
+  for (const auto &lvlSpec : lvlSpecs)
+    lvlAffines.push_back(lvlSpec.getExpr().getAffineExpr());
+  return AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+}
+
+AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
+  SmallVector<AffineExpr> dimAffines;
+  dimAffines.reserve(getDimRank());
+  for (const auto &dimSpec : dimSpecs)
+    dimAffines.push_back(dimSpec.getExpr().getAffineExpr());
+  return AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
+}
+
 void DimLvlMap::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
+}
+std::string DimLvlMap::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
 }
 void DimLvlMap::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
@@ -314,12 +386,21 @@ void DimLvlMap::print(llvm::raw_ostream &os, bool wantElision) const {
     os << ']';
   }
 
+  // LvlVar forward-declarations.
+  if (mustPrintLvlVars) {
+    os << '{';
+    llvm::interleaveComma(
+        lvlSpecs, os, [&](LvlSpec const &spec) { os << spec.getBoundVar(); });
+    os << "} ";
+  }
+
   // Dimension specifiers.
   os << '(';
   llvm::interleaveComma(
       dimSpecs, os, [&](DimSpec const &spec) { spec.print(os, wantElision); });
   os << ") -> (";
   // Level specifiers.
+  wantElision = wantElision && !mustPrintLvlVars;
   llvm::interleaveComma(
       lvlSpecs, os, [&](LvlSpec const &spec) { spec.print(os, wantElision); });
   os << ')';

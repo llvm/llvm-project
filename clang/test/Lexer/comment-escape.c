@@ -1,5 +1,4 @@
 // RUN: %clang -fsyntax-only -Wdocumentation %s
-// rdar://6757323
 // foo \
 
 #define blork 32

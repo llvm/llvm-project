@@ -73,42 +73,55 @@ tracksRegLiveness: true
 body:             |
   ; MIPS32FP32-LABEL: name: phi_i32
   ; MIPS32FP32: bb.0.entry:
-  ; MIPS32FP32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP32:   liveins: $a0, $a1, $a2
-  ; MIPS32FP32:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32FP32:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-  ; MIPS32FP32:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32FP32:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32FP32:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP32:   J %bb.2, implicit-def $at
-  ; MIPS32FP32: bb.1.cond.true:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32:   J %bb.3, implicit-def $at
-  ; MIPS32FP32: bb.2.cond.false:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32: bb.3.cond.end:
-  ; MIPS32FP32:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; MIPS32FP32:   $v0 = COPY [[PHI]]
-  ; MIPS32FP32:   RetRA implicit $v0
+  ; MIPS32FP32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP32-NEXT:   liveins: $a0, $a1, $a2
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32FP32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+  ; MIPS32FP32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32FP32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32FP32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.1.cond.true:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.2.cond.false:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.3.cond.end:
+  ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
+  ; MIPS32FP32-NEXT:   $v0 = COPY [[PHI]]
+  ; MIPS32FP32-NEXT:   RetRA implicit $v0
+  ;
   ; MIPS32FP64-LABEL: name: phi_i32
   ; MIPS32FP64: bb.0.entry:
-  ; MIPS32FP64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP64:   liveins: $a0, $a1, $a2
-  ; MIPS32FP64:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32FP64:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-  ; MIPS32FP64:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32FP64:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32FP64:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP64:   J %bb.2, implicit-def $at
-  ; MIPS32FP64: bb.1.cond.true:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64:   J %bb.3, implicit-def $at
-  ; MIPS32FP64: bb.2.cond.false:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64: bb.3.cond.end:
-  ; MIPS32FP64:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; MIPS32FP64:   $v0 = COPY [[PHI]]
-  ; MIPS32FP64:   RetRA implicit $v0
+  ; MIPS32FP64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP64-NEXT:   liveins: $a0, $a1, $a2
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32FP64-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+  ; MIPS32FP64-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32FP64-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32FP64-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP64-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.1.cond.true:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.2.cond.false:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.3.cond.end:
+  ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
+  ; MIPS32FP64-NEXT:   $v0 = COPY [[PHI]]
+  ; MIPS32FP64-NEXT:   RetRA implicit $v0
   bb.1.entry:
     liveins: $a0, $a1, $a2
 
@@ -144,54 +157,67 @@ fixedStack:
 body:             |
   ; MIPS32FP32-LABEL: name: phi_i64
   ; MIPS32FP32: bb.0.entry:
-  ; MIPS32FP32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP32:   liveins: $a0, $a2, $a3
-  ; MIPS32FP32:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32FP32:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32FP32:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a3
-  ; MIPS32FP32:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-  ; MIPS32FP32:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32FP32:   [[ADDiu1:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.1, 0
-  ; MIPS32FP32:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDiu1]], 0 :: (load (s32) from %fixed-stack.1)
-  ; MIPS32FP32:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32FP32:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP32:   J %bb.2, implicit-def $at
-  ; MIPS32FP32: bb.1.cond.true:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32:   J %bb.3, implicit-def $at
-  ; MIPS32FP32: bb.2.cond.false:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32: bb.3.cond.end:
-  ; MIPS32FP32:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
-  ; MIPS32FP32:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
-  ; MIPS32FP32:   $v0 = COPY [[PHI]]
-  ; MIPS32FP32:   $v1 = COPY [[PHI1]]
-  ; MIPS32FP32:   RetRA implicit $v0, implicit $v1
+  ; MIPS32FP32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP32-NEXT:   liveins: $a0, $a2, $a3
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32FP32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32FP32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a3
+  ; MIPS32FP32-NEXT:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
+  ; MIPS32FP32-NEXT:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
+  ; MIPS32FP32-NEXT:   [[ADDiu1:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.1, 0
+  ; MIPS32FP32-NEXT:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDiu1]], 0 :: (load (s32) from %fixed-stack.1)
+  ; MIPS32FP32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32FP32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.1.cond.true:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.2.cond.false:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.3.cond.end:
+  ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
+  ; MIPS32FP32-NEXT:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
+  ; MIPS32FP32-NEXT:   $v0 = COPY [[PHI]]
+  ; MIPS32FP32-NEXT:   $v1 = COPY [[PHI1]]
+  ; MIPS32FP32-NEXT:   RetRA implicit $v0, implicit $v1
+  ;
   ; MIPS32FP64-LABEL: name: phi_i64
   ; MIPS32FP64: bb.0.entry:
-  ; MIPS32FP64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP64:   liveins: $a0, $a2, $a3
-  ; MIPS32FP64:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32FP64:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32FP64:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a3
-  ; MIPS32FP64:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-  ; MIPS32FP64:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32FP64:   [[ADDiu1:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.1, 0
-  ; MIPS32FP64:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDiu1]], 0 :: (load (s32) from %fixed-stack.1)
-  ; MIPS32FP64:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32FP64:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP64:   J %bb.2, implicit-def $at
-  ; MIPS32FP64: bb.1.cond.true:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64:   J %bb.3, implicit-def $at
-  ; MIPS32FP64: bb.2.cond.false:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64: bb.3.cond.end:
-  ; MIPS32FP64:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
-  ; MIPS32FP64:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
-  ; MIPS32FP64:   $v0 = COPY [[PHI]]
-  ; MIPS32FP64:   $v1 = COPY [[PHI1]]
-  ; MIPS32FP64:   RetRA implicit $v0, implicit $v1
+  ; MIPS32FP64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP64-NEXT:   liveins: $a0, $a2, $a3
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32FP64-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32FP64-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a3
+  ; MIPS32FP64-NEXT:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
+  ; MIPS32FP64-NEXT:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
+  ; MIPS32FP64-NEXT:   [[ADDiu1:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.1, 0
+  ; MIPS32FP64-NEXT:   [[LW1:%[0-9]+]]:gpr32 = LW [[ADDiu1]], 0 :: (load (s32) from %fixed-stack.1)
+  ; MIPS32FP64-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32FP64-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP64-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.1.cond.true:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.2.cond.false:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.3.cond.end:
+  ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[LW]], %bb.2
+  ; MIPS32FP64-NEXT:   [[PHI1:%[0-9]+]]:gpr32 = PHI [[COPY2]], %bb.1, [[LW1]], %bb.2
+  ; MIPS32FP64-NEXT:   $v0 = COPY [[PHI]]
+  ; MIPS32FP64-NEXT:   $v1 = COPY [[PHI1]]
+  ; MIPS32FP64-NEXT:   RetRA implicit $v0, implicit $v1
   bb.1.entry:
     liveins: $a0, $a2, $a3
 
@@ -230,42 +256,55 @@ tracksRegLiveness: true
 body:             |
   ; MIPS32FP32-LABEL: name: phi_float
   ; MIPS32FP32: bb.0.entry:
-  ; MIPS32FP32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP32:   liveins: $a0, $a1, $a2
-  ; MIPS32FP32:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32FP32:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-  ; MIPS32FP32:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32FP32:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32FP32:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP32:   J %bb.2, implicit-def $at
-  ; MIPS32FP32: bb.1.cond.true:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32:   J %bb.3, implicit-def $at
-  ; MIPS32FP32: bb.2.cond.false:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32: bb.3.cond.end:
-  ; MIPS32FP32:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; MIPS32FP32:   $f0 = COPY [[PHI]]
-  ; MIPS32FP32:   RetRA implicit $f0
+  ; MIPS32FP32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP32-NEXT:   liveins: $a0, $a1, $a2
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32FP32-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+  ; MIPS32FP32-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32FP32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32FP32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.1.cond.true:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.2.cond.false:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.3.cond.end:
+  ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
+  ; MIPS32FP32-NEXT:   $f0 = COPY [[PHI]]
+  ; MIPS32FP32-NEXT:   RetRA implicit $f0
+  ;
   ; MIPS32FP64-LABEL: name: phi_float
   ; MIPS32FP64: bb.0.entry:
-  ; MIPS32FP64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP64:   liveins: $a0, $a1, $a2
-  ; MIPS32FP64:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
-  ; MIPS32FP64:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
-  ; MIPS32FP64:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
-  ; MIPS32FP64:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
-  ; MIPS32FP64:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP64:   J %bb.2, implicit-def $at
-  ; MIPS32FP64: bb.1.cond.true:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64:   J %bb.3, implicit-def $at
-  ; MIPS32FP64: bb.2.cond.false:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64: bb.3.cond.end:
-  ; MIPS32FP64:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
-  ; MIPS32FP64:   $f0 = COPY [[PHI]]
-  ; MIPS32FP64:   RetRA implicit $f0
+  ; MIPS32FP64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP64-NEXT:   liveins: $a0, $a1, $a2
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $a0
+  ; MIPS32FP64-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $a1
+  ; MIPS32FP64-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY $a2
+  ; MIPS32FP64-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[COPY]], 1
+  ; MIPS32FP64-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP64-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.1.cond.true:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.2.cond.false:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.3.cond.end:
+  ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[COPY1]], %bb.1, [[COPY2]], %bb.2
+  ; MIPS32FP64-NEXT:   $f0 = COPY [[PHI]]
+  ; MIPS32FP64-NEXT:   RetRA implicit $f0
   bb.1.entry:
     liveins: $a0, $a1, $a2
 
@@ -300,44 +339,57 @@ fixedStack:
 body:             |
   ; MIPS32FP32-LABEL: name: phi_double
   ; MIPS32FP32: bb.0.entry:
-  ; MIPS32FP32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP32:   liveins: $d6, $d7
-  ; MIPS32FP32:   [[COPY:%[0-9]+]]:afgr64 = COPY $d6
-  ; MIPS32FP32:   [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-  ; MIPS32FP32:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-  ; MIPS32FP32:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32FP32:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
-  ; MIPS32FP32:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP32:   J %bb.2, implicit-def $at
-  ; MIPS32FP32: bb.1.cond.true:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32:   J %bb.3, implicit-def $at
-  ; MIPS32FP32: bb.2.cond.false:
-  ; MIPS32FP32:   successors: %bb.3(0x80000000)
-  ; MIPS32FP32: bb.3.cond.end:
-  ; MIPS32FP32:   [[PHI:%[0-9]+]]:afgr64 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
-  ; MIPS32FP32:   $d0 = COPY [[PHI]]
-  ; MIPS32FP32:   RetRA implicit $d0
+  ; MIPS32FP32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP32-NEXT:   liveins: $d6, $d7
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   [[COPY:%[0-9]+]]:afgr64 = COPY $d6
+  ; MIPS32FP32-NEXT:   [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
+  ; MIPS32FP32-NEXT:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
+  ; MIPS32FP32-NEXT:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
+  ; MIPS32FP32-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
+  ; MIPS32FP32-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP32-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.1.cond.true:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.2.cond.false:
+  ; MIPS32FP32-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: {{  $}}
+  ; MIPS32FP32-NEXT: bb.3.cond.end:
+  ; MIPS32FP32-NEXT:   [[PHI:%[0-9]+]]:afgr64 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
+  ; MIPS32FP32-NEXT:   $d0 = COPY [[PHI]]
+  ; MIPS32FP32-NEXT:   RetRA implicit $d0
+  ;
   ; MIPS32FP64-LABEL: name: phi_double
   ; MIPS32FP64: bb.0.entry:
-  ; MIPS32FP64:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; MIPS32FP64:   liveins: $d6, $d7
-  ; MIPS32FP64:   [[COPY:%[0-9]+]]:fgr64 = COPY $d6
-  ; MIPS32FP64:   [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-  ; MIPS32FP64:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
-  ; MIPS32FP64:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
-  ; MIPS32FP64:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
-  ; MIPS32FP64:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
-  ; MIPS32FP64:   J %bb.2, implicit-def $at
-  ; MIPS32FP64: bb.1.cond.true:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64:   J %bb.3, implicit-def $at
-  ; MIPS32FP64: bb.2.cond.false:
-  ; MIPS32FP64:   successors: %bb.3(0x80000000)
-  ; MIPS32FP64: bb.3.cond.end:
-  ; MIPS32FP64:   [[PHI:%[0-9]+]]:fgr64 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
-  ; MIPS32FP64:   $d0 = COPY [[PHI]]
-  ; MIPS32FP64:   RetRA implicit $d0
+  ; MIPS32FP64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32FP64-NEXT:   liveins: $d6, $d7
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   [[COPY:%[0-9]+]]:fgr64 = COPY $d6
+  ; MIPS32FP64-NEXT:   [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
+  ; MIPS32FP64-NEXT:   [[ADDiu:%[0-9]+]]:gpr32 = ADDiu %fixed-stack.0, 0
+  ; MIPS32FP64-NEXT:   [[LW:%[0-9]+]]:gpr32 = LW [[ADDiu]], 0 :: (load (s32) from %fixed-stack.0, align 8)
+  ; MIPS32FP64-NEXT:   [[ANDi:%[0-9]+]]:gpr32 = ANDi [[LW]], 1
+  ; MIPS32FP64-NEXT:   BNE [[ANDi]], $zero, %bb.1, implicit-def $at
+  ; MIPS32FP64-NEXT:   J %bb.2, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.1.cond.true:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT:   J %bb.3, implicit-def dead $at
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.2.cond.false:
+  ; MIPS32FP64-NEXT:   successors: %bb.3(0x80000000)
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: {{  $}}
+  ; MIPS32FP64-NEXT: bb.3.cond.end:
+  ; MIPS32FP64-NEXT:   [[PHI:%[0-9]+]]:fgr64 = PHI [[COPY]], %bb.1, [[COPY1]], %bb.2
+  ; MIPS32FP64-NEXT:   $d0 = COPY [[PHI]]
+  ; MIPS32FP64-NEXT:   RetRA implicit $d0
   bb.1.entry:
     liveins: $d6, $d7
 

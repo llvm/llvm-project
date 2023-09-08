@@ -52,7 +52,7 @@
 
 # RUN: not ld.lld --shuffle-sections='['=0 2>&1 | FileCheck %s --check-prefix=INVALID
 
-# INVALID: error: --shuffle-sections=: invalid glob pattern: [
+# INVALID: error: --shuffle-sections=: invalid glob pattern, unmatched '[': [
 
 ## .text has an alignment of 4.
 .global _start

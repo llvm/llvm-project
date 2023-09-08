@@ -371,3 +371,18 @@ GUARD_CF_NOLONGJMP: -guard:cf,nolongjmp
 RUN: ld.lld -### foo.o -m i386pep --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
 RUN: ld.lld -### foo.o -m i386pep --no-guard-cf --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
 GUARD_LONGJMP_NO_CF: warning: parameter --guard-longjmp only takes effect when used with --guard-cf
+
+RUN: ld.lld -### foo.o -m i386pep --threads 3 --thinlto-jobs=4 2>&1 | FileCheck -check-prefix=THREADS %s
+RUN: ld.lld -### foo.o -m i386pep --threads 3 -plugin-opt=jobs=4 2>&1 | FileCheck -check-prefix=THREADS %s
+THREADS: -threads:3 {{.*}} -opt:lldltojobs=4
+
+RUN: ld.lld -### foo.o -m i386pep -plugin-opt=mcpu=x86-64 -plugin-opt=-emulated-tls -plugin-opt=thinlto -plugin-opt=O2 -plugin-opt=dwo_dir=foo -plugin-opt=cs-profile-generate -plugin-opt=cs-profile-path=bar 2>&1 | FileCheck -check-prefix=LTO_OPTS %s
+LTO_OPTS: -mllvm:-mcpu=x86-64 -opt:lldlto=2 -dwodir:foo -lto-cs-profile-generate -lto-cs-profile-file:bar -mllvm:-emulated-tls
+
+RUN: ld.lld -### foo.o -m i386pep --lto-O2 --lto-CGO1 --lto-cs-profile-generate --lto-cs-profile-file=foo 2>&1 | FileCheck -check-prefix=LTO_OPTS2 %s
+LTO_OPTS2:-opt:lldlto=2 -opt:lldltocgo=1 -lto-cs-profile-generate -lto-cs-profile-file:foo
+
+Test GCC specific LTO options that GCC passes unconditionally, that we ignore.
+
+RUN: ld.lld -### foo.o -m i386pep -plugin /usr/lib/gcc/x86_64-w64-mingw32/10-posix/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-w64-mingw32/10-posix/lto-wrapper -plugin-opt=-fresolution=/tmp/ccM9d4fP.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null
+RUN: ld.lld -### foo.o -m i386pep -plugin C:/msys64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/13.2.0/liblto_plugin.dll -plugin-opt=C:/msys64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/13.2.0/lto-wrapper.exe -plugin-opt=-fresolution=C:/msys64/tmp/cckbC7wB.res -plugin-opt=-pass-through=-lmingw32 2> /dev/null

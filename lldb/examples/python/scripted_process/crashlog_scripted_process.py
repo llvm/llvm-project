@@ -178,7 +178,7 @@ class CrashLogScriptedThread(ScriptedThread):
         self.idx = self.backing_thread.index
         self.tid = self.backing_thread.id
         if self.backing_thread.app_specific_backtrace:
-            self.name = "Application Specific Backtrace - " + str(self.idx)
+            self.name = "Application Specific Backtrace"
         else:
             self.name = self.backing_thread.name
         self.queue = self.backing_thread.queue

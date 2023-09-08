@@ -164,13 +164,31 @@ define <4 x i32> @combine_vec_lshr_trunc_lshr0(<4 x i64> %x) {
 ; SSE-NEXT:    packusdw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: combine_vec_lshr_trunc_lshr0:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlq $48, %ymm0, %ymm0
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retq
+; AVX2-SLOW-LABEL: combine_vec_lshr_trunc_lshr0:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpsrlq $48, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vzeroupper
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-ALL-LABEL: combine_vec_lshr_trunc_lshr0:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vpsrlq $48, %ymm0, %ymm0
+; AVX2-FAST-ALL-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [0,2,4,6,0,2,4,6]
+; AVX2-FAST-ALL-NEXT:    # ymm1 = mem[0,1,0,1]
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: combine_vec_lshr_trunc_lshr0:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vpsrlq $48, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
   %1 = lshr <4 x i64> %x, <i64 32, i64 32, i64 32, i64 32>
   %2 = trunc <4 x i64> %1 to <4 x i32>
   %3 = lshr <4 x i32> %2, <i32 16, i32 16, i32 16, i32 16>

@@ -5,7 +5,6 @@
 
 __attribute__((objc_root_class))
 @interface Test
-// rdar://19904648
 // The diagnostic will try to find a suitable macro name to use (instead of raw __attribute__).
 // While iterating through the macros it would dereference a null pointer if the macro was undefined in the same module as it was originally defined in.
 @property (assign) id newFile; // expected-error {{property follows Cocoa naming convention for returning 'owned' objects}} \

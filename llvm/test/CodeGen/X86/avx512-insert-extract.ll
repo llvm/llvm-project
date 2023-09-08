@@ -175,9 +175,8 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) nounwind {
 ; KNL-LABEL: test11:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; KNL-NEXT:    kshiftrw $4, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    testb $1, %al
+; KNL-NEXT:    testb $16, %al
 ; KNL-NEXT:    je LBB10_2
 ; KNL-NEXT:  ## %bb.1: ## %A
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -189,9 +188,8 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) nounwind {
 ; SKX-LABEL: test11:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpltud %zmm1, %zmm0, %k0
-; SKX-NEXT:    kshiftrw $4, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    testb $1, %al
+; SKX-NEXT:    testb $16, %al
 ; SKX-NEXT:    je LBB10_2
 ; SKX-NEXT:  ## %bb.1: ## %A
 ; SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
@@ -276,9 +274,8 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) nounwind {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; KNL-NEXT:    kshiftrw $4, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %ecx
-; KNL-NEXT:    testb $1, %cl
+; KNL-NEXT:    testb $16, %cl
 ; KNL-NEXT:    cmoveq %rsi, %rax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -287,9 +284,8 @@ define i64 @test14(<8 x i64>%a, <8 x i64>%b, i64 %a1, i64 %b1) nounwind {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    movq %rdi, %rax
 ; SKX-NEXT:    vpcmpgtq %zmm0, %zmm1, %k0
-; SKX-NEXT:    kshiftrb $4, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %ecx
-; SKX-NEXT:    testb $1, %cl
+; SKX-NEXT:    testb $16, %cl
 ; SKX-NEXT:    cmoveq %rsi, %rax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
@@ -2262,4 +2258,27 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
   %tmp7 = select <2 x i1> %tmp5, <2 x half> %tmp6, <2 x half> zeroinitializer
   store <2 x half> %tmp7, ptr %arg2, align 8
   ret void
+}
+
+; Check that an extracted bool element comparison is correctly extended when
+; the bool vector is bitcasted instead.
+define void @test_extractelement_v64i1_cmp0(<64 x i1> %0) nounwind {
+; KNL-LABEL: test_extractelement_v64i1_cmp0:
+; KNL:       ## %bb.0: ## %entry
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_extractelement_v64i1_cmp0:
+; SKX:       ## %bb.0: ## %entry
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+entry:
+  %1 = extractelement <64 x i1> %0, i64 0
+  br i1 %1, label %common.ret, label %2
+
+common.ret:                                       ; preds = %2, %entry
+  ret void
+
+2:                                                ; preds = %entry
+  %3 = extractelement <64 x i1> zeroinitializer, i64 0
+  br label %common.ret
 }

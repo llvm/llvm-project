@@ -1804,14 +1804,13 @@ defm : MUBUFScratchLoadPat_D16<BUFFER_LOAD_SBYTE_D16_OFFEN, BUFFER_LOAD_SBYTE_D1
 
 multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Instr_OFFSET,
                                       ValueType vt, PatFrag atomic_st> {
-  // Store follows atomic op convention so address is first
   def : GCNPat <
-     (atomic_st (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset), vt:$val),
+     (atomic_st vt:$val, (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset)),
      (Instr_ADDR64 $val, $vaddr, $srsrc, $soffset, $offset)
   >;
 
   def : GCNPat <
-    (atomic_st (MUBUFOffset v4i32:$rsrc, i32:$soffset, i32:$offset), vt:$val),
+    (atomic_st vt:$val, (MUBUFOffset v4i32:$rsrc, i32:$soffset, i32:$offset)),
     (Instr_OFFSET $val, $rsrc, $soffset, (as_i16imm $offset))
   >;
 }

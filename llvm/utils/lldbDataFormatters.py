@@ -13,7 +13,7 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand("type category define -e llvm -l c++")
     debugger.HandleCommand(
         "type synthetic add -w llvm "
-        "-l lldbDataFormatters.SmallVectorSynthProvider "
+        f"-l {__name__}.SmallVectorSynthProvider "
         '-x "^llvm::SmallVectorImpl<.+>$"'
     )
     debugger.HandleCommand(
@@ -23,7 +23,7 @@ def __lldb_init_module(debugger, internal_dict):
     )
     debugger.HandleCommand(
         "type synthetic add -w llvm "
-        "-l lldbDataFormatters.SmallVectorSynthProvider "
+        f"-l {__name__}.SmallVectorSynthProvider "
         '-x "^llvm::SmallVector<.+,.+>$"'
     )
     debugger.HandleCommand(
@@ -33,7 +33,7 @@ def __lldb_init_module(debugger, internal_dict):
     )
     debugger.HandleCommand(
         "type synthetic add -w llvm "
-        "-l lldbDataFormatters.ArrayRefSynthProvider "
+        f"-l {__name__}.ArrayRefSynthProvider "
         '-x "^llvm::ArrayRef<.+>$"'
     )
     debugger.HandleCommand(
@@ -43,27 +43,27 @@ def __lldb_init_module(debugger, internal_dict):
     )
     debugger.HandleCommand(
         "type synthetic add -w llvm "
-        "-l lldbDataFormatters.OptionalSynthProvider "
+        f"-l {__name__}.OptionalSynthProvider "
         '-x "^llvm::Optional<.+>$"'
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
-        "-e -F lldbDataFormatters.OptionalSummaryProvider "
+        f"-e -F {__name__}.OptionalSummaryProvider "
         '-x "^llvm::Optional<.+>$"'
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
-        "-F lldbDataFormatters.SmallStringSummaryProvider "
+        f"-F {__name__}.SmallStringSummaryProvider "
         '-x "^llvm::SmallString<.+>$"'
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
-        "-F lldbDataFormatters.StringRefSummaryProvider "
+        f"-F {__name__}.StringRefSummaryProvider "
         "llvm::StringRef"
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
-        "-F lldbDataFormatters.ConstStringSummaryProvider "
+        f"-F {__name__}.ConstStringSummaryProvider "
         "lldb_private::ConstString"
     )
 
@@ -72,23 +72,23 @@ def __lldb_init_module(debugger, internal_dict):
     # non-pointer types that instead specialize PointerLikeTypeTraits.
     # debugger.HandleCommand(
     #     "type synthetic add -w llvm "
-    #     "-l lldbDataFormatters.PointerIntPairSynthProvider "
+    #     f"-l {__name__}.PointerIntPairSynthProvider "
     #     '-x "^llvm::PointerIntPair<.+>$"'
     # )
     # debugger.HandleCommand(
     #     "type synthetic add -w llvm "
-    #     "-l lldbDataFormatters.PointerUnionSynthProvider "
+    #     f"-l {__name__}.PointerUnionSynthProvider "
     #     '-x "^llvm::PointerUnion<.+>$"'
     # )
 
     debugger.HandleCommand(
         "type summary add -w llvm "
-        "-e -F lldbDataFormatters.DenseMapSummary "
+        f"-e -F {__name__}.DenseMapSummary "
         '-x "^llvm::DenseMap<.+>$"'
     )
     debugger.HandleCommand(
         "type synthetic add -w llvm "
-        "-l lldbDataFormatters.DenseMapSynthetic "
+        f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
     )
 
@@ -128,6 +128,9 @@ class SmallVectorSynthProvider:
         # template parameter.
         if the_type.IsReferenceType():
             the_type = the_type.GetDereferencedType()
+
+        if the_type.IsPointerType():
+            the_type = the_type.GetPointeeType()
 
         self.data_type = the_type.GetTemplateArgumentType(0)
         self.type_size = self.data_type.GetByteSize()

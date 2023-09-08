@@ -33,7 +33,7 @@ end subroutine mul_test
 ! CHECK: %[[CVAL:.*]] = fir.load %[[CREF]] : !fir.ref<!fir.complex<2>>
 ! CHECK: %[[BVAL_CVT:.*]] = fir.convert %[[BVAL]] : (!fir.complex<2>) -> complex<f16>
 ! CHECK: %[[CVAL_CVT:.*]] = fir.convert %[[CVAL]] : (!fir.complex<2>) -> complex<f16>
-! CHECK: %[[AVAL_CVT:.*]] = complex.div %[[BVAL_CVT]], %[[CVAL_CVT]] : complex<f16>
+! CHECK: %[[AVAL_CVT:.*]] = complex.div %[[BVAL_CVT]], %[[CVAL_CVT]] fastmath<contract> : complex<f16>
 ! CHECK: %[[AVAL:.*]] = fir.convert %[[AVAL_CVT]] : (complex<f16>) -> !fir.complex<2>
 ! CHECK: fir.store %[[AVAL]] to %[[AREF]] : !fir.ref<!fir.complex<2>>
 subroutine div_test_half(a,b,c)
@@ -47,7 +47,7 @@ end subroutine div_test_half
 ! CHECK: %[[CVAL:.*]] = fir.load %[[CREF]] : !fir.ref<!fir.complex<3>>
 ! CHECK: %[[BVAL_CVT:.*]] = fir.convert %[[BVAL]] : (!fir.complex<3>) -> complex<bf16>
 ! CHECK: %[[CVAL_CVT:.*]] = fir.convert %[[CVAL]] : (!fir.complex<3>) -> complex<bf16>
-! CHECK: %[[AVAL_CVT:.*]] = complex.div %[[BVAL_CVT]], %[[CVAL_CVT]] : complex<bf16>
+! CHECK: %[[AVAL_CVT:.*]] = complex.div %[[BVAL_CVT]], %[[CVAL_CVT]] fastmath<contract> : complex<bf16>
 ! CHECK: %[[AVAL:.*]] = fir.convert %[[AVAL_CVT]] : (complex<bf16>) -> !fir.complex<3>
 ! CHECK: fir.store %[[AVAL]] to %[[AREF]] : !fir.ref<!fir.complex<3>>
 subroutine div_test_bfloat(a,b,c)

@@ -35,12 +35,10 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
             AddPointer(offset + component.offset(), indExpr.value());
           } else if (IsAllocatable(component) || IsAutomatic(component)) {
             return NotAConstant;
-          } else {
-            Result added{Add(offset + component.offset(), component.size(),
-                indExpr.value(), context)};
-            if (added != Ok) {
-              return added;
-            }
+          } else if (auto result{Add(offset + component.offset(),
+                         component.size(), indExpr.value(), context)};
+                     result != Ok) {
+            return result;
           }
         }
         offset += elementBytes;

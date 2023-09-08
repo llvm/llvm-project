@@ -38,9 +38,26 @@ long long __nv_llrint(double);
 long long __nv_llrintf(float);
 long long __nv_llround(double);
 long long __nv_llroundf(float);
+double __nv_nextafter(double, double);
+float __nv_nextafterf(float, float);
 double __nv_pow(double, double);
 float __nv_powf(float, float);
 double __nv_sin(double);
+float __nv_sinf(float);
+void __nv_sincos(double, double *, double *);
+void __nv_sincosf(float, float *, float *);
+double __nv_sinh(double);
+float __nv_sinhf(float);
+double __nv_tan(double);
+float __nv_tanf(float);
+double __nv_tanh(double);
+float __nv_tanhf(float);
+double __nv_frexp(double, int *);
+float __nv_frexpf(float, int *);
+double __nv_scalbn(double, int);
+float __nv_scalbnf(float, int);
+double __nv_remquo(double, double, int *);
+float __nv_remquof(float, float, int *);
 }
 
 } // namespace __llvm_libc

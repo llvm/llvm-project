@@ -60,8 +60,8 @@ public:
                                     NextAccess *before) override;
 
   void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface branch,
-                                            std::optional<unsigned> regionFrom,
-                                            std::optional<unsigned> regionTo,
+                                            RegionBranchPoint regionFrom,
+                                            RegionBranchPoint regionTo,
                                             const NextAccess &after,
                                             NextAccess *before) override;
 
@@ -124,15 +124,15 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
 }
 
 void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
-    RegionBranchOpInterface branch, std::optional<unsigned> regionFrom,
-    std::optional<unsigned> regionTo, const NextAccess &after,
-    NextAccess *before) {
+    RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
+    RegionBranchPoint regionTo, const NextAccess &after, NextAccess *before) {
   auto testStoreWithARegion =
       dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
 
   if (testStoreWithARegion &&
-      ((!regionTo && !testStoreWithARegion.getStoreBeforeRegion()) ||
-       (!regionFrom && testStoreWithARegion.getStoreBeforeRegion()))) {
+      ((regionTo.isParent() && !testStoreWithARegion.getStoreBeforeRegion()) ||
+       (regionFrom.isParent() &&
+        testStoreWithARegion.getStoreBeforeRegion()))) {
     visitOperation(branch, static_cast<const NextAccess &>(after),
                    static_cast<NextAccess *>(before));
   } else {
@@ -219,7 +219,7 @@ struct TestNextAccessPass
 
       SmallVector<Attribute> entryPointNextAccess;
       SmallVector<RegionSuccessor> regionSuccessors;
-      iface.getSuccessorRegions(std::nullopt, regionSuccessors);
+      iface.getSuccessorRegions(RegionBranchPoint::parent(), regionSuccessors);
       for (const RegionSuccessor &successor : regionSuccessors) {
         if (!successor.getSuccessor() || successor.getSuccessor()->empty())
           continue;

@@ -46,3 +46,31 @@ define float @float_imm_op(float %a) nounwind {
   %1 = fadd float %a, 1.0
   ret float %1
 }
+
+define float @float_positive_zero(ptr %pf) nounwind {
+; CHECK-LABEL: float_positive_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: float_positive_zero:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    li a0, 0
+; CHECKZFINX-NEXT:    ret
+  ret float 0.0
+}
+
+define float @float_negative_zero(ptr %pf) nounwind {
+; CHECK-LABEL: float_negative_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: float_negative_zero:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    lui a0, 524288
+; CHECKZFINX-NEXT:    ret
+  ret float -0.0
+}
+

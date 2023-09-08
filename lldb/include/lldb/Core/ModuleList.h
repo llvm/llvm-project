@@ -480,6 +480,9 @@ public:
   bool AnyOf(
       std::function<bool(lldb_private::Module &module)> const &callback) const;
 
+  /// Atomically swaps the contents of this module list with \a other.
+  void Swap(ModuleList &other);
+
 protected:
   // Class typedefs.
   typedef std::vector<lldb::ModuleSP>

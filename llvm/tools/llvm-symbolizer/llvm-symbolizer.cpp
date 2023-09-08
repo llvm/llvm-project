@@ -32,8 +32,10 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
@@ -50,9 +52,7 @@ using namespace symbolize;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -64,14 +64,9 @@ enum ID {
 #include "Opts.inc"
 #undef PREFIX
 
+using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -86,10 +81,10 @@ public:
 
 static std::string ToolName;
 
-static void printError(const ErrorInfoBase &EI, StringRef Path) {
+static void printError(const ErrorInfoBase &EI, StringRef AuxInfo) {
   WithColor::error(errs(), ToolName);
-  if (!EI.isA<FileError>())
-    errs() << "'" << Path << "': ";
+  if (!AuxInfo.empty())
+    errs() << "'" << AuxInfo << "': ";
   EI.log(errs());
   errs() << '\n';
 }
@@ -135,12 +130,37 @@ static void enableDebuginfod(LLVMSymbolizer &Symbolizer,
   HTTPClient::initialize();
 }
 
-static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
-                         StringRef InputString, Command &Cmd,
-                         std::string &ModuleName, object::BuildID &BuildID,
-                         uint64_t &ModuleOffset) {
+static StringRef getSpaceDelimitedWord(StringRef &Source) {
   const char kDelimiters[] = " \n\r";
-  ModuleName = "";
+  const char *Pos = Source.data();
+  StringRef Result;
+  Pos += strspn(Pos, kDelimiters);
+  if (*Pos == '"' || *Pos == '\'') {
+    char Quote = *Pos;
+    Pos++;
+    const char *End = strchr(Pos, Quote);
+    if (!End)
+      return StringRef();
+    Result = StringRef(Pos, End - Pos);
+    Pos = End + 1;
+  } else {
+    int NameLength = strcspn(Pos, kDelimiters);
+    Result = StringRef(Pos, NameLength);
+    Pos += NameLength;
+  }
+  Source = StringRef(Pos, Source.end() - Pos);
+  return Result;
+}
+
+static Error makeStringError(StringRef Msg) {
+  return make_error<StringError>(Msg, inconvertibleErrorCode());
+}
+
+static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
+                          StringRef InputString, Command &Cmd,
+                          std::string &ModuleName, object::BuildID &BuildID,
+                          uint64_t &ModuleOffset) {
+  ModuleName = BinaryName;
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
   } else if (InputString.consume_front("DATA ")) {
@@ -152,63 +172,76 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
     Cmd = Command::Code;
   }
 
-  const char *Pos;
-  // Skip delimiters and parse input filename (if needed).
-  if (BinaryName.empty() && BuildID.empty()) {
-    bool HasFilePrefix = false;
-    bool HasBuildIDPrefix = false;
-    while (true) {
-      if (InputString.consume_front("FILE:")) {
-        if (HasFilePrefix)
-          return false;
-        HasFilePrefix = true;
-        continue;
-      }
-      if (InputString.consume_front("BUILDID:")) {
-        if (HasBuildIDPrefix)
-          return false;
-        HasBuildIDPrefix = true;
-        continue;
-      }
-      break;
+  // Parse optional input file specification.
+  bool HasFilePrefix = false;
+  bool HasBuildIDPrefix = false;
+  while (!InputString.empty()) {
+    InputString = InputString.ltrim();
+    if (InputString.consume_front("FILE:")) {
+      if (HasFilePrefix || HasBuildIDPrefix)
+        return makeStringError("duplicate input file specification prefix");
+      HasFilePrefix = true;
+      continue;
     }
-    if (HasFilePrefix && HasBuildIDPrefix)
-      return false;
-
-    Pos = InputString.data();
-    Pos += strspn(Pos, kDelimiters);
-    if (*Pos == '"' || *Pos == '\'') {
-      char Quote = *Pos;
-      Pos++;
-      const char *End = strchr(Pos, Quote);
-      if (!End)
-        return false;
-      ModuleName = std::string(Pos, End - Pos);
-      Pos = End + 1;
-    } else {
-      int NameLength = strcspn(Pos, kDelimiters);
-      ModuleName = std::string(Pos, NameLength);
-      Pos += NameLength;
+    if (InputString.consume_front("BUILDID:")) {
+      if (HasBuildIDPrefix || HasFilePrefix)
+        return makeStringError("duplicate input file specification prefix");
+      HasBuildIDPrefix = true;
+      continue;
     }
-    if (HasBuildIDPrefix) {
-      BuildID = parseBuildID(ModuleName);
-      if (BuildID.empty())
-        return false;
-      ModuleName.clear();
-    }
-  } else {
-    Pos = InputString.data();
-    ModuleName = BinaryName.str();
+    break;
   }
-  // Skip delimiters and parse module offset.
-  Pos += strspn(Pos, kDelimiters);
-  int OffsetLength = strcspn(Pos, kDelimiters);
-  StringRef Offset(Pos, OffsetLength);
+
+  // If an input file is not specified on the command line, try to extract it
+  // from the command.
+  if (HasBuildIDPrefix || HasFilePrefix) {
+    InputString = InputString.ltrim();
+    if (InputString.empty()) {
+      if (HasFilePrefix)
+        return makeStringError("must be followed by an input file");
+      else
+        return makeStringError("must be followed by a hash");
+    }
+
+    if (!BinaryName.empty() || !BuildID.empty())
+      return makeStringError("input file has already been specified");
+
+    StringRef Name = getSpaceDelimitedWord(InputString);
+    if (Name.empty())
+      return makeStringError("unbalanced quotes in input file name");
+    if (HasBuildIDPrefix) {
+      BuildID = parseBuildID(Name);
+      if (BuildID.empty())
+        return makeStringError("wrong format of build-id");
+    } else {
+      ModuleName = Name;
+    }
+  } else if (BinaryName.empty() && BuildID.empty()) {
+    // No input file has been specified. If the input string contains at least
+    // two items, assume that the first item is a file name.
+    ModuleName = getSpaceDelimitedWord(InputString);
+    if (ModuleName.empty())
+      return makeStringError("no input filename has been specified");
+  }
+
+  // Parse module offset.
+  InputString = InputString.ltrim();
+  if (InputString.empty())
+    return makeStringError("no module offset has been specified");
+  int OffsetLength = InputString.find_first_of(" \n\r");
+  StringRef Offset = InputString.substr(0, OffsetLength);
   // GNU addr2line assumes the offset is hexadecimal and allows a redundant
   // "0x" or "0X" prefix; do the same for compatibility.
   if (IsAddr2Line)
     Offset.consume_front("0x") || Offset.consume_front("0X");
-  return !Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset);
+
+  // If the input is not a valid module offset, it is not an error, but its
+  // lookup does not make sense. Return error of different kind to distinguish
+  // from error or success.
+  if (Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset))
+    return errorCodeToError(errc::invalid_argument);
+
+  return Error::success();
 }
 
 template <typename T>
@@ -254,6 +287,11 @@ void executeCommand(StringRef ModuleName, const T &ModuleSpec, Command Cmd,
   Symbolizer.pruneCache();
 }
 
+static void printUnknownLineInfo(std::string ModuleName, DIPrinter &Printer) {
+  Request SymRequest = {ModuleName, std::nullopt};
+  Printer.print(SymRequest, DILineInfo());
+}
+
 static void symbolizeInput(const opt::InputArgList &Args,
                            object::BuildIDRef IncomingBuildID,
                            uint64_t AdjustVMA, bool IsAddr2Line,
@@ -263,9 +301,16 @@ static void symbolizeInput(const opt::InputArgList &Args,
   std::string ModuleName;
   object::BuildID BuildID(IncomingBuildID.begin(), IncomingBuildID.end());
   uint64_t Offset = 0;
-  if (!parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
-                    StringRef(InputString), Cmd, ModuleName, BuildID, Offset)) {
-    Printer.printInvalidCommand({ModuleName, std::nullopt}, InputString);
+  if (Error E = parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
+                             StringRef(InputString), Cmd, ModuleName, BuildID,
+                             Offset)) {
+    handleAllErrors(
+        std::move(E),
+        [&](const StringError &EI) {
+          printError(EI, InputString);
+          printUnknownLineInfo(ModuleName, Printer);
+        },
+        [&](const ECError &EI) { printUnknownLineInfo(ModuleName, Printer); });
     return;
   }
   bool ShouldInline = Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line);
@@ -382,9 +427,7 @@ static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symboliz
   Filter.finish();
 }
 
-ExitOnError ExitOnErr;
-
-int main(int argc, char **argv) {
+int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 

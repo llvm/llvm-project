@@ -13,12 +13,12 @@
 #include <__availability>
 #include <__config>
 #include <__memory/shared_ptr.h> // __shared_count
+#include <__mutex/once_flag.h>
 #include <__type_traits/make_unsigned.h>
 #include <cctype>
 #include <clocale>
 #include <cstdint>
 #include <cstdlib>
-#include <mutex>
 #include <string>
 
 // Some platforms require more includes than others. Keep the includes on all plaforms for now.

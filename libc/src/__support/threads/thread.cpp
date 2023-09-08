@@ -57,7 +57,7 @@ public:
 
   cpp::optional<unsigned int> new_key(TSSDtor *dtor) {
     MutexLock lock(&mtx);
-    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+    for (unsigned int i = 0; i < TSS_KEY_COUNT; ++i) {
       TSSKeyUnit &u = units[i];
       if (!u.active) {
         u = {dtor};

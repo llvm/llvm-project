@@ -687,13 +687,17 @@ public:
 
     auto baseBufferType = cast<MemRefType>(op.getBaseBuffer().getType());
     int64_t offset = 0;
-    if (allocLikeOp.getType() == baseBufferType)
-      results.push_back(allocLikeOp);
-    else
-      results.push_back(rewriter.create<memref::ReinterpretCastOp>(
-          loc, baseBufferType, allocLikeOp, offset,
-          /*sizes=*/ArrayRef<int64_t>(),
-          /*strides=*/ArrayRef<int64_t>()));
+    if (op.getBaseBuffer().use_empty()) {
+      results.push_back(nullptr);
+    } else {
+      if (allocLikeOp.getType() == baseBufferType)
+        results.push_back(allocLikeOp);
+      else
+        results.push_back(rewriter.create<memref::ReinterpretCastOp>(
+            loc, baseBufferType, allocLikeOp, offset,
+            /*sizes=*/ArrayRef<int64_t>(),
+            /*strides=*/ArrayRef<int64_t>()));
+    }
 
     // Offset.
     results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, offset));

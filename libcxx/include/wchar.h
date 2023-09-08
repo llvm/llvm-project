@@ -186,7 +186,7 @@ size_t mbsnrtowcs(wchar_t *__restrict __dst, const char **__restrict __src,
                   size_t __nmc, size_t __len, mbstate_t *__restrict __ps);
 size_t wcsnrtombs(char *__restrict __dst, const wchar_t **__restrict __src,
                   size_t __nwc, size_t __len, mbstate_t *__restrict __ps);
-}  // extern "C"
+} // extern "C"
 #endif  // __cplusplus && (_LIBCPP_MSVCRT || __MVS__)
 
 #endif // _LIBCPP_WCHAR_H

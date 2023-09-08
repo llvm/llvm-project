@@ -52,6 +52,17 @@ TEST_F(GlobPatternTest, Escape) {
   EXPECT_FALSE(Pat2->match("axxc"));
   EXPECT_FALSE(Pat2->match(""));
 
+  auto Pat3 = GlobPattern::create("\\{");
+  ASSERT_TRUE((bool)Pat3);
+  EXPECT_TRUE(Pat3->match("{"));
+  EXPECT_FALSE(Pat3->match("\\{"));
+  EXPECT_FALSE(Pat3->match(""));
+
+  auto Pat4 = GlobPattern::create("\\a");
+  ASSERT_TRUE((bool)Pat4);
+  EXPECT_TRUE(Pat4->match("a"));
+  EXPECT_FALSE(Pat4->match("\\a"));
+
   for (size_t I = 0; I != 4; ++I) {
     std::string S(I, '\\');
     Expected<GlobPattern> Pat = GlobPattern::create(S);
@@ -122,12 +133,15 @@ TEST_F(GlobPatternTest, BracketFrontOfCharacterClass) {
 }
 
 TEST_F(GlobPatternTest, SpecialCharsInCharacterClass) {
-  Expected<GlobPattern> Pat1 = GlobPattern::create("[*?^]");
-  EXPECT_TRUE((bool)Pat1);
+  auto Pat1 = GlobPattern::create("[*?^{},]");
+  ASSERT_TRUE((bool)Pat1);
   EXPECT_TRUE(Pat1->match("*"));
   EXPECT_TRUE(Pat1->match("?"));
   EXPECT_TRUE(Pat1->match("^"));
-  EXPECT_FALSE(Pat1->match("*?^"));
+  EXPECT_TRUE(Pat1->match("{"));
+  EXPECT_TRUE(Pat1->match("}"));
+  EXPECT_TRUE(Pat1->match(","));
+  EXPECT_FALSE(Pat1->match("*?^{},"));
   EXPECT_FALSE(Pat1->match(""));
 
   Expected<GlobPattern> Pat2 = GlobPattern::create("[*]");
@@ -137,13 +151,73 @@ TEST_F(GlobPatternTest, SpecialCharsInCharacterClass) {
 }
 
 TEST_F(GlobPatternTest, Invalid) {
-  Expected<GlobPattern> Pat1 = GlobPattern::create("[");
+  for (const auto &InvalidPattern : {"[", "[]"}) {
+    auto Pat1 = GlobPattern::create(InvalidPattern);
+    EXPECT_FALSE((bool)Pat1) << "Expected invalid pattern: " << InvalidPattern;
+    handleAllErrors(Pat1.takeError(), [&](ErrorInfoBase &EIB) {});
+  }
+}
+
+TEST_F(GlobPatternTest, InvalidBraceExpansion) {
+  for (const auto &InvalidPattern :
+       {"{", "{{", "{\\", "{\\}", "{}", "{a}", "[{}"}) {
+    auto Pat1 = GlobPattern::create(InvalidPattern, /*MaxSubPatterns=*/1024);
+    EXPECT_FALSE((bool)Pat1) << "Expected invalid pattern: " << InvalidPattern;
+    handleAllErrors(Pat1.takeError(), [&](ErrorInfoBase &EIB) {});
+  }
+  auto Pat1 = GlobPattern::create("{a,b}{c,d}{e,f}", /*MaxSubPatterns=*/7);
   EXPECT_FALSE((bool)Pat1);
   handleAllErrors(Pat1.takeError(), [&](ErrorInfoBase &EIB) {});
+}
 
-  Expected<GlobPattern> Pat2 = GlobPattern::create("[]");
-  EXPECT_FALSE((bool)Pat2);
-  handleAllErrors(Pat2.takeError(), [&](ErrorInfoBase &EIB) {});
+TEST_F(GlobPatternTest, BraceExpansion) {
+  auto Pat1 = GlobPattern::create("{a,b}{1,2}", /*MaxSubPatterns=*/1024);
+  ASSERT_TRUE((bool)Pat1);
+  EXPECT_TRUE(Pat1->match("a1"));
+  EXPECT_TRUE(Pat1->match("a2"));
+  EXPECT_TRUE(Pat1->match("b1"));
+  EXPECT_TRUE(Pat1->match("b2"));
+  EXPECT_FALSE(Pat1->match("ab"));
+
+  auto Pat2 = GlobPattern::create(",}{foo,\\,\\},z*}", /*MaxSubPatterns=*/1024);
+  ASSERT_TRUE((bool)Pat2);
+  EXPECT_TRUE(Pat2->match(",}foo"));
+  EXPECT_TRUE(Pat2->match(",},}"));
+  EXPECT_TRUE(Pat2->match(",}z"));
+  EXPECT_TRUE(Pat2->match(",}zoo"));
+  EXPECT_FALSE(Pat2->match(",}fooz"));
+  EXPECT_FALSE(Pat2->match("foo"));
+  EXPECT_FALSE(Pat2->match(""));
+
+  // This test breaks if we store terms separately and attempt to match them one
+  // by one instead of using subglobs
+  auto Pat3 = GlobPattern::create("{a,ab}b", /*MaxSubPatterns=*/1024);
+  ASSERT_TRUE((bool)Pat3);
+  EXPECT_TRUE(Pat3->match("ab"));
+  EXPECT_TRUE(Pat3->match("abb"));
+}
+
+TEST_F(GlobPatternTest, NoBraceExpansion) {
+  auto Pat1 = GlobPattern::create("{a,b}{1,2}");
+  ASSERT_TRUE((bool)Pat1);
+  EXPECT_TRUE(Pat1->match("{a,b}{1,2}"));
+  EXPECT_FALSE(Pat1->match("a1"));
+
+  auto Pat2 = GlobPattern::create("{{");
+  ASSERT_TRUE((bool)Pat2);
+  EXPECT_TRUE(Pat2->match("{{"));
+}
+
+TEST_F(GlobPatternTest, BraceExpansionCharacterClass) {
+  // Matches mangled names of C++ standard library functions
+  auto Pat =
+      GlobPattern::create("_Z{N,NK,}S[tabsiod]*", /*MaxSubPatterns=*/1024);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_TRUE(Pat->match("_ZNSt6vectorIiSaIiEE9push_backEOi"));
+  EXPECT_TRUE(Pat->match("_ZNKStfoo"));
+  EXPECT_TRUE(Pat->match("_ZNSafoo"));
+  EXPECT_TRUE(Pat->match("_ZStfoo"));
+  EXPECT_FALSE(Pat->match("_Zfoo"));
 }
 
 TEST_F(GlobPatternTest, ExtSym) {
@@ -169,7 +243,7 @@ TEST_F(GlobPatternTest, IsTrivialMatchAll) {
 }
 
 TEST_F(GlobPatternTest, NUL) {
-  for (char C : "?*{") {
+  for (char C : "?*") {
     std::string S(1, C);
     Expected<GlobPattern> Pat = GlobPattern::create(S);
     ASSERT_TRUE((bool)Pat);
@@ -185,13 +259,14 @@ TEST_F(GlobPatternTest, NUL) {
 
 TEST_F(GlobPatternTest, Pathological) {
   std::string P, S(40, 'a');
+  StringRef Pieces[] = {"a*", "[ba]*", "{b*,a*}*"};
   for (int I = 0; I != 30; ++I)
-    P += I % 2 ? "a*" : "[ba]*";
-  Expected<GlobPattern> Pat = GlobPattern::create(P);
+    P += Pieces[I % 3];
+  Expected<GlobPattern> Pat = GlobPattern::create(P, /*MaxSubPatterns=*/1024);
   ASSERT_TRUE((bool)Pat);
   EXPECT_TRUE(Pat->match(S));
   P += 'b';
-  Pat = GlobPattern::create(P);
+  Pat = GlobPattern::create(P, /*MaxSubPatterns=*/1024);
   ASSERT_TRUE((bool)Pat);
   EXPECT_FALSE(Pat->match(S));
   EXPECT_TRUE(Pat->match(S + 'b'));

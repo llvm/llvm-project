@@ -357,6 +357,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeDWARFGNUDebugAltLink:
           case eSectionTypeCTF:
+          case eSectionTypeSwiftModules:
             return AddressClass::eDebug;
           case eSectionTypeEHFrame:
           case eSectionTypeARMexidx:
@@ -550,8 +551,8 @@ size_t ObjectFile::ReadSectionData(Section *section,
 
   // The object file now contains a full mmap'ed copy of the object file
   // data, so just use this
-  return GetData(section->GetFileOffset(), section->GetFileSize(),
-                  section_data);
+  return GetData(section->GetFileOffset(), GetSectionDataSize(section),
+                 section_data);
 }
 
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,

@@ -190,7 +190,7 @@ public:
     /// Frequency of the insertion point.
     /// \p P is used to access the various analysis that will help to
     /// get that information, like MachineBlockFrequencyInfo.  If \p P
-    /// does not contain enough enough to return the actual frequency,
+    /// does not contain enough to return the actual frequency,
     /// this returns 1.
     virtual uint64_t frequency(const Pass &P) const { return 1; }
 

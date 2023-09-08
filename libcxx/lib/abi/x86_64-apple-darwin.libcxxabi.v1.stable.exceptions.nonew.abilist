@@ -1062,7 +1062,6 @@
 {'is_defined': True, 'name': '__ZNSt3__112strstreambufD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112strstreambufD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112strstreambufD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__112system_error6__initERKNS_10error_codeENS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112system_errorC1ENS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112system_errorC1ENS_10error_codeEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112system_errorC1ENS_10error_codeERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}

@@ -187,7 +187,7 @@ private:
     }
 
     /// Return a pointer to the data.
-    char *data() { return B.data(); }
+    std::byte *data() { return B.data(); }
     /// Return a pointer to the block.
     Block *block() { return &B; }
 

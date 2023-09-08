@@ -8,7 +8,7 @@
 // RUN: %clang -### -target s390x-unknown-linux-gnu -fcf-runtime-abi=swift-4.1 -c %s 2>&1 | FileCheck -check-prefix CHECK-SWIFT-4_1 %s
 // RUN: %clang -### -target x86_64-apple-macosx -fcf-runtime-abi=swift -c %s 2>&1 | FileCheck -check-prefix CHECK-SWIFT %s
 
-// RUN: %clang -### -target arm7k-apple-watchos -fcf-runtime-abi=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-INVALID %s
+// RUN: not %clang -### -target arm7k-apple-watchos -fcf-runtime-abi=invalid -c %s 2>&1 | FileCheck -check-prefix CHECK-INVALID %s
 
 // CHECK-UNSPECIFIED-NOT: "-fcf-runtime-abi=
 

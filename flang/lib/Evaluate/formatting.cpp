@@ -19,6 +19,14 @@
 
 namespace Fortran::evaluate {
 
+// Constant arrays can have non-default lower bounds, but this can't be
+// expressed in Fortran syntax directly, only implied through the use of
+// named constant (PARAMETER) definitions.  For debugging, setting this flag
+// enables a non-standard %LBOUND=[...] argument to the RESHAPE intrinsic
+// calls used to dumy constants.  It's off by default so that this syntax
+// doesn't show up in module files.
+static const bool printLbounds{false};
+
 static void ShapeAsFortran(llvm::raw_ostream &o,
     const ConstantSubscripts &shape, const ConstantSubscripts &lbounds,
     bool hasNonDefaultLowerBound) {
@@ -46,7 +54,7 @@ static void ShapeAsFortran(llvm::raw_ostream &o,
 template <typename RESULT, typename VALUE>
 llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
     llvm::raw_ostream &o) const {
-  bool hasNonDefaultLowerBound{HasNonDefaultLowerBound()};
+  bool hasNonDefaultLowerBound{printLbounds && HasNonDefaultLowerBound()};
   if (Rank() > 1 || hasNonDefaultLowerBound) {
     o << "reshape(";
   }
@@ -90,7 +98,7 @@ llvm::raw_ostream &ConstantBase<RESULT, VALUE>::AsFortran(
 template <int KIND>
 llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
     llvm::raw_ostream &o) const {
-  bool hasNonDefaultLowerBound{HasNonDefaultLowerBound()};
+  bool hasNonDefaultLowerBound{printLbounds && HasNonDefaultLowerBound()};
   if (Rank() > 1 || hasNonDefaultLowerBound) {
     o << "reshape(";
   }

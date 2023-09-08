@@ -58,6 +58,8 @@ public:
     resize(count);
     inline_memcpy(buffer_, cstr, count);
   }
+  LIBC_INLINE string(const string_view &view)
+      : string(view.data(), view.size()) {}
   LIBC_INLINE string(const char *cstr)
       : string(cstr, ::__llvm_libc::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
@@ -76,6 +78,10 @@ public:
     capacity_ = other.capacity_;
     other.reset_no_deallocate();
     return *this;
+  }
+
+  LIBC_INLINE string &operator=(const string_view &view) {
+    return *this = string(view);
   }
 
   LIBC_INLINE ~string() {
@@ -189,10 +195,8 @@ LIBC_INLINE string operator+(const char *lhs, const string &rhs) {
 
 namespace internal {
 template <typename T> string to_dec_string(T value) {
-  char dec_buf[IntegerToString::dec_bufsize<T>()];
-  auto maybe_string_view = IntegerToString::dec(value, dec_buf);
-  const auto &string_view = *maybe_string_view;
-  return string(string_view.data(), string_view.size());
+  const IntegerToString<T> buffer(value);
+  return buffer.view();
 }
 } // namespace internal
 

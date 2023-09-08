@@ -433,6 +433,9 @@ struct LineState {
   /// literal sequence, 0 otherwise.
   unsigned StartOfStringLiteral;
 
+  /// Disallow line breaks for this line.
+  bool NoLineBreak;
+
   /// A stack keeping track of properties applying to parenthesis
   /// levels.
   SmallVector<ParenState> Stack;

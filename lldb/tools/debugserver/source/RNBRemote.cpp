@@ -2585,7 +2585,7 @@ void register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
       // fail value. If it does, return this instead in case some of
       // the registers are not available on the current system.
       if (reg->nub_info.size > 0) {
-        std::basic_string<uint8_t> zeros(reg->nub_info.size, '\0');
+        std::vector<uint8_t> zeros(reg->nub_info.size, '\0');
         append_hex_value(ostrm, zeros.data(), zeros.size(), false);
       }
     }
@@ -4219,7 +4219,7 @@ rnb_err_t RNBRemote::HandlePacket_p(const char *p) {
     ostrm << "00000000";
   } else if (reg_entry->nub_info.reg == (uint32_t)-1) {
     if (reg_entry->nub_info.size > 0) {
-      std::basic_string<uint8_t> zeros(reg_entry->nub_info.size, '\0');
+      std::vector<uint8_t> zeros(reg_entry->nub_info.size, '\0');
       append_hex_value(ostrm, zeros.data(), zeros.size(), false);
     }
   } else {

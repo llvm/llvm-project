@@ -23,7 +23,7 @@
 namespace __llvm_libc {
 namespace internal {
 
-template <typename Word> constexpr Word repeat_byte(Word byte) {
+template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
   constexpr size_t BITS_IN_BYTE = 8;
   constexpr size_t BYTE_MASK = 0xff;
   Word result = 0;
@@ -49,7 +49,7 @@ template <typename Word> constexpr Word repeat_byte(Word byte) {
 // with the inverse of the original byte. This means that any byte that had the
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
-template <typename Word> constexpr bool has_zeroes(Word block) {
+template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
   constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;

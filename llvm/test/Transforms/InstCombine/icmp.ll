@@ -1868,6 +1868,49 @@ define i1 @icmp_and_shl_neg_ne_0(i32 %A, i32 %B) {
   ret i1 %cmp
 }
 
+define i1 @icmp_and_shl_neg_ne_0_shl2_no_flags(i32 %A, i32 %B) {
+; CHECK-LABEL: @icmp_and_shl_neg_ne_0_shl2_no_flags(
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[NEG]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = xor i32 %A, -1
+  %shl = shl i32 2, %B
+  %and = and i32 %shl, %neg
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_shl_neg_ne_0_shl2_nuw(i32 %A, i32 %B) {
+; CHECK-LABEL: @icmp_and_shl_neg_ne_0_shl2_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 2, [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = xor i32 %A, -1
+  %shl = shl nuw i32 2, %B
+  %and = and i32 %shl, %neg
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
+define i1 @icmp_and_shl_neg_ne_0_shl2_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @icmp_and_shl_neg_ne_0_shl2_nsw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 2, [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %neg = xor i32 %A, -1
+  %shl = shl nsw i32 2, %B
+  %and = and i32 %shl, %neg
+  %cmp = icmp ne i32 %and, 0
+  ret i1 %cmp
+}
+
 define i1 @icmp_and_shl_neg_eq_0(i32 %A, i32 %B) {
 ; CHECK-LABEL: @icmp_and_shl_neg_eq_0(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[B:%.*]]

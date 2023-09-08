@@ -1990,3 +1990,140 @@ define void @caller() nounwind {
   store volatile [32 x i32] %val, ptr @var
   ret void
 }
+
+; This function tests if the stack size is correctly calculated when
+; callee-saved registers are not a sequential list from $ra
+define void @foo() {
+; RV32I-LABEL: foo:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-NEXT:    sw s4, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    .cfi_offset s4, -4
+; RV32I-NEXT:    #APP
+; RV32I-NEXT:    li s4, 0
+; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    lw s4, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV32I-WITH-FP-LABEL: foo:
+; RV32I-WITH-FP:       # %bb.0: # %entry
+; RV32I-WITH-FP-NEXT:    addi sp, sp, -16
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-WITH-FP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    sw s4, 4(sp) # 4-byte Folded Spill
+; RV32I-WITH-FP-NEXT:    .cfi_offset ra, -4
+; RV32I-WITH-FP-NEXT:    .cfi_offset s0, -8
+; RV32I-WITH-FP-NEXT:    .cfi_offset s4, -12
+; RV32I-WITH-FP-NEXT:    addi s0, sp, 16
+; RV32I-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-WITH-FP-NEXT:    #APP
+; RV32I-WITH-FP-NEXT:    li s4, 0
+; RV32I-WITH-FP-NEXT:    #NO_APP
+; RV32I-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32I-WITH-FP-NEXT:    addi sp, sp, 16
+; RV32I-WITH-FP-NEXT:    ret
+;
+; RV32IZCMP-LABEL: foo:
+; RV32IZCMP:       # %bb.0: # %entry
+; RV32IZCMP-NEXT:    cm.push {ra, s0-s4}, -32
+; RV32IZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV32IZCMP-NEXT:    .cfi_offset s4, -4
+; RV32IZCMP-NEXT:    #APP
+; RV32IZCMP-NEXT:    li s4, 0
+; RV32IZCMP-NEXT:    #NO_APP
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s4}, 32
+;
+; RV32IZCMP-WITH-FP-LABEL: foo:
+; RV32IZCMP-WITH-FP:       # %bb.0: # %entry
+; RV32IZCMP-WITH-FP-NEXT:    addi sp, sp, -16
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 16
+; RV32IZCMP-WITH-FP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    sw s4, 4(sp) # 4-byte Folded Spill
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_offset ra, -4
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_offset s0, -8
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_offset s4, -12
+; RV32IZCMP-WITH-FP-NEXT:    addi s0, sp, 16
+; RV32IZCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
+; RV32IZCMP-WITH-FP-NEXT:    #APP
+; RV32IZCMP-WITH-FP-NEXT:    li s4, 0
+; RV32IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV32IZCMP-WITH-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    lw s4, 4(sp) # 4-byte Folded Reload
+; RV32IZCMP-WITH-FP-NEXT:    addi sp, sp, 16
+; RV32IZCMP-WITH-FP-NEXT:    ret
+;
+; RV64I-LABEL: foo:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    .cfi_def_cfa_offset 16
+; RV64I-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset s4, -8
+; RV64I-NEXT:    #APP
+; RV64I-NEXT:    li s4, 0
+; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64I-WITH-FP-LABEL: foo:
+; RV64I-WITH-FP:       # %bb.0: # %entry
+; RV64I-WITH-FP-NEXT:    addi sp, sp, -32
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-WITH-FP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64I-WITH-FP-NEXT:    .cfi_offset ra, -8
+; RV64I-WITH-FP-NEXT:    .cfi_offset s0, -16
+; RV64I-WITH-FP-NEXT:    .cfi_offset s4, -24
+; RV64I-WITH-FP-NEXT:    addi s0, sp, 32
+; RV64I-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
+; RV64I-WITH-FP-NEXT:    #APP
+; RV64I-WITH-FP-NEXT:    li s4, 0
+; RV64I-WITH-FP-NEXT:    #NO_APP
+; RV64I-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64I-WITH-FP-NEXT:    addi sp, sp, 32
+; RV64I-WITH-FP-NEXT:    ret
+;
+; RV64IZCMP-LABEL: foo:
+; RV64IZCMP:       # %bb.0: # %entry
+; RV64IZCMP-NEXT:    cm.push {ra, s0-s4}, -48
+; RV64IZCMP-NEXT:    .cfi_def_cfa_offset 48
+; RV64IZCMP-NEXT:    .cfi_offset s4, -8
+; RV64IZCMP-NEXT:    #APP
+; RV64IZCMP-NEXT:    li s4, 0
+; RV64IZCMP-NEXT:    #NO_APP
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s4}, 48
+;
+; RV64IZCMP-WITH-FP-LABEL: foo:
+; RV64IZCMP-WITH-FP:       # %bb.0: # %entry
+; RV64IZCMP-WITH-FP-NEXT:    addi sp, sp, -32
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa_offset 32
+; RV64IZCMP-WITH-FP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_offset ra, -8
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_offset s0, -16
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_offset s4, -24
+; RV64IZCMP-WITH-FP-NEXT:    addi s0, sp, 32
+; RV64IZCMP-WITH-FP-NEXT:    .cfi_def_cfa s0, 0
+; RV64IZCMP-WITH-FP-NEXT:    #APP
+; RV64IZCMP-WITH-FP-NEXT:    li s4, 0
+; RV64IZCMP-WITH-FP-NEXT:    #NO_APP
+; RV64IZCMP-WITH-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
+; RV64IZCMP-WITH-FP-NEXT:    addi sp, sp, 32
+; RV64IZCMP-WITH-FP-NEXT:    ret
+entry:
+  tail call void asm sideeffect "li s4, 0", "~{s4}"()
+  ret void
+}

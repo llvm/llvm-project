@@ -34,11 +34,10 @@ LIBC_INLINE void funlockfile(FILE *f) {
   reinterpret_cast<__llvm_libc::File *>(f)->unlock();
 }
 
-LIBC_INLINE int fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
-                                FILE *f) {
-  return static_cast<int>(
-      reinterpret_cast<__llvm_libc::File *>(f)->write_unlocked(ptr,
-                                                               size * nmemb));
+LIBC_INLINE size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
+                                   FILE *f) {
+  return reinterpret_cast<__llvm_libc::File *>(f)->write_unlocked(ptr,
+                                                                  size * nmemb);
 }
 #else  // defined(LIBC_COPT_PRINTF_USE_SYSTEM_FILE)
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return ::ferror_unlocked(f); }
@@ -47,8 +46,8 @@ LIBC_INLINE void flockfile(::FILE *f) { ::flockfile(f); }
 
 LIBC_INLINE void funlockfile(::FILE *f) { ::funlockfile(f); }
 
-LIBC_INLINE int fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
-                                ::FILE *f) {
+LIBC_INLINE size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
+                                   ::FILE *f) {
   return ::fwrite_unlocked(ptr, size, nmemb, f);
 }
 #endif // LIBC_COPT_PRINTF_USE_SYSTEM_FILE

@@ -76,9 +76,9 @@ struct __can_convert_char<char32_t> {
   using __char_type = char32_t;
 };
 
-template <class _ECharT>
+template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI
-typename enable_if<__can_convert_char<_ECharT>::value, bool>::type
+bool
 __is_separator(_ECharT __e) {
 #if defined(_LIBCPP_WIN32API)
   return __e == _ECharT('/') || __e == _ECharT('\\');
@@ -305,17 +305,17 @@ struct _PathCVT {
 template <>
 struct _PathCVT<__path_value> {
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__has_exactly_input_iterator_category<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     for (; __b != __e; ++__b)
       __dest.push_back(*__b);
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__has_forward_iterator_category<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     __dest.append(__b, __e);
   }
@@ -350,17 +350,17 @@ struct _PathCVT<char> {
       __char_to_wide(__str, const_cast<__path_value*>(__dest.data()) + __pos, __size);
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_exactly_input_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__has_exactly_input_iterator_category<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     basic_string<char> __tmp(__b, __e);
     __append_string(__dest, __tmp);
   }
 
-  template <class _Iter>
+  template <class _Iter, __enable_if_t<__has_forward_iterator_category<_Iter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  static typename enable_if<__has_forward_iterator_category<_Iter>::value>::type
+  static void
   __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     basic_string<char> __tmp(__b, __e);
     __append_string(__dest, __tmp);
@@ -445,8 +445,7 @@ struct _PathExport<char8_t> {
 
 class _LIBCPP_EXPORTED_FROM_ABI path {
   template <class _SourceOrIter, class _Tp = path&>
-  using _EnableIfPathable =
-      typename enable_if<__is_pathable<_SourceOrIter>::value, _Tp>::type;
+  using _EnableIfPathable = __enable_if_t<__is_pathable<_SourceOrIter>::value, _Tp>;
 
   template <class _Tp>
   using _SourceChar = typename __is_pathable<_Tp>::__char_type;
@@ -465,7 +464,7 @@ public:
   typedef basic_string<value_type> string_type;
   typedef basic_string_view<value_type> __string_view;
 
-  enum _LIBCPP_ENUM_VIS format : unsigned char {
+  enum format : unsigned char {
     auto_format,
     native_format,
     generic_format
@@ -678,9 +677,9 @@ public:
     return *this;
   }
 
-  template <class _ECharT>
+  template <class _ECharT, __enable_if_t<__can_convert_char<_ECharT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  typename enable_if<__can_convert_char<_ECharT>::value, path&>::type
+  path&
   operator+=(_ECharT __x) {
     _PathCVT<_ECharT>::__append_source(__pn_,
                                        basic_string_view<_ECharT>(&__x, 1));
@@ -1040,21 +1039,19 @@ public:
   iterator end() const;
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-  template <class _CharT, class _Traits>
+  template <class _CharT, class _Traits, __enable_if_t<is_same<_CharT, value_type>::value &&
+                                                       is_same<_Traits, char_traits<value_type> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI friend
-      typename enable_if<is_same<_CharT, value_type>::value &&
-                             is_same<_Traits, char_traits<value_type> >::value,
-                         basic_ostream<_CharT, _Traits>&>::type
+  basic_ostream<_CharT, _Traits>&
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
     __os << _VSTD::__quoted(__p.native());
     return __os;
   }
 
-  template <class _CharT, class _Traits>
+  template <class _CharT, class _Traits, __enable_if_t<!is_same<_CharT, value_type>::value ||
+                                                       !is_same<_Traits, char_traits<value_type> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI friend
-      typename enable_if<!is_same<_CharT, value_type>::value ||
-                             !is_same<_Traits, char_traits<value_type> >::value,
-                         basic_ostream<_CharT, _Traits>&>::type
+  basic_ostream<_CharT, _Traits>&
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
     __os << _VSTD::__quoted(__p.string<_CharT, _Traits>());
     return __os;
@@ -1071,8 +1068,7 @@ public:
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
 private:
-  inline _LIBCPP_HIDE_FROM_ABI path&
-  __assign_view(__string_view const& __s) noexcept {
+  inline _LIBCPP_HIDE_FROM_ABI path& __assign_view(__string_view const& __s) {
     __pn_ = string_type(__s);
     return *this;
   }

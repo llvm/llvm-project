@@ -73,6 +73,11 @@ def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
     "int64_t" : $stride
   );
 
+  let builders = [
+    // The nop slice (i.e., that includes everything).
+    AttrBuilder<(ins), [{ return $_get($_ctxt, 0, kDynamic, 1); }]>
+  ];
+
   let extraClassDeclaration = [{
     void print(llvm::raw_ostream &os) const;
 
@@ -153,9 +158,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       stored with compression while dense storage is used within each block
       (although hybrid schemes are possible as well).
 
-      TODO: the following example is out-of-date and will be implemented
-      in a different manner than described here.
-      (This will be corrected in an upcoming change that completely
+      (The following will be corrected in an upcoming change that completely
       overhauls the syntax of this attribute.)
 
       The dimToLvl mapping also provides a notion of "counting a
@@ -197,7 +200,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Sorted Coordinate Scheme.
     #SortedCOO = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed-nu", "singleton" ]
+      lvlTypes = [ "compressed_nu", "singleton" ]
     }>
     ... tensor<?x?xf64, #SortedCOO> ...
 
@@ -439,11 +442,11 @@ def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
 // Sparse Tensor Sorting Algorithm Attribute.
 //===----------------------------------------------------------------------===//
 
-// TODO: Currently, we only provide four implementations, and expose the
-// implementations via attribute algorithm. In the future, if we will need
-// to support both stable and non-stable quick sort, we may add
-// quick_sort_nonstable enum to the attribute. Alternative, we may use two
-// attributes, (stable|nonstable, algorithm), to specify a sorting
+// Currently, we only provide four implementations, and expose the
+// implementations via attribute algorithm. In the future, if we will
+// need to support both stable and non-stable quick sort, we may add
+// quick_sort_nonstable enum to the attribute. Alternative, we may use
+// two attributes, (stable|nonstable, algorithm), to specify a sorting
 // implementation.
 //
 // --------------------------------------------------------------------------

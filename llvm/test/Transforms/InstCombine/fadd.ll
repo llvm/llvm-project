@@ -617,3 +617,531 @@ define float @fadd_fneg_commute0(float %x, float %y, float %z) {
   %r = fadd nsz float %s, %a
   ret float %r
 }
+
+define float @fadd_reduce_sqr_sum_varA(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_order2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_order2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %a_sq, %mul
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_order3(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_order3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %b, %two_a_plus_b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_order4(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_order4(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %b, %two_a
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_order5(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_order5(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float 2.0, %a
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_order1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_order1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_sq_b_sq, %a_b_2
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_order2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_order2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %b_sq, %a_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_order3(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_order3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %b, %a
+  %a_b_2 = fmul float 2.0, %a_b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_2 = fmul float %a, 2.0
+  %a_b_2 = fmul float %a_2, %b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_order1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_order1(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_2 = fmul float %a, 2.0
+  %a_b_2 = fmul float %a_2, %b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_sq_b_sq, %a_b_2
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_order2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_order2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_2 = fmul float %a, 2.0
+  %a_b_2 = fmul float %b, %a_2
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_order3(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_order3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_2 = fmul float 2.0, %a
+  %a_b_2 = fmul float %a_2, %b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_not_one_use1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_not_one_use1(
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[TWO_A:%.*]] = fmul float [[A]], 2.000000e+00
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[TWO_A]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TWO_A_PLUS_B]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
+; CHECK-NEXT:    tail call void @fake_func(float [[MUL]])
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  tail call void @fake_func (float %mul)
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_not_one_use2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_not_one_use2(
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[TWO_A:%.*]] = fmul float [[A]], 2.000000e+00
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[TWO_A]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TWO_A_PLUS_B]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
+; CHECK-NEXT:    tail call void @fake_func(float [[A_SQ]])
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  tail call void @fake_func (float %a_sq)
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_not_one_use1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_not_one_use1(
+; CHECK-NEXT:    [[A_B:%.*]] = fmul float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[A_B]], 2.000000e+00
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    tail call void @fake_func(float [[A_B_2]])
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  tail call void @fake_func (float %a_b_2)
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_not_one_use2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_not_one_use2(
+; CHECK-NEXT:    [[A_B:%.*]] = fmul float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[A_B]], 2.000000e+00
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    tail call void @fake_func(float [[A_SQ_B_SQ]])
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  tail call void @fake_func (float %a_sq_b_sq)
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_not_one_use(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_not_one_use(
+; CHECK-NEXT:    [[A_2:%.*]] = fmul float [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[A_2]], [[B:%.*]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    tail call void @fake_func(float [[A_B_2]])
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_2 = fmul float %a, 2.0
+  %a_b_2 = fmul float %a_2, %b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  tail call void @fake_func (float %a_b_2)
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_invalid1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_invalid1(
+; CHECK-NEXT:    [[TWO_A:%.*]] = fmul float [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[TWO_A]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[TWO_A_PLUS_B]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[A]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %a
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_invalid2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_invalid2(
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[TWO_A:%.*]] = fmul float [[A]], 2.000000e+00
+; CHECK-NEXT:    [[NOT_TWO_A_PLUS_B:%.*]] = fadd float [[TWO_A]], [[A]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[NOT_TWO_A_PLUS_B]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %two_a = fmul float %a, 2.0
+  %not_two_a_plus_b = fadd float %two_a, %a
+  %mul = fmul float %not_two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_invalid3(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_invalid3(
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[NOT_TWO_A:%.*]] = fmul float [[A]], 0x4000CCCCC0000000
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[NOT_TWO_A]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TWO_A_PLUS_B]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %not_two_a = fmul float %a, 0x4000CCCCC0000000 ; 2.1
+  %two_a_plus_b = fadd float %not_two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_invalid4(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_invalid4(
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[NOT_TWO_A:%.*]] = fmul float [[B:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[NOT_TWO_A]], [[B]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TWO_A_PLUS_B]], [[B]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[MUL]], [[A_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_sq = fmul float %a, %a
+  %not_two_a = fmul float %b, 2.0
+  %two_a_plus_b = fadd float %not_two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varA_invalid5(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varA_invalid5(
+; CHECK-NEXT:    [[TWO_A:%.*]] = fmul float [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[TWO_A_PLUS_B:%.*]] = fadd float [[TWO_A]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz float [[TWO_A_PLUS_B]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = fmul reassoc nsz float [[TMP1]], [[B]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %not_a_sq = fmul float %a, %b
+  %two_a = fmul float %a, 2.0
+  %two_a_plus_b = fadd float %two_a, %b
+  %mul = fmul float %two_a_plus_b, %b
+  %add = fadd reassoc nsz float %mul, %not_a_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_invalid1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_invalid1(
+; CHECK-NEXT:    [[A_B:%.*]] = fmul float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[A_B]], 2.000000e+00
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[NOT_B_SQ:%.*]] = fmul float [[B]], [[A]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[NOT_B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %not_b_sq = fmul float %b, %a
+  %a_sq_b_sq = fadd float %a_sq, %not_b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_invalid2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_invalid2(
+; CHECK-NEXT:    [[A_B:%.*]] = fmul float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[A_B]], 2.000000e+00
+; CHECK-NEXT:    [[NOT_A_SQ:%.*]] = fmul float [[A]], [[B]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[NOT_A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %a_b_2 = fmul float %a_b, 2.0
+  %not_a_sq = fmul float %a, %b
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %not_a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_invalid3(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_invalid3(
+; CHECK-NEXT:    [[A_B:%.*]] = fmul float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A_B_2:%.*]] = fmul float [[A_B]], 0x4000CCCCC0000000
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[NOT_A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_b = fmul float %a, %b
+  %not_a_b_2 = fmul float %a_b, 0x4000CCCCC0000000 ; 2.1
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %not_a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_invalid4(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_invalid4(
+; CHECK-NEXT:    [[NOT_A_B:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[NOT_A_B]], 2.000000e+00
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B:%.*]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %not_a_b = fmul float %a, %a
+  %a_b_2 = fmul float %not_a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB_invalid5(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB_invalid5(
+; CHECK-NEXT:    [[NOT_A_B:%.*]] = fmul float [[B:%.*]], [[B]]
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[NOT_A_B]], 2.000000e+00
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %not_a_b = fmul float %b, %b
+  %a_b_2 = fmul float %not_a_b, 2.0
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_invalid1(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_invalid1(
+; CHECK-NEXT:    [[A_2:%.*]] = fmul float [[A:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[NOT_A_B_2:%.*]] = fmul float [[A_2]], [[A]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B:%.*]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[NOT_A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %a_2 = fmul float %a, 2.0
+  %not_a_b_2 = fmul float %a_2, %a
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %not_a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_invalid2(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_invalid2(
+; CHECK-NEXT:    [[NOT_A_2:%.*]] = fmul float [[A:%.*]], 0x4000CCCCC0000000
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[NOT_A_2]], [[B:%.*]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %not_a_2 = fmul float %a, 0x4000CCCCC0000000 ; 2.1
+  %a_b_2 = fmul float %not_a_2, %b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+define float @fadd_reduce_sqr_sum_varB2_invalid3(float %a, float %b) {
+; CHECK-LABEL: @fadd_reduce_sqr_sum_varB2_invalid3(
+; CHECK-NEXT:    [[NOT_A_2:%.*]] = fmul float [[B:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[A_B_2:%.*]] = fmul float [[NOT_A_2]], [[B]]
+; CHECK-NEXT:    [[A_SQ:%.*]] = fmul float [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[B_SQ:%.*]] = fmul float [[B]], [[B]]
+; CHECK-NEXT:    [[A_SQ_B_SQ:%.*]] = fadd float [[A_SQ]], [[B_SQ]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz float [[A_B_2]], [[A_SQ_B_SQ]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %not_a_2 = fmul float %b, 2.0
+  %a_b_2 = fmul float %not_a_2, %b
+  %a_sq = fmul float %a, %a
+  %b_sq = fmul float %b, %b
+  %a_sq_b_sq = fadd float %a_sq, %b_sq
+  %add = fadd reassoc nsz float %a_b_2, %a_sq_b_sq
+  ret float %add
+}
+
+declare void @fake_func(float)

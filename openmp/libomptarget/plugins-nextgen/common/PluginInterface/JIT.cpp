@@ -358,5 +358,7 @@ bool JITEngine::checkBitcodeImage(const __tgt_device_image &Image) {
   auto BitcodeTA = Triple(ActualTriple).getArch();
   BitcodeImageMap[Image.ImageStart] = BitcodeTA;
 
+  DP("Is%s IR Image\n", BitcodeTA == TT.getArch() ? " " : " NOT");
+
   return BitcodeTA == TT.getArch();
 }

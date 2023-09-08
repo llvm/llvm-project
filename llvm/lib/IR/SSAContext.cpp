@@ -16,10 +16,10 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -69,6 +69,12 @@ bool SSAContext::isConstantOrUndefValuePhi(const Instruction &Instr) {
   return false;
 }
 
+template <> Intrinsic::ID SSAContext::getIntrinsicID(const Instruction &I) {
+  if (auto *CB = dyn_cast<CallBase>(&I))
+    return CB->getIntrinsicID();
+  return Intrinsic::not_intrinsic;
+}
+
 template <> Printable SSAContext::print(const Value *V) const {
   return Printable([V](raw_ostream &Out) { V->print(Out); });
 }
@@ -88,4 +94,8 @@ template <> Printable SSAContext::print(const BasicBlock *BB) const {
     MST.incorporateFunction(*BB->getParent());
     Out << MST.getLocalSlot(BB);
   });
+}
+
+template <> Printable SSAContext::printAsOperand(const BasicBlock *BB) const {
+  return Printable([BB](raw_ostream &Out) { BB->printAsOperand(Out); });
 }
