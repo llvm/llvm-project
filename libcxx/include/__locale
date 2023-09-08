@@ -163,8 +163,6 @@ public:
     void operator=(const id&) = delete;
     id(const id&) = delete;
 
-private:
-    void __init();
 public:  // only needed for tests
     long __get();
 
