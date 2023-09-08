@@ -1419,87 +1419,52 @@ Value *convertOpOfSplatsToSplatOfOp(VPIntrinsic *VPI,
   if (!maskIsAllOneOrUndef(Mask))
     return nullptr;
 
-  Value *EVL = VPI->getArgOperand(3);
-  auto SplatAndPoison = [&Builder, &Op0, &EVL](Value *V) {
-    ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
-    return Builder.CreateVectorSplat(EC, V);
-    // FIXME: Do we need to Poison out all lanes past EVL since the semantics of
-    // all of these intrinsics are that non-active lanes are poison?
-  };
-  switch(VPI->getIntrinsicID()) {
+  ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
+  switch (VPI->getIntrinsicID()) {
   case Intrinsic::vp_add:
-    return SplatAndPoison(
-      Builder.CreateAdd(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateAdd(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_sub:
-    return SplatAndPoison(
-      Builder.CreateSub(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateSub(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_mul:
-    return SplatAndPoison(
-      Builder.CreateMul(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
-  case Intrinsic::vp_sdiv:
-    return SplatAndPoison(
-      Builder.CreateSDiv(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
- case Intrinsic::vp_udiv:
-     return SplatAndPoison(
-      Builder.CreateUDiv(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
- case Intrinsic::vp_srem:
-    return SplatAndPoison(
-      Builder.CreateSRem(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
-  case Intrinsic::vp_urem:
-    return SplatAndPoison(
-      Builder.CreateURem(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateMul(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_ashr:
-    return SplatAndPoison(
-      Builder.CreateAShr(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateAShr(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_lshr:
-    return SplatAndPoison(
-      Builder.CreateLShr(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateLShr(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_shl:
-    return SplatAndPoison(
-      Builder.CreateShl(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateShl(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_or:
-    return SplatAndPoison(
-      Builder.CreateOr(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateOr(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_and:
-    return SplatAndPoison(
-      Builder.CreateAnd(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateAnd(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_xor:
-    return SplatAndPoison(
-      Builder.CreateXor(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateXor(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_fadd:
-    return SplatAndPoison(
-      Builder.CreateFAdd(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateFAdd(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_fsub:
-    return SplatAndPoison(
-      Builder.CreateFSub(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateFSub(getSplatValue(Op0), getSplatValue(Op1)));
   case Intrinsic::vp_fmul:
-    return SplatAndPoison(
-      Builder.CreateFMul(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
-  case Intrinsic::vp_fdiv:
-    return SplatAndPoison(
-      Builder.CreateFDiv(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
-  case Intrinsic::vp_frem:
-    return SplatAndPoison(
-      Builder.CreateFRem(Builder.CreateExtractElement(Op0, (uint64_t)0),
-      Builder.CreateExtractElement(Op1, (uint64_t)1)));
+    return Builder.CreateVectorSplat(
+        EC, Builder.CreateFMul(getSplatValue(Op0), getSplatValue(Op1)));
   }
+
+  // TODO: Optimize vp_sdiv, vp_udiv, vp_srem, vp_urem, vp_fdiv, and vp_frem
+  // when EVL != 0. When we tackle these intrinsics, we may need to give care 
+  // to division by immediate 0 being undefined and signed division and signed 
+  // remained having UB when operands are INT_MIN and -1 when we tackle these
+  // intrinsics.
+
   return nullptr;
 }
 
