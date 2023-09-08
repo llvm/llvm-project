@@ -23,6 +23,7 @@ namespace mlir {
 class RewritePatternSet;
 
 namespace arith {
+class AndIOp;
 class NarrowTypeEmulationConverter;
 class TruncIOp;
 } // namespace arith
@@ -308,6 +309,12 @@ FailureOr<Value> rewriteBitCastOfTruncI(RewriterBase &rewriter,
                                         vector::BitCastOp bitCastOp,
                                         arith::TruncIOp truncOp,
                                         vector::BroadcastOp maybeBroadcastOp);
+
+/// Rewrite a vector `ext(bitcast)` to use a more efficient sequence of
+/// vector operations comprising `shuffle` and `bitwise` ops.
+FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
+                                     vector::BitCastOp bitCastOp,
+                                     vector::BroadcastOp maybeBroadcastOp);
 
 /// Appends patterns for rewriting vector operations over narrow types with
 /// ops over wider types.
