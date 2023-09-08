@@ -71,7 +71,7 @@ class PRSubscriber:
     def team_name(self) -> str:
         return self._team_name
 
-    def __init__(self, token: str, repo: str, pr_number: int, label_name : str):
+    def __init__(self, token: str, repo: str, pr_number: int, label_name: str):
         self.repo = github.Github(token).get_repo(repo)
         self.org = github.Github(token).get_organization(self.repo.organization.login)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
@@ -86,7 +86,12 @@ class PRSubscriber:
                 patch = requests.get(self.pr.diff_url).text[0:20000]
             except:
                 patch = ""
-            comment = "@llvm/{}".format(team.slug) + "\n\n<details><summary>Changes</summary><pre>\n" + patch + "\n</pre></details>"
+            comment = (
+                "@llvm/{}".format(team.slug)
+                + "\n\n<details><summary>Changes</summary><pre>\n"
+                + patch
+                + "\n</pre></details>"
+            )
             self.pr.as_issue().create_comment(comment)
         return True
 
