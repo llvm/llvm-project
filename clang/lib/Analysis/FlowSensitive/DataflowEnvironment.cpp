@@ -22,10 +22,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <utility>
 
 namespace clang {
@@ -50,6 +48,23 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
   return Result;
 }
 
+// Whether to consider equivalent two values with an unknown relation.
+//
+// FIXME: this function is a hack enabling unsoundness to support
+// convergence. Once we have widening support for the reference/pointer and
+// struct built-in models, this should be unconditionally `false` (and inlined
+// as such at its call sites).
+static bool equateUnknownValues(Value::Kind K) {
+  switch (K) {
+  case Value::Kind::Integer:
+  case Value::Kind::Pointer:
+  case Value::Kind::Record:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool compareDistinctValues(QualType Type, Value &Val1,
                                   const Environment &Env1, Value &Val2,
                                   const Environment &Env2,
@@ -66,18 +81,7 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
   case ComparisonResult::Different:
     return false;
   case ComparisonResult::Unknown:
-    switch (Val1.getKind()) {
-    case Value::Kind::Integer:
-    case Value::Kind::Pointer:
-    case Value::Kind::Record:
-      // FIXME: this choice intentionally introduces unsoundness to allow
-      // for convergence. Once we have widening support for the
-      // reference/pointer and struct built-in models, this should be
-      // `false`.
-      return true;
-    default:
-      return false;
-    }
+    return equateUnknownValues(Val1.getKind());
   }
   llvm_unreachable("All cases covered in switch");
 }
@@ -167,8 +171,7 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
   if (auto *W = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
     return *W;
 
-  // Default of widening is a no-op: leave the current value unchanged.
-  return Current;
+  return equateUnknownValues(Prev.getKind()) ? Prev : Current;
 }
 
 // Returns whether the values in `Map1` and `Map2` compare equal for those

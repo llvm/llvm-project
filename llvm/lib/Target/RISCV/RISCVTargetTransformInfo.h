@@ -49,7 +49,7 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   unsigned getEstimatedVLFor(VectorType *Ty);
 
   /// Return the cost of LMUL. The larger the LMUL, the higher the cost.
-  InstructionCost getLMULCost(MVT VT);
+  InstructionCost getLMULCost(MVT VT) const;
 
   /// Return the cost of accessing a constant pool entry of the specified
   /// type.
@@ -123,9 +123,9 @@ public:
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
 
-  InstructionCost getVRGatherVVCost(MVT VT);
-  InstructionCost getVRGatherVICost(MVT VT);
-  InstructionCost getVSlideCost(MVT VT);
+  InstructionCost getVRGatherVVCost(MVT VT) const;
+  InstructionCost getVRGatherVICost(MVT VT) const;
+  InstructionCost getVSlideCost(MVT VT) const;
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,

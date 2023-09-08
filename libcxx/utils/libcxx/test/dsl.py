@@ -180,7 +180,7 @@ def programOutput(config, program, args=None):
                 "Failed to run program, cmd:\n{}\nstderr is:\n{}".format(runcmd, err)
             )
 
-        return out
+        return libcxx.test.format._parseLitOutput(out)
 
 
 @_memoizeExpensiveOperation(

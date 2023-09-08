@@ -22,6 +22,7 @@ add_flang_library(FIRBuilder
   Runtime/Inquiry.cpp
   Runtime/Intrinsics.cpp
   Runtime/Numeric.cpp
+  Runtime/Pointer.cpp
   Runtime/Ragged.cpp
   Runtime/Reduction.cpp
   Runtime/Stop.cpp

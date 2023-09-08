@@ -32,6 +32,7 @@ namespace clang {
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
   friend class CompilerInvocation;
+  friend class CompilerInvocationBase;
 
 public:
 #define CODEGENOPT(Name, Bits, Default) unsigned Name : Bits;
