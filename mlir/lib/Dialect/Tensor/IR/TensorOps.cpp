@@ -621,18 +621,6 @@ LogicalResult EmptyOp::verify() {
     return emitOpError("incorrect number of dynamic sizes, has ")
            << getDynamicSizes().size() << ", expected "
            << getType().getNumDynamicDims();
-
-  if (getDynamicSizes().size() > 0) {
-    if (llvm::any_of(getDynamicSizes(), [](Value operand) {
-          APInt constSizeArg;
-          if (!matchPattern(operand, m_ConstantInt(&constSizeArg))) {
-            return false;
-          }
-          return constSizeArg.isNegative();
-        }))
-      return emitOpError("dynamic size must be non-negative");
-  }
-
   return success();
 }
 

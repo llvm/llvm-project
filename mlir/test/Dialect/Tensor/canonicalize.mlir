@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -canonicalize="test-convergence" | FileCheck %s
 
 // CHECK-LABEL: @tensor_bitcast_chain_ok
 // CHECK-SAME: %[[IN:.*]]: tensor<2xi32>
@@ -1851,11 +1851,13 @@ func.func @pack_unpack_dynamic_with_padding(%t: tensor<?x?x?x?xf32>, %dim1: inde
 
 // -----
 
+// CHECK: func.func @invalid_empty_negative_size
+// CHECK: %[[IDX:.*]] = index.constant
+// CHECK: %[[T:.*]] = tensor.empty(%[[IDX]]) : tensor<4x5x?xf32>
 func.func @invalid_empty_negative_size() -> (tensor<4x5x?xf32>) {
   %c1 = arith.constant 1 : index
   %cn2 = arith.constant 2 : index
   %0 = index.sub %c1, %cn2
-  // expected-error@+1 {{dynamic size must be non-negative}}
   %1 = tensor.empty(%0) : tensor<4x5x?xf32>
   return %1 : tensor<4x5x?xf32>
 }
