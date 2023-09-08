@@ -183,20 +183,34 @@ Here is an example for creating a Pull Request with the GitHub CLI:
   # Commit your changes
   git commit file.cpp -m "Code Review adjustments"
 
+  # Format changes
+  git clang-format HEAD~
+
+  # Recommit if any formatting changes
+  git commit -a --amend
+
   # Push your changes to your fork branch, be mindful of
   # your remotes here, if you don't remember what points to your
   # fork, use git remote -v to see. Usually origin points to your
   # fork and upstream to llvm/llvm-project
   git push origin my_change
 
-  # When your PR is accepted, you can now rebase it and make sure
-  # you have all the latest changes.
-  git rebase -i origin/main
+Before merging the PR, it is recommended that you rebase locally and re-run test
+checks:
 
-  # If this PR is older and you get a lot of new commits with the
-  # rebase, you might want to re-run tests and make sure nothing
-  # broke.
-  ninja check-llvm
+::
+
+  # Add upstream as a remote (if you don't have it already)
+  git remote add upstream https://github.com/llvm/llvm-project.git
+
+  # Make sure you have all the latest changes
+  git fetch upstream && git rebase -i upstream/main
+
+  # Make sure tests pass with latest changes and your change
+  ninja check
+
+  # Push the rebased changes to your fork.
+  git push origin my_change -f
 
   # Now merge it
   gh pr merge --squash --delete
@@ -281,7 +295,7 @@ checks:
 
 ::
 
-  # Add upstream as a remote
+  # Add upstream as a remote (if you don't have it already)
   git remote add upstream https://github.com/llvm/llvm-project.git
 
   # Make sure you have all the latest changes
@@ -295,6 +309,11 @@ checks:
 
 Once your PR is approved, rebased, and tests are passing, click `Squash and
 Merge` on your PR in the GitHub web interface.
+
+See more in-depth information about how to contribute in the following documentation:
+
+* :doc:`Contributing`
+* :doc:`MyFirstTypoFix`
 
 Releases
 ========
