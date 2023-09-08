@@ -943,8 +943,8 @@ std::string TokenBuffer::dumpForTests() const {
     auto *Entry = SourceMgr->getFileEntryForID(ID);
     if (!Entry)
       continue; // Skip builtin files.
-    OS << llvm::formatv("file '{0}'\n", Entry->getName())
-       << "  spelled tokens:\n"
+    std::string Path = llvm::sys::path::convert_to_slash(Entry->getName());
+    OS << llvm::formatv("file '{0}'\n", Path) << "  spelled tokens:\n"
        << "    ";
     DumpTokens(OS, File.SpelledTokens);
     OS << "\n";
