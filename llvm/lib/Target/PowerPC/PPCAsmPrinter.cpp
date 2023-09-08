@@ -2750,7 +2750,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
                   .count();
           FormatIndicatorAndUniqueModId =
               "clangPidTidTime_" + llvm::itostr(sys::Process::getProcessId()) +
-              "_" + llvm::itostr(llvm::this_thread::get_id()) + "_" +
+              "_" + llvm::itostr((int64_t)llvm::this_thread::get_id()) + "_" +
               llvm::itostr(CurTime);
         }
       }
