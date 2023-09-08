@@ -1,7 +1,7 @@
 //  RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin \
 //  RUN:            -target-feature +avx512bf16 -target-feature \
 //  RUN:            +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
-// XFAIL: *
+
 #include <immintrin.h>
 
 __m128bh test_mm_cvtne2ps2bf16(__m128 A, __m128 B) {

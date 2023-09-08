@@ -38,6 +38,16 @@ typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
  * appear in the interface though. */
 typedef signed char __v16qs __attribute__((__vector_size__(16)));
 
+#ifdef __SSE2__
+/* Both _Float16 and __bf16 require SSE2 being enabled. */
+typedef _Float16 __v8hf __attribute__((__vector_size__(16), __aligned__(16)));
+typedef _Float16 __m128h __attribute__((__vector_size__(16), __aligned__(16)));
+typedef _Float16 __m128h_u __attribute__((__vector_size__(16), __aligned__(1)));
+
+typedef __bf16 __v8bf __attribute__((__vector_size__(16), __aligned__(16)));
+typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
+#endif
+
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \

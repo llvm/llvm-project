@@ -1,7 +1,7 @@
 //  RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin \
 //  RUN:            -target-feature +avx512bf16 -emit-llvm -o - -Wall -Werror \
 //  RUN:            | FileCheck %s
-// XFAIL: *
+
 #include <immintrin.h>
 
 float test_mm_cvtsbh_ss(__bf16 A) {

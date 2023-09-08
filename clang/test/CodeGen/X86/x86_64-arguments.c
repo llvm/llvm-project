@@ -532,3 +532,9 @@ typedef float t66 __attribute__((__vector_size__(128), __aligned__(128)));
 // AVX512: @f66(ptr noundef byval(<32 x float>) align 128 %0)
 void f66(t66 a0) {
 }
+
+/// The synthesized __va_list_tag does not have file/line fields.
+// CHECK:      = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__va_list_tag",
+// CHECK-NOT:  file:
+// CHECK-NOT:  line:
+// CHECK-SAME: size:

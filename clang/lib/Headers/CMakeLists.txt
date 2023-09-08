@@ -173,6 +173,8 @@ set(x86_files
   avx512vpopcntdqvlintrin.h
   avxifmaintrin.h
   avxintrin.h
+  avxneconvertintrin.h
+  avxvnniint16intrin.h
   avxvnniint8intrin.h
   avxvnniintrin.h
   bmi2intrin.h
@@ -219,7 +221,10 @@ set(x86_files
   rtmintrin.h
   serializeintrin.h
   sgxintrin.h
+  sha512intrin.h
   shaintrin.h
+  sm3intrin.h
+  sm4intrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h
