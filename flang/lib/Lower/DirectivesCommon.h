@@ -477,18 +477,6 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::Location currentLocation = converter.getCurrentLocation();
 
-  mlir::IntegerAttr hint = nullptr;
-  mlir::omp::ClauseMemoryOrderKindAttr memoryOrder = nullptr;
-  if constexpr (std::is_same<AtomicListT,
-                             Fortran::parser::OmpAtomicClauseList>()) {
-    const AtomicListT &rightHandClauseList = std::get<2>(atomicCapture.t);
-    const AtomicListT &leftHandClauseList = std::get<0>(atomicCapture.t);
-    genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
-                                          memoryOrder);
-    genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
-                                          memoryOrder);
-  }
-
   const Fortran::parser::AssignmentStmt &stmt1 =
       std::get<typename AtomicT::Stmt1>(atomicCapture.t).v.statement;
   const auto &stmt1Var{std::get<Fortran::parser::Variable>(stmt1.t)};
@@ -540,6 +528,14 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   mlir::Operation *atomicCaptureOp = nullptr;
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
+    mlir::IntegerAttr hint = nullptr;
+    mlir::omp::ClauseMemoryOrderKindAttr memoryOrder = nullptr;
+    const AtomicListT &rightHandClauseList = std::get<2>(atomicCapture.t);
+    const AtomicListT &leftHandClauseList = std::get<0>(atomicCapture.t);
+    genOmpAtomicHintAndMemoryOrderClauses(converter, leftHandClauseList, hint,
+                                          memoryOrder);
+    genOmpAtomicHintAndMemoryOrderClauses(converter, rightHandClauseList, hint,
+                                          memoryOrder);
     atomicCaptureOp = firOpBuilder.create<mlir::omp::AtomicCaptureOp>(
         currentLocation, hint, memoryOrder);
   } else {
