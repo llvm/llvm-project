@@ -2285,7 +2285,7 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    genOpenACCConstruct(*this, bridge.getSemanticsContext(), getEval(), acc, accCacheDirectives);
+    genOpenACCConstruct(*this, bridge.getSemanticsContext(), getEval(), acc);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     builder->restoreInsertionPoint(insertPt);
@@ -4372,7 +4372,6 @@ private:
     hostAssocTuple = mlir::Value{};
     localSymbols.clear();
     blockId = 0;
-    accCacheDirectives.clear();
   }
 
   /// Helper to generate GlobalOps when the builder is not positioned in any
@@ -4802,8 +4801,6 @@ private:
 
   /// Deferred OpenACC routine attachment.
   Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
-  /// Deferred OpenACC cache directive.
-  llvm::SmallVector<const Fortran::parser::OpenACCCacheConstruct*> accCacheDirectives;
 };
 
 } // namespace
