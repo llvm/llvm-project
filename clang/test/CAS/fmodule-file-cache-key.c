@@ -6,7 +6,7 @@
 // RUN: rm -rf %t %t.cas
 // RUN: split-file %s %t
 
-// RUN: llvm-cas --cas %t.cas --ingest --data %t > %t/casid
+// RUN: llvm-cas --cas %t.cas --ingest %t > %t/casid
 
 // == Build B
 

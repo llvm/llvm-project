@@ -1,7 +1,7 @@
 RUN: rm -rf %t
 RUN: mkdir %t
 
-RUN: llvm-cas --cas %t/cas --ingest --data %S/Inputs > %t/id
+RUN: llvm-cas --cas %t/cas --ingest %S/Inputs > %t/id
 
 # Confirm that the ID has the right prefix, is well-formed, and that there's
 # nothing else on the line.

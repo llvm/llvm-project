@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-cas --cas %t/cas --ingest --data %s > %t/casid
+// RUN: llvm-cas --cas %t/cas --ingest %s > %t/casid
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
@@ -35,7 +35,7 @@
 
 // Check for a handling error if the CAS is removed but not action cache.
 // First need to ingest the input file so the compile cache can be constructed.
-// RUN: llvm-cas --ingest --cas %t/cas.new --data %s
+// RUN: llvm-cas --ingest --cas %t/cas.new  %s
 // Add the 'key => result' association we got earlier.
 // RUN: llvm-cas --cas %t/cas.new --put-cache-key @%t/cache-key @%t/cache-result
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \

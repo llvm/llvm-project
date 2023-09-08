@@ -1,7 +1,7 @@
 // REQUIRES: shell
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-cas --cas %t/cas --ingest --data %s > %t/casid
+// RUN: llvm-cas --cas %t/cas --ingest %s > %t/casid
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
@@ -60,7 +60,7 @@
 // RUN: clang-cas-test -print-include-tree -cas %t/cas @%t/include-tree-id | FileCheck %s -check-prefix=INCLUDE_TREE -DSRC_FILE=%s
 
 // Print key from plugin CAS.
-// RUN: llvm-cas --cas plugin://%llvmshlibdir/libCASPluginTest%pluginext?ondisk-path=%t/cas-plugin --ingest --data %s > %t/casid-plugin
+// RUN: llvm-cas --cas plugin://%llvmshlibdir/libCASPluginTest%pluginext?ondisk-path=%t/cas-plugin --ingest %s > %t/casid-plugin
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas-plugin -fcas-fs @%t/casid-plugin -fcache-compile-job \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \

@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-cas --cas %t/cas --ingest --data %s > %t/casid
+// RUN: llvm-cas --cas %t/cas --ingest %s > %t/casid
 
 // Check that this doesn't crash and provides proper round-tripping.
 

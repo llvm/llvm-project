@@ -7,7 +7,7 @@
 // RUN: rm -rf %t %t.cas
 // RUN: split-file %s %t
 
-// RUN: llvm-cas --cas %t.cas --ingest --data %t > %t/casid
+// RUN: llvm-cas --cas %t.cas --ingest %t > %t/casid
 
 // == Build B
 
@@ -63,7 +63,7 @@
 // == Clear pcms to ensure they load from cache, and re-ingest with pch
 
 // RUN: rm %t/*.pcm
-// RUN: llvm-cas --cas %t.cas --ingest --data %t > %t/casid
+// RUN: llvm-cas --cas %t.cas --ingest %t > %t/casid
 // RUN: rm %t/*.pch
 
 // == Build tu

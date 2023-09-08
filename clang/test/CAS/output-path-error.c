@@ -3,7 +3,7 @@
 // REQUIRES: shell
 
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: llvm-cas --cas %t/cas --ingest --data %s > %t/casid
+// RUN: llvm-cas --cas %t/cas --ingest %s > %t/casid
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
 // RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
