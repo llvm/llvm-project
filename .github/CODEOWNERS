@@ -119,7 +119,7 @@
 /mlir/**/Index/ @llvm/pr-subscribers-mlir-index
 
 # mlir-llvm
-/mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
+/mlir/**/LLVM* @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
 /mlir/**/*Linalg @llvm/pr-subscribers-mlir-linalg
@@ -245,6 +245,36 @@
 /llvm/test/Other/FileCheck-space.txt @llvm/pr-subscribers-testing-tools
 /llvm/utils/update*_test_checks.py @llvm/pr-subscribers-testing-tools
 /llvm/utils/UpdateTestChecks/ @llvm/pr-subscribers-testing-tools
+
+# llvm-binary-utilities
+/llvm/docs/CommandGuide/llvm-* @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
 
 # debug-info
 /llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
@@ -617,6 +647,12 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /clang/test/CodeGen/WebAssembly/ @llvm/pr-subscribers-webassembly
 /clang/test/Sema/*wasm* @llvm/pr-subscribers-webassembly
 /clang/test/SemaCXX/*wasm* @llvm/pr-subscribers-webassembly
+
+/lld/**/COFF/ @llvm/pr-subscribers-lld-coff
+/lld/**/ELF/ @llvm/pr-subscribers-lld-elf
+/lld/**/MachO/ @llvm/pr-subscribers-lld-macho
+/lld/**/wasm/ @llvm/pr-subscribers-lld-wasm
+/lld/Common/ @llvm/pr-subscribers-lld-coff @llvm/pr-subscribers-lld-elf @llvm/pr-subscribers-lld-macho @llvm/pr-subscribers-lld-wasm
 
 # lldb
 /lldb/** @llvm/pr-subscribers-lldb

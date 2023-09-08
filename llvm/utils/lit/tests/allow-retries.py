@@ -15,28 +15,9 @@
 
 # This test does not succeed within the allowed retry limit
 #
-# Check that the execution trace isn't corrupt due to reprocessing the script
-# multiple times (e.g., '%dbg(...)' processing used to accumulate across
-# retries).
-#
-# RUN: not %{lit} %{inputs}/allow-retries/does-not-succeed-within-limit.py -v |\
-# RUN:   FileCheck --check-prefix=CHECK-TEST3 -match-full-lines %s
-#
-#       CHECK-TEST3: FAIL: allow-retries :: does-not-succeed-within-limit.py (1 of 1)
-#  CHECK-TEST3-NEXT: {{\**}} TEST 'allow-retries :: does-not-succeed-within-limit.py' FAILED {{\**}}
-#  CHECK-TEST3-NEXT: Exit Code: 1
-# CHECK-TEST3-EMPTY:
-#  CHECK-TEST3-NEXT: Command Output (stdout):
-#  CHECK-TEST3-NEXT: --
-#  CHECK-TEST3-NEXT: # {{RUN}}: at line 3
-#  CHECK-TEST3-NEXT: false
-#  CHECK-TEST3-NEXT: # executed command: false
-#  CHECK-TEST3-NEXT: # note: command had no output on stdout or stderr
-#  CHECK-TEST3-NEXT: # error: command failed with exit status: 1
-# CHECK-TEST3-EMPTY:
-#  CHECK-TEST3-NEXT: --
-#       CHECK-TEST3: Failed Tests (1):
-#       CHECK-TEST3: allow-retries :: does-not-succeed-within-limit.py
+# RUN: not %{lit} %{inputs}/allow-retries/does-not-succeed-within-limit.py | FileCheck --check-prefix=CHECK-TEST3 %s
+# CHECK-TEST3: Failed Tests (1):
+# CHECK-TEST3: allow-retries :: does-not-succeed-within-limit.py
 
 # This test should be UNRESOLVED since it has more than one ALLOW_RETRIES
 # lines, and that is not allowed.

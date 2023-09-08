@@ -308,7 +308,7 @@ class __tuple_leaf
 
     template <class _Tp>
     static _LIBCPP_HIDE_FROM_ABI constexpr bool __can_bind_reference() {
-#if __has_builtin(__reference_binds_to_temporary)
+#if __has_keyword(__reference_binds_to_temporary)
       return !__reference_binds_to_temporary(_Hp, _Tp);
 #else
       return true;
