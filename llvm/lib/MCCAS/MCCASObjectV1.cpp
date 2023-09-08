@@ -112,7 +112,7 @@ struct CUInfo {
 };
 static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
     MutableArrayRef<char> CUData, support::endianness Endian,
-    std::optional<uint32_t> NewOffset = std::nullopt, bool SkipData = true);
+    std::optional<uint32_t> NewOffset = std::nullopt);
 Expected<cas::ObjectProxy>
 MCSchema::createFromMCAssemblerImpl(MachOCASWriter &ObjectWriter,
                                     MCAssembler &Asm, const MCAsmLayout &Layout,
@@ -1645,9 +1645,10 @@ mccasformats::v1::getSizeFromDwarfHeaderAndSkip(BinaryStreamReader &Reader) {
 /// contained in CUData, as well as the total number of bytes taken by the CU.
 /// Note: this is different from the length field of the Dwarf header, which
 /// does not account for the header size.
-static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
-    MutableArrayRef<char> CUData, support::endianness Endian,
-    std::optional<uint32_t> NewOffset, bool SkipData) {
+static Expected<CUInfo>
+getAndSetDebugAbbrevOffsetAndSkip(MutableArrayRef<char> CUData,
+                                  support::endianness Endian,
+                                  std::optional<uint32_t> NewOffset) {
   BinaryStreamReader Reader(toStringRef(CUData), Endian);
   Expected<size_t> Size = getSizeFromDwarfHeader(Reader);
   if (!Size)
@@ -1681,13 +1682,10 @@ static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
       return std::move(E);
   }
 
-  // Do not skip the CU length when materializing the debug info section, the CU
-  // length will be larger than the CUData length.
-  if (SkipData) {
-    Reader.setOffset(AfterSizeOffset);
-    if (auto E = Reader.skip(*Size))
-      return std::move(E);
-  }
+  Reader.setOffset(AfterSizeOffset);
+  if (auto E = Reader.skip(*Size))
+    return std::move(E);
+
   return CUInfo{Reader.getOffset(), AbbrevOffset};
 }
 
