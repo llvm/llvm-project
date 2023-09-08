@@ -179,3 +179,19 @@ define <4 x float> @insertps_from_broadcast_multiple_use(<4 x float> %a, <4 x fl
   %13 = fadd <4 x float> %11, %12
   ret <4 x float> %13
 }
+
+define <4 x float> @nofold_insertps(ptr %a, <4 x float> %b) {
+; X86-LABEL: nofold_insertps:
+; X86:       ## %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vinsertps $176, (%eax), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[2]
+; X86-NEXT:    retl
+;
+; X64-LABEL: nofold_insertps:
+; X64:       ## %bb.0:
+; X64-NEXT:    vinsertps $176, (%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[2]
+; X64-NEXT:    retq
+  %1 = load <4 x float>, ptr %a, align 1
+  %2 = shufflevector <4 x float> %b, <4 x float> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 6>
+  ret <4 x float> %2
+}
