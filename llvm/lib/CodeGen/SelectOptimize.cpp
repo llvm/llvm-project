@@ -439,7 +439,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       DIt++;
     }
     for (auto *DI : DebugPseudoINS) {
-      DI->moveBefore(&*EndBlock->getFirstInsertionPt());
+      DI->moveBeforePreserving(&*EndBlock->getFirstInsertionPt());
     }
 
     // These are the new basic blocks for the conditional branch.
