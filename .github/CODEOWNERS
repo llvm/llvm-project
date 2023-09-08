@@ -490,14 +490,19 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/lib/IR/ @llvm/pr-subscribers-llvm-ir
 /llvm/include/llvm/IR/ @llvm/pr-subscribers-llvm-ir
 /llvm/docs/LangRef.rst @llvm/pr-subscribers-llvm-ir
+/llvm/unittests/IR/ @llvm/pr-subscribers-llvm-ir
 
 # llvm-analysis
 /llvm/lib/Analysis/ @llvm/pr-subscribers-llvm-analysis
 /llvm/include/llvm/Analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/test/Analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/unittests/Analysis/ @llvm/pr-subscribers-llvm-analysis
 
 # llvm-transforms
 /llvm/lib/Transforms/ @llvm/pr-subscribers-llvm-transforms
 /llvm/include/llvm/Transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/test/Transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/unittests/Transforms/ @llvm/pr-subscribers-llvm-transforms
 
 # clangd
 /clang-tools-extra/clangd/ @llvm/pr-subscribers-clangd
