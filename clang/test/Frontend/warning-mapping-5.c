@@ -4,5 +4,5 @@
 
 #pragma clang diagnostic warning "-Wsign-compare"
 int f0(int x, unsigned y) {
-  return x < y; // expected-warning {{comparison of integers}}
+  return x < y; // expected-warning {{comparison of integers}} expected-note{{}}
 }

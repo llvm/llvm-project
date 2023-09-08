@@ -14075,8 +14075,10 @@ public:
 /// Analyze the operands of the given comparison.  Implements the
 /// fallback case from AnalyzeComparison.
 void ImplicitConversionChecker::AnalyzeImpConvsInComparison(BinaryOperator *E) {
-  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(), false, false);
-  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(), false, false);
+  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(),
+                             /*IsInitList=*/false, /*IsTopLevelExpr=*/false);
+  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(),
+                             /*IsInitList=*/false, /*IsTopLevelExpr=*/false);
 }
 
 /// Implements -Wsign-compare.
@@ -14164,8 +14166,10 @@ void ImplicitConversionChecker::AnalyzeComparison(BinaryOperator *E) {
 
   // Go ahead and analyze implicit conversions in the operands.  Note
   // that we skip the implicit conversions on both sides.
-  AnalyzeImplicitConversions(LHS, E->getOperatorLoc(), false, false);
-  AnalyzeImplicitConversions(RHS, E->getOperatorLoc(), false, false);
+  AnalyzeImplicitConversions(LHS, E->getOperatorLoc(), /*IsInitList=*/false,
+                             /*IsTopLevelExpr=*/false);
+  AnalyzeImplicitConversions(RHS, E->getOperatorLoc(), /*IsInitList=*/false,
+                             /*IsTopLevelExpr=*/false);
 
   // If the signed range is non-negative, -Wsign-compare won't fire.
   if (signedRange.NonNegative)
@@ -14209,18 +14213,21 @@ void ImplicitConversionChecker::AnalyzeComparison(BinaryOperator *E) {
     PrefixS << Lexer::getSourceText(TokRange, S.SourceMgr, S.getLangOpts(),
                                     &Invalid);
     if (!Invalid) {
-      bool ParenthesizeForCast = isa<BinaryOperator>(signedOperand) ||
+      bool ParenthesizeForCast = S.getLangOpts().CPlusPlus ||
+                                 isa<BinaryOperator>(signedOperand) ||
                                  isa<ConditionalOperator>(signedOperand);
       bool IsSignedLHS = signedOperand == LHS;
       bool IsLTOrLE = E->getOpcode() == BO_LT || E->getOpcode() == BO_LE;
       bool IsGTOrGE = E->getOpcode() == BO_GT || E->getOpcode() == BO_GE;
       if ((IsSignedLHS && IsLTOrLE) || (!IsSignedLHS && IsGTOrGE)) {
-        PrefixS << " < 0 || (";
+        PrefixS << " < 0 || ";
       } else {
-        PrefixS << " >= 0 && (";
+        PrefixS << " >= 0 && ";
       }
-      PrefixS << T.getAsString(S.getLangOpts());
-      PrefixS << ")";
+      if (S.getLangOpts().CPlusPlus)
+        PrefixS << "static_cast<" << T.getAsString(S.getLangOpts()) << ">";
+      else
+        PrefixS << "(" << T.getAsString(S.getLangOpts()) << ")";
       if (ParenthesizeForCast)
         PrefixS << "(";
       PrefixS.flush();
@@ -14384,7 +14391,8 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
 /// operations.
 void ImplicitConversionChecker::AnalyzeAssignment(BinaryOperator *E) {
   // Just recurse on the LHS.
-  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(), false, true);
+  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(),
+                             /*IsInitList=*/false, /*IsTopLevelExpr=*/true);
 
   // We want to recurse on the RHS as normal unless we're assigning to
   // a bitfield.
@@ -14392,8 +14400,9 @@ void ImplicitConversionChecker::AnalyzeAssignment(BinaryOperator *E) {
     if (AnalyzeBitFieldAssignment(S, Bitfield, E->getRHS(),
                                   E->getOperatorLoc())) {
       // Recurse, ignoring any implicit conversions on the RHS.
-      return AnalyzeImplicitConversions(E->getRHS()->IgnoreParenImpCasts(),
-                                        E->getOperatorLoc(), false, true);
+      return AnalyzeImplicitConversions(
+          E->getRHS()->IgnoreParenImpCasts(), E->getOperatorLoc(),
+          /*IsInitList=*/false, /*IsTopLevelExpr=*/true);
     }
   }
 
@@ -14568,8 +14577,10 @@ void ImplicitConversionChecker::AnalyzeCompoundAssignment(BinaryOperator *E) {
   assert(isa<CompoundAssignOperator>(E) &&
          "Must be compound assignment operation");
   // Recurse on the LHS and RHS in here
-  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(), false, true);
-  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(), false, true);
+  AnalyzeImplicitConversions(E->getLHS(), E->getOperatorLoc(),
+                             /*IsInitList=*/false, /*IsTopLevelExpr=*/true);
+  AnalyzeImplicitConversions(E->getRHS(), E->getOperatorLoc(),
+                             /*IsInitList=*/false, /*IsTopLevelExpr=*/true);
 
   if (E->getLHS()->getType()->isAtomicType())
     S.Diag(E->getOperatorLoc(), diag::warn_atomic_implicit_seq_cst);
@@ -15362,14 +15373,16 @@ void ImplicitConversionChecker::CheckConditionalOperand(Expr *E, QualType T,
   if (auto *CO = dyn_cast<AbstractConditionalOperator>(E))
     return CheckConditionalOperator(CO, CC, T);
 
-  AnalyzeImplicitConversions(E, CC, false, true);
+  AnalyzeImplicitConversions(E, CC, /*IsInitList=*/false,
+                             /*IsTopLevelExpr=*/true);
   if (E->getType() != T)
     return CheckImplicitConversion(S, E, T, CC, &ICContext);
 }
 
 void ImplicitConversionChecker::CheckConditionalOperator(
     AbstractConditionalOperator *E, SourceLocation CC, QualType T) {
-  AnalyzeImplicitConversions(E->getCond(), E->getQuestionLoc(), false, true);
+  AnalyzeImplicitConversions(E->getCond(), E->getQuestionLoc(),
+                             /*IsInitList=*/false, /*IsTopLevelExpr=*/true);
 
   Expr *TrueExpr = E->getTrueExpr();
   if (auto *BCO = dyn_cast<BinaryConditionalOperator>(E))
@@ -15489,7 +15502,8 @@ void ImplicitConversionChecker::AnalyzeImplicitConversions(
     // FIXME: Use a more uniform representation for this.
     for (auto *SE : POE->semantics())
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SE))
-        WorkList.push_back({OVE->getSourceExpr(), CC, IsListInit, false});
+        WorkList.push_back(
+            {OVE->getSourceExpr(), CC, IsListInit, /*IsTopLevelExpr=*/false});
   }
 
   // Skip past explicit casts.
@@ -15497,7 +15511,7 @@ void ImplicitConversionChecker::AnalyzeImplicitConversions(
     E = CE->getSubExpr()->IgnoreParenImpCasts();
     if (!CE->getType()->isVoidType() && E->getType()->isAtomicType())
       S.Diag(E->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);
-    WorkList.push_back({E, CC, IsListInit, false});
+    WorkList.push_back({E, CC, IsListInit, /*IsTopLevelExpr=*/false});
     return;
   }
 
@@ -15544,7 +15558,7 @@ void ImplicitConversionChecker::AnalyzeImplicitConversions(
       // Ignore checking string literals that are in logical and operators.
       // This is a common pattern for asserts.
       continue;
-    WorkList.push_back({ChildExpr, CC, IsListInit, false});
+    WorkList.push_back({ChildExpr, CC, IsListInit, /*IsTopLevelExpr=*/false});
   }
 
   if (BO && BO->isLogicalOp()) {
