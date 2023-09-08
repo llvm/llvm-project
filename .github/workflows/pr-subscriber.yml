@@ -11,6 +11,7 @@ permissions:
 jobs:
   auto-subscribe:
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Setup Automation Script
         run: |
