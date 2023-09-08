@@ -446,6 +446,24 @@ Some examples are listed below with suggestions for how to investigate them.
     space emulation for just ``lldb``, ``qemu-system`` for testing
     ``lldb-server``).
 
+.. note:: When using QEMU you may need to use the built in GDB stub, instead of
+          ``lldb-server``. For example if you wanted to debug ``lldb`` running
+          inside ``qemu-user-s390x`` you would connect to the GDB stub provided
+          by QEMU.
+
+          The same applies if you want to see how ``lldb`` would debug a test
+          program that is running on s390x. It's not totally accurate because
+          you're not using ``lldb-server``, but this is fine for features that
+          are mostly implemented in ``lldb``.
+
+          If you are running a full system using ``qemu-system``, you likely
+          want to connect to the ``lldb-server`` running within the userspace
+          of that system.
+
+          If your test program is bare metal (meaning it requires no supporting
+          operating system) then connect to the built in GDB stub. This can be
+          useful when testing embedded systems or kernel debugging.
+
 Reducing Ptrace Related Bugs
 ****************************
 
