@@ -22,3 +22,5 @@ target_link_libraries(ClangReplInterpreterTests PUBLIC
 if(NOT WIN32)
   add_subdirectory(ExceptionTests)
 endif()
+
+export_executable_symbols(ClangReplInterpreterTests)

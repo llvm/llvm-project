@@ -325,6 +325,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
+    case tok::annot_repl_input_end:
       // Stop before we change submodules. They generally indicate a "good"
       // place to pick up parsing again (except in the special case where
       // we're trying to skip to EOF).
@@ -705,6 +706,7 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     return false;
 
   case tok::eof:
+  case tok::annot_repl_input_end:
     // Check whether -fmax-tokens= was reached.
     if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
       PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
@@ -717,7 +719,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
     // Late template parsing can begin.
     Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
-    Actions.ActOnEndOfTranslationUnit();
+    if (!PP.isIncrementalProcessingEnabled())
+      Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
 
@@ -1042,7 +1045,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       ConsumeToken();
       return nullptr;
     }
-    if (PP.isIncrementalProcessingEnabled() &&
+    if (getLangOpts().IncrementalExtensions &&
         !isDeclarationStatement(/*DisambiguatingWithExpression=*/true))
       return ParseTopLevelStmtDecl();
 
