@@ -80,7 +80,9 @@ add_subdirectory(${LLVM_LIBGCC_COMPILER_RT_PATH} "../compiler-rt")
 
 set(LIBUNWIND_ENABLE_STATIC ON)
 set(LIBUNWIND_ENABLE_SHARED ON)
-set(LIBUNWIND_USE_COMPILER_RT ON)
+set(LIBUNWIND_USE_COMPILER_RT OFF)
+set(LIBUNWIND_HAS_GCC_LIB OFF)
+set(LIBUNWIND_HAS_GCC_S_LIB OFF)
 add_subdirectory(${LLVM_LIBGCC_LIBUNWIND_PATH} "../libunwind")
 
 add_custom_target(gcc_s.ver
