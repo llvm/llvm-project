@@ -51,9 +51,9 @@ define dso_local void @test_iltsc_store(i8 signext %a, i8 signext %b) {
 ; CHECK-LABEL: test_iltsc_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    stb r3, glob@toc@l(r5)
+; CHECK-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp slt i8 %a, %b
@@ -67,9 +67,9 @@ define dso_local void @test_iltsc_sext_store(i8 signext %a, i8 signext %b) {
 ; CHECK-LABEL: test_iltsc_sext_store:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    stb r3, glob@toc@l(r5)
+; CHECK-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp slt i8 %a, %b
@@ -82,8 +82,8 @@ entry:
 define dso_local void @test_iltsc_sext_z_store(i8 signext %a) {
 ; CHECK-LABEL: test_iltsc_sext_z_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    srwi r3, r3, 7
+; CHECK-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:

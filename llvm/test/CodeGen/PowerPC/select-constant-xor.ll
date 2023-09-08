@@ -125,11 +125,11 @@ define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK-LABEL: oneusecmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srawi 6, 3, 31
 ; CHECK-NEXT:    cmpwi 3, 0
-; CHECK-NEXT:    xori 3, 6, 127
-; CHECK-NEXT:    isellt 4, 5, 4
-; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    srawi 6, 3, 31
+; CHECK-NEXT:    xori 6, 6, 127
+; CHECK-NEXT:    isellt 3, 5, 4
+; CHECK-NEXT:    add 3, 6, 3
 ; CHECK-NEXT:    blr
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -128, i32 127

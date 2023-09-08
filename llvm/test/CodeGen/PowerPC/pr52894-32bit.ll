@@ -9,12 +9,12 @@
 ; Function Attrs: mustprogress uwtable
 define dso_local void @_Z1g1dILi17EE(ptr nocapture noundef readnone byval(%struct.d) align 4 %0) local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z1g1dILi17EE:
-; CHECK:    mtfprwz f0, r4
-; CHECK:    stwx [[REG:r[0-9]+]], r1, r4
-; CHECK:    mffprwz r4, f0
-; CHECK:    mtfprwz f0, r4
-; CHECK:    lwzx [[REG]], r1, r4
-; CHECK:    mffprwz r4, f0
+; CHECK-NOT:    mtfprwz f0, r4
+; CHECK-NOT:    stwx r3, r1, r4
+; CHECK-NOT:    mffprwz r4, f0
+; CHECK-NOT:    mtfprwz f0, r4
+; CHECK-NOT:    lwzx r3, r1, r4
+; CHECK-NOT:    mffprwz r4, f0
 entry:
   %c = alloca %struct.d, align 4
   call void @llvm.lifetime.start.p0(i64 524288, ptr nonnull %c) #3
