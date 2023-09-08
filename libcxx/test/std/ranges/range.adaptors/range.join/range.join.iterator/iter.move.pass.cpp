@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // friend constexpr decltype(auto) iter_move(const iterator& i);
 

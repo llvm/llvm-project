@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // constexpr iterator& operator--();
 //              requires ref-is-glvalue && bidirectional_range<Base> &&
@@ -18,9 +17,12 @@
 //                       bidirectional_range<range_reference_t<Base>> &&
 //                       common_range<range_reference_t<Base>>;
 
+#include <algorithm>
+#include <array>
 #include <cassert>
 #include <ranges>
 #include <type_traits>
+#include <vector>
 
 #include "../types.h"
 
@@ -148,6 +150,15 @@ constexpr bool test() {
     auto iter = jv.begin();
     static_assert(!CanPreDecrement<decltype(iter)>);
     static_assert(!CanPostDecrement<decltype(iter)>);
+  }
+
+  {
+    // LWG3791: `join_view::iterator::operator--` may be ill-formed
+    std::vector<std::vector<int>> vec = {{1, 2}, {3, 4}, {5, 6}};
+    auto r = vec | std::views::transform([](auto& x) -> auto&& { return std::move(x); }) | std::views::join;
+    auto e = --r.end();
+    assert(*e == 6);
+    assert(std::ranges::equal(std::views::reverse(r), std::array{6, 5, 4, 3, 2, 1}));
   }
 
   return true;

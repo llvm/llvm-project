@@ -11,6 +11,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <string>
 #include <tuple>
 
 #include "test_macros.h"
@@ -52,13 +53,13 @@ inline ChildView globalChildren[4] = {
     ChildView(globalBuffer[3]),
 };
 
-template <class T>
+template <class T, template<class...> class Iter = cpp17_input_iterator>
 struct ParentView : std::ranges::view_base {
   T* ptr_;
   unsigned size_;
 
-  using iterator = cpp20_input_iterator<T*>;
-  using const_iterator = cpp20_input_iterator<const T*>;
+  using iterator = Iter<T*>;
+  using const_iterator = Iter<const T*>;
   using sentinel = sentinel_wrapper<iterator>;
   using const_sentinel = sentinel_wrapper<const_iterator>;
 
@@ -80,6 +81,9 @@ struct ParentView : std::ranges::view_base {
 template <class T>
 ParentView(T*) -> ParentView<T>;
 
+template<class T>
+using ForwardParentView = ParentView<T, forward_iterator>;
+
 struct CopyableChild : std::ranges::view_base {
   int* ptr_;
   unsigned size_;
@@ -97,21 +101,25 @@ struct CopyableChild : std::ranges::view_base {
   constexpr const_sentinel end() const { return const_sentinel(const_iterator(ptr_ + size_)); }
 };
 
-struct CopyableParent : std::ranges::view_base {
+template<template<class...> class Iter>
+struct CopyableParentTemplate : std::ranges::view_base {
   CopyableChild* ptr_;
 
-  using iterator = cpp17_input_iterator<CopyableChild*>;
-  using const_iterator = cpp17_input_iterator<const CopyableChild*>;
+  using iterator = Iter<CopyableChild*>;
+  using const_iterator = Iter<const CopyableChild*>;
   using sentinel = sentinel_wrapper<iterator>;
   using const_sentinel = sentinel_wrapper<const_iterator>;
 
-  constexpr CopyableParent(CopyableChild* ptr) : ptr_(ptr) {}
+  constexpr CopyableParentTemplate(CopyableChild* ptr) : ptr_(ptr) {}
 
   constexpr iterator begin() { return iterator(ptr_); }
   constexpr const_iterator begin() const { return const_iterator(ptr_); }
   constexpr sentinel end() { return sentinel(iterator(ptr_ + 4)); }
   constexpr const_sentinel end() const { return const_sentinel(const_iterator(ptr_ + 4)); }
 };
+
+using CopyableParent = CopyableParentTemplate<cpp17_input_iterator>;
+using ForwardCopyableParent = CopyableParentTemplate<forward_iterator>;
 
 struct Box {
   int x;
@@ -391,5 +399,49 @@ struct IterMoveSwapAwareView : BufferView<int*> {
   constexpr auto end() { return move_swap_aware_iter{&iter_move_called, &iter_swap_called, data_ + size_}; }
 };
 static_assert(std::ranges::input_range<IterMoveSwapAwareView>);
+
+class StashingIterator {
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type      = std::string;
+
+  constexpr StashingIterator() : letter_('a') {}
+
+  constexpr StashingIterator& operator++() {
+    str_ += letter_;
+    ++letter_;
+    return *this;
+  }
+
+  constexpr void operator++(int) { ++*this; }
+
+  constexpr value_type operator*() const { return str_; }
+
+  constexpr bool operator==(std::default_sentinel_t) const { return letter_ > 'z'; }
+
+private:
+  char letter_;
+  value_type str_;
+};
+
+using StashingRange = std::ranges::subrange<StashingIterator, std::default_sentinel_t>;
+static_assert(std::ranges::input_range<StashingRange>);
+static_assert(!std::ranges::forward_range<StashingRange>);
+
+class ConstNonJoinableRange : public std::ranges::view_base {
+public:
+  constexpr StashingIterator begin() { return {}; }
+  constexpr std::default_sentinel_t end() { return {}; }
+
+  constexpr const int* begin() const { return &val_; }
+  constexpr const int* end() const { return &val_ + 1; }
+
+private:
+  int val_ = 1;
+};
+static_assert(std::ranges::input_range<ConstNonJoinableRange>);
+static_assert(std::ranges::input_range<const ConstNonJoinableRange>);
+static_assert(std::ranges::input_range<std::ranges::range_reference_t<ConstNonJoinableRange>>);
+static_assert(!std::ranges::input_range<std::ranges::range_reference_t<const ConstNonJoinableRange>>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_JOIN_TYPES_H

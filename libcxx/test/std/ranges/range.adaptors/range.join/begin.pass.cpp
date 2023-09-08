@@ -7,15 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // constexpr auto begin();
 // constexpr auto begin() const
-//    requires input_range<const V> &&
-//             is_reference_v<range_reference_t<const V>>;
+//    requires forward_range<const V> &&
+//             is_reference_v<range_reference_t<const V>> &&
+//             input_range<range_reference_t<const V>>;
 
+#include <algorithm>
 #include <cassert>
 #include <ranges>
+#include <string_view>
 
 #include "types.h"
 
@@ -120,7 +122,7 @@ constexpr bool test() {
     static_assert(HasConstBegin<decltype(jv)>);
   }
 
-  // !input_range<const V>
+  // !forward_range<const V>
   {
     std::ranges::join_view jv{ConstNotRange{}};
     static_assert(!HasConstBegin<decltype(jv)>);
@@ -144,6 +146,27 @@ constexpr bool test() {
   {
     std::ranges::join_view<SimpleParentView> jv;
     static_assert(std::same_as<decltype(jv.begin()), decltype(std::as_const(jv).begin())>);
+  }
+
+  // Check stashing iterators (LWG3698: regex_iterator and join_view don't work together very well)
+  {
+    std::ranges::join_view<StashingRange> jv;
+    assert(std::ranges::equal(std::views::counted(jv.begin(), 10), std::string_view{"aababcabcd"}));
+  }
+
+  // LWG3700: The `const begin` of the `join_view` family does not require `InnerRng` to be a range
+  {
+    std::ranges::join_view<ConstNonJoinableRange> jv;
+    static_assert(!HasConstBegin<decltype(jv)>);
+  }
+
+  // Check example from LWG3700
+  {
+    auto r = std::views::iota(0, 5) | std::views::split(1);
+    auto s = std::views::single(r);
+    auto j = s | std::views::join;
+    auto f = j.front();
+    assert(std::ranges::equal(f, std::views::single(0)));
   }
 
   return true;

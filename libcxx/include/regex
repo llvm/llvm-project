@@ -697,6 +697,7 @@ public:
     typedef const value_type*                    pointer;
     typedef const value_type&                    reference;
     typedef forward_iterator_tag                 iterator_category;
+    typedef input_iterator_tag                   iterator_concept; // since C++20
 
     regex_iterator();
     regex_iterator(BidirectionalIterator a, BidirectionalIterator b,
@@ -737,6 +738,7 @@ public:
     typedef const value_type*                pointer;
     typedef const value_type&                reference;
     typedef forward_iterator_tag             iterator_category;
+    typedef input_iterator_tag               iterator_concept; // since C++20
 
     regex_token_iterator();
     regex_token_iterator(BidirectionalIterator a, BidirectionalIterator b,
@@ -6407,6 +6409,9 @@ public:
     typedef const value_type*                     pointer;
     typedef const value_type&                     reference;
     typedef forward_iterator_tag                  iterator_category;
+#if _LIBCPP_STD_VER >= 20
+    typedef input_iterator_tag                    iterator_concept;
+#endif
 
 private:
     _BidirectionalIterator           __begin_;
@@ -6542,6 +6547,9 @@ public:
     typedef const value_type*                 pointer;
     typedef const value_type&                 reference;
     typedef forward_iterator_tag              iterator_category;
+#if _LIBCPP_STD_VER >= 20
+    typedef input_iterator_tag                iterator_concept;
+#endif
 
 private:
     typedef regex_iterator<_BidirectionalIterator, _CharT, _Traits> _Position;

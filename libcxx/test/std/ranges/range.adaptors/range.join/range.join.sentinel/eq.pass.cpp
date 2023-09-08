@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // template<bool OtherConst>
 //   requires sentinel_for<sentinel_t<Base>, iterator_t<maybe-const<OtherConst, V>>>
@@ -17,6 +16,7 @@
 #include <concepts>
 #include <functional>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 
@@ -61,18 +61,27 @@ static_assert(EqualityComparable<std::ranges::iterator_t<const ConstComparableVi
 constexpr bool test() {
   int buffer[4][4] = {{1111, 2222, 3333, 4444}, {555, 666, 777, 888}, {99, 1010, 1111, 1212}, {13, 14, 15, 16}};
 
+  // test iterator<false> == sentinel<false>
   {
     ChildView children[4] = {ChildView(buffer[0]), ChildView(buffer[1]), ChildView(buffer[2]), ChildView(buffer[3])};
-    auto jv = std::ranges::join_view(ParentView(children));
+    auto jv               = std::ranges::join_view(ParentView(children));
     assert(jv.end() == std::ranges::next(jv.begin(), 16));
-    static_assert(!EqualityComparable<decltype(std::as_const(jv).begin()), decltype(jv.end())>);
-    static_assert(!EqualityComparable<decltype(jv.begin()), decltype(std::as_const(jv).end())>);
   }
 
+  // test iterator<false> == sentinel<true>
+  {
+    ChildView children[4] = {ChildView(buffer[0]), ChildView(buffer[1]), ChildView(buffer[2]), ChildView(buffer[3])};
+    using ParentT         = std::remove_all_extents_t<decltype(children)>;
+    auto jv               = std::ranges::join_view(ForwardParentView<ParentT>(children));
+    assert(std::as_const(jv).end() == std::ranges::next(jv.begin(), 16));
+  }
+
+  // test iterator<true> == sentinel<true>
   {
     CopyableChild children[4] = {CopyableChild(buffer[0]), CopyableChild(buffer[1]), CopyableChild(buffer[2]),
                                  CopyableChild(buffer[3])};
-    const auto jv = std::ranges::join_view(ParentView(children));
+    using ParentT             = std::remove_all_extents_t<decltype(children)>;
+    const auto jv             = std::ranges::join_view(ForwardParentView<ParentT>(children));
     assert(jv.end() == std::ranges::next(jv.begin(), 16));
   }
 

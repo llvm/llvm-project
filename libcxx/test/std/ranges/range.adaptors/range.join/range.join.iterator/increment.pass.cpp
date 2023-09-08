@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // constexpr iterator& operator++();
 // constexpr void operator++(int);
@@ -203,6 +202,23 @@ constexpr bool test() {
     std::ranges::join_view jv{inners};
     auto iter = jv.begin();
     static_assert(std::is_void_v<decltype(iter++)>);
+  }
+
+  {
+    // Check stashing iterators (LWG3698: regex_iterator and join_view don't work together very well)
+    std::ranges::join_view<StashingRange> jv;
+    auto it = jv.begin();
+    assert(*it == 'a');
+    ++it;
+    assert(*it == 'a');
+    ++it;
+    assert(*it == 'b');
+    it++;
+    assert(*it == 'a');
+    it++;
+    assert(*it == 'b');
+    ++it;
+    assert(*it == 'c');
   }
 
   return true;

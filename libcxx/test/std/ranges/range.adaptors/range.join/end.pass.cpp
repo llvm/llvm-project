@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // constexpr auto end();
 // constexpr auto end() const;
+//   requires forward_range<const V> &&
+//            is_reference_v<range_reference_t<const V>> &&
+//            input_range<range_reference_t<const V>>
 
 #include <cassert>
 #include <ranges>
@@ -33,13 +35,13 @@ concept HasConstEnd = requires (const T& t){
 // | 3  |   Y    |   Y     |   Y    |   Y   |    N    |   Y    |sentinel<true> |sentinel<true>|
 // | 4  |   Y    |   Y     |   Y    |   N   |    Y    |   Y    |sentinel<true> |      -       |
 // | 5  |   Y    |   Y     |   N    |   Y   |    Y    |   Y    |sentinel<true> |sentinel<true>|
-// | 6  |   Y    |   N     |   Y    |   Y   |    Y    |   Y    |sentinel<true> |sentinel<true>|
+// | 6  |   Y    |   N     |   Y    |   Y   |    Y    |   Y    |sentinel<true> |      -       |
 // | 7  |   N    |   Y     |   Y    |   Y   |    Y    |   Y    |iterator<false>|iterator<true>|
 // | 8  |   N    |   Y     |   Y    |   Y   |    Y    |   N    |sentinel<false>|sentinel<true>|
 // | 9  |   N    |   Y     |   Y    |   Y   |    N    |   Y    |sentinel<false>|sentinel<true>|
 // | 10 |   N    |   Y     |   Y    |   N   |    Y    |   Y    |sentinel<false>|      -       |
 // | 11 |   N    |   Y     |   N    |   Y   |    Y    |   Y    |sentinel<false>|sentinel<true>|
-// | 12 |   N    |   N     |   Y    |   Y   |    Y    |   Y    |sentinel<false>|sentinel<true>|
+// | 12 |   N    |   N     |   Y    |   Y   |    Y    |   Y    |sentinel<false>|      -       |
 //
 //
 
@@ -131,10 +133,8 @@ constexpr bool test() {
 
     std::ranges::join_view jv(outer);
     assert(jv.end() == std::ranges::next(jv.begin(), 16));
-    assert(std::as_const(jv).end() == std::ranges::next(std::as_const(jv).begin(), 16));
 
-    static_assert(HasConstEnd<decltype(jv)>);
-    static_assert(std::same_as<decltype(jv.end()), decltype(std::as_const(jv).end())>);
+    static_assert(!HasConstEnd<decltype(jv)>);
     static_assert(!std::ranges::common_range<decltype(jv)>);
     static_assert(!std::ranges::common_range<const decltype(jv)>);
   }
@@ -219,10 +219,8 @@ constexpr bool test() {
 
     std::ranges::join_view jv(outer);
     assert(jv.end() == std::ranges::next(jv.begin(), 16));
-    assert(std::as_const(jv).end() == std::ranges::next(std::as_const(jv).begin(), 16));
 
-    static_assert(HasConstEnd<decltype(jv)>);
-    static_assert(!std::same_as<decltype(jv.end()), decltype(std::as_const(jv).end())>);
+    static_assert(!HasConstEnd<decltype(jv)>);
     static_assert(!std::ranges::common_range<decltype(jv)>);
     static_assert(!std::ranges::common_range<const decltype(jv)>);
   }
@@ -286,6 +284,12 @@ constexpr bool test() {
     CopyableChild children[4] = {CopyableChild(buffer[0], 4), CopyableChild(buffer[1], 4), CopyableChild(buffer[2], 4), CopyableChild(buffer[3], 0)};
     auto jv = std::ranges::join_view(ParentView(children));
     assert(jv.end() == std::ranges::next(jv.begin(), 12));
+  }
+
+  // LWG3700: The `const begin` of the `join_view` family does not require `InnerRng` to be a range
+  {
+    std::ranges::join_view<ConstNonJoinableRange> jv;
+    static_assert(!HasConstEnd<decltype(jv)>);
   }
 
   return true;

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // constexpr iterator(iterator<!Const> i)
 //             requires Const &&
@@ -37,7 +36,7 @@ constexpr bool test() {
   {
     CopyableChild children[4] = {CopyableChild(buffer[0]), CopyableChild(buffer[1]), CopyableChild(buffer[2]),
                                  CopyableChild(buffer[3])};
-    std::ranges::join_view jv(CopyableParent{children});
+    std::ranges::join_view jv(ForwardCopyableParent{children});
     auto iter1 = jv.begin();
     using iterator = decltype(iter1);
     using const_iterator = decltype(std::as_const(jv).begin());

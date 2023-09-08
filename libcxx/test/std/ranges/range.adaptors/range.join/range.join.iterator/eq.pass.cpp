@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: !c++experimental
 
 // friend constexpr bool operator==(const iterator& x, const iterator& y);
-//          requires ref-is-glvalue && equality_comparable<iterator_t<Base>> &&
+//          requires ref-is-glvalue && forward_range<Base> &&
 //                   equality_comparable<iterator_t<range_reference_t<Base>>>;
 
 #include <cassert>
@@ -43,7 +42,7 @@ constexpr bool test() {
   }
 
   {
-    // !equality_comparable<iterator_t<Base>>
+    // !forward_range<iterator_t<Base>>
     using Inner = BufferView<int*>;
     using Outer = BufferView<cpp20_input_iterator<Inner*>, sentinel_wrapper<cpp20_input_iterator<Inner*>>>;
     static_assert(!std::equality_comparable<std::ranges::iterator_t<Outer>>);
@@ -51,8 +50,6 @@ constexpr bool test() {
     std::ranges::join_view jv(Outer{inners});
     auto iter = jv.begin();
     static_assert(!std::equality_comparable<decltype(iter)>);
-    auto const_iter = std::as_const(jv).begin();
-    static_assert(!std::equality_comparable<decltype(const_iter)>);
   }
 
   {

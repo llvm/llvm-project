@@ -104,7 +104,7 @@
 "`P2708R1 <https://wg21.link/P2708R1>`__","LWG", "No Further Fundamentals TSes", "November 2022","|Nothing to do|","",""
 "","","","","","",""
 "`P0290R4 <https://wg21.link/P0290R4>`__","LWG", "``apply()`` for ``synchronized_value<T>``","February 2023","","","|concurrency TS|"
-"`P2770R0 <https://wg21.link/P2770R0>`__","LWG", "Stashing stashing ``iterators`` for proper flattening","February 2023","|In Progress|","","|ranges|"
+"`P2770R0 <https://wg21.link/P2770R0>`__","LWG", "Stashing stashing ``iterators`` for proper flattening","February 2023","|Partial| [#note-P2770R0]_","","|ranges|"
 "`P2164R9 <https://wg21.link/P2164R9>`__","LWG", "``views::enumerate``","February 2023","","","|ranges|"
 "`P2711R1 <https://wg21.link/P2711R1>`__","LWG", "Making multi-param constructors of ``views`` ``explicit``","February 2023","|In Progress| [#note-P2711R1]_","","|ranges|"
 "`P2609R3 <https://wg21.link/P2609R3>`__","LWG", "Relaxing Ranges Just A Smidge","February 2023","","","|ranges|"
