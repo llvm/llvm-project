@@ -82,7 +82,8 @@ class PRSubscriber:
             if self.team_name != team.name.lower():
                 continue
             try:
-                patch = requests.get(self.pr.diff_url).text
+                # GitHub limits comments to 65,536 characters, let's limit our comments to 20,000.
+                patch = requests.get(self.pr.diff_url).text[0:20000]
             except:
                 patch = ""
             comment = "@llvm/{}".format(team.slug) + "\n\n<details><summary>Changes</summary><pre>\n" + patch + "\n</pre></details>"
