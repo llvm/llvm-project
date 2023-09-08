@@ -189,12 +189,25 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     PPOpts = X.PPOpts;
     AnalyzerOpts = X.AnalyzerOpts;
     MigratorOpts = X.MigratorOpts;
+    APINotesOpts = X.APINotesOpts;
+    CASOpts = X.CASOpts;
     CodeGenOpts = X.CodeGenOpts;
     FSOpts = X.FSOpts;
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
   }
+  return *this;
+}
+
+CompilerInvocation::CompilerInvocation(const CowCompilerInvocation &X)
+    : CompilerInvocationBase(EmptyConstructor{}) {
+  CompilerInvocationBase::deep_copy_assign(X);
+}
+
+CompilerInvocation &
+CompilerInvocation::operator=(const CowCompilerInvocation &X) {
+  CompilerInvocationBase::deep_copy_assign(X);
   return *this;
 }
 
