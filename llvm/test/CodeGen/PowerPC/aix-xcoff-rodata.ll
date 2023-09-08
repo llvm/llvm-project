@@ -1,16 +1,16 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false \
 ; RUN:   -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
 ; RUN:   FileCheck --check-prefixes=OBJ,OBJ32 %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYMS,SYMS32 %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false \
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false \
 ; RUN:   -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t64.o | \
 ; RUN:   FileCheck --check-prefixes=OBJ,OBJ64 %s
