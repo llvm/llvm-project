@@ -171,81 +171,80 @@ strstreambuf::int_type strstreambuf::underflow() {
 }
 
 strstreambuf::pos_type strstreambuf::seekoff(off_type __off, ios_base::seekdir __way, ios_base::openmode __which) {
-  off_type __p(-1);
   bool pos_in  = (__which & ios::in) != 0;
   bool pos_out = (__which & ios::out) != 0;
-  bool legal   = false;
   switch (__way) {
   case ios::beg:
   case ios::end:
-    if (pos_in || pos_out)
-      legal = true;
+    if (!pos_in && !pos_out)
+      return pos_type(off_type(-1));
     break;
   case ios::cur:
-    if (pos_in != pos_out)
-      legal = true;
+    if (pos_in == pos_out)
+      return pos_type(off_type(-1));
     break;
   }
+
   if (pos_in && gptr() == nullptr)
-    legal = false;
+    return pos_type(off_type(-1));
   if (pos_out && pptr() == nullptr)
-    legal = false;
-  if (legal) {
-    off_type newoff;
-    char* seekhigh = epptr() ? epptr() : egptr();
-    switch (__way) {
-    case ios::beg:
-      newoff = 0;
-      break;
-    case ios::cur:
-      newoff = (pos_in ? gptr() : pptr()) - eback();
-      break;
-    case ios::end:
-      newoff = seekhigh - eback();
-      break;
-    default:
-      __libcpp_unreachable();
-    }
-    newoff += __off;
-    if (0 <= newoff && newoff <= seekhigh - eback()) {
-      char* newpos = eback() + newoff;
-      if (pos_in)
-        setg(eback(), newpos, _VSTD::max(newpos, egptr()));
-      if (pos_out) {
-        // min(pbase, newpos), newpos, epptr()
-        __off = epptr() - newpos;
-        setp(min(pbase(), newpos), epptr());
-        __pbump((epptr() - pbase()) - __off);
-      }
-      __p = newoff;
-    }
+    return pos_type(off_type(-1));
+
+  off_type newoff;
+  char* seekhigh = epptr() ? epptr() : egptr();
+  switch (__way) {
+  case ios::beg:
+    newoff = 0;
+    break;
+  case ios::cur:
+    newoff = (pos_in ? gptr() : pptr()) - eback();
+    break;
+  case ios::end:
+    newoff = seekhigh - eback();
+    break;
+  default:
+    __libcpp_unreachable();
   }
-  return pos_type(__p);
+  newoff += __off;
+  if (newoff < 0 || newoff > seekhigh - eback())
+    return pos_type(off_type(-1));
+
+  char* newpos = eback() + newoff;
+  if (pos_in)
+    setg(eback(), newpos, _VSTD::max(newpos, egptr()));
+  if (pos_out) {
+    // min(pbase, newpos), newpos, epptr()
+    __off = epptr() - newpos;
+    setp(min(pbase(), newpos), epptr());
+    __pbump((epptr() - pbase()) - __off);
+  }
+  return pos_type(newoff);
 }
 
 strstreambuf::pos_type strstreambuf::seekpos(pos_type __sp, ios_base::openmode __which) {
-  off_type __p(-1);
   bool pos_in  = (__which & ios::in) != 0;
   bool pos_out = (__which & ios::out) != 0;
-  if (pos_in || pos_out) {
-    if (!((pos_in && gptr() == nullptr) || (pos_out && pptr() == nullptr))) {
-      off_type newoff = __sp;
-      char* seekhigh  = epptr() ? epptr() : egptr();
-      if (0 <= newoff && newoff <= seekhigh - eback()) {
-        char* newpos = eback() + newoff;
-        if (pos_in)
-          setg(eback(), newpos, _VSTD::max(newpos, egptr()));
-        if (pos_out) {
-          // min(pbase, newpos), newpos, epptr()
-          off_type temp = epptr() - newpos;
-          setp(min(pbase(), newpos), epptr());
-          __pbump((epptr() - pbase()) - temp);
-        }
-        __p = newoff;
-      }
-    }
+  if (!pos_in && !pos_out)
+    return pos_type(off_type(-1));
+
+  if ((pos_in && gptr() == nullptr) || (pos_out && pptr() == nullptr))
+    return pos_type(off_type(-1));
+
+  off_type newoff = __sp;
+  char* seekhigh  = epptr() ? epptr() : egptr();
+  if (newoff < 0 || newoff > seekhigh - eback())
+    return pos_type(off_type(-1));
+
+  char* newpos = eback() + newoff;
+  if (pos_in)
+    setg(eback(), newpos, _VSTD::max(newpos, egptr()));
+  if (pos_out) {
+    // min(pbase, newpos), newpos, epptr()
+    off_type temp = epptr() - newpos;
+    setp(min(pbase(), newpos), epptr());
+    __pbump((epptr() - pbase()) - temp);
   }
-  return pos_type(__p);
+  return pos_type(newoff);
 }
 
 istrstream::~istrstream() {}
