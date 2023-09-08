@@ -27,22 +27,21 @@ define i32 @fputs() {
 define internal i32 @__kmpc_target_init(ptr %0) {
 ; AMDGPU-LABEL: define {{[^@]+}}@__kmpc_target_init
 ; AMDGPU-SAME: (ptr [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
-; AMDGPU-NEXT:    [[TMP2:%.*]] = addrspacecast ptr getelementptr (i8, ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr), i64 2) to ptr addrspace(1)
-; AMDGPU-NEXT:    [[TMP3:%.*]] = load i8, ptr addrspace(1) [[TMP2]], align 2
-; AMDGPU-NEXT:    [[TMP4:%.*]] = and i8 [[TMP3]], 2
-; AMDGPU-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; AMDGPU-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x() #[[ATTR3:[0-9]+]]
-; AMDGPU-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
-; AMDGPU-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP5]], i1 [[TMP7]], i1 false
-; AMDGPU-NEXT:    br i1 [[OR_COND]], label [[TMP8:%.*]], label [[TMP9:%.*]]
-; AMDGPU:       8:
+; AMDGPU-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr), i64 2), align 2
+; AMDGPU-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 2
+; AMDGPU-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], 0
+; AMDGPU-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x() #[[ATTR3:[0-9]+]]
+; AMDGPU-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
+; AMDGPU-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP4]], i1 [[TMP6]], i1 false
+; AMDGPU-NEXT:    br i1 [[OR_COND]], label [[TMP7:%.*]], label [[TMP8:%.*]]
+; AMDGPU:       7:
 ; AMDGPU-NEXT:    store i8 0, ptr addrspace(3) null, align 2147483648
-; AMDGPU-NEXT:    br label [[TMP9]]
+; AMDGPU-NEXT:    br label [[TMP8]]
+; AMDGPU:       8:
+; AMDGPU-NEXT:    br label [[TMP10:%.*]]
 ; AMDGPU:       9:
-; AMDGPU-NEXT:    br label [[TMP11:%.*]]
-; AMDGPU:       10:
 ; AMDGPU-NEXT:    unreachable
-; AMDGPU:       11:
+; AMDGPU:       10:
 ; AMDGPU-NEXT:    ret i32 0
 ;
   %2 = getelementptr %struct.ConfigurationEnvironmentTy.8, ptr %0, i64 0, i32 2
