@@ -32,6 +32,8 @@ using namespace llvm;
 static MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
                                       AsmPrinter &AP) {
   if (MO.isGlobal()) {
+    // Get the symbol from the global, accounting for XCOFF-specific
+    // intricacies (see TargetLoweringObjectFileXCOFF::getTargetSymbol).
     const GlobalValue *GV = MO.getGlobal();
     return AP.getSymbol(GV);
   }
