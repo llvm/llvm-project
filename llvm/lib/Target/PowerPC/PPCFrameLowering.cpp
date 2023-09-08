@@ -2742,7 +2742,9 @@ bool PPCFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
 }
 
 uint64_t PPCFrameLowering::getStackThreshold() const {
-  // The scratch register of STUX contains a signed negative 64-bit number.
+  // The scratch register of STUX contains a signed negative 64-bit number,
+  // so that the minimum number contained in the scratch register is -2^63,
+  // thus the maximum stack size is |-2^63| = 2^63.
   if (Subtarget.isPPC64())
     return 1UL << 63;
 
