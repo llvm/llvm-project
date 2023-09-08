@@ -1779,17 +1779,6 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
     }
 }
 
-template <class _Iterator>
-_LIBCPP_HIDE_FROM_ABI
-bool __iterator_in_range(_Iterator __first, _Iterator __last, _Iterator __it) {
-    for (_Iterator __p = __first; __p != __last; ++__p) {
-        if (__p == __it) {
-            return true;
-        }
-    }
-    return false;
-}
-
 template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l)
