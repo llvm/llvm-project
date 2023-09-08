@@ -176,10 +176,10 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
     const auto *I = cast<Instruction>(U);
     // If this instruction accesses memory make sure it doesn't access beyond
     // the bounds of the allocated object.
+    // TODO: TypeSize::getFixed should be modified to adapt to scalable vectors
     std::optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);
     if (MemLoc && MemLoc->Size.hasValue() &&
-        !TypeSize::isKnownGE(AllocSize,
-                             TypeSize::getFixed(MemLoc->Size.getValue())))
+        !TypeSize::isKnownGE(AllocSize, MemLoc->Size.getValue()))
       return true;
     switch (I->getOpcode()) {
     case Instruction::Store:
