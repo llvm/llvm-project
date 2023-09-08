@@ -186,9 +186,16 @@ std::optional<llvm::cas::CASID> clang::canonicalizeAndCreateCacheKey(
 
 std::optional<llvm::cas::CASID>
 clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
-                                const CompilerInvocation &OriginalInvocation) {
+                                const CompilerInvocation &OriginalCI) {
+  CompilerInvocation CI(OriginalCI);
+  (void)canonicalizeForCaching(CAS, Diags, CI);
+  return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
+}
 
-  CompilerInvocation CI(OriginalInvocation);
+std::optional<llvm::cas::CASID>
+clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
+                                const CowCompilerInvocation &OriginalCI) {
+  CompilerInvocation CI(OriginalCI);
   (void)canonicalizeForCaching(CAS, Diags, CI);
   return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
 }

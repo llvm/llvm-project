@@ -27,6 +27,7 @@ class raw_ostream;
 namespace clang {
 
 class CompilerInvocation;
+class CowCompilerInvocation;
 class DiagnosticsEngine;
 
 /// Caching-related options for a given \c CompilerInvocation that are
@@ -48,6 +49,9 @@ struct CompileJobCachingOptions {
 std::optional<llvm::cas::CASID>
 createCompileJobCacheKey(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
                          const CompilerInvocation &Invocation);
+std::optional<llvm::cas::CASID>
+createCompileJobCacheKey(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
+                         const CowCompilerInvocation &Invocation);
 
 /// Perform any destructive changes needed to canonicalize \p Invocation for
 /// caching, extracting the settings that affect compilation even if they do not
