@@ -145,6 +145,92 @@ TEST(LlvmLibcTypeTraitsTest, integral_constant) {
   EXPECT_EQ((integral_constant<int, 4>::value), 4);
 }
 
+namespace invoke_detail {
+
+enum State { INIT = 0, A_APPLY_CALLED, B_APPLY_CALLED };
+
+struct A {
+  State state = INIT;
+  virtual ~A() {}
+  virtual void apply() { state = A_APPLY_CALLED; }
+};
+
+struct B : public A {
+  virtual ~B() {}
+  virtual void apply() { state = B_APPLY_CALLED; }
+};
+
+void free_function() {}
+int free_function_return_5() { return 5; }
+int free_function_passtrough(int value) { return value; }
+
+struct Delegate {
+  int (*ptr)(int) = &free_function_passtrough;
+};
+
+} // namespace invoke_detail
+
+TEST(LlvmLibcTypeTraitsTest, invoke) {
+  using namespace invoke_detail;
+  { // member function call
+    A a;
+    EXPECT_EQ(a.state, INIT);
+    cpp::invoke(&A::apply, a);
+    EXPECT_EQ(a.state, A_APPLY_CALLED);
+  }
+  { // overriden member function call
+    B b;
+    EXPECT_EQ(b.state, INIT);
+    cpp::invoke(&A::apply, b);
+    EXPECT_EQ(b.state, B_APPLY_CALLED);
+  }
+  { // free function
+    cpp::invoke(&free_function);
+    EXPECT_EQ(cpp::invoke(&free_function_return_5), 5);
+    EXPECT_EQ(cpp::invoke(&free_function_passtrough, 1), 1);
+  }
+  { // pointer member function call
+    Delegate d;
+    EXPECT_EQ(cpp::invoke(&Delegate::ptr, d, 2), 2);
+  }
+  { // lambda
+    EXPECT_EQ(cpp::invoke([]() -> int { return 2; }), 2);
+    EXPECT_EQ(cpp::invoke([](int value) -> int { return value; }, 1), 1);
+  }
+}
+
+TEST(LlvmLibcTypeTraitsTest, invoke_result) {
+  using namespace invoke_detail;
+  EXPECT_TRUE(
+      (cpp::is_same_v<cpp::invoke_result_t<decltype(&A::apply), A>, void>));
+  EXPECT_TRUE(
+      (cpp::is_same_v<cpp::invoke_result_t<decltype(&A::apply), B>, void>));
+  EXPECT_TRUE(
+      (cpp::is_same_v<cpp::invoke_result_t<decltype(&free_function)>, void>));
+  EXPECT_TRUE(
+      (cpp::is_same_v<cpp::invoke_result_t<decltype(&free_function_return_5)>,
+                      int>));
+  EXPECT_TRUE((cpp::is_same_v<
+               cpp::invoke_result_t<decltype(&free_function_passtrough), int>,
+               int>));
+  EXPECT_TRUE(
+      (cpp::is_same_v<
+          cpp::invoke_result_t<decltype(&Delegate::ptr), Delegate, int>, int>));
+  {
+    auto lambda = []() {};
+    EXPECT_TRUE((cpp::is_same_v<cpp::invoke_result_t<decltype(lambda)>, void>));
+  }
+  {
+    auto lambda = []() { return 0; };
+    EXPECT_TRUE((cpp::is_same_v<cpp::invoke_result_t<decltype(lambda)>, int>));
+  }
+  {
+    auto lambda = [](int) -> double { return 0; };
+    EXPECT_TRUE(
+        (cpp::is_same_v<cpp::invoke_result_t<decltype(lambda), int>, double>));
+  }
+}
+
 using IntegralAndFloatingTypes =
     testing::TypeList<bool, char, short, int, long, long long, unsigned char,
                       unsigned short, unsigned int, unsigned long,
