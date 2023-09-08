@@ -348,8 +348,4 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
          !isKernelFunction(*F);
 }
 
-bool Isv2x16VT(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
-}
-
 } // namespace llvm
