@@ -776,7 +776,7 @@ is guarded by ``GET_ATable_DECL``, while the definitions are guarded by
     { "Ted", 0x4, 0x4 }, // 2
     { "Alice", 0x4, 0x5 }, // 3
     { "Bob", 0x5, 0x3 }, // 4
-    /* { "Dale", 0x2, 0x1 }, // 5 */ // No this line as `IsNeeded` is 0.
+    /* { "Dale", 0x2, 0x1 }, // 5 */ // We don't generate this line as `IsNeeded` is 0.
   };
 
   const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
