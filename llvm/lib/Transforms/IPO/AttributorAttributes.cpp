@@ -12304,11 +12304,31 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
                         UsedAssumedInformation))
       return ChangeStatus::UNCHANGED;
 
+    const auto *TTI =
+        A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
+            *CB->getFunction());
+    const DataLayout &DL = A.getDataLayout();
+    LLVMContext &Ctx = CB->getContext();
+
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     Value *FP = CB->getCalledOperand();
-    if (FP->getType()->getPointerAddressSpace())
-      FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
-                                 FP->getName() + ".as0", CB);
+    unsigned ProgramAS = A.getDataLayout().getProgramAddressSpace();
+    unsigned PtrAS = FP->getType()->getPointerAddressSpace();
+    // TODO: All we really want is a bitcast, see:
+    // https://github.com/llvm/llvm-project/commit/37642714edfc382be90ab8ec091e0261465c1b47#r126273142
+    if (PtrAS != ProgramAS) {
+      if (TTI->isNoopAddrSpaceCast(PtrAS, ProgramAS)) {
+        FP = new AddrSpaceCastInst(FP, PointerType::get(FP->getType(), 0),
+                                   FP->getName() + ".as0", CB);
+      } else {
+        FP = new IntToPtrInst(
+            new PtrToIntInst(FP,
+                             Type::getIntNTy(Ctx, DL.getPointerTypeSizeInBits(
+                                                      FP->getType())),
+                             "", CB),
+            PointerType::get(Ctx, ProgramAS), "", CB);
+      }
+    }
 
     bool CBIsVoid = CB->getType()->isVoidTy();
     Instruction *IP = CB;
