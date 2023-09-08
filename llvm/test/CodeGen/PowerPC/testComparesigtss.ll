@@ -65,11 +65,11 @@ entry:
 define void @test_igtss_store(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: test_igtss_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r4, r3
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    sth r3, 0(r5)
+; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sgt i16 %a, %b
@@ -82,11 +82,11 @@ entry:
 define void @test_igtss_sext_store(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: test_igtss_sext_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r4, r3
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    sth r3, 0(r5)
+; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sgt i16 %a, %b

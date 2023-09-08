@@ -19,8 +19,8 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:    addi 6, 1, 46
 ; CHECK-NEXT:    sth 3, 46(1)
 ; CHECK-NEXT:    lis 3, 0
-; CHECK-NEXT:    ori 3, 3, 33059
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    ori 3, 3, 33059
 ; CHECK-NEXT:  .LBB0_1: # %L.entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 6
