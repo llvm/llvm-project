@@ -37,7 +37,7 @@ suspend:
   ret ptr %hdl
 }
 
-; See if the i8* for coro.begin was added to f.Frame
+; See if the ptr for coro.begin was added to f.Frame
 ; CHECK-LABEL: %f.Frame = type { ptr, ptr, ptr, i1 }
 
 ; See if the g's coro.begin was spilled into the frame
