@@ -129,6 +129,7 @@ public:
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI domain_error(const domain_error&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI domain_error& operator=(const domain_error&) _NOEXCEPT = default;
     ~domain_error() _NOEXCEPT override;
 #endif
 };
@@ -142,6 +143,7 @@ public:
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI invalid_argument(const invalid_argument&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI invalid_argument& operator=(const invalid_argument&) _NOEXCEPT = default;
     ~invalid_argument() _NOEXCEPT override;
 #endif
 };
@@ -154,6 +156,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY explicit length_error(const char* __s)   : logic_error(__s) {}
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI length_error(const length_error&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI length_error& operator=(const length_error&) _NOEXCEPT = default;
     ~length_error() _NOEXCEPT override;
 #endif
 };
@@ -167,6 +170,7 @@ public:
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI out_of_range(const out_of_range&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI out_of_range& operator=(const out_of_range&) _NOEXCEPT = default;
     ~out_of_range() _NOEXCEPT override;
 #endif
 };
@@ -180,6 +184,7 @@ public:
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI range_error(const range_error&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI range_error& operator=(const range_error&) _NOEXCEPT = default;
     ~range_error() _NOEXCEPT override;
 #endif
 };
@@ -193,6 +198,7 @@ public:
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI overflow_error(const overflow_error&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI overflow_error& operator=(const overflow_error&) _NOEXCEPT = default;
     ~overflow_error() _NOEXCEPT override;
 #endif
 };
@@ -206,6 +212,7 @@ public:
 
 #ifndef _LIBCPP_ABI_VCRUNTIME
     _LIBCPP_HIDE_FROM_ABI underflow_error(const underflow_error&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI underflow_error& operator=(const underflow_error&) _NOEXCEPT = default;
     ~underflow_error() _NOEXCEPT override;
 #endif
 };
