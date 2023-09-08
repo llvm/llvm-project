@@ -537,7 +537,6 @@ libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
 libcxx/src/std_stream.h
 libcxx/src/string.cpp
-libcxx/src/strstream.cpp
 libcxx/src/support/ibm/mbsnrtowcs.cpp
 libcxx/src/support/ibm/wcsnrtombs.cpp
 libcxx/src/support/ibm/xlocale_zos.cpp

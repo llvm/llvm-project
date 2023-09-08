@@ -15,9 +15,9 @@ define void @fold_constant_stores_loaddr(ptr %i8_ptr) {
 ; LE-LABEL: fold_constant_stores_loaddr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    li 4, 0
-; LE-NEXT:    li 5, -86
 ; LE-NEXT:    std 4, 0(3)
-; LE-NEXT:    stb 5, 0(3)
+; LE-NEXT:    li 4, -86
+; LE-NEXT:    stb 4, 0(3)
 ; LE-NEXT:    blr
 entry:
   store i64   0, ptr %i8_ptr, align 8
@@ -38,9 +38,9 @@ define void @fold_constant_stores_hiaddr(ptr %i8_ptr) {
 ; LE-LABEL: fold_constant_stores_hiaddr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    li 4, 0
-; LE-NEXT:    li 5, -86
 ; LE-NEXT:    std 4, 0(3)
-; LE-NEXT:    stb 5, 0(3)
+; LE-NEXT:    li 4, -86
+; LE-NEXT:    stb 4, 0(3)
 ; LE-NEXT:    blr
 entry:
   store i64   0, ptr %i8_ptr, align 8
