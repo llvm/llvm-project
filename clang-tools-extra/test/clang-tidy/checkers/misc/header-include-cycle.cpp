@@ -4,10 +4,10 @@
 // RUN: mkdir %T/misc-header-include-cycle-headers/system
 // RUN: cp -r %S/Inputs/system/header-include-cycle* %T/misc-header-include-cycle-headers/system
 // RUN: cp %s %T/header-include-cycle.cpp
-// RUN: clang-tidy %T/header-include-cycle.cpp -checks='-*,misc-header-include-cycle' -header-filter=.* \
+// RUN: clang-tidy %T%{fs-sep}header-include-cycle.cpp -checks='-*,misc-header-include-cycle' -header-filter=.* \
 // RUN: -config="{CheckOptions: {misc-header-include-cycle.IgnoredFilesList: 'header-include-cycle.self-e.hpp'}}" \
-// RUN: -- -I%T/misc-header-include-cycle-headers -isystem %T/misc-header-include-cycle-headers/system \
-// RUN: --include %T/misc-header-include-cycle-headers/header-include-cycle.self-i.hpp | FileCheck %s \
+// RUN: -- -I%T%{fs-sep}misc-header-include-cycle-headers -isystem %T%{fs-sep}misc-header-include-cycle-headers%{fs-sep}system \
+// RUN: --include %T%{fs-sep}misc-header-include-cycle-headers%{fs-sep}header-include-cycle.self-i.hpp | FileCheck %s \
 // RUN: -check-prefix=CHECK-MESSAGES "-implicit-check-not={{note|warning|error}}:" --dump-input=fail
 // RUN: rm -rf %T/misc-header-include-cycle-headers
 
