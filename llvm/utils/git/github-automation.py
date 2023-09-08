@@ -65,6 +65,36 @@ class IssueSubscriber:
         return False
 
 
+class PRSubscriber:
+    @property
+    def team_name(self) -> str:
+        return self._team_name
+
+    def __init__(self, token: str, repo: str, pr_number: int, label_name: str):
+        self.repo = github.Github(token).get_repo(repo)
+        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.pr = self.repo.get_issue(pr_number).as_pull_request()
+        self._team_name = "pr-subscribers-{}".format(label_name).lower()
+
+    def run(self) -> bool:
+        for team in self.org.get_teams():
+            if self.team_name != team.name.lower():
+                continue
+            try:
+                # GitHub limits comments to 65,536 characters, let's limit our comments to 20,000.
+                patch = requests.get(self.pr.diff_url).text[0:20000]
+            except:
+                patch = ""
+            comment = (
+                "@llvm/{}".format(team.slug)
+                + "\n\n<details><summary>Changes</summary><pre>\n"
+                + patch
+                + "\n</pre></details>"
+            )
+            self.pr.as_issue().create_comment(comment)
+        return True
+
+
 def setup_llvmbot_git(git_dir="."):
     """
     Configure the git repo in `git_dir` with the llvmbot account so
@@ -506,6 +536,10 @@ issue_subscriber_parser = subparsers.add_parser("issue-subscriber")
 issue_subscriber_parser.add_argument("--label-name", type=str, required=True)
 issue_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
+pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
+pr_subscriber_parser.add_argument("--label-name", type=str, required=True)
+pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
+
 release_workflow_parser = subparsers.add_parser("release-workflow")
 release_workflow_parser.add_argument(
     "--llvm-project-dir",
@@ -551,6 +585,11 @@ if args.command == "issue-subscriber":
         args.token, args.repo, args.issue_number, args.label_name
     )
     issue_subscriber.run()
+elif args.command == "pr-subscriber":
+    pr_subscriber = PRSubscriber(
+        args.token, args.repo, args.issue_number, args.label_name
+    )
+    pr_subscriber.run()
 elif args.command == "release-workflow":
     release_workflow = ReleaseWorkflow(
         args.token,
