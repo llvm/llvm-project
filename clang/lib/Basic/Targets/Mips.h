@@ -328,6 +328,8 @@ public:
         IsMips16 = true;
       else if (Feature == "+micromips")
         IsMicromips = true;
+      else if (Feature == "+mips32r6" || Feature == "+mips64r6")
+        HasUnalignedAccess = true;
       else if (Feature == "+dsp")
         DspRev = std::max(DspRev, DSP1);
       else if (Feature == "+dspr2")
