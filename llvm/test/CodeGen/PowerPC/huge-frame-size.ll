@@ -20,13 +20,13 @@ define void @foo(i8 %x) {
 ; CHECK-LE-NEXT:    stdux 1, 1, 0
 ; CHECK-LE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LE-NEXT:    li 4, 1
-; CHECK-LE-NEXT:    li 5, -1
-; CHECK-LE-NEXT:    addi 6, 1, 32
+; CHECK-LE-NEXT:    addi 5, 1, 32
 ; CHECK-LE-NEXT:    stb 3, 32(1)
 ; CHECK-LE-NEXT:    rldic 4, 4, 31, 32
-; CHECK-LE-NEXT:    rldic 5, 5, 0, 32
-; CHECK-LE-NEXT:    stbx 3, 6, 4
-; CHECK-LE-NEXT:    stbx 3, 6, 5
+; CHECK-LE-NEXT:    stbx 3, 5, 4
+; CHECK-LE-NEXT:    li 4, -1
+; CHECK-LE-NEXT:    rldic 4, 4, 0, 32
+; CHECK-LE-NEXT:    stbx 3, 5, 4
 ; CHECK-LE-NEXT:    ld 1, 0(1)
 ; CHECK-LE-NEXT:    blr
 ;
