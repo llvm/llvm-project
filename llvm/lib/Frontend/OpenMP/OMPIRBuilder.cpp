@@ -6130,7 +6130,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   //   current_basic_block:
   //     br label %teams.exit
   //   teams.exit:
-  //     ; instructions after task
+  //     ; instructions after teams
   // }
   // def outlined_fn() {
   //   teams.alloca:
