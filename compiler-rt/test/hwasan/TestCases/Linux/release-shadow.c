@@ -23,7 +23,7 @@ const size_t kMapSize = kNumPages * kPageSize;
 void sync_rss() {
   char *page = (char *)mmap(0, kPageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   // Linux kernel updates RSS counters after a set number of page faults.
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < 10000; ++i) {
     page[0] = 42;
     madvise(page, kPageSize, MADV_DONTNEED);
   }
