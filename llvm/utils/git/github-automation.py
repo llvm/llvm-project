@@ -67,39 +67,26 @@ class IssueSubscriber:
 
 
 class PRSubscriber:
+    @property
+    def team_name(self) -> str:
+        return self._team_name
 
-    class PRTeam:
-        def __init__(self, slug: str, description: str):
-            self.slug = slug
-            self.globs = [x.strip() for x in description.split(",")]
-
-    def __init__(self, token: str, repo: str, pr_number: int):
+    def __init__(self, token: str, repo: str, pr_number: int, label_name : str):
         self.repo = github.Github(token).get_repo(repo)
         self.org = github.Github(token).get_organization(self.repo.organization.login)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
-        self.teams = []
-        for team in self.org.get_teams():
-            if not team.name.startswith("pr-subscribers-"):
-                continue
-            self.teams.append(PRSubscriber.PRTeam(team.slug, team.description))
+        self._team_name = "pr-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        mentions = []
-        for c in self.pr.get_commits():
-            for f in c.files:
-                print(f.filename)
-            for t in self.teams:
-                for g in t.globs:
-                    if len(fnmatch.filter([f.filename for f in c.files], g)):
-                        print('Matches {} for {}'.format(g, t.slug))
-                        mentions.append(t.slug)
-                        break
-
-        if not len(mentions):
-            return False
-
-        comment = "\n".join(['@llvm/{}'.format(m) for m in mentions])
-        self.pr.as_issue().create_comment(comment)
+        for team in self.org.get_teams():
+            if self.team_name != team.name.lower():
+                continue
+            try:
+                patch = requests.get(self.pr.diff_url).text
+            except:
+                patch = ""
+            comment = "@llvm/{}".format(team.slug) + "\n\n<details><summary>Changes</summary><pre>\n" + patch + "\n</pre></details>"
+            self.pr.as_issue().create_comment(comment)
         return True
 
 
@@ -545,6 +532,7 @@ issue_subscriber_parser.add_argument("--label-name", type=str, required=True)
 issue_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
 pr_subscriber_parser = subparsers.add_parser("pr-subscriber")
+pr_subscriber_parser.add_argument("--label-name", type=str, required=True)
 pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
 release_workflow_parser = subparsers.add_parser("release-workflow")
@@ -594,7 +582,7 @@ if args.command == "issue-subscriber":
     issue_subscriber.run()
 elif args.command == "pr-subscriber":
     pr_subscriber = PRSubscriber(
-        args.token, args.repo, args.issue_number
+        args.token, args.repo, args.issue_number, args.label_name
     )
     pr_subscriber.run()
 elif args.command == "release-workflow":

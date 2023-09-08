@@ -3,7 +3,7 @@ name: PR Subscriber
 on:
   pull_request:
     types:
-      - opened
+      - labeled
 
 permissions:
   contents: read
@@ -20,8 +20,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Update watchers
+        # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+        env:
+          LABEL_NAME: ${{ github.event.label.name }}
         run: |
           ./github-automation.py \
           --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
           pr-subscriber \
           --issue-number '${{ github.event.pull_request.number }}'
+          --label-name "$LABEL_NAME"
