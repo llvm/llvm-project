@@ -86,14 +86,14 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
     switch (Specifier) {
     case '@':
       break;
-    case 'm':
+    case 'm':  // Module name speicifer.
       if (Values.size() != 1) {
         return createProfileParseError(Twine("invalid module name value: '") +
                                        S + "'");
       }
       DIFilename = sys::path::remove_leading_dotslash(Values[0]);
       continue;
-    case 'f': {
+    case 'f': {  // Function names specifier.
       bool FunctionFound = any_of(Values, [&](StringRef Alias) {
         auto It = FunctionNameToDIFilename.find(Alias);
         // No match if this function name is not found in this module.
@@ -129,7 +129,7 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       DIFilename = "";
       continue;
     }
-    case 'c':
+    case 'c':  // Basic block cluster specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
       if (FI == ProgramBBClusterInfo.end())
