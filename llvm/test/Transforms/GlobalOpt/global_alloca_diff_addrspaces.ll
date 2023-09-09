@@ -9,7 +9,7 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 
 ; Function Attrs: norecurse
 define void @test(i32 %0) #0 {
-; CHECK-LABEL: define amdgpu_kernel void @test(
+; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
