@@ -187,7 +187,7 @@ class Symbolizer final {
   // If stale, need to reload the modules before looking up addresses.
   bool modules_fresh_;
 
-  // Platform-specific default demangler, must not return nullptr.
+  // Platform-specific default demangler, returns nullptr on failure.
   const char *PlatformDemangle(const char *name);
 
   static Symbolizer *symbolizer_;
