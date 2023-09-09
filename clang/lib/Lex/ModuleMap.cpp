@@ -1519,7 +1519,7 @@ namespace clang {
     ModuleMap &Map;
 
     /// The current module map file.
-    const FileEntry *ModuleMapFile;
+    FileEntryRef ModuleMapFile;
 
     /// Source location of most recent parsed module declaration
     SourceLocation CurrModuleDeclLoc;
@@ -1591,7 +1591,7 @@ namespace clang {
   public:
     explicit ModuleMapParser(Lexer &L, SourceManager &SourceMgr,
                              const TargetInfo *Target, DiagnosticsEngine &Diags,
-                             ModuleMap &Map, const FileEntry *ModuleMapFile,
+                             ModuleMap &Map, FileEntryRef ModuleMapFile,
                              DirectoryEntryRef Directory, bool IsSystem)
         : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map),
           ModuleMapFile(ModuleMapFile), Directory(Directory),
@@ -2127,7 +2127,7 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule->NoUndeclaredIncludes = true;
   ActiveModule->Directory = Directory;
 
-  StringRef MapFileName(ModuleMapFile->getName());
+  StringRef MapFileName(ModuleMapFile.getName());
   if (MapFileName.endswith("module.private.modulemap") ||
       MapFileName.endswith("module_private.map")) {
     ActiveModule->ModuleMapIsPrivate = true;
@@ -3117,7 +3117,7 @@ bool ModuleMapParser::parseModuleMapFile() {
   } while (true);
 }
 
-bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
+bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
                                    DirectoryEntryRef Dir, FileID ID,
                                    unsigned *Offset,
                                    SourceLocation ExternModuleLoc) {
