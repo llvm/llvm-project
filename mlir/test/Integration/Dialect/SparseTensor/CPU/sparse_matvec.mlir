@@ -18,23 +18,23 @@
 //--------------------------------------------------------------------------------------------------
 
 // REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx"
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with parallelization strategy.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true parallelization-strategy=any-storage-any-loop
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and parallelization strategy.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false parallelization-strategy=any-storage-any-loop
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
