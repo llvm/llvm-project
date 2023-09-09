@@ -224,7 +224,7 @@ public:
         IncludedHeader = *StandardHeader;
       }
     if (!IncludedHeader && File)
-      IncludedHeader = &File->getFileEntry();
+      IncludedHeader = *File;
     checkForExport(HashFID, HashLine, std::move(IncludedHeader), File);
     checkForKeep(HashLine, File);
   }
@@ -243,7 +243,7 @@ public:
       if (IncludedHeader) {
         switch (IncludedHeader->kind()) {
         case Header::Physical:
-          Out->IWYUExportBy[IncludedHeader->physical()->getUniqueID()]
+          Out->IWYUExportBy[IncludedHeader->physical().getUniqueID()]
               .push_back(Top.Path);
           break;
         case Header::Standard:
@@ -393,18 +393,18 @@ llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
   return It->getSecond();
 }
 
-static llvm::SmallVector<const FileEntry *>
+static llvm::SmallVector<FileEntryRef>
 toFileEntries(llvm::ArrayRef<StringRef> FileNames, FileManager &FM) {
-  llvm::SmallVector<const FileEntry *> Results;
+  llvm::SmallVector<FileEntryRef> Results;
 
   for (auto FName : FileNames) {
     // FIMXE: log the failing cases?
-    if (auto FE = expectedToOptional(FM.getFileRef(FName)))
+    if (auto FE = FM.getOptionalFileRef(FName))
       Results.push_back(*FE);
   }
   return Results;
 }
-llvm::SmallVector<const FileEntry *>
+llvm::SmallVector<FileEntryRef>
 PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
   auto It = IWYUExportBy.find(File->getUniqueID());
   if (It == IWYUExportBy.end())
@@ -412,7 +412,7 @@ PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
 
   return toFileEntries(It->getSecond(), FM);
 }
-llvm::SmallVector<const FileEntry *>
+llvm::SmallVector<FileEntryRef>
 PragmaIncludes::getExporters(tooling::stdlib::Header StdHeader,
                              FileManager &FM) const {
   auto It = StdIWYUExportBy.find(StdHeader);
