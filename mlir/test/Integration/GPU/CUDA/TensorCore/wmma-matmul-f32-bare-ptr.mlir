@@ -3,7 +3,9 @@
 // Similar to the wmma-matmul-f32 but but with the memref bare pointer lowering convention.
 // This test also uses gpu.memcpy operations (instead of gpu.host_register).
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -test-lower-to-nvvm="host-bare-ptr-calling-convention=1 kernel-bare-ptr-calling-convention=1 cubin-chip=sm_70" \
+// RUN: | mlir-opt -gpu-kernel-outlining \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm{use-bare-ptr-memref-call-conv=1},gpu-to-cubin{chip=sm_70}))' \
+// RUN: | mlir-opt --convert-scf-to-cf -gpu-to-llvm="use-bare-pointers-for-host=1 use-bare-pointers-for-kernels=1" \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --entry-point-result=void \
