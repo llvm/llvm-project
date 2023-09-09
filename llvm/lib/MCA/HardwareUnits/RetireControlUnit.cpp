@@ -66,7 +66,8 @@ const RetireControlUnit::RUToken &RetireControlUnit::getCurrentToken() const {
 
 unsigned RetireControlUnit::computeNextSlotIdx() const {
   const RetireControlUnit::RUToken &Current = getCurrentToken();
-  unsigned NextSlotIdx = CurrentInstructionSlotIdx + std::max(1U, Current.NumSlots);
+  unsigned NextSlotIdx =
+      CurrentInstructionSlotIdx + std::max(1U, Current.NumSlots);
   return NextSlotIdx % Queue.size();
 }
 
@@ -82,12 +83,13 @@ void RetireControlUnit::consumeCurrentToken() {
   CurrentInstructionSlotIdx += std::max(1U, Current.NumSlots);
   CurrentInstructionSlotIdx %= Queue.size();
   AvailableEntries += Current.NumSlots;
-  Current = { InstRef(), 0U, false };
+  Current = {InstRef(), 0U, false};
 }
 
 void RetireControlUnit::onInstructionExecuted(unsigned TokenID) {
   assert(Queue.size() > TokenID);
-  assert(Queue[TokenID].IR.getInstruction() && "Instruction was not dispatched!");
+  assert(Queue[TokenID].IR.getInstruction() &&
+         "Instruction was not dispatched!");
   assert(Queue[TokenID].Executed == false && "Instruction already executed!");
   Queue[TokenID].Executed = true;
 }

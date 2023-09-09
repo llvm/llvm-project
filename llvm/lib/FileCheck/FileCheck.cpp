@@ -9,8 +9,8 @@
 // FileCheck does a line-by line check of a file that validates whether it
 // contains the expected content.  This is useful for regression tests etc.
 //
-// This file implements most of the API that will be used by the FileCheck utility
-// as well as various unittests.
+// This file implements most of the API that will be used by the FileCheck
+// utility as well as various unittests.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/FileCheck/FileCheck.h"
@@ -307,7 +307,7 @@ Pattern::parseVariable(StringRef &Str, const SourceMgr &SM) {
 
   StringRef Name = Str.take_front(I);
   Str = Str.substr(I);
-  return VariableProperties {Name, IsPseudo};
+  return VariableProperties{Name, IsPseudo};
 }
 
 // StringRef holding all characters considered as horizontal whitespaces by
@@ -1847,20 +1847,22 @@ bool FileCheck::readCheckFile(
 
     // Verify that CHECK-LABEL lines do not define or use variables
     if ((CheckTy == Check::CheckLabel) && P.hasVariable()) {
-      SM.PrintMessage(
-          SMLoc::getFromPointer(UsedPrefixStart), SourceMgr::DK_Error,
-          "found '" + UsedPrefix + "-LABEL:'"
-                                   " with variable definition or use");
+      SM.PrintMessage(SMLoc::getFromPointer(UsedPrefixStart),
+                      SourceMgr::DK_Error,
+                      "found '" + UsedPrefix +
+                          "-LABEL:'"
+                          " with variable definition or use");
       return true;
     }
 
-    // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line before them.
+    // Verify that CHECK-NEXT/SAME/EMPTY lines have at least one CHECK line
+    // before them.
     if ((CheckTy == Check::CheckNext || CheckTy == Check::CheckSame ||
          CheckTy == Check::CheckEmpty) &&
         CheckStrings->empty()) {
-      StringRef Type = CheckTy == Check::CheckNext
-                           ? "NEXT"
-                           : CheckTy == Check::CheckEmpty ? "EMPTY" : "SAME";
+      StringRef Type = CheckTy == Check::CheckNext    ? "NEXT"
+                       : CheckTy == Check::CheckEmpty ? "EMPTY"
+                                                      : "SAME";
       SM.PrintMessage(SMLoc::getFromPointer(UsedPrefixStart),
                       SourceMgr::DK_Error,
                       "found '" + UsedPrefix + "-" + Type +

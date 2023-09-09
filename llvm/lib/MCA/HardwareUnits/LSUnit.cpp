@@ -96,8 +96,8 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
     if (CurrentStoreBarrierGroupID) {
       MemoryGroup &StoreGroup = getGroup(CurrentStoreBarrierGroupID);
       LLVM_DEBUG(dbgs() << "[LSUnit]: GROUP DEP: ("
-                        << CurrentStoreBarrierGroupID
-                        << ") --> (" << NewGID << ")\n");
+                        << CurrentStoreBarrierGroupID << ") --> (" << NewGID
+                        << ")\n");
       StoreGroup.addSuccessor(&NewGroup, true);
     }
 
@@ -109,7 +109,6 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
                         << ") --> (" << NewGID << ")\n");
       StoreGroup.addSuccessor(&NewGroup, !assumeNoAlias());
     }
-
 
     CurrentStoreGroupID = NewGID;
     if (IsStoreBarrier)
@@ -165,8 +164,7 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
     if (IsLoadBarrier) {
       if (ImmediateLoadDominator) {
         MemoryGroup &LoadGroup = getGroup(ImmediateLoadDominator);
-        LLVM_DEBUG(dbgs() << "[LSUnit]: GROUP DEP: ("
-                          << ImmediateLoadDominator
+        LLVM_DEBUG(dbgs() << "[LSUnit]: GROUP DEP: (" << ImmediateLoadDominator
                           << ") --> (" << NewGID << ")\n");
         LoadGroup.addSuccessor(&NewGroup, true);
       }
@@ -175,8 +173,8 @@ unsigned LSUnit::dispatch(const InstRef &IR) {
       if (CurrentLoadBarrierGroupID) {
         MemoryGroup &LoadGroup = getGroup(CurrentLoadBarrierGroupID);
         LLVM_DEBUG(dbgs() << "[LSUnit]: GROUP DEP: ("
-                          << CurrentLoadBarrierGroupID
-                          << ") --> (" << NewGID << ")\n");
+                          << CurrentLoadBarrierGroupID << ") --> (" << NewGID
+                          << ")\n");
         LoadGroup.addSuccessor(&NewGroup, true);
       }
     }
