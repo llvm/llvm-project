@@ -56,12 +56,13 @@ public:
   } CompilationTarget;
 
   /// Constructor initializing the toolkit path, the list of files to link to,
-  /// extra command line options & the compilation target. The default
-  /// compilation target is `binOrFatbin`.
+  /// extra command line options, the compilation target and a callback for
+  /// obtaining the parent symbol table. The default compilation target is
+  /// `binOrFatbin`.
   TargetOptions(StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
                 CompilationTarget compilationTarget = binOrFatbin,
-                function_ref<SymbolTable *()> symbolTableCallback = {});
+                function_ref<SymbolTable *()> getSymbolTableCallback = {});
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -82,9 +83,12 @@ public:
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
-  /// Returns the parent symbol table if a callback was provided, else returns
-  /// nullptr.
-  SymbolTable *getParentTable() const;
+  /// Returns the result of the `getSymbolTableCallback` callback or a nullptr
+  /// if no callback was provided.
+  /// Note: The callback itself can return nullptr. It is up to the target how
+  /// to react to getting a nullptr, e.g., emitting an error or constructing the
+  /// table.
+  SymbolTable *getSymbolTable() const;
 
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
@@ -92,7 +96,7 @@ protected:
   TargetOptions(TypeID typeID, StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
                 CompilationTarget compilationTarget = binOrFatbin,
-                function_ref<SymbolTable *()> symbolTableCallback = {});
+                function_ref<SymbolTable *()> getSymbolTableCallback = {});
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -109,7 +113,7 @@ protected:
 
   /// Callback for obtaining the parent symbol table of all the GPU modules
   /// being serialized.
-  function_ref<SymbolTable *()> symbolTableCallback;
+  function_ref<SymbolTable *()> getSymbolTableCallback;
 
 private:
   TypeID typeID;

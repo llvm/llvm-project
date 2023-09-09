@@ -1979,22 +1979,20 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // GPU target options
 //===----------------------------------------------------------------------===//
 
-TargetOptions::TargetOptions(StringRef toolkitPath,
-                             ArrayRef<std::string> linkFiles,
-                             StringRef cmdOptions,
-                             CompilationTarget compilationTarget,
-                             function_ref<SymbolTable *()> symbolTableCallback)
+TargetOptions::TargetOptions(
+    StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef cmdOptions, CompilationTarget compilationTarget,
+    function_ref<SymbolTable *()> getSymbolTableCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, symbolTableCallback) {}
+                    cmdOptions, compilationTarget, getSymbolTableCallback) {}
 
-TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
-                             ArrayRef<std::string> linkFiles,
-                             StringRef cmdOptions,
-                             CompilationTarget compilationTarget,
-                             function_ref<SymbolTable *()> symbolTableCallback)
+TargetOptions::TargetOptions(
+    TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef cmdOptions, CompilationTarget compilationTarget,
+    function_ref<SymbolTable *()> getSymbolTableCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
-      symbolTableCallback(symbolTableCallback), typeID(typeID) {}
+      getSymbolTableCallback(getSymbolTableCallback), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -2004,8 +2002,8 @@ ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
 
-SymbolTable *TargetOptions::getParentTable() const {
-  return symbolTableCallback ? symbolTableCallback() : nullptr;
+SymbolTable *TargetOptions::getSymbolTable() const {
+  return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
