@@ -1030,12 +1030,12 @@ void VerifyDiagnosticConsumer::UpdateParsedFileStatus(SourceManager &SM,
   if (FID.isInvalid())
     return;
 
-  const FileEntry *FE = SM.getFileEntryForID(FID);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
 
   if (PS == IsParsed) {
     // Move the FileID from the unparsed set to the parsed set.
     UnparsedFiles.erase(FID);
-    ParsedFiles.insert(std::make_pair(FID, FE));
+    ParsedFiles.insert(std::make_pair(FID, FE ? &FE->getFileEntry() : nullptr));
   } else if (!ParsedFiles.count(FID) && !UnparsedFiles.count(FID)) {
     // Add the FileID to the unparsed set if we haven't seen it before.
 
@@ -1076,17 +1076,17 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Iterate through list of unparsed files.
     for (const auto &I : UnparsedFiles) {
       const UnparsedFileStatus &Status = I.second;
-      const FileEntry *FE = Status.getFile();
+      OptionalFileEntryRef FE = Status.getFile();
 
       // Skip files that have been parsed via an alias.
-      if (FE && ParsedFileCache.count(FE))
+      if (FE && ParsedFileCache.count(*FE))
         continue;
 
       // Report a fatal error if this file contained directives.
       if (Status.foundDirectives()) {
-        llvm::report_fatal_error(Twine("-verify directives found after rather"
-                                       " than during normal parsing of ",
-                                 StringRef(FE ? FE->getName() : "(unknown)")));
+        llvm::report_fatal_error("-verify directives found after rather"
+                                 " than during normal parsing of " +
+                                 (FE ? FE->getName() : "(unknown)"));
       }
     }
 
