@@ -12,7 +12,9 @@
 
 // std::views::stride_view
 
+#include "__ranges/stride_view.h"
 #include "test.h"
+#include <concepts>
 #include <iterator>
 #include <ranges>
 #include <utility>
@@ -23,149 +25,84 @@ concept CanBePiped = requires(View&& view, T&& t) {
 };
 
 constexpr bool test() {
-  int arr[] = {1, 2, 3};
+  constexpr int array_n = 3;
+  int arr[array_n]      = {1, 2, 3};
 
-  // Simple use cases.
+  // Test that `std::views::stride` is a range adaptor.
   {
+    // Check various forms of
+    // view | stride
     {
-      BidirView view(arr, arr + 3);
-      std::ranges::stride_view<BidirView> strided(view, 1);
-      auto strided_iter = strided.begin();
+      {
+        BidirView view(arr, arr + array_n);
+        //std::ranges::stride_view<BidirView> strided(view, 1);
+        std::same_as<std::ranges::stride_view<BidirView>> decltype(auto) strided = view | std::views::stride(1);
+        auto strided_iter                                                        = strided.begin();
 
-      assert(*strided_iter == arr[0]);
+        // Check that the begin() iter views arr[0]
+        assert(*strided_iter == arr[0]);
 
-      std::ranges::advance(strided_iter, 2);
-      assert(*strided_iter == arr[2]);
-    }
-    {
-      BidirView view(arr, arr + 3);
-      std::ranges::stride_view<BidirView> strided(view, 2);
-      auto strided_iter = strided.begin();
+        // Check that the strided_iter, after advancing it 2 * 1 steps, views arr[2].
+        std::ranges::advance(strided_iter, 2);
+        assert(*strided_iter == arr[2]);
+      }
+      {
+        BidirView view(arr, arr + array_n);
+        std::same_as<std::ranges::stride_view<BidirView>> decltype(auto) strided = view | std::views::stride(2);
+        auto strided_iter                                                        = strided.begin();
 
-      assert(*strided_iter == arr[0]);
+        assert(*strided_iter == arr[0]);
 
-      std::ranges::advance(strided_iter, 1);
-      assert(*strided_iter == arr[2]);
+        // Same test as above, just advance one time with a bigger step (1 * 2 steps).
+        std::ranges::advance(strided_iter, 1);
+        assert(*strided_iter == arr[2]);
+      }
     }
   }
 
-#if 0
-  // views::reverse(x) is equivalent to subrange{end, begin, size} if x is a
-  // sized subrange over reverse iterators
+  // Check various forms of
+  // adaptor | stride
   {
-    using It = bidirectional_iterator<int*>;
-    using Subrange = std::ranges::subrange<It, It, std::ranges::subrange_kind::sized>;
+    // Parallels the two tests from above.
+    constexpr auto identity_lambda = [](int i) { return i * 2; };
+    {
+      BidirView view(arr, arr + array_n);
+      const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(1);
 
-    using ReverseIt = std::reverse_iterator<It>;
-    using ReverseSubrange = std::ranges::subrange<ReverseIt, ReverseIt, std::ranges::subrange_kind::sized>;
+      const auto transform_stride_applied = transform_stride_partial(view);
+      auto transform_stride_applied_iter  = transform_stride_applied.begin();
+      assert(*transform_stride_applied_iter == std::invoke(identity_lambda, arr[0]));
+      std::ranges::advance(transform_stride_applied_iter, 2);
+      assert(*transform_stride_applied_iter == std::invoke(identity_lambda, arr[2]));
+    }
 
     {
-      BidirRange view(buf, buf + 3);
-      ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)), /* size */3);
-      std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(base(result.begin()) == buf);
-      assert(base(result.end()) == buf + 3);
-    }
-    {
-      // std::move into views::reverse
-      BidirRange view(buf, buf + 3);
-      ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)), /* size */3);
-      std::same_as<Subrange> auto result = std::views::reverse(std::move(subrange));
-      assert(base(result.begin()) == buf);
-      assert(base(result.end()) == buf + 3);
-    }
-    {
-      // with a const subrange
-      BidirRange view(buf, buf + 3);
-      ReverseSubrange const subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)), /* size */3);
-      std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(base(result.begin()) == buf);
-      assert(base(result.end()) == buf + 3);
+      BidirView view(arr, arr + array_n);
+      const auto transform_stride_partial = std::views::transform(identity_lambda) | std::views::stride(2);
+
+      const auto transform_stride_applied = transform_stride_partial(view);
+      auto transform_stride_applied_iter  = transform_stride_applied.begin();
+      assert(*transform_stride_applied_iter == std::invoke(identity_lambda, arr[0]));
+      std::ranges::advance(transform_stride_applied_iter, 1);
+      assert(*transform_stride_applied_iter == std::invoke(identity_lambda, arr[2]));
     }
   }
 
-  // views::reverse(x) is equivalent to subrange{end, begin} if x is an
-  // unsized subrange over reverse iterators
   {
-    using It = bidirectional_iterator<int*>;
-    using Subrange = std::ranges::subrange<It, It, std::ranges::subrange_kind::unsized>;
+    using ForwardStrideView      = std::ranges::stride_view<ForwardView>;
+    using BidirStrideView        = std::ranges::stride_view<BidirView>;
+    using RandomAccessStrideView = std::ranges::stride_view<RandomAccessView>;
 
-    using ReverseIt = std::reverse_iterator<It>;
-    using ReverseSubrange = std::ranges::subrange<ReverseIt, ReverseIt, std::ranges::subrange_kind::unsized>;
-
-    {
-      BidirRange view(buf, buf + 3);
-      ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)));
-      std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(base(result.begin()) == buf);
-      assert(base(result.end()) == buf + 3);
-    }
-    {
-      // std::move into views::reverse
-      BidirRange view(buf, buf + 3);
-      ReverseSubrange subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)));
-      std::same_as<Subrange> auto result = std::views::reverse(std::move(subrange));
-      assert(base(result.begin()) == buf);
-      assert(base(result.end()) == buf + 3);
-    }
-    {
-      // with a const subrange
-      BidirRange view(buf, buf + 3);
-      ReverseSubrange const subrange(ReverseIt(std::ranges::end(view)), ReverseIt(std::ranges::begin(view)));
-      std::same_as<Subrange> auto result = std::views::reverse(subrange);
-      assert(base(result.begin()) == buf);
-      assert(base(result.end()) == buf + 3);
-    }
+    static_assert(std::ranges::forward_range<ForwardStrideView>);
+    static_assert(std::ranges::bidirectional_range<BidirStrideView>);
+    static_assert(std::ranges::random_access_range<RandomAccessStrideView>);
+    // TODO: check sized_range
   }
 
-  // Otherwise, views::reverse(x) is equivalent to ranges::reverse_view{x}
-  {
-    BidirRange view(buf, buf + 3);
-    std::same_as<std::ranges::reverse_view<BidirRange>> auto result = std::views::reverse(view);
-    assert(base(result.begin().base()) == buf + 3);
-    assert(base(result.end().base()) == buf);
-  }
-
-  // Test that std::views::reverse is a range adaptor
-  {
-    // Test `v | views::reverse`
-    {
-      BidirRange view(buf, buf + 3);
-      std::same_as<std::ranges::reverse_view<BidirRange>> auto result = view | std::views::reverse;
-      assert(base(result.begin().base()) == buf + 3);
-      assert(base(result.end().base()) == buf);
-    }
-
-    // Test `adaptor | views::reverse`
-    {
-      BidirRange view(buf, buf + 3);
-      auto f = [](int i) { return i; };
-      auto const partial = std::views::transform(f) | std::views::reverse;
-      using Result = std::ranges::reverse_view<std::ranges::transform_view<BidirRange, decltype(f)>>;
-      std::same_as<Result> auto result = partial(view);
-      assert(base(result.begin().base().base()) == buf + 3);
-      assert(base(result.end().base().base()) == buf);
-    }
-
-    // Test `views::reverse | adaptor`
-    {
-      BidirRange view(buf, buf + 3);
-      auto f = [](int i) { return i; };
-      auto const partial = std::views::reverse | std::views::transform(f);
-      using Result = std::ranges::transform_view<std::ranges::reverse_view<BidirRange>, decltype(f)>;
-      std::same_as<Result> auto result = partial(view);
-      assert(base(result.begin().base().base()) == buf + 3);
-      assert(base(result.end().base().base()) == buf);
-    }
-  }
-#endif // big block
-
-  // From:
-  // Test that std::views::reverse is a range adaptor
   // Check SFINAE friendliness
   {
     struct NotAViewableRange {};
-    struct NotABidirRange {};
+    struct NotARange {};
     // Not invocable because there is no parameter.
     static_assert(!std::is_invocable_v<decltype(std::views::stride)>);
     // Not invocable because NotAViewableRange is, well, not a viewable range.
@@ -176,8 +113,7 @@ constexpr bool test() {
     // Make sure that pipe operations work!
     static_assert(CanBePiped<BidirView, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
     static_assert(CanBePiped<BidirView&, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
-    static_assert(
-        !CanBePiped<NotABidirRange, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
+    static_assert(!CanBePiped<NotARange, decltype(std::views::stride(std::ranges::range_difference_t<BidirView>{}))>);
   }
   // A final sanity check.
   { static_assert(std::same_as<decltype(std::views::stride), decltype(std::ranges::views::stride)>); }
