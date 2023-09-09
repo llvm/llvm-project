@@ -127,8 +127,7 @@ set(MEMPROF_COMMON_RUNTIME_OBJECT_LIBS
   RTSanitizerCommon
   RTSanitizerCommonLibc
   RTSanitizerCommonCoverage
-  RTSanitizerCommonSymbolizer
-  RTSanitizerCommonSymbolizerInternal)
+  RTSanitizerCommonSymbolizer)
 
 add_compiler_rt_runtime(clang_rt.memprof
   STATIC
