@@ -431,6 +431,8 @@ tok::PPKeywordKind IdentifierInfo::getPPKeywordID() const {
   unsigned Len = getLength();
   if (Len < 2) return tok::pp_not_keyword;
   const char *Name = getNameStart();
+  if (std::string_view(Name, Len) == "define2")
+    return tok::pp_define2;
   switch (HASH(Len, Name[0], Name[2])) {
   default: return tok::pp_not_keyword;
   CASE( 2, 'i', '\0', if);

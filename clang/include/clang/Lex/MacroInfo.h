@@ -102,6 +102,10 @@ class MacroInfo {
   /// like \#define A A.
   bool IsDisabled : 1;
 
+  // True if 'define2' used,
+  // ignores 'IsDisabled' and enables expansion anyway
+  bool AllowRecurse : 1;
+
   /// True if this macro is either defined in the main file and has
   /// been used, or if it is not defined in the main file.
   ///
@@ -278,18 +282,13 @@ public:
   /// Return true if this macro is enabled.
   ///
   /// In other words, that we are not currently in an expansion of this macro.
-  bool isEnabled() const { return !IsDisabled; }
+  bool isEnabled() const { return AllowRecurse || !IsDisabled; }
+  void setAllowRecursive(bool Allow) { AllowRecurse = Allow; }
+  bool isAllowRecurse() const { return AllowRecurse; }
 
-  void EnableMacro() {
-    assert(IsDisabled && "Cannot enable an already-enabled macro!");
-    IsDisabled = false;
-  }
+  void EnableMacro() { IsDisabled = false; }
 
-  void DisableMacro() {
-    assert(!IsDisabled && "Cannot disable an already-disabled macro!");
-    IsDisabled = true;
-  }
-
+  void DisableMacro() { IsDisabled = true; }
   /// Determine whether this macro was used for a header guard.
   bool isUsedForHeaderGuard() const { return UsedForHeaderGuard; }
 

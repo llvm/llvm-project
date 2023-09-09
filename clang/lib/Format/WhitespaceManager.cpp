@@ -743,7 +743,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
     if (!Current || Current->isNot(tok::identifier))
       return false;
 
-    if (!Current->Previous || Current->Previous->isNot(tok::pp_define))
+    if (!Current->Previous || !Current->Previous->isOneOf(tok::pp_define, tok::pp_define2))
       return false;
 
     // For a macro function, 0 spaces are required between the
