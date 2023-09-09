@@ -136,7 +136,7 @@ class Symbolizer final {
 
   // Release internal caches (if any).
   void Flush();
-  // Attempts to demangle the provided C++ mangled name.
+  // Attempts to demangle the provided C++ mangled name. Never returns nullptr.
   const char *Demangle(const char *name);
 
   // Allow user to install hooks that would be called before/after Symbolizer
