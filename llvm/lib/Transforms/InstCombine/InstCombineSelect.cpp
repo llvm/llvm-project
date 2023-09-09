@@ -3086,17 +3086,18 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                 m_c_LogicalOr(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
-  // select (~a | c), a, b -> and a, (or c, freeze(b))
+  // select (~a | c), a, b -> select a, (select c, true, b), false
   if (match(CondVal, m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))) &&
       CondVal->hasOneUse()) {
-    FalseVal = Builder.CreateFreeze(FalseVal);
-    return BinaryOperator::CreateAnd(TrueVal, Builder.CreateOr(C, FalseVal));
+    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
+    return SelectInst::Create(TrueVal, OrV, Zero);
   }
-  // select (~c & b), a, b -> and b, (or freeze(a), c)
-  if (match(CondVal, m_c_And(m_Not(m_Value(C)), m_Specific(FalseVal))) &&
-      CondVal->hasOneUse()) {
-    TrueVal = Builder.CreateFreeze(TrueVal);
-    return BinaryOperator::CreateAnd(FalseVal, Builder.CreateOr(C, TrueVal));
+  // select (c & b), a, b -> select b, (select ~c, true, a), false
+  if (match(CondVal, m_c_And(m_Value(C), m_Specific(FalseVal))) &&
+      CondVal->hasOneUse() && isFreeToInvert(C, C->hasOneUse())) {
+    Value *NotC = Builder.CreateNot(C);
+    Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
+    return SelectInst::Create(FalseVal, OrV, Zero);
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
   if (match(CondVal, m_c_Or(m_Specific(TrueVal), m_Value(C))) &&
