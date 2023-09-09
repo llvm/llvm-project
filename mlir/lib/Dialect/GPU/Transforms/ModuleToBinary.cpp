@@ -67,15 +67,25 @@ void GpuModuleToBinaryPass::runOnOperation() {
   if (targetFormat == -1)
     getOperation()->emitError() << "Invalid format specified.";
 
-  std::unique_ptr<SymbolTable> parentTable;
-  // Create the symbol table if it was requested in the pass options.
-  if (constructSymbolTable)
-    parentTable = std::unique_ptr<SymbolTable>(new SymbolTable(getOperation()));
+  // Lazy symbol table builder callback.
+  std::optional<SymbolTable> parentTable;
+  auto lazyTableBuilder = [&]() -> SymbolTable * {
+    // Build the table if it has not been built.
+    if (!parentTable) {
+      Operation *table = SymbolTable::getNearestSymbolTable(getOperation());
+      // It's up to the target attribute to determine if failing to find a
+      // symbol table is an error.
+      if (!table)
+        return nullptr;
+      parentTable = SymbolTable(table);
+    }
+    return &parentTable.value();
+  };
 
   TargetOptions targetOptions(
       toolkitPath, linkFiles, cmdOptions,
       static_cast<TargetOptions::CompilationTarget>(targetFormat),
-      parentTable.get());
+      lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(),
           offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(

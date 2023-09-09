@@ -1983,18 +1983,18 @@ TargetOptions::TargetOptions(StringRef toolkitPath,
                              ArrayRef<std::string> linkFiles,
                              StringRef cmdOptions,
                              CompilationTarget compilationTarget,
-                             SymbolTable *parentTable)
+                             function_ref<SymbolTable *()> symbolTableCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget, parentTable) {}
+                    cmdOptions, compilationTarget, symbolTableCallback) {}
 
 TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
                              ArrayRef<std::string> linkFiles,
                              StringRef cmdOptions,
                              CompilationTarget compilationTarget,
-                             SymbolTable *parentTable)
+                             function_ref<SymbolTable *()> symbolTableCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
-      parentTable(parentTable), typeID(typeID) {}
+      symbolTableCallback(symbolTableCallback), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -2004,7 +2004,9 @@ ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
 
-SymbolTable *TargetOptions::getParentTable() const { return parentTable; }
+SymbolTable *TargetOptions::getParentTable() const {
+  return symbolTableCallback ? symbolTableCallback() : nullptr;
+}
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
 TargetOptions::tokenizeCmdOptions() const {

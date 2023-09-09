@@ -57,11 +57,11 @@ public:
 
   /// Constructor initializing the toolkit path, the list of files to link to,
   /// extra command line options & the compilation target. The default
-  /// compilation target is `binary`.
+  /// compilation target is `binOrFatbin`.
   TargetOptions(StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
                 CompilationTarget compilationTarget = binOrFatbin,
-                SymbolTable *parentTable = nullptr);
+                function_ref<SymbolTable *()> symbolTableCallback = {});
 
   /// Returns the typeID.
   TypeID getTypeID() const;
@@ -82,7 +82,8 @@ public:
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
-  /// Returns the provided parent symbol table.
+  /// Returns the parent symbol table if a callback was provided, else returns
+  /// nullptr.
   SymbolTable *getParentTable() const;
 
 protected:
@@ -91,7 +92,7 @@ protected:
   TargetOptions(TypeID typeID, StringRef toolkitPath = {},
                 ArrayRef<std::string> linkFiles = {}, StringRef cmdOptions = {},
                 CompilationTarget compilationTarget = binOrFatbin,
-                SymbolTable *parentTable = nullptr);
+                function_ref<SymbolTable *()> symbolTableCallback = {});
 
   /// Path to the target toolkit.
   std::string toolkitPath;
@@ -106,9 +107,9 @@ protected:
   /// Compilation process target representation.
   CompilationTarget compilationTarget;
 
-  /// Parent symbol table of all the GPU modules being serialized. By default
-  /// this member is null as it is not required by most targets.
-  SymbolTable *parentTable;
+  /// Callback for obtaining the parent symbol table of all the GPU modules
+  /// being serialized.
+  function_ref<SymbolTable *()> symbolTableCallback;
 
 private:
   TypeID typeID;

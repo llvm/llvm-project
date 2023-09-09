@@ -80,10 +80,7 @@ def GpuModuleToBinaryPass
     Option<"cmdOptions", "opts", "std::string", [{""}],
            "Command line options to pass to the tools.">,
     Option<"compilationTarget", "format", "std::string", [{"binOrFatbin"}],
-           "The target representation of the compilation process.">,
-    Option<"constructSymbolTable", "symbol-table", "bool", [{false}],
-           "Enable building a symbol table enclosing the modules to serialize."
-           "Most targets can safely disable this.">
+           "The target representation of the compilation process.">
   ];
 }
 
