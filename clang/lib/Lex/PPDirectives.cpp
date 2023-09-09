@@ -1041,14 +1041,14 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     return FE;
   }
 
-  const FileEntry *CurFileEnt;
+  OptionalFileEntryRef CurFileEnt;
   // Otherwise, see if this is a subframework header.  If so, this is relative
   // to one of the headers on the #include stack.  Walk the list of the current
   // headers on the #include stack and pass them to HeaderInfo.
   if (IsFileLexer()) {
     if ((CurFileEnt = CurPPLexer->getFileEntry())) {
       if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
-              Filename, CurFileEnt, SearchPath, RelativePath, RequestingModule,
+              Filename, *CurFileEnt, SearchPath, RelativePath, RequestingModule,
               SuggestedModule)) {
         if (SuggestedModule && !LangOpts.AsmPreprocessor)
           HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
@@ -1063,7 +1063,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     if (IsFileLexer(ISEntry)) {
       if ((CurFileEnt = ISEntry.ThePPLexer->getFileEntry())) {
         if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
-                Filename, CurFileEnt, SearchPath, RelativePath,
+                Filename, *CurFileEnt, SearchPath, RelativePath,
                 RequestingModule, SuggestedModule)) {
           if (SuggestedModule && !LangOpts.AsmPreprocessor)
             HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
