@@ -1178,11 +1178,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
 /// is a subframework within Carbon.framework.  If so, return the FileEntry
 /// for the designated file, otherwise return null.
 OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
-    StringRef Filename, const FileEntry *ContextFileEnt,
+    StringRef Filename, FileEntryRef ContextFileEnt,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule) {
-  assert(ContextFileEnt && "No context file?");
-
   // Framework names must have a '/' in the filename.  Find it.
   // FIXME: Should we permit '\' on Windows?
   size_t SlashPos = Filename.find('/');
@@ -1190,7 +1188,7 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
     return std::nullopt;
 
   // Look up the base framework name of the ContextFileEnt.
-  StringRef ContextName = ContextFileEnt->getName();
+  StringRef ContextName = ContextFileEnt.getName();
 
   // If the context info wasn't a framework, couldn't be a subframework.
   const unsigned DotFrameworkLen = 10;
