@@ -6309,7 +6309,69 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
       Y->getType()->isIntOrIntVectorTy(1) && Pred == ICmpInst::ICMP_ULE)
     return BinaryOperator::CreateOr(Builder.CreateIsNull(X), Y);
 
+  ICmpInst::Predicate Pred1, Pred2;
   const APInt *C;
+  // icmp eq/ne X, (zext (icmp eq/ne X, C))
+  if (match(&I, m_c_ICmp(Pred1, m_Value(X),
+                         m_ZExt(m_ICmp(Pred2, m_Deferred(X), m_APInt(C))))) &&
+      ICmpInst::isEquality(Pred1) && ICmpInst::isEquality(Pred2)) {
+    if (C->isZero()) {
+      if (Pred2 == ICmpInst::ICMP_EQ) {
+        // icmp eq X, (zext (icmp eq X, 0)) --> false
+        // icmp ne X, (zext (icmp eq X, 0)) --> true
+        return replaceInstUsesWith(
+            I,
+            Constant::getIntegerValue(
+                I.getType(),
+                APInt(1U, static_cast<uint64_t>(Pred1 == ICmpInst::ICMP_NE))));
+      } else {
+        // icmp eq X, (zext (icmp ne X, 0)) --> icmp ult X, 2
+        // icmp ne X, (zext (icmp ne X, 0)) --> icmp ugt X, 1
+        return ICmpInst::Create(
+            Instruction::ICmp,
+            Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
+                                       : ICmpInst::ICMP_ULT,
+            X,
+            Constant::getIntegerValue(
+                X->getType(), APInt(X->getType()->getScalarSizeInBits(),
+                                    Pred1 == ICmpInst::ICMP_NE ? 1 : 2)));
+      }
+    } else if (C->isOne()) {
+      if (Pred2 == ICmpInst::ICMP_NE) {
+        // icmp eq X, (zext (icmp ne X, 1)) --> false
+        // icmp ne X, (zext (icmp ne X, 1)) --> true
+        return replaceInstUsesWith(
+            I,
+            Constant::getIntegerValue(
+                I.getType(),
+                APInt(1U, static_cast<uint64_t>(Pred1 == ICmpInst::ICMP_NE))));
+      } else {
+        // icmp eq X, (zext (icmp eq X, 1)) --> icmp ult X, 2
+        // icmp ne X, (zext (icmp eq X, 1)) --> icmp ugt X, 1
+        return ICmpInst::Create(
+            Instruction::ICmp,
+            Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
+                                       : ICmpInst::ICMP_ULT,
+            X,
+            Constant::getIntegerValue(
+                X->getType(), APInt(X->getType()->getScalarSizeInBits(),
+                                    Pred1 == ICmpInst::ICMP_NE ? 1 : 2)));
+      }
+    } else {
+      // C != 0 && C != 1
+      // icmp eq X, (zext (icmp eq X, C)) --> icmp eq X, 0
+      // icmp eq X, (zext (icmp ne X, C)) --> icmp eq X, 1
+      // icmp ne X, (zext (icmp eq X, C)) --> icmp ne X, 0
+      // icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, 1
+      return ICmpInst::Create(
+          Instruction::ICmp, Pred1, X,
+          Constant::getIntegerValue(
+              X->getType(),
+              APInt(X->getType()->getScalarSizeInBits(),
+                    static_cast<uint64_t>(Pred2 == ICmpInst::ICMP_NE))));
+    }
+  }
+
   if (match(I.getOperand(0), m_c_Add(m_ZExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
       match(I.getOperand(1), m_APInt(C)) &&
       X->getType()->isIntOrIntVectorTy(1) &&
