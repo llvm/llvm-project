@@ -52,7 +52,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
     pm.addPass(createSparseGPUCodegenPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
-    pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
+    pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
   }
 
   // TODO(springerm): Add sparse support to the BufferDeallocation pass and add
