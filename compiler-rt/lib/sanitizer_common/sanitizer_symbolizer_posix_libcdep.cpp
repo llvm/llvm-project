@@ -56,7 +56,7 @@ const char *DemangleCXXABI(const char *name) {
           __cxxabiv1::__cxa_demangle(name, 0, 0, 0))
       return demangled_name;
 
-  return name;
+  return nullptr;
 }
 
 // As of now, there are no headers for the Swift runtime. Once they are
