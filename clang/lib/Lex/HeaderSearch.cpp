@@ -818,7 +818,7 @@ static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
 static void
 diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
                          StringRef Includer, StringRef IncludeFilename,
-                         const FileEntry *IncludeFE, bool isAngled = false,
+                         FileEntryRef IncludeFE, bool isAngled = false,
                          bool FoundByHeaderMap = false) {
   bool IsIncluderPrivateHeader = false;
   SmallString<128> FromFramework, ToFramework;
@@ -828,7 +828,7 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
     return;
   bool IsIncludeePrivateHeader = false;
   bool IsIncludeeInFramework =
-      isFrameworkStylePath(IncludeFE->getName(), IsIncludeePrivateHeader,
+      isFrameworkStylePath(IncludeFE.getName(), IsIncludeePrivateHeader,
                            ToFramework, ToIncludeSpelling);
 
   if (!isAngled && !FoundByHeaderMap) {
@@ -965,7 +965,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         if (First) {
           diagnoseFrameworkInclude(Diags, IncludeLoc,
                                    IncluderAndDir.second.getName(), Filename,
-                                   &FE->getFileEntry());
+                                   *FE);
           return FE;
         }
 
@@ -1119,9 +1119,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
 
     bool FoundByHeaderMap = !IsMapped ? false : *IsMapped;
     if (!Includers.empty())
-      diagnoseFrameworkInclude(
-          Diags, IncludeLoc, Includers.front().second.getName(), Filename,
-          &File->getFileEntry(), isAngled, FoundByHeaderMap);
+      diagnoseFrameworkInclude(Diags, IncludeLoc,
+                               Includers.front().second.getName(), Filename,
+                               *File, isAngled, FoundByHeaderMap);
 
     // Remember this location for the next lookup we do.
     cacheLookupSuccess(CacheLookup, It, IncludeLoc);
