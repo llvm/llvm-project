@@ -2342,8 +2342,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Ask HeaderInfo if we should enter this #include file.  If not, #including
   // this file will have no effect.
   if (Action == Enter && File &&
-      !HeaderInfo.ShouldEnterIncludeFile(*this, &File->getFileEntry(),
-                                         EnterOnce, getLangOpts().Modules, SM,
+      !HeaderInfo.ShouldEnterIncludeFile(*this, *File, EnterOnce,
+                                         getLangOpts().Modules, SM,
                                          IsFirstIncludeOfFile)) {
     // C++ standard modules:
     // If we are not in the GMF, then we textually include only
