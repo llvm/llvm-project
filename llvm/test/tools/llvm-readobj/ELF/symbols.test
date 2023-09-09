@@ -228,3 +228,21 @@ Symbols:
 # SYMTAB-SHSTRTAB-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 # SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
 # SYMTAB-SHSTRTAB-ERR-GNU-NEXT:      1: 0000000000000001     0 NOTYPE  GLOBAL DEFAULT     1 foo
+
+## Test a symbol defined relative to a section with an invalid name.
+# RUN: yaml2obj --docnum=3 %s -o %t64.err4
+# RUN: llvm-readelf -s %t64.err4 2>&1 | FileCheck /dev/null --implicit-check-not=warning:
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:   .invalid
+    Type:   SHT_PROGBITS
+    ShName: 0xffff
+Symbols:
+  - Name:    foo
+    Section: .invalid
