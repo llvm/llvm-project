@@ -32,9 +32,10 @@ namespace llvm {
 ///   supported.
 /// * \p "{<glob>,...}" matches one of the globs in the list. Nested brace
 ///   expansions are not supported. If \p MaxSubPatterns is empty then
-///   characters \p "{,}" are treated as literals.
+///   brace expansions are not supported and characters \p "{,}" are treated as
+///   literals.
 /// * \p "\" escapes the next character so it is treated as a literal.
-///
+/// .
 /// Some known edge cases are:
 /// * \p "]" is allowed as the first character in a character class, i.e.,
 ///   \p "[]]" is valid and matches the literal \p "]".
@@ -42,7 +43,7 @@ namespace llvm {
 /// * Empty or singleton brace expansions, e.g., \p "{}", \p "{a}", are invalid.
 /// * \p "}" and \p "," that are not inside a brace expansion are taken as
 ///   literals, e.g., \p ",}" is valid but \p "{" is not.
-///
+/// .
 /// For example, \p "*[/\\]foo.{c,cpp}" will match (unix or windows) paths to
 /// all files named \p "foo.c" or \p "foo.cpp".
 class GlobPattern {
