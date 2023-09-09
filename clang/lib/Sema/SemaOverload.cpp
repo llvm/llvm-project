@@ -5556,9 +5556,11 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
 
   // First check the qualifiers.
   QualType FromTypeCanon = S.Context.getCanonicalType(FromType);
-  if (ImplicitParamType.getCVRQualifiers()
-                                    != FromTypeCanon.getLocalCVRQualifiers() &&
-      !ImplicitParamType.isAtLeastAsQualifiedAs(FromTypeCanon)) {
+  // MSVC ignores __unaligned qualifier for overload candidates; do the same.
+  if (ImplicitParamType.getCVRQualifiers() !=
+          FromTypeCanon.getLocalCVRQualifiers() &&
+      !ImplicitParamType.isAtLeastAsQualifiedAs(
+          withoutUnaligned(S.Context, FromTypeCanon))) {
     ICS.setBad(BadConversionSequence::bad_qualifiers,
                FromType, ImplicitParamType);
     return ICS;
