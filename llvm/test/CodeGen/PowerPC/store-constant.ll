@@ -17,8 +17,8 @@ define void @foo(ptr %p) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    stb 4, 8(3)
 ; CHECK-NEXT:    std 4, 0(3)
+; CHECK-NEXT:    stb 4, 8(3)
 ; CHECK-NEXT:    sth 4, 10(3)
 ; CHECK-NEXT:    stw 4, 12(3)
 ; CHECK-NEXT:    blr
@@ -39,8 +39,8 @@ define void @bar(ptr %p) {
 ; CHECK-NEXT:    li 4, 2
 ; CHECK-NEXT:    stw 4, 12(3)
 ; CHECK-NEXT:    sth 4, 10(3)
-; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    stb 4, 8(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
   %i = getelementptr %struct.S, ptr %p, i64 0, i32 3
   store i32 2, ptr %i, align 4
@@ -58,18 +58,18 @@ define void @setSmallNeg() {
 ; CHECK-LABEL: setSmallNeg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    addis 5, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 6, 2, .LC3@toc@ha
-; CHECK-NEXT:    li 7, -7
+; CHECK-NEXT:    li 4, -7
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
-; CHECK-NEXT:    ld 5, .LC2@toc@l(5)
-; CHECK-NEXT:    ld 6, .LC3@toc@l(6)
-; CHECK-NEXT:    stb 7, 0(3)
-; CHECK-NEXT:    sth 7, 0(4)
-; CHECK-NEXT:    std 7, 0(6)
-; CHECK-NEXT:    stw 7, 0(5)
+; CHECK-NEXT:    stb 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 3, .LC1@toc@l(3)
+; CHECK-NEXT:    sth 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
+; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
+; CHECK-NEXT:    ld 3, .LC3@toc@l(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i8 -7, ptr @CVal, align 1
@@ -84,18 +84,18 @@ define void @setSmallPos() {
 ; CHECK-LABEL: setSmallPos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    addis 5, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 6, 2, .LC3@toc@ha
-; CHECK-NEXT:    li 7, 8
+; CHECK-NEXT:    li 4, 8
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
-; CHECK-NEXT:    ld 5, .LC2@toc@l(5)
-; CHECK-NEXT:    ld 6, .LC3@toc@l(6)
-; CHECK-NEXT:    stb 7, 0(3)
-; CHECK-NEXT:    sth 7, 0(4)
-; CHECK-NEXT:    std 7, 0(6)
-; CHECK-NEXT:    stw 7, 0(5)
+; CHECK-NEXT:    stb 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 3, .LC1@toc@l(3)
+; CHECK-NEXT:    sth 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
+; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
+; CHECK-NEXT:    ld 3, .LC3@toc@l(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i8 8, ptr @CVal, align 1
@@ -110,15 +110,15 @@ define void @setMaxNeg() {
 ; CHECK-LABEL: setMaxNeg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 5, 2, .LC3@toc@ha
-; CHECK-NEXT:    li 6, -32768
+; CHECK-NEXT:    li 4, -32768
 ; CHECK-NEXT:    ld 3, .LC1@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC2@toc@l(4)
-; CHECK-NEXT:    ld 5, .LC3@toc@l(5)
-; CHECK-NEXT:    sth 6, 0(3)
-; CHECK-NEXT:    stw 6, 0(4)
-; CHECK-NEXT:    std 6, 0(5)
+; CHECK-NEXT:    sth 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
+; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
+; CHECK-NEXT:    ld 3, .LC3@toc@l(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i16 -32768, ptr @SVal, align 2
@@ -132,15 +132,15 @@ define void @setMaxPos() {
 ; CHECK-LABEL: setMaxPos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC1@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 5, 2, .LC3@toc@ha
-; CHECK-NEXT:    li 6, 32767
+; CHECK-NEXT:    li 4, 32767
 ; CHECK-NEXT:    ld 3, .LC1@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC2@toc@l(4)
-; CHECK-NEXT:    ld 5, .LC3@toc@l(5)
-; CHECK-NEXT:    sth 6, 0(3)
-; CHECK-NEXT:    stw 6, 0(4)
-; CHECK-NEXT:    std 6, 0(5)
+; CHECK-NEXT:    sth 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
+; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
+; CHECK-NEXT:    ld 3, .LC3@toc@l(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i16 32767, ptr @SVal, align 2
@@ -154,13 +154,13 @@ define void @setExcessiveNeg() {
 ; CHECK-LABEL: setExcessiveNeg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC3@toc@ha
-; CHECK-NEXT:    lis 5, -1
+; CHECK-NEXT:    lis 4, -1
 ; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC3@toc@l(4)
-; CHECK-NEXT:    ori 5, 5, 32767
-; CHECK-NEXT:    stw 5, 0(3)
-; CHECK-NEXT:    std 5, 0(4)
+; CHECK-NEXT:    ori 4, 4, 32767
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
+; CHECK-NEXT:    ld 3, .LC3@toc@l(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i32 -32769, ptr @IVal, align 4
@@ -173,16 +173,16 @@ define void @setExcessivePos() {
 ; CHECK-LABEL: setExcessivePos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC4@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 5, 2, .LC3@toc@ha
-; CHECK-NEXT:    li 6, 0
+; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    ld 3, .LC4@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC2@toc@l(4)
-; CHECK-NEXT:    ld 5, .LC3@toc@l(5)
-; CHECK-NEXT:    ori 6, 6, 32768
-; CHECK-NEXT:    sth 6, 0(3)
-; CHECK-NEXT:    stw 6, 0(4)
-; CHECK-NEXT:    std 6, 0(5)
+; CHECK-NEXT:    ori 4, 4, 32768
+; CHECK-NEXT:    sth 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
+; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC3@toc@ha
+; CHECK-NEXT:    ld 3, .LC3@toc@l(3)
+; CHECK-NEXT:    std 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i16 -32768, ptr @USVal, align 2
@@ -244,12 +244,12 @@ define void @setSameValDiffSizeCI() {
 ; CHECK-LABEL: setSameValDiffSizeCI:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC0@toc@ha
-; CHECK-NEXT:    li 5, 255
+; CHECK-NEXT:    li 4, 255
 ; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC0@toc@l(4)
-; CHECK-NEXT:    stw 5, 0(3)
-; CHECK-NEXT:    stb 5, 0(4)
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
+; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
+; CHECK-NEXT:    stb 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i32 255, ptr @IVal, align 4
@@ -261,13 +261,13 @@ define void @setSameValDiffSizeSI() {
 ; CHECK-LABEL: setSameValDiffSizeSI:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LC2@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LC1@toc@ha
-; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    ld 3, .LC2@toc@l(3)
-; CHECK-NEXT:    ld 4, .LC1@toc@l(4)
-; CHECK-NEXT:    ori 5, 5, 65535
-; CHECK-NEXT:    stw 5, 0(3)
-; CHECK-NEXT:    sth 5, 0(4)
+; CHECK-NEXT:    ori 4, 4, 65535
+; CHECK-NEXT:    stw 4, 0(3)
+; CHECK-NEXT:    addis 3, 2, .LC1@toc@ha
+; CHECK-NEXT:    ld 3, .LC1@toc@l(3)
+; CHECK-NEXT:    sth 4, 0(3)
 ; CHECK-NEXT:    blr
 entry:
   store i32 65535, ptr @IVal, align 4

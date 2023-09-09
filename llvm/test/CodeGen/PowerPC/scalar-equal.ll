@@ -20,9 +20,9 @@ define double @testoeq(double %a, double %b, double %c, double %d) {
 ; FAST-P8-LABEL: testoeq:
 ; FAST-P8:       # %bb.0: # %entry
 ; FAST-P8-NEXT:    xssubdp f0, f1, f2
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; FAST-P8-NEXT:    fsel f1, f0, f3, f4
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: testoeq:
@@ -46,10 +46,11 @@ define double @testoeq(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: testoeq:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xscmpudp cr0, f1, f2
-; NO-FAST-P8-NEXT:    fmr f1, f3
-; NO-FAST-P8-NEXT:    beqlr cr0
+; NO-FAST-P8-NEXT:    beq cr0, .LBB0_2
 ; NO-FAST-P8-NEXT:  # %bb.1: # %entry
-; NO-FAST-P8-NEXT:    fmr f1, f4
+; NO-FAST-P8-NEXT:    fmr f3, f4
+; NO-FAST-P8-NEXT:  .LBB0_2: # %entry
+; NO-FAST-P8-NEXT:    fmr f1, f3
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp oeq double %a, %b
@@ -61,9 +62,9 @@ define double @testoeq_fast(double %a, double %b, double %c, double %d) {
 ; FAST-P8-LABEL: testoeq_fast:
 ; FAST-P8:       # %bb.0: # %entry
 ; FAST-P8-NEXT:    xssubdp f0, f1, f2
-; FAST-P8-NEXT:    xsnegdp f1, f0
-; FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; FAST-P8-NEXT:    fsel f1, f0, f3, f4
+; FAST-P8-NEXT:    xsnegdp f0, f0
+; FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; FAST-P8-NEXT:    blr
 ;
 ; FAST-P9-LABEL: testoeq_fast:
@@ -85,9 +86,9 @@ define double @testoeq_fast(double %a, double %b, double %c, double %d) {
 ; NO-FAST-P8-LABEL: testoeq_fast:
 ; NO-FAST-P8:       # %bb.0: # %entry
 ; NO-FAST-P8-NEXT:    xssubdp f0, f1, f2
-; NO-FAST-P8-NEXT:    xsnegdp f1, f0
-; NO-FAST-P8-NEXT:    fsel f0, f0, f3, f4
-; NO-FAST-P8-NEXT:    fsel f1, f1, f0, f4
+; NO-FAST-P8-NEXT:    fsel f1, f0, f3, f4
+; NO-FAST-P8-NEXT:    xsnegdp f0, f0
+; NO-FAST-P8-NEXT:    fsel f1, f0, f1, f4
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf nsz oeq double %a, %b

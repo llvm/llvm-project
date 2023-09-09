@@ -122,14 +122,14 @@ entry:
 define <1 x i128> @test7(<1 x i128> %a, <1 x i128> %b, <1 x i128> %c, <1 x i128> %d) {
 ; CHECK-VSX-LABEL: test7:
 ; CHECK-VSX:       # %bb.0: # %entry
-; CHECK-VSX-NEXT:    xxswapd vs0, v5
-; CHECK-VSX-NEXT:    xxswapd vs1, v4
 ; CHECK-VSX-NEXT:    mfvsrd r3, v5
 ; CHECK-VSX-NEXT:    mfvsrd r4, v4
-; CHECK-VSX-NEXT:    mffprd r5, f0
-; CHECK-VSX-NEXT:    mffprd r6, f1
 ; CHECK-VSX-NEXT:    xor r3, r4, r3
-; CHECK-VSX-NEXT:    xor r4, r6, r5
+; CHECK-VSX-NEXT:    xxswapd vs0, v5
+; CHECK-VSX-NEXT:    xxswapd vs1, v4
+; CHECK-VSX-NEXT:    mffprd r4, f0
+; CHECK-VSX-NEXT:    mffprd r5, f1
+; CHECK-VSX-NEXT:    xor r4, r5, r4
 ; CHECK-VSX-NEXT:    or. r3, r4, r3
 ; CHECK-VSX-NEXT:    bclr 12, eq, 0
 ; CHECK-VSX-NEXT:  # %bb.1: # %entry
@@ -139,15 +139,15 @@ define <1 x i128> @test7(<1 x i128> %a, <1 x i128> %b, <1 x i128> %c, <1 x i128>
 ; CHECK-NOVSX-BE-LABEL: test7:
 ; CHECK-NOVSX-BE:       # %bb.0: # %entry
 ; CHECK-NOVSX-BE-NEXT:    addi r3, r1, -16
-; CHECK-NOVSX-BE-NEXT:    addi r4, r1, -32
 ; CHECK-NOVSX-BE-NEXT:    stvx v5, 0, r3
-; CHECK-NOVSX-BE-NEXT:    stvx v4, 0, r4
+; CHECK-NOVSX-BE-NEXT:    addi r3, r1, -32
+; CHECK-NOVSX-BE-NEXT:    stvx v4, 0, r3
 ; CHECK-NOVSX-BE-NEXT:    ld r3, -16(r1)
 ; CHECK-NOVSX-BE-NEXT:    ld r4, -32(r1)
-; CHECK-NOVSX-BE-NEXT:    ld r5, -8(r1)
-; CHECK-NOVSX-BE-NEXT:    ld r6, -24(r1)
+; CHECK-NOVSX-BE-NEXT:    ld r5, -24(r1)
 ; CHECK-NOVSX-BE-NEXT:    xor r3, r4, r3
-; CHECK-NOVSX-BE-NEXT:    xor r4, r6, r5
+; CHECK-NOVSX-BE-NEXT:    ld r4, -8(r1)
+; CHECK-NOVSX-BE-NEXT:    xor r4, r5, r4
 ; CHECK-NOVSX-BE-NEXT:    or. r3, r4, r3
 ; CHECK-NOVSX-BE-NEXT:    bclr 12, eq, 0
 ; CHECK-NOVSX-BE-NEXT:  # %bb.1: # %entry
@@ -157,15 +157,15 @@ define <1 x i128> @test7(<1 x i128> %a, <1 x i128> %b, <1 x i128> %c, <1 x i128>
 ; CHECK-NOVSX-LE-LABEL: test7:
 ; CHECK-NOVSX-LE:       # %bb.0: # %entry
 ; CHECK-NOVSX-LE-NEXT:    addi r3, r1, -16
-; CHECK-NOVSX-LE-NEXT:    addi r4, r1, -32
 ; CHECK-NOVSX-LE-NEXT:    stvx v5, 0, r3
-; CHECK-NOVSX-LE-NEXT:    stvx v4, 0, r4
+; CHECK-NOVSX-LE-NEXT:    addi r3, r1, -32
+; CHECK-NOVSX-LE-NEXT:    stvx v4, 0, r3
 ; CHECK-NOVSX-LE-NEXT:    ld r3, -8(r1)
 ; CHECK-NOVSX-LE-NEXT:    ld r4, -24(r1)
-; CHECK-NOVSX-LE-NEXT:    ld r5, -16(r1)
-; CHECK-NOVSX-LE-NEXT:    ld r6, -32(r1)
+; CHECK-NOVSX-LE-NEXT:    ld r5, -32(r1)
 ; CHECK-NOVSX-LE-NEXT:    xor r3, r4, r3
-; CHECK-NOVSX-LE-NEXT:    xor r4, r6, r5
+; CHECK-NOVSX-LE-NEXT:    ld r4, -16(r1)
+; CHECK-NOVSX-LE-NEXT:    xor r4, r5, r4
 ; CHECK-NOVSX-LE-NEXT:    or. r3, r4, r3
 ; CHECK-NOVSX-LE-NEXT:    bclr 12, eq, 0
 ; CHECK-NOVSX-LE-NEXT:  # %bb.1: # %entry

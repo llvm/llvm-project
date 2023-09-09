@@ -137,21 +137,21 @@ define dso_local void @test_inesi_store(i32 signext %a, i32 signext %b) {
 ; CHECK-BE-LABEL: test_inesi_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
 ; CHECK-BE-NEXT:    xori r3, r3, 1
-; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_inesi_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    cntlzw r3, r3
 ; CHECK-LE-NEXT:    srwi r3, r3, 5
 ; CHECK-LE-NEXT:    xori r3, r3, 1
-; CHECK-LE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp ne i32 %a, %b
@@ -174,23 +174,23 @@ define dso_local void @test_inesi_sext_store(i32 signext %a, i32 signext %b) {
 ; CHECK-BE-LABEL: test_inesi_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
 ; CHECK-BE-NEXT:    xori r3, r3, 1
 ; CHECK-BE-NEXT:    neg r3, r3
-; CHECK-BE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_inesi_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    cntlzw r3, r3
 ; CHECK-LE-NEXT:    srwi r3, r3, 5
 ; CHECK-LE-NEXT:    xori r3, r3, 1
 ; CHECK-LE-NEXT:    neg r3, r3
-; CHECK-LE-NEXT:    stw r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    stw r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp ne i32 %a, %b
