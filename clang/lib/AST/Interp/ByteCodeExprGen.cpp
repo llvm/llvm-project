@@ -167,8 +167,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
-      if (DiscardResult)
-        return this->discard(SubExpr);
+    if (DiscardResult)
+      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
