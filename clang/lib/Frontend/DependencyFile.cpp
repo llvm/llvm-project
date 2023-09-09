@@ -105,7 +105,7 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
   DependencyCollector &DepCollector;
   DepCollectorMMCallbacks(DependencyCollector &DC) : DepCollector(DC) {}
 
-  void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
+  void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
                          bool IsSystem) override {
     StringRef Filename = Entry.getName();
     DepCollector.maybeAddDependency(Filename,
