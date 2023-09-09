@@ -199,8 +199,7 @@ public:
 private:
   friend class ModuleMapParser;
 
-  using HeadersMap =
-      llvm::DenseMap<const FileEntry *, SmallVector<KnownHeader, 1>>;
+  using HeadersMap = llvm::DenseMap<FileEntryRef, SmallVector<KnownHeader, 1>>;
 
   /// Mapping from each header to the module that owns the contents of
   /// that header.
@@ -357,7 +356,7 @@ private:
   /// If \p File represents a builtin header within Clang's builtin include
   /// directory, this also loads all of the module maps to see if it will get
   /// associated with a specific module (e.g. in /usr/include).
-  HeadersMap::iterator findKnownHeader(const FileEntry *File);
+  HeadersMap::iterator findKnownHeader(FileEntryRef File);
 
   /// Searches for a module whose umbrella directory contains \p File.
   ///
@@ -451,8 +450,7 @@ public:
 
   /// Like \ref findAllModulesForHeader, but do not attempt to infer module
   /// ownership from umbrella headers if we've not already done so.
-  ArrayRef<KnownHeader>
-  findResolvedModulesForHeader(const FileEntry *File) const;
+  ArrayRef<KnownHeader> findResolvedModulesForHeader(FileEntryRef File) const;
 
   /// Resolve all lazy header directives for the specified file.
   ///

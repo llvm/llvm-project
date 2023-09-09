@@ -1576,7 +1576,7 @@ HeaderSearch::findAllModulesForHeader(FileEntryRef File) const {
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-HeaderSearch::findResolvedModulesForHeader(const FileEntry *File) const {
+HeaderSearch::findResolvedModulesForHeader(FileEntryRef File) const {
   if (ExternalSource) {
     // Make sure the external source has handled header info about this file,
     // which includes whether the file is part of a module.
