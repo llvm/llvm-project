@@ -2152,12 +2152,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     const CXXDefaultInitExpr *E) {
-
+  SourceLocScope<Emitter> SLS(this, E);
   if (Initializing)
     return this->visitInitializer(E->getExpr());
 
   assert(classify(E->getType()));
-  SourceLocScope<Emitter> SLS(this, E);
   return this->visit(E->getExpr());
 }
 
