@@ -60,7 +60,7 @@ bool FileRemapper::initFromFile(StringRef filePath, DiagnosticsEngine &Diag,
   if (!llvm::sys::fs::exists(infoFile))
     return false;
 
-  std::vector<std::pair<FileEntryRef, const FileEntry *> > pairs;
+  std::vector<std::pair<FileEntryRef, FileEntryRef>> pairs;
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileBuf =
       llvm::MemoryBuffer::getFile(infoFile, /*IsText=*/true);
@@ -84,7 +84,7 @@ bool FileRemapper::initFromFile(StringRef filePath, DiagnosticsEngine &Diag,
         continue;
       return report("File does not exist: " + fromFilename, Diag);
     }
-    llvm::ErrorOr<const FileEntry *> newFE = FileMgr->getFile(toFilename);
+    auto newFE = FileMgr->getOptionalFileRef(toFilename);
     if (!newFE) {
       if (ignoreIfFilesChanged)
         continue;
@@ -134,8 +134,9 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
     infoOut << origPath << '\n';
     infoOut << (uint64_t)origFE.getModificationTime() << '\n';
 
-    if (const FileEntry *FE = I->second.dyn_cast<const FileEntry *>()) {
-      SmallString<200> newPath = StringRef(FE->getName());
+    if (I->second.is<FileEntryRef>()) {
+      auto FE = I->second.get<FileEntryRef>();
+      SmallString<200> newPath = StringRef(FE.getName());
       fs::make_absolute(newPath);
       infoOut << newPath << '\n';
     } else {
@@ -153,10 +154,10 @@ bool FileRemapper::flushToFile(StringRef outputPath, DiagnosticsEngine &Diag) {
       newOut.write(mem->getBufferStart(), mem->getBufferSize());
       newOut.close();
 
-      auto newE = FileMgr->getFile(tempPath);
+      auto newE = FileMgr->getOptionalFileRef(tempPath);
       if (newE) {
         remap(origFE, *newE);
-        infoOut << (*newE)->getName() << '\n';
+        infoOut << newE->getName() << '\n';
       }
     }
   }
@@ -196,8 +197,9 @@ void FileRemapper::forEachMapping(
     llvm::function_ref<void(StringRef, const llvm::MemoryBufferRef &)>
         CaptureBuffer) const {
   for (auto &Mapping : FromToMappings) {
-    if (const FileEntry *FE = Mapping.second.dyn_cast<const FileEntry *>()) {
-      CaptureFile(Mapping.first.getName(), FE->getName());
+    if (Mapping.second.is<FileEntryRef>()) {
+      auto FE = Mapping.second.get<FileEntryRef>();
+      CaptureFile(Mapping.first.getName(), FE.getName());
       continue;
     }
     CaptureBuffer(
@@ -209,8 +211,9 @@ void FileRemapper::forEachMapping(
 void FileRemapper::applyMappings(PreprocessorOptions &PPOpts) const {
   for (MappingsTy::const_iterator
          I = FromToMappings.begin(), E = FromToMappings.end(); I != E; ++I) {
-    if (const FileEntry *FE = I->second.dyn_cast<const FileEntry *>()) {
-      PPOpts.addRemappedFile(I->first.getName(), FE->getName());
+    if (I->second.is<FileEntryRef>()) {
+      auto FE = I->second.get<FileEntryRef>();
+      PPOpts.addRemappedFile(I->first.getName(), FE.getName());
     } else {
       llvm::MemoryBuffer *mem = I->second.get<llvm::MemoryBuffer *>();
       PPOpts.addRemappedFile(I->first.getName(), mem);
@@ -234,8 +237,7 @@ void FileRemapper::remap(FileEntryRef file,
   targ = memBuf.release();
 }
 
-void FileRemapper::remap(FileEntryRef file, const FileEntry *newfile) {
-  assert(newfile);
+void FileRemapper::remap(FileEntryRef file, FileEntryRef newfile) {
   Target &targ = FromToMappings[file];
   resetTarget(targ);
   targ = newfile;
@@ -263,7 +265,7 @@ void FileRemapper::resetTarget(Target &targ) {
   if (llvm::MemoryBuffer *oldmem = targ.dyn_cast<llvm::MemoryBuffer *>()) {
     delete oldmem;
   } else {
-    const FileEntry *toFE = targ.get<const FileEntry *>();
+    FileEntryRef toFE = targ.get<FileEntryRef>();
     ToFromMappings.erase(toFE);
   }
 }
