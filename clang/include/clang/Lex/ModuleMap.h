@@ -415,7 +415,7 @@ public:
   }
 
   /// Is this a compiler builtin header?
-  bool isBuiltinHeader(const FileEntry *File);
+  bool isBuiltinHeader(FileEntryRef File);
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {

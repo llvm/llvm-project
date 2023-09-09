@@ -412,9 +412,9 @@ static StringRef sanitizeFilenameAsIdentifier(StringRef Name,
   return Name;
 }
 
-bool ModuleMap::isBuiltinHeader(const FileEntry *File) {
-  return File->getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
-         isBuiltinHeaderName(llvm::sys::path::filename(File->getName()));
+bool ModuleMap::isBuiltinHeader(FileEntryRef File) {
+  return File.getDir() == BuiltinIncludeDir && LangOpts.BuiltinHeadersInSystemModules &&
+         isBuiltinHeaderName(llvm::sys::path::filename(File.getName()));
 }
 
 ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
