@@ -1,0 +1,23 @@
+# RUN: llvm-mc -triple=riscv64 -mattr=+zcmp,+experimental-zfa --cdis %s | FileCheck %s --strict-whitespace --match-full-lines
+
+# Registers and immediates
+0x03 0xe0 0x40 0x00
+# CHECK:	lwu	[0;36mzero[0m, [0;31m4[0m([0;36mra[0m)
+
+# Branch targets
+0x63 0x00 0xb5 0x04
+# CHECK-NEXT:	beq	[0;36ma0[0m, [0;36ma1[0m, [0;33m64[0m
+
+# CSRs
+0xf3 0x23 0x10 0xf1
+# CHECK-NEXT:	csrr	[0;36mt2[0m, [0;36mmvendorid[0m
+
+# FP immediates
+0xd3 0x00 0x1f 0xf0
+# CHECK-NEXT:	fli.s	[0;36mft1[0m, [0;31minf[0m
+0xd3 0x80 0x1e 0xf0
+# CHECK-NEXT:	fli.s	[0;36mft1[0m, [0;31m65536.0[0m
+
+# Rlist and spimm
+0x62 0xbe
+# CHECK-NEXT:	cm.popret	[0;36m{ra, s0-s1}[0m, [0;31m32[0m

@@ -16,6 +16,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -75,7 +76,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
-  O << getRegisterName(Reg);
+  markup(O, Markup::Register) << getRegisterName(Reg);
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -90,7 +91,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (MO.isImm()) {
-    O << MO.getImm();
+    markup(O, Markup::Immediate) << MO.getImm();
     return;
   }
 
@@ -110,9 +111,9 @@ void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
     uint64_t Target = Address + MO.getImm();
     if (!STI.hasFeature(RISCV::Feature64Bit))
       Target &= 0xffffffff;
-    O << formatHex(Target);
+    markup(O, Markup::Target) << formatHex(Target);
   } else {
-    O << MO.getImm();
+    markup(O, Markup::Target) << MO.getImm();
   }
 }
 
@@ -123,11 +124,11 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
   auto SiFiveReg = RISCVSysReg::lookupSiFiveRegByEncoding(Imm);
   auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
   if (SiFiveReg && SiFiveReg->haveVendorRequiredFeatures(STI.getFeatureBits()))
-    O << SiFiveReg->Name;
+    markup(O, Markup::Register) << SiFiveReg->Name;
   else if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
-    O << SysReg->Name;
+    markup(O, Markup::Register) << SysReg->Name;
   else
-    O << Imm;
+    markup(O, Markup::Register) << Imm;
 }
 
 void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
@@ -162,11 +163,11 @@ void RISCVInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNo,
                                          raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (Imm == 1) {
-    O << "min";
+    markup(O, Markup::Immediate) << "min";
   } else if (Imm == 30) {
-    O << "inf";
+    markup(O, Markup::Immediate) << "inf";
   } else if (Imm == 31) {
-    O << "nan";
+    markup(O, Markup::Immediate) << "nan";
   } else {
     float FPVal = RISCVLoadFPImm::getFPImm(Imm);
     // If the value is an integer, print a .0 fraction. Otherwise, use %g to
@@ -174,9 +175,9 @@ void RISCVInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNo,
     // if it is shorter than printing as a decimal. The smallest value requires
     // 12 digits of precision including the decimal.
     if (FPVal == (int)(FPVal))
-      O << format("%.1f", FPVal);
+      markup(O, Markup::Immediate) << format("%.1f", FPVal);
     else
-      O << format("%.12g", FPVal);
+      markup(O, Markup::Immediate) << format("%.12g", FPVal);
   }
 }
 
@@ -208,19 +209,20 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
 void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  O << "{";
+  auto OS = markup(O, Markup::Register);
+  OS << "{";
   switch (Imm) {
   case RISCVZC::RLISTENCODE::RA:
-    O << (ArchRegNames ? "x1" : "ra");
+    OS << (ArchRegNames ? "x1" : "ra");
     break;
   case RISCVZC::RLISTENCODE::RA_S0:
-    O << (ArchRegNames ? "x1, x8" : "ra, s0");
+    OS << (ArchRegNames ? "x1, x8" : "ra, s0");
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S1:
-    O << (ArchRegNames ? "x1, x8-x9" : "ra, s0-s1");
+    OS << (ArchRegNames ? "x1, x8-x9" : "ra, s0-s1");
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S2:
-    O << (ArchRegNames ? "x1, x8-x9, x18" : "ra, s0-s2");
+    OS << (ArchRegNames ? "x1, x8-x9, x18" : "ra, s0-s2");
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S3:
   case RISCVZC::RLISTENCODE::RA_S0_S4:
@@ -229,16 +231,16 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
   case RISCVZC::RLISTENCODE::RA_S0_S7:
   case RISCVZC::RLISTENCODE::RA_S0_S8:
   case RISCVZC::RLISTENCODE::RA_S0_S9:
-    O << (ArchRegNames ? "x1, x8-x9, x18-" : "ra, s0-")
-      << getRegisterName(RISCV::X19 + (Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
+    OS << (ArchRegNames ? "x1, x8-x9, x18-" : "ra, s0-")
+       << getRegisterName(RISCV::X19 + (Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S11:
-    O << (ArchRegNames ? "x1, x8-x9, x18-x27" : "ra, s0-s11");
+    OS << (ArchRegNames ? "x1, x8-x9, x18-x27" : "ra, s0-s11");
     break;
   default:
     llvm_unreachable("invalid register list");
   }
-  O << "}";
+  OS << "}";
 }
 
 void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
@@ -256,6 +258,7 @@ void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
   if (Opcode == RISCV::CM_PUSH)
     Spimm = -Spimm;
 
+  auto OS = markup(O, Markup::Immediate);
   RISCVZC::printSpimm(Spimm, O);
 }
 
