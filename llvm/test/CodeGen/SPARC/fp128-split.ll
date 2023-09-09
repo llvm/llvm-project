@@ -11,8 +11,8 @@ define fp128 @testcase(fp128 %0) {
   ; CHECK:   liveins: $q0
   ; CHECK:   [[COPY:%[0-9]+]]:qfpregs = COPY $q0
   ; CHECK:   [[COPY1:%[0-9]+]]:dfpregs = COPY [[COPY]].sub_odd64
-  ; CHECK:   [[LEAX_ADDri:%[0-9]+]]:i64regs = LEAX_ADDri %stack.0, 0
-  ; CHECK:   [[ORXri:%[0-9]+]]:i64regs = ORXri killed [[LEAX_ADDri]], 8
+  ; CHECK:   [[ADDri:%[0-9]+]]:i64regs = ADDri %stack.0, 0
+  ; CHECK:   [[ORXri:%[0-9]+]]:i64regs = ORXri killed [[ADDri]], 8
   ; CHECK:   STDFrr [[ORXri]], $g0, killed [[COPY1]] :: (store (s64) into %stack.0 + 8)
   ; CHECK:   [[COPY2:%[0-9]+]]:dfpregs = COPY [[COPY]].sub_even64
   ; CHECK:   STDFri %stack.0, 0, killed [[COPY2]] :: (store (s64) into %stack.0, align 16)
@@ -32,8 +32,8 @@ define fp128 @testcase(fp128 %0) {
   ; CHECK:   [[COPY7:%[0-9]+]]:i64regs = COPY [[ADDEri]]
   ; CHECK:   [[SLLXri:%[0-9]+]]:i64regs = SLLXri killed [[COPY7]], 32
   ; CHECK:   [[ORXrr:%[0-9]+]]:i64regs = ORXrr killed [[SLLXri]], killed [[SRLri]]
-  ; CHECK:   [[LEAX_ADDri1:%[0-9]+]]:i64regs = LEAX_ADDri %stack.1, 0
-  ; CHECK:   [[ORXri1:%[0-9]+]]:i64regs = ORXri killed [[LEAX_ADDri1]], 8
+  ; CHECK:   [[ADDri1:%[0-9]+]]:i64regs = ADDri %stack.1, 0
+  ; CHECK:   [[ORXri1:%[0-9]+]]:i64regs = ORXri killed [[ADDri1]], 8
   ; CHECK:   STXrr [[ORXri1]], $g0, killed [[ORXrr]] :: (store (s64) into %stack.1 + 8, basealign 16)
   ; CHECK:   [[SRLri1:%[0-9]+]]:i64regs = SRLri killed [[ADDEri1]], 0
   ; CHECK:   [[COPY8:%[0-9]+]]:i64regs = COPY [[ADDEri2]]
