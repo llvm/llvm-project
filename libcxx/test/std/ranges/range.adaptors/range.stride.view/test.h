@@ -15,15 +15,17 @@
 
 template <typename T = int>
 struct InstrumentedBasicRange {
-  T *begin() const;
-  T *end() const;
+  T* begin() const;
+  T* end() const;
 };
 
 template <typename T = int>
 struct InstrumentedBasicView : std::ranges::view_base {
   constexpr explicit InstrumentedBasicView(T* b, T* e) : begin_(b), end_(e) {}
-  constexpr InstrumentedBasicView(InstrumentedBasicView const& other) : begin_(other.begin_), end_(other.end_), wasCopyInitialized(true) {}
-  constexpr InstrumentedBasicView(InstrumentedBasicView&& other) : begin_(other.begin_), end_(other.end_), wasMoveInitialized(true) {}
+  constexpr InstrumentedBasicView(InstrumentedBasicView const& other)
+      : begin_(other.begin_), end_(other.end_), wasCopyInitialized(true) {}
+  constexpr InstrumentedBasicView(InstrumentedBasicView&& other)
+      : begin_(other.begin_), end_(other.end_), wasMoveInitialized(true) {}
   InstrumentedBasicView& operator=(InstrumentedBasicView const&) = default;
   InstrumentedBasicView& operator=(InstrumentedBasicView&&)      = default;
   constexpr T* begin() const { return begin_; }
@@ -141,12 +143,54 @@ struct BidirView : std::ranges::view_base {
 
   constexpr bidirectional_iterator<int*> begin() { return bidirectional_iterator<int*>{begin_}; }
   constexpr bidirectional_iterator<const int*> begin() const { return bidirectional_iterator<const int*>{begin_}; }
-  constexpr bidirectional_iterator<int*> end() { return bidirectional_iterator<int*>{end_}; }
-  constexpr bidirectional_iterator<const int*> end() const { return bidirectional_iterator<const int*>{end_}; }
+  constexpr sentinel_wrapper<bidirectional_iterator<int*>> end() {
+    return sentinel_wrapper<bidirectional_iterator<int*>>{bidirectional_iterator<int*>{end_}};
+  }
+  constexpr sentinel_wrapper<bidirectional_iterator<const int*>> end() const {
+    return sentinel_wrapper<bidirectional_iterator<const int*>>{bidirectional_iterator<const int*>{end_}};
+  }
 };
 
 static_assert(std::ranges::view<BidirView>);
 static_assert(std::copyable<BidirView>);
+
+struct ForwardView : public std::ranges::view_base {
+  int* begin_;
+  int* end_;
+
+  constexpr ForwardView(int* b, int* e) : begin_(b), end_(e) {}
+
+  constexpr forward_iterator<int*> begin() { return forward_iterator<int*>{begin_}; }
+  constexpr forward_iterator<const int*> begin() const { return forward_iterator<const int*>{begin_}; }
+  constexpr sentinel_wrapper<forward_iterator<int*>> end() {
+    return sentinel_wrapper<forward_iterator<int*>>{forward_iterator<int*>{end_}};
+  }
+  constexpr sentinel_wrapper<forward_iterator<const int*>> end() const {
+    return sentinel_wrapper<forward_iterator<const int*>>{forward_iterator<const int*>{end_}};
+  }
+};
+
+static_assert(std::ranges::view<ForwardView>);
+static_assert(std::copyable<ForwardView>);
+
+struct RandomAccessView : std::ranges::view_base {
+  int* begin_;
+  int* end_;
+
+  constexpr RandomAccessView(int* b, int* e) : begin_(b), end_(e) {}
+
+  constexpr random_access_iterator<int*> begin() { return random_access_iterator<int*>{begin_}; }
+  //constexpr random_access_iterator<const int*> begin() const { return random_access_iterator<const int*>{begin_}; }
+  constexpr sentinel_wrapper<random_access_iterator<int*>> end() {
+    return sentinel_wrapper<random_access_iterator<int*>>{random_access_iterator<int*>{end_}};
+  }
+  //constexpr sentinel_wrapper<random_access_iterator<const int*>> end() const { return sentinel_wrapper<random_access_iterator<const int*>>{random_access_iterator<const int*>{end_}}; }
+  constexpr std::size_t size() const { return end_ - begin_; }
+};
+
+static_assert(std::ranges::view<RandomAccessView>);
+static_assert(std::ranges::random_access_range<RandomAccessView>);
+static_assert(std::copyable<RandomAccessView>);
 
 /*
 enum CopyCategory { MoveOnly, Copyable };
