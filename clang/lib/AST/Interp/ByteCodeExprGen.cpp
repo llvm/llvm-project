@@ -167,8 +167,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
-      if (DiscardResult)
-        return this->discard(SubExpr);
+    if (DiscardResult)
+      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
@@ -222,13 +222,8 @@ bool ByteCodeExprGen<Emitter>::VisitFloatingLiteral(const FloatingLiteral *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *PE) {
-  const Expr *SubExpr = PE->getSubExpr();
-
-  if (DiscardResult)
-    return this->discard(SubExpr);
-
-  return this->visit(SubExpr);
+bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *E) {
+  return this->delegate(E->getSubExpr());
 }
 
 template <class Emitter>
@@ -2152,12 +2147,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     const CXXDefaultInitExpr *E) {
-
+  SourceLocScope<Emitter> SLS(this, E);
   if (Initializing)
     return this->visitInitializer(E->getExpr());
 
   assert(classify(E->getType()));
-  SourceLocScope<Emitter> SLS(this, E);
   return this->visit(E->getExpr());
 }
 
