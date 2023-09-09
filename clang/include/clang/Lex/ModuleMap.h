@@ -57,8 +57,8 @@ public:
   /// contents.
   /// \param File The file itself.
   /// \param IsSystem Whether this is a module map from a system include path.
-  virtual void moduleMapFileRead(SourceLocation FileStart,
-                                 const FileEntry &File, bool IsSystem) {}
+  virtual void moduleMapFileRead(SourceLocation FileStart, FileEntryRef File,
+                                 bool IsSystem) {}
 
   /// Called when a header is added during module map parsing.
   ///
