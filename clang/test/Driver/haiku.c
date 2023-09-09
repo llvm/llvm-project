@@ -1,3 +1,5 @@
+// UNSUPPORTED: system-windows
+
 // Check the C header paths
 // RUN: %clang --target=x86_64-unknown-haiku -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-C-HEADER-PATH %s
