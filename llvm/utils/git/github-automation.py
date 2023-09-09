@@ -65,6 +65,14 @@ class IssueSubscriber:
         return False
 
 
+def human_readable_size(size, decimal_places=2):
+    for unit in ["B", "KiB", "MiB", "GiB", "TiB", "PiB"]:
+        if size < 1024.0 or unit == "PiB":
+            break
+        size /= 1024.0
+    return f"{size:.{decimal_places}f} {unit}"
+
+
 class PRSubscriber:
     @property
     def team_name(self) -> str:
@@ -77,22 +85,61 @@ class PRSubscriber:
         self._team_name = "pr-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        for team in self.org.get_teams():
-            if self.team_name != team.name.lower():
-                continue
-            try:
-                # GitHub limits comments to 65,536 characters, let's limit our comments to 20,000.
-                patch = requests.get(self.pr.diff_url).text[0:20000]
-            except:
-                patch = ""
-            comment = (
-                "@llvm/{}".format(team.slug)
-                + "\n\n<details><summary>Changes</summary><pre>\n"
-                + patch
-                + "\n</pre></details>"
-            )
-            self.pr.as_issue().create_comment(comment)
+        patch = None
+        team = self._get_curent_team()
+        if not team:
+            print(f"couldn't find team named {self.team_name}")
+            return False
+
+        # Get statistics for each file
+        diff_stats = f"{self.pr.changed_files} Files Affected:\n\n"
+        for file in self.pr.get_files():
+            diff_stats += f"- ({file.status}) {file.filename} ("
+            if file.additions:
+                diff_stats += f"+{file.additions}"
+            if file.deletions:
+                diff_stats += f"-{file.deletions}"
+            diff_stats += ") "
+            if file.status == "renamed":
+                print(f"(from {file.previous_filename})")
+            diff_stats += "\n"
+        diff_stats += "\n"
+
+        # Get the diff
+        try:
+            patch = requests.get(self.pr.diff_url).text
+        except:
+            patch = ""
+        diff_stats += "\n<pre>\n" + patch
+
+        # GitHub limits comments to 65,536 characters, let's limit the diff to 20kB.
+        DIFF_LIMIT = 20 * 1024
+        patch_link = f"Full diff: {self.pr.diff_url}\n"
+        if len(patch) > DIFF_LIMIT:
+            patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
+            diff_stats = diff_stats[0:DIFF_LIMIT] + "...\n<truncated>\n"
+        diff_stats += "</pre>"
+
+        body = self.pr.body
+        comment = (
+            "@llvm/{}".format(team.slug)
+            + "\n\n<details>\n"
+            + f"<summary>Changes</summary>\n\n"
+            + f"{body}\n--\n"
+            + patch_link
+            + "\n"
+            + f"{diff_stats}\n\n"
+            + "</details>"
+        )
+
+        self.pr.as_issue().create_comment(comment)
         return True
+
+    def _get_curent_team(self) -> Optional[github.Team.Team]:
+        for team in self.org.get_teams():
+            if self.team_name == team.name.lower():
+                return team
+        return None
 
 
 def setup_llvmbot_git(git_dir="."):
@@ -199,7 +246,6 @@ def extract_commit_hash(arg: str):
 
 
 class ReleaseWorkflow:
-
     CHERRY_PICK_FAILED_LABEL = "release:cherry-pick-failed"
 
     """
