@@ -118,20 +118,24 @@ strtoumax      |check|
 =============  =========  ============
 
 stdio.h
---------
+-------
 
 =============  =========  ============
 Function Name  Available  RPC Required
 =============  =========  ============
 puts           |check|    |check|
 fputs          |check|    |check|
+fputc          |check|    |check|
+fwrite         |check|    |check|
+putc           |check|    |check|
+putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
 fread          |check|    |check|
 =============  =========  ============
 
 time.h
---------
+------
 
 =============  =========  ============
 Function Name  Available  RPC Required
