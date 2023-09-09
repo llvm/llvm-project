@@ -533,27 +533,24 @@ public:
     if (const auto &maptype{std::get<std::optional<parser::OmpMapType>>(x.t)}) {
       using Type = parser::OmpMapType::Type;
       const Type &type{std::get<Type>(maptype->t)};
-      switch ((uint32_t)type) { // Avoid -Wcovered-switch-default
-      case (uint32_t)Type::To:
+      switch (type) {
+      case Type::To:
         ompFlag = Symbol::Flag::OmpMapTo;
         break;
-      case (uint32_t)Type::From:
+      case Type::From:
         ompFlag = Symbol::Flag::OmpMapFrom;
         break;
-      case (uint32_t)Type::Tofrom:
+      case Type::Tofrom:
         ompFlag = Symbol::Flag::OmpMapToFrom;
         break;
-      case (uint32_t)Type::Alloc:
+      case Type::Alloc:
         ompFlag = Symbol::Flag::OmpMapAlloc;
         break;
-      case (uint32_t)Type::Release:
+      case Type::Release:
         ompFlag = Symbol::Flag::OmpMapRelease;
         break;
-      case (uint32_t)Type::Delete:
+      case Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
-        break;
-      default:
-        assert(false && "Unsupported map-type");
         break;
       }
     }
