@@ -26239,6 +26239,52 @@ TEST_F(FormatTest, RemoveParentheses) {
                Style);
 }
 
+TEST_F(FormatTest, AllowBreakBeforeNoexceptSpecifier) {
+  auto Style = getLLVMStyleWithColumns(35);
+
+  EXPECT_EQ(Style.AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  // The following line does not fit within the 35 column limit, but that's what
+  // happens with no break allowed.
+  verifyFormat("void bar(int arg1, double arg2) noexcept(\n"
+               "    noexcept(baz(arg1)) &&\n"
+               "    noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
+               Style);
+
+  Style.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Always;
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  verifyFormat("void bar(int arg1, double arg2)\n"
+               "    noexcept(noexcept(baz(arg1)) &&\n"
+               "             noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments()\n"
+               "    noexcept;",
+               Style);
+
+  Style.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_OnlyWithParen;
+  verifyFormat("void foo(int arg1,\n"
+               "         double arg2) noexcept;",
+               Style);
+
+  verifyFormat("void bar(int arg1, double arg2)\n"
+               "    noexcept(noexcept(baz(arg1)) &&\n"
+               "             noexcept(baz(arg2)));",
+               Style);
+
+  verifyFormat("void aVeryLongFunctionNameWithoutAnyArguments() noexcept;",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
