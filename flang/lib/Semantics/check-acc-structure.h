@@ -71,6 +71,8 @@ public:
   void Enter(const parser::SubroutineSubprogram &);
   void Enter(const parser::FunctionSubprogram &);
   void Enter(const parser::SeparateModuleSubprogram &);
+  void Enter(const parser::DoConstruct &);
+  void Leave(const parser::DoConstruct &);
 
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenACC/ACC.inc"
@@ -88,6 +90,7 @@ private:
   llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
 
   llvm::SmallDenseSet<Symbol *> declareSymbols;
+  unsigned loopNestLevel = 0;
 };
 
 } // namespace Fortran::semantics

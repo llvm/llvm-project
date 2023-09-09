@@ -240,8 +240,7 @@ define void @func7(ptr %unknown) {
 define void @undef_in_callees() {
 ; CHECK-LABEL: @undef_in_callees(
 ; CHECK-NEXT:  cond.end.i:
-; CHECK-NEXT:    call void undef(ptr undef, i32 undef, ptr undef), !callees !2
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ;
 cond.end.i:
   call void undef(ptr undef, i32 undef, ptr undef), !callees !3

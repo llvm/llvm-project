@@ -1447,7 +1447,7 @@ define internal void @broker(ptr %ptr) {
 ; TUNIT-LABEL: define {{[^@]+}}@broker
 ; TUNIT-SAME: () #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @indirect()
+; TUNIT-NEXT:    call void @indirect() #[[ATTR16:[0-9]+]]
 ; TUNIT-NEXT:    call void @unknown()
 ; TUNIT-NEXT:    ret void
 ;
@@ -1649,6 +1649,7 @@ dead5:
 ; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR14]] = { nosync }
 ; TUNIT: attributes #[[ATTR15]] = { nosync nounwind memory(read) }
+; TUNIT: attributes #[[ATTR16]] = { nounwind memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
