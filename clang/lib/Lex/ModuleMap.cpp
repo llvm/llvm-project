@@ -417,8 +417,7 @@ bool ModuleMap::isBuiltinHeader(const FileEntry *File) {
          isBuiltinHeaderName(llvm::sys::path::filename(File->getName()));
 }
 
-ModuleMap::HeadersMap::iterator
-ModuleMap::findKnownHeader(const FileEntry *File) {
+ModuleMap::HeadersMap::iterator ModuleMap::findKnownHeader(FileEntryRef File) {
   resolveHeaderDirectives(File);
   HeadersMap::iterator Known = Headers.find(File);
   if (HeaderInfo.getHeaderSearchOpts().ImplicitModuleMaps &&
@@ -711,7 +710,7 @@ ModuleMap::findAllModulesForHeader(FileEntryRef File) {
 }
 
 ArrayRef<ModuleMap::KnownHeader>
-ModuleMap::findResolvedModulesForHeader(const FileEntry *File) const {
+ModuleMap::findResolvedModulesForHeader(FileEntryRef File) const {
   // FIXME: Is this necessary?
   resolveHeaderDirectives(File);
   auto It = Headers.find(File);
@@ -927,9 +926,9 @@ Module *ModuleMap::createModuleForInterfaceUnit(SourceLocation Loc,
 
   // Mark the main source file as being within the newly-created module so that
   // declarations and macros are properly visibility-restricted to it.
-  auto *MainFile = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+  auto MainFile = SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID());
   assert(MainFile && "no input file for module interface");
-  Headers[MainFile].push_back(KnownHeader(Result, PrivateHeader));
+  Headers[*MainFile].push_back(KnownHeader(Result, PrivateHeader));
 
   return Result;
 }
@@ -1373,7 +1372,7 @@ LLVM_DUMP_METHOD void ModuleMap::dump() {
   llvm::errs() << "Headers:";
   for (HeadersMap::iterator H = Headers.begin(), HEnd = Headers.end();
        H != HEnd; ++H) {
-    llvm::errs() << "  \"" << H->first->getName() << "\" -> ";
+    llvm::errs() << "  \"" << H->first.getName() << "\" -> ";
     for (SmallVectorImpl<KnownHeader>::const_iterator I = H->second.begin(),
                                                       E = H->second.end();
          I != E; ++I) {
