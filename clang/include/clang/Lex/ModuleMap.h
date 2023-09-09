@@ -721,7 +721,7 @@ public:
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
                           DirectoryEntryRef HomeDir, FileID ID = FileID(),
                           unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());

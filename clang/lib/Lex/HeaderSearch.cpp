@@ -1660,8 +1660,8 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
   return true;
 }
 
-static const FileEntry *getPrivateModuleMap(FileEntryRef File,
-                                            FileManager &FileMgr) {
+static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
+                                                FileManager &FileMgr) {
   StringRef Filename = llvm::sys::path::filename(File.getName());
   SmallString<128>  PrivateFilename(File.getDir().getName());
   if (Filename == "module.map")
@@ -1669,10 +1669,8 @@ static const FileEntry *getPrivateModuleMap(FileEntryRef File,
   else if (Filename == "module.modulemap")
     llvm::sys::path::append(PrivateFilename, "module.private.modulemap");
   else
-    return nullptr;
-  if (auto File = FileMgr.getFile(PrivateFilename))
-    return *File;
-  return nullptr;
+    return std::nullopt;
+  return FileMgr.getOptionalFileRef(PrivateFilename);
 }
 
 bool HeaderSearch::loadModuleMapFile(FileEntryRef File, bool IsSystem,
@@ -1738,8 +1736,8 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   }
 
   // Try to load a corresponding private module map.
-  if (const FileEntry *PMMFile = getPrivateModuleMap(File, FileMgr)) {
-    if (ModMap.parseModuleMapFile(PMMFile, IsSystem, Dir)) {
+  if (OptionalFileEntryRef PMMFile = getPrivateModuleMap(File, FileMgr)) {
+    if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
       LoadedModuleMaps[File] = false;
       return LMM_InvalidModuleMap;
     }
