@@ -7,6 +7,8 @@
 #define INT_MAX __INT_MAX__
 
 typedef __INTPTR_TYPE__ intptr_t;
+typedef __int128 int128_t;
+typedef unsigned __int128 uint128_t;
 
 
 static_assert(true, "");
@@ -25,6 +27,28 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // ref-error{{failed}} \
                                  // expected-note{{evaluates to}} \
                                  // ref-note{{evaluates to}}
+
+
+namespace i128 {
+  constexpr int128_t I128_1 = 12;
+  static_assert(I128_1 == 12, "");
+  static_assert(I128_1 != 10, "");
+  static_assert(I128_1 != 12, ""); // expected-error{{failed}} \
+                                   // ref-error{{failed}} \
+                                   // expected-note{{evaluates to}} \
+                                   // ref-note{{evaluates to}}
+
+  static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
+  static_assert(UINT128_MAX == -1, "");
+
+  static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
+  static_assert(INT128_MAX != 0, "");
+  static const __int128_t INT128_MIN = -INT128_MAX - 1;
+  constexpr __int128 A = INT128_MAX + 1; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{outside the range}} \
+                                         // ref-error {{must be initialized by a constant expression}} \
+                                         // ref-note {{outside the range}}
+}
 
 constexpr bool b = number;
 static_assert(b, "");

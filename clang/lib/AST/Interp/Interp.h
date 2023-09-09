@@ -289,7 +289,11 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     return true;
   } else {
     S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-    return S.noteUndefinedBehavior();
+    if (!S.noteUndefinedBehavior()) {
+      S.Stk.pop<T>();
+      return false;
+    }
+    return true;
   }
 }
 
@@ -1636,9 +1640,11 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
-  Integral<LT::bitWidth(), false> R;
-  Integral<LT::bitWidth(), false>::shiftRight(LHS.toUnsigned(), RHS, Bits, &R);
-  S.Stk.push<LT>(R);
+  typename LT::AsUnsigned R;
+  LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                             LT::AsUnsigned::from(RHS), Bits, &R);
+  S.Stk.push<LT>(LT::from(R));
+
   return true;
 }
 
@@ -1653,9 +1659,10 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
-  Integral<LT::bitWidth(), false> R;
-  Integral<LT::bitWidth(), false>::shiftLeft(LHS.toUnsigned(), RHS, Bits, &R);
-  S.Stk.push<LT>(R);
+  typename LT::AsUnsigned R;
+  LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                            LT::AsUnsigned::from(RHS), Bits, &R);
+  S.Stk.push<LT>(LT::from(R));
   return true;
 }
 
