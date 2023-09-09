@@ -476,21 +476,6 @@ def SETHIXi : F2_1<0b100,
 
 // ATOMICS.
 let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
-  let asi = 0b10000000 in
-    def CASXrr: F3_1_asi<3, 0b111110,
-                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
-                                     I64Regs:$swap),
-                 "casx [$rs1], $rs2, $rd",
-                 [(set i64:$rd,
-                     (atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap))]>;
-
-  let asi = 0b10001000 in
-    def CASXLrr: F3_1_asi<3, 0b111110,
-                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
-                                     I64Regs:$swap),
-                 "casxl [$rs1], $rs2, $rd",
-                 []>;
-
   def CASXArr: F3_1_asi<3, 0b111110,
                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
                                      I64Regs:$swap, ASITag:$asi),
@@ -514,6 +499,9 @@ def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 // atomic_store_64 val, addr -> store val, addr
 def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_64 i64:$val, ADDRri:$dst), (STXri ADDRri:$dst, $val)>;
+
+def : Pat<(atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap),
+          (CASXArr $rs1, $rs2, $swap, 0x80)>;
 
 } // Predicates = [Is64Bit]
 
