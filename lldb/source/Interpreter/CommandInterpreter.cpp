@@ -3000,7 +3000,7 @@ ExecutionContext CommandInterpreter::GetExecutionContext() {
   ExecutionContext exe_ctx;
   if (!m_overriden_exe_contexts.empty()) {
     // During the course of a command, the target may have replaced the process 
-    // coming in with another.  If fix that here:
+    // coming in with another.  I fix that here:
     exe_ctx = m_overriden_exe_contexts.top();
     // Don't use HasProcessScope, that returns false if there is a process but
     // it's no longer valid, which is one of the cases we want to catch here.

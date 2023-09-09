@@ -170,7 +170,11 @@ class ProcessAttachTestCase(TestBase):
         n_errors, quit_req, crashed = self.dbg.RunCommandInterpreter(
             True, True, options, 0, False, False)
         
-        time.sleep(5)
+        while 1:
+            time.sleep(1)
+            if target.process.state == lldb.eStateAttaching:
+                break
+
         self.dbg.DispatchInputInterrupt()
         self.dbg.DispatchInputInterrupt()
 
