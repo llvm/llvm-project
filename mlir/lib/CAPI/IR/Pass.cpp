@@ -13,6 +13,7 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/Pass/PassManager.h"
+#include <functional>
 #include <optional>
 
 using namespace mlir;
@@ -44,8 +45,21 @@ MlirLogicalResult mlirPassManagerRunOnOp(MlirPassManager passManager,
   return wrap(unwrap(passManager)->run(unwrap(op)));
 }
 
-void mlirPassManagerEnableIRPrinting(MlirPassManager passManager) {
-  return unwrap(passManager)->enableIRPrinting();
+void mlirPassManagerEnableIRPrinting(MlirPassManager passManager,
+                                     MlirIRPrinterConfig config) {
+  std::function<bool(Pass *, Operation *)> shouldPrintBeforePass = nullptr;
+  std::function<bool(Pass *, Operation *)> shouldPrintAfterPass = nullptr;
+  if (unwrap(config)->shouldPrintBeforePass())
+    shouldPrintBeforePass = [](Pass *, Operation *) { return true; };
+  if (unwrap(config)->shouldPrintAfterPass())
+    shouldPrintAfterPass = [](Pass *, Operation *) { return true; };
+  return unwrap(passManager)
+      ->enableIRPrinting(shouldPrintBeforePass, shouldPrintAfterPass,
+                         unwrap(config)->shouldPrintAtModuleScope(),
+                         unwrap(config)->shouldPrintAfterOnlyOnChange(),
+                         unwrap(config)->shouldPrintAfterOnlyOnFailure(),
+                         /*out=*/llvm::errs(),
+                         unwrap(config)->getOpPrintingFlags());
 }
 
 void mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable) {

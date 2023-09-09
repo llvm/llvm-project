@@ -133,10 +133,13 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
 PassManager::IRPrinterConfig::IRPrinterConfig(bool printModuleScope,
                                               bool printAfterOnlyOnChange,
                                               bool printAfterOnlyOnFailure,
+                                              bool printBeforePass,
+                                              bool printAfterPass,
                                               OpPrintingFlags opPrintingFlags)
     : printModuleScope(printModuleScope),
       printAfterOnlyOnChange(printAfterOnlyOnChange),
       printAfterOnlyOnFailure(printAfterOnlyOnFailure),
+      printBeforePass(printBeforePass), printAfterPass(printAfterPass),
       opPrintingFlags(opPrintingFlags) {}
 PassManager::IRPrinterConfig::~IRPrinterConfig() = default;
 
@@ -172,7 +175,7 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
       bool printAfterOnlyOnFailure, OpPrintingFlags opPrintingFlags,
       raw_ostream &out)
       : IRPrinterConfig(printModuleScope, printAfterOnlyOnChange,
-                        printAfterOnlyOnFailure, opPrintingFlags),
+                        printAfterOnlyOnFailure, false, false, opPrintingFlags),
         shouldPrintBeforePass(std::move(shouldPrintBeforePass)),
         shouldPrintAfterPass(std::move(shouldPrintAfterPass)), out(out) {
     assert((this->shouldPrintBeforePass || this->shouldPrintAfterPass) &&

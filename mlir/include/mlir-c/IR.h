@@ -56,6 +56,7 @@ DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
 DEFINE_C_API_STRUCT(MlirOpOperand, void);
 DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
+DEFINE_C_API_STRUCT(MlirIRPrinterConfig, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
 DEFINE_C_API_STRUCT(MlirSymbolTable, void);
@@ -449,6 +450,14 @@ mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
 /// Do not verify the operation when using custom operation printers.
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags);
+
+//===----------------------------------------------------------------------===//
+// IR Printing config API.
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED MlirIRPrinterConfig mlirIRPrinterConfigCreate(void);
+
+MLIR_CAPI_EXPORTED void mlirIRPrinterConfigDestroy(MlirIRPrinterConfig config);
 
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.

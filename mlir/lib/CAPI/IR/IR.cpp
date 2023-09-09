@@ -219,6 +219,14 @@ void mlirOpPrintingFlagsAssumeVerified(MlirOpPrintingFlags flags) {
   unwrap(flags)->assumeVerified();
 }
 
+MlirIRPrinterConfig mlirIRPrinterConfigCreate() {
+  return wrap(new PassManager::IRPrinterConfig());
+}
+
+void mlirIRPrinterConfigDestroy(MlirIRPrinterConfig config) {
+  delete unwrap(config);
+}
+
 //===----------------------------------------------------------------------===//
 // Bytecode printing flags API.
 //===----------------------------------------------------------------------===//

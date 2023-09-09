@@ -74,9 +74,38 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
            "Releases (leaks) the backing pass manager (testing)")
       .def(
           "enable_ir_printing",
-          [](PyPassManager &passManager) {
-            mlirPassManagerEnableIRPrinting(passManager.get());
+          [](PyPassManager &passManager, bool printBeforePass,
+             bool printAfterPass, bool printModuleScope,
+             bool printAfterOnlyOnChange, bool printAfterOnlyOnFailure,
+             std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
+             bool printGenericOpForm) {
+            MlirIRPrinterConfig config = mlirIRPrinterConfigCreate();
+            mlirPassManagerEnableIRPrinting(passManager.get(), config);
+            mlirIRPrinterConfigDestroy(config);
+            // MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+            // if (largeElementsLimit)
+            //   mlirOpPrintingFlagsElideLargeElementsAttrs(flags,
+            //                                              *largeElementsLimit);
+            // if (enableDebugInfo)
+            //   mlirOpPrintingFlagsEnableDebugInfo(flags, /*enable=*/true,
+            //                                      /*prettyForm=*/false);
+            // if (printGenericOpForm)
+            //   mlirOpPrintingFlagsPrintGenericOpForm(flags);
+            // mlirPassManagerEnableIRPrinting(passManager.get(),
+            // printBeforePass,
+            //                                 printAfterPass, printModuleScope,
+            //                                 printAfterOnlyOnChange,
+            //                                 printAfterOnlyOnFailure, flags);
+            // mlirOpPrintingFlagsDestroy(flags);
           },
+          py::arg("print_before_pass") = true,
+          py::arg("print_after_pass") = true,
+          py::arg("print_module_scope") = true,
+          py::arg("print_after_only_on_change") = true,
+          py::arg("print_after_only_on_failure") = false,
+          py::arg("large_elements_limit") = py::none(),
+          py::arg("enable_debug_info") = false,
+          py::arg("print_generic_op_form") = false,
           "Enable mlir-print-ir-after-all.")
       .def(
           "enable_verifier",

@@ -307,7 +307,8 @@ public:
     ///   IR.
     explicit IRPrinterConfig(
         bool printModuleScope = false, bool printAfterOnlyOnChange = false,
-        bool printAfterOnlyOnFailure = false,
+        bool printAfterOnlyOnFailure = false, bool printBeforePass = false,
+        bool printAfterPass = false,
         OpPrintingFlags opPrintingFlags = OpPrintingFlags());
     virtual ~IRPrinterConfig();
 
@@ -338,6 +339,10 @@ public:
       return printAfterOnlyOnFailure;
     }
 
+    bool shouldPrintBeforePass() const { return printBeforePass; }
+
+    bool shouldPrintAfterPass() const { return printAfterPass; }
+
     /// Returns the printing flags to be used to print the IR.
     OpPrintingFlags getOpPrintingFlags() const { return opPrintingFlags; }
 
@@ -352,6 +357,10 @@ public:
     /// A flag that indicates that the IR after a pass should only be printed if
     /// the pass failed.
     bool printAfterOnlyOnFailure;
+
+    bool printBeforePass;
+
+    bool printAfterPass;
 
     /// Flags to control printing behavior.
     OpPrintingFlags opPrintingFlags;
