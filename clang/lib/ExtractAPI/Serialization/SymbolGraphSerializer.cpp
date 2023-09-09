@@ -597,7 +597,7 @@ std::optional<Object> serializeTemplateMixinImpl(const RecordTy &Record,
 
   Object Generics;
   Array GenericParameters;
-  for (const auto Param : Template.getParameters()) {
+  for (const auto &Param : Template.getParameters()) {
     Object Parameter;
     Parameter["name"] = Param.Name;
     Parameter["index"] = Param.Index;
@@ -608,7 +608,7 @@ std::optional<Object> serializeTemplateMixinImpl(const RecordTy &Record,
     Generics["parameters"] = std::move(GenericParameters);
 
   Array GenericConstraints;
-  for (const auto Constr : Template.getConstraints()) {
+  for (const auto &Constr : Template.getConstraints()) {
     Object Constraint;
     Constraint["kind"] = Constr.Kind;
     Constraint["lhs"] = Constr.LHS;

@@ -3,16 +3,26 @@
 # Run as: CLANG=bin/clang build_symbolizer.sh out.o
 # zlib can be downloaded from http://www.zlib.net.
 #
-# Script compiles self-contained object file with symbolization code.
+# Script compiles self-contained object file with symbolization code and injects
+# it into the given set of runtime libraries. Script updates only libraries
+# which has unresolved __sanitizer_symbolize_* symbols and matches architecture.
+# Object file is be compiled from LLVM sources with dependencies like libc++ and
+# zlib. Then it internalizes symbols in the file, so that it can be linked
+# into arbitrary programs, avoiding conflicts with the program own symbols and
+# avoiding dependencies on any program symbols. The only acceptable dependencies
+# are libc and __sanitizer::internal_* from sanitizer runtime.
 #
 # Symbols exported by the object file will be used by Sanitizer runtime
 # libraries to symbolize code/data in-process.
+#
+# The script will modify the output directory which is given as the first
+# argument to the script.
 #
 # FIXME: We should really be using a simpler approach to building this object
 # file, and it should be available as a regular cmake rule. Conceptually, we
 # want to be doing "ld -r" followed by "objcopy -G" to create a relocatable
 # object file with only our entry points exposed. However, this does not work at
-# present, see https://github.com/llvm/llvm-project/issues/30098.
+# present, see PR30750.
 
 set -x
 set -e
@@ -20,7 +30,7 @@ set -u
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
-OUTPUT=$(readlink -f $1)
+TARGE_DIR=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
 LLVM_SRC=$(readlink -f $LLVM_SRC)
@@ -176,6 +186,20 @@ nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefine
 (diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
   (echo "Failed: unexpected symbols"; exit 1)
 
-cp -f symbolizer.o $OUTPUT
+arch() {
+  objdump -f $1 | grep -m1 -Po "(?<=file format ).*$"
+}
+
+SYMBOLIZER_FORMAT=$(arch symbolizer.o)
+echo "Injecting $SYMBOLIZER_FORMAT symbolizer..."
+for A in $TARGE_DIR/libclang_rt.*san*.a; do
+  A_FORMAT=$(arch $A)
+  if [[ "$A_FORMAT" != "$SYMBOLIZER_FORMAT" ]] ; then
+    continue
+  fi
+  (nm -u $A 2>/dev/null | grep -E "__sanitizer_symbolize_code" >/dev/null) || continue
+  echo "$A"
+  $AR rcs $A symbolizer.o
+done
 
 echo "Success!"

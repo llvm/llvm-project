@@ -1161,7 +1161,8 @@ multiclass SOPP_With_Relaxation <string opName, dag ins,
   def _pad_s_nop : SOPP_Pseudo <opName # "_pad_s_nop", ins, asmOps, pattern, " ", opName>;
 }
 
-def S_NOP : SOPP_Pseudo<"s_nop" , (ins i16imm:$simm16), "$simm16"> {
+def S_NOP : SOPP_Pseudo<"s_nop" , (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_nop timm:$simm16)]> {
   let hasSideEffects = 1;
 }
 
