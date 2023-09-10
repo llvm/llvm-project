@@ -209,20 +209,33 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
 void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
-  auto OS = markup(O, Markup::Register);
-  OS << "{";
+  O << "{";
   switch (Imm) {
   case RISCVZC::RLISTENCODE::RA:
-    OS << (ArchRegNames ? "x1" : "ra");
+    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
     break;
   case RISCVZC::RLISTENCODE::RA_S0:
-    OS << (ArchRegNames ? "x1, x8" : "ra, s0");
+    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    O << ", ";
+    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S1:
-    OS << (ArchRegNames ? "x1, x8-x9" : "ra, s0-s1");
+    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    O << ", ";
+    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    O << '-';
+    markup(O, Markup::Register) << (ArchRegNames ? "x9" : "s1");
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S2:
-    OS << (ArchRegNames ? "x1, x8-x9, x18" : "ra, s0-s2");
+    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    O << ", ";
+    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    O << '-';
+    markup(O, Markup::Register) << (ArchRegNames ? "x9" : "s2");
+    if (ArchRegNames) {
+      O << ", ";
+      markup(O, Markup::Register) << "x18";
+    }
     break;
   case RISCVZC::RLISTENCODE::RA_S0_S3:
   case RISCVZC::RLISTENCODE::RA_S0_S4:
@@ -231,16 +244,26 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
   case RISCVZC::RLISTENCODE::RA_S0_S7:
   case RISCVZC::RLISTENCODE::RA_S0_S8:
   case RISCVZC::RLISTENCODE::RA_S0_S9:
-    OS << (ArchRegNames ? "x1, x8-x9, x18-" : "ra, s0-")
-       << getRegisterName(RISCV::X19 + (Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
-    break;
   case RISCVZC::RLISTENCODE::RA_S0_S11:
-    OS << (ArchRegNames ? "x1, x8-x9, x18-x27" : "ra, s0-s11");
+    markup(O, Markup::Register) << (ArchRegNames ? "x1" : "ra");
+    O << ", ";
+    markup(O, Markup::Register) << (ArchRegNames ? "x8" : "s0");
+    O << '-';
+    if (ArchRegNames) {
+      markup(O, Markup::Register) << "x9";
+      O << ", ";
+      markup(O, Markup::Register) << "x18";
+      O << '-';
+    }
+    markup(O, Markup::Register) << getRegisterName(
+        RISCV::X19 + (Imm == RISCVZC::RLISTENCODE::RA_S0_S11
+                          ? 8
+                          : Imm - RISCVZC::RLISTENCODE::RA_S0_S3));
     break;
   default:
     llvm_unreachable("invalid register list");
   }
-  OS << "}";
+  O << "}";
 }
 
 void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
@@ -258,6 +281,7 @@ void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
   if (Opcode == RISCV::CM_PUSH)
     Spimm = -Spimm;
 
+  // RAII guard for ANSI color escape sequences
   auto OS = markup(O, Markup::Immediate);
   RISCVZC::printSpimm(Spimm, O);
 }
@@ -272,7 +296,7 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
     return;
   O << ", ";
   printRegName(O, MO.getReg());
-  O << ".t";
+  markup(O, Markup::Register) << ".t";
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
