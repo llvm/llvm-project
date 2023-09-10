@@ -2653,7 +2653,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
       }
 
-      assert(DefSize == 32 || DefSize == 64 && "Unexpected const def size");
+      assert((DefSize == 32 || DefSize == 64) && "Unexpected const def size");
       // Either emit a FMOV, or emit a copy to emit a normal mov.
       const Register DefGPRReg = MRI.createVirtualRegister(
           DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
