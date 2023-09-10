@@ -534,6 +534,23 @@ public:
   }
 };
 
+class TransformedType : public Node {
+  StringView Transform;
+  Node *BaseType;
+public:
+  TransformedType(StringView Transform_, Node *BaseType_)
+      : Node(KTransformedType), Transform(Transform_), BaseType(BaseType_) {}
+
+  template<typename Fn> void match(Fn F) const { F(Transform, BaseType); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB += Transform;
+    OB += '(';
+    BaseType->print(OB);
+    OB += ')';
+  }
+};
+
 struct AbiTagAttr : Node {
   Node *Base;
   std::string_view Tag;
@@ -3894,7 +3911,15 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     // Typically, <builtin-type>s are not considered substitution candidates,
     // but the exception to that exception is vendor extended types (Itanium C++
     // ABI 5.9.1).
-    Result = make<NameType>(Res);
+    if (consumeIf('I')) {
+      Node *BaseType = parseType();
+      if (BaseType == nullptr)
+        return nullptr;
+      if (!consumeIf('E'))
+        return nullptr;
+      Result = make<TransformedType>(Res, BaseType);
+    } else
+      Result = make<NameType>(Res);
     break;
   }
   case 'D':
