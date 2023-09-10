@@ -132,7 +132,7 @@ define ptr @callee6() {
 
 define ptr @caller6_fail() {
 ; CHECK-LABEL: define ptr @caller6_fail() {
-; CHECK-NEXT:    [[R_I:%.*]] = call dereferenceable(8) ptr @foo()
+; CHECK-NEXT:    [[R_I:%.*]] = call dereferenceable(16) ptr @foo()
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call dereferenceable(8) ptr @callee6()
@@ -159,7 +159,7 @@ define ptr @callee7() {
 
 define ptr @caller7_fail() {
 ; CHECK-LABEL: define ptr @caller7_fail() {
-; CHECK-NEXT:    [[R_I:%.*]] = call dereferenceable_or_null(8) ptr @foo()
+; CHECK-NEXT:    [[R_I:%.*]] = call dereferenceable_or_null(16) ptr @foo()
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call dereferenceable_or_null(8) ptr @callee7()
