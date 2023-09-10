@@ -28,6 +28,7 @@ public:
 private:
   const StringRef NullMacrosStr;
   SmallVector<StringRef, 1> NullMacros;
+  std::vector<StringRef> IgnoredTypes;
 };
 
 } // namespace clang::tidy::modernize
