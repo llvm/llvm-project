@@ -1,8 +1,12 @@
-// RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-dangling-handle %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14 -check-suffix=,CXX14 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
 // RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
-// FIXME: Fix the checker to work in C++17 or later mode.
+
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=,CXX17 %s bugprone-dangling-handle %t -- \
+// RUN:   -config="{CheckOptions: \
+// RUN:             {bugprone-dangling-handle.HandleClasses: \
+// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
 
 namespace std {
 
@@ -84,27 +88,32 @@ std::string ReturnsAString();
 
 void Positives() {
   std::string_view view1 = std::string();
-  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:28: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
 
   std::string_view view_2 = ReturnsAString();
-  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:29: warning: std::basic_string_view outlives its value [bugprone-dangling-handle]
 
   view1 = std::string();
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: std::basic_string_view outlives
 
   const std::string& str_ref = "";
   std::string_view view3 = true ? "A" : str_ref;
-  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:28: warning: std::basic_string_view outlives
   view3 = true ? "A" : str_ref;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: std::basic_string_view outlives
 
   std::string_view view4(ReturnsAString());
-  // CHECK-MESSAGES: [[@LINE-1]]:20: warning: std::basic_string_view outlives
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:20: warning: std::basic_string_view outlives
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:26: warning: std::basic_string_view outlives
 }
 
 void OtherTypes() {
   llvm::StringRef ref = std::string();
-  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: llvm::StringRef outlives its value
+  // CHECK-MESSAGES-CXX14: [[@LINE-1]]:19: warning: llvm::StringRef outlives its value
+  // CHECK-MESSAGES-CXX17: [[@LINE-2]]:25: warning: llvm::StringRef outlives its value
 }
 
 const char static_array[] = "A";
