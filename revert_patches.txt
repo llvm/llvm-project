@@ -14,6 +14,3 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
 
 Nicole and Saiyed:
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
-
-Revert "[Parser] Parse string literal arguments of 'avail"
-
