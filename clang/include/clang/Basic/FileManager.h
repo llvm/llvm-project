@@ -327,7 +327,7 @@ public:
   /// This is a very expensive operation, despite its results being cached,
   /// and should only be used when the physical layout of the file system is
   /// required, which is (almost) never.
-  StringRef getCanonicalName(const FileEntry *File);
+  StringRef getCanonicalName(FileEntryRef File);
 
 private:
   /// Retrieve the canonical name for a given file or directory.
