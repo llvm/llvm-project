@@ -2501,7 +2501,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       // accept the cached file as legit.
       if (ValidateASTInputFilesContent &&
           StoredContentHash != static_cast<uint64_t>(llvm::hash_code(-1))) {
-        auto MemBuffOrError = FileMgr.getBufferForFile(File);
+        auto MemBuffOrError = FileMgr.getBufferForFile(*File);
         if (!MemBuffOrError) {
           if (!Complain)
             return MTimeChange;
