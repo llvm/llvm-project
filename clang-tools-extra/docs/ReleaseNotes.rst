@@ -183,6 +183,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/lambda-function-name>` check by adding option
   `IgnoreMacros` to ignore warnings in macros.
 
+- Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
+  <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
+  eliminating false positives resulting from direct usage of bitwise operators.
+
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
