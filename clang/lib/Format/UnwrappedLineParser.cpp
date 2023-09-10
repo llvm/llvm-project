@@ -3373,9 +3373,8 @@ bool clang::format::UnwrappedLineParser::parseRequires() {
         FormatTok = Tokens->setPosition(StoredPosition);
         parseRequiresExpression(RequiresToken);
         return false;
-      } else {
-        break;
       }
+      break;
     case tok::r_paren:
     case tok::pipepipe:
       FormatTok = Tokens->setPosition(StoredPosition);

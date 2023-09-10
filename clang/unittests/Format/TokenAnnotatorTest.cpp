@@ -1019,10 +1019,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
 
   Tokens = annotate("void f() & requires(true) {}");
   EXPECT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
 
   Tokens = annotate("void f() & requires(C<true, true>) {}");
   EXPECT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::kw_requires, TT_RequiresClause);
   EXPECT_TOKEN(Tokens[4], tok::amp, TT_PointerOrReference);
 }
 
@@ -1143,6 +1145,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
   EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_RequiresExpressionLBrace);
+
+  Tokens = annotate("bool foo = requires(C<true, true> c) {\n"
+                    "  { c.foo(); }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 24u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::kw_requires, TT_RequiresExpression);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_RequiresExpressionLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_RequiresExpressionLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {
