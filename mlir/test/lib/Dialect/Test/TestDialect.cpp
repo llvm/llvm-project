@@ -28,9 +28,11 @@
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -50,12 +52,12 @@ using namespace test;
 Attribute MyPropStruct::asAttribute(MLIRContext *ctx) const {
   return StringAttr::get(ctx, content);
 }
-LogicalResult MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
-                                        InFlightDiagnostic *diag) {
+LogicalResult
+MyPropStruct::setFromAttr(MyPropStruct &prop, Attribute attr,
+                          function_ref<InFlightDiagnostic &()> getDiag) {
   StringAttr strAttr = dyn_cast<StringAttr>(attr);
   if (!strAttr) {
-    if (diag)
-      *diag << "Expect StringAttr but got " << attr;
+    getDiag() << "Expect StringAttr but got " << attr;
     return failure();
   }
   prop.content = strAttr.getValue();
@@ -103,9 +105,9 @@ static void writeToMlirBytecode(::mlir::DialectBytecodeWriter &writer,
     writer.writeVarInt(elt);
 }
 
-static LogicalResult setPropertiesFromAttribute(PropertiesWithCustomPrint &prop,
-                                                Attribute attr,
-                                                InFlightDiagnostic *diagnostic);
+static LogicalResult
+setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
+                           function_ref<InFlightDiagnostic &()> getDiag);
 static DictionaryAttr
 getPropertiesAsAttribute(MLIRContext *ctx,
                          const PropertiesWithCustomPrint &prop);
@@ -114,9 +116,9 @@ static void customPrintProperties(OpAsmPrinter &p,
                                   const PropertiesWithCustomPrint &prop);
 static ParseResult customParseProperties(OpAsmParser &parser,
                                          PropertiesWithCustomPrint &prop);
-static LogicalResult setPropertiesFromAttribute(VersionedProperties &prop,
-                                                Attribute attr,
-                                                InFlightDiagnostic *diagnostic);
+static LogicalResult
+setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
+                           function_ref<InFlightDiagnostic &()> getDiag);
 static DictionaryAttr getPropertiesAsAttribute(MLIRContext *ctx,
                                                const VersionedProperties &prop);
 static llvm::hash_code computeHash(const VersionedProperties &prop);
@@ -1135,23 +1137,20 @@ OpFoldResult ManualCppOpWithFold::fold(ArrayRef<Attribute> attributes) {
 
 static LogicalResult
 setPropertiesFromAttribute(PropertiesWithCustomPrint &prop, Attribute attr,
-                           InFlightDiagnostic *diagnostic) {
+                           function_ref<InFlightDiagnostic &()> getDiag) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    if (diagnostic)
-      *diagnostic << "expected DictionaryAttr to set TestProperties";
+    getDiag() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    if (diagnostic)
-      *diagnostic << "expected StringAttr for key `label`";
+    getDiag() << "expected StringAttr for key `label`";
     return failure();
   }
   auto valueAttr = dict.getAs<IntegerAttr>("value");
   if (!valueAttr) {
-    if (diagnostic)
-      *diagnostic << "expected IntegerAttr for key `value`";
+    getDiag() << "expected IntegerAttr for key `value`";
     return failure();
   }
 
@@ -1187,23 +1186,20 @@ static ParseResult customParseProperties(OpAsmParser &parser,
 }
 static LogicalResult
 setPropertiesFromAttribute(VersionedProperties &prop, Attribute attr,
-                           InFlightDiagnostic *diagnostic) {
+                           function_ref<InFlightDiagnostic &()> getDiag) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    if (diagnostic)
-      *diagnostic << "expected DictionaryAttr to set VersionedProperties";
+    getDiag() << "expected DictionaryAttr to set VersionedProperties";
     return failure();
   }
   auto value1Attr = dict.getAs<IntegerAttr>("value1");
   if (!value1Attr) {
-    if (diagnostic)
-      *diagnostic << "expected IntegerAttr for key `value1`";
+    getDiag() << "expected IntegerAttr for key `value1`";
     return failure();
   }
   auto value2Attr = dict.getAs<IntegerAttr>("value2");
   if (!value2Attr) {
-    if (diagnostic)
-      *diagnostic << "expected IntegerAttr for key `value2`";
+    getDiag() << "expected IntegerAttr for key `value2`";
     return failure();
   }
 

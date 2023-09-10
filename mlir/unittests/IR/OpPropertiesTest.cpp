@@ -33,38 +33,33 @@ struct TestProperties {
 /// parsing with the generic format.
 static LogicalResult
 setPropertiesFromAttribute(TestProperties &prop, Attribute attr,
-                           InFlightDiagnostic *diagnostic) {
+                           function_ref<InFlightDiagnostic &()> getDiag) {
   DictionaryAttr dict = dyn_cast<DictionaryAttr>(attr);
   if (!dict) {
-    if (diagnostic)
-      *diagnostic << "expected DictionaryAttr to set TestProperties";
+    getDiag() << "expected DictionaryAttr to set TestProperties";
     return failure();
   }
   auto aAttr = dict.getAs<IntegerAttr>("a");
   if (!aAttr) {
-    if (diagnostic)
-      *diagnostic << "expected IntegerAttr for key `a`";
+    getDiag() << "expected IntegerAttr for key `a`";
     return failure();
   }
   auto bAttr = dict.getAs<FloatAttr>("b");
   if (!bAttr ||
       &bAttr.getValue().getSemantics() != &llvm::APFloatBase::IEEEsingle()) {
-    if (diagnostic)
-      *diagnostic << "expected FloatAttr for key `b`";
+    getDiag() << "expected FloatAttr for key `b`";
     return failure();
   }
 
   auto arrayAttr = dict.getAs<DenseI64ArrayAttr>("array");
   if (!arrayAttr) {
-    if (diagnostic)
-      *diagnostic << "expected DenseI64ArrayAttr for key `array`";
+    getDiag() << "expected DenseI64ArrayAttr for key `array`";
     return failure();
   }
 
   auto label = dict.getAs<mlir::StringAttr>("label");
   if (!label) {
-    if (diagnostic)
-      *diagnostic << "expected StringAttr for key `label`";
+    getDiag() << "expected StringAttr for key `label`";
     return failure();
   }
 
@@ -257,8 +252,15 @@ TEST(OpPropertiesTest, FailedProperties) {
   attrs.push_back(b.getNamedAttr("a", b.getStringAttr("foo")));
   state.propertiesAttr = attrs.getDictionary(&context);
   {
-    auto diag = op->emitError("setting properties failed: ");
-    auto result = state.setProperties(op, &diag);
+    std::unique_ptr<InFlightDiagnostic> diagnostic;
+    auto getDiag = [&]() -> InFlightDiagnostic & {
+      if (!diagnostic) {
+        diagnostic = std::make_unique<InFlightDiagnostic>(
+            op->emitError("setting properties failed: "));
+      }
+      return *diagnostic;
+    };
+    auto result = state.setProperties(op, getDiag);
     EXPECT_TRUE(result.failed());
   }
   EXPECT_STREQ("setting properties failed: expected IntegerAttr for key `a`",
