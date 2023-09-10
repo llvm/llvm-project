@@ -3427,7 +3427,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
     switch (LBO->getOpcode()) {
     default:
       break;
-    case Instruction::Shl:
+    case Instruction::Shl: {
       bool NUW = Q.IIQ.hasNoUnsignedWrap(LBO) && Q.IIQ.hasNoUnsignedWrap(RBO);
       bool NSW = Q.IIQ.hasNoSignedWrap(LBO) && Q.IIQ.hasNoSignedWrap(RBO);
       if (!NUW || (ICmpInst::isSigned(Pred) && !NSW) ||
@@ -3436,6 +3436,32 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
       if (Value *V = simplifyICmpInst(Pred, LBO->getOperand(1),
                                       RBO->getOperand(1), Q, MaxRecurse - 1))
         return V;
+      break;
+    }
+    // icmp X & C1, X & C2 where (C1 & C2) == C1/C2
+    // icmp X | C1, X | C2 where (C1 & C2) == C1/C2
+    case Instruction::And:
+    case Instruction::Or: {
+      if (ICmpInst::isUnsigned(Pred)) {
+        const APInt *C1, *C2;
+        if (match(LBO->getOperand(1), m_APInt(C1)) &&
+            match(RBO->getOperand(1), m_APInt(C2))) {
+          if (C1->isSubsetOf(*C2)) {
+            if (Pred == ICmpInst::ICMP_ULE)
+              return ConstantInt::getTrue(getCompareTy(LHS));
+            if (Pred == ICmpInst::ICMP_UGT)
+              return ConstantInt::getFalse(getCompareTy(LHS));
+          }
+          if (C2->isSubsetOf(*C1)) {
+            if (Pred == ICmpInst::ICMP_UGE)
+              return ConstantInt::getTrue(getCompareTy(LHS));
+            if (Pred == ICmpInst::ICMP_ULT)
+              return ConstantInt::getFalse(getCompareTy(LHS));
+          }
+        }
+      }
+      break;
+    }
     }
   }
 
