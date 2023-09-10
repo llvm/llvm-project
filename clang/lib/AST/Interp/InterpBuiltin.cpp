@@ -594,5 +594,22 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
   return true;
 }
 
+bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
+                                const Pointer &Ptr, const APSInt &IntValue) {
+
+  const Record *R = Ptr.getRecord();
+  assert(R);
+  assert(R->getNumFields() == 1);
+
+  unsigned FieldOffset = R->getField(0u)->Offset;
+  const Pointer &FieldPtr = Ptr.atField(FieldOffset);
+  PrimType FieldT = *S.getContext().classify(FieldPtr.getType());
+
+  INT_TYPE_SWITCH(FieldT,
+                  FieldPtr.deref<T>() = T::from(IntValue.getSExtValue()));
+  FieldPtr.initialize();
+  return true;
+}
+
 } // namespace interp
 } // namespace clang
