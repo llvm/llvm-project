@@ -5514,7 +5514,7 @@ the configuration (without a prefix: ``Auto``).
 .. _SpacesInParentheses:
 
 **SpacesInParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInParentheses>`
-  If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  If ``true``, spaces will be inserted after ``(`` and before ``)``.
   This option is **deprecated**. The previous behavior is preserved by using
   ``SpacesInParens`` with ``Custom`` and by setting all
   ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
