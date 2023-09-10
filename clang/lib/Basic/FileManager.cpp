@@ -636,8 +636,8 @@ StringRef FileManager::getCanonicalName(DirectoryEntryRef Dir) {
   return getCanonicalName(Dir, Dir.getName());
 }
 
-StringRef FileManager::getCanonicalName(const FileEntry *File) {
-  return getCanonicalName(File, File->getName());
+StringRef FileManager::getCanonicalName(FileEntryRef File) {
+  return getCanonicalName(File, File.getName());
 }
 
 StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
