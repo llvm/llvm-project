@@ -13,6 +13,7 @@ if(CLANG_INCLUDE_TESTS)
   endif()
 endif()
 
+add_subdirectory(clang-symbolgraph-merger)
 add_subdirectory(clang-apply-replacements)
 add_subdirectory(clang-reorder-fields)
 add_subdirectory(modularize)

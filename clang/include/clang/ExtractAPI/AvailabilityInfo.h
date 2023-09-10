@@ -53,6 +53,12 @@ private:
 
 public:
   AvailabilitySet(const Decl *Decl);
+  AvailabilitySet(AvailabilityList &List,
+                  bool UnconditionallyDeprecated = false,
+                  bool UnconditionallyUnavailable = false)
+      : Availabilities(List),
+        UnconditionallyDeprecated(UnconditionallyDeprecated),
+        UnconditionallyUnavailable(UnconditionallyUnavailable) {}
   AvailabilitySet() = default;
 
   AvailabilityList::const_iterator begin() const {
