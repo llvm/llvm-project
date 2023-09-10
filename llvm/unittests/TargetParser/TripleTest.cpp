@@ -1801,6 +1801,7 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::MachO, Triple("i686-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::MachO, Triple("i686-apple-ios").getObjectFormat());
   EXPECT_EQ(Triple::MachO, Triple("i686---macho").getObjectFormat());
+  EXPECT_EQ(Triple::MachO, Triple("powerpc-apple-macosx").getObjectFormat());
 
   EXPECT_EQ(Triple::COFF, Triple("i686--win32").getObjectFormat());
 
