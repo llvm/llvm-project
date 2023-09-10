@@ -533,15 +533,15 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   StringRef OriginalModuleMapName = CI.getFrontendOpts().OriginalModuleMap;
   if (!OriginalModuleMapName.empty()) {
     auto OriginalModuleMap =
-        CI.getFileManager().getFile(OriginalModuleMapName,
-                                    /*openFile*/ true);
+        CI.getFileManager().getOptionalFileRef(OriginalModuleMapName,
+                                               /*openFile*/ true);
     if (!OriginalModuleMap) {
       CI.getDiagnostics().Report(diag::err_module_map_not_found)
         << OriginalModuleMapName;
       return nullptr;
     }
-    if (*OriginalModuleMap != CI.getSourceManager().getFileEntryForID(
-                                 CI.getSourceManager().getMainFileID())) {
+    if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
+                                  CI.getSourceManager().getMainFileID())) {
       M->IsInferred = true;
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
         .setInferredModuleAllowedBy(M, *OriginalModuleMap);

@@ -270,8 +270,8 @@ private:
     Attributes Attrs;
 
     /// If \c InferModules is non-zero, the module map file that allowed
-    /// inferred modules.  Otherwise, nullptr.
-    const FileEntry *ModuleMapFile;
+    /// inferred modules.  Otherwise, nullopt.
+    OptionalFileEntryRef ModuleMapFile;
 
     /// The names of modules that cannot be inferred within this
     /// directory.
@@ -286,7 +286,8 @@ private:
 
   /// A mapping from an inferred module to the module map that allowed the
   /// inference.
-  llvm::DenseMap<const Module *, const FileEntry *> InferredModuleAllowedBy;
+  // FIXME: Consider making the values non-optional.
+  llvm::DenseMap<const Module *, OptionalFileEntryRef> InferredModuleAllowedBy;
 
   llvm::DenseMap<const Module *, AdditionalModMapsSet> AdditionalModMaps;
 
@@ -641,7 +642,7 @@ public:
   /// getContainingModuleMapFile().
   OptionalFileEntryRef getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
+  void setInferredModuleAllowedBy(Module *M, OptionalFileEntryRef ModMap);
 
   /// Canonicalize \p Path in a manner suitable for a module map file. In
   /// particular, this canonicalizes the parent directory separately from the
