@@ -257,7 +257,7 @@ public:
     return *this += -__s;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator[](difference_type __s) const
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __s) const
     requires random_access_range<_Base>
   {
     return *(*this + __s);
