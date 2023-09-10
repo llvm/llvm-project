@@ -122,7 +122,7 @@ struct Header {
     Verbatim,
   };
 
-  Header(const FileEntry *FE) : Storage(FE) {}
+  Header(FileEntryRef FE) : Storage(FE) {}
   Header(tooling::stdlib::Header H) : Storage(H) {}
   Header(StringRef VerbatimSpelling) : Storage(VerbatimSpelling) {}
 
@@ -130,7 +130,7 @@ struct Header {
   bool operator==(const Header &RHS) const { return Storage == RHS.Storage; }
   bool operator<(const Header &RHS) const;
 
-  const FileEntry *physical() const { return std::get<Physical>(Storage); }
+  FileEntryRef physical() const { return std::get<Physical>(Storage); }
   tooling::stdlib::Header standard() const {
     return std::get<Standard>(Storage);
   }
@@ -142,7 +142,7 @@ struct Header {
 
 private:
   // Order must match Kind enum!
-  std::variant<const FileEntry *, tooling::stdlib::Header, StringRef> Storage;
+  std::variant<FileEntryRef, tooling::stdlib::Header, StringRef> Storage;
 
   // Disambiguation tag to make sure we can call the right constructor from
   // DenseMapInfo methods.

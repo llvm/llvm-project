@@ -107,14 +107,23 @@ protected:
   /// Options controlling preprocessed output.
   std::shared_ptr<PreprocessorOutputOptions> PreprocessorOutputOpts;
 
-public:
+  /// Dummy tag type whose instance can be passed into the constructor to
+  /// prevent creation of the reference-counted option objects.
+  struct EmptyConstructor {};
+
   CompilerInvocationBase();
-  CompilerInvocationBase(const CompilerInvocationBase &X) { operator=(X); }
+  CompilerInvocationBase(EmptyConstructor) {}
+  CompilerInvocationBase(const CompilerInvocationBase &X) = delete;
   CompilerInvocationBase(CompilerInvocationBase &&X) = default;
-  CompilerInvocationBase &operator=(const CompilerInvocationBase &X);
+  CompilerInvocationBase &operator=(const CompilerInvocationBase &X) = delete;
+  CompilerInvocationBase &deep_copy_assign(const CompilerInvocationBase &X);
+  CompilerInvocationBase &shallow_copy_assign(const CompilerInvocationBase &X);
   CompilerInvocationBase &operator=(CompilerInvocationBase &&X) = default;
   ~CompilerInvocationBase() = default;
 
+public:
+  /// Const getters.
+  /// @{
   const LangOptions &getLangOpts() const { return *LangOpts; }
   const TargetOptions &getTargetOpts() const { return *TargetOpts; }
   const DiagnosticOptions &getDiagnosticOpts() const { return *DiagnosticOpts; }
@@ -131,7 +140,101 @@ public:
   const PreprocessorOutputOptions &getPreprocessorOutputOpts() const {
     return *PreprocessorOutputOpts;
   }
+  /// @}
 
+  /// Command line generation.
+  /// @{
+  using StringAllocator = llvm::function_ref<const char *(const Twine &)>;
+  /// Generate cc1-compatible command line arguments from this instance.
+  ///
+  /// \param [out] Args - The generated arguments. Note that the caller is
+  /// responsible for inserting the path to the clang executable and "-cc1" if
+  /// desired.
+  /// \param SA - A function that given a Twine can allocate storage for a given
+  /// command line argument and return a pointer to the newly allocated string.
+  /// The returned pointer is what gets appended to Args.
+  void generateCC1CommandLine(llvm::SmallVectorImpl<const char *> &Args,
+                              StringAllocator SA) const {
+    generateCC1CommandLine([&](const Twine &Arg) {
+      // No need to allocate static string literals.
+      Args.push_back(Arg.isSingleStringLiteral()
+                         ? Arg.getSingleStringRef().data()
+                         : SA(Arg));
+    });
+  }
+
+  using ArgumentConsumer = llvm::function_ref<void(const Twine &)>;
+  /// Generate cc1-compatible command line arguments from this instance.
+  ///
+  /// \param Consumer - Callback that gets invoked for every single generated
+  /// command line argument.
+  void generateCC1CommandLine(ArgumentConsumer Consumer) const;
+
+  /// Generate cc1-compatible command line arguments from this instance,
+  /// wrapping the result as a std::vector<std::string>.
+  ///
+  /// This is a (less-efficient) wrapper over generateCC1CommandLine().
+  std::vector<std::string> getCC1CommandLine() const;
+
+private:
+  /// Generate command line options from DiagnosticOptions.
+  static void GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
+                                     ArgumentConsumer Consumer,
+                                     bool DefaultDiagColor);
+
+  /// Generate command line options from LangOptions.
+  static void GenerateLangArgs(const LangOptions &Opts,
+                               ArgumentConsumer Consumer, const llvm::Triple &T,
+                               InputKind IK);
+
+  // Generate command line options from CodeGenOptions.
+  static void GenerateCodeGenArgs(const CodeGenOptions &Opts,
+                                  ArgumentConsumer Consumer,
+                                  const llvm::Triple &T,
+                                  const std::string &OutputFile,
+                                  const LangOptions *LangOpts);
+  /// @}
+};
+
+/// Helper class for holding the data necessary to invoke the compiler.
+///
+/// This class is designed to represent an abstract "invocation" of the
+/// compiler, including data such as the include paths, the code generation
+/// options, the warning flags, and so on.
+class CompilerInvocation : public CompilerInvocationBase {
+public:
+  CompilerInvocation() = default;
+  CompilerInvocation(const CompilerInvocation &X)
+      : CompilerInvocationBase(EmptyConstructor{}) {
+    deep_copy_assign(X);
+  }
+  CompilerInvocation(CompilerInvocation &&) = default;
+  CompilerInvocation &operator=(const CompilerInvocation &X) {
+    deep_copy_assign(X);
+    return *this;
+  }
+  ~CompilerInvocation() = default;
+
+  /// Const getters.
+  /// @{
+  // Note: These need to be pulled in manually. Otherwise, they get hidden by
+  // the mutable getters with the same names.
+  using CompilerInvocationBase::getLangOpts;
+  using CompilerInvocationBase::getTargetOpts;
+  using CompilerInvocationBase::getDiagnosticOpts;
+  using CompilerInvocationBase::getHeaderSearchOpts;
+  using CompilerInvocationBase::getPreprocessorOpts;
+  using CompilerInvocationBase::getAnalyzerOpts;
+  using CompilerInvocationBase::getMigratorOpts;
+  using CompilerInvocationBase::getCodeGenOpts;
+  using CompilerInvocationBase::getFileSystemOpts;
+  using CompilerInvocationBase::getFrontendOpts;
+  using CompilerInvocationBase::getDependencyOutputOpts;
+  using CompilerInvocationBase::getPreprocessorOutputOpts;
+  /// @}
+
+  /// Mutable getters.
+  /// @{
   LangOptions &getLangOpts() { return *LangOpts; }
   TargetOptions &getTargetOpts() { return *TargetOpts; }
   DiagnosticOptions &getDiagnosticOpts() { return *DiagnosticOpts; }
@@ -148,15 +251,8 @@ public:
   PreprocessorOutputOptions &getPreprocessorOutputOpts() {
     return *PreprocessorOutputOpts;
   }
-};
+  /// @}
 
-/// Helper class for holding the data necessary to invoke the compiler.
-///
-/// This class is designed to represent an abstract "invocation" of the
-/// compiler, including data such as the include paths, the code generation
-/// options, the warning flags, and so on.
-class CompilerInvocation : public CompilerInvocationBase {
-public:
   /// Base class internals.
   /// @{
   using CompilerInvocationBase::LangOpts;
@@ -200,38 +296,6 @@ public:
   /// identifying the conditions under which the module was built.
   std::string getModuleHash() const;
 
-  using StringAllocator = llvm::function_ref<const char *(const Twine &)>;
-  /// Generate cc1-compatible command line arguments from this instance.
-  ///
-  /// \param [out] Args - The generated arguments. Note that the caller is
-  /// responsible for inserting the path to the clang executable and "-cc1" if
-  /// desired.
-  /// \param SA - A function that given a Twine can allocate storage for a given
-  /// command line argument and return a pointer to the newly allocated string.
-  /// The returned pointer is what gets appended to Args.
-  void generateCC1CommandLine(llvm::SmallVectorImpl<const char *> &Args,
-                              StringAllocator SA) const {
-    generateCC1CommandLine([&](const Twine &Arg) {
-      // No need to allocate static string literals.
-      Args.push_back(Arg.isSingleStringLiteral()
-                         ? Arg.getSingleStringRef().data()
-                         : SA(Arg));
-    });
-  }
-
-  using ArgumentConsumer = llvm::function_ref<void(const Twine &)>;
-  /// Generate cc1-compatible command line arguments from this instance.
-  ///
-  /// \param Consumer - Callback that gets invoked for every single generated
-  /// command line argument.
-  void generateCC1CommandLine(ArgumentConsumer Consumer) const;
-
-  /// Generate cc1-compatible command line arguments from this instance,
-  /// wrapping the result as a std::vector<std::string>.
-  ///
-  /// This is a (less-efficient) wrapper over generateCC1CommandLine().
-  std::vector<std::string> getCC1CommandLine() const;
-
   /// Check that \p Args can be parsed and re-serialized without change,
   /// emiting diagnostics for any differences.
   ///
@@ -256,21 +320,11 @@ private:
                                  ArrayRef<const char *> CommandLineArgs,
                                  DiagnosticsEngine &Diags, const char *Argv0);
 
-  /// Generate command line options from DiagnosticOptions.
-  static void GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
-                                     ArgumentConsumer Consumer,
-                                     bool DefaultDiagColor);
-
   /// Parse command line options that map to LangOptions.
   static bool ParseLangArgs(LangOptions &Opts, llvm::opt::ArgList &Args,
                             InputKind IK, const llvm::Triple &T,
                             std::vector<std::string> &Includes,
                             DiagnosticsEngine &Diags);
-
-  /// Generate command line options from LangOptions.
-  static void GenerateLangArgs(const LangOptions &Opts,
-                               ArgumentConsumer Consumer, const llvm::Triple &T,
-                               InputKind IK);
 
   /// Parse command line options that map to CodeGenOptions.
   static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
@@ -278,13 +332,45 @@ private:
                                const llvm::Triple &T,
                                const std::string &OutputFile,
                                const LangOptions &LangOptsRef);
+};
 
-  // Generate command line options from CodeGenOptions.
-  static void GenerateCodeGenArgs(const CodeGenOptions &Opts,
-                                  ArgumentConsumer Consumer,
-                                  const llvm::Triple &T,
-                                  const std::string &OutputFile,
-                                  const LangOptions *LangOpts);
+/// Same as \c CompilerInvocation, but with copy-on-write optimization.
+class CowCompilerInvocation : public CompilerInvocationBase {
+public:
+  CowCompilerInvocation() = default;
+  CowCompilerInvocation(const CowCompilerInvocation &X)
+      : CompilerInvocationBase(EmptyConstructor{}) {
+    shallow_copy_assign(X);
+  }
+  CowCompilerInvocation(CowCompilerInvocation &&) = default;
+  CowCompilerInvocation &operator=(const CowCompilerInvocation &X) {
+    shallow_copy_assign(X);
+    return *this;
+  }
+  ~CowCompilerInvocation() = default;
+
+  CowCompilerInvocation(const CompilerInvocation &X)
+      : CompilerInvocationBase(EmptyConstructor{}) {
+    deep_copy_assign(X);
+  }
+
+  // Const getters are inherited from the base class.
+
+  /// Mutable getters.
+  /// @{
+  LangOptions &getMutLangOpts();
+  TargetOptions &getMutTargetOpts();
+  DiagnosticOptions &getMutDiagnosticOpts();
+  HeaderSearchOptions &getMutHeaderSearchOpts();
+  PreprocessorOptions &getMutPreprocessorOpts();
+  AnalyzerOptions &getMutAnalyzerOpts();
+  MigratorOptions &getMutMigratorOpts();
+  CodeGenOptions &getMutCodeGenOpts();
+  FileSystemOptions &getMutFileSystemOpts();
+  FrontendOptions &getMutFrontendOpts();
+  DependencyOutputOptions &getMutDependencyOutputOpts();
+  PreprocessorOutputOptions &getMutPreprocessorOutputOpts();
+  /// @}
 };
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

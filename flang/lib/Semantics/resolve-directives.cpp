@@ -552,9 +552,6 @@ public:
       case Type::Delete:
         ompFlag = Symbol::Flag::OmpMapDelete;
         break;
-      default:
-        assert(false && "Unsupported map-type");
-        break;
       }
     }
     const auto &ompObjList{std::get<parser::OmpObjectList>(x.t)};
@@ -1763,6 +1760,21 @@ void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
     context_.Say(x.source,
         "ALLOCATE directives that appear in a TARGET region "
         "must specify an allocator clause"_err_en_US);
+  }
+
+  const auto &allocateStmt =
+      std::get<parser::Statement<parser::AllocateStmt>>(x.t).statement;
+  if (const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+    CheckAllNamesInAllocateStmt(
+        std::get<parser::Verbatim>(x.t).source, *list, allocateStmt);
+  }
+  if (const auto &subDirs{
+          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
+              x.t)}) {
+    for (const auto &dalloc : *subDirs) {
+      CheckAllNamesInAllocateStmt(std::get<parser::Verbatim>(dalloc.t).source,
+          std::get<parser::OmpObjectList>(dalloc.t), allocateStmt);
+    }
   }
   PopContext();
 }

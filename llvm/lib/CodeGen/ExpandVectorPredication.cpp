@@ -179,6 +179,10 @@ struct CachingVPExpander {
   Value *expandPredicationInReduction(IRBuilder<> &Builder,
                                       VPReductionIntrinsic &PI);
 
+  /// Lower this VP cast operation to a non-VP intrinsic.
+  Value *expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
+                                          VPIntrinsic &VPI);
+
   /// Lower this VP memory operation to a non-VP intrinsic.
   Value *expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                             VPIntrinsic &VPI);
@@ -436,6 +440,27 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
   return Reduction;
 }
 
+Value *CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
+                                                           VPIntrinsic &VPI) {
+  // TODO: Add anthor Cast Intrinsic, VP_TRUNC/VP_ZEXT
+  switch (VPI.getIntrinsicID()) {
+  default:
+    llvm_unreachable("Not a VP memory intrinsic");
+  case Intrinsic::vp_inttoptr: {
+    Value *NewOp =
+        Builder.CreateIntToPtr(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
+  case Intrinsic::vp_ptrtoint: {
+    Value *NewOp =
+        Builder.CreatePtrToInt(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
+  }
+}
+
 Value *
 CachingVPExpander::expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                                       VPIntrinsic &VPI) {
@@ -597,6 +622,10 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
 
   if (auto *VPCmp = dyn_cast<VPCmpIntrinsic>(&VPI))
     return expandPredicationInComparison(Builder, *VPCmp);
+
+  if (VPCastIntrinsic::isVPCast(VPI.getIntrinsicID())) {
+    return expandPredicationToCastIntrinsic(Builder, VPI);
+  }
 
   switch (VPI.getIntrinsicID()) {
   default:

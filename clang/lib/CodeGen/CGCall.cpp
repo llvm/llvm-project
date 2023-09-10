@@ -2001,6 +2001,54 @@ static void getTrivialDefaultFunctionAttributes(
   }
 }
 
+static void
+overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
+                                           const llvm::Function &F,
+                                           const TargetOptions &TargetOpts) {
+  auto FFeatures = F.getFnAttribute("target-features");
+
+  llvm::StringSet<> IncompatibleFeatureNames;
+  SmallVector<StringRef> MergedFeatures;
+  MergedFeatures.reserve(TargetOpts.Features.size());
+
+  if (FFeatures.isValid()) {
+    const auto &TFeatures = TargetOpts.FeatureMap;
+    for (StringRef Feature : llvm::split(FFeatures.getValueAsString(), ',')) {
+      if (Feature.empty())
+        continue;
+
+      bool EnabledForFunc = Feature.starts_with("+");
+      assert(EnabledForFunc || Feature.starts_with("-"));
+
+      StringRef Name = Feature.drop_front(1);
+      auto TEntry = TFeatures.find(Name);
+
+      // Preserves features that are incompatible (either set to something
+      // different or missing) from the target features
+      bool MissingFromTarget = TEntry == TFeatures.end();
+      bool EnabledForTarget = !MissingFromTarget && TEntry->second;
+      bool Incompatible = EnabledForTarget != EnabledForFunc;
+      if (MissingFromTarget || Incompatible) {
+        MergedFeatures.push_back(Feature);
+        if (Incompatible)
+          IncompatibleFeatureNames.insert(Name);
+      }
+    }
+  }
+
+  for (StringRef Feature : TargetOpts.Features) {
+    if (Feature.empty())
+      continue;
+    StringRef Name = Feature.drop_front(1);
+    if (IncompatibleFeatureNames.contains(Name))
+      continue;
+    MergedFeatures.push_back(Feature);
+  }
+
+  if (!MergedFeatures.empty())
+    FuncAttr.addAttribute("target-features", llvm::join(MergedFeatures, ","));
+}
+
 void CodeGen::mergeDefaultFunctionDefinitionAttributes(
     llvm::Function &F, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, const TargetOptions &TargetOpts,
@@ -2058,6 +2106,9 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
 
   F.removeFnAttrs(AttrsToRemove);
   addDenormalModeAttrs(Merged, MergedF32, FuncAttrs);
+
+  overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, TargetOpts);
+
   F.addFnAttrs(FuncAttrs);
 }
 
@@ -2226,6 +2277,17 @@ static llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
   if (LangOpts.NoHonorNaNs)
     Mask |= llvm::fcNan;
   return Mask;
+}
+
+void CodeGenModule::AdjustMemoryAttribute(StringRef Name,
+                                          CGCalleeInfo CalleeInfo,
+                                          llvm::AttributeList &Attrs) {
+  if (Attrs.getMemoryEffects().getModRef() == llvm::ModRefInfo::NoModRef) {
+    Attrs = Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Memory);
+    llvm::Attribute MemoryAttr = llvm::Attribute::getWithMemoryEffects(
+        getLLVMContext(), llvm::MemoryEffects::writeOnly());
+    Attrs = Attrs.addFnAttribute(getLLVMContext(), MemoryAttr);
+  }
 }
 
 /// Construct the IR attribute list of a function or call.
@@ -5450,11 +5512,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
 
+    // If -ffast-math is enabled and the function is guarded by an
+    // '__attribute__((optnone)) adjust the memory attribute so the BE emits the
+    // library call instead of the intrinsic.
+    if (FD->hasAttr<OptimizeNoneAttr>() && getLangOpts().FastMath)
+      CGM.AdjustMemoryAttribute(CalleePtr->getName(), Callee.getAbstractInfo(),
+                                Attrs);
+  }
   // Add call-site nomerge attribute if exists.
   if (InNoMergeAttributedStmt)
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoMerge);

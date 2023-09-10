@@ -43,9 +43,11 @@ using ScopeBlockIdMap =
 /// a symbol where all the Fortran context is needed. Otherwise, external
 /// symbols are mangled outside of any scope.
 std::string mangleName(const semantics::Symbol &, ScopeBlockIdMap &,
-                       bool keepExternalInScope = false);
+                       bool keepExternalInScope = false,
+                       bool underscoring = true);
 std::string mangleName(const semantics::Symbol &,
-                       bool keepExternalInScope = false);
+                       bool keepExternalInScope = false,
+                       bool underscoring = true);
 
 /// Convert a derived type instance to an internal name.
 std::string mangleName(const semantics::DerivedTypeSpec &, ScopeBlockIdMap &);
