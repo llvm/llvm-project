@@ -26,4 +26,31 @@ define i32 @test1(i32 %A, i32 %B) {
   ret i32 %t4
 }
 
+; TODO: The addlike OR instruction should fold into the LEA.
 
+define i64 @test2(i32 %a0, i64 %a1) {
+; X32-LABEL: test2:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    movl %edx, %eax
+; X32-NEXT:    andl $2147483640, %eax # imm = 0x7FFFFFF8
+; X32-NEXT:    shrl $31, %edx
+; X32-NEXT:    leal 4(%eax,%eax), %eax
+; X32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    retl
+;
+; X64-LABEL: test2:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    andl $-8, %edi
+; X64-NEXT:    orl $2, %edi
+; X64-NEXT:    leaq (%rsi,%rdi,2), %rax
+; X64-NEXT:    retq
+  %x1 = and i32 %a0, -8
+  %x2 = or i32 %x1, 2
+  %x3 = zext i32 %x2 to i64
+  %x4 = shl i64 %x3, 1
+  %x5 = add i64 %a1, %x4
+  ret i64 %x5
+}
