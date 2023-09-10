@@ -622,7 +622,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
       UmbrellaModule = UmbrellaModule->Parent;
 
     if (UmbrellaModule->InferSubmodules) {
-      OptionalFileEntryRefDegradesToFileEntryPtr UmbrellaModuleMap =
+      OptionalFileEntryRef UmbrellaModuleMap =
           getModuleMapFileForUniquing(UmbrellaModule);
 
       // Infer submodules for each of the directories we found between
@@ -993,7 +993,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
 
   // If the framework has a parent path from which we're allowed to infer
   // a framework module, do so.
-  const FileEntry *ModuleMapFile = nullptr;
+  OptionalFileEntryRef ModuleMapFile;
   if (!Parent) {
     // Determine whether we're allowed to infer a module map.
     bool canInfer = false;
@@ -1294,13 +1294,13 @@ OptionalFileEntryRef
 ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
   if (M->IsInferred) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");
-    // FIXME: Update InferredModuleAllowedBy to use FileEntryRef.
-    return InferredModuleAllowedBy.find(M)->second->getLastRef();
+    return InferredModuleAllowedBy.find(M)->second;
   }
   return getContainingModuleMapFile(M);
 }
 
-void ModuleMap::setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap) {
+void ModuleMap::setInferredModuleAllowedBy(Module *M,
+                                           OptionalFileEntryRef ModMap) {
   assert(M->IsInferred && "module not inferred");
   InferredModuleAllowedBy[M] = ModMap;
 }
