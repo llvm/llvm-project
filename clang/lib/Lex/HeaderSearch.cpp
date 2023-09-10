@@ -818,7 +818,7 @@ static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
 static void
 diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
                          StringRef Includer, StringRef IncludeFilename,
-                         const FileEntry *IncludeFE, bool isAngled = false,
+                         FileEntryRef IncludeFE, bool isAngled = false,
                          bool FoundByHeaderMap = false) {
   bool IsIncluderPrivateHeader = false;
   SmallString<128> FromFramework, ToFramework;
@@ -828,7 +828,7 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
     return;
   bool IsIncludeePrivateHeader = false;
   bool IsIncludeeInFramework =
-      isFrameworkStylePath(IncludeFE->getName(), IsIncludeePrivateHeader,
+      isFrameworkStylePath(IncludeFE.getName(), IsIncludeePrivateHeader,
                            ToFramework, ToIncludeSpelling);
 
   if (!isAngled && !FoundByHeaderMap) {
@@ -965,7 +965,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         if (First) {
           diagnoseFrameworkInclude(Diags, IncludeLoc,
                                    IncluderAndDir.second.getName(), Filename,
-                                   &FE->getFileEntry());
+                                   *FE);
           return FE;
         }
 
@@ -1119,9 +1119,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
 
     bool FoundByHeaderMap = !IsMapped ? false : *IsMapped;
     if (!Includers.empty())
-      diagnoseFrameworkInclude(
-          Diags, IncludeLoc, Includers.front().second.getName(), Filename,
-          &File->getFileEntry(), isAngled, FoundByHeaderMap);
+      diagnoseFrameworkInclude(Diags, IncludeLoc,
+                               Includers.front().second.getName(), Filename,
+                               *File, isAngled, FoundByHeaderMap);
 
     // Remember this location for the next lookup we do.
     cacheLookupSuccess(CacheLookup, It, IncludeLoc);
@@ -1660,8 +1660,8 @@ bool HeaderSearch::findUsableModuleForFrameworkHeader(
   return true;
 }
 
-static const FileEntry *getPrivateModuleMap(FileEntryRef File,
-                                            FileManager &FileMgr) {
+static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
+                                                FileManager &FileMgr) {
   StringRef Filename = llvm::sys::path::filename(File.getName());
   SmallString<128>  PrivateFilename(File.getDir().getName());
   if (Filename == "module.map")
@@ -1669,10 +1669,8 @@ static const FileEntry *getPrivateModuleMap(FileEntryRef File,
   else if (Filename == "module.modulemap")
     llvm::sys::path::append(PrivateFilename, "module.private.modulemap");
   else
-    return nullptr;
-  if (auto File = FileMgr.getFile(PrivateFilename))
-    return *File;
-  return nullptr;
+    return std::nullopt;
+  return FileMgr.getOptionalFileRef(PrivateFilename);
 }
 
 bool HeaderSearch::loadModuleMapFile(FileEntryRef File, bool IsSystem,
@@ -1738,8 +1736,8 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   }
 
   // Try to load a corresponding private module map.
-  if (const FileEntry *PMMFile = getPrivateModuleMap(File, FileMgr)) {
-    if (ModMap.parseModuleMapFile(PMMFile, IsSystem, Dir)) {
+  if (OptionalFileEntryRef PMMFile = getPrivateModuleMap(File, FileMgr)) {
+    if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
       LoadedModuleMaps[File] = false;
       return LMM_InvalidModuleMap;
     }

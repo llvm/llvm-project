@@ -435,6 +435,9 @@ Floating Point Support in Clang
   semantics. If ``math-errno`` is disabled in the current TU, clang will
   re-enable ``math-errno`` in the presense of
   ``#pragma float_control(precise,on)``.
+- Add ``__builtin_exp10``, ``__builtin_exp10f``,
+  ``__builtin_exp10f16``, ``__builtin_exp10l`` and
+  ``__builtin_exp10f128`` builtins.
 
 AST Matchers
 ------------
@@ -444,6 +447,7 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``AllowBreakBeforeNoexceptSpecifier`` option.
 
 libclang
 --------

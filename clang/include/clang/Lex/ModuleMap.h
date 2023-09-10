@@ -194,7 +194,7 @@ public:
     }
   };
 
-  using AdditionalModMapsSet = llvm::SmallPtrSet<const FileEntry *, 1>;
+  using AdditionalModMapsSet = llvm::SmallPtrSet<FileEntryRef, 1>;
 
 private:
   friend class ModuleMapParser;
@@ -653,7 +653,7 @@ public:
     return &I->second;
   }
 
-  void addAdditionalModuleMapFile(const Module *M, const FileEntry *ModuleMap);
+  void addAdditionalModuleMapFile(const Module *M, FileEntryRef ModuleMap);
 
   /// Resolve all of the unresolved exports in the given module.
   ///
@@ -721,7 +721,7 @@ public:
   ///        that caused us to load this module map file, if any.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool parseModuleMapFile(const FileEntry *File, bool IsSystem,
+  bool parseModuleMapFile(FileEntryRef File, bool IsSystem,
                           DirectoryEntryRef HomeDir, FileID ID = FileID(),
                           unsigned *Offset = nullptr,
                           SourceLocation ExternModuleLoc = SourceLocation());

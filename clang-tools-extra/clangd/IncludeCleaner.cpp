@@ -410,7 +410,7 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
         for (const auto &H : Providers) {
           if (H.kind() == include_cleaner::Header::Physical &&
               (H.physical() == MainFile || H.physical() == PreamblePatch ||
-               H.physical()->getLastRef().getDir() == ResourceDir)) {
+               H.physical().getDir() == ResourceDir)) {
             Satisfied = true;
             continue;
           }
