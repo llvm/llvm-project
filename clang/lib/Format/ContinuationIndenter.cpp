@@ -1600,9 +1600,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
-  // Verilog case labels are are on the same unwrapped lines as the statements
-  // that follow.  TokenAnnotator identifies them and sets MustBreakBefore.
-  // Indentation is taken care of here.  A case label can only have 1 statement
+  // Verilog case labels are on the same unwrapped lines as the statements that
+  // follow. TokenAnnotator identifies them and sets MustBreakBefore.
+  // Indentation is taken care of here. A case label can only have 1 statement
   // in Verilog, so we don't have to worry about lines that follow.
   if (Style.isVerilog() && State.NextToken &&
       State.NextToken->MustBreakBefore &&
