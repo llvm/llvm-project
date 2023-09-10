@@ -295,8 +295,7 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   if (MO.getReg() == RISCV::NoRegister)
     return;
   O << ", ";
-  printRegName(O, MO.getReg());
-  markup(O, Markup::Register) << ".t";
+  markup(O, Markup::Register) << getRegisterName(MO.getReg()) << ".t";
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
