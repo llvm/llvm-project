@@ -79,7 +79,7 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
     Register Reg = MO.getReg();
     if (Reg.isPhysical()) {
       // Don't delete live physreg defs, or any reserved register defs.
-      if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
+      if (!LivePhysRegs.available(*MRI, Reg))
         return false;
     } else {
       if (MO.isDead()) {

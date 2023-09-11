@@ -518,7 +518,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
   unsigned RegClassID = ChainBegin->getDesc().operands()[0].RegClass;
   auto Ord = RCI.getOrder(TRI->getRegClass(RegClassID));
   for (auto Reg : Ord) {
-    if (!Units.available(Reg))
+    if (Units.contains(Reg))
       continue;
     if (C == getColor(Reg))
       return Reg;

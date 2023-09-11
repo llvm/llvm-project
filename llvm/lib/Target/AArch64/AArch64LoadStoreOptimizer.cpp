@@ -1265,7 +1265,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
         BaseReg == AArch64InstrInfo::getLdStBaseOp(MI).getReg() &&
         AArch64InstrInfo::getLdStOffsetOp(MI).isImm() &&
         isLdOffsetInRangeOfSt(LoadMI, MI, TII) &&
-        ModifiedRegUnits.available(getLdStRegOp(MI).getReg())) {
+        !ModifiedRegUnits.contains(getLdStRegOp(MI).getReg())) {
       StoreI = MBBI;
       return true;
     }
@@ -1278,7 +1278,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
 
     // Otherwise, if the base register is modified, we have no match, so
     // return early.
-    if (!ModifiedRegUnits.available(BaseReg))
+    if (ModifiedRegUnits.contains(BaseReg))
       return false;
 
     // If we encounter a store aliased with the load, return early.
@@ -1510,7 +1510,7 @@ static std::optional<MCPhysReg> tryToFindRegisterToRename(
 
   auto *RegClass = TRI->getMinimalPhysRegClass(Reg);
   for (const MCPhysReg &PR : *RegClass) {
-    if (DefinedInBB.available(PR) && UsedInBetween.available(PR) &&
+    if (!DefinedInBB.contains(PR) && !UsedInBetween.contains(PR) &&
         !RegInfo.isReserved(PR) && !AnySubOrSuperRegCalleePreserved(PR) &&
         CanBeUsedForAllClasses(PR)) {
       DefinedInBB.addReg(PR);
@@ -1615,9 +1615,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // can't be paired: bail and keep looking.
         if (IsPreLdSt) {
           bool IsOutOfBounds = MIOffset != TII->getMemScale(MI);
-          bool IsBaseRegUsed = !UsedRegUnits.available(
+          bool IsBaseRegUsed = UsedRegUnits.contains(
               AArch64InstrInfo::getLdStBaseOp(MI).getReg());
-          bool IsBaseRegModified = !ModifiedRegUnits.available(
+          bool IsBaseRegModified = ModifiedRegUnits.contains(
               AArch64InstrInfo::getLdStBaseOp(MI).getReg());
           // If the stored value and the address of the second instruction is
           // the same, it needs to be using the updated register and therefore
@@ -1694,16 +1694,16 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         //   ldr x2 [x3]
         //   ldr x4 [x2, #8],
         // the first and third ldr cannot be converted to ldp x1, x4, [x2]
-        if (!ModifiedRegUnits.available(BaseReg))
+        if (ModifiedRegUnits.contains(BaseReg))
           return E;
 
         // If the Rt of the second instruction was not modified or used between
         // the two instructions and none of the instructions between the second
         // and first alias with the second, we can combine the second into the
         // first.
-        if (ModifiedRegUnits.available(getLdStRegOp(MI).getReg()) &&
+        if (!ModifiedRegUnits.contains(getLdStRegOp(MI).getReg()) &&
             !(MI.mayLoad() &&
-              !UsedRegUnits.available(getLdStRegOp(MI).getReg())) &&
+              UsedRegUnits.contains(getLdStRegOp(MI).getReg())) &&
             !mayAlias(MI, MemInsns, AA)) {
 
           Flags.setMergeForward(false);
@@ -1716,10 +1716,10 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
         // first and the second alias with the first, we can combine the first
         // into the second.
         if (!(MayLoad &&
-              !UsedRegUnits.available(getLdStRegOp(FirstMI).getReg())) &&
+              UsedRegUnits.contains(getLdStRegOp(FirstMI).getReg())) &&
             !mayAlias(FirstMI, MemInsns, AA)) {
 
-          if (ModifiedRegUnits.available(getLdStRegOp(FirstMI).getReg())) {
+          if (!ModifiedRegUnits.contains(getLdStRegOp(FirstMI).getReg())) {
             Flags.setMergeForward(true);
             Flags.clearRenameReg();
             return MBBI;
@@ -1761,7 +1761,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
     // Otherwise, if the base register is modified, we have no match, so
     // return early.
-    if (!ModifiedRegUnits.available(BaseReg))
+    if (ModifiedRegUnits.contains(BaseReg))
       return E;
 
     // Update list of instructions that read/write memory.
@@ -1987,8 +1987,8 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     // return early.
     // If we are optimizing SP, do not allow instructions that may load or store
     // in between the load and the optimized value update.
-    if (!ModifiedRegUnits.available(BaseReg) ||
-        !UsedRegUnits.available(BaseReg) ||
+    if (ModifiedRegUnits.contains(BaseReg) ||
+        UsedRegUnits.contains(BaseReg) ||
         (BaseRegSP && MBBI->mayLoadOrStore()))
       return E;
   }
@@ -2062,8 +2062,8 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
 
     // Otherwise, if the base register is used or modified, we have no match, so
     // return early.
-    if (!ModifiedRegUnits.available(BaseReg) ||
-        !UsedRegUnits.available(BaseReg))
+    if (ModifiedRegUnits.contains(BaseReg) ||
+        UsedRegUnits.contains(BaseReg))
       return E;
     // Keep track if we have a memory access before an SP pre-increment, in this
     // case we need to validate later that the update amount respects the red

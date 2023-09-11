@@ -156,7 +156,7 @@ public:
                                     const TargetRegisterInfo &TRI) {
     if (!FromEndOfBlockToStartOfSeqWasSet)
       initFromEndOfBlockToStartOfSeq(TRI);
-    return FromEndOfBlockToStartOfSeq.available(Reg);
+    return !FromEndOfBlockToStartOfSeq.contains(Reg);
   }
 
   /// \returns True if `isAvailableAcrossAndOutOfSeq` fails for any register
@@ -166,7 +166,7 @@ public:
     if (!FromEndOfBlockToStartOfSeqWasSet)
       initFromEndOfBlockToStartOfSeq(TRI);
     return any_of(Regs, [&](Register Reg) {
-      return !FromEndOfBlockToStartOfSeq.available(Reg);
+      return FromEndOfBlockToStartOfSeq.contains(Reg);
     });
   }
 
@@ -181,7 +181,7 @@ public:
   bool isAvailableInsideSeq(Register Reg, const TargetRegisterInfo &TRI) {
     if (!InSeqWasSet)
       initInSeq(TRI);
-    return InSeq.available(Reg);
+    return !InSeq.contains(Reg);
   }
 
   /// The number of instructions that would be saved by outlining every

@@ -748,7 +748,7 @@ void FalkorHWPFFix::runOnLoop(MachineLoop &L, MachineFunction &Fn) {
       }
 
       for (unsigned ScratchReg : AArch64::GPR64RegClass) {
-        if (!LR.available(ScratchReg) || MRI.isReserved(ScratchReg))
+        if (!LR.available(MRI, ScratchReg))
           continue;
 
         LoadInfo NewLdI(LdI);

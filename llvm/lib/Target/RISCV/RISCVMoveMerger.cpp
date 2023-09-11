@@ -150,9 +150,9 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
         //  If paired destination register was modified or used, the source reg
         //  was modified, there is no possibility of finding matching
         //  instruction so exit early.
-        if (!ModifiedRegUnits.available(DestReg) ||
-            !UsedRegUnits.available(DestReg) ||
-            !ModifiedRegUnits.available(SourceReg))
+        if (ModifiedRegUnits.contains(DestReg) ||
+            UsedRegUnits.contains(DestReg) ||
+            ModifiedRegUnits.contains(SourceReg))
           return E;
 
         return I;
@@ -162,9 +162,9 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
             (RegPair.Destination->getReg() == DestReg))
           return E;
 
-        if (!ModifiedRegUnits.available(DestReg) ||
-            !UsedRegUnits.available(DestReg) ||
-            !ModifiedRegUnits.available(SourceReg))
+        if (ModifiedRegUnits.contains(DestReg) ||
+            UsedRegUnits.contains(DestReg) ||
+            ModifiedRegUnits.contains(SourceReg))
           return E;
 
         return I;

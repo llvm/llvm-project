@@ -100,8 +100,8 @@ bool RISCVPushPopOpt::adjustRetVal(MachineBasicBlock::iterator &MBBI) {
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
     // If a0 was modified or used, there is no possibility
     // of using ret_val slot of POP instruction.
-    if (!ModifiedRegUnits.available(RISCV::X10) ||
-        !UsedRegUnits.available(RISCV::X10))
+    if (ModifiedRegUnits.contains(RISCV::X10) ||
+        UsedRegUnits.contains(RISCV::X10))
       return false;
   }
   return false;

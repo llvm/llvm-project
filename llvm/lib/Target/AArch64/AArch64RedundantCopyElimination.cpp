@@ -190,7 +190,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
       // register of the compare is not modified (including a self-clobbering
       // compare) between the compare and conditional branch we known the value
       // of the 1st source operand.
-      if (PredI.getOperand(2).isImm() && DomBBClobberedRegs.available(SrcReg) &&
+      if (PredI.getOperand(2).isImm() && !DomBBClobberedRegs.contains(SrcReg) &&
           SrcReg != DstReg) {
         // We've found the instruction that sets NZCV.
         int32_t KnownImm = PredI.getOperand(2).getImm();
@@ -210,7 +210,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
 
       // The destination register must not be modified between the NZCV setting
       // instruction and the conditional branch.
-      if (!DomBBClobberedRegs.available(DstReg))
+      if (DomBBClobberedRegs.contains(DstReg))
         return Res;
 
       FirstUse = PredI;
@@ -254,7 +254,7 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
 
       // The destination register of the NZCV setting instruction must not be
       // modified before the conditional branch.
-      if (!DomBBClobberedRegs.available(DstReg))
+      if (DomBBClobberedRegs.contains(DstReg))
         return false;
 
       // We've found the instruction that sets NZCV whose DstReg == 0.
@@ -323,12 +323,12 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
         MCPhysReg CopyDstReg = PredI->getOperand(0).getReg();
         MCPhysReg CopySrcReg = PredI->getOperand(1).getReg();
         for (auto &KnownReg : KnownRegs) {
-          if (!OptBBClobberedRegs.available(KnownReg.Reg))
+          if (OptBBClobberedRegs.contains(KnownReg.Reg))
             continue;
           // If we have X = COPY Y, and Y is known to be zero, then now X is
           // known to be zero.
           if (CopySrcReg == KnownReg.Reg &&
-              OptBBClobberedRegs.available(CopyDstReg)) {
+              !OptBBClobberedRegs.contains(CopyDstReg)) {
             KnownRegs.push_back(RegImm(CopyDstReg, KnownReg.Imm));
             if (SeenFirstUse)
               FirstUse = PredI;
@@ -337,7 +337,7 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
           // If we have X = COPY Y, and X is known to be zero, then now Y is
           // known to be zero.
           if (CopyDstReg == KnownReg.Reg &&
-              OptBBClobberedRegs.available(CopySrcReg)) {
+              !OptBBClobberedRegs.contains(CopySrcReg)) {
             KnownRegs.push_back(RegImm(CopySrcReg, KnownReg.Imm));
             if (SeenFirstUse)
               FirstUse = PredI;
@@ -354,7 +354,7 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
                                         OptBBUsedRegs, TRI);
       // Stop if all of the known-zero regs have been clobbered.
       if (all_of(KnownRegs, [&](RegImm KnownReg) {
-            return !OptBBClobberedRegs.available(KnownReg.Reg);
+            return OptBBClobberedRegs.contains(KnownReg.Reg);
           }))
         break;
     }

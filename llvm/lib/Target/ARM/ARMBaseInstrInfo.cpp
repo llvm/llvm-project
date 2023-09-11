@@ -6259,8 +6259,8 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
     LRU.accumulate(MI);
 
   // Check if each of the unsafe registers are available...
-  bool R12AvailableInBlock = LRU.available(ARM::R12);
-  bool CPSRAvailableInBlock = LRU.available(ARM::CPSR);
+  bool R12AvailableInBlock = !LRU.contains(ARM::R12);
+  bool CPSRAvailableInBlock = !LRU.contains(ARM::CPSR);
 
   // If all of these are dead (and not live out), we know we don't have to check
   // them later.
@@ -6272,9 +6272,9 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 
   // If any of these registers is available in the MBB, but also a live out of
   // the block, then we know outlining is unsafe.
-  if (R12AvailableInBlock && !LRU.available(ARM::R12))
+  if (R12AvailableInBlock && LRU.contains(ARM::R12))
     return false;
-  if (CPSRAvailableInBlock && !LRU.available(ARM::CPSR))
+  if (CPSRAvailableInBlock && LRU.contains(ARM::CPSR))
     return false;
 
   // Check if there's a call inside this MachineBasicBlock.  If there is, then
@@ -6287,7 +6287,7 @@ bool ARMBaseInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   bool LRIsAvailable =
       MBB.isReturnBlock() && !MBB.back().isCall()
           ? isLRAvailable(getRegisterInfo(), MBB.rbegin(), MBB.rend())
-          : LRU.available(ARM::LR);
+          : !LRU.contains(ARM::LR);
   if (!LRIsAvailable)
     Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
 

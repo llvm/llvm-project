@@ -316,7 +316,7 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
         Register R = BI.getOperand(0).getReg();
         if (R.isPhysical()) {
-          if (Defs.available(R))
+          if (!Defs.contains(R))
             ReuseBP = R;
         } else if (R.isVirtual()) {
           // Extending a range of a virtual register can be dangerous,
