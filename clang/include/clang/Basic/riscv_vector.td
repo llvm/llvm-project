@@ -1668,7 +1668,7 @@ defm vor : RVVIntBinBuiltinSet;
 }
 defm vnot_v : RVVPseudoVNotBuiltin<"vxor", "csil">;
 
-// 11.6. Vector Single-Width Bit Shift Instructions
+// 11.6. Vector Single-Width Shift Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsll : RVVShiftBuiltinSet;
 defm vsrl : RVVUnsignedShiftBuiltinSet;
@@ -1682,7 +1682,7 @@ defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                          [["v", "vw"],
                                           ["Uv", "UvUw"]]>;
 
-// 11.8. Vector Integer Comparison Instructions
+// 11.8. Vector Integer Compare Instructions
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
 defm vmseq : RVVIntMaskOutBuiltinSet;
@@ -2266,7 +2266,7 @@ defm vmfge : RVVFloatingMaskOutBuiltinSet;
 let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "xfd">;
 
-// 13.15. Vector Floating-Point Merge Instructio
+// 13.15. Vector Floating-Point Merge Instruction
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
