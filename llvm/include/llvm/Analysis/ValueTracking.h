@@ -256,13 +256,12 @@ fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                  Value *RHS, bool LookThroughSrc = true);
 std::tuple<Value *, FPClassTest, FPClassTest>
 fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
+                 FPClassTest RHS, bool LookThroughSrc = true);
+std::tuple<Value *, FPClassTest, FPClassTest>
+fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                  const APFloat &RHS, bool LookThroughSrc = true);
 
 #if 0
-std::tuple<Value *, FPClassTest, FPClassTest>
-fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                 FPClassTest RHS, bool LookThroughSrc = true);
-
 inline std::tuple<Value *, FPClassTest, FPClassTest>
 fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                  const APFloat &RHS, bool LookThroughSrc = true) {
