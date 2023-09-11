@@ -443,9 +443,10 @@ void IRCanonicalizer::reorderInstructions(
 void IRCanonicalizer::reorderInstruction(
     Instruction *Used, Instruction *User,
     SmallPtrSet<const Instruction *, 32> &Visited) {
-  if (Visited.contains(Used)) {
+  if(isa<PHINode>(Used))
     return;
-  }
+  if (Visited.contains(Used))
+    return;
   Visited.insert(Used);
 
   if (Used->getParent() == User->getParent()) {
