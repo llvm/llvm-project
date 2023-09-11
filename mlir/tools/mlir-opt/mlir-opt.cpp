@@ -264,6 +264,10 @@ void registerTestPasses() {
 
 int main(int argc, char **argv) {
   registerAllPasses();
+#if MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE == 1
+  registerGpuSerializeToCubinPass();
+  registerGpuSerializeToHsacoPass();
+#endif
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
 #endif
