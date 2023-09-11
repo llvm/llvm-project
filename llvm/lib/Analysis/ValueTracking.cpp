@@ -4222,6 +4222,11 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
   return {Src, Mask};
 }
 
+static std::tuple<Value *, FPClassTest, FPClassTest>
+exactClass(Value *V, FPClassTest M) {
+  return {V, M, ~M};
+}
+
 std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        const APFloat &ConstRHS, bool LookThroughSrc) {
@@ -4255,6 +4260,52 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
   if (Pred == FCmpInst::FCMP_UNO && !IsNaN)
     return {Src, fcNan, ~fcNan};
+
+  if (IsZero) {
+    // Compares with fcNone are only exactly equal to fcZero if input denormals
+    // are not flushed.
+    // TODO: Handle DAZ by expanding masks to cover subnormal cases.
+    if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
+        !inputDenormalIsIEEE(F, LHS->getType()))
+      return {nullptr, fcAllFlags, fcAllFlags};
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OEQ: // Match x == 0.0
+      return exactClass(Src, fcZero);
+    case FCmpInst::FCMP_UEQ: // Match isnan(x) || (x == 0.0)
+      return exactClass(Src, fcZero | fcNan);
+    case FCmpInst::FCMP_UNE: // Match (x != 0.0)
+      return exactClass(Src, ~fcZero);
+    case FCmpInst::FCMP_ONE: // Match !isnan(x) && x != 0.0
+      return exactClass(Src, ~fcNan & ~fcZero);
+    case FCmpInst::FCMP_ORD:
+      // Canonical form of ord/uno is with a zero. We could also handle
+      // non-canonical other non-NaN constants or LHS == RHS.
+      return exactClass(Src, ~fcNan);
+    case FCmpInst::FCMP_UNO:
+      return exactClass(Src, fcNan);
+    case FCmpInst::FCMP_OGT: // x > 0
+      return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf);
+    case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
+      return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan);
+    case FCmpInst::FCMP_OGE: // x >= 0
+      return exactClass(Src, fcPositive | fcNegZero);
+    case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
+      return exactClass(Src, fcPositive | fcNegZero | fcNan);
+    case FCmpInst::FCMP_OLT: // x < 0
+      return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf);
+    case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
+      return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan);
+    case FCmpInst::FCMP_OLE: // x <= 0
+      return exactClass(Src, fcNegative | fcPosZero);
+    case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
+      return exactClass(Src, fcNegative | fcPosZero | fcNan);
+    default:
+      break;
+    }
+
+    return {nullptr, fcAllFlags, fcAllFlags};
+  }
 
   if (Pred == FCmpInst::FCMP_OEQ) {
     return {Src, RHSClass, fcAllFlags};
