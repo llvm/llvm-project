@@ -2994,7 +2994,7 @@ bool AAExecutionDomainFunction::handleCallees(Attributor &A,
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = true;
       EntryBBED.EncounteredNonLocalSideEffect = false;
-      ExitED.IsReachingAlignedBarrierOnly = true;
+      ExitED.IsReachingAlignedBarrierOnly = false;
     } else {
       EntryBBED.IsExecutedByInitialThreadOnly = false;
       EntryBBED.IsReachedFromAlignedBarrierOnly = false;
