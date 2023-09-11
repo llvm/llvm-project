@@ -23,6 +23,11 @@ module derived_type_finalization
     type(t2) :: t
   end type
 
+  type t4
+  contains
+    final :: t4_final
+  end type
+
 contains
 
   subroutine t1_final(this)
@@ -226,6 +231,17 @@ contains
 ! CHECK-NOT: fir.freemem %{{.*}} : !fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>
 ! CHECK: %[[RES_CONV:.*]] = fir.convert %[[RES]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMderived_type_finalizationTt1{a:i32}>>>>>) -> !fir.box<none>
 ! CHECK: %{{.*}} = fir.call @_FortranADestroy(%[[RES_CONV]]) {{.*}} : (!fir.box<none>) -> none
+
+  subroutine t4_final(this)
+    type(t4) :: this
+  end subroutine
+
+  subroutine local_t4()
+    type(t4) :: t
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMderived_type_finalizationPlocal_t4()
+! CHECK: %{{.*}} = fir.call @_FortranADestroy(%2) fastmath<contract> : (!fir.box<none>) -> none
 
 end module
 
