@@ -231,14 +231,18 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
   if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
-    const Type *Ty;
-    const TemplateSpecializationType *TSTy;
-    if (NNS && (Ty = NNS->getAsType()) &&
-        (TSTy = Ty->getAs<TemplateSpecializationType>()))
-      Result.addOuterTemplateArguments(const_cast<FunctionTemplateDecl *>(FTD),
-                                       TSTy->template_arguments(),
-                                       /*Final=*/false);
+
+    while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
+
+      if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>())
+        Result.addOuterTemplateArguments(
+            const_cast<FunctionTemplateDecl *>(FTD), TSTy->template_arguments(),
+            /*Final=*/false);
+
+      NNS = NNS->getPrefix();
+    }
   }
+
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
 }
 
