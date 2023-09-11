@@ -361,25 +361,26 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       const MachineOperand &FlagsOP = MI->getOperand(OpNum - 1);
       if (!FlagsOP.isImm())
         return true;
-      unsigned Flags = FlagsOP.getImm();
+      InlineAsm::Flag F(FlagsOP.getImm());
 
       // This operand may not be the one that actually provides the register. If
       // it's tied to a previous one then we should refer instead to that one
       // for registers and their classes.
       unsigned TiedIdx;
-      if (InlineAsm::isUseOperandTiedToDef(Flags, TiedIdx)) {
+      if (F.isUseOperandTiedToDef(TiedIdx)) {
         for (OpNum = InlineAsm::MIOp_FirstOperand; TiedIdx; --TiedIdx) {
           unsigned OpFlags = MI->getOperand(OpNum).getImm();
-          OpNum += InlineAsm::getNumOperandRegisters(OpFlags) + 1;
+          const InlineAsm::Flag F(OpFlags);
+          OpNum += F.getNumOperandRegisters() + 1;
         }
-        Flags = MI->getOperand(OpNum).getImm();
+        F = InlineAsm::Flag(MI->getOperand(OpNum).getImm());
 
         // Later code expects OpNum to be pointing at the register rather than
         // the flags.
         OpNum += 1;
       }
 
-      unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+      const unsigned NumVals = F.getNumOperandRegisters();
       unsigned RC;
       bool FirstHalf;
       const ARMBaseTargetMachine &ATM =
@@ -394,7 +395,7 @@ bool ARMAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         // ExtraCode[0] == 'R'.
         FirstHalf = !ATM.isLittleEndian();
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-      if (InlineAsm::hasRegClassConstraint(Flags, RC) &&
+      if (F.hasRegClassConstraint(RC) &&
           ARM::GPRPairRegClass.hasSubClassEq(TRI->getRegClass(RC))) {
         if (NumVals != 1)
           return true;
