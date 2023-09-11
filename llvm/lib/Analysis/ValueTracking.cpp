@@ -4110,7 +4110,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 
   const bool IsInf = (RHSClass & fcInf) == RHSClass;
   if (IsInf) {
-    FPClassTest Mask;
+    FPClassTest Mask = fcAllFlags;
 
     switch (Pred) {
     case FCmpInst::FCMP_OEQ:
