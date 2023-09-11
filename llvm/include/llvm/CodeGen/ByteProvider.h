@@ -32,6 +32,11 @@ private:
   ByteProvider(std::optional<ISelOp> Src, int64_t DestOffset, int64_t SrcOffset)
       : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset) {}
 
+  ByteProvider(std::optional<ISelOp> Src, int64_t DestOffset, int64_t SrcOffset,
+               bool IsSigned)
+      : Src(Src), DestOffset(DestOffset), SrcOffset(SrcOffset),
+        IsSigned(IsSigned) {}
+
   // TODO -- use constraint in c++20
   // Does this type correspond with an operation in selection DAG
   template <typename T> class is_op {
@@ -61,13 +66,16 @@ public:
   // DestOffset
   int64_t SrcOffset = 0;
 
+  // Whether or not Src be treated as signed
+  bool IsSigned = false;
+
   ByteProvider() = default;
 
   static ByteProvider getSrc(std::optional<ISelOp> Val, int64_t ByteOffset,
-                             int64_t VectorOffset) {
+                             int64_t VectorOffset, bool IsSigned = false) {
     static_assert(is_op<ISelOp>().value,
                   "ByteProviders must contain an operation in selection DAG.");
-    return ByteProvider(Val, ByteOffset, VectorOffset);
+    return ByteProvider(Val, ByteOffset, VectorOffset, IsSigned);
   }
 
   static ByteProvider getConstantZero() {

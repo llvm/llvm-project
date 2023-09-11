@@ -10513,7 +10513,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 // performed.
 static const std::optional<ByteProvider<SDValue>>
 calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
-                 unsigned Depth = 0) {
+                 bool IsSigned = false, unsigned Depth = 0) {
   // We may need to recursively traverse a series of SRLs
   if (Depth >= 6)
     return std::nullopt;
@@ -10524,12 +10524,15 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, IsSigned,
+                            Depth + 1);
   }
 
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND_INREG: {
+    IsSigned |= Op->getOpcode() == ISD::SIGN_EXTEND ||
+                Op->getOpcode() == ISD::SIGN_EXTEND_INREG;
     SDValue NarrowOp = Op->getOperand(0);
     auto NarrowVT = NarrowOp.getValueType();
     if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG) {
@@ -10542,7 +10545,8 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
     if (SrcIndex >= NarrowByteWidth)
       return std::nullopt;
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, IsSigned,
+                            Depth + 1);
   }
 
   case ISD::SRA:
@@ -10558,11 +10562,18 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 
     SrcIndex += BitShift / 8;
 
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, IsSigned,
+                            Depth + 1);
   }
 
   default: {
-    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
+    if (auto L = dyn_cast<LoadSDNode>(Op))
+      IsSigned |= L->getExtensionType() == ISD::SEXTLOAD;
+
+    if (auto A = dyn_cast<AtomicSDNode>(Op) || Op->isMemIntrinsic())
+      return std::nullopt;
+
+    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex, IsSigned);
   }
   }
   llvm_unreachable("fully handled switch");
@@ -10576,7 +10587,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 // performed. \p StartingIndex is the originally requested byte of the Or
 static const std::optional<ByteProvider<SDValue>>
 calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
-                      unsigned StartingIndex = 0) {
+                      unsigned StartingIndex = 0, bool IsSigned = false) {
   // Finding Src tree of RHS of or typically requires at least 1 additional
   // depth
   if (Depth > 6)
@@ -10591,11 +10602,11 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   switch (Op.getOpcode()) {
   case ISD::OR: {
     auto RHS = calculateByteProvider(Op.getOperand(1), Index, Depth + 1,
-                                     StartingIndex);
+                                     StartingIndex, IsSigned);
     if (!RHS)
       return std::nullopt;
     auto LHS = calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                     StartingIndex);
+                                     StartingIndex, IsSigned);
     if (!LHS)
       return std::nullopt;
     // A well formed Or will have two ByteProviders for each byte, one of which
@@ -10626,7 +10637,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       return ByteProvider<SDValue>::getConstantZero();
     }
 
-    return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
+    return calculateSrcByte(Op->getOperand(0), StartingIndex, Index, IsSigned);
   }
 
   case ISD::SRA:
@@ -10651,7 +10662,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // the SRL is Index + ByteShift
     return BytesProvided - ByteShift > Index
                ? calculateSrcByte(Op->getOperand(0), StartingIndex,
-                                  Index + ByteShift)
+                                  Index + ByteShift, IsSigned)
                : ByteProvider<SDValue>::getConstantZero();
   }
 
@@ -10672,7 +10683,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return Index < ByteShift
                ? ByteProvider<SDValue>::getConstantZero()
                : calculateByteProvider(Op.getOperand(0), Index - ByteShift,
-                                       Depth + 1, StartingIndex);
+                                       Depth + 1, StartingIndex, IsSigned);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -10691,13 +10702,17 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (NarrowBitWidth % 8 != 0)
       return std::nullopt;
     uint64_t NarrowByteWidth = NarrowBitWidth / 8;
+    IsSigned |= Op->getOpcode() == ISD::SIGN_EXTEND ||
+                Op->getOpcode() == ISD::SIGN_EXTEND_INREG ||
+                Op->getOpcode() == ISD::AssertSext;
 
     if (Index >= NarrowByteWidth)
       return Op.getOpcode() == ISD::ZERO_EXTEND
                  ? std::optional<ByteProvider<SDValue>>(
                        ByteProvider<SDValue>::getConstantZero())
                  : std::nullopt;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex);
+    return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex,
+                                 IsSigned);
   }
 
   case ISD::TRUNCATE: {
@@ -10705,7 +10720,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
     if (NarrowByteWidth >= Index) {
       return calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                   StartingIndex);
+                                   StartingIndex, IsSigned);
     }
 
     return std::nullopt;
@@ -10713,13 +10728,14 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
   case ISD::CopyFromReg: {
     if (BitWidth / 8 > Index)
-      return calculateSrcByte(Op, StartingIndex, Index);
+      return calculateSrcByte(Op, StartingIndex, Index, IsSigned);
 
     return std::nullopt;
   }
 
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
+    IsSigned |= L->getExtensionType() == ISD::SEXTLOAD;
     unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
     if (NarrowBitWidth % 8 != 0)
       return std::nullopt;
@@ -10736,7 +10752,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     }
 
     if (NarrowByteWidth > Index) {
-      return calculateSrcByte(Op, StartingIndex, Index);
+      return calculateSrcByte(Op, StartingIndex, Index, IsSigned);
     }
 
     return std::nullopt;
@@ -10744,7 +10760,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), BitWidth / 8 - Index - 1,
-                                 Depth + 1, StartingIndex);
+                                 Depth + 1, StartingIndex, IsSigned);
 
   case ISD::EXTRACT_VECTOR_ELT: {
     auto IdxOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -10759,7 +10775,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     }
 
     return calculateSrcByte(ScalarSize == 32 ? Op : Op.getOperand(0),
-                            StartingIndex, Index);
+                            StartingIndex, Index, IsSigned);
   }
 
   case AMDGPUISD::PERM: {
@@ -10775,9 +10791,10 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     auto NextOp = Op.getOperand(IdxMask > 0x03 ? 0 : 1);
     auto NextIndex = IdxMask > 0x03 ? IdxMask % 4 : IdxMask;
 
-    return IdxMask != 0x0c ? calculateSrcByte(NextOp, StartingIndex, NextIndex)
-                           : ByteProvider<SDValue>(
-                                 ByteProvider<SDValue>::getConstantZero());
+    return IdxMask != 0x0c
+               ? calculateSrcByte(NextOp, StartingIndex, NextIndex, IsSigned)
+               : ByteProvider<SDValue>(
+                     ByteProvider<SDValue>::getConstantZero());
   }
 
   default: {
@@ -12587,11 +12604,7 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
     auto MulIdx = isMul(LHS) ? 0 : 1;
 
     auto MulOpcode = TempNode.getOperand(MulIdx).getOpcode();
-    bool IsSigned =
-        MulOpcode == AMDGPUISD::MUL_I24 ||
-        (MulOpcode == ISD::MUL &&
-         TempNode->getOperand(MulIdx)->getFlags().hasNoSignedWrap() &&
-         !TempNode->getOperand(MulIdx)->getFlags().hasNoUnsignedWrap());
+    std::optional<bool> IsSigned;
     SmallVector<std::pair<SDValue, unsigned>, 4> Src0s;
     SmallVector<std::pair<SDValue, unsigned>, 4> Src1s;
     SmallVector<SDValue, 4> Src2s;
@@ -12607,14 +12620,18 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
           (MulOpcode == ISD::MUL &&
            TempNode->getOperand(MulIdx)->getFlags().hasNoSignedWrap() &&
            !TempNode->getOperand(MulIdx)->getFlags().hasNoUnsignedWrap());
-      if (IterIsSigned != IsSigned) {
-        break;
-      }
       auto Src0 = handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(0));
       if (!Src0)
         break;
       auto Src1 = handleMulOperand(TempNode->getOperand(MulIdx)->getOperand(1));
       if (!Src1)
+        break;
+      if (Src0->IsSigned != Src1->IsSigned)
+        break;
+      IterIsSigned |= Src0->IsSigned;
+      if (!IsSigned)
+        IsSigned = IterIsSigned;
+      if (IterIsSigned != *IsSigned)
         break;
       placeSources(*Src0, *Src1, Src0s, Src1s, I);
       auto AddIdx = 1 - MulIdx;
@@ -12629,6 +12646,17 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
         auto Src1 =
             handleMulOperand(TempNode->getOperand(AddIdx)->getOperand(1));
         if (!Src1)
+          break;
+        if (Src0->IsSigned != Src1->IsSigned)
+          break;
+        auto IterIsSigned =
+            MulOpcode == AMDGPUISD::MUL_I24 ||
+            (MulOpcode == ISD::MUL &&
+             TempNode->getOperand(MulIdx)->getFlags().hasNoSignedWrap() &&
+             !TempNode->getOperand(MulIdx)->getFlags().hasNoUnsignedWrap());
+        IterIsSigned |= Src0->IsSigned;
+        assert(IsSigned);
+        if (IterIsSigned != *IsSigned)
           break;
         placeSources(*Src0, *Src1, Src0s, Src1s, I + 1);
         Src2s.push_back(DAG.getConstant(0, SL, MVT::i32));
@@ -12695,18 +12723,19 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       Src1 = resolveSources(DAG, SL, Src1s, false, true);
     }
 
+    assert(IsSigned);
     SDValue Src2 =
-        DAG.getExtOrTrunc(IsSigned, Src2s[ChainLength - 1], SL, MVT::i32);
+        DAG.getExtOrTrunc(*IsSigned, Src2s[ChainLength - 1], SL, MVT::i32);
 
-    SDValue IID = DAG.getTargetConstant(IsSigned ? Intrinsic::amdgcn_sdot4
-                                                 : Intrinsic::amdgcn_udot4,
+    SDValue IID = DAG.getTargetConstant(*IsSigned ? Intrinsic::amdgcn_sdot4
+                                                  : Intrinsic::amdgcn_udot4,
                                         SL, MVT::i64);
 
     assert(!VT.isVector());
     auto Dot = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::i32, IID, Src0,
                            Src1, Src2, DAG.getTargetConstant(0, SL, MVT::i1));
 
-    return DAG.getExtOrTrunc(IsSigned, Dot, SL, VT);
+    return DAG.getExtOrTrunc(*IsSigned, Dot, SL, VT);
   }
 
   if (VT != MVT::i32 || !DCI.isAfterLegalizeDAG())
