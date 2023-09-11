@@ -4037,6 +4037,9 @@ std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        FPClassTest RHSClass, bool LookThroughSrc) {
   Value *Src = LHS;
+  const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
+  const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
+
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   if (IsFabs)
     RHSClass = llvm::fneg(RHSClass);
@@ -4098,8 +4101,6 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     return {nullptr, fcAllFlags, fcAllFlags};
   }
 
-  const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
-  const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
   const bool IsDenormalRHS = (RHSClass & fcSubnormal) == RHSClass;
 
   const bool IsInf = (RHSClass & fcInf) == RHSClass;
@@ -4133,8 +4134,6 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     case FCmpInst::FCMP_ONE:
     case FCmpInst::FCMP_UEQ: {
-      Mask = ~RHSClass | fcNan;
-
       // Match __builtin_isinf patterns
       //   fcmp one x, -inf -> is_fpclass x, fcNegInf
       //   fcmp one fabs(x), -inf -> is_fpclass x, ~fcNegInf & ~fcNan
@@ -4225,8 +4224,8 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (Pred == FCmpInst::FCMP_UNE)
     return {Src, fcAllFlags, RHSClass | fcNan};
 
-  assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal ||
-          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal) &&
+  assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal || RHSClass == fcNormal ||
+          RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal || RHSClass == fcSubnormal) &&
          "should have been recognized as an exact class test");
 
   if (IsNegativeRHS) {
