@@ -162,8 +162,7 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
 // and have that work. Then, delete this function.
 bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
   std::vector<SDValue> AsmNodeOperands;
-  unsigned Flag;
-  InlineAsm::Kind Kind;
+  InlineAsm::Flag Flag;
   bool Changed = false;
   unsigned NumOps = N->getNumOperands();
 
@@ -187,10 +186,8 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
     if (i < InlineAsm::Op_FirstOperand)
       continue;
 
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(i))) {
-      Flag = C->getZExtValue();
-      Kind = InlineAsm::getKind(Flag);
-    }
+    if (const auto *C = dyn_cast<ConstantSDNode>(N->getOperand(i)))
+      Flag = InlineAsm::Flag(C->getZExtValue());
     else
       continue;
 
@@ -198,13 +195,13 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
     // two operands. The first is a constant of value InlineAsm::Kind::Imm, and
     // the second is a constant with the value of the immediate. If we get here
     // and we have a Kind::Imm, skip the next operand, and continue.
-    if (Kind == InlineAsm::Kind::Imm) {
+    if (Flag.isImmKind()) {
       SDValue op = N->getOperand(++i);
       AsmNodeOperands.push_back(op);
       continue;
     }
 
-    unsigned NumRegs = InlineAsm::getNumOperandRegisters(Flag);
+    const unsigned NumRegs = Flag.getNumOperandRegisters();
     if (NumRegs)
       OpChanged.push_back(false);
 
@@ -212,15 +209,15 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
     bool IsTiedToChangedOp = false;
     // If it's a use that is tied with a previous def, it has no
     // reg class constraint.
-    if (Changed && InlineAsm::isUseOperandTiedToDef(Flag, DefIdx))
+    if (Changed && Flag.isUseOperandTiedToDef(DefIdx))
       IsTiedToChangedOp = OpChanged[DefIdx];
 
-    if (Kind != InlineAsm::Kind::RegUse && Kind != InlineAsm::Kind::RegDef &&
-        Kind != InlineAsm::Kind::RegDefEarlyClobber)
+    if (!Flag.isRegUseKind() && !Flag.isRegDefKind() &&
+        !Flag.isRegDefEarlyClobberKind())
       continue;
 
     unsigned RC;
-    bool HasRC = InlineAsm::hasRegClassConstraint(Flag, RC);
+    const bool HasRC = Flag.hasRegClassConstraint(RC);
     if ((!IsTiedToChangedOp && (!HasRC || RC != SP::IntRegsRegClassID))
         || NumRegs != 2)
       continue;
@@ -233,8 +230,7 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
     SDValue PairedReg;
     MachineRegisterInfo &MRI = MF->getRegInfo();
 
-    if (Kind == InlineAsm::Kind::RegDef ||
-        Kind == InlineAsm::Kind::RegDefEarlyClobber) {
+    if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
       // Replace the two GPRs with 1 GPRPair and copy values from GPRPair to
       // the original GPRs.
 
@@ -296,11 +292,11 @@ bool SparcDAGToDAGISel::tryInlineAsm(SDNode *N){
 
     if(PairedReg.getNode()) {
       OpChanged[OpChanged.size() -1 ] = true;
-      Flag = InlineAsm::getFlagWord(Kind, 1 /* RegNum*/);
+      Flag = InlineAsm::Flag(Flag.getKind(), 1 /* RegNum*/);
       if (IsTiedToChangedOp)
-        Flag = InlineAsm::getFlagWordForMatchingOp(Flag, DefIdx);
+        Flag.setMatchingOp(DefIdx);
       else
-        Flag = InlineAsm::getFlagWordForRegClass(Flag, SP::IntPairRegClassID);
+        Flag.setRegClass(SP::IntPairRegClassID);
       // Replace the current flag.
       AsmNodeOperands[AsmNodeOperands.size() -1] = CurDAG->getTargetConstant(
           Flag, dl, MVT::i32);

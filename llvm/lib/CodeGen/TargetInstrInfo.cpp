@@ -1610,25 +1610,24 @@ std::string TargetInstrInfo::createMIROperandComment(
   assert(Op.isImm() && "Expected flag operand to be an immediate");
   // Pretty print the inline asm operand descriptor.
   unsigned Flag = Op.getImm();
-  InlineAsm::Kind Kind = InlineAsm::getKind(Flag);
-  OS << InlineAsm::getKindName(Kind);
+  const InlineAsm::Flag F(Flag);
+  OS << F.getKindName();
 
-  unsigned RCID = 0;
-  if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
-      InlineAsm::hasRegClassConstraint(Flag, RCID)) {
+  unsigned RCID;
+  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
     if (TRI) {
       OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
     } else
       OS << ":RC" << RCID;
   }
 
-  if (InlineAsm::isMemKind(Flag)) {
-    unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
+  if (F.isMemKind()) {
+    const unsigned MCID = F.getMemoryConstraintID();
     OS << ":" << InlineAsm::getMemConstraintName(MCID);
   }
 
-  unsigned TiedTo = 0;
-  if (InlineAsm::isUseOperandTiedToDef(Flag, TiedTo))
+  unsigned TiedTo;
+  if (F.isUseOperandTiedToDef(TiedTo))
     OS << " tiedto:$" << TiedTo;
 
   return OS.str();
