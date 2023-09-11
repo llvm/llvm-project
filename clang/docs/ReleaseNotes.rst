@@ -281,6 +281,10 @@ Bug Fixes to C++ Support
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
+- Fix a crash when calling a non-constant immediate function
+  in the initializer of a static data member.
+  (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
