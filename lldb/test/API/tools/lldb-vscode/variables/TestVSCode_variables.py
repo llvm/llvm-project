@@ -127,15 +127,17 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         varref_dict = {}
         self.verify_variables(verify_locals, locals, varref_dict)
 
-    @skipIfWindows
-    @skipIfRemote
-    def test_scopes_variables_setVariable_evaluate(self):
+    def do_test_scopes_variables_setVariable_evaluate(
+        self, enableAutoVariableSummaries: bool
+    ):
         """
         Tests the "scopes", "variables", "setVariable", and "evaluate"
         packets.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(
+            program, enableAutoVariableSummaries=enableAutoVariableSummaries
+        )
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -219,12 +221,20 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             },
             "pt": {
                 "equals": {"type": "PointType"},
-                "startswith": {"result": "{x:11, y:22}"},
+                "startswith": {
+                    "result": "{x:11, y:22}"
+                    if enableAutoVariableSummaries
+                    else "PointType @ 0x"
+                },
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
                 "equals": {"type": "int[32]"},
-                "startswith": {"result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"},
+                "startswith": {
+                    "result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
+                    if enableAutoVariableSummaries
+                    else "int[32] @ 0x"
+                },
                 "hasVariablesReference": True,
             },
             "argv": {
@@ -347,13 +357,27 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    def test_scopes_and_evaluate_expansion(self):
+    def test_scopes_variables_setVariable_evaluate(self):
+        self.do_test_scopes_variables_setVariable_evaluate(
+            enableAutoVariableSummaries=False
+        )
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_scopes_variables_setVariable_evaluate_with_descriptive_summaries(self):
+        self.do_test_scopes_variables_setVariable_evaluate(
+            enableAutoVariableSummaries=True
+        )
+
+    def do_test_scopes_and_evaluate_expansion(self, enableAutoVariableSummaries: bool):
         """
         Tests the evaluated expression expands successfully after "scopes" packets
         and permanent expressions persist.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(
+            program, enableAutoVariableSummaries=enableAutoVariableSummaries
+        )
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -410,7 +434,11 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "name": "pt",
             "response": {
                 "equals": {"type": "PointType"},
-                "startswith": {"result": "{x:11, y:22}"},
+                "startswith": {
+                    "result": "{x:11, y:22}"
+                    if enableAutoVariableSummaries
+                    else "PointType @ 0x"
+                },
                 "missing": ["indexedVariables"],
                 "hasVariablesReference": True,
             },
@@ -487,14 +515,24 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    def test_indexedVariables(self):
+    def test_scopes_and_evaluate_expansion(self):
+        self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=False)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_scopes_and_evaluate_expansion_with_descriptive_summaries(self):
+        self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=True)
+
+    def do_test_indexedVariables(self, enableSyntheticChildDebugging: bool):
         """
         Tests that arrays and lldb.SBValue objects that have synthetic child
         providers have "indexedVariables" key/value pairs. This helps the IDE
         not to fetch too many children all at once.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(
+            program, enableSyntheticChildDebugging=enableSyntheticChildDebugging
+        )
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 4")
         lines = [breakpoint1_line]
@@ -507,13 +545,14 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
         # Verify locals
         locals = self.vscode.get_local_variables()
-        # The vector variables will have one additional entry from the fake
+        # The vector variables might have one additional entry from the fake
         # "[raw]" child.
+        raw_child_count = 1 if enableSyntheticChildDebugging else 0
         verify_locals = {
             "small_array": {"equals": {"indexedVariables": 5}},
             "large_array": {"equals": {"indexedVariables": 200}},
-            "small_vector": {"equals": {"indexedVariables": 6}},
-            "large_vector": {"equals": {"indexedVariables": 201}},
+            "small_vector": {"equals": {"indexedVariables": 5 + raw_child_count}},
+            "large_vector": {"equals": {"indexedVariables": 200 + raw_child_count}},
             "pt": {"missing": ["indexedVariables"]},
         }
         self.verify_variables(verify_locals, locals)
@@ -526,12 +565,24 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "[2]": {"equals": {"type": "int", "value": "0"}},
             "[3]": {"equals": {"type": "int", "value": "0"}},
             "[4]": {"equals": {"type": "int", "value": "0"}},
-            "[raw]": {"contains": {"type": ["vector"]}},
         }
+        if enableSyntheticChildDebugging:
+            verify_children["[raw]"] = ({"contains": {"type": ["vector"]}},)
+
         children = self.vscode.request_variables(locals[2]["variablesReference"])[
             "body"
         ]["variables"]
         self.verify_variables(verify_children, children)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_indexedVariables(self):
+        self.do_test_indexedVariables(enableSyntheticChildDebugging=False)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_indexedVariables_with_raw_child_for_synthetics(self):
+        self.do_test_indexedVariables(enableSyntheticChildDebugging=True)
 
     @skipIfWindows
     @skipIfRemote
