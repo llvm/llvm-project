@@ -4785,7 +4785,7 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
   auto FNewDecLoc = SrcMgr.getDecomposedLoc(New);
   auto FOldDecLoc = SrcMgr.getDecomposedLoc(Old->getLocation());
   auto *FNew = SrcMgr.getFileEntryForID(FNewDecLoc.first);
-  auto *FOld = SrcMgr.getFileEntryForID(FOldDecLoc.first);
+  auto FOld = SrcMgr.getFileEntryRefForID(FOldDecLoc.first);
   auto &HSI = PP.getHeaderSearchInfo();
   StringRef HdrFilename =
       SrcMgr.getFilename(SrcMgr.getSpellingLoc(Old->getLocation()));
@@ -4823,7 +4823,7 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
     EmittedDiag |= noteFromModuleOrInclude(getCurrentModule(), NewIncLoc);
 
     // If the header has no guards, emit a note suggesting one.
-    if (FOld && !HSI.isFileMultipleIncludeGuarded(FOld))
+    if (FOld && !HSI.isFileMultipleIncludeGuarded(*FOld))
       Diag(Old->getLocation(), diag::note_use_ifdef_guards);
 
     if (EmittedDiag)

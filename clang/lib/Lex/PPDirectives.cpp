@@ -961,7 +961,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
 
   // If the header lookup mechanism may be relative to the current inclusion
   // stack, record the parent #includes.
-  SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 16> Includers;
+  SmallVector<std::pair<OptionalFileEntryRef, DirectoryEntryRef>, 16> Includers;
   bool BuildSystemModule = false;
   if (!FromDir && !FromFile) {
     FileID FID = getCurrentFileLexer()->getFileID();
@@ -981,7 +981,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     // map file.
     if (!FileEnt) {
       if (FID == SourceMgr.getMainFileID() && MainFileDir) {
-        Includers.push_back(std::make_pair(nullptr, *MainFileDir));
+        Includers.push_back(std::make_pair(std::nullopt, *MainFileDir));
         BuildSystemModule = getCurrentModule()->IsSystem;
       } else if ((FileEnt = SourceMgr.getFileEntryRefForID(
                       SourceMgr.getMainFileID()))) {
@@ -2325,8 +2325,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SrcMgr::CharacteristicKind FileCharacter =
       SourceMgr.getFileCharacteristic(FilenameTok.getLocation());
   if (File)
-    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(&File->getFileEntry()),
-                             FileCharacter);
+    FileCharacter = std::max(HeaderInfo.getFileDirFlavor(*File), FileCharacter);
 
   // If this is a '#import' or an import-declaration, don't re-enter the file.
   //

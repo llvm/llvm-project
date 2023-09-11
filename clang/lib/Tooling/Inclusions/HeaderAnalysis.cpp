@@ -66,9 +66,8 @@ llvm::StringRef getFileContents(const FileEntry *FE, const SourceManager &SM) {
 
 } // namespace
 
-bool isSelfContainedHeader(const FileEntry *FE, const SourceManager &SM,
+bool isSelfContainedHeader(FileEntryRef FE, const SourceManager &SM,
                            const HeaderSearch &HeaderInfo) {
-  assert(FE);
   if (!HeaderInfo.isFileMultipleIncludeGuarded(FE) &&
       !HeaderInfo.hasFileBeenImported(FE) &&
       // Any header that contains #imports is supposed to be #import'd so no

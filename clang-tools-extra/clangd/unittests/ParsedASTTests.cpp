@@ -465,10 +465,10 @@ std::string once(llvm::StringRef Code) {
 
 bool mainIsGuarded(const ParsedAST &AST) {
   const auto &SM = AST.getSourceManager();
-  const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
+  OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
   return AST.getPreprocessor()
       .getHeaderSearchInfo()
-      .isFileMultipleIncludeGuarded(MainFE);
+      .isFileMultipleIncludeGuarded(*MainFE);
 }
 
 MATCHER_P(diag, Desc, "") {
