@@ -4036,15 +4036,25 @@ exactClass(Value *V, FPClassTest M) {
 std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        FPClassTest RHSClass, bool LookThroughSrc) {
+  assert(RHSClass != fcNone);
+
+  FPClassTest OrigClass = RHSClass;
+
   Value *Src = LHS;
   const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
   const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
+  const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
 
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
   if (IsFabs)
     RHSClass = llvm::fneg(RHSClass);
 
-  const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
+  // Compare of abs to negative
+  if (RHSClass == fcNone) {
+    assert((OrigClass & fcZero) == fcNone);
+    return exactClass(Src, CmpInst::isOrdered(Pred) ? fcNone : fcNan);
+  }
+
   if (IsNaN) {
     // fcmp o__ x, nan -> false
     // fcmp u__ x, nan -> true
@@ -4324,11 +4334,13 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        const APFloat &ConstRHS, bool LookThroughSrc) {
   FPClassTest RHSClass = ConstRHS.classify();
   auto Ret = fcmpImpliesClass(Pred, F, LHS, RHSClass, LookThroughSrc);
-  Value *Src = std::get<0>(Ret);
-  if (!Src)
+  Value *xxSrc = std::get<0>(Ret);
+  if (!xxSrc)
     return Ret;
 
-  const bool IsFabs = (std::get<1>(Ret) & fcNegative) == fcNone;
+  Value *Src = LHS;
+  //const bool IsFabs = (std::get<1>(Ret) & fcNegative) == fcNone;
+  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
 
   // We can refine checks against smallest normal / largest denormal to an
   // exact class test.
