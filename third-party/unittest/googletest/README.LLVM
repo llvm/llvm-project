@@ -1,10 +1,8 @@
 LLVM notes
 ----------
 
-This directory contains Google Test 1.14.0,
-revision `f8d7d77c06936315286eb55f8de22cd23c188571`, with all elements removed
-except for the actual source code, to minimize the addition to the LLVM
-distribution.
+This directory contains Google Test v1.14.0, with all elements removed except
+for the actual source code, to minimize the addition to the LLVM distribution.
 
 Cleaned up as follows:
 
@@ -19,3 +17,5 @@ $ mv LICENSE LICENSE.TXT
 Modified as follows:
 * Added raw_os_ostream support to include/gtest/internal/custom/gtest-printers.h.
 * Added StringRef support to include/gtest/internal/custom/gtest-printers.h.
+* Added LLVM printable value support to include/gtest/gtest-message.h and
+  include/gtest/gtest-printers.h.
