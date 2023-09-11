@@ -250,13 +250,23 @@ raw_ostream& DeclPrinter::Indent(unsigned Indentation) {
   return Out;
 }
 
-static bool canPrintOnLeftSide(attr::Kind kind) {
-  switch (kind) {
+// For CLANG_ATTR_LIST_CanPrintOnLeft macro.
 #include "clang/Basic/AttrLeftSideCanPrintList.inc"
+
+// For CLANG_ATTR_LIST_PrintOnLeft macro.
+#include "clang/Basic/AttrLeftSideMustPrintList.inc"
+
+static bool canPrintOnLeftSide(attr::Kind kind) {
+#ifdef CLANG_ATTR_LIST_CanPrintOnLeft
+  switch (kind) {
+  CLANG_ATTR_LIST_CanPrintOnLeft
     return true;
   default:
     return false;
   }
+#else
+  return false;
+#endif
 }
 
 static bool canPrintOnLeftSide(const Attr *A) {
@@ -268,11 +278,16 @@ static bool canPrintOnLeftSide(const Attr *A) {
 
 static bool mustPrintOnLeftSide(attr::Kind kind) {
   switch (kind) {
-#include "clang/Basic/AttrLeftSideMustPrintList.inc"
+#ifdef CLANG_ATTR_LIST_PrintOnLeft
+  switch (kind) {
+  CLANG_ATTR_LIST_PrintOnLeft
     return true;
   default:
     return false;
   }
+#else
+  return false;
+#endif
 }
 
 static bool mustPrintOnLeftSide(const Attr *A) {
@@ -314,7 +329,6 @@ void DeclPrinter::prettyPrintAttributes(Decl *D, llvm::raw_ostream &Out,
                    VD->getInitStyle() == VarDecl::CallInit)
           AttrLoc = AttrPrintLoc::Left;
       }
-
       // Only print the side matches the user requested.
       if ((Loc & AttrLoc) != AttrPrintLoc::None)
         A->printPretty(Out, Policy);
