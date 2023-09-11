@@ -5,7 +5,7 @@
 // RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix AARCH64 %}
 // AARCH64: All available -march extensions for AArch64
 
-// RUN: %if aarch64-registered-target %{ %clang --target=riscv64-linux-gnu \
+// RUN: %if riscv-registered-target %{ %clang --target=riscv64-linux-gnu \
 // RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix RISCV %}
 // RISCV: All available -march extensions for RISC-V
 
