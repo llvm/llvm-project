@@ -8786,7 +8786,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
     // If VecVT has an LMUL > 1, then SubVecVT should have a smaller LMUL, and
     // we should have successfully decomposed the extract into a subregister.
-    assert(SubRegIdx != RISCV::NoRegister);
+    assert(SubRegIdx != RISCV::NoSubRegister);
     InterSubVT = getLMUL1VT(VecVT);
     Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, InterSubVT, Vec);
   }
