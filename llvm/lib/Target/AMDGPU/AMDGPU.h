@@ -291,6 +291,16 @@ FunctionPass *createAMDGPURewriteUndefForPHIPass();
 void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
 extern char &AMDGPURewriteUndefForPHIPassID;
 
+class AMDGPURewriteUndefForPHIPass
+    : public PassInfoMixin<AMDGPURewriteUndefForPHIPass> {
+private:
+  TargetMachine &TM;
+
+public:
+  AMDGPURewriteUndefForPHIPass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;
 

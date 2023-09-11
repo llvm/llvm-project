@@ -177,6 +177,20 @@ bool AMDGPURewriteUndefForPHI::runOnFunction(Function &F) {
   return rewritePHIs(F, UA, DT);
 }
 
+PreservedAnalyses
+AMDGPURewriteUndefForPHIPass::run(Function &F, FunctionAnalysisManager &AM) {
+  UniformityInfo &UA = AM.getResult<UniformityInfoAnalysis>(F);
+  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  bool Changed = rewritePHIs(F, UA, DT);
+  if (Changed) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
+}
+
 FunctionPass *llvm::createAMDGPURewriteUndefForPHIPass() {
   return new AMDGPURewriteUndefForPHI();
 }

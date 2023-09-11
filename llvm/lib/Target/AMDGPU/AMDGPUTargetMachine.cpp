@@ -663,6 +663,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPULowerKernelArgumentsPass(*this));
           return true;
         }
+        if (PassName == "amdgpu-rewrite-undef-for-phi") {
+          PM.addPass(AMDGPURewriteUndefForPHIPass(*this));
+          return true;
+        }
         return false;
       });
 
