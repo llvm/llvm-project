@@ -1601,8 +1601,8 @@ defm : RVVIndexedSegStoreTuple<"vsuxseg">;
 defm : RVVIndexedSegStoreTuple<"vsoxseg">;
 }
 
-// 12. Vector Integer Arithmetic Instructions
-// 12.1. Vector Single-Width Integer Add and Subtract
+// 11. Vector Integer Arithmetic Instructions
+// 11.1. Vector Single-Width Integer Add and Subtract
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vadd : RVVIntBinBuiltinSet;
 defm vsub : RVVIntBinBuiltinSet;
@@ -1612,7 +1612,7 @@ defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
 }
 defm vneg_v : RVVPseudoUnaryBuiltin<"vrsub", "csil">;
 
-// 12.2. Vector Widening Integer Add/Subtract
+// 11.2. Vector Widening Integer Add/Subtract
 // Widening unsigned integer add/subtract, 2*SEW = SEW +/- SEW
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vwaddu : RVVUnsignedWidenBinBuiltinSet;
@@ -1632,7 +1632,7 @@ defm vwcvtu_x_x_v : RVVPseudoVWCVTBuiltin<"vwaddu", "vwcvtu_x", "csi",
 defm vwcvt_x_x_v : RVVPseudoVWCVTBuiltin<"vwadd", "vwcvt_x", "csi",
                                          [["w", "wv"]]>;
 
-// 12.3. Vector Integer Extension
+// 11.3. Vector Integer Extension
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
@@ -1648,7 +1648,7 @@ let Log2LMUL = [-3, -2, -1, 0] in {
 }
 }
 
-// 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+// 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let UnMaskedPolicyScheme = HasPassthruOperand in {
     defm vadc : RVVCarryinBuiltinSet;
@@ -1660,7 +1660,7 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   defm vmsbc : RVVIntMaskOutBuiltinSet;
 }
 
-// 12.5. Vector Bitwise Logical Instructions
+// 11.5. Vector Bitwise Logical Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vand : RVVIntBinBuiltinSet;
 defm vxor : RVVIntBinBuiltinSet;
@@ -1668,13 +1668,13 @@ defm vor : RVVIntBinBuiltinSet;
 }
 defm vnot_v : RVVPseudoVNotBuiltin<"vxor", "csil">;
 
-// 12.6. Vector Single-Width Bit Shift Instructions
+// 11.6. Vector Single-Width Shift Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsll : RVVShiftBuiltinSet;
 defm vsrl : RVVUnsignedShiftBuiltinSet;
 defm vsra : RVVSignedShiftBuiltinSet;
 
-// 12.7. Vector Narrowing Integer Right Shift Instructions
+// 11.7. Vector Narrowing Integer Right Shift Instructions
 defm vnsrl : RVVUnsignedNShiftBuiltinSet;
 defm vnsra : RVVSignedNShiftBuiltinSet;
 }
@@ -1682,7 +1682,7 @@ defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                          [["v", "vw"],
                                           ["Uv", "UvUw"]]>;
 
-// 12.8. Vector Integer Comparison Instructions
+// 11.8. Vector Integer Compare Instructions
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
 defm vmseq : RVVIntMaskOutBuiltinSet;
@@ -1697,14 +1697,14 @@ defm vmsgeu : RVVUnsignedMaskOutBuiltinSet;
 defm vmsge : RVVSignedMaskOutBuiltinSet;
 }
 
-// 12.9. Vector Integer Min/Max Instructions
+// 11.9. Vector Integer Min/Max Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vminu : RVVUnsignedBinBuiltinSet;
 defm vmin : RVVSignedBinBuiltinSet;
 defm vmaxu : RVVUnsignedBinBuiltinSet;
 defm vmax : RVVSignedBinBuiltinSet;
 
-// 12.10. Vector Single-Width Integer Multiply Instructions
+// 11.10. Vector Single-Width Integer Multiply Instructions
 defm vmul : RVVIntBinBuiltinSet;
 defm vmulh : RVVSignedBinBuiltinSet;
 defm vmulhu : RVVUnsignedBinBuiltinSet;
@@ -1712,14 +1712,14 @@ defm vmulhsu : RVVOutOp1BuiltinSet<"vmulhsu", "csil",
                                    [["vv", "v", "vvUv"],
                                     ["vx", "v", "vvUe"]]>;
 
-// 12.11. Vector Integer Divide Instructions
+// 11.11. Vector Integer Divide Instructions
 defm vdivu : RVVUnsignedBinBuiltinSet;
 defm vdiv : RVVSignedBinBuiltinSet;
 defm vremu : RVVUnsignedBinBuiltinSet;
 defm vrem : RVVSignedBinBuiltinSet;
 }
 
-// 12.12. Vector Widening Integer Multiply Instructions
+// 11.12. Vector Widening Integer Multiply Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2], UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vwmul : RVVOutOp0Op1BuiltinSet<"vwmul", "csi",
                                     [["vv", "w", "wvv"],
@@ -1732,14 +1732,14 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
                                        ["vx", "w", "wvUe"]]>;
 }
 
-// 12.13. Vector Single-Width Integer Multiply-Add Instructions
+// 11.13. Vector Single-Width Integer Multiply-Add Instructions
 let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
 defm vnmsub : RVVIntTerBuiltinSet;
 
-// 12.14. Vector Widening Integer Multiply-Add Instructions
+// 11.14. Vector Widening Integer Multiply-Add Instructions
 let HasMaskedOffOperand = false,
     Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 defm vwmaccu : RVVOutOp1Op2BuiltinSet<"vwmaccu", "csi",
@@ -1756,7 +1756,7 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 }
 }
 
-// 12.15. Vector Integer Merge Instructions
+// 11.15. Vector Integer Merge Instructions
 // C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (passthru, op1, op2, mask, vl)
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
@@ -1774,7 +1774,7 @@ let HasMasked = false,
                                      ["vxm", "Uv", "UvUvUem"]]>;
 }
 
-// 12.16. Vector Integer Move Instructions
+// 11.16. Vector Integer Move Instructions
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
@@ -1792,7 +1792,7 @@ let HasMasked = false,
                                     ["x", "Uv", "UvUe"]]>;
 }
 
-// 13. Vector Fixed-Point Arithmetic Instructions
+// 12. Vector Fixed-Point Arithmetic Instructions
 let HeaderCode =
 [{
 enum __RISCV_VXRM {
@@ -1804,7 +1804,7 @@ enum __RISCV_VXRM {
 }] in
 def vxrm_enum : RVVHeader;
 
-// 13.1. Vector Single-Width Saturating Add and Subtract
+// 12.1. Vector Single-Width Saturating Add and Subtract
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vsaddu : RVVUnsignedBinBuiltinSet;
 defm vsadd : RVVSignedBinBuiltinSet;
@@ -1846,16 +1846,16 @@ let ManualCodegen = [{
     return Builder.CreateCall(F, Operands, "");
   }
 }] in {
-  // 13.2. Vector Single-Width Averaging Add and Subtract
+  // 12.2. Vector Single-Width Averaging Add and Subtract
   defm vaaddu : RVVUnsignedBinBuiltinSetRoundingMode;
   defm vaadd : RVVSignedBinBuiltinSetRoundingMode;
   defm vasubu : RVVUnsignedBinBuiltinSetRoundingMode;
   defm vasub : RVVSignedBinBuiltinSetRoundingMode;
 
-  // 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+  // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
   defm vsmul : RVVSignedBinBuiltinSetRoundingMode;
 
-  // 13.4. Vector Single-Width Scaling Shift Instructions
+  // 12.4. Vector Single-Width Scaling Shift Instructions
   defm vssrl : RVVUnsignedShiftBuiltinSetRoundingMode;
   defm vssra : RVVSignedShiftBuiltinSetRoundingMode;
 }
@@ -1896,13 +1896,13 @@ let ManualCodegen = [{
     return Builder.CreateCall(F, Operands, "");
   }
 }] in {
-  // 13.5. Vector Narrowing Fixed-Point Clip Instructions
+  // 12.5. Vector Narrowing Fixed-Point Clip Instructions
   defm vnclipu : RVVUnsignedNShiftBuiltinSetRoundingMode;
   defm vnclip : RVVSignedNShiftBuiltinSetRoundingMode;
 }
 }
 
-// 14. Vector Floating-Point Instructions
+// 13. Vector Floating-Point Instructions
 let HeaderCode =
 [{
 enum __RISCV_FRM {
@@ -1961,32 +1961,32 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = true in {
-    // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+    // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
     defm vfadd  : RVVFloatingBinBuiltinSetRoundingMode;
     defm vfsub  : RVVFloatingBinBuiltinSetRoundingMode;
     defm vfrsub : RVVFloatingBinVFBuiltinSetRoundingMode;
 
-    // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
     // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
     defm vfwadd : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
     defm vfwsub : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
 
-    // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+    // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
     defm vfmul  : RVVFloatingBinBuiltinSetRoundingMode;
     defm vfdiv  : RVVFloatingBinBuiltinSetRoundingMode;
     defm vfrdiv : RVVFloatingBinVFBuiltinSetRoundingMode;
   }
-  // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+  // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
   defm vfadd  : RVVFloatingBinBuiltinSet;
   defm vfsub  : RVVFloatingBinBuiltinSet;
   defm vfrsub : RVVFloatingBinVFBuiltinSet;
 
-  // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
   // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
   defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
   defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
 
-  // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+  // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
   defm vfmul  : RVVFloatingBinBuiltinSet;
   defm vfdiv  : RVVFloatingBinBuiltinSet;
   defm vfrdiv : RVVFloatingBinVFBuiltinSet;
@@ -2038,24 +2038,24 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = true in {
-    // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
     // Widening FP add/subtract, 2*SEW = SEW +/- SEW
     defm vfwadd : RVVFloatingWidenBinBuiltinSetRoundingMode;
     defm vfwsub : RVVFloatingWidenBinBuiltinSetRoundingMode;
 
-    // 14.5. Vector Widening Floating-Point Multiply
+    // 13.5. Vector Widening Floating-Point Multiply
     let Log2LMUL = [-2, -1, 0, 1, 2] in {
       defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
                                           [["vv", "w", "wvvu"],
                                             ["vf", "w", "wveu"]]>;
     }
   }
-  // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
   // Widening FP add/subtract, 2*SEW = SEW +/- SEW
   defm vfwadd : RVVFloatingWidenBinBuiltinSet;
   defm vfwsub : RVVFloatingWidenBinBuiltinSet;
 
-  // 14.5. Vector Widening Floating-Point Multiply
+  // 13.5. Vector Widening Floating-Point Multiply
   let Log2LMUL = [-2, -1, 0, 1, 2] in {
     defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
                                         [["vv", "w", "wvv"],
@@ -2104,7 +2104,7 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
-    // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+    // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
     defm vfmacc  : RVVFloatingTerBuiltinSetRoundingMode;
     defm vfnmacc : RVVFloatingTerBuiltinSetRoundingMode;
     defm vfmsac  : RVVFloatingTerBuiltinSetRoundingMode;
@@ -2114,7 +2114,7 @@ let ManualCodegen = [{
     defm vfmsub  : RVVFloatingTerBuiltinSetRoundingMode;
     defm vfnmsub : RVVFloatingTerBuiltinSetRoundingMode;
   }
-  // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+  // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
   defm vfmacc  : RVVFloatingTerBuiltinSet;
   defm vfnmacc : RVVFloatingTerBuiltinSet;
   defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -2163,13 +2163,13 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
-    // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+    // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
     defm vfwmacc  : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwnmacc : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwmsac  : RVVFloatingWidenTerBuiltinSetRoundingMode;
     defm vfwnmsac : RVVFloatingWidenTerBuiltinSetRoundingMode;
   }
-  // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+  // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
   defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
   defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
   defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
@@ -2223,27 +2223,27 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
-    // 14.8. Vector Floating-Point Square-Root Instruction
+    // 13.8. Vector Floating-Point Square-Root Instruction
     defm vfsqrt : RVVOutBuiltinSet<"vfsqrt", "xfd", [["v", "v", "vvu"]]>;
 
-    // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+    // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
     defm vfrec7 : RVVOutBuiltinSet<"vfrec7", "xfd", [["v", "v", "vvu"]]>;
   }
-  // 14.8. Vector Floating-Point Square-Root Instruction
+  // 13.8. Vector Floating-Point Square-Root Instruction
   defm vfsqrt : RVVOutBuiltinSet<"vfsqrt", "xfd", [["v", "v", "vv"]]>;
 
-  // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+  // 13.10. Vector Floating-Point Reciprocal Estimate Instruction
   defm vfrec7 : RVVOutBuiltinSet<"vfrec7", "xfd", [["v", "v", "vv"]]>;
 }
 
-// 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+// 13.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 def vfrsqrt7 : RVVFloatingUnaryVVBuiltin;
 
-// 14.11. Vector Floating-Point MIN/MAX Instructions
+// 13.11. Vector Floating-Point MIN/MAX Instructions
 defm vfmin : RVVFloatingBinBuiltinSet;
 defm vfmax : RVVFloatingBinBuiltinSet;
 
-// 14.12. Vector Floating-Point Sign-Injection Instructions
+// 13.12. Vector Floating-Point Sign-Injection Instructions
 defm vfsgnj  : RVVFloatingBinBuiltinSet;
 defm vfsgnjn : RVVFloatingBinBuiltinSet;
 defm vfsgnjx : RVVFloatingBinBuiltinSet;
@@ -2251,7 +2251,7 @@ defm vfsgnjx : RVVFloatingBinBuiltinSet;
 defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "xfd">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "xfd">;
 
-// 14.13. Vector Floating-Point Compare Instructions
+// 13.13. Vector Floating-Point Compare Instructions
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
@@ -2262,11 +2262,11 @@ defm vmfgt : RVVFloatingMaskOutBuiltinSet;
 defm vmfge : RVVFloatingMaskOutBuiltinSet;
 }
 
-// 14.14. Vector Floating-Point Classify Instruction
+// 13.14. Vector Floating-Point Classify Instruction
 let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
   def vfclass : RVVOp0Builtin<"Uv", "Uvv", "xfd">;
 
-// 14.15. Vector Floating-Point Merge Instructio
+// 13.15. Vector Floating-Point Merge Instruction
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
@@ -2286,7 +2286,7 @@ let HasMasked = false,
                                      [["vfm", "v", "vvem"]]>;
 }
 
-// 14.16. Vector Floating-Point Move Instruction
+// 13.16. Vector Floating-Point Move Instruction
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     SupportOverloading = false,
@@ -2295,12 +2295,12 @@ let HasMasked = false,
   defm vfmv_v : RVVOutBuiltinSet<"vfmv_v_f", "xfd",
                                   [["f", "v", "ve"]]>;
 
-// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+// 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
 def vfcvt_rtz_x_f_v : RVVConvToSignedBuiltin<"vfcvt_rtz_x">;
 
-// 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+// 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfwcvt_rtz_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_rtz_xu">;
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
@@ -2315,7 +2315,7 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
     }
 }
 
-// 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+// 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
   def vfncvt_rtz_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_rtz_xu">;
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
@@ -2379,7 +2379,7 @@ let ManualCodegen = [{
         RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUvu"]]>;
     }
 
-    // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+    // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
     let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
       let OverloadedName = "vfwcvt_x" in
         defm :
@@ -2388,7 +2388,7 @@ let ManualCodegen = [{
         defm :
           RVVConvBuiltinSet<"vfwcvt_xu_f_v", "xf", [["Uw", "Uwvu"]]>;
     }
-    // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+    // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
     let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
       let OverloadedName = "vfncvt_x" in
         defm :
@@ -2410,7 +2410,7 @@ let ManualCodegen = [{
     }
   }
 
-  // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+  // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
   let OverloadedName = "vfcvt_x" in
     defm :
       RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivv"]]>;
@@ -2424,7 +2424,7 @@ let ManualCodegen = [{
       RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUv"]]>;
   }
 
-  // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+  // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
   let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
     let OverloadedName = "vfwcvt_x" in
       defm :
@@ -2433,7 +2433,7 @@ let ManualCodegen = [{
       defm :
         RVVConvBuiltinSet<"vfwcvt_xu_f_v", "xf", [["Uw", "Uwv"]]>;
   }
-  // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+  // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
   let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
     let OverloadedName = "vfncvt_x" in
       defm :
@@ -2456,8 +2456,8 @@ let ManualCodegen = [{
 }
 }
 
-// 15. Vector Reduction Operations
-// 15.1. Vector Single-Width Integer Reduction Instructions
+// 14. Vector Reduction Operations
+// 14.1. Vector Single-Width Integer Reduction Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = HasPassthruOperand,
     HasMaskPolicy = false in {
@@ -2470,7 +2470,7 @@ defm vredand : RVVIntReductionBuiltinSet;
 defm vredor : RVVIntReductionBuiltinSet;
 defm vredxor : RVVIntReductionBuiltinSet;
 
-// 15.2. Vector Widening Integer Reduction Instructions
+// 14.2. Vector Widening Integer Reduction Instructions
 // Vector Widening Integer Reduction Operations
 let HasMaskedOffOperand = true in {
   defm vwredsum : RVVOutOp0BuiltinSet<"vwredsum", "csi",
@@ -2479,7 +2479,7 @@ let HasMaskedOffOperand = true in {
                                        [["vs", "UvUSw", "USwUvUSw"]]>;
 }
 
-// 15.3. Vector Single-Width Floating-Point Reduction Instructions
+// 14.3. Vector Single-Width Floating-Point Reduction Instructions
 defm vfredmax : RVVFloatingReductionBuiltin;
 defm vfredmin : RVVFloatingReductionBuiltin;
 let ManualCodegen = [{
@@ -2525,26 +2525,26 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = 1 in {
-    // 15.3. Vector Single-Width Floating-Point Reduction Instructions
+    // 14.3. Vector Single-Width Floating-Point Reduction Instructions
     defm vfredusum : RVVFloatingReductionBuiltinRoundingMode;
     defm vfredosum : RVVFloatingReductionBuiltinRoundingMode;
 
-    // 15.4. Vector Widening Floating-Point Reduction Instructions
+    // 14.4. Vector Widening Floating-Point Reduction Instructions
     defm vfwredusum : RVVFloatingWidenReductionBuiltinRoundingMode;
     defm vfwredosum : RVVFloatingWidenReductionBuiltinRoundingMode;
   }
-  // 15.3. Vector Single-Width Floating-Point Reduction Instructions
+  // 14.3. Vector Single-Width Floating-Point Reduction Instructions
   defm vfredusum : RVVFloatingReductionBuiltin;
   defm vfredosum : RVVFloatingReductionBuiltin;
 
-  // 15.4. Vector Widening Floating-Point Reduction Instructions
+  // 14.4. Vector Widening Floating-Point Reduction Instructions
   defm vfwredusum : RVVFloatingWidenReductionBuiltin;
   defm vfwredosum : RVVFloatingWidenReductionBuiltin;
 }
 }
 
-// 16. Vector Mask Instructions
-// 16.1. Vector Mask-Register Logical Instructions
+// 15. Vector Mask Instructions
+// 15.1. Vector Mask-Register Logical Instructions
 def vmand    : RVVMaskBinBuiltin;
 def vmnand   : RVVMaskBinBuiltin;
 def vmandn   : RVVMaskBinBuiltin;
@@ -2560,36 +2560,36 @@ defm vmmv_m : RVVPseudoMaskBuiltin<"vmand", "c">;
 defm vmnot_m : RVVPseudoMaskBuiltin<"vmnand", "c">;
 
 let MaskedPolicyScheme = NonePolicy in {
-// 16.2. Vector count population in mask vcpop.m
+// 15.2. Vector count population in mask vcpop.m
 def vcpop : RVVMaskOp0Builtin<"um">;
 
-// 16.3. vfirst find-first-set mask bit
+// 15.3. vfirst find-first-set mask bit
 def vfirst : RVVMaskOp0Builtin<"lm">;
 }
 
 let MaskedPolicyScheme = HasPassthruOperand,
     HasTailPolicy = false in {
-// 16.4. vmsbf.m set-before-first mask bit
+// 15.4. vmsbf.m set-before-first mask bit
 def vmsbf : RVVMaskUnaryBuiltin;
 
-// 16.5. vmsif.m set-including-first mask bit
+// 15.5. vmsif.m set-including-first mask bit
 def vmsif : RVVMaskUnaryBuiltin;
 
-// 16.6. vmsof.m set-only-first mask bit
+// 15.6. vmsof.m set-only-first mask bit
 def vmsof : RVVMaskUnaryBuiltin;
 }
 
 let UnMaskedPolicyScheme = HasPassthruOperand, SupportOverloading = false in {
-  // 16.8. Vector Iota Instruction
+  // 15.8. Vector Iota Instruction
   defm viota : RVVOutBuiltinSet<"viota", "csil", [["m", "Uv", "Uvm"]]>;
 
-  // 16.9. Vector Element Index Instruction
+  // 15.9. Vector Element Index Instruction
   defm vid : RVVOutBuiltinSet<"vid", "csil", [["v", "v", "v"],
                                               ["v", "Uv", "Uv"]]>;
 }
 
-// 17. Vector Permutation Instructions
-// 17.1. Integer Scalar Move Instructions
+// 16. Vector Permutation Instructions
+// 16.1. Integer Scalar Move Instructions
 let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vmv_x" in
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
@@ -2603,7 +2603,7 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
                                     ["x", "Uv", "UvUe"]]>;
 }
 
-// 17.2. Floating-Point Scalar Move Instructions
+// 16.2. Floating-Point Scalar Move Instructions
 let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
@@ -2616,22 +2616,22 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
                                       ["x", "Uv", "UvUe"]]>;
 }
 
-// 17.3. Vector Slide Instructions
-// 17.3.1. Vector Slideup Instructions
+// 16.3. Vector Slide Instructions
+// 16.3.1. Vector Slideup Instructions
 defm vslideup   : RVVSlideUpBuiltinSet;
-// 17.3.2. Vector Slidedown Instructions
+// 16.3.2. Vector Slidedown Instructions
 defm vslidedown : RVVSlideDownBuiltinSet;
 
-// 17.3.3. Vector Slide1up Instructions
+// 16.3.3. Vector Slide1up Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm vslide1up : RVVSlideOneBuiltinSet;
 defm vfslide1up : RVVFloatingBinVFBuiltinSet;
 
-// 17.3.4. Vector Slide1down Instruction
+// 16.3.4. Vector Slide1down Instruction
 defm vslide1down : RVVSlideOneBuiltinSet;
 defm vfslide1down : RVVFloatingBinVFBuiltinSet;
 
-// 17.4. Vector Register Gather Instructions
+// 16.4. Vector Register Gather Instructions
 // signed and floating type
 defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilxfd",
                                  [["vv", "v", "vvUv"]]>;
@@ -2648,7 +2648,7 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
                                      [["vv", "Uv", "UvUv(Log2EEW:4)Uv"]]>;
 }
 
-// 17.5. Vector Compress Instruction
+// 16.5. Vector Compress Instruction
 let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
