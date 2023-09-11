@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX11
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=GFX11
 
 #===------------------------------------------------------------------------===#
 # FLAT

@@ -1,5 +1,5 @@
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
-! RUN: llvm-mc %s -arch=sparc   -show-encoding | FileCheck %s --check-prefix=V8
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s --check-prefix=V9
+! RUN: llvm-mc %s -triple=sparc   -show-encoding | FileCheck %s --check-prefix=V8
 
         ! V8: stbar                 ! encoding: [0x81,0x43,0xc0,0x00]
         ! V9: stbar                 ! encoding: [0x81,0x43,0xc0,0x00]

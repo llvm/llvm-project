@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck -check-prefix=GFX940 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck -check-prefix=GFX940 %s
 
 v_mfma_f32_32x32x2bf16 a[0:31], v0, v1, 0
 // GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
