@@ -1,5 +1,13 @@
 add_subdirectory(memory_utils)
 
+if(LIBC_CONF_STRING_UNSAFE_WIDE_READ)
+  message(">>> Adding -DLIBC_COPT_STRING_UNSAFE_WIDE_READ")
+  list(APPEND string_config_options "-DLIBC_COPT_STRING_UNSAFE_WIDE_READ")
+endif()
+if(string_config_options)
+  list(PREPEND string_config_options "COMPILE_OPTIONS")
+endif()
+
 add_header_library(
   string_utils
   HDRS
@@ -10,6 +18,7 @@ add_header_library(
     libc.include.stdlib
     libc.src.__support.common
     libc.src.__support.CPP.bitset
+  ${string_config_options}
 )
 
 add_header_library(

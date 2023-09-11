@@ -12,5 +12,11 @@
       "value": false,
       "doc": "Disable handling of %n in printf format string."
     }
+  },
+  "string": {
+    "LIBC_CONF_STRING_UNSAFE_WIDE_READ": {
+      "value": false,
+      "doc": "Read more than a byte at a time to perform byte-string operations like strlen."
+    }
   }
 }
