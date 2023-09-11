@@ -3519,6 +3519,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     assert(GV && "Not a direct call");
     // See if we need any target-specific flags on the GV operand.
     unsigned char OpFlags = Subtarget->classifyGlobalFunctionReference(GV);
+    if (OpFlags == X86II::MO_PLT && !Is64Bit &&
+        TM.getRelocationModel() == Reloc::Static && isa<Function>(GV) &&
+        cast<Function>(GV)->isIntrinsic())
+      OpFlags = X86II::MO_NO_FLAG;
 
     // This will be a direct call, or an indirect call through memory for
     // NonLazyBind calls or dllimport calls.
