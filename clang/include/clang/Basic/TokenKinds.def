@@ -531,7 +531,6 @@ TYPE_TRAIT_1(__is_scoped_enum, IsScopedEnum, KEYCXX)
 TYPE_TRAIT_1(__is_referenceable, IsReferenceable, KEYCXX)
 TYPE_TRAIT_1(__can_pass_in_regs, CanPassInRegs, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
-TYPE_TRAIT_2(__reference_constructs_from_temporary, ReferenceConstructsFromTemporary, KEYCXX)
 
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
