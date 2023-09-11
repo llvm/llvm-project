@@ -2720,6 +2720,13 @@ def : GCNPat<
   (V_MUL_F32_e64 0, (i32 CONST.FP32_NEG_ONE), $src_mods, $src)
 >;
 
+let SubtargetPredicate = HasPackedFP32Ops in {
+def : GCNPat<
+  (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+  (V_PK_MUL_F32 0, CONST.FP32_ONE, $src_mods, $src)
+>;
+}
+
 // TODO: Handle fneg like other types.
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
