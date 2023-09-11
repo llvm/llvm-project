@@ -915,11 +915,6 @@ public:
     return name;
   }
 
-  bool isHostAssocSymbol(
-      const Fortran::semantics::Symbol *sym) const override final {
-    return hostAssocSymbols.contains(sym);
-  }
-
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
@@ -1010,7 +1005,9 @@ private:
     if (!forced && lookupSymbol(sym))
       return false;
     if (lowerToHighLevelFIR()) {
-      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val, forced);
+      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val,
+                                       fir::FortranVariableFlagsEnum::None,
+                                       forced);
     } else {
       localSymbols.addSymbol(sym, val, forced);
     }
@@ -4377,7 +4374,6 @@ private:
     builder = nullptr;
     hostAssocTuple = mlir::Value{};
     localSymbols.clear();
-    hostAssocSymbols.clear();
     blockId = 0;
   }
 
@@ -4762,11 +4758,6 @@ private:
                                                      accRoutineInfos);
   }
 
-  void
-  addHostAssocSymbol(const Fortran::semantics::Symbol *sym) override final {
-    hostAssocSymbols.insert(sym);
-  }
-
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -4793,9 +4784,6 @@ private:
 
   /// Tuple of host associated variables
   mlir::Value hostAssocTuple;
-
-  /// A set of symbols used inside the current function via host association.
-  llvm::DenseSet<const Fortran::semantics::Symbol *> hostAssocSymbols;
 
   /// A map of unique names for constant expressions.
   /// The names are used for representing the constant expressions

@@ -129,12 +129,6 @@ public:
                    std::unique_ptr<Fortran::lower::SomeExpr> expression,
                    mlir::Type eleTy) = 0;
 
-  /// Return true, if the given symbol represents a host associated variable.
-  virtual bool isHostAssocSymbol(const Fortran::semantics::Symbol *) const = 0;
-
-  /// Register a symbol representing a host associated variable.
-  virtual void addHostAssocSymbol(const Fortran::semantics::Symbol *) = 0;
-
   //===--------------------------------------------------------------------===//
   // Expressions
   //===--------------------------------------------------------------------===//

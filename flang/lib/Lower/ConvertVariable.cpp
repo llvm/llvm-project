@@ -1422,9 +1422,9 @@ recoverShapeVector(llvm::ArrayRef<std::int64_t> shapeVec, mlir::Value initVal) {
 }
 
 fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::semantics::Symbol &sym) {
-  fir::FortranVariableFlagsEnum flags = fir::FortranVariableFlagsEnum::None;
+    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym,
+    fir::FortranVariableFlagsEnum extraFlags) {
+  fir::FortranVariableFlagsEnum flags = extraFlags;
   const auto &attrs = sym.attrs();
   if (attrs.test(Fortran::semantics::Attr::ALLOCATABLE))
     flags = flags | fir::FortranVariableFlagsEnum::allocatable;
@@ -1452,11 +1452,9 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
     flags = flags | fir::FortranVariableFlagsEnum::value;
   if (attrs.test(Fortran::semantics::Attr::VOLATILE))
     flags = flags | fir::FortranVariableFlagsEnum::fortran_volatile;
-  if (converter.isHostAssocSymbol(&sym))
-    flags = flags | fir::FortranVariableFlagsEnum::host_assoc;
   if (flags == fir::FortranVariableFlagsEnum::None)
     return {};
-  return fir::FortranVariableFlagsAttr::get(&converter.getMLIRContext(), flags);
+  return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
 /// Map a symbol to its FIR address and evaluated specification expressions.
@@ -1496,7 +1494,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       lenParams.emplace_back(len);
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(converter, sym);
+        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
 
     if (isCrayPointee) {
       mlir::Type baseType =
@@ -1574,14 +1572,16 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 void Fortran::lower::genDeclareSymbol(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, const Fortran::semantics::Symbol &sym,
-    const fir::ExtendedValue &exv, bool force) {
+    const fir::ExtendedValue &exv, fir::FortranVariableFlagsEnum extraFlags,
+    bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       !Fortran::semantics::IsProcedure(sym) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(converter, sym);
+        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
+                                                  extraFlags);
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes);
@@ -1628,8 +1628,9 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                           bool replace = false) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
-    Fortran::lower::genDeclareSymbol(converter, symMap, sym,
-                                     std::move(boxValue), replace);
+    Fortran::lower::genDeclareSymbol(
+        converter, symMap, sym, std::move(boxValue),
+        fir::FortranVariableFlagsEnum::None, replace);
     return;
   }
   symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,
