@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga %s -filetype=obj | llvm-objdump -d --arch-name=amdgcn --mcpu=tonga - | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=obj | llvm-objdump -d --arch-name=amdgcn --mcpu=tonga - | FileCheck %s
 
 	.text
 

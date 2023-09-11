@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck %s --check-prefix=GFX11
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble -show-encoding < %s | FileCheck %s --check-prefix=GFX11
 
 # GFX11: image_atomic_add v[1:2], v2, s[12:19] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x03,0x30,0xf0,0x02,0x01,0x03,0x00]
 0x80,0x03,0x30,0xf0,0x02,0x01,0x03,0x00
