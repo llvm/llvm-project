@@ -4377,6 +4377,7 @@ private:
     builder = nullptr;
     hostAssocTuple = mlir::Value{};
     localSymbols.clear();
+    hostAssocSymbols.clear();
     blockId = 0;
   }
 
