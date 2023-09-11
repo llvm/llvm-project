@@ -171,6 +171,10 @@ struct CachingVPExpander {
   Value *expandPredicationInBinaryOperator(IRBuilder<> &Builder,
                                            VPIntrinsic &PI);
 
+  /// Lower this VP int call to a unpredicated int call.
+  Value *expandPredicationToIntCall(IRBuilder<> &Builder, VPIntrinsic &PI,
+                                    unsigned UnpredicatedIntrinsicID);
+
   /// Lower this VP fp call to a unpredicated fp call.
   Value *expandPredicationToFPCall(IRBuilder<> &Builder, VPIntrinsic &PI,
                                    unsigned UnpredicatedIntrinsicID);
@@ -277,6 +281,26 @@ CachingVPExpander::expandPredicationInBinaryOperator(IRBuilder<> &Builder,
 
   replaceOperation(*NewBinOp, VPI);
   return NewBinOp;
+}
+
+Value *CachingVPExpander::expandPredicationToIntCall(
+    IRBuilder<> &Builder, VPIntrinsic &VPI, unsigned UnpredicatedIntrinsicID) {
+  switch (UnpredicatedIntrinsicID) {
+  case Intrinsic::abs:
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+  case Intrinsic::umax:
+  case Intrinsic::umin: {
+    Value *Op0 = VPI.getOperand(0);
+    Value *Op1 = VPI.getOperand(1);
+    Function *Fn = Intrinsic::getDeclaration(
+        VPI.getModule(), UnpredicatedIntrinsicID, {VPI.getType()});
+    Value *NewOp = Builder.CreateCall(Fn, {Op0, Op1}, VPI.getName());
+    replaceOperation(*NewOp, VPI);
+    return NewOp;
+  }
+  }
+  return nullptr;
 }
 
 Value *CachingVPExpander::expandPredicationToFPCall(
@@ -635,6 +659,16 @@ Value *CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
     replaceOperation(*NewNegOp, VPI);
     return NewNegOp;  
   }
+  case Intrinsic::vp_abs:
+    return expandPredicationToIntCall(Builder, VPI, Intrinsic::abs);
+  case Intrinsic::vp_smax:
+    return expandPredicationToIntCall(Builder, VPI, Intrinsic::smax);
+  case Intrinsic::vp_smin:
+    return expandPredicationToIntCall(Builder, VPI, Intrinsic::smin);
+  case Intrinsic::vp_umax:
+    return expandPredicationToIntCall(Builder, VPI, Intrinsic::umax);
+  case Intrinsic::vp_umin:
+    return expandPredicationToIntCall(Builder, VPI, Intrinsic::umin);
   case Intrinsic::vp_fabs:
     return expandPredicationToFPCall(Builder, VPI, Intrinsic::fabs);
   case Intrinsic::vp_sqrt:
