@@ -32,6 +32,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -1375,6 +1376,58 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   return Valid;
 }
 
+// Add attributes from CB params and Fn attributes that can always be propagated
+// to the corresponding argument / inner callbases.
+static void AddParamAndFnBasicAttributes(const CallBase &CB,
+                                         ValueToValueMapTy &VMap) {
+  auto *CalledFunction = CB.getCalledFunction();
+  auto &Context = CalledFunction->getContext();
+
+  // Collect valid attributes for all params.
+  SmallVector<AttrBuilder> ValidParamAttrs;
+  bool HasAttrToPropagate = false;
+
+  for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
+    ValidParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    // Access attributes can be propagated to any param with the same underlying
+    // object as the argument.
+    if (CB.paramHasAttr(I, Attribute::ReadNone))
+      ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
+    if (CB.paramHasAttr(I, Attribute::ReadOnly))
+      ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
+    if (CB.paramHasAttr(I, Attribute::WriteOnly))
+      ValidParamAttrs.back().addAttribute(Attribute::WriteOnly);
+    HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
+  }
+
+  // Won't be able to propagate anything.
+  if (!HasAttrToPropagate)
+    return;
+
+  for (BasicBlock &BB : *CalledFunction) {
+    for (Instruction &Ins : BB) {
+      CallBase *InnerCB = dyn_cast<CallBase>(&Ins);
+      if (InnerCB != nullptr) {
+        if (auto *NewInnerCB =
+                dyn_cast_or_null<CallBase>(VMap.lookup(InnerCB))) {
+          AttributeList AL = NewInnerCB->getAttributes();
+          for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
+            // Check if the underlying value for the parameter is an argument.
+            const Value *UnderlyingV =
+                getUnderlyingObject(InnerCB->getArgOperand(I));
+            if (const Argument *Arg = dyn_cast<Argument>(UnderlyingV)) {
+              unsigned ArgNo = Arg->getArgNo();
+              // If so, propagate its access attributes.
+              AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
+            }
+          }
+          NewInnerCB->setAttributes(AL);
+        }
+      }
+    }
+  }
+}
+
 // Recursively check BB for a preceding alloca. An alive alloca at the callsite
 // essentially makes propagating any memory effects impossible. While scanning
 // for the alloca also collect and callsites we may be able to modify.
@@ -2410,6 +2463,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // Add noalias metadata if necessary.
     AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
 
+    AddParamAndFnBasicAttributes(CB, VMap);
     AddFnAccessAttributes(CB, VMap);
 
     // Clone return attributes on the callsite into the calls within the inlined
