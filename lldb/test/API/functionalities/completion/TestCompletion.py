@@ -237,16 +237,13 @@ class CommandLineCompletionTestCase(TestBase):
         src_dir = os.path.dirname(os.path.realpath(__file__))
         self.complete_from_to(
             "log enable lldb expr -f " + src_dir,
-            [src_dir + os.sep],
-            turn_off_re_match=True,
-        )
+            [src_dir + os.sep])
 
     # <rdar://problem/11052829>
     def test_infinite_loop_while_completing(self):
         """Test that 'process print hello\' completes to itself and does not infinite loop."""
         self.complete_from_to(
-            "process print hello\\", "process print hello\\", turn_off_re_match=True
-        )
+            "process print hello\\", "process print hello\\")
 
     def test_watchpoint_co(self):
         """Test that 'watchpoint co' completes to 'watchpoint command '."""
@@ -727,9 +724,7 @@ class CommandLineCompletionTestCase(TestBase):
         self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.complete_from_to(
             "breakpoint set -n Fo",
-            "breakpoint set -n Foo::Bar(int,\\ int)",
-            turn_off_re_match=True,
-        )
+            "breakpoint set -n Foo::Bar(int,\\ int)")
         # No completion for Qu because the candidate is
         # (anonymous namespace)::Quux().
         self.complete_from_to("breakpoint set -n Qu", "")
@@ -822,8 +817,7 @@ class CommandLineCompletionTestCase(TestBase):
         for subcommand in subcommands:
             self.complete_from_to(
                 "target stop-hook " + subcommand + " 1 ",
-                "target stop-hook " + subcommand + " 1 ",
-            )
+                "target stop-hook " + subcommand + " 1 ")
 
     def test_common_completion_type_language(self):
         self.complete_from_to("type category -l ", ["c"])
