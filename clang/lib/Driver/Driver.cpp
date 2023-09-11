@@ -4284,7 +4284,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // and quits.
     if (Arg *A = Args.getLastArg(Opt)) {
       if (Opt == options::OPT_print_supported_extensions &&
-          !C.getDefaultToolChain().getTriple().isRISCV()) {
+          !C.getDefaultToolChain().getTriple().isRISCV() &&
+          !C.getDefaultToolChain().getTriple().isAArch64()) {
         C.getDriver().Diag(diag::err_opt_not_valid_on_target)
             << "--print-supported-extensions";
         return;
