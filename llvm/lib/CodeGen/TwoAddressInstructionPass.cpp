@@ -1882,10 +1882,8 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
                 LiveRange::iterator UseSeg = S.FindSegmentContaining(Idx);
                 if (UseSeg != S.end()) {
                   LiveRange::iterator DefSeg = std::next(UseSeg);
-                  if (DefSeg != S.end())
-                    S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
-                  else
-                    S.removeSegment(UseSeg);
+                  assert(DefSeg != S.end());
+                  S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
                 }
                 // Otherwise, it should have only one segment that starts at
                 // 160r which we should remove.
