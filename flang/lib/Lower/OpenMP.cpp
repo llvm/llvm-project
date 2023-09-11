@@ -1123,6 +1123,8 @@ addReductionDecl(mlir::Location currentLocation,
               Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
         if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
           mlir::Value symVal = converter.getSymbolAddress(*symbol);
+          if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+            symVal = declOp.getBase();
           mlir::Type redType =
               symVal.getType().cast<fir::ReferenceType>().getEleTy();
           reductionVars.push_back(symVal);
@@ -1160,6 +1162,8 @@ addReductionDecl(mlir::Location currentLocation,
                 Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
           if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
             mlir::Value symVal = converter.getSymbolAddress(*symbol);
+            if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+              symVal = declOp.getBase();
             mlir::Type redType =
                 symVal.getType().cast<fir::ReferenceType>().getEleTy();
             reductionVars.push_back(symVal);
@@ -3746,6 +3750,8 @@ void Fortran::lower::genOpenMPReduction(
                   Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
             if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
               mlir::Value reductionVal = converter.getSymbolAddress(*symbol);
+              if (auto declOp = reductionVal.getDefiningOp<hlfir::DeclareOp>())
+                reductionVal = declOp.getBase();
               mlir::Type reductionType =
                   reductionVal.getType().cast<fir::ReferenceType>().getEleTy();
               if (!reductionType.isa<fir::LogicalType>()) {
@@ -3789,6 +3795,9 @@ void Fortran::lower::genOpenMPReduction(
                     ompObject)}) {
               if (const Fortran::semantics::Symbol * symbol{name->symbol}) {
                 mlir::Value reductionVal = converter.getSymbolAddress(*symbol);
+                if (auto declOp =
+                        reductionVal.getDefiningOp<hlfir::DeclareOp>())
+                  reductionVal = declOp.getBase();
                 for (const mlir::OpOperand &reductionValUse :
                      reductionVal.getUses()) {
                   if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(
@@ -3841,6 +3850,13 @@ mlir::Operation *Fortran::lower::findReductionChain(mlir::Value loadVal,
                 mlir::dyn_cast<fir::StoreOp>(reductionOperand.getOwner())) {
           if (store.getMemref() == *reductionVal) {
             store.erase();
+            return reductionOp;
+          }
+        }
+        if (auto assign =
+                mlir::dyn_cast<hlfir::AssignOp>(reductionOperand.getOwner())) {
+          if (assign.getLhs() == *reductionVal) {
+            assign.erase();
             return reductionOp;
           }
         }
@@ -3898,6 +3914,11 @@ void Fortran::lower::removeStoreOp(mlir::Operation *reductionOp,
         if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(convertReductionUse)) {
           if (storeOp.getMemref() == symVal)
             storeOp.erase();
+        }
+        if (auto assignOp =
+                mlir::dyn_cast<hlfir::AssignOp>(convertReductionUse)) {
+          if (assignOp.getLhs() == symVal)
+            assignOp.erase();
         }
       }
     }
