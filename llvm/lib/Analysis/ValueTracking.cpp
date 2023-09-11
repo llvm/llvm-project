@@ -4360,6 +4360,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
     default:
       // xxx - am i tested
+      return {nullptr, fcAllFlags, fcAllFlags};
       return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(), LookThroughSrc);
     }
 
