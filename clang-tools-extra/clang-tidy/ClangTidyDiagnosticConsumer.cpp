@@ -552,7 +552,7 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
   // location needed depends on the check (in particular, where this check wants
   // to apply fixes).
   FileID FID = Sources.getDecomposedExpansionLoc(Location).first;
-  const FileEntry *File = Sources.getFileEntryForID(FID);
+  OptionalFileEntryRef File = Sources.getFileEntryRefForID(FID);
 
   // -DMACRO definitions on the command line have locations in a virtual buffer
   // that doesn't have a FileEntry. Don't skip these as well.

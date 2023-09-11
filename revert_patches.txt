@@ -14,3 +14,7 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
 
 Nicole and Saiyed:
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
+
+Johannes: AA crashes  smoke/func-ptr
+Revert "[OpenMPOpt] Allow indirect calls in AAKernelInfoCallSite (#65836) "
+  fails: aomp_mappings_newrt flang-340559 func-ptr

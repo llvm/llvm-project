@@ -146,8 +146,8 @@ int main(int argc, char **argv) {
                          : tooling::ApplyChangesSpec::kNone;
 
   for (const auto &FileChange : Changes) {
-    const FileEntry *Entry = FileChange.first;
-    StringRef FileName = Entry->getName();
+    FileEntryRef Entry = FileChange.first;
+    StringRef FileName = Entry.getName();
     llvm::Expected<std::string> NewFileData =
         applyChanges(FileName, FileChange.second, Spec, Diagnostics);
     if (!NewFileData) {

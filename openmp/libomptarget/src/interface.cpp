@@ -75,11 +75,11 @@ EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
 
 template <typename TargetAsyncInfoTy>
 static inline void
-targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
-                 void **ArgsBase, void **Args, int64_t *ArgSizes,
-                 int64_t *ArgTypes, map_var_info_t *ArgNames, void **ArgMappers,
-                 TargetDataFuncPtrTy TargetDataFunction,
-                 const char *RegionTypeMsg, const char *RegionName) {
+targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
+           void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
+           map_var_info_t *ArgNames, void **ArgMappers,
+           TargetDataFuncPtrTy TargetDataFunction, const char *RegionTypeMsg,
+           const char *RegionName) {
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
@@ -110,30 +110,30 @@ targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
 
   /// RAII to establish tool anchors before and after data begin / end / update
-  OMPT_IF_BUILT(
-      assert((TargetDataFunction == targetDataBegin ||
-              TargetDataFunction == targetDataEnd ||
-              TargetDataFunction == targetDataUpdate) &&
-             "Encountered unexpected TargetDataFunction during "
-             "execution of targetDataMapper");
-      auto CallbackFunctions =
-          (TargetDataFunction == targetDataBegin)
-              ? RegionInterface.getCallbacks<ompt_target_enter_data>()
-          : (TargetDataFunction == targetDataEnd)
-              ? RegionInterface.getCallbacks<ompt_target_exit_data>()
-              : RegionInterface.getCallbacks<ompt_target_update>();
-      auto TraceGenerators =
-          (TargetDataFunction == targetDataBegin)
-              ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
-          : (TargetDataFunction == targetDataEnd)
-              ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
-              : RegionInterface.getTraceGenerators<ompt_target_update>();
-      InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
-                                   OMPT_GET_RETURN_ADDRESS(0));
+  OMPT_IF_BUILT(assert((TargetDataFunction == targetDataBegin ||
+                        TargetDataFunction == targetDataEnd ||
+                        TargetDataFunction == targetDataUpdate) &&
+                       "Encountered unexpected TargetDataFunction during "
+                       "execution of targetData");
+                auto CallbackFunctions =
+                    (TargetDataFunction == targetDataBegin)
+                        ? RegionInterface.getCallbacks<ompt_target_enter_data>()
+                    : (TargetDataFunction == targetDataEnd)
+                        ? RegionInterface.getCallbacks<ompt_target_exit_data>()
+                        : RegionInterface.getCallbacks<ompt_target_update>();
+
+                auto TraceGenerators =
+                    (TargetDataFunction == targetDataBegin)
+                        ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
+                    : (TargetDataFunction == targetDataEnd)
+                        ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
+                    : RegionInterface.getTraceGenerators<ompt_target_update>();
+                InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
+                                             OMPT_GET_RETURN_ADDRESS(0));)
       // ToDo: mhalk Do we need a check for TracingActive here?
       InterfaceRAII TargetDataTraceRAII(
           TraceGenerators, DeviceId,
-          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = TargetDataFunction(Loc, Device, ArgNum, ArgsBase, Args, ArgSizes,
@@ -156,10 +156,11 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *Loc, int64_t DeviceId,
                                            map_var_info_t *ArgNames,
                                            void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-  targetDataMapper<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
-                                ArgTypes, ArgNames, ArgMappers, targetDataBegin,
-                                "Entering OpenMP data region with being_mapper",
-                                "begin");
+
+  targetData<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
+                          ArgTypes, ArgNames, ArgMappers, targetDataBegin,
+                          "Entering OpenMP data region with being_mapper",
+                          "begin");
 }
 
 EXTERN void __tgt_target_data_begin_nowait_mapper(
@@ -168,7 +169,7 @@ EXTERN void __tgt_target_data_begin_nowait_mapper(
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
 
-  targetDataMapper<TaskAsyncInfoWrapperTy>(
+  targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataBegin,
       "Entering OpenMP data region with being_nowait_mapper", "begin");
@@ -185,10 +186,9 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *Loc, int64_t DeviceId,
                                          void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
 
-  targetDataMapper<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
-                                ArgTypes, ArgNames, ArgMappers, targetDataEnd,
-                                "Exiting OpenMP data region with end_mapper",
-                                "end");
+  targetData<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
+                          ArgTypes, ArgNames, ArgMappers, targetDataEnd,
+                          "Exiting OpenMP data region with end_mapper", "end");
 }
 
 EXTERN void __tgt_target_data_end_nowait_mapper(
@@ -197,7 +197,7 @@ EXTERN void __tgt_target_data_end_nowait_mapper(
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
 
-  targetDataMapper<TaskAsyncInfoWrapperTy>(
+  targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataEnd,
       "Exiting OpenMP data region with end_nowait_mapper", "end");
@@ -211,7 +211,7 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
                                             void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
 
-  targetDataMapper<AsyncInfoTy>(
+  targetData<AsyncInfoTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataUpdate,
       "Updating data within the OpenMP data region with update_mapper",
@@ -223,7 +223,7 @@ EXTERN void __tgt_target_data_update_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-  targetDataMapper<TaskAsyncInfoWrapperTy>(
+  targetData<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataUpdate,
       "Updating data within the OpenMP data region with update_nowait_mapper",
