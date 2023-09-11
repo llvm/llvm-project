@@ -1868,15 +1868,35 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
             // %reg.subidx.
             LaneBitmask LaneMask =
                 TRI->getSubRegIndexLaneMask(mi->getOperand(0).getSubReg());
-            SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
+            SlotIndex Idx = LIS->getInstructionIndex(*mi);
             for (auto &S : LI.subranges()) {
               if ((S.LaneMask & LaneMask).none()) {
+                // If Idx is 160B, and we have a subrange that isn't in
+                // %reg.subidx like so:
+                //
+                // [152r,160r)[160r,256r)
+                //
+                // Merge the two segments together so the subrange becomes:
+                //
+                // [152r,256r)
                 LiveRange::iterator UseSeg = S.FindSegmentContaining(Idx);
-                LiveRange::iterator DefSeg = std::next(UseSeg);
-                if (DefSeg != S.end())
-                  S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+                if (UseSeg != S.end()) {
+                  LiveRange::iterator DefSeg = std::next(UseSeg);
+                  if (DefSeg != S.end())
+                    S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+                  else
+                    S.removeSegment(UseSeg);
+                }
+                // Otherwise, it should have only one segment that starts at
+                // 160r which we should remove.
+                else {
+                  assert(S.containsOneValue());
+                  assert(S.begin()->start == Idx.getRegSlot());
+                  S.removeSegment(S.begin());
+                }
               }
             }
+            LI.removeEmptySubRanges();
 
             // The COPY no longer has a use of %reg.
             LIS->shrinkToUses(&LI);
