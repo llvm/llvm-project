@@ -550,12 +550,16 @@ public:
   bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override {
-    // Preserve previously set header search paths.
+    // llvm::SaveAndRestore doesn't support bit field.
+    auto ForceCheckCXX20ModulesInputFiles =
+        this->HSOpts.ForceCheckCXX20ModulesInputFiles;
     llvm::SaveAndRestore X(this->HSOpts.UserEntries);
     llvm::SaveAndRestore Y(this->HSOpts.SystemHeaderPrefixes);
     llvm::SaveAndRestore Z(this->HSOpts.VFSOverlayFiles);
 
     this->HSOpts = HSOpts;
+    this->HSOpts.ForceCheckCXX20ModulesInputFiles =
+        ForceCheckCXX20ModulesInputFiles;
 
     return false;
   }
