@@ -113,7 +113,7 @@ define void @extract_v2i32_v8i32_2(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a1)
@@ -171,7 +171,7 @@ define void @extract_v2i32_nxv16i32_0(<vscale x 16 x i32> %x, ptr %y) {
 define void @extract_v2i32_nxv16i32_2(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -184,7 +184,7 @@ define void @extract_v2i32_nxv16i32_2(<vscale x 16 x i32> %x, ptr %y) {
 define void @extract_v2i32_nxv16i32_4(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -197,7 +197,7 @@ define void @extract_v2i32_nxv16i32_4(<vscale x 16 x i32> %x, ptr %y) {
 define void @extract_v2i32_nxv16i32_6(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -210,7 +210,7 @@ define void @extract_v2i32_nxv16i32_6(<vscale x 16 x i32> %x, ptr %y) {
 define void @extract_v2i32_nxv16i32_8(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -273,7 +273,7 @@ define void @extract_v2i8_nxv2i8_6(<vscale x 2 x i8> %x, ptr %y) {
 define void @extract_v8i32_nxv16i32_8(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v8i32_nxv16i32_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (a0)
@@ -437,7 +437,7 @@ define void @extract_v2i1_v64i1_2(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -555,7 +555,7 @@ define void @extract_v2i1_nxv64i1_2(<vscale x 64 x i1> %x, ptr %y) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 2, e8, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -581,7 +581,7 @@ define void @extract_v2i1_nxv64i1_42(<vscale x 64 x i1> %x, ptr %y) {
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    li a1, 42
-; CHECK-NEXT:    vsetivli zero, 2, e8, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -606,7 +606,7 @@ define void @extract_v2i1_nxv32i1_26(<vscale x 32 x i1> %x, ptr %y) {
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 2, e8, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 26
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0

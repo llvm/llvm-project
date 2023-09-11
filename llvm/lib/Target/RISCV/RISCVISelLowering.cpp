@@ -7466,6 +7466,32 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   return convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
 }
 
+// Given a scalable vector type and an index into it, returns the type for the
+// smallest subvector that the index fits in. This can be used to reduce LMUL
+// for operations like vslidedown.
+//
+// E.g. With Zvl128b, index 3 in a nxv4i32 fits within the first nxv2i32.
+static std::optional<MVT>
+getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
+                      const RISCVSubtarget &Subtarget) {
+  assert(VecVT.isScalableVector());
+  const unsigned EltSize = VecVT.getScalarSizeInBits();
+  const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
+  const unsigned MinVLMAX = VectorBitsMin / EltSize;
+  MVT SmallerVT;
+  if (MaxIdx < MinVLMAX)
+    SmallerVT = getLMUL1VT(VecVT);
+  else if (MaxIdx < MinVLMAX * 2)
+    SmallerVT = getLMUL1VT(VecVT).getDoubleNumVectorElementsVT();
+  else if (MaxIdx < MinVLMAX * 4)
+    SmallerVT = getLMUL1VT(VecVT)
+                    .getDoubleNumVectorElementsVT()
+                    .getDoubleNumVectorElementsVT();
+  if (!SmallerVT.isValid() || !VecVT.bitsGT(SmallerVT))
+    return std::nullopt;
+  return SmallerVT;
+}
+
 // Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
 // extract the first element: (extractelt (slidedown vec, idx), 0). For integer
 // types this is done using VMV_X_S to allow us to glean information about the
@@ -7554,21 +7580,9 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx))
     MaxIdx = IdxC->getZExtValue();
   if (MaxIdx) {
-    const unsigned EltSize = ContainerVT.getScalarSizeInBits();
-    const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
-    const unsigned MinVLMAX = VectorBitsMin/EltSize;
-    MVT SmallerVT;
-    if (*MaxIdx < MinVLMAX)
-      SmallerVT = getLMUL1VT(ContainerVT);
-    else if (*MaxIdx < MinVLMAX * 2)
-      SmallerVT = getLMUL1VT(ContainerVT)
-        .getDoubleNumVectorElementsVT();
-    else if (*MaxIdx < MinVLMAX * 4)
-      SmallerVT = getLMUL1VT(ContainerVT)
-        .getDoubleNumVectorElementsVT()
-        .getDoubleNumVectorElementsVT();
-    if (SmallerVT.isValid() && ContainerVT.bitsGT(SmallerVT)) {
-      ContainerVT = SmallerVT;
+    if (auto SmallerVT =
+            getSmallestVTForIndex(ContainerVT, *MaxIdx, DL, DAG, Subtarget)) {
+      ContainerVT = *SmallerVT;
       Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
                         DAG.getConstant(0, DL, XLenVT));
     }
@@ -8751,6 +8765,16 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
+
+    // Shrink down Vec so we're performing the slidedown on a smaller LMUL.
+    unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
+    if (auto ShrunkVT =
+            getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
+      ContainerVT = *ShrunkVT;
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                        DAG.getVectorIdxConstant(0, DL));
+    }
+
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. This
