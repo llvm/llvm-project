@@ -559,7 +559,8 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true)) {
       performOmptCallback(device_initialize,
-                          /* device_num */ DeviceId,
+                          /* device_num */ DeviceId +
+                              Plugin.getDeviceIdStartIndex(),
                           /* type */ getComputeUnitKind().c_str(),
                           /* device */ DevicePtr,
                           /* lookup */ ompt::doLookup,
@@ -605,7 +606,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
-Error GenericDeviceTy::deinit() {
+Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
   if (MemoryManager)
@@ -623,7 +624,9 @@ Error GenericDeviceTy::deinit() {
   if (ompt::CallbacksInitialized) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false)) {
-      performOmptCallback(device_finalize, /* device_num */ DeviceId);
+      performOmptCallback(device_finalize,
+                          /* device_num */ DeviceId +
+                              Plugin.getDeviceIdStartIndex());
     }
   }
   ompt::removeDeviceId(reinterpret_cast<ompt_device_t *>(this));
@@ -676,7 +679,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     size_t Bytes =
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(device_load,
-                        /* device_num */ DeviceId,
+                        /* device_num */ DeviceId +
+                            Plugin.getDeviceIdStartIndex(),
                         /* FileName */ nullptr,
                         /* File Offset */ 0,
                         /* VmaInFile */ nullptr,
@@ -1429,7 +1433,7 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
     return Plugin::success();
 
   // Deinitialize the device and release its resources.
-  if (auto Err = Devices[DeviceId]->deinit())
+  if (auto Err = Devices[DeviceId]->deinit(*this))
     return Err;
 
   // Delete the device and invalidate its reference.
@@ -1939,6 +1943,11 @@ int __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr,
            ptr, size);
     return OFFLOAD_FAIL;
   }
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
+  Plugin::get().setDeviceIdStartIndex(DeviceIdOffset);
 
   return OFFLOAD_SUCCESS;
 }

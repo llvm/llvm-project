@@ -7,6 +7,8 @@
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=LLVM1 --implicit-check-not="warning:"
 # RUN: llvm-readelf %t1 --symbols --relocations 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=GNU1 --implicit-check-not="warning:"
+# RUN: llvm-readelf %t1 --symbols -X 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=GNUX1 --implicit-check-not="warning:"
 
 # LLVM1:      Relocations [
 # LLVM1-NEXT:   Section (5) .rela.foo {
@@ -61,6 +63,22 @@
 # GNU1-NEXT:      8: {{.*}} SECTION {{.*}} 66 symbol4
 # GNU1-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
 # GNU1-NEXT:      9: {{.*}} SECTION {{.*}}  3 <section 3>
+
+# GNUX1:      Symbol table '.symtab' contains 10 entries:
+# GNUX1-NEXT:    Num: {{.*}} Type    {{.*}} Ndx(SecName) Name
+# GNUX1-NEXT:      0: {{.*}} NOTYPE  {{.*}} UND {{$}}
+# GNUX1-NEXT:      1: {{.*}} SECTION {{.*}}   1 (.foo)    .foo
+# GNUX1-NEXT:      2: {{.*}} SECTION {{.*}}   1 (.foo)     symbol1
+# GNUX1-NEXT: warning: '[[FILE]]': invalid section index: 67
+# GNUX1-NEXT:      3: {{.*}} SECTION {{.*}}  67            <section 67>
+# GNUX1-NEXT:      4: {{.*}} SECTION {{.*}}  67            symbol2
+# GNUX1-NEXT:      5: {{.*}} SECTION {{.*}}   2 (.bar)     .bar
+# GNUX1-NEXT:      6: {{.*}} SECTION {{.*}}   2 (.bar)     symbol3
+# GNUX1-NEXT: warning: '[[FILE]]': invalid section index: 66
+# GNUX1-NEXT:      7: {{.*}} SECTION {{.*}}  66            <section 66>
+# GNUX1-NEXT:      8: {{.*}} SECTION {{.*}}  66            symbol4
+# GNUX1-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# GNUX1-NEXT:      9: {{.*}} SECTION {{.*}}   3            <section 3>
 
 --- !ELF
 FileHeader:

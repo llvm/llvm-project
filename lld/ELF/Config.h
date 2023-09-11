@@ -476,6 +476,12 @@ struct Ctx {
   // True if we need to reserve two .got entries for local-dynamic TLS model.
   std::atomic<bool> needsTlsLd{false};
 
+  // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
+  // order. Each DEFINED(sym) evaluation checks whether the reference happens
+  // before a possible `sym = expr;`.
+  unsigned scriptSymOrderCounter = 1;
+  llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
+
   void reset();
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);

@@ -123,6 +123,9 @@ public:
   /// Insert an unlinked instruction into a basic block immediately before
   /// the specified instruction.
   void insertBefore(Instruction *InsertPos);
+  void insertBefore(SymbolTableList<Instruction>::iterator InsertPos) {
+    insertBefore(&*InsertPos);
+  }
 
   /// Insert an unlinked instruction into a basic block immediately after the
   /// specified instruction.
@@ -132,6 +135,11 @@ public:
   /// returns the iterator of the inserted instruction.
   SymbolTableList<Instruction>::iterator
   insertInto(BasicBlock *ParentBB, SymbolTableList<Instruction>::iterator It);
+
+  void insertBefore(BasicBlock &BB,
+                    SymbolTableList<Instruction>::iterator InsertPos) {
+    insertInto(&BB, InsertPos);
+  }
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
@@ -382,6 +390,10 @@ public:
 
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
+
+  /// Fetch the debug location for this node, unless this is a debug intrinsic,
+  /// in which case fetch the debug location of the next non-debug node.
+  const DebugLoc &getStableDebugLoc() const;
 
   /// Set or clear the nuw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.

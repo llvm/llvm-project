@@ -2076,41 +2076,42 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
     --e;  // Don't process a glue operand if it is here.
 
   while (i != e) {
-    unsigned Flags = cast<ConstantSDNode>(InOps[i])->getZExtValue();
-    if (!InlineAsm::isMemKind(Flags) && !InlineAsm::isFuncKind(Flags)) {
+    InlineAsm::Flag Flags(cast<ConstantSDNode>(InOps[i])->getZExtValue());
+    if (!Flags.isMemKind() && !Flags.isFuncKind()) {
       // Just skip over this operand, copying the operands verbatim.
-      Ops.insert(Ops.end(), InOps.begin()+i,
-                 InOps.begin()+i+InlineAsm::getNumOperandRegisters(Flags) + 1);
-      i += InlineAsm::getNumOperandRegisters(Flags) + 1;
+      Ops.insert(Ops.end(), InOps.begin() + i,
+                 InOps.begin() + i + Flags.getNumOperandRegisters() + 1);
+      i += Flags.getNumOperandRegisters() + 1;
     } else {
-      assert(InlineAsm::getNumOperandRegisters(Flags) == 1 &&
+      assert(Flags.getNumOperandRegisters() == 1 &&
              "Memory operand with multiple values?");
 
       unsigned TiedToOperand;
-      if (InlineAsm::isUseOperandTiedToDef(Flags, TiedToOperand)) {
+      if (Flags.isUseOperandTiedToDef(TiedToOperand)) {
         // We need the constraint ID from the operand this is tied to.
         unsigned CurOp = InlineAsm::Op_FirstOperand;
-        Flags = cast<ConstantSDNode>(InOps[CurOp])->getZExtValue();
+        Flags =
+            InlineAsm::Flag(cast<ConstantSDNode>(InOps[CurOp])->getZExtValue());
         for (; TiedToOperand; --TiedToOperand) {
-          CurOp += InlineAsm::getNumOperandRegisters(Flags)+1;
-          Flags = cast<ConstantSDNode>(InOps[CurOp])->getZExtValue();
+          CurOp += Flags.getNumOperandRegisters() + 1;
+          Flags = InlineAsm::Flag(
+              cast<ConstantSDNode>(InOps[CurOp])->getZExtValue());
         }
       }
 
       // Otherwise, this is a memory operand.  Ask the target to select it.
       std::vector<SDValue> SelOps;
-      unsigned ConstraintID = InlineAsm::getMemoryConstraintID(Flags);
+      unsigned ConstraintID = Flags.getMemoryConstraintID();
       if (SelectInlineAsmMemoryOperand(InOps[i+1], ConstraintID, SelOps))
         report_fatal_error("Could not match memory address.  Inline asm"
                            " failure!");
 
       // Add this to the output node.
-      unsigned NewFlags =
-          InlineAsm::isMemKind(Flags)
-              ? InlineAsm::getFlagWord(InlineAsm::Kind::Mem, SelOps.size())
-              : InlineAsm::getFlagWord(InlineAsm::Kind::Func, SelOps.size());
-      NewFlags = InlineAsm::getFlagWordForMem(NewFlags, ConstraintID);
-      Ops.push_back(CurDAG->getTargetConstant(NewFlags, DL, MVT::i32));
+      Flags = InlineAsm::Flag(Flags.isMemKind() ? InlineAsm::Kind::Mem
+                                                : InlineAsm::Kind::Func,
+                              SelOps.size());
+      Flags.setMemConstraint(ConstraintID);
+      Ops.push_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
       llvm::append_range(Ops, SelOps);
       i += 2;
     }
