@@ -876,7 +876,7 @@ static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
 
   auto *FalseValI = cast<Instruction>(FalseVal);
   auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
-                                     *FalseValI);
+                                     FalseValI->getIterator());
   IC.replaceOperand(*FalseValI, FalseValI->getOperand(0) == Y ? 0 : 1, FrY);
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
@@ -3118,7 +3118,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     Value *Op1 = IsAnd ? TrueVal : FalseVal;
     if (isCheckForZeroAndMulWithOverflow(CondVal, Op1, IsAnd, Y)) {
       auto *FI = new FreezeInst(*Y, (*Y)->getName() + ".fr");
-      InsertNewInstBefore(FI, *cast<Instruction>(Y->getUser()));
+      InsertNewInstBefore(FI, cast<Instruction>(Y->getUser())->getIterator());
       replaceUse(*Y, FI);
       return replaceInstUsesWith(SI, Op1);
     }
