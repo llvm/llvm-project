@@ -305,4 +305,13 @@ program acc_loop
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
+  !$acc loop
+  DO i = 1, n
+    !$acc cache(b)
+    a(i) = b(i)
+  END DO
+
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
+! CHECK: acc.loop cache(%[[CACHE]] : !fir.ref<!fir.array<10xf32>>)
+
 end program
