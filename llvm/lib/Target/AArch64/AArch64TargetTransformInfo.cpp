@@ -269,6 +269,40 @@ bool AArch64TTIImpl::areTypesABICompatible(
   return true;
 }
 
+unsigned
+AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                     unsigned DefaultCallPenalty) const {
+  // This function calculates a penalty for executing Call in F.
+  //
+  // There are two ways this function can be called:
+  // (1)  F:
+  //       call from F -> G (the call here is Call)
+  //
+  // For (1), Call.getCaller() == F, so it will always return a high cost if
+  // a streaming-mode change is required (thus promoting the need to inline the
+  // function)
+  //
+  // (2)  F:
+  //       call from F -> G (the call here is not Call)
+  //      G:
+  //       call from G -> H (the call here is Call)
+  //
+  // For (2), if after inlining the body of G into F the call to H requires a
+  // streaming-mode change, and the call to G from F would also require a
+  // streaming-mode change, then there is benefit to do the streaming-mode
+  // change only once and avoid inlining of G into F.
+  SMEAttrs FAttrs(*F);
+  SMEAttrs CalleeAttrs(Call);
+  if (FAttrs.requiresSMChange(CalleeAttrs)) {
+    if (F == Call.getCaller())                                // (1)
+      return 5 * DefaultCallPenalty;
+    if (FAttrs.requiresSMChange(SMEAttrs(*Call.getCaller()))) // (2)
+      return 10 * DefaultCallPenalty;
+  }
+
+  return DefaultCallPenalty;
+}
+
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
