@@ -2598,9 +2598,12 @@ private:
     if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
-    // "&&(" is quite unlikely to be two successive unary "&".
-    if (Tok.is(tok::ampamp) && NextToken->is(tok::l_paren))
+    // "&&" followed by "(", "*", or "&" is quite unlikely to be two successive
+    // unary "&".
+    if (Tok.is(tok::ampamp) &&
+        NextToken->isOneOf(tok::l_paren, tok::star, tok::amp)) {
       return TT_BinaryOperator;
+    }
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
