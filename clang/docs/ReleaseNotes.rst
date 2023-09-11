@@ -215,7 +215,7 @@ Bug Fixes in This Version
 - Support MSVC predefined macro expressions in constant expressions and in
   local structs.
 - Correctly parse non-ascii identifiers that appear immediately after a line splicing
-  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
+  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_)
 - Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
   an invalid conversion during method function overload resolution.
 
@@ -272,8 +272,8 @@ Bug Fixes to C++ Support
 
 - Fix crash when the trailing return type of a generic and dependent
   lambda refers to an init-capture.
-  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
-  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_ and
+  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
