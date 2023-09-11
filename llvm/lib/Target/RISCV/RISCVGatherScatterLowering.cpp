@@ -373,14 +373,21 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
   if (!VecOperand)
     return std::make_pair(nullptr, nullptr);
 
-  // We need the number of significant bits to match the index type.  IF it
-  // doesn't, then adding the stride later may not wrap correctly.
+  // We can't extract the stride if the arithmetic is done at a different size
+  // than the pointer type. Adding the stride later may not wrap correctly.
+  // Technically we could handle wider indices, but I don't expect that in
+  // practice.  Handle one special case here - constants.  This simplifies
+  // writing test cases.
   Value *VecIndex = Ops[*VecOperand];
   Type *VecIntPtrTy = DL->getIntPtrType(GEP->getType());
-  if (VecIndex->getType()->getScalarSizeInBits() > VecIntPtrTy->getScalarSizeInBits()) {
-    unsigned MaxBits = ComputeMaxSignificantBits(VecIndex, *DL);
-    if (MaxBits > VecIntPtrTy->getScalarSizeInBits())
+  if (VecIndex->getType() != VecIntPtrTy) {
+    auto *VecIndexC = dyn_cast<Constant>(VecIndex);
+    if (!VecIndexC)
       return std::make_pair(nullptr, nullptr);
+    if (VecIndex->getType()->getScalarSizeInBits() > VecIntPtrTy->getScalarSizeInBits())
+      VecIndex = ConstantFoldCastInstruction(Instruction::Trunc, VecIndexC, VecIntPtrTy);
+    else
+      VecIndex = ConstantFoldCastInstruction(Instruction::SExt, VecIndexC, VecIntPtrTy);
   }
 
   // Handle the non-recursive case.  This is what we see if the vectorizer
@@ -398,8 +405,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
     // Convert stride to pointer size if needed.
     Type *IntPtrTy = DL->getIntPtrType(BasePtr->getType());
-    assert(IntPtrTy == VecIntPtrTy->getScalarType());
-    Stride = Builder.CreateSExtOrTrunc(Stride, IntPtrTy);
+    assert(Stride->getType() == IntPtrTy && "Unexpected type");
 
     // Scale the stride by the size of the indexed type.
     if (TypeScale != 1)
@@ -439,8 +445,7 @@ RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
 
   // Convert stride to pointer size if needed.
   Type *IntPtrTy = DL->getIntPtrType(BasePtr->getType());
-  assert(IntPtrTy == VecIntPtrTy->getScalarType());
-  Stride = Builder.CreateSExtOrTrunc(Stride, IntPtrTy);
+  assert(Stride->getType() == IntPtrTy && "Unexpected type");
 
   // Scale the stride by the size of the indexed type.
   if (TypeScale != 1)
