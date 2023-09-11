@@ -391,6 +391,10 @@ public:
   /// Return the debug location for this node as a DebugLoc.
   const DebugLoc &getDebugLoc() const { return DbgLoc; }
 
+  /// Fetch the debug location for this node, unless this is a debug intrinsic,
+  /// in which case fetch the debug location of the next non-debug node.
+  const DebugLoc &getStableDebugLoc() const;
+
   /// Set or clear the nuw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
   void setHasNoUnsignedWrap(bool b = true);
