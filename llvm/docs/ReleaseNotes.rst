@@ -166,6 +166,8 @@ Changes to the LLVM tools
 
 * llvm-symbolizer now treats invalid input as an address for which source
   information is not found.
+* llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
+  information (section name) when showing symbols.
 
 Changes to LLDB
 ---------------------------------
