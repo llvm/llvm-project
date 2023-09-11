@@ -84,7 +84,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   // We don't emit warnings on unused-using-decls from headers, so bail out if
   // the main file is a header.
-  if (const auto *MainFile = Result.SourceManager->getFileEntryForID(
+  if (auto MainFile = Result.SourceManager->getFileEntryRefForID(
           Result.SourceManager->getMainFileID());
       utils::isFileExtension(MainFile->getName(), HeaderFileExtensions))
     return;

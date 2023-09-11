@@ -67,7 +67,7 @@ private:
   bool tryCreateStridedLoadStore(IntrinsicInst *II, Type *DataType, Value *Ptr,
                                  Value *AlignOp);
 
-  std::pair<Value *, Value *> determineBaseAndStride(GetElementPtrInst *GEP,
+  std::pair<Value *, Value *> determineBaseAndStride(Instruction *Ptr,
                                                      IRBuilderBase &Builder);
 
   bool matchStridedRecurrence(Value *Index, Loop *L, Value *&Stride,
@@ -321,8 +321,18 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
 }
 
 std::pair<Value *, Value *>
-RISCVGatherScatterLowering::determineBaseAndStride(GetElementPtrInst *GEP,
+RISCVGatherScatterLowering::determineBaseAndStride(Instruction *Ptr,
                                                    IRBuilderBase &Builder) {
+
+  // A gather/scatter of a splat is a zero strided load/store.
+  if (auto *BasePtr = getSplatValue(Ptr)) {
+    Type *IntPtrTy = DL->getIntPtrType(BasePtr->getType());
+    return std::make_pair(BasePtr, ConstantInt::get(IntPtrTy, 0));
+  }
+
+  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+  if (!GEP)
+    return std::make_pair(nullptr, nullptr);
 
   auto I = StridedAddrs.find(GEP);
   if (I != StridedAddrs.end())
@@ -452,17 +462,17 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
   if (!TLI->isTypeLegal(DataTypeVT))
     return false;
 
-  // Pointer should be a GEP.
-  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP)
+  // Pointer should be an instruction.
+  auto *PtrI = dyn_cast<Instruction>(Ptr);
+  if (!PtrI)
     return false;
 
-  LLVMContext &Ctx = GEP->getContext();
+  LLVMContext &Ctx = PtrI->getContext();
   IRBuilder<InstSimplifyFolder> Builder(Ctx, *DL);
-  Builder.SetInsertPoint(GEP);
+  Builder.SetInsertPoint(PtrI);
 
   Value *BasePtr, *Stride;
-  std::tie(BasePtr, Stride) = determineBaseAndStride(GEP, Builder);
+  std::tie(BasePtr, Stride) = determineBaseAndStride(PtrI, Builder);
   if (!BasePtr)
     return false;
   assert(Stride != nullptr);
@@ -485,8 +495,8 @@ bool RISCVGatherScatterLowering::tryCreateStridedLoadStore(IntrinsicInst *II,
   II->replaceAllUsesWith(Call);
   II->eraseFromParent();
 
-  if (GEP->use_empty())
-    RecursivelyDeleteTriviallyDeadInstructions(GEP);
+  if (PtrI->use_empty())
+    RecursivelyDeleteTriviallyDeadInstructions(PtrI);
 
   return true;
 }

@@ -4053,6 +4053,8 @@ def SPIRV_KHR_CMU_MatrixA   : I32EnumAttrCase<"MatrixA", 0>;
 def SPIRV_KHR_CMU_MatrixB   : I32EnumAttrCase<"MatrixB", 1>;
 def SPIRV_KHR_CMU_MatrixAcc : I32EnumAttrCase<"MatrixAcc", 2>;
 
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
 def SPIRV_KHR_CooperativeMatrixUseAttr :
     SPIRV_I32EnumAttr<"CooperativeMatrixUseKHR",
                       "valid SPIR-V Cooperative Matrix Use (KHR)",
@@ -4064,6 +4066,8 @@ def SPIRV_KHR_CooperativeMatrixUseAttr :
 def SPIRV_KHR_CML_RowMajor    : I32EnumAttrCase<"RowMajor", 0>;
 def SPIRV_KHR_CML_ColumnMajor : I32EnumAttrCase<"ColumnMajor", 1>;
 
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
 def SPIRV_KHR_CooperativeMatrixLayoutAttr :
     SPIRV_I32EnumAttr<"CooperativeMatrixLayoutKHR",
                       "valid SPIR-V Cooperative Matrix Layout (KHR)",

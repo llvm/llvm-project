@@ -48,7 +48,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
 llvm::StringRef Header::resolvedPath() const {
   switch (kind()) {
   case include_cleaner::Header::Physical:
-    return physical()->tryGetRealPathName();
+    return physical().getFileEntry().tryGetRealPathName();
   case include_cleaner::Header::Standard:
     return standard().name().trim("<>\"");
   case include_cleaner::Header::Verbatim:
@@ -60,7 +60,7 @@ llvm::StringRef Header::resolvedPath() const {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
   switch (H.kind()) {
   case Header::Physical:
-    return OS << H.physical()->getName();
+    return OS << H.physical().getName();
   case Header::Standard:
     return OS << H.standard().name();
   case Header::Verbatim:
@@ -198,7 +198,7 @@ bool Header::operator<(const Header &RHS) const {
     return kind() < RHS.kind();
   switch (kind()) {
   case Header::Physical:
-    return physical()->getName() < RHS.physical()->getName();
+    return physical().getName() < RHS.physical().getName();
   case Header::Standard:
     return standard().name() < RHS.standard().name();
   case Header::Verbatim:

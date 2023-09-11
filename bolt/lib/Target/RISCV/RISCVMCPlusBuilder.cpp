@@ -42,6 +42,7 @@ public:
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_PCREL_HI20:
     case ELF::R_RISCV_PCREL_LO12_I:
+    case ELF::R_RISCV_PCREL_LO12_S:
       return true;
     default:
       llvm_unreachable("Unexpected RISCV relocation type in code");
@@ -352,6 +353,7 @@ public:
     case ELF::R_RISCV_PCREL_HI20:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
+    case ELF::R_RISCV_PCREL_LO12_S:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
     case ELF::R_RISCV_CALL:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL, Ctx);

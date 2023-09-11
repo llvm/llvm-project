@@ -7466,6 +7466,32 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   return convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
 }
 
+// Given a scalable vector type and an index into it, returns the type for the
+// smallest subvector that the index fits in. This can be used to reduce LMUL
+// for operations like vslidedown.
+//
+// E.g. With Zvl128b, index 3 in a nxv4i32 fits within the first nxv2i32.
+static std::optional<MVT>
+getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
+                      const RISCVSubtarget &Subtarget) {
+  assert(VecVT.isScalableVector());
+  const unsigned EltSize = VecVT.getScalarSizeInBits();
+  const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
+  const unsigned MinVLMAX = VectorBitsMin / EltSize;
+  MVT SmallerVT;
+  if (MaxIdx < MinVLMAX)
+    SmallerVT = getLMUL1VT(VecVT);
+  else if (MaxIdx < MinVLMAX * 2)
+    SmallerVT = getLMUL1VT(VecVT).getDoubleNumVectorElementsVT();
+  else if (MaxIdx < MinVLMAX * 4)
+    SmallerVT = getLMUL1VT(VecVT)
+                    .getDoubleNumVectorElementsVT()
+                    .getDoubleNumVectorElementsVT();
+  if (!SmallerVT.isValid() || !VecVT.bitsGT(SmallerVT))
+    return std::nullopt;
+  return SmallerVT;
+}
+
 // Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
 // extract the first element: (extractelt (slidedown vec, idx), 0). For integer
 // types this is done using VMV_X_S to allow us to glean information about the
@@ -7554,25 +7580,29 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   if (auto *IdxC = dyn_cast<ConstantSDNode>(Idx))
     MaxIdx = IdxC->getZExtValue();
   if (MaxIdx) {
-    const unsigned EltSize = ContainerVT.getScalarSizeInBits();
-    const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
-    const unsigned MinVLMAX = VectorBitsMin/EltSize;
-    MVT SmallerVT;
-    if (*MaxIdx < MinVLMAX)
-      SmallerVT = getLMUL1VT(ContainerVT);
-    else if (*MaxIdx < MinVLMAX * 2)
-      SmallerVT = getLMUL1VT(ContainerVT)
-        .getDoubleNumVectorElementsVT();
-    else if (*MaxIdx < MinVLMAX * 4)
-      SmallerVT = getLMUL1VT(ContainerVT)
-        .getDoubleNumVectorElementsVT()
-        .getDoubleNumVectorElementsVT();
-    if (SmallerVT.isValid() && ContainerVT.bitsGT(SmallerVT)) {
-      ContainerVT = SmallerVT;
+    if (auto SmallerVT =
+            getSmallestVTForIndex(ContainerVT, *MaxIdx, DL, DAG, Subtarget)) {
+      ContainerVT = *SmallerVT;
       Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
                         DAG.getConstant(0, DL, XLenVT));
     }
   }
+
+  // If after narrowing, the required slide is still greater than LMUL2,
+  // fallback to generic expansion and go through the stack.  This is done
+  // for a subtle reason: extracting *all* elements out of a vector is
+  // widely expected to be linear in vector size, but because vslidedown
+  // is linear in LMUL, performing N extracts using vslidedown becomes
+  // O(n^2) / (VLEN/ETYPE) work.  On the surface, going through the stack
+  // seems to have the same problem (the store is linear in LMUL), but the
+  // generic expansion *memoizes* the store, and thus for many extracts of
+  // the same vector we end up with one store and a bunch of loads.
+  // TODO: We don't have the same code for insert_vector_elt because we
+  // have BUILD_VECTOR and handle the degenerate case there.  Should we
+  // consider adding an inverse BUILD_VECTOR node?
+  MVT LMUL2VT = getLMUL1VT(ContainerVT).getDoubleNumVectorElementsVT();
+  if (ContainerVT.bitsGT(LMUL2VT) && VecVT.isFixedLengthVector())
+    return SDValue();
 
   // If the index is 0, the vector is already in the right position.
   if (!isNullConstant(Idx)) {
@@ -8735,21 +8765,32 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
     }
   }
 
+  // With an index of 0 this is a cast-like subvector, which can be performed
+  // with subregister operations.
+  if (OrigIdx == 0)
+    return Op;
+
   // If the subvector vector is a fixed-length type, we cannot use subregister
   // manipulation to simplify the codegen; we don't know which register of a
   // LMUL group contains the specific subvector as we only know the minimum
   // register size. Therefore we must slide the vector group down the full
   // amount.
   if (SubVecVT.isFixedLengthVector()) {
-    // With an index of 0 this is a cast-like subvector, which can be performed
-    // with subregister operations.
-    if (OrigIdx == 0)
-      return Op;
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VecVT);
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
+
+    // Shrink down Vec so we're performing the slidedown on a smaller LMUL.
+    unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
+    if (auto ShrunkVT =
+            getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
+      ContainerVT = *ShrunkVT;
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
+                        DAG.getVectorIdxConstant(0, DL));
+    }
+
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. This
@@ -8776,17 +8817,18 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   if (RemIdx == 0)
     return Op;
 
-  // Else we must shift our vector register directly to extract the subvector.
-  // Do this using VSLIDEDOWN.
+  // Else SubVecVT is a fractional LMUL and may need to be slid down.
+  assert(RISCVVType::decodeVLMUL(getLMUL(SubVecVT)).second);
 
   // If the vector type is an LMUL-group type, extract a subvector equal to the
-  // nearest full vector register type. This should resolve to a EXTRACT_SUBREG
-  // instruction.
+  // nearest full vector register type.
   MVT InterSubVT = VecVT;
   if (VecVT.bitsGT(getLMUL1VT(VecVT))) {
+    // If VecVT has an LMUL > 1, then SubVecVT should have a smaller LMUL, and
+    // we should have successfully decomposed the extract into a subregister.
+    assert(SubRegIdx != RISCV::NoSubRegister);
     InterSubVT = getLMUL1VT(VecVT);
-    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InterSubVT, Vec,
-                      DAG.getConstant(OrigIdx - RemIdx, DL, XLenVT));
+    Vec = DAG.getTargetExtractSubreg(SubRegIdx, DL, InterSubVT, Vec);
   }
 
   // Slide this vector register down by the desired number of elements in order
@@ -13329,27 +13371,6 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  // A special case is if the stride is exactly the width of one of the loads,
-  // in which case it's contiguous and can be combined into a regular vle
-  // without changing the element size
-  if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
-      ConstStride && !Reversed &&
-      ConstStride->getZExtValue() == BaseLdVT.getFixedSizeInBits() / 8) {
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(),
-        VT.getStoreSize(), Align);
-    // Can't do the combine if the load isn't naturally aligned with the element
-    // type
-    if (!TLI.allowsMemoryAccessForAlignment(*DAG.getContext(),
-                                            DAG.getDataLayout(), VT, *MMO))
-      return SDValue();
-
-    SDValue WideLoad = DAG.getLoad(VT, DL, BaseLd->getChain(), BasePtr, MMO);
-    for (SDValue Ld : N->ops())
-      DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), WideLoad);
-    return WideLoad;
-  }
-
   // Get the widened scalar type, e.g. v4i8 -> i64
   unsigned WideScalarBitWidth =
       BaseLdVT.getScalarSizeInBits() * BaseLdVT.getVectorNumElements();
@@ -13364,20 +13385,22 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isLegalStridedLoadStore(WideVecVT, Align))
     return SDValue();
 
-  MVT ContainerVT = TLI.getContainerForFixedLengthVector(WideVecVT);
-  SDValue VL =
-      getDefaultVLOps(WideVecVT, ContainerVT, DL, DAG, Subtarget).second;
-  SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+  SDVTList VTs = DAG.getVTList({WideVecVT, MVT::Other});
   SDValue IntID =
-      DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, Subtarget.getXLenVT());
+    DAG.getTargetConstant(Intrinsic::riscv_masked_strided_load, DL,
+                          Subtarget.getXLenVT());
   if (Reversed)
     Stride = DAG.getNegative(Stride, DL, Stride->getValueType(0));
+  SDValue AllOneMask =
+    DAG.getSplat(WideVecVT.changeVectorElementType(MVT::i1), DL,
+                 DAG.getConstant(1, DL, MVT::i1));
+
   SDValue Ops[] = {BaseLd->getChain(),
                    IntID,
-                   DAG.getUNDEF(ContainerVT),
+                   DAG.getUNDEF(WideVecVT),
                    BasePtr,
                    Stride,
-                   VL};
+                   AllOneMask};
 
   uint64_t MemSize;
   if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
@@ -13399,11 +13422,7 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   for (SDValue Ld : N->ops())
     DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), StridedLoad);
 
-  // Note: Perform the bitcast before the convertFromScalableVector so we have
-  // balanced pairs of convertFromScalable/convertToScalable
-  SDValue Res = DAG.getBitcast(
-      TLI.getContainerForFixedLengthVector(VT.getSimpleVT()), StridedLoad);
-  return convertFromScalableVector(VT, Res, DAG, Subtarget);
+  return DAG.getBitcast(VT.getSimpleVT(), StridedLoad);
 }
 
 static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
@@ -14142,6 +14161,25 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       // By default we do not combine any intrinsic.
     default:
       return SDValue();
+    case Intrinsic::riscv_masked_strided_load: {
+      MVT VT = N->getSimpleValueType(0);
+      auto *Load = cast<MemIntrinsicSDNode>(N);
+      SDValue PassThru = N->getOperand(2);
+      SDValue Base = N->getOperand(3);
+      SDValue Stride = N->getOperand(4);
+      SDValue Mask = N->getOperand(5);
+
+      // If the stride is equal to the element size in bytes,  we can use
+      // a masked.load.
+      const unsigned ElementSize = VT.getScalarStoreSize();
+      if (auto *StrideC = dyn_cast<ConstantSDNode>(Stride);
+          StrideC && StrideC->getZExtValue() == ElementSize)
+        return DAG.getMaskedLoad(VT, DL, Load->getChain(), Base,
+                                 DAG.getUNDEF(XLenVT), Mask, PassThru,
+                                 Load->getMemoryVT(), Load->getMemOperand(),
+                                 ISD::UNINDEXED, ISD::NON_EXTLOAD);
+      return SDValue();
+    }
     case Intrinsic::riscv_vcpop:
     case Intrinsic::riscv_vcpop_mask:
     case Intrinsic::riscv_vfirst:

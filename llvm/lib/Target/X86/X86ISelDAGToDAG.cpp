@@ -2256,9 +2256,10 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
   // index: sext(add_nsw(x,c)) -> index: sext(x), disp + sext(c)
   // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
-  if (Opc == ISD::SIGN_EXTEND && !VT.isVector()) {
+  if (Opc == ISD::SIGN_EXTEND && !VT.isVector() && N.hasOneUse()) {
     SDValue Src = N.getOperand(0);
-    if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap()) {
+    if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap() &&
+        Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
         auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
@@ -2268,6 +2269,35 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
           SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
           SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
           SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtSrc);
+          insertDAGNode(*CurDAG, N, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtAdd);
+          CurDAG->ReplaceAllUsesWith(N, ExtAdd);
+          CurDAG->RemoveDeadNode(N.getNode());
+          return ExtSrc;
+        }
+      }
+    }
+  }
+
+  // index: zext(add_nuw(x,c)) -> index: zext(x), disp + zext(c)
+  // index: zext(addlike(x,c)) -> index: zext(x), disp + zext(c)
+  // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
+  if (Opc == ISD::ZERO_EXTEND && !VT.isVector() && N.hasOneUse()) {
+    SDValue Src = N.getOperand(0);
+    unsigned SrcOpc = Src.getOpcode();
+    if (((SrcOpc == ISD::ADD && Src->getFlags().hasNoUnsignedWrap()) ||
+         CurDAG->isADDLike(Src)) &&
+        Src.hasOneUse()) {
+      if (CurDAG->isBaseWithConstantOffset(Src)) {
+        SDValue AddSrc = Src.getOperand(0);
+        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
+        uint64_t Offset = (uint64_t)AddVal->getZExtValue();
+        if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
+          SDLoc DL(N);
+          SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
+          SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
+          SDValue ExtAdd = CurDAG->getNode(SrcOpc, DL, VT, ExtSrc, ExtVal);
           insertDAGNode(*CurDAG, N, ExtSrc);
           insertDAGNode(*CurDAG, N, ExtVal);
           insertDAGNode(*CurDAG, N, ExtAdd);

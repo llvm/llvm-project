@@ -25660,6 +25660,7 @@ The '``llvm.reset.fpenv``' intrinsic sets the current floating-point environment
 to default state. It is similar to the call 'fesetenv(FE_DFL_ENV)', except it
 does not return any value.
 
+.. _int_get_fpmode:
 
 '``llvm.get.fpmode``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
