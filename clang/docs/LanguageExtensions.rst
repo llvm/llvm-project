@@ -1582,6 +1582,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_integral`` (C++, Embarcadero)
 * ``__is_interface_class`` (Microsoft):
   Returns ``false``, even for types defined with ``__interface``.
+* ``__is_invocable_r`` (Clang)
 * ``__is_literal`` (Clang):
   Synonym for ``__is_literal_type``.
 * ``__is_literal_type`` (C++, GNU, Microsoft):
@@ -1594,6 +1595,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_nothrow_assignable`` (C++, MSVC 2013)
 * ``__is_nothrow_constructible`` (C++, MSVC 2013)
 * ``__is_nothrow_destructible`` (C++, MSVC 2013)
+* ``__is_nothrow_invocable_r`` (Clang)
 * ``__is_nullptr`` (C++, GNU, Microsoft, Embarcadero):
   Returns true for ``std::nullptr_t`` and false for everything else. The
   corresponding standard library feature is ``std::is_null_pointer``, but

@@ -357,8 +357,8 @@ struct __invokable_r {
   using _Result = decltype(__try_call<_Fp, _Args...>(0));
 
   using type              = __conditional_t<_IsNotSame<_Result, __nat>::value,
-                               __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
-                               false_type>;
+                                            __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
+                                            false_type>;
   static const bool value = type::value;
 };
 template <class _Fp, class... _Args>
@@ -424,6 +424,22 @@ struct __invoke_void_return_wrapper<_Ret, true> {
 
 // is_invocable
 
+#  if __has_builtin(__is_invocable_r)
+
+template <class _Fn, class... _Args>
+struct _LIBCPP_TEMPLATE_VIS is_invocable : bool_constant<__is_invocable_r(void, _Fn, _Args...)> {};
+
+template <class _Ret, class _Fn, class... _Args>
+struct _LIBCPP_TEMPLATE_VIS is_invocable_r : bool_constant<__is_invocable_r(_Ret, _Fn, _Args...)> {};
+
+template <class _Fn, class... _Args>
+inline constexpr bool is_invocable_v = __is_invocable_r(void, _Fn, _Args...);
+
+template <class _Ret, class _Fn, class... _Args>
+inline constexpr bool is_invocable_r_v = __is_invocable_r(_Ret, _Fn, _Args...);
+
+#  else
+
 template <class _Fn, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_invocable : integral_constant<bool, __invokable<_Fn, _Args...>::value> {};
 
@@ -436,7 +452,25 @@ inline constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
 template <class _Ret, class _Fn, class... _Args>
 inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
 
+#  endif // __has_builtin(__is_invocable_r)
+
 // is_nothrow_invocable
+
+#  if __has_builtin(__is_nothrow_invocable_r)
+
+template <class _Fn, class... _Args>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable : bool_constant<__is_nothrow_invocable_r(void, _Fn, _Args...)> {};
+
+template <class _Ret, class _Fn, class... _Args>
+struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r : bool_constant<__is_nothrow_invocable_r(_Ret, _Fn, _Args...)> {};
+
+template <class _Fn, class... _Args>
+inline constexpr bool is_nothrow_invocable_v = __is_nothrow_invocable_r(void, _Fn, _Args...);
+
+template <class _Ret, class _Fn, class... _Args>
+inline constexpr bool is_nothrow_invocable_r_v = __is_nothrow_invocable_r(_Ret, _Fn, _Args...);
+
+#  else
 
 template <class _Fn, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable : integral_constant<bool, __nothrow_invokable<_Fn, _Args...>::value> {
@@ -451,6 +485,8 @@ inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args..
 
 template <class _Ret, class _Fn, class... _Args>
 inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
+
+#  endif // __has_builtin(__is_nothrow_invocable_r)
 
 template <class _Fn, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS invoke_result : __invoke_of<_Fn, _Args...> {};

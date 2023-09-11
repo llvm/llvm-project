@@ -78,6 +78,10 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
+- The builtins `__is_invocable_r` and `__is_nothrow_invocable_r` have been added.
+  These are equivalent to the standard library builtins `std::is_invocable_r`
+  and `std::is_nothrow_invocable_r`.
+
 C++ Language Changes
 --------------------
 

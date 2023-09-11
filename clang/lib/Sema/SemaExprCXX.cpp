@@ -5468,6 +5468,271 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
                                     QualType RhsT, SourceLocation KeyLoc);
 
+static bool IsBaseOf(Sema &Self, QualType LhsT, QualType RhsT,
+                     SourceLocation KeyLoc) {
+  // C++0x [meta.rel]p2
+  // Base is a base class of Derived without regard to cv-qualifiers or
+  // Base and Derived are not unions and name the same class type without
+  // regard to cv-qualifiers.
+
+  const RecordType *lhsRecord = LhsT->getAs<RecordType>();
+  const RecordType *rhsRecord = RhsT->getAs<RecordType>();
+  if (!rhsRecord || !lhsRecord) {
+    const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
+    const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
+    if (!LHSObjTy || !RHSObjTy)
+      return false;
+
+    ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
+    ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
+    if (!BaseInterface || !DerivedInterface)
+      return false;
+
+    if (Self.RequireCompleteType(
+            KeyLoc, RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
+      return false;
+
+    return BaseInterface->isSuperClassOf(DerivedInterface);
+  }
+
+  assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT) ==
+         (lhsRecord == rhsRecord));
+
+  // Unions are never base classes, and never have base classes.
+  // It doesn't matter if they are complete or not. See PR#41843
+  if (lhsRecord && lhsRecord->getDecl()->isUnion())
+    return false;
+  if (rhsRecord && rhsRecord->getDecl()->isUnion())
+    return false;
+
+  if (lhsRecord == rhsRecord)
+    return true;
+
+  // C++0x [meta.rel]p2:
+  //   If Base and Derived are class types and are different types
+  //   (ignoring possible cv-qualifiers) then Derived shall be a
+  //   complete type.
+  if (Self.RequireCompleteType(
+          KeyLoc, RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
+    return false;
+
+  return cast<CXXRecordDecl>(rhsRecord->getDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+}
+
+static bool IsConvertible(Sema& Self, QualType LhsT, QualType RhsT, SourceLocation KeyLoc, bool CheckNothrow) {
+  // C++0x [meta.rel]p4:
+  //   Given the following function prototype:
+  //
+  //     template <class T>
+  //       typename add_rvalue_reference<T>::type create();
+  //
+  //   the predicate condition for a template specialization
+  //   is_convertible<From, To> shall be satisfied if and only if
+  //   the return expression in the following code would be
+  //   well-formed, including any implicit conversions to the return
+  //   type of the function:
+  //
+  //     To test() {
+  //       return create<From>();
+  //     }
+  //
+  //   Access checking is performed as if in a context unrelated to To and
+  //   From. Only the validity of the immediate context of the expression
+  //   of the return-statement (including conversions to the return type)
+  //   is considered.
+  //
+  // We model the initialization as a copy-initialization of a temporary
+  // of the appropriate type, which for this expression is identical to the
+  // return statement (since NRVO doesn't apply).
+
+  // Functions aren't allowed to return function or array types.
+  if (RhsT->isFunctionType() || RhsT->isArrayType())
+    return false;
+
+  // A return statement in a void function must have void type.
+  if (RhsT->isVoidType())
+    return LhsT->isVoidType();
+
+  // A function definition requires a complete, non-abstract return type.
+  if (!Self.isCompleteType(KeyLoc, RhsT) || Self.isAbstractType(KeyLoc, RhsT))
+    return false;
+
+  // Compute the result of add_rvalue_reference.
+  if (LhsT->isObjectType() || LhsT->isFunctionType())
+    LhsT = Self.Context.getRValueReferenceType(LhsT);
+
+  // Build a fake source and destination for initialization.
+  InitializedEntity To(InitializedEntity::InitializeTemporary(RhsT));
+  OpaqueValueExpr From(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
+                       Expr::getValueKindForType(LhsT));
+  Expr *FromPtr = &From;
+  InitializationKind Kind(
+      InitializationKind::CreateCopy(KeyLoc, SourceLocation()));
+
+  // Perform the initialization in an unevaluated context within a SFINAE
+  // trap at translation unit scope.
+  EnterExpressionEvaluationContext Unevaluated(
+      Self, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::SFINAETrap SFINAE(Self, /*AccessCheckingSFINAE=*/true);
+  Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
+  InitializationSequence Init(Self, To, Kind, FromPtr);
+  if (Init.Failed())
+    return false;
+
+  ExprResult Result = Init.Perform(Self, To, Kind, FromPtr);
+  if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+    return false;
+
+  if (!CheckNothrow)
+    return true;
+  return Self.canThrow(Result.get()) == CT_Cannot;
+}
+
+static bool RequireAllCompleteTypes(Sema &S, ArrayRef<TypeSourceInfo *> Args,
+                                    SourceLocation KWLoc) {
+  for (const auto *TSI : Args) {
+    QualType ArgTy = TSI->getType();
+    if (ArgTy->isVoidType() || ArgTy->isIncompleteArrayType())
+      continue;
+
+    if (S.RequireCompleteType(
+            KWLoc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr))
+      return true;
+  }
+  return false;
+}
+
+static bool IsInvocable(Sema &S, SourceLocation KWLoc,
+                        ArrayRef<TypeSourceInfo *> Args,
+                        SourceLocation RParenLoc, bool CheckNothrow) {
+  assert(!Args.empty());
+
+  if (Args.size() == 1) {
+    S.Diag(RParenLoc, diag::err_type_trait_arity)
+        << 2 << 1 << 1 << Args.size() << 1;
+    return false;
+  }
+
+  if (RequireAllCompleteTypes(S, Args, KWLoc))
+    return false;
+
+  auto ReturnType = Args[0]->getType();
+  auto FunctorType = Args[1]->getType();
+  auto NonRefFunctorType = FunctorType.getNonReferenceType();
+
+  const auto IsConvertibleToReturnType = [&](QualType InvokeResult) {
+    return ReturnType->isVoidType() ||
+           IsConvertible(S, InvokeResult, ReturnType, RParenLoc, CheckNothrow);
+  };
+
+  const auto BuildCallHelper = [&](size_t IgnoreCount, auto CallChecker) {
+    EnterExpressionEvaluationContext Unevaluated(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(S, true);
+
+    const auto ArgCount = Args.size() - IgnoreCount;
+
+    auto Deleter = [&](OpaqueValueExpr *Expr) {
+      for (size_t i = 0; i != ArgCount; ++i)
+        std::destroy_at(Expr + i);
+      std::allocator<OpaqueValueExpr>{}.deallocate(Expr, ArgCount);
+    };
+
+    // FIXME: There is most likely a much better way to achieve this
+    std::unique_ptr<OpaqueValueExpr[], decltype(Deleter) &> ArgExprs(
+        std::allocator<OpaqueValueExpr>{}.allocate(ArgCount), Deleter);
+    std::unique_ptr<Expr *[]> ArgExprPtrs =
+        std::make_unique<Expr *[]>(ArgCount);
+
+    for (auto [I, Arg] : llvm::enumerate(Args.drop_front(IgnoreCount))) {
+      ::new (ArgExprs.get() + I)
+          OpaqueValueExpr(KWLoc, Arg->getType().getNonReferenceType(),
+                          Expr::getValueKindForType(Arg->getType()));
+      ArgExprPtrs[I] = ArgExprs.get() + I;
+    }
+    return CallChecker(MutableArrayRef<Expr *>(ArgExprPtrs.get(), ArgCount));
+  };
+
+  // bullets 1-6
+  if (NonRefFunctorType->isMemberPointerType()) {
+    if (Args.size() < 3)
+      return false;
+
+    auto *MemberPointerT = NonRefFunctorType->getAs<MemberPointerType>();
+
+    auto Object = Args[2]->getType().getNonReferenceType();
+
+    // bullets 3, 6 - ignore pointers
+    if (Object->isPointerType())
+      Object = Object->getPointeeType();
+    // bullets 2, 5 - ignore reference_wrapper
+    else if (auto* RD = Object->getAsCXXRecordDecl()) {
+      if (auto *TS = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+        if (TS->isInStdNamespace() && TS->getName() == "reference_wrapper")
+          Object = TS->getTemplateArgs().get(0).getAsType();
+      }
+    }
+    // Bullets 2 and 3 are now equivalent to 1 and
+    // bullets 5 and 6 are equivalent to 4.
+
+    if (!IsBaseOf(S, MemberPointerT->getClass()->getCanonicalTypeUnqualified(),
+                  Object, RParenLoc))
+      return false;
+
+    // bullets 4-6
+    if (NonRefFunctorType->isMemberDataPointerType()) {
+      if (!IsConvertibleToReturnType(MemberPointerT->getPointeeType()))
+        return false;
+      return Args.size() == 3;
+    }
+
+    // bullets 1-3
+    return BuildCallHelper(3, [&](auto ArgExprPtrs) {
+      OpaqueValueExpr MemberPtr(KWLoc, NonRefFunctorType,
+                                Expr::getValueKindForType(FunctorType));
+      OpaqueValueExpr Obj(KWLoc, Object, Expr::getValueKindForType(Object));
+      auto *BinOp = BinaryOperator::Create(
+          S.getASTContext(), &Obj, &MemberPtr,
+          BinaryOperator::Opcode::BO_PtrMemD, S.getASTContext().BoundMemberTy,
+          clang::VK_PRValue, OK_Ordinary, KWLoc, {});
+
+      ParenExpr Parens(KWLoc, RParenLoc, BinOp);
+
+      auto Result = S.BuildCallToMemberFunction(nullptr, &Parens, KWLoc,
+                                                ArgExprPtrs, RParenLoc);
+      if (Result.isInvalid())
+        return false;
+
+      if (CheckNothrow && S.canThrow(Result.get()) != CT_Cannot)
+        return false;
+
+      return IsConvertibleToReturnType(Result.get()->getType());
+    });
+  }
+
+  // bullet 7
+
+  if (const auto *FT = NonRefFunctorType->getAs<FunctionProtoType>();
+      FT && (!FT->getMethodQuals().empty() || FT->getRefQualifier() != RQ_None))
+    return false;
+
+  return BuildCallHelper(2, [&](auto ArgExprPtrs) {
+    OpaqueValueExpr Obj(KWLoc, NonRefFunctorType,
+                        Expr::getValueKindForType(FunctorType));
+
+    auto Result = S.BuildCallExpr(nullptr, &Obj, KWLoc, ArgExprPtrs, RParenLoc);
+
+    if (Result.isInvalid())
+      return false;
+
+    if (CheckNothrow && S.canThrow(Result.get()) != CT_Cannot)
+      return false;
+
+    return IsConvertibleToReturnType(Result.get()->getType());
+  });
+}
+
 static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
                                      SourceLocation KWLoc,
                                      ArrayRef<TypeSourceInfo *> Args,
@@ -5600,7 +5865,12 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     llvm_unreachable("unhandled type trait");
     return false;
   }
-    default: llvm_unreachable("not a TT");
+  case clang::TT_IsInvocableR:
+  case clang::TT_IsNothrowInvocableR:
+    return IsInvocable(S, KWLoc, Args, RParenLoc,
+                       Kind == TT_IsNothrowInvocableR);
+
+  default: llvm_unreachable("not a TT");
   }
 
   return false;
@@ -5719,56 +5989,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
          "Cannot evaluate traits of dependent types");
 
   switch(BTT) {
-  case BTT_IsBaseOf: {
-    // C++0x [meta.rel]p2
-    // Base is a base class of Derived without regard to cv-qualifiers or
-    // Base and Derived are not unions and name the same class type without
-    // regard to cv-qualifiers.
+  case BTT_IsBaseOf:
+    return IsBaseOf(Self, LhsT, RhsT, KeyLoc);
 
-    const RecordType *lhsRecord = LhsT->getAs<RecordType>();
-    const RecordType *rhsRecord = RhsT->getAs<RecordType>();
-    if (!rhsRecord || !lhsRecord) {
-      const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
-      const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
-      if (!LHSObjTy || !RHSObjTy)
-        return false;
-
-      ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
-      ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
-      if (!BaseInterface || !DerivedInterface)
-        return false;
-
-      if (Self.RequireCompleteType(
-              KeyLoc, RhsT, diag::err_incomplete_type_used_in_type_trait_expr))
-        return false;
-
-      return BaseInterface->isSuperClassOf(DerivedInterface);
-    }
-
-    assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT)
-             == (lhsRecord == rhsRecord));
-
-    // Unions are never base classes, and never have base classes.
-    // It doesn't matter if they are complete or not. See PR#41843
-    if (lhsRecord && lhsRecord->getDecl()->isUnion())
-      return false;
-    if (rhsRecord && rhsRecord->getDecl()->isUnion())
-      return false;
-
-    if (lhsRecord == rhsRecord)
-      return true;
-
-    // C++0x [meta.rel]p2:
-    //   If Base and Derived are class types and are different types
-    //   (ignoring possible cv-qualifiers) then Derived shall be a
-    //   complete type.
-    if (Self.RequireCompleteType(KeyLoc, RhsT,
-                          diag::err_incomplete_type_used_in_type_trait_expr))
-      return false;
-
-    return cast<CXXRecordDecl>(rhsRecord->getDecl())
-      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
-  }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);
   case BTT_TypeCompatible: {
@@ -5780,75 +6003,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, QualType LhsT,
   }
   case BTT_IsConvertible:
   case BTT_IsConvertibleTo:
-  case BTT_IsNothrowConvertible: {
-    // C++0x [meta.rel]p4:
-    //   Given the following function prototype:
-    //
-    //     template <class T>
-    //       typename add_rvalue_reference<T>::type create();
-    //
-    //   the predicate condition for a template specialization
-    //   is_convertible<From, To> shall be satisfied if and only if
-    //   the return expression in the following code would be
-    //   well-formed, including any implicit conversions to the return
-    //   type of the function:
-    //
-    //     To test() {
-    //       return create<From>();
-    //     }
-    //
-    //   Access checking is performed as if in a context unrelated to To and
-    //   From. Only the validity of the immediate context of the expression
-    //   of the return-statement (including conversions to the return type)
-    //   is considered.
-    //
-    // We model the initialization as a copy-initialization of a temporary
-    // of the appropriate type, which for this expression is identical to the
-    // return statement (since NRVO doesn't apply).
-
-    // Functions aren't allowed to return function or array types.
-    if (RhsT->isFunctionType() || RhsT->isArrayType())
-      return false;
-
-    // A return statement in a void function must have void type.
-    if (RhsT->isVoidType())
-      return LhsT->isVoidType();
-
-    // A function definition requires a complete, non-abstract return type.
-    if (!Self.isCompleteType(KeyLoc, RhsT) || Self.isAbstractType(KeyLoc, RhsT))
-      return false;
-
-    // Compute the result of add_rvalue_reference.
-    if (LhsT->isObjectType() || LhsT->isFunctionType())
-      LhsT = Self.Context.getRValueReferenceType(LhsT);
-
-    // Build a fake source and destination for initialization.
-    InitializedEntity To(InitializedEntity::InitializeTemporary(RhsT));
-    OpaqueValueExpr From(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
-                         Expr::getValueKindForType(LhsT));
-    Expr *FromPtr = &From;
-    InitializationKind Kind(InitializationKind::CreateCopy(KeyLoc,
-                                                           SourceLocation()));
-
-    // Perform the initialization in an unevaluated context within a SFINAE
-    // trap at translation unit scope.
-    EnterExpressionEvaluationContext Unevaluated(
-        Self, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(Self, /*AccessCheckingSFINAE=*/true);
-    Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
-    InitializationSequence Init(Self, To, Kind, FromPtr);
-    if (Init.Failed())
-      return false;
-
-    ExprResult Result = Init.Perform(Self, To, Kind, FromPtr);
-    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
-      return false;
-
-    if (BTT != BTT_IsNothrowConvertible)
-      return true;
-
-    return Self.canThrow(Result.get()) == CT_Cannot;
-  }
+  case BTT_IsNothrowConvertible:
+    return IsConvertible(Self, LhsT, RhsT, KeyLoc,
+                         BTT == BTT_IsNothrowConvertible);
 
   case BTT_IsAssignable:
   case BTT_IsNothrowAssignable:
