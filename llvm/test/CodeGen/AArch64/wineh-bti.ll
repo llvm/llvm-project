@@ -47,11 +47,11 @@ lbl4:
 
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #2
+; CHECK-NEXT: mov w0, #4
 
 ; CHECK:      .LBB0_4:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #4
+; CHECK-NEXT: mov w0, #2
 
 ; CHECK:      .LBB0_5:
 ; CHECK-NEXT: hint #36

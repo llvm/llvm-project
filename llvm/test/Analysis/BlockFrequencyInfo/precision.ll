@@ -5,10 +5,10 @@
 
 ; CHECK-LABEL: block-frequency-info: func0
 ; CHECK: - entry: float = 1.0, {{.*}}, count = 1000
-; CHECK: - cmp0_true: float = 0.4, {{.*}}, count = 388
+; CHECK: - cmp0_true: float = 0.4, {{.*}}, count = 400
 ; CHECK: - cmp0_false: float = 0.6, {{.*}}, count = 600
-; CHECK: - cmp1_true: float = 0.1, {{.*}}, count = 88
-; CHECK: - cmp1_false: float = 0.3, {{.*}}, count = 288
+; CHECK: - cmp1_true: float = 0.1, {{.*}}, count = 100
+; CHECK: - cmp1_false: float = 0.3, {{.*}}, count = 300
 ; CHECK: - join: float = 1.0, {{.*}}, count = 1000
 
 define void @func0(i32 %a0, i32 %a1) !prof !0 {

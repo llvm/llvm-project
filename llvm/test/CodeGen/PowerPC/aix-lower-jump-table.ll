@@ -66,9 +66,9 @@ sw.epilog:
 ; 32SMALL-ASM: 	    .align  2
 ; 32SMALL-ASM: L..JTI0_0:
 ; 32SMALL-ASM: 	    .vbyte	4, L..BB0_2-L..JTI0_0
+; 32SMALL-ASM: 	    .vbyte	4, L..BB0_6-L..JTI0_0
 ; 32SMALL-ASM: 	    .vbyte	4, L..BB0_4-L..JTI0_0
 ; 32SMALL-ASM: 	    .vbyte	4, L..BB0_5-L..JTI0_0
-; 32SMALL-ASM: 	    .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; 32LARGE-ASM-LABEL: jump_table
 ; 32LARGE-ASM: .jump_table:
@@ -93,9 +93,9 @@ sw.epilog:
 ; 32LARGE-ASM:      .align  2
 ; 32LARGE-ASM: L..JTI0_0:
 ; 32LARGE-ASM:      .vbyte	4, L..BB0_2-L..JTI0_0
+; 32LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 ; 32LARGE-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 32LARGE-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
-; 32LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; 64SMALL-ASM-LABEL: jump_table
 ; 64SMALL-ASM: .jump_table:
@@ -119,9 +119,9 @@ sw.epilog:
 ; 64SMALL-ASM:      .align  2
 ; 64SMALL-ASM: L..JTI0_0:
 ; 64SMALL-ASM:      .vbyte	4, L..BB0_2-L..JTI0_0
+; 64SMALL-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 ; 64SMALL-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 64SMALL-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
-; 64SMALL-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; 64LARGE-ASM-LABEL: jump_table
 ; 64LARGE-ASM: .jump_table:
@@ -146,9 +146,9 @@ sw.epilog:
 ; 64LARGE-ASM:      .align  2
 ; 64LARGE-ASM: L..JTI0_0:
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_2-L..JTI0_0
+; 64LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
-; 64LARGE-ASM:      .vbyte	4, L..BB0_6-L..JTI0_0
 
 ; FUNC-ASM:         .csect .jump_table[PR],5
 ; FUNC-ASM: L..BB0_2:
@@ -162,9 +162,9 @@ sw.epilog:
 ; FUNC-ASM:         .align  2
 ; FUNC-ASM: L..JTI0_0:
 ; FUNC-ASM:         .vbyte  4, L..BB0_2-L..JTI0_0
+; FUNC-ASM:         .vbyte  4, L..BB0_6-L..JTI0_0
 ; FUNC-ASM:         .vbyte  4, L..BB0_4-L..JTI0_0
 ; FUNC-ASM:         .vbyte  4, L..BB0_5-L..JTI0_0
-; FUNC-ASM:         .vbyte  4, L..BB0_6-L..JTI0_0
 
 ; SMALL-ASM: .toc
 ; SMALL-ASM: .tc L..JTI0_0[TC],L..JTI0_0

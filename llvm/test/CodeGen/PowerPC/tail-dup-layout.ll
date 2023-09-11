@@ -372,19 +372,17 @@ exit:
 ; CHECK: # %bb.{{[0-9]+}}: # %entry
 ; CHECK: andi.
 ; CHECK: # %bb.{{[0-9]+}}: # %test2
-; Make sure then2 falls through from test2
+; Make sure else2 falls through from test2
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
-; CHECK: # %bb.{{[0-9]+}}: # %then2
-; CHECK: andi. {{[0-9]+}}, {{[0-9]+}}, 4
+; CHECK: # %bb.{{[0-9]+}}: # %else2
+; CHECK: bl c
 ; CHECK: # %else1
 ; CHECK: bl a
 ; CHECK: bl a
-; Make sure then2 was copied into else1
+; CHECK: # %then2
 ; CHECK: andi. {{[0-9]+}}, {{[0-9]+}}, 4
 ; CHECK: # %end1
 ; CHECK: bl d
-; CHECK: # %else2
-; CHECK: bl c
 ; CHECK: # %end2
 define void @avoidable_test(i32 %tag) {
 entry:

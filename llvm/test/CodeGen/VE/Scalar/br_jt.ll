@@ -21,13 +21,13 @@ define signext i32 @br_jt3(i32 signext %0) {
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    or %s0, 3, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    or %s0, 7, (0)1
 ; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    or %s0, 3, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -43,13 +43,13 @@ define signext i32 @br_jt3(i32 signext %0) {
 ; PIC-NEXT:    or %s0, 0, (0)1
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    b.l.t (, %s10)
-; PIC-NEXT:  .LBB0_1:
-; PIC-NEXT:    or %s0, 3, (0)1
-; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
-; PIC-NEXT:    b.l.t (, %s10)
 ; PIC-NEXT:  .LBB0_5:
 ; PIC-NEXT:    or %s0, 7, (0)1
 ; PIC-NEXT:  .LBB0_6:
+; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
+; PIC-NEXT:    b.l.t (, %s10)
+; PIC-NEXT:  .LBB0_1:
+; PIC-NEXT:    or %s0, 3, (0)1
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    b.l.t (, %s10)
   switch i32 %0, label %4 [
@@ -308,14 +308,14 @@ define signext i32 @br_jt3_m(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB4_1:
-; CHECK-NEXT:    or %s0, 3, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB4_5:
 ; CHECK-NEXT:    and %s0, %s1, (32)0
 ; CHECK-NEXT:    adds.w.sx %s0, 3, %s0
 ; CHECK-NEXT:  .LBB4_6:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB4_1:
+; CHECK-NEXT:    or %s0, 3, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -331,14 +331,14 @@ define signext i32 @br_jt3_m(i32 signext %0, i32 signext %1) {
 ; PIC-NEXT:    or %s0, 0, (0)1
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    b.l.t (, %s10)
-; PIC-NEXT:  .LBB4_1:
-; PIC-NEXT:    or %s0, 3, (0)1
-; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
-; PIC-NEXT:    b.l.t (, %s10)
 ; PIC-NEXT:  .LBB4_5:
 ; PIC-NEXT:    and %s0, %s1, (32)0
 ; PIC-NEXT:    adds.w.sx %s0, 3, %s0
 ; PIC-NEXT:  .LBB4_6:
+; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
+; PIC-NEXT:    b.l.t (, %s10)
+; PIC-NEXT:  .LBB4_1:
+; PIC-NEXT:    or %s0, 3, (0)1
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    b.l.t (, %s10)
   switch i32 %0, label %6 [
@@ -471,14 +471,6 @@ define signext i32 @br_jt7_m(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB6_3:
-; CHECK-NEXT:    or %s0, 4, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    adds.w.sx %s0, 3, %s1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB6_8:
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:  .LBB6_9:
@@ -490,6 +482,14 @@ define signext i32 @br_jt7_m(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB6_6:
 ; CHECK-NEXT:    or %s0, 10, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB6_3:
+; CHECK-NEXT:    or %s0, 4, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB6_4:
+; CHECK-NEXT:    adds.w.sx %s0, 3, %s1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB6_5:
@@ -530,12 +530,12 @@ define signext i32 @br_jt7_m(i32 signext %0, i32 signext %1) {
 ; PIC-NEXT:    or %s0, 10, (0)1
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    b.l.t (, %s10)
-; PIC-NEXT:  .LBB6_14:
-; PIC-NEXT:    adds.w.sx %s0, 3, %s1
-; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
-; PIC-NEXT:    b.l.t (, %s10)
 ; PIC-NEXT:  .LBB6_2:
 ; PIC-NEXT:    or %s0, 3, (0)1
+; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
+; PIC-NEXT:    b.l.t (, %s10)
+; PIC-NEXT:  .LBB6_14:
+; PIC-NEXT:    adds.w.sx %s0, 3, %s1
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    b.l.t (, %s10)
 ; PIC-NEXT:  .LBB6_15:
@@ -607,21 +607,9 @@ define signext i32 @br_jt8_m(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB7_3:
-; CHECK-NEXT:    or %s0, 4, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB7_4:
-; CHECK-NEXT:    adds.w.sx %s0, 3, %s1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB7_9:
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:  .LBB7_10:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    b.l.t (, %s10)
-; CHECK-NEXT:  .LBB7_5:
-; CHECK-NEXT:    adds.w.sx %s0, -5, %s1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB7_6:
@@ -634,6 +622,18 @@ define signext i32 @br_jt8_m(i32 signext %0, i32 signext %1) {
 ; CHECK-NEXT:    b.l.t (, %s10)
 ; CHECK-NEXT:  .LBB7_7:
 ; CHECK-NEXT:    or %s0, 10, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB7_3:
+; CHECK-NEXT:    or %s0, 4, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB7_4:
+; CHECK-NEXT:    adds.w.sx %s0, 3, %s1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    b.l.t (, %s10)
+; CHECK-NEXT:  .LBB7_5:
+; CHECK-NEXT:    adds.w.sx %s0, -5, %s1
 ; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
 ;
@@ -666,17 +666,8 @@ define signext i32 @br_jt8_m(i32 signext %0, i32 signext %1) {
 ; PIC-NEXT:  .LBB7_2:
 ; PIC-NEXT:    or %s0, 0, (0)1
 ; PIC-NEXT:    br.l.t .LBB7_10
-; PIC-NEXT:  .LBB7_3:
-; PIC-NEXT:    or %s0, 4, (0)1
-; PIC-NEXT:    br.l.t .LBB7_10
-; PIC-NEXT:  .LBB7_4:
-; PIC-NEXT:    adds.w.sx %s0, 3, %s1
-; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_9:
 ; PIC-NEXT:    or %s0, 0, %s2
-; PIC-NEXT:    br.l.t .LBB7_10
-; PIC-NEXT:  .LBB7_5:
-; PIC-NEXT:    adds.w.sx %s0, -5, %s1
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_6:
 ; PIC-NEXT:    adds.w.sx %s0, -2, %s1
@@ -686,6 +677,15 @@ define signext i32 @br_jt8_m(i32 signext %0, i32 signext %1) {
 ; PIC-NEXT:    br.l.t .LBB7_10
 ; PIC-NEXT:  .LBB7_7:
 ; PIC-NEXT:    or %s0, 10, (0)1
+; PIC-NEXT:    br.l.t .LBB7_10
+; PIC-NEXT:  .LBB7_3:
+; PIC-NEXT:    or %s0, 4, (0)1
+; PIC-NEXT:    br.l.t .LBB7_10
+; PIC-NEXT:  .LBB7_4:
+; PIC-NEXT:    adds.w.sx %s0, 3, %s1
+; PIC-NEXT:    br.l.t .LBB7_10
+; PIC-NEXT:  .LBB7_5:
+; PIC-NEXT:    adds.w.sx %s0, -5, %s1
 ; PIC-NEXT:  .LBB7_10:
 ; PIC-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; PIC-NEXT:    ld %s16, 32(, %s11)
