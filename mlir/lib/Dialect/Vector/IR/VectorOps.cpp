@@ -172,24 +172,21 @@ bool mlir::vector::isDisjointTransferIndices(
     return false;
   unsigned rankOffset = transferA.getLeadingShapedRank();
   for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    auto indexA = transferA.indices()[i].getDefiningOp<arith::ConstantOp>();
-    auto indexB = transferB.indices()[i].getDefiningOp<arith::ConstantOp>();
+    auto indexA = getConstantIntValue(transferA.indices()[i]);
+    auto indexB = getConstantIntValue(transferB.indices()[i]);
     // If any of the indices are dynamic we cannot prove anything.
-    if (!indexA || !indexB)
+    if (!indexA.has_value() || !indexB.has_value())
       continue;
 
     if (i < rankOffset) {
       // For leading dimensions, if we can prove that index are different we
       // know we are accessing disjoint slices.
-      if (llvm::cast<IntegerAttr>(indexA.getValue()).getInt() !=
-          llvm::cast<IntegerAttr>(indexB.getValue()).getInt())
+      if (*indexA != *indexB)
         return true;
     } else {
       // For this dimension, we slice a part of the memref we need to make sure
       // the intervals accessed don't overlap.
-      int64_t distance =
-          std::abs(llvm::cast<IntegerAttr>(indexA.getValue()).getInt() -
-                   llvm::cast<IntegerAttr>(indexB.getValue()).getInt());
+      int64_t distance = std::abs(*indexA - *indexB);
       if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
         return true;
     }
