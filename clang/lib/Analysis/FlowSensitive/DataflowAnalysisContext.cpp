@@ -104,6 +104,13 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
   return *Res.first->second;
 }
 
+void DataflowAnalysisContext::addGlobalConstraint(const Formula &Constraint) {
+  if (GlobalConstraints == nullptr)
+    GlobalConstraints = &Constraint;
+  else
+    GlobalConstraints = &arena().makeAnd(*GlobalConstraints, Constraint);
+}
+
 void DataflowAnalysisContext::addFlowConditionConstraint(
     Atom Token, const Formula &Constraint) {
   auto Res = FlowConditionConstraints.try_emplace(Token, &Constraint);
@@ -150,7 +157,7 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
   Constraints.insert(&arena().makeAtomRef(Token));
   Constraints.insert(&arena().makeNot(Val));
   llvm::DenseSet<Atom> VisitedTokens;
-  addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
+  addTransitiveFlowConditionConstraints(Token, Constraints);
   return isUnsatisfiable(std::move(Constraints));
 }
 
@@ -160,7 +167,7 @@ bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
   llvm::DenseSet<Atom> VisitedTokens;
-  addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
+  addTransitiveFlowConditionConstraints(Token, Constraints);
   return isUnsatisfiable(std::move(Constraints));
 }
 
@@ -172,27 +179,33 @@ bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
-    Atom Token, llvm::SetVector<const Formula *> &Constraints,
-    llvm::DenseSet<Atom> &VisitedTokens) {
-  auto Res = VisitedTokens.insert(Token);
-  if (!Res.second)
-    return;
+    Atom Token, llvm::SetVector<const Formula *> &Constraints) {
+  llvm::DenseSet<Atom> AddedTokens;
+  std::vector<Atom> Remaining = {Token};
 
-  auto ConstraintsIt = FlowConditionConstraints.find(Token);
-  if (ConstraintsIt == FlowConditionConstraints.end()) {
-    Constraints.insert(&arena().makeAtomRef(Token));
-  } else {
-    // Bind flow condition token via `iff` to its set of constraints:
-    // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
-    Constraints.insert(&arena().makeEquals(arena().makeAtomRef(Token),
-                                           *ConstraintsIt->second));
-  }
+  if (GlobalConstraints)
+    Constraints.insert(GlobalConstraints);
+  // Define all the flow conditions that might be referenced in constraints.
+  while (!Remaining.empty()) {
+    auto Token = Remaining.back();
+    Remaining.pop_back();
+    if (!AddedTokens.insert(Token).second)
+      continue;
 
-  auto DepsIt = FlowConditionDeps.find(Token);
-  if (DepsIt != FlowConditionDeps.end()) {
-    for (Atom DepToken : DepsIt->second) {
-      addTransitiveFlowConditionConstraints(DepToken, Constraints,
-                                            VisitedTokens);
+    auto ConstraintsIt = FlowConditionConstraints.find(Token);
+    if (ConstraintsIt == FlowConditionConstraints.end()) {
+      Constraints.insert(&arena().makeAtomRef(Token));
+    } else {
+      // Bind flow condition token via `iff` to its set of constraints:
+      // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
+      Constraints.insert(&arena().makeEquals(arena().makeAtomRef(Token),
+                                             *ConstraintsIt->second));
+    }
+
+    if (auto DepsIt = FlowConditionDeps.find(Token);
+        DepsIt != FlowConditionDeps.end()) {
+      for (Atom A : DepsIt->second)
+        Remaining.push_back(A);
     }
   }
 }
@@ -201,8 +214,7 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
                                                 llvm::raw_ostream &OS) {
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
-  llvm::DenseSet<Atom> VisitedTokens;
-  addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
+  addTransitiveFlowConditionConstraints(Token, Constraints);
 
   // TODO: have formulas know about true/false directly instead
   Atom True = arena().makeLiteral(true).getAtom();

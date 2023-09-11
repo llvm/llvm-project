@@ -108,6 +108,14 @@ public:
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
+  /// Adds `Constraint` to current and future flow conditions in this context.
+  ///
+  /// This must be used with care: the constraint must be truly global across
+  /// the analysis, and should not invalidate the result of past logic.
+  ///
+  /// Adding constraints on freshly created boolean variables is generally safe.
+  void addGlobalConstraint(const Formula &Constraint);
+
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
 
@@ -174,12 +182,11 @@ private:
   void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
-  /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
-  /// to track tokens of flow conditions that were already visited by recursive
-  /// calls.
-  void addTransitiveFlowConditionConstraints(
-      Atom Token, llvm::SetVector<const Formula *> &Constraints,
-      llvm::DenseSet<Atom> &VisitedTokens);
+  /// of its transitive dependencies to `Constraints`.
+  void
+  addTransitiveFlowConditionConstraints(Atom Token,
+                                        llvm::SetVector<const Formula *> &Out);
+
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
@@ -224,6 +231,7 @@ private:
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
+  const Formula *GlobalConstraints = nullptr;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 
