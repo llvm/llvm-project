@@ -740,7 +740,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   Value *Op0 = VPI.getArgOperand(0);
   Value *Op1 = VPI.getArgOperand(1);
 
-  if (!isSplatValue(Op0) || !isSplatValue(Op1))
+  if (!getSplatValue(Op0) || !getSplatValue(Op1))
     return false;
 
   // For the binary VP intrinsics supported here, the result on disabled lanes
@@ -757,27 +757,16 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!IsAllTrueMask(VPI.getArgOperand(2)))
     return false;
 
-  DenseMap<Intrinsic::ID, unsigned> VPIntrinsicToScalar(
-      {{Intrinsic::vp_add, Instruction::Add},
-       {Intrinsic::vp_sub, Instruction::Sub},
-       {Intrinsic::vp_mul, Instruction::Mul},
-       {Intrinsic::vp_ashr, Instruction::AShr},
-       {Intrinsic::vp_lshr, Instruction::LShr},
-       {Intrinsic::vp_shl, Instruction::Shl},
-       {Intrinsic::vp_or, Instruction::Or},
-       {Intrinsic::vp_and, Instruction::And},
-       {Intrinsic::vp_xor, Instruction::Xor},
-       {Intrinsic::vp_fadd, Instruction::FAdd},
-       {Intrinsic::vp_fsub, Instruction::FSub},
-       {Intrinsic::vp_fmul, Instruction::FMul},
-       {Intrinsic::vp_sdiv, Instruction::SDiv},
-       {Intrinsic::vp_udiv, Instruction::UDiv},
-       {Intrinsic::vp_srem, Instruction::SRem},
-       {Intrinsic::vp_urem, Instruction::URem}});
-
   // Check to make sure we support scalarization of the intrinsic
+  std::set<Intrinsic::ID> SupportedIntrinsics(
+      {Intrinsic::vp_add, Intrinsic::vp_sub, Intrinsic::vp_mul,
+       Intrinsic::vp_ashr, Intrinsic::vp_lshr, Intrinsic::vp_shl,
+       Intrinsic::vp_or, Intrinsic::vp_and, Intrinsic::vp_xor,
+       Intrinsic::vp_fadd, Intrinsic::vp_fsub, Intrinsic::vp_fmul,
+       Intrinsic::vp_sdiv, Intrinsic::vp_udiv, Intrinsic::vp_srem,
+       Intrinsic::vp_urem});
   Intrinsic::ID IntrID = VPI.getIntrinsicID();
-  if (!VPIntrinsicToScalar.contains(IntrID))
+  if (!SupportedIntrinsics.count(IntrID))
     return false;
 
   // Calculate cost of splatting both operands into vectors and the vector
@@ -797,8 +786,13 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
 
   // Calculate cost of scalarizing
-  InstructionCost ScalarOpCost = TTI.getArithmeticInstrCost(
-      VPIntrinsicToScalar[IntrID], VecTy->getScalarType());
+  std::optional<unsigned> ScalarOpcodeOpt =
+      VPIntrinsic::getFunctionalOpcodeForVP(IntrID);
+  assert(ScalarOpcodeOpt && "Unable to determine scalar opcode");
+  unsigned ScalarOpcode = *ScalarOpcodeOpt;
+
+  InstructionCost ScalarOpCost =
+      TTI.getArithmeticInstrCost(ScalarOpcode, VecTy->getScalarType());
   InstructionCost NewCost = ScalarOpCost + SplatCost;
 
   LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
@@ -814,87 +808,17 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
   Value *EVL = VPI.getArgOperand(3);
   const DataLayout &DL = VPI.getModule()->getDataLayout();
-  switch (IntrID) {
-  case Intrinsic::vp_add:
+  bool IsKnownNonZeroVL = isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT);
+  bool MustHaveNonZeroVL =
+      IntrID == Intrinsic::vp_sdiv || IntrID == Intrinsic::vp_udiv ||
+      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem;
+
+  if ((MustHaveNonZeroVL && IsKnownNonZeroVL) || !MustHaveNonZeroVL) {
     replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateAdd(getSplatValue(Op0), getSplatValue(Op1))));
+                          EC, Builder.CreateBinOp(
+                                  (Instruction::BinaryOps)ScalarOpcode,
+                                  getSplatValue(Op0), getSplatValue(Op1))));
     return true;
-  case Intrinsic::vp_sub:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateSub(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_mul:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateMul(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_ashr:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateAShr(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_lshr:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateLShr(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_shl:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateShl(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_or:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateOr(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_and:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateAnd(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_xor:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateXor(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_fadd:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateFAdd(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_fsub:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateFSub(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_fmul:
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-        EC, Builder.CreateFMul(getSplatValue(Op0), getSplatValue(Op1))));
-    return true;
-  case Intrinsic::vp_sdiv:
-    if (isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
-      replaceValue(VPI, *Builder.CreateVectorSplat(
-                            EC, Builder.CreateSDiv(getSplatValue(Op0),
-                                                   getSplatValue(Op1))));
-      return true;
-    }
-    return false;
-  case Intrinsic::vp_udiv:
-    if (isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
-      replaceValue(VPI, *Builder.CreateVectorSplat(
-                            EC, Builder.CreateUDiv(getSplatValue(Op0),
-                                                   getSplatValue(Op1))));
-      return true;
-    }
-    return false;
-  case Intrinsic::vp_srem:
-    if (isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
-      replaceValue(VPI, *Builder.CreateVectorSplat(
-                            EC, Builder.CreateSRem(getSplatValue(Op0),
-                                                   getSplatValue(Op1))));
-      return true;
-    }
-    return false;
-  case Intrinsic::vp_urem:
-    if (isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
-      replaceValue(VPI, *Builder.CreateVectorSplat(
-                            EC, Builder.CreateURem(getSplatValue(Op0),
-                                                   getSplatValue(Op1))));
-      return true;
-    }
-    return false;
   }
   return false;
 }
