@@ -852,9 +852,11 @@ void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
         continue;
 
     // Otherwise a new PHI is needed. Create one and populate it.
-    PHINode *NewPN = PHINode::Create(
-        PN.getType(), Preds.size(), "split",
-        SplitBB->isLandingPad() ? &SplitBB->front() : SplitBB->getTerminator());
+    PHINode *NewPN = PHINode::Create(PN.getType(), Preds.size(), "split");
+    BasicBlock::iterator InsertPos =
+        SplitBB->isLandingPad() ? SplitBB->begin()
+                                : SplitBB->getTerminator()->getIterator();
+    NewPN->insertBefore(InsertPos);
     for (BasicBlock *BB : Preds)
       NewPN->addIncoming(V, BB);
 
