@@ -110,10 +110,12 @@ public:
 
   /// Adds `Constraint` to current and future flow conditions in this context.
   ///
-  /// This must be used with care: the constraint must be truly global across
-  /// the analysis, and should not invalidate the result of past logic.
-  ///
-  /// Adding constraints on freshly created boolean variables is generally safe.
+  /// The global condition must contain only flow-insensitive information, i.e.
+  /// facts that are true on all paths through the program.
+  /// Information can be added eagerly (when analysis begins), or lazily (e.g.
+  /// when values are first used). The analysis must be careful that the same
+  /// information is added to the global condition regardless of which order
+  /// blocks are analyzed in.
   void addGlobalConstraint(const Formula &Constraint);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
