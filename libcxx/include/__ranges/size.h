@@ -20,7 +20,6 @@
 #include <__type_traits/make_signed.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cvref.h>
-#include <__utility/auto_cast.h>
 #include <__utility/declval.h>
 #include <cstddef>
 
@@ -49,13 +48,13 @@ concept __size_enabled = !disable_sized_range<remove_cvref_t<_Tp>>;
 
 template <class _Tp>
 concept __member_size = __size_enabled<_Tp> && __workaround_52970<_Tp> && requires(_Tp&& __t) {
-  { _LIBCPP_AUTO_CAST(__t.size()) } -> __integer_like;
+  { auto(__t.size()) } -> __integer_like;
 };
 
 template <class _Tp>
 concept __unqualified_size =
     __size_enabled<_Tp> && !__member_size<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
-      { _LIBCPP_AUTO_CAST(size(__t)) } -> __integer_like;
+      { auto(size(__t)) } -> __integer_like;
     };
 
 template <class _Tp>
@@ -81,15 +80,15 @@ struct __fn {
   // `[range.prim.size]`: `auto(t.size())` is a valid expression.
   template <__member_size _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.size()))) {
-    return _LIBCPP_AUTO_CAST(__t.size());
+      noexcept(noexcept(auto(__t.size()))) {
+    return auto(__t.size());
   }
 
   // `[range.prim.size]`: `auto(size(t))` is a valid expression.
   template <__unqualified_size _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(size(__t)))) {
-    return _LIBCPP_AUTO_CAST(size(__t));
+      noexcept(noexcept(auto(size(__t)))) {
+    return auto(size(__t));
   }
 
   // [range.prim.size]: the `to-unsigned-like` case.

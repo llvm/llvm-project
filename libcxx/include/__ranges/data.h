@@ -22,7 +22,6 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_pointer.h>
 #include <__type_traits/remove_reference.h>
-#include <__utility/auto_cast.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,7 +40,7 @@ concept __ptr_to_object = is_pointer_v<_Tp> && is_object_v<remove_pointer_t<_Tp>
 
 template <class _Tp>
 concept __member_data = __can_borrow<_Tp> && __workaround_52970<_Tp> && requires(_Tp&& __t) {
-  { _LIBCPP_AUTO_CAST(__t.data()) } -> __ptr_to_object;
+  { auto(__t.data()) } -> __ptr_to_object;
 };
 
 template <class _Tp>

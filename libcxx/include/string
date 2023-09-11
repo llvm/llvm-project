@@ -612,7 +612,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__type_traits/noexcept_move_assign_container.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/void_t.h>
-#include <__utility/auto_cast.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
@@ -1221,7 +1220,7 @@ public:
   template <class _Op>
   _LIBCPP_HIDE_FROM_ABI constexpr void resize_and_overwrite(size_type __n, _Op __op) {
     __resize_default_init(__n);
-    __erase_to_end(std::move(__op)(data(), _LIBCPP_AUTO_CAST(__n)));
+    __erase_to_end(std::move(__op)(data(), auto(__n)));
   }
 #endif
 

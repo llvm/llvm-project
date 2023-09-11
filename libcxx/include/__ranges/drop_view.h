@@ -39,7 +39,6 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cvref.h>
-#include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <cstddef>
@@ -211,9 +210,8 @@ struct __fn {
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np>
     requires __is_empty_view<remove_cvref_t<_Range>>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&&) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Range>(__range))))
-          -> decltype(_LIBCPP_AUTO_CAST(std::forward<_Range>(__range))) {
-    return _LIBCPP_AUTO_CAST(std::forward<_Range>(__range));
+      noexcept(noexcept(auto(std::forward<_Range>(__range)))) -> decltype(auto(std::forward<_Range>(__range))) {
+    return auto(std::forward<_Range>(__range));
   }
 
   // [range.drop.overview]: the `span | basic_string_view | iota_view | subrange (StoreSize == false)` case.
@@ -279,9 +277,9 @@ struct __fn {
     requires (__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
   _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
   constexpr auto operator()(_Range&& __range, _Np&&) const
-    noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Range>(__range))))
-    -> decltype(      _LIBCPP_AUTO_CAST(std::forward<_Range>(__range)))
-    { return          _LIBCPP_AUTO_CAST(std::forward<_Range>(__range)); }
+    noexcept(noexcept(auto(std::forward<_Range>(__range))))
+    -> decltype(      auto(std::forward<_Range>(__range)))
+    { return          auto(std::forward<_Range>(__range)); }
 #endif
   // clang-format on
 
@@ -289,14 +287,14 @@ struct __fn {
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np, class _RawRange = remove_cvref_t<_Range>>
   // Note: without specifically excluding the other cases, GCC sees this overload as ambiguous with the other
   // overloads.
-    requires(
-        !(__is_empty_view<_RawRange> ||
+    requires(!(__is_empty_view<_RawRange> ||
 #  if _LIBCPP_STD_VER >= 23
-          __is_repeat_specialization<_RawRange> ||
+               __is_repeat_specialization<_RawRange> ||
 #  endif
-          (__is_subrange_specialization_with_store_size<_RawRange> && sized_range<_RawRange> &&
-           random_access_range<_RawRange>) ||
-          (__is_passthrough_specialization<_RawRange> && sized_range<_RawRange> && random_access_range<_RawRange>)))
+               (__is_subrange_specialization_with_store_size<_RawRange> && sized_range<_RawRange> &&
+                random_access_range<_RawRange>) ||
+               (__is_passthrough_specialization<_RawRange> && sized_range<_RawRange> &&
+                random_access_range<_RawRange>)))
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
       noexcept(noexcept(drop_view(std::forward<_Range>(__range), std::forward<_Np>(__n))))
           -> decltype(drop_view(std::forward<_Range>(__range), std::forward<_Np>(__n))) {
