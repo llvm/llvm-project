@@ -55,7 +55,7 @@ namespace test_union {
 
   struct S1 {
     union {
-      union { // expected-note 4 {{'S1' is implicitly deleted because field '' has a deleted}}
+      union { // expected-note-re 4 {{'S1' is implicitly deleted because field 'test_union::S1::(anonymous union at {{.*}})' has a deleted}}
         int * AQ f0;
         char f1;
       };
