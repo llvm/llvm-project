@@ -4532,6 +4532,15 @@ static void TryReferenceListInitialization(Sema &S,
       if (T1Quals.hasAddressSpace())
         Sequence.AddQualificationConversionStep(
             cv1T1, DestType->isRValueReferenceType() ? VK_XValue : VK_LValue);
+      else if (S.getLangOpts().CPlusPlus20 &&
+               isa<IncompleteArrayType>(T1->getUnqualifiedDesugaredType()) &&
+               DestType->isRValueReferenceType()) {
+        // [dcl.init.list] p3.10
+        // unless T is “reference to array of unknown bound of U”, in which case
+        // the type of the prvalue is the type of x in the declaration U x[] H,
+        // where H is the initializer list.
+        Sequence.AddQualificationConversionStep(cv1T1, VK_XValue);
+      }
     } else
       Sequence.SetFailed(
           InitializationSequence::FK_NonConstLValueReferenceBindingToTemporary);
