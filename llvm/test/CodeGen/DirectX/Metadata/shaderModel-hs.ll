@@ -1,4 +1,6 @@
 ; RUN: opt -S -dxil-metadata-emit %s | FileCheck %s
+; REQUIRES: directx-registered-target
+
 target triple = "dxil-pc-shadermodel6.6-hull"
 
 ; CHECK: !dx.shaderModel = !{![[SM:[0-9]+]]}

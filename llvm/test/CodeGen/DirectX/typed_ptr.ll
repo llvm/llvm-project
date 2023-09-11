@@ -1,4 +1,6 @@
 ; RUN: opt -S -dxil-prepare < %s | FileCheck %s
+; REQUIRES: directx-registered-target
+
 target triple = "dxil-unknown-unknown"
 
 @gs = external addrspace(3) global [20 x [6 x float]], align 4

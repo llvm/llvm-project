@@ -1,4 +1,5 @@
 ; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
+; REQUIRES: directx-registered-target
 
 ; Make sure dxil operation function calls for all ComputeID dxil operations are generated.
 

@@ -1,4 +1,6 @@
 ; RUN: llc %s --filetype=asm -o - | FileCheck %s
+; REQUIRES: directx-registered-target
+
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 define float @negateF(float %0) {
