@@ -22,10 +22,10 @@ body:             |
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -991146299
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 -991146299
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = exact G_ASHR [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[ASHR]], [[C1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = exact G_MUL [[ASHR]], [[C1]]
     ; CHECK-NEXT: $w0 = COPY [[MUL]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
@@ -87,13 +87,13 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -991146299
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 954437177
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C2]](s32), [[C1]](s32), [[C2]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 -991146299
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 954437177
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = exact G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = exact G_BUILD_VECTOR [[C1]](s32), [[C2]](s32), [[C1]](s32), [[C2]](s32)
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x s32>) = exact G_ASHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<4 x s32>) = G_MUL [[ASHR]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<4 x s32>) = exact G_MUL [[ASHR]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: $q0 = COPY [[MUL]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
@@ -115,12 +115,12 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -991146299
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = exact G_CONSTANT i32 -991146299
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = exact G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s32>) = exact G_BUILD_VECTOR [[C1]](s32), [[C1]](s32), [[C1]](s32), [[C1]](s32)
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x s32>) = exact G_ASHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<4 x s32>) = G_MUL [[ASHR]], [[BUILD_VECTOR1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<4 x s32>) = exact G_MUL [[ASHR]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: $q0 = COPY [[MUL]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0

@@ -21,6 +21,10 @@
 
 using namespace llvm;
 
+GIMatchTableExecutor::GIMatchTableObserver::~GIMatchTableObserver() {
+  // anchor
+}
+
 GIMatchTableExecutor::MatcherState::MatcherState(unsigned MaxRenderers)
     : Renderers(MaxRenderers) {}
 

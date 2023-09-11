@@ -3465,15 +3465,15 @@ void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
      << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
-     << "  NewMIVector OutMIs;\n"
+     << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
      << "  " << MatchDataInfo::StructName << " = "
      << MatchDataInfo::StructTypeName << "();\n\n"
-     << "  if (executeMatchTable(*this, OutMIs, State, ExecInfo"
+     << "  if (executeMatchTable(*this, State, ExecInfo, B"
      << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
         "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
-     << ", /*CoverageInfo*/ nullptr, &Observer)) {\n"
+     << ", /*CoverageInfo*/ nullptr)) {\n"
      << "    return true;\n"
      << "  }\n\n"
      << "  return false;\n"
@@ -3550,7 +3550,7 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
 
   OS << "void " << getClassName()
      << "::runCustomAction(unsigned ApplyID, const MatcherState &State, "
-        "NewMIVector &OutMIs) const "
+        "ArrayRef<MachineInstrBuilder> OutMIs) const "
         "{\n";
   if (!ApplyCode.empty()) {
     OS << "  switch(ApplyID) {\n";

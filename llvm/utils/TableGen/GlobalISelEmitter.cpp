@@ -2263,10 +2263,10 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
         "&CoverageInfo) const {\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
-     << "  NewMIVector OutMIs;\n"
+     << "  MachineIRBuilder B(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n\n"
-     << "  if (executeMatchTable(*this, OutMIs, State, ExecInfo"
+     << "  if (executeMatchTable(*this, State, ExecInfo, B"
      << ", getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures"
      << ", &CoverageInfo)) {\n"
      << "    return true;\n"
@@ -2348,7 +2348,8 @@ void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
   OS << "void " << getClassName()
-     << "::runCustomAction(unsigned, const MatcherState&, NewMIVector &) const "
+     << "::runCustomAction(unsigned, const MatcherState&, "
+        "ArrayRef<MachineInstrBuilder>) const "
         "{\n"
      << "    llvm_unreachable(\"" + getClassName() +
             " does not support custom C++ actions!\");\n"

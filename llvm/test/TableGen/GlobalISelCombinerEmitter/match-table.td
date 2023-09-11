@@ -93,12 +93,12 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK:      bool GenMyCombiner::tryCombineAll(MachineInstr &I) const {
 // CHECK-NEXT:   const TargetSubtargetInfo &ST = MF.getSubtarget();
 // CHECK-NEXT:   const PredicateBitset AvailableFeatures = getAvailableFeatures();
-// CHECK-NEXT:   NewMIVector OutMIs;
+// CHECK-NEXT:   B.setInstrAndDebugLoc(I);
 // CHECK-NEXT:   State.MIs.clear();
 // CHECK-NEXT:   State.MIs.push_back(&I);
 // CHECK-NEXT:   MatchInfos = MatchInfosTy();
 // CHECK-EMPTY:
-// CHECK-NEXT:   if (executeMatchTable(*this, OutMIs, State, ExecInfo, getMatchTable(), *ST.getInstrInfo(), MRI, *MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures, /*CoverageInfo*/ nullptr, &Observer))
+// CHECK-NEXT:   if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), *ST.getInstrInfo(), MRI, *MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures, /*CoverageInfo*/ nullptr))
 // CHECK-NEXT:     return true;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
@@ -111,7 +111,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   GICXXCustomAction_CombineApplyGICombiner1,
 // CHECK-NEXT:   GICXXCustomAction_CombineApplyGICombiner2,
 // CHECK-NEXT: };
-// CHECK-NEXT: void GenMyCombiner::runCustomAction(unsigned ApplyID, const MatcherState &State, NewMIVector &OutMIs) const {
+// CHECK-NEXT: void GenMyCombiner::runCustomAction(unsigned ApplyID, const MatcherState &State, ArrayRef<MachineInstrBuilder> OutMIs) const {
 // CHECK-NEXT:   switch(ApplyID) {
 // CHECK-NEXT:   case GICXXCustomAction_CombineApplyGICombiner0:{
 // CHECK-NEXT:     APPLY
