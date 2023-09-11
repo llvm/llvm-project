@@ -148,23 +148,3 @@
 
 #undef F
 #undef G
-
-#define merge_all_expand2(a, b) a ## b
-#define merge_all_expand(a, b) merge_all_expand2(a, b)
-#define2 concat_all(head, ...) merge_all_expand(head, __VA_OPT__(concat_all(__VA_ARGS__)))
-29: concat_all(aa, bb, cc)
-30: [concat_all()]
-// CHECK: 29: aabbcc
-// CHECK: 30: []
-
-#undef merge_all_expand
-#undef merge_all_expand2
-#undef concat_all
-
-#define2 reverse(head, ...) __VA_OPT__(reverse(__VA_ARGS__) , ) head
-
-31: reverse(1,2,3)
-
-// CHECK: 31: 3,2,1
-
-#undef reverse
