@@ -222,7 +222,11 @@ struct StreamPrinter {
       -> decltype((void)(*os << value)) {
     // Call streaming operator found by ADL, possibly with implicit conversions
     // of the arguments.
+    // LLVM local change to support llvm printables.
+    //
+    // *os << value;
     *os << ::llvm_gtest::printable(value);
+    // LLVM local change end.
   }
 };
 

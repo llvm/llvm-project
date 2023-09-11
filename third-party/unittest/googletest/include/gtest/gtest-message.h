@@ -145,7 +145,11 @@ class GTEST_API_ Message {
     // overloads of << defined in the global namespace and those
     // visible via Koenig lookup are both exposed in this function.
     using ::operator<<;
+    // LLVM local change to support llvm printables.
+    //
+    // *ss_ << val;
     *ss_ << llvm_gtest::printable(val);
+    // LLVM local change end.
     return *this;
   }
 
@@ -183,7 +187,11 @@ class GTEST_API_ Message {
     if (pointer == nullptr) {
       *ss_ << "(null)";
     } else {
+      // LLVM local change to support llvm printables.
+      //
+      // *ss_ << pointer;
       *ss_ << llvm_gtest::printable(pointer);
+      // LLVM local change end.
     }
     return *this;
   }
