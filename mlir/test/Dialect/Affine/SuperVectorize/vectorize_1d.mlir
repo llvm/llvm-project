@@ -684,3 +684,16 @@ func.func @vec_vecdim_reduction_rejected(%in: memref<256x512xf32>, %out: memref<
 
 // CHECK-LABEL: @vec_vecdim_reduction_rejected
 // CHECK-NOT: vector
+
+// -----
+
+// CHECK-LABEL: @large_step_size
+// Support the step size exceeding 2^32-1.
+func.func @large_step_size(%A: memref<4294967295xf32>) {
+ %cst = arith.constant 0.000000e+00 : f32
+ // CHECK: affine.for %{{.*}} = 0 to 256 step 549755813760 {
+ affine.for %i = 0 to 256 step 4294967295 {
+   affine.store %cst, %A[%i] : memref<4294967295xf32>
+ }
+ return
+}
