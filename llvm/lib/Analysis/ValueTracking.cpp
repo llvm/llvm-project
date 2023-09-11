@@ -4016,210 +4016,14 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
 std::pair<Value *, FPClassTest>
 llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
                       const APFloat *ConstRHS, bool LookThroughSrc) {
-  // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
-  if (Pred == FCmpInst::FCMP_ORD && !ConstRHS->isNaN())
-    return {LHS, ~fcNan};
 
-  // fcmp uno x, zero|normal|subnormal|inf -> fcNan
-  if (Pred == FCmpInst::FCMP_UNO && !ConstRHS->isNaN())
-    return {LHS, fcNan};
-
-  if (ConstRHS->isZero()) {
-    // Compares with fcNone are only exactly equal to fcZero if input denormals
-    // are not flushed.
-    // TODO: Handle DAZ by expanding masks to cover subnormal cases.
-    if (Pred != FCmpInst::FCMP_ORD && Pred != FCmpInst::FCMP_UNO &&
-        !inputDenormalIsIEEE(F, LHS->getType()))
-      return {nullptr, fcNone};
-
-    switch (Pred) {
-    case FCmpInst::FCMP_OEQ: // Match x == 0.0
-      return {LHS, fcZero};
-    case FCmpInst::FCMP_UEQ: // Match isnan(x) || (x == 0.0)
-      return {LHS, fcZero | fcNan};
-    case FCmpInst::FCMP_UNE: // Match (x != 0.0)
-      return {LHS, ~fcZero};
-    case FCmpInst::FCMP_ONE: // Match !isnan(x) && x != 0.0
-      return {LHS, ~fcNan & ~fcZero};
-    case FCmpInst::FCMP_ORD:
-      // Canonical form of ord/uno is with a zero. We could also handle
-      // non-canonical other non-NaN constants or LHS == RHS.
-      return {LHS, ~fcNan};
-    case FCmpInst::FCMP_UNO:
-      return {LHS, fcNan};
-    case FCmpInst::FCMP_OGT: // x > 0
-      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf};
-    case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
-      return {LHS, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan};
-    case FCmpInst::FCMP_OGE: // x >= 0
-      return {LHS, fcPositive | fcNegZero};
-    case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
-      return {LHS, fcPositive | fcNegZero | fcNan};
-    case FCmpInst::FCMP_OLT: // x < 0
-      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf};
-    case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
-      return {LHS, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan};
-    case FCmpInst::FCMP_OLE: // x <= 0
-      return {LHS, fcNegative | fcPosZero};
-    case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
-      return {LHS, fcNegative | fcPosZero | fcNan};
-    default:
-      break;
-    }
-
-    return {nullptr, fcNone};
-  }
-
-  Value *Src = LHS;
-  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
-
-  FPClassTest RHSClass = ConstRHS->classify();
-  if (IsFabs)
-    RHSClass = llvm::fabs(RHSClass);
-
-  // Compute the test mask that would return true for the ordered comparisons.
-  FPClassTest Mask = RHSClass;
-
-  if (ConstRHS->isInfinity()) {
-    /// this generalizes for the equality case
-    switch (Pred) {
-    case FCmpInst::FCMP_OEQ:
-    case FCmpInst::FCMP_UNE: {
-      // Match __builtin_isinf patterns
-      //
-      //   fcmp oeq x, +inf -> is_fpclass x, fcPosInf
-      //   fcmp oeq fabs(x), +inf -> is_fpclass x, fcInf
-      //   fcmp oeq x, -inf -> is_fpclass x, fcNegInf
-      //   fcmp oeq fabs(x), -inf -> is_fpclass x, 0 -> false
-      //
-      //   fcmp une x, +inf -> is_fpclass x, ~fcPosInf
-      //   fcmp une fabs(x), +inf -> is_fpclass x, ~fcInf
-      //   fcmp une x, -inf -> is_fpclass x, ~fcNegInf
-      //   fcmp une fabs(x), -inf -> is_fpclass x, fcAllFlags -> true
-#if 0
-      if (ConstRHS->isNegative()) {
-        Mask = fcNegInf;
-        if (IsFabs)
-          Mask = fcNone;
-      } else {
-        Mask = fcPosInf;
-        if (IsFabs)
-          Mask |= fcNegInf;
-      }
-#endif
-      break;
-    }
-    case FCmpInst::FCMP_ONE:
-    case FCmpInst::FCMP_UEQ: {
-      // Match __builtin_isinf patterns
-      //   fcmp one x, -inf -> is_fpclass x, fcNegInf
-      //   fcmp one fabs(x), -inf -> is_fpclass x, ~fcNegInf & ~fcNan
-      //   fcmp one x, +inf -> is_fpclass x, ~fcNegInf & ~fcNan
-      //   fcmp one fabs(x), +inf -> is_fpclass x, ~fcInf & fcNan
-      //
-      //   fcmp ueq x, +inf -> is_fpclass x, fcPosInf|fcNan
-      //   fcmp ueq (fabs x), +inf -> is_fpclass x, fcInf|fcNan
-      //   fcmp ueq x, -inf -> is_fpclass x, fcNegInf|fcNan
-      //   fcmp ueq fabs(x), -inf -> is_fpclass x, fcNan
-      if (ConstRHS->isNegative()) {
-        Mask = ~fcNegInf & ~fcNan;
-        if (IsFabs)
-          Mask = ~fcNan;
-      } else {
-        Mask = ~fcPosInf & ~fcNan;
-        if (IsFabs)
-          Mask &= ~fcNegInf;
-      }
-
-      break;
-    }
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_UGE: {
-      if (ConstRHS->isNegative()) {
-        // No value is ordered and less than negative infinity.
-        // All values are unordered with or at least negative infinity.
-        // fcmp olt x, -inf -> false
-        // fcmp uge x, -inf -> true
-        Mask = fcNone;
-        break;
-      }
-
-      // fcmp olt fabs(x), +inf -> fcFinite
-      // fcmp uge fabs(x), +inf -> ~fcFinite
-      // fcmp olt x, +inf -> fcFinite|fcNegInf
-      // fcmp uge x, +inf -> ~(fcFinite|fcNegInf)
-      Mask = fcFinite;
-      if (!IsFabs)
-        Mask |= fcNegInf;
-      break;
-    }
-    case FCmpInst::FCMP_OGE:
-    case FCmpInst::FCMP_ULT: {
-      if (ConstRHS->isNegative()) // TODO
-        return {nullptr, fcNone};
-
-      // fcmp oge fabs(x), +inf -> fcInf
-      // fcmp oge x, +inf -> fcPosInf
-      // fcmp ult fabs(x), +inf -> ~fcInf
-      // fcmp ult x, +inf -> ~fcPosInf
-      Mask = fcPosInf;
-      if (IsFabs)
-        Mask |= fcNegInf;
-      break;
-    }
-    case FCmpInst::FCMP_OGT:
-    case FCmpInst::FCMP_ULE: {
-      if (ConstRHS->isNegative())
-        return {nullptr, fcNone};
-
-      // No value is ordered and greater than infinity.
-      Mask = fcNone;
-      break;
-    }
-    default:
-      return {nullptr, fcNone};
-    }
-  } else if (ConstRHS->isSmallestNormalized() && !ConstRHS->isNegative()) {
-    // Match pattern that's used in __builtin_isnormal.
-    switch (Pred) {
-    case FCmpInst::FCMP_OLT:
-    case FCmpInst::FCMP_UGE: {
-      // fcmp olt x, smallest_normal -> fcNegInf|fcNegNormal|fcSubnormal|fcZero
-      // fcmp olt fabs(x), smallest_normal -> fcSubnormal|fcZero
-      // fcmp uge x, smallest_normal -> fcNan|fcPosNormal|fcPosInf
-      // fcmp uge fabs(x), smallest_normal -> ~(fcSubnormal|fcZero)
-      Mask = fcZero | fcSubnormal;
-      if (!IsFabs)
-        Mask |= fcNegNormal | fcNegInf;
-
-      break;
-    }
-    case FCmpInst::FCMP_OGE:
-    case FCmpInst::FCMP_ULT: {
-      // fcmp oge x, smallest_normal -> fcPosNormal | fcPosInf
-      // fcmp oge fabs(x), smallest_normal -> fcInf | fcNormal
-      // fcmp ult x, smallest_normal -> ~(fcPosNormal | fcPosInf)
-      // fcmp ult fabs(x), smallest_normal -> ~(fcInf | fcNormal)
-      Mask = fcPosInf | fcPosNormal;
-      if (IsFabs)
-        Mask |= fcNegInf | fcNegNormal;
-      break;
-    }
-    default:
-      return {nullptr, fcNone};
-    }
-  } else if (ConstRHS->isNaN()) {
-    // fcmp o__ x, nan -> false
-    // fcmp u__ x, nan -> true
-    Mask = fcNone;
-  } else
-    return {nullptr, fcNone};
-
-  // Invert the comparison for the unordered cases.
-  if (FCmpInst::isUnordered(Pred))
-    Mask = ~Mask;
-
-  return {Src, Mask};
+  auto [Src, ClassIfTrue, ClassIfFalse] = fcmpImpliesClass(Pred,
+                                                           F,
+                                                           LHS,
+                                                           *ConstRHS, LookThroughSrc);
+  if (Src && ClassIfTrue == ~ClassIfFalse)
+    return {Src, ClassIfTrue};
+  return {nullptr, fcAllFlags};
 }
 
 static std::tuple<Value *, FPClassTest, FPClassTest>
@@ -4238,10 +4042,8 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   const bool IsZero = (RHSClass & fcZero) == RHSClass;
   const bool IsInf = (RHSClass & fcInf) == RHSClass;
 
-
   Value *Src = LHS;
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
-
   if (IsFabs)
     RHSClass = llvm::fneg(RHSClass);
 
