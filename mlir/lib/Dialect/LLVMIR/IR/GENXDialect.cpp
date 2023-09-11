@@ -60,6 +60,40 @@ LogicalResult GENXDialect::verifyOperationAttribute(Operation *op,
   return success();
 }
 
+static mlir::ParseResult parseMemoryFenceFlags(OpAsmParser &parser,
+                                               IntegerAttr &flagsAttr) {
+  MemoryFenceFlagAttr memoryFenceFlagAttr;
+  int flags = 0;
+  do {
+    if (parser.parseCustomAttributeWithFallback(memoryFenceFlagAttr))
+      return failure();
+    flags |= static_cast<int>(memoryFenceFlagAttr.getValue());
+  } while (succeeded(parser.parseOptionalComma()));
+  flagsAttr =
+      IntegerAttr::get(IntegerType::get(parser.getContext(), 32), flags);
+  return success();
+}
+
+static void printMemoryFenceFlags(OpAsmPrinter &p, FenceOp op,
+                                  IntegerAttr flags) {
+  bool firstFlag = true;
+  auto printFlag = [&](int flag) {
+    assert(flag == 1 | flag == 2 | flag == 4 &&
+           "Expecting valid memory fence flag");
+    if (!firstFlag)
+      p << ",";
+    p.printStrippedAttrOrType(MemoryFenceFlagAttr::get(
+        flags.getContext(), static_cast<MemoryFenceFlag>(flag)));
+    firstFlag = false;
+  };
+  if (flags.getInt() & 1)
+    printFlag(1);
+  if (flags.getInt() & 2)
+    printFlag(2);
+  if (flags.getInt() & 4)
+    printFlag(4);
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/GENXOps.cpp.inc"
 

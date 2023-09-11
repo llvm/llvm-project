@@ -36,6 +36,23 @@ func.func @genx.barrier() {
   llvm.return
 }
 
+func.func @genx.atomic_work_item_fence() {
+  // CHECK-LABEL: genx.atomic_work_item_fence
+  // CHECK: genx.atomic_work_item_fence < LOCAL_MEM_FENCE >,  Relaxed,  work_item
+  genx.atomic_work_item_fence <LOCAL_MEM_FENCE>, Relaxed, work_item
+  // CHECK: genx.atomic_work_item_fence < GLOBAL_MEM_FENCE >,  Acquire,  work_group
+  genx.atomic_work_item_fence <GLOBAL_MEM_FENCE>, Acquire, work_group
+  // CHECK: genx.atomic_work_item_fence < IMAGE_MEM_FENCE >,  Release,  device
+  genx.atomic_work_item_fence <IMAGE_MEM_FENCE>, Release, device
+  // CHECK: genx.atomic_work_item_fence < LOCAL_MEM_FENCE >,  AcquireRelease,  all_svm_devices
+  genx.atomic_work_item_fence <LOCAL_MEM_FENCE>, AcquireRelease, all_svm_devices
+  // CHECK: genx.atomic_work_item_fence < GLOBAL_MEM_FENCE >,  SequentiallyConsistent,  sub_group
+  genx.atomic_work_item_fence <GLOBAL_MEM_FENCE>, SequentiallyConsistent, sub_group
+  // CHECK: genx.atomic_work_item_fence < LOCAL_MEM_FENCE, IMAGE_MEM_FENCE >,  Acquire,  sub_group
+  genx.atomic_work_item_fence <LOCAL_MEM_FENCE, IMAGE_MEM_FENCE>, Acquire, sub_group
+  llvm.return
+}
+
 func.func @genx.sub_group_shuffle() {
   // CHECK-LABEL: genx.sub_group_shuffle
   %0 = llvm.mlir.constant(0 : i32) : i32

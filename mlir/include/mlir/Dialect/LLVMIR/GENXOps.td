@@ -148,14 +148,76 @@ def GENX_BarrierOp : GENX_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
-def ShflKindXor : I32EnumAttrCase<"XOR", 0>;
-def ShflKindUp   : I32EnumAttrCase<"UP", 1>;
-def ShflKindDown : I32EnumAttrCase<"DOWN", 2>;
-def ShflKindIdx  : I32EnumAttrCase<"IDX", 3>;
+/// Enum attribute of the different memory fence flags.
+def MemoryFenceFlag : I32EnumAttr<"MemoryFenceFlag", "GENX memory fence flag",
+  [
+    I32EnumAttrCase<"LOCAL_MEM_FENCE",  1>,
+    I32EnumAttrCase<"GLOBAL_MEM_FENCE", 2>,
+    I32EnumAttrCase<"IMAGE_MEM_FENCE",  4>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def MemoryFenceFlagAttr : EnumAttr<GENX_Dialect, MemoryFenceFlag, "memory_fence_flag">;
+
+/// Enum attribute of the different memory order.
+def MemoryOrder : I32EnumAttr<"MemoryOrder", "GENX memory order",
+  [
+    I32EnumAttrCase<"Relaxed",                 0>,
+    I32EnumAttrCase<"Acquire",                 2>,
+    I32EnumAttrCase<"Release",                 3>,
+    I32EnumAttrCase<"AcquireRelease",          4>,
+    I32EnumAttrCase<"SequentiallyConsistent",  5>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def MemoryOrderAttr : EnumAttr<GENX_Dialect, MemoryOrder, "memory_order">;
+
+/// Enum attribute of the different memory scope.
+def MemoryScope : I32EnumAttr<"MemoryScope", "GENX memory scope",
+  [
+    I32EnumAttrCase<"work_item",        0>,
+    I32EnumAttrCase<"work_group",       1>,
+    I32EnumAttrCase<"device",           2>,
+    I32EnumAttrCase<"all_svm_devices",  3>,
+    I32EnumAttrCase<"sub_group",        4>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def MemoryScopeAttr : EnumAttr<GENX_Dialect, MemoryScope, "memory_scope">;
+
+def GENX_FenceOp : GENX_Op<"atomic_work_item_fence">,
+  Arguments<(ins ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<7>]>:$flags,
+                 MemoryOrderAttr:$order,
+                 MemoryScopeAttr:$scope)> {
+  let summary = "Fence of memory accesses";
+  string baseDescription = [{
+    Ensures that memory accesses issued before this instruction will be observed
+    before memory accesses issued after this instruction. Function arguments
+    determine what kind of memory is being controlled and what kind of control
+    to apply.
+    $flags must be set to MemoryFenceFlag or a combination of them.
+    $order determines the type of fence (e.g., acquire, release, etc.).
+    $scope control the extent a fence is visible with respect to the memory model.
+  }];
+  string llvmBuilder = [{
+    createFence(builder, $flags, $order, $scope);
+  }];
+  let assemblyFormat = [{
+    ` ` `<` custom<MemoryFenceFlags>($flags) ` ``>` `,` $order `,` $scope attr-dict
+  }];
+}
 
 /// Enum attribute of the different shuffle kinds.
 def ShflKind : I32EnumAttr<"ShflKind", "GENX shuffle kind",
-  [ShflKindXor, ShflKindUp, ShflKindDown, ShflKindIdx]> {
+  [
+    I32EnumAttrCase<"XOR",  0>,
+    I32EnumAttrCase<"UP",   1>,
+    I32EnumAttrCase<"DOWN", 2>,
+    I32EnumAttrCase<"IDX",  3>
+  ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::GENX";
 }

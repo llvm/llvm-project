@@ -37,6 +37,23 @@ llvm.func @genx.barrier() {
   llvm.return
 }
 
+llvm.func @genx.atomic_work_item_fence() {
+  // CHECK-LABEL: genx.atomic_work_item_fence
+  // CHECK: call void @_Z22atomic_work_item_fencej12memory_order12memory_scope(i32 1, i32 0, i32 0)
+  genx.atomic_work_item_fence <LOCAL_MEM_FENCE>, Relaxed, work_item
+  // CHECK: call void @_Z22atomic_work_item_fencej12memory_order12memory_scope(i32 2, i32 2, i32 1)
+  genx.atomic_work_item_fence <GLOBAL_MEM_FENCE>, Acquire, work_group
+  // CHECK: call void @_Z22atomic_work_item_fencej12memory_order12memory_scope(i32 4, i32 3, i32 2)
+  genx.atomic_work_item_fence <IMAGE_MEM_FENCE>, Release, device
+  // CHECK: call void @_Z22atomic_work_item_fencej12memory_order12memory_scope(i32 1, i32 4, i32 3)
+  genx.atomic_work_item_fence <LOCAL_MEM_FENCE>, AcquireRelease, all_svm_devices
+  // CHECK: call void @_Z22atomic_work_item_fencej12memory_order12memory_scope(i32 2, i32 5, i32 4)
+  genx.atomic_work_item_fence <GLOBAL_MEM_FENCE>, SequentiallyConsistent, sub_group
+  // CHECK: call void @_Z22atomic_work_item_fencej12memory_order12memory_scope(i32 5, i32 2, i32 4)
+  genx.atomic_work_item_fence <LOCAL_MEM_FENCE, IMAGE_MEM_FENCE>, Acquire, sub_group
+  llvm.return
+}
+
 llvm.func @genx.sub_group_shuffle() {
   // CHECK-LABEL: genx.sub_group_shuffle
   %0 = llvm.mlir.constant(0 : i32) : i32
