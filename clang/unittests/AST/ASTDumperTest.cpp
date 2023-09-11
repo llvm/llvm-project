@@ -30,7 +30,11 @@ using testing::StartsWith;
 
 std::vector<std::string> dumpTypeLoc(llvm::StringRef Name, ASTContext &Ctx) {
   auto Lookup = Ctx.getTranslationUnitDecl()->lookup(&Ctx.Idents.get(Name));
-  auto *D = Lookup.find_first<DeclaratorDecl>();
+  DeclaratorDecl *D = nullptr;
+  if ((D = Lookup.find_first<DeclaratorDecl>()))
+    ;
+  else if (auto *TD = Lookup.find_first<FunctionTemplateDecl>())
+    D = TD->getTemplatedDecl();
   EXPECT_NE(D, nullptr) << Name;
   if (!D)
     return {};
@@ -66,9 +70,34 @@ TEST(ASTDumper, TypeLocChain) {
                   "    `-BuiltinTypeLoc <col:11> 'int'"));
 }
 
+TEST(ASTDumper, AutoType) {
+  TestInputs Inputs(R"cc(
+    template <class, class> concept C = true;
+    C<int> auto str1 = "hello";
+    auto str2 = "hello";
+  )cc");
+  Inputs.ExtraArgs.push_back("-std=c++20");
+  TestAST AST(Inputs);
+  EXPECT_THAT(
+      dumpTypeLoc("str1", AST.context()),
+      ElementsAre(""
+                  "AutoTypeLoc <input.mm:3:5, col:12> 'C<int> auto' undeduced",
+                  StartsWith("|-Concept"), //
+                  "`-TemplateArgument <col:7> type 'int'",
+                  StartsWith("  `-BuiltinType")));
+  EXPECT_THAT(dumpTypeLoc("str2", AST.context()),
+              ElementsAre(""
+                          "AutoTypeLoc <input.mm:4:5> 'auto' undeduced"));
+}
+
+
 TEST(ASTDumper, FunctionTypeLoc) {
   TestAST AST(R"cc(
     void x(int, double *y);
+
+    auto trailing() -> int;
+
+    template <class T> int tmpl(T&&);
   )cc");
   EXPECT_THAT(
       dumpTypeLoc("x", AST.context()),
@@ -81,6 +110,37 @@ TEST(ASTDumper, FunctionTypeLoc) {
                   "| `-PointerTypeLoc <col:17, col:24> 'double *'",
                   "|   `-BuiltinTypeLoc <col:17> 'double'",
                   "`-BuiltinTypeLoc <col:5> 'void'"));
+
+  EXPECT_THAT(dumpTypeLoc("trailing", AST.context()),
+              ElementsAre(""
+                          "FunctionProtoTypeLoc <input.mm:4:5, col:24> "
+                          "'auto () -> int' trailing_return cdecl",
+                          "`-BuiltinTypeLoc <col:24> 'int'"));
+
+  EXPECT_THAT(
+      dumpTypeLoc("tmpl", AST.context()),
+      ElementsAre(""
+                  "FunctionProtoTypeLoc <input.mm:6:24, col:36> "
+                  "'int (T &&)' cdecl",
+                  StartsWith("|-ParmVarDecl"),
+                  "| `-RValueReferenceTypeLoc <col:33, col:34> 'T &&'",
+                  "|   `-TemplateTypeParmTypeLoc <col:33> 'T' depth 0 index 0",
+                  StartsWith("|     `-TemplateTypeParm"),
+                  "`-BuiltinTypeLoc <col:24> 'int'"));
+
+  // Dynamic-exception-spec needs C++14 or earlier.
+  TestInputs Throws(R"cc(
+    void throws() throw(int);
+  )cc");
+  Throws.ExtraArgs.push_back("-std=c++14");
+  AST = TestAST(Throws);
+  EXPECT_THAT(dumpTypeLoc("throws", AST.context()),
+              ElementsAre(""
+                          "FunctionProtoTypeLoc <input.mm:2:5, col:28> "
+                          "'void () throw(int)' exceptionspec_dynamic cdecl",
+                          // FIXME: include TypeLoc for int
+                          "|-Exceptions: 'int'",
+                          "`-BuiltinTypeLoc <col:5> 'void'"));
 }
 
 } // namespace

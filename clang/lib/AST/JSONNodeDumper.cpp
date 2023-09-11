@@ -77,7 +77,7 @@ void JSONNodeDumper::Visit(const Type *T) {
     return;
 
   JOS.attribute("kind", (llvm::Twine(T->getTypeClassName()) + "Type").str());
-  JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar*/ false));
+  JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar=*/false));
   attributeOnlyIfTrue("containsErrors", T->containsErrors());
   attributeOnlyIfTrue("isDependent", T->isDependentType());
   attributeOnlyIfTrue("isInstantiationDependent",
@@ -106,7 +106,7 @@ void JSONNodeDumper::Visit(TypeLoc TL) {
                  "TypeLoc")
                     .str());
   JOS.attribute("type",
-                createQualType(QualType(TL.getType()), /*Desugar*/ false));
+                createQualType(QualType(TL.getType()), /*Desugar=*/false));
   JOS.attributeObject("range",
                       [TL, this] { writeSourceRange(TL.getSourceRange()); });
 }

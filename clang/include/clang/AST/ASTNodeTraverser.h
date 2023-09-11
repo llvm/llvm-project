@@ -532,9 +532,8 @@ public:
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isCXXForRangeDecl())
       return;
 
-    if (VisitLocs)
-      if (const auto *TSI = D->getTypeSourceInfo())
-        Visit(TSI->getTypeLoc());
+    if (const auto *TSI = D->getTypeSourceInfo(); VisitLocs && TSI)
+      Visit(TSI->getTypeLoc());
     if (D->hasInit())
       Visit(D->getInit());
   }
