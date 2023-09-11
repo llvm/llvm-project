@@ -737,7 +737,8 @@ public:
 
   LogicalResult matchAndRewrite(tensor::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    // See if tensor input of tensor.extract op is the result of a linalg.fill op.
+    // See if tensor input of tensor.extract op is the result of a linalg.fill
+    // op.
     auto fillOp = extractOp.getTensor().getDefiningOp<linalg::FillOp>();
     if (!fillOp)
       return failure();
@@ -751,15 +752,65 @@ public:
   }
 };
 
+/// Folds pack(fill) into a single fill op if
+///   1. The pack op does not have padding value, or
+///   2. The filled value and padding value are the same.
+static FailureOr<FillOp> foldFillPackIntoFillOp(RewriterBase &rewriter,
+                                                tensor::PackOp packOp) {
+  auto fillOp = packOp.getSource().getDefiningOp<FillOp>();
+  if (!fillOp)
+    return failure();
+
+  if (auto paddingValue = packOp.getPaddingValue())
+    if (!isEqualConstantIntOrValue(paddingValue, fillOp.value()))
+      return failure();
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(fillOp);
+
+  Value packOpDest = packOp.getDest();
+  if (!packOpDest.hasOneUse())
+    return failure();
+  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
+    packOpDest = tensor::PackOp::createDestinationTensor(
+        rewriter, fillOp.getLoc(), fillOp.getDpsInitOperand(0)->get(),
+        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
+        packOp.getOuterDimsPerm());
+  } else {
+    DominanceInfo dom(fillOp);
+    if (!dom.properlyDominates(packOpDest, fillOp))
+      return failure();
+  }
+
+  Value fillDest = packOpDest;
+  return clone(rewriter, fillOp, packOpDest.getType(),
+               {fillOp.value(), fillDest});
+}
+
+/// Wrapper pattern that applies foldFillPackIntoFillOp method.
+struct FoldFillWithPack : public OpRewritePattern<tensor::PackOp> {
+public:
+  FoldFillWithPack(MLIRContext *context)
+      : OpRewritePattern<tensor::PackOp>(context) {}
+
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    auto fillOp = foldFillPackIntoFillOp(rewriter, packOp);
+    if (failed(fillOp))
+      return failure();
+    rewriter.replaceOp(packOp, fillOp.value().result());
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results
-      .add<FoldFillWithTensorExtract,
-           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill>(context);
+  results.add<FoldFillWithTensorExtract, FoldFillWithPack, FoldFillWithPad,
+              FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+              FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+              FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//
