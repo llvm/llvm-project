@@ -153,3 +153,8 @@ namespace PR31701 {
     const C c = C::n<i>;
   }
 }
+
+struct PR65784s{
+  int *ptr;
+} const PR65784[] = {(int *)""};
+PR65784s PR65784f() { return *PR65784; }

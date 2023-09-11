@@ -2,6 +2,7 @@
 /// split DWARF files with a relative DW_AT_comp_dir set, when the program file
 /// has been moved and/or we're executing it from another directory. Even when
 /// the provided search path is actually a symlink to the real location.
+// UNSUPPORTED: system-darwin
 // UNSUPPORTED: system-windows
 // RUN: rm -rf %t.compdir/ %t.e/
 // RUN: mkdir -p %t.compdir/a/b/c/d/

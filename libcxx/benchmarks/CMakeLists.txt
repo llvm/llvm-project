@@ -183,6 +183,7 @@ set(BENCHMARK_TESTS
     algorithms/sort_heap.bench.cpp
     algorithms/stable_sort.bench.cpp
     libcxxabi/dynamic_cast.bench.cpp
+    libcxxabi/dynamic_cast_old_stress.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
     deque_iterator.bench.cpp

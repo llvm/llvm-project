@@ -71,8 +71,12 @@ template <class ContextT>
 void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
   auto ID = ContextT::getIntrinsicID(I);
   auto *TokenDef = findAndCheckConvergenceTokenUsed(I);
-
   bool IsCtrlIntrinsic = true;
+
+  // If this is the first instruction in the block, then we have not seen a
+  // convergent op yet.
+  if (!I.getPrevNode())
+    SeenFirstConvOp = false;
 
   switch (ID) {
   case Intrinsic::experimental_convergence_entry:
@@ -82,8 +86,9 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
     Check(I.getParent()->isEntryBlock(),
           "Entry intrinsic can occur only in the entry block.",
           {Context.print(&I)});
-    Check(I.getParent()->getFirstNonPHI() == &I,
-          "Entry intrinsic can occur only at the start of the basic block.",
+    Check(!SeenFirstConvOp,
+          "Entry intrinsic cannot be preceded by a convergent operation in the "
+          "same basic block.",
           {Context.print(&I)});
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
@@ -95,14 +100,18 @@ void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
   case Intrinsic::experimental_convergence_loop:
     Check(TokenDef, "Loop intrinsic must have a convergencectrl token operand.",
           {Context.print(&I)});
-    Check(I.getParent()->getFirstNonPHI() == &I,
-          "Loop intrinsic can occur only at the start of the basic block.",
+    Check(!SeenFirstConvOp,
+          "Loop intrinsic cannot be preceded by a convergent operation in the "
+          "same basic block.",
           {Context.print(&I)});
     break;
   default:
     IsCtrlIntrinsic = false;
     break;
   }
+
+  if (isConvergent(I))
+    SeenFirstConvOp = true;
 
   if (TokenDef || IsCtrlIntrinsic) {
     Check(isConvergent(I),

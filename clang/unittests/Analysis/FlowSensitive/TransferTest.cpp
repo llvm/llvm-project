@@ -3964,10 +3964,7 @@ TEST(TransferTest, LoopDereferencingChangingPointerConverges) {
       }
     }
   )cc";
-  // FIXME: Implement pointer value widening to make analysis converge.
-  ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(Code),
-      llvm::FailedWithMessage("maximum number of iterations reached"));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
 TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
@@ -3989,10 +3986,7 @@ TEST(TransferTest, LoopDereferencingChangingRecordPointerConverges) {
       }
     }
   )cc";
-  // FIXME: Implement pointer value widening to make analysis converge.
-  ASSERT_THAT_ERROR(
-      checkDataflowWithNoopAnalysis(Code),
-      llvm::FailedWithMessage("maximum number of iterations reached"));
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code), llvm::Succeeded());
 }
 
 TEST(TransferTest, DoesNotCrashOnUnionThisExpr) {
@@ -5857,6 +5851,26 @@ TEST(TransferTest, AnonymousStructWithReferenceField) {
         ASSERT_EQ(AnonStruct.getChild(*IDecl),
                   Env.getStorageLocation(*GlobalIDecl));
       });
+}
+
+TEST(TransferTest, EvaluateBlockWithUnreachablePreds) {
+  // This is a crash repro.
+  // `false` block may not have been processed when we try to evaluate the `||`
+  // after visiting `true`, because it is not necessary (and therefore the edge
+  // is marked unreachable). Trying to get the analysis state via
+  // `getEnvironment` for the subexpression still should not crash.
+  std::string Code = R"(
+    int cast(int i) {
+      if ((i < 0 && true) || false) {
+        return 0;
+      }
+      return 0;
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
 }
 
 } // namespace

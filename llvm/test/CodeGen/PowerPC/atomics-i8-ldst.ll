@@ -7,16 +7,16 @@
 ; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-P10
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10,CHECK-P9
+; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10,CHECK-P9
+; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10,CHECK-P8
+; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10,CHECK-P8
+; RUN:   < %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREP10
 
 ; Function Attrs: nofree norecurse nounwind uwtable willreturn
 define dso_local signext i8 @ld_0_int8_t_uint8_t(i64 %ptr) {
@@ -175,25 +175,15 @@ define dso_local signext i8 @ld_disjoint_align32_int8_t_uint8_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_int8_t_uint8_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    lbzx r3, r3, r4
-; CHECK-P9-NEXT:    extsb r3, r3
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_int8_t_uint8_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    lbzx r3, r3, r4
-; CHECK-P8-NEXT:    extsb r3, r3
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_int8_t_uint8_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    lbzx r3, r3, r4
+; CHECK-PREP10-NEXT:    extsb r3, r3
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -473,25 +463,15 @@ define dso_local signext i8 @ld_disjoint_align32_int8_t_uint16_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_int8_t_uint16_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    lhzx r3, r3, r4
-; CHECK-P9-NEXT:    extsb r3, r3
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_int8_t_uint16_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    lhzx r3, r3, r4
-; CHECK-P8-NEXT:    extsb r3, r3
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_int8_t_uint16_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    lhzx r3, r3, r4
+; CHECK-PREP10-NEXT:    extsb r3, r3
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -777,25 +757,15 @@ define dso_local signext i8 @ld_disjoint_align32_int8_t_uint32_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_int8_t_uint32_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    lwzx r3, r3, r4
-; CHECK-P9-NEXT:    extsb r3, r3
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_int8_t_uint32_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    lwzx r3, r3, r4
-; CHECK-P8-NEXT:    extsb r3, r3
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_int8_t_uint32_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    lwzx r3, r3, r4
+; CHECK-PREP10-NEXT:    extsb r3, r3
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -1081,25 +1051,15 @@ define dso_local signext i8 @ld_disjoint_align32_int8_t_uint64_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    extsb r3, r3
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_int8_t_uint64_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    ldx r3, r3, r4
-; CHECK-P9-NEXT:    extsb r3, r3
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_int8_t_uint64_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    ldx r3, r3, r4
-; CHECK-P8-NEXT:    extsb r3, r3
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_int8_t_uint64_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    ldx r3, r3, r4
+; CHECK-PREP10-NEXT:    extsb r3, r3
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -1366,23 +1326,14 @@ define dso_local zeroext i8 @ld_disjoint_align32_uint8_t_uint8_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_uint8_t_uint8_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    lbzx r3, r3, r4
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_uint8_t_uint8_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    lbzx r3, r3, r4
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_uint8_t_uint8_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    lbzx r3, r3, r4
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -1654,25 +1605,15 @@ define dso_local zeroext i8 @ld_disjoint_align32_uint8_t_uint16_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    clrldi r3, r3, 56
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_uint8_t_uint16_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    lhzx r3, r3, r4
-; CHECK-P9-NEXT:    clrldi r3, r3, 56
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_uint8_t_uint16_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    lhzx r3, r3, r4
-; CHECK-P8-NEXT:    clrldi r3, r3, 56
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_uint8_t_uint16_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    lhzx r3, r3, r4
+; CHECK-PREP10-NEXT:    clrldi r3, r3, 56
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -1958,25 +1899,15 @@ define dso_local zeroext i8 @ld_disjoint_align32_uint8_t_uint32_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    clrldi r3, r3, 56
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_uint8_t_uint32_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    lwzx r3, r3, r4
-; CHECK-P9-NEXT:    clrldi r3, r3, 56
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_uint8_t_uint32_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    lwzx r3, r3, r4
-; CHECK-P8-NEXT:    clrldi r3, r3, 56
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_uint8_t_uint32_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    lwzx r3, r3, r4
+; CHECK-PREP10-NEXT:    clrldi r3, r3, 56
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -2262,25 +2193,15 @@ define dso_local zeroext i8 @ld_disjoint_align32_uint8_t_uint64_t(i64 %ptr) {
 ; CHECK-P10-NEXT:    clrldi r3, r3, 56
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: ld_disjoint_align32_uint8_t_uint64_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r4, -15264
-; CHECK-P9-NEXT:    and r3, r3, r4
-; CHECK-P9-NEXT:    lis r4, 15258
-; CHECK-P9-NEXT:    ori r4, r4, 41712
-; CHECK-P9-NEXT:    ldx r3, r3, r4
-; CHECK-P9-NEXT:    clrldi r3, r3, 56
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: ld_disjoint_align32_uint8_t_uint64_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r4, -15264
-; CHECK-P8-NEXT:    lis r5, 15258
-; CHECK-P8-NEXT:    and r3, r3, r4
-; CHECK-P8-NEXT:    ori r4, r5, 41712
-; CHECK-P8-NEXT:    ldx r3, r3, r4
-; CHECK-P8-NEXT:    clrldi r3, r3, 56
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: ld_disjoint_align32_uint8_t_uint64_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r4, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r4
+; CHECK-PREP10-NEXT:    lis r4, 15258
+; CHECK-PREP10-NEXT:    ori r4, r4, 41712
+; CHECK-PREP10-NEXT:    ldx r3, r3, r4
+; CHECK-PREP10-NEXT:    clrldi r3, r3, 56
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -2545,23 +2466,14 @@ define dso_local void @st_disjoint_align32_uint8_t_uint8_t(i64 %ptr, i8 zeroext 
 ; CHECK-P10-NEXT:    pstb r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_uint8_t_uint8_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    stbx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_uint8_t_uint8_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    stbx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_uint8_t_uint8_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    stbx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -2821,23 +2733,14 @@ define dso_local void @st_disjoint_align32_uint8_t_uint16_t(i64 %ptr, i8 zeroext
 ; CHECK-P10-NEXT:    psth r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_uint8_t_uint16_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    sthx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_uint8_t_uint16_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    sthx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_uint8_t_uint16_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    sthx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -3103,23 +3006,14 @@ define dso_local void @st_disjoint_align32_uint8_t_uint32_t(i64 %ptr, i8 zeroext
 ; CHECK-P10-NEXT:    pstw r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_uint8_t_uint32_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    stwx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_uint8_t_uint32_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    stwx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_uint8_t_uint32_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    stwx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -3385,23 +3279,14 @@ define dso_local void @st_disjoint_align32_uint8_t_uint64_t(i64 %ptr, i8 zeroext
 ; CHECK-P10-NEXT:    pstd r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_uint8_t_uint64_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    stdx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_uint8_t_uint64_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    stdx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_uint8_t_uint64_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    stdx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -3667,23 +3552,14 @@ define dso_local void @st_disjoint_align32_int8_t_uint16_t(i64 %ptr, i8 signext 
 ; CHECK-P10-NEXT:    psth r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_int8_t_uint16_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    sthx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_int8_t_uint16_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    sthx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_int8_t_uint16_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    sthx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -3949,23 +3825,14 @@ define dso_local void @st_disjoint_align32_int8_t_uint32_t(i64 %ptr, i8 signext 
 ; CHECK-P10-NEXT:    pstw r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_int8_t_uint32_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    stwx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_int8_t_uint32_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    stwx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_int8_t_uint32_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    stwx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000
@@ -4231,23 +4098,14 @@ define dso_local void @st_disjoint_align32_int8_t_uint64_t(i64 %ptr, i8 signext 
 ; CHECK-P10-NEXT:    pstd r4, 999990000(r3), 0
 ; CHECK-P10-NEXT:    blr
 ;
-; CHECK-P9-LABEL: st_disjoint_align32_int8_t_uint64_t:
-; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lis r5, -15264
-; CHECK-P9-NEXT:    and r3, r3, r5
-; CHECK-P9-NEXT:    lis r5, 15258
-; CHECK-P9-NEXT:    ori r5, r5, 41712
-; CHECK-P9-NEXT:    stdx r4, r3, r5
-; CHECK-P9-NEXT:    blr
-;
-; CHECK-P8-LABEL: st_disjoint_align32_int8_t_uint64_t:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    lis r5, -15264
-; CHECK-P8-NEXT:    lis r6, 15258
-; CHECK-P8-NEXT:    and r3, r3, r5
-; CHECK-P8-NEXT:    ori r5, r6, 41712
-; CHECK-P8-NEXT:    stdx r4, r3, r5
-; CHECK-P8-NEXT:    blr
+; CHECK-PREP10-LABEL: st_disjoint_align32_int8_t_uint64_t:
+; CHECK-PREP10:       # %bb.0: # %entry
+; CHECK-PREP10-NEXT:    lis r5, -15264
+; CHECK-PREP10-NEXT:    and r3, r3, r5
+; CHECK-PREP10-NEXT:    lis r5, 15258
+; CHECK-PREP10-NEXT:    ori r5, r5, 41712
+; CHECK-PREP10-NEXT:    stdx r4, r3, r5
+; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
   %or = or i64 %and, 999990000

@@ -1805,4 +1805,26 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
   }
 }
 
+TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
+  std::string expected = "All available -march extensions for AArch64\n\n"
+                         "\taes\n\tb16b16\n\tbf16";
+
+  outs().flush();
+  testing::internal::CaptureStdout();
+  AArch64::PrintSupportedExtensions();
+  outs().flush();
+  std::string captured = testing::internal::GetCapturedStdout();
+
+  // Check that the start of the output is as expected.
+  EXPECT_EQ(0ULL, captured.find(expected));
+
+  // Should not include "none".
+  EXPECT_EQ(std::string::npos, captured.find("none"));
+  // Should not include anything that lacks a feature name. Checking a few here
+  // but not all as if one is hidden correctly the rest should be.
+  EXPECT_EQ(std::string::npos, captured.find("memtag3"));
+  EXPECT_EQ(std::string::npos, captured.find("sha1"));
+  EXPECT_EQ(std::string::npos, captured.find("ssbs2"));
+}
+
 } // namespace

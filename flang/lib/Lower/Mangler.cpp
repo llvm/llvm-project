@@ -83,10 +83,9 @@ Fortran::lower::mangle::mangleName(std::string &name,
 }
 
 // Mangle the name of \p symbol to make it globally unique.
-std::string
-Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
-                                   ScopeBlockIdMap &scopeBlockIdMap,
-                                   bool keepExternalInScope) {
+std::string Fortran::lower::mangle::mangleName(
+    const Fortran::semantics::Symbol &symbol, ScopeBlockIdMap &scopeBlockIdMap,
+    bool keepExternalInScope, bool underscoring) {
   // Resolve module and host associations before mangling.
   const auto &ultimateSymbol = symbol.GetUltimate();
 
@@ -167,11 +166,12 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                                      symbolName);
           },
           [&](const Fortran::semantics::CommonBlockDetails &) {
-            return fir::NameUniquer::doCommonBlock(symbolName);
+            return Fortran::semantics::GetCommonBlockObjectName(ultimateSymbol,
+                                                                underscoring);
           },
           [&](const Fortran::semantics::ProcBindingDetails &procBinding) {
             return mangleName(procBinding.symbol(), scopeBlockIdMap,
-                              keepExternalInScope);
+                              keepExternalInScope, underscoring);
           },
           [&](const Fortran::semantics::DerivedTypeDetails &) -> std::string {
             // Derived type mangling must use mangleName(DerivedTypeSpec) so
@@ -186,13 +186,14 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
 
 std::string
 Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
-                                   bool keepExternalInScope) {
+                                   bool keepExternalInScope,
+                                   bool underscoring) {
   assert((symbol.owner().kind() !=
               Fortran::semantics::Scope::Kind::BlockConstruct ||
           symbol.has<Fortran::semantics::SubprogramDetails>()) &&
          "block object mangling must specify a scopeBlockIdMap");
   ScopeBlockIdMap scopeBlockIdMap;
-  return mangleName(symbol, scopeBlockIdMap, keepExternalInScope);
+  return mangleName(symbol, scopeBlockIdMap, keepExternalInScope, underscoring);
 }
 
 std::string Fortran::lower::mangle::mangleName(

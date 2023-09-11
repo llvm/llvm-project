@@ -12,6 +12,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
+#include "src/time/linux/clockGetTimeImpl.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 #include <time.h>
@@ -20,19 +21,10 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   struct timespec ts;
-#if SYS_clock_gettime
-  int ret = __llvm_libc::syscall_impl<int>(
-      SYS_clock_gettime, CLOCK_PROCESS_CPUTIME_ID, reinterpret_cast<long>(&ts));
-#elif defined(SYS_clock_gettime64)
-  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
-                                           CLOCK_PROCESS_CPUTIME_ID,
-                                           reinterpret_cast<long>(&ts));
-#else
-#error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
-#endif
-  if (ret < 0) {
-    libc_errno = -ret;
-    return clock_t(-1);
+  auto result = internal::clock_gettimeimpl(CLOCK_PROCESS_CPUTIME_ID, &ts);
+  if (!result.has_value()) {
+    libc_errno = result.error();
+    return -1;
   }
 
   // The above syscall gets the CPU time in seconds plus nanoseconds.

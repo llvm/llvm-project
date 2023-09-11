@@ -635,3 +635,106 @@ func.func @vector_print_scalable_vector(%arg0: vector<[4]xi32>) {
 // CHECK:           vector.print
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+func.func @transfer_read_array_of_scalable(%arg0: memref<3x?xf32>) -> vector<3x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %dim = memref.dim %arg0, %c1 : memref<3x?xf32>
+  %mask = vector.create_mask %c1, %dim : vector<3x[4]xi1>
+  %read = vector.transfer_read %arg0[%c0, %c0], %cst, %mask {in_bounds = [true, true]} : memref<3x?xf32>, vector<3x[4]xf32>
+  return %read : vector<3x[4]xf32>
+}
+// CHECK-LABEL:   func.func @transfer_read_array_of_scalable(
+// CHECK-SAME:                                               %[[ARG:.*]]: memref<3x?xf32>) -> vector<3x[4]xf32> {
+// CHECK:           %[[PADDING:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[ALLOCA_VEC:.*]] = memref.alloca() : memref<vector<3x[4]xf32>>
+// CHECK:           %[[ALLOCA_MASK:.*]] = memref.alloca() : memref<vector<3x[4]xi1>>
+// CHECK:           %[[DIM_SIZE:.*]] = memref.dim %[[ARG]], %[[C1]] : memref<3x?xf32>
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[C1]], %[[DIM_SIZE]] : vector<3x[4]xi1>
+// CHECK:           memref.store %[[MASK]], %[[ALLOCA_MASK]][] : memref<vector<3x[4]xi1>>
+// CHECK:           %[[UNPACK_VECTOR:.*]] = vector.type_cast %[[ALLOCA_VEC]] : memref<vector<3x[4]xf32>> to memref<3xvector<[4]xf32>>
+// CHECK:           %[[UNPACK_MASK:.*]] = vector.type_cast %[[ALLOCA_MASK]] : memref<vector<3x[4]xi1>> to memref<3xvector<[4]xi1>>
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
+// CHECK:             %[[MASK_SLICE:.*]] = memref.load %[[UNPACK_MASK]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xi1>>
+// CHECK:             %[[READ_SLICE:.*]] = vector.transfer_read %[[ARG]]{{\[}}%[[VAL_11]], %[[C0]]], %[[PADDING]], %[[MASK_SLICE]] {in_bounds = [true]} : memref<3x?xf32>, vector<[4]xf32>
+// CHECK:             memref.store %[[READ_SLICE]], %[[UNPACK_VECTOR]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xf32>>
+// CHECK:           }
+// CHECK:           %[[RESULT:.*]] = memref.load %[[ALLOCA_VEC]][] : memref<vector<3x[4]xf32>>
+// CHECK:           return %[[RESULT]] : vector<3x[4]xf32>
+// CHECK:         }
+
+// -----
+
+func.func @transfer_write_array_of_scalable(%vec: vector<3x[4]xf32>, %arg0: memref<3x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %dim = memref.dim %arg0, %c1 : memref<3x?xf32>
+  %mask = vector.create_mask %c1, %dim : vector<3x[4]xi1>
+  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = [true, true]} : vector<3x[4]xf32>, memref<3x?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @transfer_write_array_of_scalable(
+// CHECK-SAME:                                                %[[VEC:.*]]: vector<3x[4]xf32>,
+// CHECK-SAME:                                                %[[MEMREF:.*]]: memref<3x?xf32>) {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C3:.*]] = arith.constant 3 : index
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[ALLOCA_VEC:.*]] = memref.alloca() : memref<vector<3x[4]xf32>>
+// CHECK:           %[[ALLOCA_MASK:.*]] = memref.alloca() : memref<vector<3x[4]xi1>>
+// CHECK:           %[[DIM_SIZE:.*]] = memref.dim %[[MEMREF]], %[[C1]] : memref<3x?xf32>
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[C1]], %[[DIM_SIZE]] : vector<3x[4]xi1>
+// CHECK:           memref.store %[[MASK]], %[[ALLOCA_MASK]][] : memref<vector<3x[4]xi1>>
+// CHECK:           memref.store %[[VEC]], %[[ALLOCA_VEC]][] : memref<vector<3x[4]xf32>>
+// CHECK:           %[[UNPACK_VECTOR:.*]] = vector.type_cast %[[ALLOCA_VEC]] : memref<vector<3x[4]xf32>> to memref<3xvector<[4]xf32>>
+// CHECK:           %[[UNPACK_MASK:.*]] = vector.type_cast %[[ALLOCA_MASK]] : memref<vector<3x[4]xi1>> to memref<3xvector<[4]xi1>>
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
+// CHECK:             %[[MASK_SLICE:.*]] = memref.load %[[UNPACK_VECTOR]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xf32>>
+// CHECK:             %[[VECTOR_SLICE:.*]] = memref.load %[[UNPACK_MASK]]{{\[}}%[[VAL_11]]] : memref<3xvector<[4]xi1>>
+// CHECK:             vector.transfer_write %[[MASK_SLICE]], %[[MEMREF]]{{\[}}%[[VAL_11]], %[[C0]]], %[[VECTOR_SLICE]] {in_bounds = [true]} : vector<[4]xf32>, memref<3x?xf32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// -----
+
+/// The following two tests currently cannot be lowered via unpacking the leading dim since it is scalable.
+/// It may be possible to special case this via a dynamic dim in future.
+
+func.func @cannot_lower_transfer_write_with_leading_scalable(%vec: vector<[4]x4xf32>, %arg0: memref<?x4xf32>) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %dim = memref.dim %arg0, %c0 : memref<?x4xf32>
+  %mask = vector.create_mask %dim, %c4 : vector<[4]x4xi1>
+  vector.transfer_write %vec, %arg0[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[4]x4xf32>, memref<?x4xf32>
+  return
+}
+// CHECK-LABEL:   func.func @cannot_lower_transfer_write_with_leading_scalable(
+// CHECK-SAME:                                                                 %[[VEC:.*]]: vector<[4]x4xf32>,
+// CHECK-SAME:                                                                 %[[MEMREF:.*]]: memref<?x4xf32>)
+// CHECK: vector.transfer_write %[[VEC]], %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true]} : vector<[4]x4xf32>, memref<?x4xf32>
+
+// -----
+
+func.func @cannot_lower_transfer_read_with_leading_scalable(%arg0: memref<?x4xf32>) -> vector<[4]x4xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %dim = memref.dim %arg0, %c0 : memref<?x4xf32>
+  %mask = vector.create_mask %dim, %c4 : vector<[4]x4xi1>
+  %read = vector.transfer_read %arg0[%c0, %c0], %cst, %mask {in_bounds = [true, true]} : memref<?x4xf32>, vector<[4]x4xf32>
+  return %read : vector<[4]x4xf32>
+}
+// CHECK-LABEL:   func.func @cannot_lower_transfer_read_with_leading_scalable(
+// CHECK-SAME:                                                                %[[MEMREF:.*]]: memref<?x4xf32>)
+// CHECK: %{{.*}} = vector.transfer_read %[[MEMREF]][%{{.*}}, %{{.*}}], %{{.*}}, %{{.*}} {in_bounds = [true, true]} : memref<?x4xf32>, vector<[4]x4xf32>
+
+

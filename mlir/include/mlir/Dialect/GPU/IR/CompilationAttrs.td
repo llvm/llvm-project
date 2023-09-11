@@ -32,8 +32,9 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
       #gpu.object<#nvvm.target, "...">
     ```
   }];
-  let parameters = (ins "TargetAttrInterface":$target, "StringAttr":$object);
+  let parameters = (ins "Attribute":$target, "StringAttr":$object);
   let assemblyFormat = [{`<` $target `,` $object `>`}];
+  let genVerifyDecl = 1;
 }
 
 def GPUObjectArrayAttr :

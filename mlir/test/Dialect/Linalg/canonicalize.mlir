@@ -397,9 +397,8 @@ func.func @fold_static_pad_fill() -> tensor<412x276xf32> {
 
 //  CHECK-DAG:   %[[I1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[F0:.+]] = arith.constant 0.000000e+00 : f32
-//      CHECK:   %[[OF:.+]] = linalg.fill ins(%[[F0]] : f32) outs(%[[SRC]] : tensor<8x?x16x32xf32>)
 //      CHECK:   %[[S0:.+]] = affine.apply #[[MAP0]]()[%[[LOW0]]]
-//      CHECK:   %[[DIM1:.+]] = tensor.dim %[[OF]], %[[I1]] : tensor<8x?x16x32xf32>
+//      CHECK:   %[[DIM1:.+]] = tensor.dim %[[SRC]], %[[I1]] : tensor<8x?x16x32xf32>
 //      CHECK:   %[[S1:.+]] = affine.apply #[[MAP1]]()[%[[DIM1]]]
 //      CHECK:   %[[S2:.+]] = affine.apply #[[MAP2]]()[%[[HIGH2]]]
 //      CHECK:   %[[S3:.+]] = affine.apply #[[MAP3]]()[%[[LOW3]], %[[HIGH3]]]
@@ -907,4 +906,25 @@ func.func @dead_softmax(%arg0: tensor<16x64x256xf32>) -> tensor<16x64x256xf32> {
   %1 = linalg.softmax dimension(1)
     ins(%arg0 : tensor<16x64x256xf32>) outs(%0 : tensor<16x64x256xf32>) -> tensor<16x64x256xf32>
   return %arg0 : tensor<16x64x256xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_dim_of_dest_style_op
+//       CHECK: tensor.dim
+//       CHECK: tensor.dim
+//   CHECK-NOT: tensor.dim
+//       CHECK: return
+func.func @canonicalize_dim_of_dest_style_op(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %dim0_0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
+  %dim1_0 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
+  %0 = tensor.empty(%dim0_0, %dim1_0) : tensor<?x?xf32>
+  %1 = linalg.copy ins(%arg0 : tensor<?x?xf32>) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %dim0_1 = tensor.dim %1, %c0 : tensor<?x?xf32>
+  %dim1_1 = tensor.dim %1, %c1 : tensor<?x?xf32>
+  %2 = tensor.empty(%dim0_1, %dim1_1) : tensor<?x?xf32>
+  %3 = linalg.copy ins(%1 : tensor<?x?xf32>) outs(%2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %3: tensor<?x?xf32>
 }

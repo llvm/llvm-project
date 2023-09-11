@@ -589,7 +589,7 @@ public:
   NODE(parser, OmpAtomicClause)
   NODE(parser, OmpAtomicClauseList)
   NODE(parser, OmpAtomicDefaultMemOrderClause)
-  NODE_ENUM(OmpAtomicDefaultMemOrderClause, Type)
+  NODE_ENUM(common, OmpAtomicDefaultMemOrderType)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)

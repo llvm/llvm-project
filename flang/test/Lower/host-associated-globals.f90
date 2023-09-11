@@ -38,7 +38,7 @@ contains
  end subroutine
 end subroutine
 ! CHECK-LABEL: func.func @_QFtest_commonPbar() attributes {fir.internal_proc} {
-! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QCx) : !fir.ref<!fir.array<12xi8>>
+! CHECK:  %[[VAL_0:.*]] = fir.address_of(@x_) : !fir.ref<!fir.array<12xi8>>
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<12xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

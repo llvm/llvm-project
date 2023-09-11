@@ -78,6 +78,10 @@ CMake invocation at ``<monorepo>/llvm``:
   This type of build is also commonly called a "Runtimes build", but we would like to move
   away from that terminology, which is too confusing.
 
+.. warning::
+  Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not*
+  freshen the cmake cache of any of the enabled runtimes.
+
 Support for Windows
 ===================
 
