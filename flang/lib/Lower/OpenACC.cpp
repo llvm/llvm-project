@@ -1356,8 +1356,8 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value gangNum;
   mlir::Value gangDim;
   mlir::Value gangStatic;
-  llvm::SmallVector<mlir::Value, 2> tileOperands, privateOperands,
-      reductionOperands;
+  llvm::SmallVector<mlir::Value> tileOperands, privateOperands,
+      reductionOperands, cacheOperands;
   llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
   bool hasGang = false, hasVector = false, hasWorker = false;
 
@@ -1451,6 +1451,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, tileOperands);
   addOperands(operands, operandSegments, privateOperands);
   addOperands(operands, operandSegments, reductionOperands);
+  addOperands(operands, operandSegments, cacheOperands);
 
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       builder, currentLocation, operands, operandSegments);
