@@ -4049,11 +4049,13 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (IsFabs)
     RHSClass = llvm::fneg(RHSClass);
 
+#if 0
   // Compare of abs to negative
   if (RHSClass == fcNone) {
     assert((OrigClass & fcZero) == fcNone);
     return exactClass(Src, CmpInst::isOrdered(Pred) ? fcNone : fcNan);
   }
+#endif
 
   if (IsNaN) {
     // fcmp o__ x, nan -> false
