@@ -912,18 +912,18 @@ Type ContractionOp::getExpectedMaskType() {
 
   unsigned numVecDims = lhsIdxMap.getNumDims();
   SmallVector<int64_t> maskShape(numVecDims, ShapedType::kDynamic);
-  SmallVector<bool> maskShapeScalabledims(numVecDims, false);
+  SmallVector<bool> maskShapeScalableDims(numVecDims, false);
 
   // Using the information in the indexing maps, extract the size of each
   // dimension in the vector.contract operation from the two input operands.
   for (auto [dimIdx, dimSize] : llvm::enumerate(lhsType.getShape())) {
     maskShape[lhsIdxMap.getDimPosition(dimIdx)] = dimSize;
-    maskShapeScalabledims[lhsIdxMap.getDimPosition(dimIdx)] =
+    maskShapeScalableDims[lhsIdxMap.getDimPosition(dimIdx)] =
         lhsType.getScalableDims()[dimIdx];
   }
   for (auto [dimIdx, dimSize] : llvm::enumerate(rhsType.getShape())) {
     maskShape[rhsIdxMap.getDimPosition(dimIdx)] = dimSize;
-    maskShapeScalabledims[rhsIdxMap.getDimPosition(dimIdx)] =
+    maskShapeScalableDims[rhsIdxMap.getDimPosition(dimIdx)] =
         rhsType.getScalableDims()[dimIdx];
   }
 
@@ -932,7 +932,7 @@ Type ContractionOp::getExpectedMaskType() {
 
   return VectorType::get(maskShape,
                          IntegerType::get(lhsType.getContext(), /*width=*/1),
-                         maskShapeScalabledims);
+                         maskShapeScalableDims);
 }
 
 SmallVector<StringRef> ContractionOp::getTraitAttrNames() {
