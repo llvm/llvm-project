@@ -7588,6 +7588,22 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     }
   }
 
+  // If after narrowing, the required slide is still greater than LMUL2,
+  // fallback to generic expansion and go through the stack.  This is done
+  // for a subtle reason: extracting *all* elements out of a vector is
+  // widely expected to be linear in vector size, but because vslidedown
+  // is linear in LMUL, performing N extracts using vslidedown becomes
+  // O(n^2) / (VLEN/ETYPE) work.  On the surface, going through the stack
+  // seems to have the same problem (the store is linear in LMUL), but the
+  // generic expansion *memoizes* the store, and thus for many extracts of
+  // the same vector we end up with one store and a bunch of loads.
+  // TODO: We don't have the same code for insert_vector_elt because we
+  // have BUILD_VECTOR and handle the degenerate case there.  Should we
+  // consider adding an inverse BUILD_VECTOR node?
+  MVT LMUL2VT = getLMUL1VT(ContainerVT).getDoubleNumVectorElementsVT();
+  if (ContainerVT.bitsGT(LMUL2VT) && VecVT.isFixedLengthVector())
+    return SDValue();
+
   // If the index is 0, the vector is already in the right position.
   if (!isNullConstant(Idx)) {
     // Use a VL of 1 to avoid processing more elements than we need.
