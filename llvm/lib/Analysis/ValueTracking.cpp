@@ -4230,12 +4230,6 @@ exactClass(Value *V, FPClassTest M) {
 std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        const APFloat &ConstRHS, bool LookThroughSrc) {
-#if 0
-  auto [Val, ClassMask] =
-      fcmpToClassTest(Pred, F, LHS, &ConstRHS, LookThroughSrc);
-  if (Val)
-    return {Val, ClassMask, ~ClassMask};
-#endif
   FPClassTest RHSClass = ConstRHS.classify();
 
   const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
@@ -4305,6 +4299,114 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     }
 
     return {nullptr, fcAllFlags, fcAllFlags};
+  }
+
+  if (IsInf) {
+    FPClassTest Mask;
+
+    switch (Pred) {
+    case FCmpInst::FCMP_OEQ:
+    case FCmpInst::FCMP_UNE: {
+      // Match __builtin_isinf patterns
+      //
+      //   fcmp oeq x, +inf -> is_fpclass x, fcPosInf
+      //   fcmp oeq fabs(x), +inf -> is_fpclass x, fcInf
+      //   fcmp oeq x, -inf -> is_fpclass x, fcNegInf
+      //   fcmp oeq fabs(x), -inf -> is_fpclass x, 0 -> false
+      //
+      //   fcmp une x, +inf -> is_fpclass x, ~fcPosInf
+      //   fcmp une fabs(x), +inf -> is_fpclass x, ~fcInf
+      //   fcmp une x, -inf -> is_fpclass x, ~fcNegInf
+      //   fcmp une fabs(x), -inf -> is_fpclass x, fcAllFlags -> true
+      if (IsNegativeRHS) {
+        Mask = fcNegInf;
+        if (IsFabs)
+          Mask = fcNone;
+      } else {
+        Mask = fcPosInf;
+        if (IsFabs)
+          Mask |= fcNegInf;
+      }
+      break;
+    }
+    case FCmpInst::FCMP_ONE:
+    case FCmpInst::FCMP_UEQ: {
+      Mask = ~RHSClass | fcNan;
+
+      // Match __builtin_isinf patterns
+      //   fcmp one x, -inf -> is_fpclass x, fcNegInf
+      //   fcmp one fabs(x), -inf -> is_fpclass x, ~fcNegInf & ~fcNan
+      //   fcmp one x, +inf -> is_fpclass x, ~fcNegInf & ~fcNan
+      //   fcmp one fabs(x), +inf -> is_fpclass x, ~fcInf & fcNan
+      //
+      //   fcmp ueq x, +inf -> is_fpclass x, fcPosInf|fcNan
+      //   fcmp ueq (fabs x), +inf -> is_fpclass x, fcInf|fcNan
+      //   fcmp ueq x, -inf -> is_fpclass x, fcNegInf|fcNan
+      //   fcmp ueq fabs(x), -inf -> is_fpclass x, fcNan
+      if (IsNegativeRHS) {
+        Mask = ~fcNegInf & ~fcNan;
+        if (IsFabs)
+          Mask = ~fcNan;
+      } else {
+        Mask = ~fcPosInf & ~fcNan;
+        if (IsFabs)
+          Mask &= ~fcNegInf;
+      }
+
+      break;
+    }
+    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_UGE: {
+      if (IsNegativeRHS) {
+        // No value is ordered and less than negative infinity.
+        // All values are unordered with or at least negative infinity.
+        // fcmp olt x, -inf -> false
+        // fcmp uge x, -inf -> true
+        Mask = fcNone;
+        break;
+      }
+
+      // fcmp olt fabs(x), +inf -> fcFinite
+      // fcmp uge fabs(x), +inf -> ~fcFinite
+      // fcmp olt x, +inf -> fcFinite|fcNegInf
+      // fcmp uge x, +inf -> ~(fcFinite|fcNegInf)
+      Mask = fcFinite;
+      if (!IsFabs)
+        Mask |= fcNegInf;
+      break;
+    }
+    case FCmpInst::FCMP_OGE:
+    case FCmpInst::FCMP_ULT: {
+      if (IsNegativeRHS) // TODO
+        return {nullptr, fcAllFlags, fcAllFlags};
+
+      // fcmp oge fabs(x), +inf -> fcInf
+      // fcmp oge x, +inf -> fcPosInf
+      // fcmp ult fabs(x), +inf -> ~fcInf
+      // fcmp ult x, +inf -> ~fcPosInf
+      Mask = fcPosInf;
+      if (IsFabs)
+        Mask |= fcNegInf;
+      break;
+    }
+    case FCmpInst::FCMP_OGT:
+    case FCmpInst::FCMP_ULE: {
+      if (IsNegativeRHS)
+        return {nullptr, fcAllFlags, fcAllFlags};
+
+      // No value is ordered and greater than infinity.
+      Mask = fcNone;
+      break;
+    }
+    default:
+      return {nullptr, fcAllFlags, fcAllFlags};
+    }
+
+    // Invert the comparison for the unordered cases.
+    if (FCmpInst::isUnordered(Pred))
+      Mask = ~Mask;
+
+    return exactClass(Src, Mask);
   }
 
   if (Pred == FCmpInst::FCMP_OEQ) {
