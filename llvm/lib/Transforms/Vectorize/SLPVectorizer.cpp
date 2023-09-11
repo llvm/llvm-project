@@ -2436,8 +2436,7 @@ private:
 
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
-  TargetTransformInfo::OperandValueInfo getOperandInfo(const TreeEntry &E,
-                                                       unsigned OpIdx);
+  TargetTransformInfo::OperandValueInfo getOperandInfo(ArrayRef<Value *> Ops);
 
   /// \returns the cost of the vectorizable entry.
   InstructionCost getEntryCost(const TreeEntry *E,
@@ -6559,27 +6558,25 @@ static bool isAlternateInstruction(const Instruction *I,
   return I->getOpcode() == AltOp->getOpcode();
 }
 
-TTI::OperandValueInfo BoUpSLP::getOperandInfo(const TreeEntry &E,
-                                              unsigned OpIdx) {
-  ArrayRef<Value*> VL = E.getOperand(OpIdx);
-  assert(!VL.empty());
-  const auto *Op0 = VL.front();
+TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) {
+  assert(!Ops.empty());
+  const auto *Op0 = Ops.front();
 
-  const bool IsConstant = all_of(VL, [](Value *V) {
+  const bool IsConstant = all_of(Ops, [](Value *V) {
     // TODO: We should allow undef elements here
     return isConstant(V) && !isa<UndefValue>(V);
   });
-  const bool IsUniform = all_of(VL, [=](Value *V) {
+  const bool IsUniform = all_of(Ops, [=](Value *V) {
     // TODO: We should allow undef elements here
     return V == Op0;
   });
-  const bool IsPowerOfTwo = all_of(VL, [](Value *V) {
+  const bool IsPowerOfTwo = all_of(Ops, [](Value *V) {
     // TODO: We should allow undef elements here
     if (auto *CI = dyn_cast<ConstantInt>(V))
       return CI->getValue().isPowerOf2();
     return false;
   });
-  const bool IsNegatedPowerOfTwo = all_of(VL, [](Value *V) {
+  const bool IsNegatedPowerOfTwo = all_of(Ops, [](Value *V) {
     // TODO: We should allow undef elements here
     if (auto *CI = dyn_cast<ConstantInt>(V))
       return CI->getValue().isNegatedPowerOf2();
@@ -7999,8 +7996,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
-      TTI::OperandValueInfo Op1Info = getOperandInfo(*E, 0);
-      TTI::OperandValueInfo Op2Info = getOperandInfo(*E, OpIdx);
+      TTI::OperandValueInfo Op1Info = getOperandInfo(E->getOperand(0));
+      TTI::OperandValueInfo Op2Info = getOperandInfo(E->getOperand(OpIdx));
       return TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind, Op1Info,
                                          Op2Info) +
              CommonCost;
@@ -8065,7 +8062,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       // We know that we can merge the stores. Calculate the cost.
-      TTI::OperandValueInfo OpInfo = getOperandInfo(*E, 0);
+      TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
       return TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
                                   BaseSI->getPointerAddressSpace(), CostKind,
                                   OpInfo) +
