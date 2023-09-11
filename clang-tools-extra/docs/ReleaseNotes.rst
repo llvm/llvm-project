@@ -247,6 +247,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
 
+- Improved :doc:`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
+  ``emplace_back`` cannot construct with aggregate initialization.
+
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
   false-positives when special member function is actually used or implicit.
