@@ -2223,12 +2223,15 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 )
             self.assertFalse(got_failure, error_msg)
 
-    def complete_exactly(self, str_input, patterns):
-        self.complete_from_to(str_input, patterns, True)
-
-    def complete_from_to(self, str_input, patterns, turn_off_re_match=False):
+    def complete_from_to(self, str_input, patterns):
         """Test that the completion mechanism completes str_input to patterns,
-        where patterns could be a pattern-string or a list of pattern-strings"""
+        where patterns could be a single pattern-string or a list of
+        pattern-strings.
+
+        If there is only one pattern and it is exactly equal to str_input, this
+        assumes that there should be no completions provided and that the result
+        should be the same as the input."""
+
         # Patterns should not be None in order to proceed.
         self.assertFalse(patterns is None)
         # And should be either a string or list of strings.  Check for list type
@@ -2254,21 +2257,16 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 for idx in range(1, num_matches + 1):
                     compare_string += match_strings.GetStringAtIndex(idx) + "\n"
 
+        if len(patterns) == 1 and str_input == patterns[0] and num_matches:
+            self.fail("Expected no completions but got:\n" + compare_string)
+
         for p in patterns:
-            if turn_off_re_match:
-                self.expect(
-                    compare_string,
-                    msg=COMPLETION_MSG(str_input, p, match_strings),
-                    exe=False,
-                    substrs=[p],
-                )
-            else:
-                self.expect(
-                    compare_string,
-                    msg=COMPLETION_MSG(str_input, p, match_strings),
-                    exe=False,
-                    patterns=[p],
-                )
+            self.expect(
+                compare_string,
+                msg=COMPLETION_MSG(str_input, p, match_strings),
+                exe=False,
+                substrs=[p],
+            )
 
     def completions_match(self, command, completions):
         """Checks that the completions for the given command are equal to the
