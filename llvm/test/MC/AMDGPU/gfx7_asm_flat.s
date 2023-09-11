@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s
 
 flat_load_ubyte v5, v[1:2]
 // CHECK: [0x00,0x00,0x20,0xdc,0x01,0x00,0x00,0x05]

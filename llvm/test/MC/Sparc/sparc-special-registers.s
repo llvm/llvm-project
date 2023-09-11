@@ -1,5 +1,5 @@
-! RUN: llvm-mc %s -arch=sparc   -show-encoding | FileCheck %s --check-prefixes=CHECK,V8
-! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s --check-prefixes=CHECK,V9
+! RUN: llvm-mc %s -triple=sparc   -show-encoding | FileCheck %s --check-prefixes=CHECK,V8
+! RUN: llvm-mc %s -triple=sparcv9 -show-encoding | FileCheck %s --check-prefixes=CHECK,V9
 
         ! CHECK: rd %y, %i0            ! encoding: [0xb1,0x40,0x00,0x00]
         rd %y, %i0

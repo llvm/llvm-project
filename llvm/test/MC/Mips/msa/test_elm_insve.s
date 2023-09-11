@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        insve.b $w25[3], $w9[0]         # encoding: [0x79,0x43,0x4e,0x59]
 # CHECK:        insve.h $w24[2], $w2[0]         # encoding: [0x79,0x62,0x16,0x19]

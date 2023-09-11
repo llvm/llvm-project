@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga 2>&1 %s | FileCheck -check-prefix=VI-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 2>&1 %s | FileCheck -check-prefix=GFX9_10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 2>&1 %s | FileCheck --check-prefixes=GFX9_10-ERR --implicit-check-not=error: %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefixes=GFX1030 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga 2>&1 %s | FileCheck -check-prefix=VI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 2>&1 %s | FileCheck -check-prefix=GFX9_10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 2>&1 %s | FileCheck --check-prefixes=GFX9_10-ERR --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefixes=GFX1030 %s
 
 scratch_load_ubyte v1, off, off
 // GFX1030: encoding: [0x00,0x40,0x20,0xdc,0x00,0x00,0x7f,0x01]

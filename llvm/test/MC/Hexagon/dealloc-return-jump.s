@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj -o - %s
+# RUN: not llvm-mc -triple=hexagon -mcpu=hexagonv62 -filetype=obj -o - %s
 # Check that a duplex involving dealloc_return is correctly checked
 # dealloc_return cannot be involved in a double jump packet
 
