@@ -2461,6 +2461,34 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             FP16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return AdjustCost(Entry->Cost);
 
+  if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
+      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      !TLI->isTypeLegal(SrcTy) && !TLI->isTypeLegal(DstTy)) {
+    // Add cost for extending unpacked masked loads to wide illegal scalable
+    // vectors. For such cases we require a combination of extending loads and
+    // unpacks, for example:
+    //   masked load of nxv4i8 + zext -> nxv4i64 becomes
+    //   ld1b {z0.s}, ...
+    //   uunpklo z1.d, z0.s
+    //   uunpkhi z2.d, z0.s
+    static const TypeConversionCostTblEntry IllToIllTbl[] = {
+      { ISD::ZERO_EXTEND, MVT::nxv4i64, MVT::nxv4i8,  2},
+      { ISD::ZERO_EXTEND, MVT::nxv4i64, MVT::nxv4i16, 2},
+      { ISD::ZERO_EXTEND, MVT::nxv8i32, MVT::nxv8i8,  2},
+      { ISD::ZERO_EXTEND, MVT::nxv8i64, MVT::nxv8i8,  6},
+
+      { ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i8,  2},
+      { ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i16, 2},
+      { ISD::SIGN_EXTEND, MVT::nxv8i32, MVT::nxv8i8,  2},
+      { ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i8,  6},
+    };
+
+    if (const auto *Entry = ConvertCostTableLookup(IllToIllTbl, ISD,
+                                                   DstTy.getSimpleVT(),
+                                                   SrcTy.getSimpleVT()))
+      return AdjustCost(Entry->Cost);
+  }
+
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
