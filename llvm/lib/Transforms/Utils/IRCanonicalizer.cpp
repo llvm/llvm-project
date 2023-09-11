@@ -443,23 +443,23 @@ void IRCanonicalizer::reorderInstructions(
 void IRCanonicalizer::reorderInstruction(
     Instruction *Used, Instruction *User,
     SmallPtrSet<const Instruction *, 32> &Visited) {
+  if (Visited.contains(Used)) {
+    return;
+  }
+  Visited.insert(Used);
 
-  if (!Visited.count(Used)) {
-    Visited.insert(Used);
+  if (Used->getParent() == User->getParent()) {
+    // If Used and User share the same basic block move Used just before User.
+    Used->moveBefore(User);
+  } else {
+    // Otherwise move Used to the very end of its basic block.
+    Used->moveBefore(&Used->getParent()->back());
+  }
 
-    if (Used->getParent() == User->getParent()) {
-      // If Used and User share the same basic block move Used just before User.
-      Used->moveBefore(User);
-    } else {
-      // Otherwise move Used to the very end of its basic block.
-      Used->moveBefore(&Used->getParent()->back());
-    }
-
-    for (auto &OP : Used->operands()) {
-      if (auto *IOP = dyn_cast<Instruction>(OP)) {
-        // Walk up the def-use tree.
-        reorderInstruction(IOP, Used, Visited);
-      }
+  for (auto &OP : Used->operands()) {
+    if (auto *IOP = dyn_cast<Instruction>(OP)) {
+      // Walk up the def-use tree.
+      reorderInstruction(IOP, Used, Visited);
     }
   }
 }
