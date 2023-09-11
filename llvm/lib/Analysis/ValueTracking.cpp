@@ -4044,14 +4044,19 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   if (IsFabs)
     RHSClass = llvm::fneg(RHSClass);
 
-  const bool IsNaN = (RHSClass & ~fcNan) == RHSClass;
+  const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
+  if (IsNaN) {
+    // fcmp o__ x, nan -> false
+    // fcmp u__ x, nan -> true
+    return exactClass(Src, CmpInst::isOrdered(Pred) ? fcNone : fcAllFlags);
+  }
 
   // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
-  if (Pred == FCmpInst::FCMP_ORD && !IsNaN)
+  if (Pred == FCmpInst::FCMP_ORD)
     return {Src, ~fcNan, fcNan};
 
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
-  if (Pred == FCmpInst::FCMP_UNO && !IsNaN)
+  if (Pred == FCmpInst::FCMP_UNO)
     return {Src, fcNan, ~fcNan};
 
   const bool IsZero = (RHSClass & fcZero) == RHSClass;
