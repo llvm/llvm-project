@@ -15,7 +15,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s16) = G_SEXT_INREG [[TRUNC]], 8
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s16) = exact G_SEXT_INREG [[TRUNC]], 8
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SEXT_INREG]](s16)
     ; CHECK-NEXT: $w0 = COPY [[ANYEXT]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
@@ -75,7 +75,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<4 x s16>) = G_SEXT_INREG [[COPY]], 8
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<4 x s16>) = exact G_SEXT_INREG [[COPY]], 8
     ; CHECK-NEXT: $d0 = COPY [[SEXT_INREG]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0

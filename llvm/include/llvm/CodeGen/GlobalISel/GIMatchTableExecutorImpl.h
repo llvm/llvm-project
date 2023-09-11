@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -42,16 +43,32 @@ namespace llvm {
 template <class TgtExecutor, class PredicateBitset, class ComplexMatcherMemFn,
           class CustomRendererFn>
 bool GIMatchTableExecutor::executeMatchTable(
-    TgtExecutor &Exec, NewMIVector &OutMIs, MatcherState &State,
+    TgtExecutor &Exec, MatcherState &State,
     const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
         &ExecInfo,
-    const int64_t *MatchTable, const TargetInstrInfo &TII,
-    MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-    const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
-    CodeGenCoverage *CoverageInfo, GISelChangeObserver *Observer) const {
+    MachineIRBuilder &Builder, const int64_t *MatchTable,
+    const TargetInstrInfo &TII, MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, const RegisterBankInfo &RBI,
+    const PredicateBitset &AvailableFeatures,
+    CodeGenCoverage *CoverageInfo) const {
+
+  // Setup observer
+  GIMatchTableObserver MTObserver;
+  GISelObserverWrapper Observer(&MTObserver);
+  if (auto *CurObs = Builder.getChangeObserver())
+    Observer.addObserver(CurObs);
+
+  // TODO: Set MF delegate?
+
+  // Setup builder.
+  auto RestoreOldObserver = Builder.setTemporaryChangeObserver(Observer);
 
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
+
+  // We also record MachineInstrs manually in this vector so opcodes can address
+  // them.
+  SmallVector<MachineInstrBuilder, 4> OutMIs;
 
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
@@ -71,14 +88,16 @@ bool GIMatchTableExecutor::executeMatchTable(
     return RejectAndResume;
   };
 
-  auto propagateFlags = [=](NewMIVector &OutMIs) {
-    for (auto MIB : OutMIs) {
+  auto propagateFlags = [&]() {
+    for (auto *MI : MTObserver.CreatedInsts) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
       uint16_t MIBFlags = Flags;
-      if (NoFPException && MIB->mayRaiseFPException())
+      if (NoFPException && MI->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
-      MIB.setMIFlags(MIBFlags);
+      Observer.changingInstr(*MI);
+      MI->setFlags(MIBFlags);
+      Observer.changedInstr(*MI);
     }
 
     return true;
@@ -901,6 +920,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       OutMIs[NewInsnID] = MachineInstrBuilder(*State.MIs[OldInsnID]->getMF(),
                                               State.MIs[OldInsnID]);
       OutMIs[NewInsnID]->setDesc(TII.get(NewOpcode));
+      MTObserver.CreatedInsts.insert(OutMIs[NewInsnID]);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_MutateOpcode(OutMIs["
                              << NewInsnID << "], MIs[" << OldInsnID << "], "
@@ -914,8 +934,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
-      OutMIs[NewInsnID] = BuildMI(*State.MIs[0]->getParent(), State.MIs[0],
-                                  MIMetadata(*State.MIs[0]), TII.get(Opcode));
+      OutMIs[NewInsnID] = Builder.buildInstr(Opcode);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs["
                              << NewInsnID << "], " << Opcode << ")\n");
@@ -1239,8 +1258,11 @@ bool GIMatchTableExecutor::executeMatchTable(
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_EraseFromParent(MIs["
                              << InsnID << "])\n");
-      if (Observer)
-        Observer->erasingInstr(*MI);
+      // If we're erasing the insertion point, ensure we don't leave a dangling
+      // pointer in the builder.
+      if (Builder.getInsertPt() == MI)
+        Builder.setInsertPt(*MI->getParent(), ++MI->getIterator());
+      Observer.erasingInstr(*MI);
       MI->eraseFromParent();
       break;
     }
@@ -1269,11 +1291,9 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
       Register New = State.MIs[NewInsnID]->getOperand(NewOpIdx).getReg();
-      if (Observer)
-        Observer->changingAllUsesOfReg(MRI, Old);
+      Observer.changingAllUsesOfReg(MRI, Old);
       MRI.replaceRegWith(Old, New);
-      if (Observer)
-        Observer->finishedChangingAllUsesOfReg();
+      Observer.finishedChangingAllUsesOfReg();
       break;
     }
     case GIR_ReplaceRegWithTempReg: {
@@ -1288,11 +1308,9 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       Register Old = State.MIs[OldInsnID]->getOperand(OldOpIdx).getReg();
       Register New = State.TempRegisters[TempRegID];
-      if (Observer)
-        Observer->changingAllUsesOfReg(MRI, Old);
+      Observer.changingAllUsesOfReg(MRI, Old);
       MRI.replaceRegWith(Old, New);
-      if (Observer)
-        Observer->finishedChangingAllUsesOfReg();
+      Observer.finishedChangingAllUsesOfReg();
       break;
     }
     case GIR_Coverage: {
@@ -1309,11 +1327,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_Done:
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_Done\n");
-      if (Observer) {
-        for (MachineInstr *MI : OutMIs)
-          Observer->createdInstr(*MI);
-      }
-      propagateFlags(OutMIs);
+      propagateFlags();
       return true;
     default:
       llvm_unreachable("Unexpected command");

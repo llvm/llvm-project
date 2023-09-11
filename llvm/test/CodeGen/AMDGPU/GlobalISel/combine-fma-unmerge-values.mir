@@ -79,9 +79,9 @@ body: |
     ; GFX10-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: %vec:_(<2 x s32>) = G_LOAD %ptr(p1) :: (load (<2 x s32>), addrspace 1)
     ; GFX10-NEXT: %el0:_(s32), %el1:_(s32) = G_UNMERGE_VALUES %vec(<2 x s32>)
-    ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FPEXT]], [[FPEXT1]], %el1
+    ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPEXT [[TRUNC]](s16)
+    ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPEXT [[TRUNC1]](s16)
+    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[FPEXT]], [[FPEXT1]], %el1
     ; GFX10-NEXT: $vgpr0 = COPY [[FMA]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s16) = G_TRUNC %0(s32)
@@ -116,9 +116,9 @@ body: |
     ; GFX10-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: %vec:_(<2 x s32>) = G_LOAD %ptr(p1) :: (load (<2 x s32>), addrspace 1)
     ; GFX10-NEXT: %el0:_(s32), %el1:_(s32) = G_UNMERGE_VALUES %vec(<2 x s32>)
-    ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[FPEXT]], [[FPEXT1]], %el1
+    ; GFX10-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPEXT [[TRUNC]](s16)
+    ; GFX10-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPEXT [[TRUNC1]](s16)
+    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[FPEXT]], [[FPEXT1]], %el1
     ; GFX10-NEXT: $vgpr0 = COPY [[FMA]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s16) = G_TRUNC %0(s32)
@@ -149,8 +149,8 @@ body: |
     ; GFX10-NEXT: %ptr:_(p1) = COPY $vgpr4_vgpr5
     ; GFX10-NEXT: %vec:_(<2 x s32>) = G_LOAD %ptr(p1) :: (load (<2 x s32>), addrspace 1)
     ; GFX10-NEXT: %el0:_(s32), %el1:_(s32) = G_UNMERGE_VALUES %vec(<2 x s32>)
-    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY2]], [[COPY3]], %el1
-    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[FMA]]
+    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY2]], [[COPY3]], %el1
+    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[FMA]]
     ; GFX10-NEXT: $vgpr0 = COPY [[FMA1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
@@ -181,8 +181,8 @@ body: |
     ; GFX10-NEXT: %ptr:_(p1) = COPY $vgpr4_vgpr5
     ; GFX10-NEXT: %vec:_(<2 x s32>) = G_LOAD %ptr(p1) :: (load (<2 x s32>), addrspace 1)
     ; GFX10-NEXT: %el0:_(s32), %el1:_(s32) = G_UNMERGE_VALUES %vec(<2 x s32>)
-    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY2]], [[COPY3]], %el1
-    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[FMA]]
+    ; GFX10-NEXT: [[FMA:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY2]], [[COPY3]], %el1
+    ; GFX10-NEXT: [[FMA1:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FMA [[COPY]], [[COPY1]], [[FMA]]
     ; GFX10-NEXT: $vgpr0 = COPY [[FMA1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 namespace llvm {
 
@@ -362,6 +363,15 @@ public:
 
   void setChangeObserver(GISelChangeObserver &Observer) {
     State.Observer = &Observer;
+  }
+
+  GISelChangeObserver *getChangeObserver() const { return State.Observer; }
+
+  // Replaces the change observer with \p Observer and returns an object that
+  // restores the old Observer on destruction.
+  SaveAndRestore<GISelChangeObserver *>
+  setTemporaryChangeObserver(GISelChangeObserver &Observer) {
+    return SaveAndRestore<GISelChangeObserver *>(State.Observer, &Observer);
   }
 
   void stopObservingChanges() { State.Observer = nullptr; }

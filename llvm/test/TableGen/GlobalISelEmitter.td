@@ -82,7 +82,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    const int64_t *getMatchTable() const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
 // CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
-// CHECK-NEXT:    void runCustomAction(unsigned FnID, const MatcherState &State, NewMIVector &OutMIs) const override;
+// CHECK-NEXT:    void runCustomAction(unsigned FnID, const MatcherState &State, ArrayRef<MachineInstrBuilder> OutMIs) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -216,11 +216,11 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
 // CHECK-NEXT: const PredicateBitset AvailableFeatures = getAvailableFeatures();
-// CHECK-NEXT: NewMIVector OutMIs;
+// CHECK-NEXT: MachineIRBuilder B(I);
 // CHECK-NEXT: State.MIs.clear();
 // CHECK-NEXT: State.MIs.push_back(&I);
 
-// CHECK:      if (executeMatchTable(*this, OutMIs, State, ExecInfo, getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures, &CoverageInfo)) {
+// CHECK:      if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures, &CoverageInfo)) {
 // CHECK-NEXT:   return true;
 // CHECK-NEXT: }
 

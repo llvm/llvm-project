@@ -18,6 +18,7 @@
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -40,6 +41,7 @@ class APInt;
 class APFloat;
 class GISelKnownBits;
 class MachineInstr;
+class MachineIRBuilder;
 class MachineInstrBuilder;
 class MachineFunction;
 class MachineOperand;
@@ -501,10 +503,25 @@ public:
   }
 
 protected:
+  /// Observer used by \ref executeMatchTable to record all instructions created
+  /// by the rule.
+  class GIMatchTableObserver : public GISelChangeObserver {
+  public:
+    virtual ~GIMatchTableObserver();
+
+    void erasingInstr(MachineInstr &MI) override { CreatedInsts.erase(&MI); }
+    void createdInstr(MachineInstr &MI) override { CreatedInsts.insert(&MI); }
+    void changingInstr(MachineInstr &MI) override {}
+    void changedInstr(MachineInstr &MI) override {}
+
+    // Keeps track of all instructions that have been created when applying a
+    // rule.
+    SmallDenseSet<MachineInstr *, 4> CreatedInsts;
+  };
+
   using ComplexRendererFns =
       std::optional<SmallVector<std::function<void(MachineInstrBuilder &)>, 4>>;
   using RecordedMIVector = SmallVector<MachineInstr *, 4>;
-  using NewMIVector = SmallVector<MachineInstrBuilder, 4>;
 
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
@@ -555,15 +572,15 @@ protected:
   /// and false otherwise.
   template <class TgtExecutor, class PredicateBitset, class ComplexMatcherMemFn,
             class CustomRendererFn>
-  bool executeMatchTable(
-      TgtExecutor &Exec, NewMIVector &OutMIs, MatcherState &State,
-      const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
-          &ISelInfo,
-      const int64_t *MatchTable, const TargetInstrInfo &TII,
-      MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-      const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
-      CodeGenCoverage *CoverageInfo,
-      GISelChangeObserver *Observer = nullptr) const;
+  bool executeMatchTable(TgtExecutor &Exec, MatcherState &State,
+                         const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn,
+                                          CustomRendererFn> &ExecInfo,
+                         MachineIRBuilder &Builder, const int64_t *MatchTable,
+                         const TargetInstrInfo &TII, MachineRegisterInfo &MRI,
+                         const TargetRegisterInfo &TRI,
+                         const RegisterBankInfo &RBI,
+                         const PredicateBitset &AvailableFeatures,
+                         CodeGenCoverage *CoverageInfo) const;
 
   virtual const int64_t *getMatchTable() const {
     llvm_unreachable("Should have been overridden by tablegen if used");
@@ -592,7 +609,7 @@ protected:
   }
 
   virtual void runCustomAction(unsigned, const MatcherState &State,
-                               NewMIVector &OutMIs) const {
+                               ArrayRef<MachineInstrBuilder> OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }
 

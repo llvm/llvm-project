@@ -13,8 +13,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %input:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s16) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s16) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s16) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s16) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: %res:_(s32) = G_ANYEXT [[FCANONICALIZE]](s16)
     ; CHECK-NEXT: $vgpr0 = COPY %res(s32)
     %0:_(s32) = COPY $vgpr0
@@ -84,8 +84,8 @@ body:             |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s32) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s32) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0 = COPY [[FCANONICALIZE]](s32)
     %input:_(s32) = COPY $vgpr0
     %cst:_(s32) = G_FCONSTANT float 0.0
@@ -144,8 +144,8 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s64) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCANONICALIZE]](s64)
     %input:_(s64) = COPY $vgpr0_vgpr1
     %cst:_(s64) = G_FCONSTANT double 0.0
@@ -204,8 +204,8 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<4 x s16>) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<4 x s16>) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<4 x s16>) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<4 x s16>) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCANONICALIZE]](<4 x s16>)
     %input:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %cst:_(s16) = G_FCONSTANT half 0.0
@@ -268,8 +268,8 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<4 x s32>) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<4 x s32>) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<4 x s32>) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<4 x s32>) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FCANONICALIZE]](<4 x s32>)
     %input:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %cst:_(s32) = G_FCONSTANT float 0.0
@@ -332,8 +332,8 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<4 x s32>) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<4 x s32>) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<4 x s32>) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<4 x s32>) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FCANONICALIZE]](<4 x s32>)
     %input:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %cst:_(s32) = G_FCONSTANT float 0.0
@@ -354,8 +354,8 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %input:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s64>) = G_FNEG %input
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s64>) = G_FCANONICALIZE [[FNEG]]
+    ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s64>) = nsz G_FNEG %input
+    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s64>) = nsz G_FCANONICALIZE [[FNEG]]
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FCANONICALIZE]](<2 x s64>)
     %input:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %cst:_(s64) = G_FCONSTANT double 0.0
