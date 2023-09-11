@@ -2307,7 +2307,17 @@ public:
   }
 
   void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
-    Word(ToUpperCaseLetters(common::EnumToString(x.v)));
+    switch (x.v) {
+    case OmpAtomicDefaultMemOrderClause::Type::SeqCst:
+      Word("SEQ_CST");
+      break;
+    case OmpAtomicDefaultMemOrderClause::Type::AcqRel:
+      Word("ACQ_REL");
+      break;
+    case OmpAtomicDefaultMemOrderClause::Type::Relaxed:
+      Word("RELAXED");
+      break;
+    }
   }
 
   void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
