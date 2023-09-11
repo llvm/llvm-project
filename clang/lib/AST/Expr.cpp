@@ -701,6 +701,7 @@ PredefinedExpr *PredefinedExpr::CreateEmpty(const ASTContext &Ctx,
 }
 
 StringRef PredefinedExpr::getIdentKindName(PredefinedExpr::IdentKind IK) {
+  printf("Enter getIdentKindName\n");
   switch (IK) {
   case Func:
     return "__func__";
