@@ -499,8 +499,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // (The rest of HeaderFileInfo is not relevant for our purposes).
   if (Preamble && Preamble->MainIsIncludeGuarded) {
     const SourceManager &SM = Clang->getSourceManager();
-    const FileEntry *MainFE = SM.getFileEntryForID(SM.getMainFileID());
-    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(MainFE);
+    OptionalFileEntryRef MainFE = SM.getFileEntryRefForID(SM.getMainFileID());
+    Clang->getPreprocessor().getHeaderSearchInfo().MarkFileIncludeOnce(*MainFE);
   }
 
   // Set up ClangTidy. Must happen after BeginSourceFile() so ASTContext exists.

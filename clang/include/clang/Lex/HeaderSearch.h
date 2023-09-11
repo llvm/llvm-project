@@ -139,7 +139,7 @@ public:
   /// \returns Header file information for the given file entry, with the
   /// \c External bit set. If the file entry is not known, return a
   /// default-constructed \c HeaderFileInfo.
-  virtual HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) = 0;
+  virtual HeaderFileInfo GetHeaderFileInfo(FileEntryRef FE) = 0;
 };
 
 /// This structure is used to record entries in our framework cache.
@@ -487,7 +487,7 @@ public:
   OptionalFileEntryRef LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       ConstSearchDirIterator FromDir, ConstSearchDirIterator *CurDir,
-      ArrayRef<std::pair<const FileEntry *, DirectoryEntryRef>> Includers,
+      ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
       bool *IsMapped, bool *IsFrameworkFound, bool SkipCache = false,
@@ -522,33 +522,32 @@ public:
 
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
-  SrcMgr::CharacteristicKind getFileDirFlavor(const FileEntry *File) {
+  SrcMgr::CharacteristicKind getFileDirFlavor(FileEntryRef File) {
     return (SrcMgr::CharacteristicKind)getFileInfo(File).DirInfo;
   }
 
   /// Mark the specified file as a "once only" file due to
   /// \#pragma once.
-  void MarkFileIncludeOnce(const FileEntry *File) {
+  void MarkFileIncludeOnce(FileEntryRef File) {
     HeaderFileInfo &FI = getFileInfo(File);
     FI.isPragmaOnce = true;
   }
 
   /// Mark the specified file as a system header, e.g. due to
   /// \#pragma GCC system_header.
-  void MarkFileSystemHeader(const FileEntry *File) {
+  void MarkFileSystemHeader(FileEntryRef File) {
     getFileInfo(File).DirInfo = SrcMgr::C_System;
   }
 
   /// Mark the specified file as part of a module.
-  void MarkFileModuleHeader(const FileEntry *FE,
-                            ModuleMap::ModuleHeaderRole Role,
+  void MarkFileModuleHeader(FileEntryRef FE, ModuleMap::ModuleHeaderRole Role,
                             bool isCompilingModuleHeader);
 
   /// Mark the specified file as having a controlling macro.
   ///
   /// This is used by the multiple-include optimization to eliminate
   /// no-op \#includes.
-  void SetFileControllingMacro(const FileEntry *File,
+  void SetFileControllingMacro(FileEntryRef File,
                                const IdentifierInfo *ControllingMacro) {
     getFileInfo(File).ControllingMacro = ControllingMacro;
   }
@@ -558,10 +557,10 @@ public:
   /// macro.
   ///
   /// This routine does not consider the effect of \#import
-  bool isFileMultipleIncludeGuarded(const FileEntry *File) const;
+  bool isFileMultipleIncludeGuarded(FileEntryRef File) const;
 
   /// Determine whether the given file is known to have ever been \#imported.
-  bool hasFileBeenImported(const FileEntry *File) const {
+  bool hasFileBeenImported(FileEntryRef File) const {
     const HeaderFileInfo *FI = getExistingFileInfo(File);
     return FI && FI->isImport;
   }
@@ -806,13 +805,13 @@ public:
 
   /// Return the HeaderFileInfo structure for the specified FileEntry,
   /// in preparation for updating it in some way.
-  HeaderFileInfo &getFileInfo(const FileEntry *FE);
+  HeaderFileInfo &getFileInfo(FileEntryRef FE);
 
   /// Return the HeaderFileInfo structure for the specified FileEntry,
   /// if it has ever been filled in.
   /// \param WantExternal Whether the caller wants purely-external header file
   ///        info (where \p External is true).
-  const HeaderFileInfo *getExistingFileInfo(const FileEntry *FE,
+  const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE,
                                             bool WantExternal = true) const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
