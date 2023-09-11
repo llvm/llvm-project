@@ -184,6 +184,26 @@ add_math_entrypoint_gpu_object(
 )
 
 add_math_entrypoint_gpu_object(
+  logb
+  SRCS
+    logb.cpp
+  HDRS
+    ../logb.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  logbf
+  SRCS
+    logbf.cpp
+  HDRS
+    ../logbf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
   modf
   SRCS
     modf.cpp
