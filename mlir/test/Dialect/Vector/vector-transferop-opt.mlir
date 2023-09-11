@@ -223,8 +223,11 @@ func.func @forward_dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
 //         %1 = vector.transfer_read %subview
 //         vector.transfer_write %1, %alloca
 //         vector.transfer_write %vec, %collapse_shape 
+//         %2 = vector.transfer_read %alloca
 //         vector.transfer_write %1, %subview
-// Indeed, %alloca and %collapse_shape alias and hence %2 != %1.
+// Indeed, %alloca and %collapse_shape alias and hence %2 != %1. Instead, the
+// final `vector.transfer_write` should be preserved as:
+//         vector.transfer_write %2, %subview
 
 // CHECK-LABEL:  func.func @collapse_shape
 //       CHECK:    scf.for {{.*}} {
