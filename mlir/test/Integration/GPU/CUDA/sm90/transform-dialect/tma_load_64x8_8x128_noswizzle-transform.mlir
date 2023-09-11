@@ -25,24 +25,31 @@
 // CHECK-PTX: mbarrier.arrive.expect_tx.shared.b64
 // CHECK-PTX: mbarrier.try_wait.parity.shared.b64
 
-// TODO: GPU layering does not currently work end-to-end. Activate the following
-// when fixed.
-// R-UN: | mlir-opt -convert-index-to-llvm=index-bitwidth=32 \
-// R-UN:     -gpu-to-llvm \
-// R-UN:     -convert-func-to-llvm \
-// R-UN:     -cse \
-// R-UN:     -canonicalize \
-// R-UN:     -reconcile-unrealized-casts \
-// R-UN: | mlir-cpu-runner \
-// R-UN:   --shared-libs=%mlir_cuda_runtime \
-// R-UN:   --shared-libs=%mlir_runner_utils \
-// R-UN:   --entry-point-result=void \
-// R-UN: | FileCheck %s
+// RUN: mlir-opt %s \
+// RUN:     -test-transform-dialect-interpreter \
+// RUN:     -test-transform-dialect-erase-schedule \
+// RUN:     -convert-nvgpu-to-nvvm -gpu-kernel-outlining \
+// RUN:     -convert-scf-to-cf -convert-nvvm-to-llvm \
+// RUN:     -convert-vector-to-llvm \
+// RUN:     -convert-math-to-llvm \
+// RUN:     -expand-strided-metadata \
+// RUN:     -lower-affine \
+// RUN:     -convert-index-to-llvm=index-bitwidth=32 \
+// RUN:     -convert-arith-to-llvm \
+// RUN:     -finalize-memref-to-llvm \
+// RUN:     -convert-func-to-llvm \
+// RUN:     -canonicalize \
+// RUN:     -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
+// RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
+// RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary -canonicalize -cse -reconcile-unrealized-casts \
+// RUN: | mlir-cpu-runner \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --entry-point-result=void \
+// RUN: | FileCheck %s
 
-// C-HECK: [GPU] TMA BEFORE lhs[45][7] 0.000000
-// C-HECK: [GPU] TMA BEFORE rhs[7][0] 0.000000
-// C-HECK: [GPU] TMA LOADED lhs[45][7] 7.000000
-// C-HECK: [GPU] TMA LOADED rhs[7][0] 3.000000
+// CHECK: [GPU] TMA LOADED lhs[45][7] 7.000000
+// CHECK: [GPU] TMA LOADED rhs[7][0] 3.000000
 
 memref.global "private" @bufferLhsGlobal : memref<64x8xf32, 3>
 memref.global "private" @bufferRhsGlobal : memref<8x128xf32, 3>
