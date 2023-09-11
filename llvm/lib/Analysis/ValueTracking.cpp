@@ -4219,13 +4219,13 @@ llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
 
 std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
-                       const APFloat *ConstRHS, bool LookThroughSrc) {
+                       const APFloat &ConstRHS, bool LookThroughSrc) {
   auto [Val, ClassMask] =
-      fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
+      fcmpToClassTest(Pred, F, LHS, &ConstRHS, LookThroughSrc);
   if (Val)
     return {Val, ClassMask, ~ClassMask};
 
-  FPClassTest RHSClass = ConstRHS->classify();
+  FPClassTest RHSClass = ConstRHS.classify();
   assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal ||
           RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal) &&
          "should have been recognized as an exact class test");
@@ -4233,8 +4233,8 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   const bool IsNegativeRHS = (RHSClass & fcNegative) == RHSClass;
   const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
 
-  assert(IsNegativeRHS == ConstRHS->isNegative());
-  assert(IsPositiveRHS == !ConstRHS->isNegative());
+  assert(IsNegativeRHS == ConstRHS.isNegative());
+  assert(IsPositiveRHS == !ConstRHS.isNegative());
 
   Value *Src = LHS;
   const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
@@ -4286,7 +4286,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     FPClassTest ClassesLE = fcNegInf | fcNegNormal;
     FPClassTest ClassesGE = fcPositive | fcNegZero | fcNegSubnormal;
 
-    if (ConstRHS->isDenormal())
+    if (ConstRHS.isDenormal())
       ClassesLE |= fcNegSubnormal;
     else
       ClassesGE |= fcNegNormal;
@@ -4310,7 +4310,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   } else if (IsPositiveRHS) {
     FPClassTest ClassesGE = fcPosNormal | fcPosInf;
     FPClassTest ClassesLE = fcNegative | fcPosZero | fcPosNormal;
-    if (ConstRHS->isDenormal())
+    if (ConstRHS.isDenormal())
       ClassesGE |= fcPosNormal;
     else
       ClassesLE |= fcPosSubnormal;
@@ -4348,7 +4348,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   const APFloat *ConstRHS;
   if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
     return {nullptr, fcAllFlags, fcNone};
-  return fcmpImpliesClass(Pred, F, LHS, ConstRHS, LookThroughSrc);
+  return fcmpImpliesClass(Pred, F, LHS, *ConstRHS, LookThroughSrc);
 }
 
 static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
@@ -4379,16 +4379,17 @@ static FPClassTest computeKnownFPClassFromAssumes(const Value *V,
       if (match(RHS, m_APFloat(CRHS))) {
         // First see if we can fold in fabs/fneg into the test.
         auto [CmpVal, MaskIfTrue, MaskIfFalse] =
-            fcmpImpliesClass(Pred, *F, LHS, CRHS, true);
+            fcmpImpliesClass(Pred, *F, LHS, *CRHS, true);
         if (CmpVal == V)
-          KnownFromAssume &= MaskIfTrue;
+          KnownFromAssume &= (MaskIfTrue & ~MaskIfFalse);
+
         else {
           // Try again without the lookthrough if we found a different source
           // value.
           auto [CmpVal, MaskIfTrue, MaskIfFalse] =
-              fcmpImpliesClass(Pred, *F, LHS, CRHS, false);
+              fcmpImpliesClass(Pred, *F, LHS, *CRHS, false);
           if (CmpVal == V)
-            KnownFromAssume &= MaskIfTrue;
+            KnownFromAssume &= (MaskIfTrue & ~MaskIfFalse);
         }
       }
     } else if (match(I->getArgOperand(0),
