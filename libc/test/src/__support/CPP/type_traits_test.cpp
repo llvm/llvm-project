@@ -253,6 +253,28 @@ TEST(LlvmLibcTypeTraitsTest, is_enum_enum) {
 
 // TODO is_null_pointer
 
+TEST(LlvmLibcTypeTraitsTest, is_object) {
+  EXPECT_TRUE((is_object_v<int>));      // scalar
+  EXPECT_TRUE((is_object_v<Struct[]>)); // array
+  EXPECT_TRUE((is_object_v<Union>));    // union
+  EXPECT_TRUE((is_object_v<Class>));    // class
+
+  // pointers are still objects
+  EXPECT_TRUE((is_object_v<int *>));       // scalar
+  EXPECT_TRUE((is_object_v<Struct(*)[]>)); // array
+  EXPECT_TRUE((is_object_v<Union *>));     // union
+  EXPECT_TRUE((is_object_v<Class *>));     // class
+
+  // reference are not objects
+  EXPECT_FALSE((is_object_v<int &>));       // scalar
+  EXPECT_FALSE((is_object_v<Struct(&)[]>)); // array
+  EXPECT_FALSE((is_object_v<Union &>));     // union
+  EXPECT_FALSE((is_object_v<Class &>));     // class
+
+  // not an object
+  EXPECT_FALSE((is_object_v<void>));
+}
+
 // TODO is_pointer
 
 // TODO is_reference
