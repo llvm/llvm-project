@@ -4045,18 +4045,6 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   const bool IsPositiveRHS = (RHSClass & fcPositive) == RHSClass;
   const bool IsNaN = (RHSClass & ~fcNan) == fcNone;
 
-  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
-  if (IsFabs)
-    RHSClass = llvm::fneg(RHSClass);
-
-#if 0
-  // Compare of abs to negative
-  if (RHSClass == fcNone) {
-    assert((OrigClass & fcZero) == fcNone);
-    return exactClass(Src, CmpInst::isOrdered(Pred) ? fcNone : fcNan);
-  }
-#endif
-
   if (IsNaN) {
     // fcmp o__ x, nan -> false
     // fcmp u__ x, nan -> true
@@ -4070,6 +4058,10 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
   // fcmp uno x, zero|normal|subnormal|inf -> fcNan
   if (Pred == FCmpInst::FCMP_UNO)
     return {Src, fcNan, ~fcNan};
+
+  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+  if (IsFabs)
+    RHSClass = llvm::fneg(RHSClass);
 
   const bool IsZero = (RHSClass & fcZero) == RHSClass;
   if (IsZero) {
@@ -4334,19 +4326,12 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        const APFloat &ConstRHS, bool LookThroughSrc) {
-  FPClassTest RHSClass = ConstRHS.classify();
-  auto Ret = fcmpImpliesClass(Pred, F, LHS, RHSClass, LookThroughSrc);
-  Value *xxSrc = std::get<0>(Ret);
-  if (!xxSrc)
-    return Ret;
-
-  Value *Src = LHS;
-  //const bool IsFabs = (std::get<1>(Ret) & fcNegative) == fcNone;
-  const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
-
   // We can refine checks against smallest normal / largest denormal to an
   // exact class test.
   if (!ConstRHS.isNegative() && ConstRHS.isSmallestNormalized()) {
+    Value *Src = LHS;
+    const bool IsFabs = LookThroughSrc && match(LHS, m_FAbs(m_Value(Src)));
+
     FPClassTest Mask;
     // Match pattern that's used in __builtin_isnormal.
     switch (Pred) {
@@ -4374,7 +4359,8 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
       break;
     }
     default:
-      return Ret;
+      // xxx - am i tested
+      return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(), LookThroughSrc);
     }
 
     // Invert the comparison for the unordered cases.
@@ -4384,7 +4370,7 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
     return exactClass(Src, Mask);
   }
 
-  return Ret;
+  return fcmpImpliesClass(Pred, F, LHS, ConstRHS.classify(), LookThroughSrc);
 }
 
 std::tuple<Value *, FPClassTest, FPClassTest>
