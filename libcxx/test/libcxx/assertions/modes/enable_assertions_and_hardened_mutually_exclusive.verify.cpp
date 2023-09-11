@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test verifies that `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_DEBUG_MODE` are mutually exclusive.
+// This test verifies that `_LIBCPP_ENABLE_ASSERTIONS` and `_LIBCPP_ENABLE_HARDENED_MODE` are mutually exclusive.
 
-// If `_LIBCPP_ENABLE_ASSERTIONS` is defined, it would additionally produce a different error.
-// UNSUPPORTED: libcpp-has-assertions
+// UNSUPPORTED: libcpp-has-debug-mode
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: modules-build
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=1 -D_LIBCPP_ENABLE_DEBUG_MODE=1
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_ENABLE_HARDENED_MODE=1
 
 #include <cassert>
 
-// expected-error@*:*  {{Only one of _LIBCPP_ENABLE_HARDENED_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled.}}
+// expected-error@*:*  {{_LIBCPP_ENABLE_ASSERTIONS is mutually exclusive with _LIBCPP_ENABLE_HARDENED_MODE and _LIBCPP_ENABLE_DEBUG_MODE.}}

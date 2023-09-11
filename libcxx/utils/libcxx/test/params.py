@@ -300,6 +300,18 @@ DEFAULT_PARAMETERS = [
         actions=lambda enabled: [] if not enabled else [AddFeature("long_tests")],
     ),
     Parameter(
+        name="enable_assertions",
+        choices=[True, False],
+        type=bool,
+        default=False,
+        help="Whether to enable assertions when compiling the test suite. This is only meaningful when "
+        "running the tests against libc++.",
+        actions=lambda assertions: [] if not assertions else [
+            AddCompileFlag("-D_LIBCPP_ENABLE_ASSERTIONS=1"),
+            AddFeature("libcpp-has-assertions"),
+        ],
+    ),
+    Parameter(
         name="hardening_mode",
         choices=["unchecked", "hardened", "debug"],
         type=str,

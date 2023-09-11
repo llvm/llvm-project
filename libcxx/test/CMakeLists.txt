@@ -24,6 +24,10 @@ if (NOT LIBCXX_ENABLE_RTTI)
   serialize_lit_param(enable_rtti False)
 endif()
 
+if (LIBCXX_ENABLE_ASSERTIONS)
+  serialize_lit_param(enable_assertions True)
+endif()
+
 serialize_lit_param(hardening_mode "\"${LIBCXX_HARDENING_MODE}\"")
 
 if (CMAKE_CXX_COMPILER_TARGET)

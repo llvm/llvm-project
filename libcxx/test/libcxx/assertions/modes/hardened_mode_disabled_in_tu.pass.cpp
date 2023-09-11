@@ -8,7 +8,7 @@
 
 // This test ensures that we can disable the hardened mode on a per-TU basis regardless of how the library was built.
 
-// UNSUPPORTED: libcpp-has-debug-mode
+// REQUIRES: libcpp-has-hardened-mode
 // ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=0
 
 #include <cassert>
