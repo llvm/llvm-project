@@ -9,6 +9,11 @@
 // RUN:   -std=c++11 -emit-llvm -o - -target-cpu gfx906 \
 // RUN:   | FileCheck -check-prefixes=NEG,NORDC %s
 
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -x hip %s \
+// RUN:   -fgpu-rdc -std=c++11 -emit-llvm -o - \
+// RUN:   | FileCheck -check-prefix=HOST-NEG %s
+
+
 #include "Inputs/cuda.h"
 
 // CHECK-LABEL: @__clang_gpu_used_external = internal {{.*}}global
@@ -21,10 +26,13 @@
 // NEG-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel3v
 // NEG-NOT: @__clang_gpu_used_external = {{.*}} @var2
 // NEG-NOT: @__clang_gpu_used_external = {{.*}} @var3
+// NEG-NOT: @__clang_gpu_used_external = {{.*}} @ext_shvar
+// NEG-NOT: @__clang_gpu_used_external = {{.*}} @shvar
 // NORDC-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel1v
 // NORDC-NOT: @__clang_gpu_used_external = {{.*}} @_Z7kernel4v
 // NORDC-NOT: @__clang_gpu_used_external = {{.*}} @var1
-
+// HOST-NEG-NOT: call void @__hipRegisterVar({{.*}}, ptr @ext_shvar
+// HOST-NEG-NOT: call void @__hipRegisterVar({{.*}}, ptr @shvar
 __global__ void kernel1();
 
 // kernel2 is not marked as used since it is a definition.
@@ -48,4 +56,14 @@ void test() {
   kernel1<<<1, 1>>>();
   void *p = (void*)kernel4;
   use(&var1);
+}
+
+__global__ void test_lambda_using_extern_shared() {
+  extern __shared__ int ext_shvar[];
+  __shared__ int shvar[10];
+  auto lambda = [&]() {
+    ext_shvar[0] = 1;
+    shvar[0] = 2;
+  };
+  lambda();
 }
