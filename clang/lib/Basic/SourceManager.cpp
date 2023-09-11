@@ -725,8 +725,8 @@ SourceManager::bypassFileContentsOverride(FileEntryRef File) {
   return BypassFile;
 }
 
-void SourceManager::setFileIsTransient(const FileEntry *File) {
-  getOrCreateContentCache(File->getLastRef()).IsTransient = true;
+void SourceManager::setFileIsTransient(FileEntryRef File) {
+  getOrCreateContentCache(File).IsTransient = true;
 }
 
 std::optional<StringRef>
