@@ -78,7 +78,9 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
-* The legacy optimization pipeline has been removed.
+* The legacy optimization pipeline (``PassManagerBuilder.h``) has been removed.
+  See the `new pass manager docs <https://llvm.org/docs/NewPassManager.html>`_
+  for how to use the new pass manager APIs.
 
 * Alloca merging in the inliner has been removed, since it only worked with the
   legacy inliner pass. Backend stack coloring should handle cases alloca
