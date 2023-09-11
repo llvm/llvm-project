@@ -238,11 +238,12 @@ Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
 
     while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
-
-      if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>())
-        Result.addOuterTemplateArguments(
-            const_cast<FunctionTemplateDecl *>(FTD), TSTy->template_arguments(),
-            /*Final=*/false);
+      if (NNS->isInstantiationDependent()) {
+        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>())
+          Result.addOuterTemplateArguments(
+              const_cast<FunctionTemplateDecl *>(FTD), TSTy->template_arguments(),
+              /*Final=*/false);
+      }
 
       NNS = NNS->getPrefix();
     }
