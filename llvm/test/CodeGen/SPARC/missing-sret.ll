@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -filetype=obj < %s > /dev/null 2> %t2
+; RUN: llc -mtriple=sparc -filetype=obj < %s > /dev/null 2> %t2
 
 define void @mul_double_cc({ double, double }* noalias sret({ double, double }) %agg.result, double %a, double %b, double %c, double %d) {
 entry:
