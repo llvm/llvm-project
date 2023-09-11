@@ -52131,12 +52131,11 @@ static SDValue combineSignExtendInReg(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// sext(add_nsw(x, C)) --> add_nsw(sext(x), C_sext)
-/// zext(add_nuw(x, C)) --> add_nuw(zext(x), C_zext)
-/// zext(addlike(x, C)) --> add(zext(x), C_zext)
-/// Promoting a sign/zero extension ahead of a no overflow 'add' or 'addlike'
-/// exposes opportunities to combine math ops, use an LEA, or use a complex
-/// addressing mode. This can eliminate extend, add, and shift instructions.
+/// sext(add_nsw(x, C)) --> add(sext(x), C_sext)
+/// zext(add_nuw(x, C)) --> add(zext(x), C_zext)
+/// Promoting a sign/zero extension ahead of a no overflow 'add' exposes
+/// opportunities to combine math ops, use an LEA, or use a complex addressing
+/// mode. This can eliminate extend, add, and shift instructions.
 static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   if (Ext->getOpcode() != ISD::SIGN_EXTEND &&
@@ -52148,19 +52147,17 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
   if (VT != MVT::i64)
     return SDValue();
 
-  bool NSW = false, NUW = false;
-  bool Sext = Ext->getOpcode() == ISD::SIGN_EXTEND;
-
   SDValue Add = Ext->getOperand(0);
-  unsigned AddOpc = Add->getOpcode();
-  if (AddOpc == ISD::ADD) {
-    NSW = Add->getFlags().hasNoSignedWrap();
-    NUW = Add->getFlags().hasNoUnsignedWrap();
-    // We need an 'add nsw' feeding into the 'sext' or 'add nuw' feeding
-    // into the 'zext'
-    if ((Sext && !NSW) || (!Sext && !NUW))
-      return SDValue();
-  } else if (!(!Sext && DAG.isADDLike(Add)))
+  if (Add.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  bool Sext = Ext->getOpcode() == ISD::SIGN_EXTEND;
+  bool NSW = Add->getFlags().hasNoSignedWrap();
+  bool NUW = Add->getFlags().hasNoUnsignedWrap();
+
+  // We need an 'add nsw' feeding into the 'sext' or 'add nuw' feeding
+  // into the 'zext'
+  if ((Sext && !NSW) || (!Sext && !NUW))
     return SDValue();
 
   // Having a constant operand to the 'add' ensures that we are not increasing
@@ -52196,7 +52193,7 @@ static SDValue promoteExtBeforeAdd(SDNode *Ext, SelectionDAG &DAG,
   SDNodeFlags Flags;
   Flags.setNoSignedWrap(NSW);
   Flags.setNoUnsignedWrap(NUW);
-  return DAG.getNode(AddOpc, SDLoc(Add), VT, NewExt, NewConstant, Flags);
+  return DAG.getNode(ISD::ADD, SDLoc(Add), VT, NewExt, NewConstant, Flags);
 }
 
 // If we face {ANY,SIGN,ZERO}_EXTEND that is applied to a CMOV with constant
