@@ -25,21 +25,21 @@ using namespace llvm;
 
 namespace {
 const char *ARMArch[] = {
-    "armv4",       "armv4t",    "armv5",        "armv5t",      "armv5e",
-    "armv5te",     "armv5tej",  "armv6",        "armv6j",      "armv6k",
-    "armv6hl",     "armv6t2",   "armv6kz",      "armv6z",      "armv6zk",
-    "armv6-m",     "armv6m",    "armv6sm",      "armv6s-m",    "armv7-a",
-    "armv7",       "armv7a",    "armv7ve",      "armv7hl",     "armv7l",
-    "armv7-r",     "armv7r",    "armv7-m",      "armv7m",      "armv7k",
-    "armv7s",      "armv7e-m",  "armv7em",      "armv8-a",     "armv8",
-    "armv8a",      "armv8l",    "armv8.1-a",    "armv8.1a",    "armv8.2-a",
-    "armv8.2a",    "armv8.3-a", "armv8.3a",     "armv8.4-a",   "armv8.4a",
-    "armv8.5-a",   "armv8.5a",  "armv8.6-a",    "armv8.6a",    "armv8.7-a",
-    "armv8.7a",    "armv8.8-a", "armv8.8a",     "armv8.9-a",   "armv8.9a",
-    "armv8-r",     "armv8r",    "armv8-m.base", "armv8m.base", "armv8-m.main",
-    "armv8m.main", "iwmmxt",    "iwmmxt2",      "xscale",      "armv8.1-m.main",
-    "armv9-a",     "armv9",     "armv9a",       "armv9.1-a",   "armv9.1a",
-    "armv9.2-a",   "armv9.2a",  "armv9.3-a",    "armv9.3a",    "armv9.4-a",
+    "armv4",        "armv4t",      "armv5",          "armv5t",      "armv5e",
+    "armv5te",      "armv5tej",    "armv6",          "armv6j",      "armv6k",
+    "armv6hl",      "armv6t2",     "armv6kz",        "armv6z",      "armv6zk",
+    "armv6-m",      "armv6m",      "armv6sm",        "armv6s-m",    "armv7-a",
+    "armv7",        "armv7a",      "armv7ve",        "armv7hl",     "armv7l",
+    "armv7-r",      "armv7r",      "armv7-m",        "armv7m",      "armv7k",
+    "armv7s",       "armv7e-m",    "armv7em",        "armv8-a",     "armv8",
+    "armv8a",       "armv8l",      "armv8.1-a",      "armv8.1a",    "armv8.2-a",
+    "armv8.2a",     "armv8.3-a",   "armv8.3a",       "armv8.4-a",   "armv8.4a",
+    "armv8.5-a",    "armv8.5a",    "armv8.6-a",      "armv8.6a",    "armv8.7-a",
+    "armv8.7a",     "armv8.8-a",   "armv8.8a",       "armv8.9-a",   "armv8.9a",
+    "armv8-r",      "armv8r",      "armv8-m.base",   "armv8m.base", "armv8-m.main",
+    "armv8m.main",  "iwmmxt",      "iwmmxt2",        "xscale",      "armv8.1-m.main",
+    "armv9-a",      "armv9",       "armv9a",         "armv9.1-a",   "armv9.1a",
+    "armv9.2-a",    "armv9.2a",    "armv9.3-a",      "armv9.3a",    "armv9.4-a",
     "armv9.4a",
 };
 
@@ -70,23 +70,23 @@ std::string FormatExtensionFlags(T Flags) {
   return llvm::join(Features, ", ");
 }
 
-std::string SerializeExtensionFlags(Bitset<AArch64::AEK_EXTENSIONS_MAX> Flags) {
-  static_assert((AArch64::AEK_EXTENSIONS_MAX % 4 == 0),
-    "AArch64::AEK_EXTENSIONS_MAX shoubld be divisible by 4");
-
+std::string SerializeExtensionFlags(Bitset<AArch64::AEK_EXTENSIONS_LAST> Flags) {
   std::string SerializedFlags;
+  std::ostringstream ss;
   int HexValue = 0;
-  for (unsigned int i = 0; i < AArch64::AEK_EXTENSIONS_MAX; i++) {
+  for (unsigned int i = 0; i < AArch64::AEK_EXTENSIONS_LAST; i++) {
     HexValue <<= 1;
     HexValue |= (int)Flags[i];
     if ((i + 1) % 4 == 0) {
-      std::ostringstream ss;
       ss << std::hex << HexValue;
-      SerializedFlags += ss.str();
       HexValue = 0;
     }
   }
-  std::reverse(SerializedFlags.begin(), SerializedFlags.end());
+  // check if there are remainig unhandled bits
+  if ((AArch64::AEK_EXTENSIONS_LAST % 4) != 0)
+      ss << std::hex << HexValue;
+
+  SerializedFlags = ss.str();
   return SerializedFlags;
 }
 
@@ -110,8 +110,8 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
 
   testing::AssertionResult
   operator()(const char *m_expr, const char *n_expr,
-             Bitset<AArch64::AEK_EXTENSIONS_MAX> ExpectedFlags,
-             Bitset<AArch64::AEK_EXTENSIONS_MAX> GotFlags) {
+             Bitset<AArch64::AEK_EXTENSIONS_LAST> ExpectedFlags,
+             Bitset<AArch64::AEK_EXTENSIONS_LAST> GotFlags) {
     if (ExpectedFlags == GotFlags)
       return testing::AssertionSuccess();
 
@@ -120,11 +120,11 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
                "Expected extension flags: {0} ({1:x})\n"
                "     Got extension flags: {2} ({3:x})\n",
                FormatExtensionFlags<ISAKind,
-                                    Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+                                    Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
                    ExpectedFlags),
                SerializeExtensionFlags(ExpectedFlags),
                FormatExtensionFlags<ISAKind,
-                                    Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+                                    Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
                    GotFlags),
                SerializeExtensionFlags(ExpectedFlags), CPUName);
   }
@@ -142,9 +142,9 @@ template <typename T> struct ARMCPUTestParams {
   friend std::ostream &operator<<(std::ostream &os,
                                   const ARMCPUTestParams<T> &params) {
     os << "\"" << params.CPUName.str() << "\", \"" << params.ExpectedArch.str()
-       << "\", \"" << params.ExpectedFPU.str() << "\", 0x" << std::hex;
+       << "\", \"" << params.ExpectedFPU.str() << "\", 0x";
     if constexpr (std::is_same<T, uint64_t>::value)
-      os << params.ExpectedFlags;
+      os << std::hex << params.ExpectedFlags;
     else
       os << SerializeExtensionFlags(params.ExpectedFlags);
     os << ", \"" << params.CPUAttr.str() << "\"";
@@ -185,51 +185,31 @@ TEST_P(ARMCPUTestFixture, ARMCPUTests) {
 INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestsPart1, ARMCPUTestFixture,
     ::testing::Values(
-        ARMCPUTestParams<uint64_t>("invalid", "invalid", "invalid",
-                                   ARM::AEK_NONE, ""),
-        ARMCPUTestParams<uint64_t>("generic", "invalid", "none", ARM::AEK_NONE,
-                                   ""),
+        ARMCPUTestParams<uint64_t>("invalid", "invalid", "invalid", ARM::AEK_NONE, ""),
+        ARMCPUTestParams<uint64_t>("generic", "invalid", "none", ARM::AEK_NONE, ""),
 
         ARMCPUTestParams<uint64_t>("arm8", "armv4", "none", ARM::AEK_NONE, "4"),
-        ARMCPUTestParams<uint64_t>("arm810", "armv4", "none", ARM::AEK_NONE,
-                                   "4"),
-        ARMCPUTestParams<uint64_t>("strongarm", "armv4", "none", ARM::AEK_NONE,
-                                   "4"),
-        ARMCPUTestParams<uint64_t>("strongarm110", "armv4", "none",
-                                   ARM::AEK_NONE, "4"),
-        ARMCPUTestParams<uint64_t>("strongarm1100", "armv4", "none",
-                                   ARM::AEK_NONE, "4"),
-        ARMCPUTestParams<uint64_t>("strongarm1110", "armv4", "none",
-                                   ARM::AEK_NONE, "4"),
-        ARMCPUTestParams<uint64_t>("arm7tdmi", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm7tdmi-s", "armv4t", "none",
-                                   ARM::AEK_NONE, "4T"),
-        ARMCPUTestParams<uint64_t>("arm710t", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm720t", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm9", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm9tdmi", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm920", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm920t", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm922t", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm940t", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("ep9312", "armv4t", "none", ARM::AEK_NONE,
-                                   "4T"),
-        ARMCPUTestParams<uint64_t>("arm10tdmi", "armv5t", "none", ARM::AEK_NONE,
-                                   "5T"),
-        ARMCPUTestParams<uint64_t>("arm1020t", "armv5t", "none", ARM::AEK_NONE,
-                                   "5T"),
+        ARMCPUTestParams<uint64_t>("arm810", "armv4", "none", ARM::AEK_NONE, "4"),
+        ARMCPUTestParams<uint64_t>("strongarm", "armv4", "none", ARM::AEK_NONE, "4"),
+        ARMCPUTestParams<uint64_t>("strongarm110", "armv4", "none", ARM::AEK_NONE, "4"),
+        ARMCPUTestParams<uint64_t>("strongarm1100", "armv4", "none", ARM::AEK_NONE, "4"),
+        ARMCPUTestParams<uint64_t>("strongarm1110", "armv4", "none", ARM::AEK_NONE, "4"),
+        ARMCPUTestParams<uint64_t>("arm7tdmi", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm7tdmi-s", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm710t", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm720t", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm9", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm9tdmi", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm920", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm920t", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm922t", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm940t", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("ep9312", "armv4t", "none", ARM::AEK_NONE, "4T"),
+        ARMCPUTestParams<uint64_t>("arm10tdmi", "armv5t", "none", ARM::AEK_NONE, "5T"),
+        ARMCPUTestParams<uint64_t>("arm1020t", "armv5t", "none", ARM::AEK_NONE, "5T"),
         ARMCPUTestParams<uint64_t>("arm9e", "armv5te", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "5TE"),
-        ARMCPUTestParams<uint64_t>("arm946e-s", "armv5te", "none",
+        ARMCPUTestParams("arm946e-s", "armv5te", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "5TE"),
         ARMCPUTestParams<uint64_t>("arm966e-s", "armv5te", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "5TE"),
@@ -248,34 +228,27 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams<uint64_t>("arm1136jf-s", "armv6", "vfpv2",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "6"),
         ARMCPUTestParams<uint64_t>("arm1176jz-s", "armv6kz", "none",
-                                   ARM::AEK_NONE | ARM::AEK_SEC | ARM::AEK_DSP,
-                                   "6KZ"),
+                                   ARM::AEK_NONE | ARM::AEK_SEC | ARM::AEK_DSP, "6KZ"),
         ARMCPUTestParams<uint64_t>("mpcore", "armv6k", "vfpv2",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "6K"),
         ARMCPUTestParams<uint64_t>("mpcorenovfp", "armv6k", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "6K"),
         ARMCPUTestParams<uint64_t>("arm1176jzf-s", "armv6kz", "vfpv2",
-                                   ARM::AEK_NONE | ARM::AEK_SEC | ARM::AEK_DSP,
-                                   "6KZ"),
+                                   ARM::AEK_NONE | ARM::AEK_SEC | ARM::AEK_DSP, "6KZ"),
         ARMCPUTestParams<uint64_t>("arm1156t2-s", "armv6t2", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "6T2"),
         ARMCPUTestParams<uint64_t>("arm1156t2f-s", "armv6t2", "vfpv2",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "6T2"),
-        ARMCPUTestParams<uint64_t>("cortex-m0", "armv6-m", "none",
-                                   ARM::AEK_NONE, "6-M"),
-        ARMCPUTestParams<uint64_t>("cortex-m0plus", "armv6-m", "none",
-                                   ARM::AEK_NONE, "6-M"),
-        ARMCPUTestParams<uint64_t>("cortex-m1", "armv6-m", "none",
-                                   ARM::AEK_NONE, "6-M"),
-        ARMCPUTestParams<uint64_t>("sc000", "armv6-m", "none", ARM::AEK_NONE,
+        ARMCPUTestParams<uint64_t>("cortex-m0", "armv6-m", "none", ARM::AEK_NONE, "6-M"),
+        ARMCPUTestParams<uint64_t>("cortex-m0plus", "armv6-m", "none", ARM::AEK_NONE,
                                    "6-M"),
+        ARMCPUTestParams<uint64_t>("cortex-m1", "armv6-m", "none", ARM::AEK_NONE, "6-M"),
+        ARMCPUTestParams<uint64_t>("sc000", "armv6-m", "none", ARM::AEK_NONE, "6-M"),
         ARMCPUTestParams<uint64_t>("cortex-a5", "armv7-a", "neon-vfpv4",
-                                   ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_DSP,
-                                   "7-A"),
+                                   ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_DSP, "7-A"),
         ARMCPUTestParams<uint64_t>("cortex-a7", "armv7-a", "neon-vfpv4",
-                                   ARM::AEK_HWDIVTHUMB | ARM::AEK_HWDIVARM |
-                                       ARM::AEK_MP | ARM::AEK_SEC |
-                                       ARM::AEK_VIRT | ARM::AEK_DSP,
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_HWDIVARM | ARM::AEK_MP |
+                             ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_DSP,
                                    "7-A"),
         ARMCPUTestParams<uint64_t>("cortex-a8", "armv7-a", "neon",
                                    ARM::AEK_SEC | ARM::AEK_DSP, "7-A")));
@@ -286,8 +259,7 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestsPart2, ARMCPUTestFixture,
     ::testing::Values(
         ARMCPUTestParams<uint64_t>("cortex-a9", "armv7-a", "neon-fp16",
-                                   ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_DSP,
-                                   "7-A"),
+                                   ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_DSP, "7-A"),
         ARMCPUTestParams<uint64_t>("cortex-a12", "armv7-a", "neon-vfpv4",
                                    ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
                                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
@@ -304,28 +276,25 @@ INSTANTIATE_TEST_SUITE_P(
                                        ARM::AEK_DSP,
                                    "7-A"),
         ARMCPUTestParams<uint64_t>("krait", "armv7-a", "neon-vfpv4",
-                                   ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP,
+                                   ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7-A"),
         ARMCPUTestParams<uint64_t>("cortex-r4", "armv7-r", "none",
-                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP,
-                                   "7-R"),
+                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                         "7-R"),
         ARMCPUTestParams<uint64_t>("cortex-r4f", "armv7-r", "vfpv3-d16",
-                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP,
-                                   "7-R"),
+                         ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                         "7-R"),
         ARMCPUTestParams<uint64_t>("cortex-r5", "armv7-r", "vfpv3-d16",
-                                   ARM::AEK_MP | ARM::AEK_HWDIVARM |
-                                       ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                         ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                                       ARM::AEK_DSP,
                                    "7-R"),
         ARMCPUTestParams<uint64_t>("cortex-r7", "armv7-r", "vfpv3-d16-fp16",
-                                   ARM::AEK_MP | ARM::AEK_HWDIVARM |
-                                       ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                                   ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                                       ARM::AEK_DSP,
                                    "7-R"),
         ARMCPUTestParams<uint64_t>("cortex-r8", "armv7-r", "vfpv3-d16-fp16",
-                                   ARM::AEK_MP | ARM::AEK_HWDIVARM |
-                                       ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
+                                   ARM::AEK_MP | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP,
                                    "7-R"),
         ARMCPUTestParams<uint64_t>("cortex-r52", "armv8-r", "neon-fp-armv8",
                                    ARM::AEK_NONE | ARM::AEK_CRC | ARM::AEK_MP |
@@ -337,179 +306,165 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams<uint64_t>("cortex-m3", "armv7-m", "none",
                                    ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB, "7-M"),
         ARMCPUTestParams<uint64_t>("cortex-m4", "armv7e-m", "fpv4-sp-d16",
-                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP,
+                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7E-M"),
         ARMCPUTestParams<uint64_t>("cortex-m7", "armv7e-m", "fpv5-d16",
-                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP,
+                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7E-M"),
-        ARMCPUTestParams<uint64_t>("cortex-a32", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("cortex-a32", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>("cortex-a35", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("cortex-a35", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>("cortex-a53", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("cortex-a53", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a55", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("cortex-a55", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>("cortex-a57", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>("cortex-a72", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("cortex-a72", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>("cortex-a73", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("cortex-a73", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a75", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("cortex-a75", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a76", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("cortex-a76", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a76ae", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("cortex-a76ae", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC |
-                ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD,
+        ARMCPUTestParams<uint64_t>("cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+                             ARM::AEK_FP16 | ARM::AEK_DOTPROD,
             "8.2-A"),
         ARMCPUTestParams<uint64_t>("cortex-a710", "armv9-a", "neon-fp-armv8",
                                    ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
                                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP | ARM::AEK_CRC |
-                                       ARM::AEK_RAS | ARM::AEK_DOTPROD |
-                                       ARM::AEK_FP16FML | ARM::AEK_BF16 |
-                                       ARM::AEK_I8MM | ARM::AEK_SB,
+                                       ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+                             ARM::AEK_DOTPROD | ARM::AEK_FP16FML |
+                             ARM::AEK_BF16 | ARM::AEK_I8MM | ARM::AEK_SB,
                                    "9-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-a78", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_DOTPROD | ARM::AEK_FP16 | ARM::AEK_SEC | ARM::AEK_MP |
-                ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
-                ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS,
-            "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD | ARM::AEK_SEC |
+        ARMCPUTestParams<uint64_t>("cortex-a78", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_DOTPROD | ARM::AEK_FP16 | ARM::AEK_SEC |
                 ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC,
-            "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-x1c", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD | ARM::AEK_SEC |
-                ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
-                ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC,
-            "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "neoverse-n1", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
-                ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
-            "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "neoverse-n2", "armv8.5-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_HWDIVTHUMB | ARM::AEK_HWDIVARM |
-                ARM::AEK_MP | ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_DSP |
-                ARM::AEK_BF16 | ARM::AEK_DOTPROD | ARM::AEK_RAS |
-                ARM::AEK_I8MM | ARM::AEK_SB,
-            "8.5-A"),
-        ARMCPUTestParams<uint64_t>(
-            "neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
-            ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                 ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC |
-                ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_BF16 | ARM::AEK_DOTPROD,
+                             ARM::AEK_RAS,
+            "8.2-A"),
+        ARMCPUTestParams<uint64_t>("cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD |
+                             ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP | ARM::AEK_CRC,
+            "8.2-A"),
+        ARMCPUTestParams<uint64_t>("cortex-x1c", "armv8.2-a", "crypto-neon-fp-armv8",
+                         ARM::AEK_RAS | ARM::AEK_FP16 | ARM::AEK_DOTPROD |
+                             ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP | ARM::AEK_CRC,
+                         "8.2-A"),
+        ARMCPUTestParams<uint64_t>("neoverse-n1", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+                ARM::AEK_FP16 | ARM::AEK_RAS | ARM::AEK_DOTPROD,
+            "8.2-A"),
+        ARMCPUTestParams<uint64_t>("neoverse-n2", "armv8.5-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_HWDIVARM | ARM::AEK_MP | ARM::AEK_SEC |
+                             ARM::AEK_VIRT | ARM::AEK_DSP | ARM::AEK_BF16 |
+                             ARM::AEK_DOTPROD | ARM::AEK_RAS | ARM::AEK_I8MM |
+                             ARM::AEK_SB,
+            "8.5-A"),
+        ARMCPUTestParams<uint64_t>("neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
+            ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
+                             ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
+                             ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+                             ARM::AEK_FP16 | ARM::AEK_BF16 | ARM::AEK_DOTPROD,
             "8.4-A"),
         ARMCPUTestParams<uint64_t>("cyclone", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>("exynos-m3", "armv8-a",
-                                   "crypto-neon-fp-armv8",
+        ARMCPUTestParams<uint64_t>("exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
                                    ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
                                        ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
                                        ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "8-A"),
-        ARMCPUTestParams<uint64_t>(
-            "exynos-m4", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("exynos-m4", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_DOTPROD | ARM::AEK_FP16 | ARM::AEK_RAS,
             "8.2-A"),
-        ARMCPUTestParams<uint64_t>(
-            "exynos-m5", "armv8.2-a", "crypto-neon-fp-armv8",
-            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT |
-                ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
+        ARMCPUTestParams<uint64_t>("exynos-m5", "armv8.2-a", "crypto-neon-fp-armv8",
+            ARM::AEK_CRC | ARM::AEK_SEC | ARM::AEK_MP |
+                             ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+                             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP |
                 ARM::AEK_DOTPROD | ARM::AEK_FP16 | ARM::AEK_RAS,
             "8.2-A"),
         ARMCPUTestParams<uint64_t>("cortex-m23", "armv8-m.base", "none",
-                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB,
-                                   "8-M.Baseline"),
+                                   ARM::AEK_NONE | ARM::AEK_HWDIVTHUMB, "8-M.Baseline"),
         ARMCPUTestParams<uint64_t>("cortex-m33", "armv8-m.main", "fpv5-sp-d16",
-                                   ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
-                                   "8-M.Mainline"),
+                                   ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "8-M.Mainline"),
         ARMCPUTestParams<uint64_t>("cortex-m35p", "armv8-m.main", "fpv5-sp-d16",
-                                   ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
-                                   "8-M.Mainline"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-m55", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
-                ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16,
+                                   ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "8-M.Mainline"),
+        ARMCPUTestParams<uint64_t>("cortex-m55", "armv8.1-m.main",
+                         "fp-armv8-fullfp16-d16",
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD |
+                             ARM::AEK_FP | ARM::AEK_RAS | ARM::AEK_LOB |
+                             ARM::AEK_FP16,
             "8.1-M.Mainline"),
-        ARMCPUTestParams<uint64_t>(
-            "cortex-m85", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
-                ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
+        ARMCPUTestParams<uint64_t>("cortex-m85", "armv8.1-m.main",
+                         "fp-armv8-fullfp16-d16",
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD |
+                             ARM::AEK_FP | ARM::AEK_RAS | ARM::AEK_LOB |
+                             ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
-        ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE,
-                                   "iwmmxt"),
-        ARMCPUTestParams<uint64_t>("xscale", "xscale", "none", ARM::AEK_NONE,
-                                   "xscale"),
+        ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE, "iwmmxt"),
+        ARMCPUTestParams<uint64_t>("xscale", "xscale", "none", ARM::AEK_NONE, "xscale"),
         ARMCPUTestParams<uint64_t>("swift", "armv7s", "neon-vfpv4",
-                                   ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
-                                       ARM::AEK_DSP,
+                                   ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                                    "7-S")));
 
 static constexpr unsigned NumARMCPUArchs = 89;
@@ -521,14 +476,14 @@ TEST(TargetParserTest, testARMCPUArchList) {
   // No list exists for these in this test suite, so ensure all are
   // valid, and match the expected 'magic' count.
   EXPECT_EQ(List.size(), NumARMCPUArchs);
-  for (StringRef CPU : List) {
+  for(StringRef CPU : List) {
     EXPECT_NE(ARM::parseCPUArch(CPU), ARM::ArchKind::INVALID);
   }
 }
 
 TEST(TargetParserTest, testInvalidARMArch) {
   auto InvalidArchStrings = {"armv", "armv99", "noarm"};
-  for (const char *InvalidArch : InvalidArchStrings)
+  for (const char* InvalidArch : InvalidArchStrings)
     EXPECT_EQ(ARM::parseArch(InvalidArch), ARM::ArchKind::INVALID);
 }
 
@@ -544,87 +499,124 @@ bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
 
 TEST(TargetParserTest, testARMArch) {
   EXPECT_TRUE(
-      testARMArch("armv4", "strongarm", "v4", ARMBuildAttrs::CPUArch::v4));
+      testARMArch("armv4", "strongarm", "v4",
+                          ARMBuildAttrs::CPUArch::v4));
   EXPECT_TRUE(
-      testARMArch("armv4t", "arm7tdmi", "v4t", ARMBuildAttrs::CPUArch::v4T));
+      testARMArch("armv4t", "arm7tdmi", "v4t",
+                          ARMBuildAttrs::CPUArch::v4T));
   EXPECT_TRUE(
-      testARMArch("armv5t", "arm10tdmi", "v5", ARMBuildAttrs::CPUArch::v5T));
+      testARMArch("armv5t", "arm10tdmi", "v5",
+                          ARMBuildAttrs::CPUArch::v5T));
   EXPECT_TRUE(
-      testARMArch("armv5te", "arm1022e", "v5e", ARMBuildAttrs::CPUArch::v5TE));
-  EXPECT_TRUE(testARMArch("armv5tej", "arm926ej-s", "v5e",
+      testARMArch("armv5te", "arm1022e", "v5e",
+                          ARMBuildAttrs::CPUArch::v5TE));
+  EXPECT_TRUE(
+      testARMArch("armv5tej", "arm926ej-s", "v5e",
                           ARMBuildAttrs::CPUArch::v5TEJ));
   EXPECT_TRUE(
-      testARMArch("armv6", "arm1136jf-s", "v6", ARMBuildAttrs::CPUArch::v6));
+      testARMArch("armv6", "arm1136jf-s", "v6",
+                          ARMBuildAttrs::CPUArch::v6));
   EXPECT_TRUE(
-      testARMArch("armv6k", "mpcore", "v6k", ARMBuildAttrs::CPUArch::v6K));
-  EXPECT_TRUE(testARMArch("armv6t2", "arm1156t2-s", "v6t2",
+      testARMArch("armv6k", "mpcore", "v6k",
+                          ARMBuildAttrs::CPUArch::v6K));
+  EXPECT_TRUE(
+      testARMArch("armv6t2", "arm1156t2-s", "v6t2",
                           ARMBuildAttrs::CPUArch::v6T2));
-  EXPECT_TRUE(testARMArch("armv6kz", "arm1176jzf-s", "v6kz",
+  EXPECT_TRUE(
+      testARMArch("armv6kz", "arm1176jzf-s", "v6kz",
                           ARMBuildAttrs::CPUArch::v6KZ));
   EXPECT_TRUE(
-      testARMArch("armv6-m", "cortex-m0", "v6m", ARMBuildAttrs::CPUArch::v6_M));
+      testARMArch("armv6-m", "cortex-m0", "v6m",
+                          ARMBuildAttrs::CPUArch::v6_M));
   EXPECT_TRUE(
-      testARMArch("armv7-a", "generic", "v7", ARMBuildAttrs::CPUArch::v7));
+      testARMArch("armv7-a", "generic", "v7",
+                          ARMBuildAttrs::CPUArch::v7));
   EXPECT_TRUE(
-      testARMArch("armv7ve", "generic", "v7ve", ARMBuildAttrs::CPUArch::v7));
+      testARMArch("armv7ve", "generic", "v7ve",
+                          ARMBuildAttrs::CPUArch::v7));
   EXPECT_TRUE(
-      testARMArch("armv7-r", "cortex-r4", "v7r", ARMBuildAttrs::CPUArch::v7));
+      testARMArch("armv7-r", "cortex-r4", "v7r",
+                          ARMBuildAttrs::CPUArch::v7));
   EXPECT_TRUE(
-      testARMArch("armv7-m", "cortex-m3", "v7m", ARMBuildAttrs::CPUArch::v7));
-  EXPECT_TRUE(testARMArch("armv7e-m", "cortex-m4", "v7em",
+      testARMArch("armv7-m", "cortex-m3", "v7m",
+                          ARMBuildAttrs::CPUArch::v7));
+  EXPECT_TRUE(
+      testARMArch("armv7e-m", "cortex-m4", "v7em",
                           ARMBuildAttrs::CPUArch::v7E_M));
   EXPECT_TRUE(
-      testARMArch("armv8-a", "generic", "v8a", ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.1-a", "generic", "v8.1a",
+      testARMArch("armv8-a", "generic", "v8a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.2-a", "generic", "v8.2a",
+  EXPECT_TRUE(
+      testARMArch("armv8.1-a", "generic", "v8.1a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.3-a", "generic", "v8.3a",
+  EXPECT_TRUE(
+      testARMArch("armv8.2-a", "generic", "v8.2a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.4-a", "generic", "v8.4a",
+  EXPECT_TRUE(
+      testARMArch("armv8.3-a", "generic", "v8.3a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.5-a", "generic", "v8.5a",
+  EXPECT_TRUE(
+      testARMArch("armv8.4-a", "generic", "v8.4a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.6-a", "generic", "v8.6a",
+  EXPECT_TRUE(
+      testARMArch("armv8.5-a", "generic", "v8.5a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.7-a", "generic", "v8.7a",
+  EXPECT_TRUE(
+      testARMArch("armv8.6-a", "generic", "v8.6a",
+                          ARMBuildAttrs::CPUArch::v8_A));
+  EXPECT_TRUE(
+      testARMArch("armv8.7-a", "generic", "v8.7a",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testARMArch("armv8.8-a", "generic", "v8.8a",
                           ARMBuildAttrs::CPUArch::v8_A));
-  EXPECT_TRUE(testARMArch("armv8.9-a", "generic", "v8.9a",
+  EXPECT_TRUE(
+      testARMArch("armv8.9-a", "generic", "v8.9a",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(
-      testARMArch("armv9-a", "generic", "v9a", ARMBuildAttrs::CPUArch::v9_A));
-  EXPECT_TRUE(testARMArch("armv9.1-a", "generic", "v9.1a",
+      testARMArch("armv9-a", "generic", "v9a",
                           ARMBuildAttrs::CPUArch::v9_A));
-  EXPECT_TRUE(testARMArch("armv9.2-a", "generic", "v9.2a",
+  EXPECT_TRUE(
+      testARMArch("armv9.1-a", "generic", "v9.1a",
                           ARMBuildAttrs::CPUArch::v9_A));
-  EXPECT_TRUE(testARMArch("armv9.3-a", "generic", "v9.3a",
+  EXPECT_TRUE(
+      testARMArch("armv9.2-a", "generic", "v9.2a",
                           ARMBuildAttrs::CPUArch::v9_A));
-  EXPECT_TRUE(testARMArch("armv9.4-a", "generic", "v9.4a",
+  EXPECT_TRUE(
+      testARMArch("armv9.3-a", "generic", "v9.3a",
                           ARMBuildAttrs::CPUArch::v9_A));
-  EXPECT_TRUE(testARMArch("armv8-r", "cortex-r52", "v8r",
+  EXPECT_TRUE(
+      testARMArch("armv9.4-a", "generic", "v9.4a",
+                          ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(
+      testARMArch("armv8-r", "cortex-r52", "v8r",
                           ARMBuildAttrs::CPUArch::v8_R));
-  EXPECT_TRUE(testARMArch("armv8-m.base", "generic", "v8m.base",
+  EXPECT_TRUE(
+      testARMArch("armv8-m.base", "generic", "v8m.base",
                           ARMBuildAttrs::CPUArch::v8_M_Base));
-  EXPECT_TRUE(testARMArch("armv8-m.main", "generic", "v8m.main",
+  EXPECT_TRUE(
+      testARMArch("armv8-m.main", "generic", "v8m.main",
                           ARMBuildAttrs::CPUArch::v8_M_Main));
-  EXPECT_TRUE(testARMArch("armv8.1-m.main", "generic", "v8.1m.main",
+  EXPECT_TRUE(
+      testARMArch("armv8.1-m.main", "generic", "v8.1m.main",
                           ARMBuildAttrs::CPUArch::v8_1_M_Main));
   EXPECT_TRUE(
-      testARMArch("iwmmxt", "iwmmxt", "", ARMBuildAttrs::CPUArch::v5TE));
+      testARMArch("iwmmxt", "iwmmxt", "",
+                          ARMBuildAttrs::CPUArch::v5TE));
   EXPECT_TRUE(
-      testARMArch("iwmmxt2", "generic", "", ARMBuildAttrs::CPUArch::v5TE));
+      testARMArch("iwmmxt2", "generic", "",
+                          ARMBuildAttrs::CPUArch::v5TE));
   EXPECT_TRUE(
-      testARMArch("xscale", "xscale", "v5e", ARMBuildAttrs::CPUArch::v5TE));
+      testARMArch("xscale", "xscale", "v5e",
+                          ARMBuildAttrs::CPUArch::v5TE));
   EXPECT_TRUE(
-      testARMArch("armv7s", "swift", "v7s", ARMBuildAttrs::CPUArch::v7));
+      testARMArch("armv7s", "swift", "v7s",
+                          ARMBuildAttrs::CPUArch::v7));
   EXPECT_TRUE(
-      testARMArch("armv7k", "generic", "v7k", ARMBuildAttrs::CPUArch::v7));
+      testARMArch("armv7k", "generic", "v7k",
+                          ARMBuildAttrs::CPUArch::v7));
 }
 
-bool testARMExtension(StringRef CPUName, ARM::ArchKind ArchKind,
-                      StringRef ArchExt) {
+bool testARMExtension(StringRef CPUName,ARM::ArchKind ArchKind, StringRef ArchExt) {
   return ARM::getDefaultExtensions(CPUName, ArchKind) &
          ARM::parseArchExt(ArchExt);
 }
@@ -632,28 +624,39 @@ bool testARMExtension(StringRef CPUName, ARM::ArchKind ArchKind,
 TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("strongarm", ARM::ArchKind::INVALID, "dsp"));
   EXPECT_FALSE(testARMExtension("arm7tdmi", ARM::ArchKind::INVALID, "dsp"));
-  EXPECT_FALSE(testARMExtension("arm10tdmi", ARM::ArchKind::INVALID, "simd"));
+  EXPECT_FALSE(testARMExtension("arm10tdmi",
+                                ARM::ArchKind::INVALID, "simd"));
   EXPECT_FALSE(testARMExtension("arm1022e", ARM::ArchKind::INVALID, "simd"));
-  EXPECT_FALSE(testARMExtension("arm926ej-s", ARM::ArchKind::INVALID, "simd"));
-  EXPECT_FALSE(
-      testARMExtension("arm1136jf-s", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(
-      testARMExtension("arm1156t2-s", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(
-      testARMExtension("arm1176jzf-s", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-m0", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-a8", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-r4", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-m3", ARM::ArchKind::INVALID, "crypto"));
-  EXPECT_FALSE(testARMExtension("cortex-a53", ARM::ArchKind::INVALID, "ras"));
-  EXPECT_FALSE(testARMExtension("cortex-a53", ARM::ArchKind::INVALID, "fp16"));
-  EXPECT_TRUE(testARMExtension("cortex-a55", ARM::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(
-      testARMExtension("cortex-a55", ARM::ArchKind::INVALID, "fp16fml"));
-  EXPECT_TRUE(testARMExtension("cortex-a75", ARM::ArchKind::INVALID, "fp16"));
-  EXPECT_FALSE(
-      testARMExtension("cortex-a75", ARM::ArchKind::INVALID, "fp16fml"));
-  EXPECT_FALSE(testARMExtension("cortex-r52", ARM::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testARMExtension("arm926ej-s",
+                                ARM::ArchKind::INVALID, "simd"));
+  EXPECT_FALSE(testARMExtension("arm1136jf-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("arm1156t2-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("arm1176jzf-s",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-m0",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-a8",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-r4",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-m3",
+                                ARM::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testARMExtension("cortex-a53",
+                                ARM::ArchKind::INVALID, "ras"));
+  EXPECT_FALSE(testARMExtension("cortex-a53",
+                                ARM::ArchKind::INVALID, "fp16"));
+  EXPECT_TRUE(testARMExtension("cortex-a55",
+                                ARM::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testARMExtension("cortex-a55",
+                                ARM::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testARMExtension("cortex-a75",
+                                ARM::ArchKind::INVALID, "fp16"));
+  EXPECT_FALSE(testARMExtension("cortex-a75",
+                                ARM::ArchKind::INVALID, "fp16fml"));
+  EXPECT_FALSE(testARMExtension("cortex-r52",
+                                ARM::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testARMExtension("iwmmxt", ARM::ArchKind::INVALID, "crc"));
   EXPECT_FALSE(testARMExtension("xscale", ARM::ArchKind::INVALID, "crc"));
   EXPECT_FALSE(testARMExtension("swift", ARM::ArchKind::INVALID, "crc"));
@@ -665,13 +668,16 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV5TEJ, "simd"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6K, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6T2, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6KZ, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV6T2, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV6KZ, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV6M, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7A, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7R, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7M, "crypto"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV7EM, "crypto"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV7EM, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8A, "ras"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_1A, "ras"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "profile"));
@@ -682,10 +688,10 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_4A, "fp16"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_4A, "fp16fml"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8R, "ras"));
-  EXPECT_FALSE(
-      testARMExtension("generic", ARM::ArchKind::ARMV8MBaseline, "crc"));
-  EXPECT_FALSE(
-      testARMExtension("generic", ARM::ArchKind::ARMV8MMainline, "crc"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV8MBaseline, "crc"));
+  EXPECT_FALSE(testARMExtension("generic",
+                                ARM::ArchKind::ARMV8MMainline, "crc"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::IWMMXT, "crc"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::IWMMXT2, "crc"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::XSCALE, "crc"));
@@ -710,9 +716,11 @@ TEST(TargetParserTest, ARMFPUNeonSupportLevel) {
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
     if (FK == ARM::FK_LAST ||
         ARM::getFPUName(FK).find("neon") == std::string::npos)
-      EXPECT_EQ(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
+      EXPECT_EQ(ARM::NeonSupportLevel::None,
+                 ARM::getFPUNeonSupportLevel(FK));
     else
-      EXPECT_NE(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
+      EXPECT_NE(ARM::NeonSupportLevel::None,
+                ARM::getFPUNeonSupportLevel(FK));
 }
 
 TEST(TargetParserTest, ARMFPURestriction) {
@@ -736,8 +744,8 @@ TEST(TargetParserTest, ARMExtensionFeatures) {
       Extensions[Ext.ID] = {Ext.Feature, Ext.NegFeature};
   }
 
-  Extensions[ARM::AEK_HWDIVARM] = {"+hwdiv-arm", "-hwdiv-arm"};
-  Extensions[ARM::AEK_HWDIVTHUMB] = {"+hwdiv", "-hwdiv"};
+  Extensions[ARM::AEK_HWDIVARM]   = { "+hwdiv-arm", "-hwdiv-arm" };
+  Extensions[ARM::AEK_HWDIVTHUMB] = { "+hwdiv",     "-hwdiv" };
 
   std::vector<StringRef> Features;
 
@@ -997,7 +1005,7 @@ TEST(TargetParserTest, getARMCPUForArch) {
 
 class AArch64CPUTestFixture
     : public ::testing::TestWithParam<
-          ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>> {};
+          ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>> {};
 
 TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
   ARMCPUTestParams params = GetParam();
@@ -1014,35 +1022,35 @@ TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
 INSTANTIATE_TEST_SUITE_P(
     AArch64CPUTests, AArch64CPUTestFixture,
     ::testing::Values(
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a34", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a35", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a53", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a55", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_RAS,
                  AArch64::AEK_LSE, AArch64::AEK_RDM, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a510", "armv9-a", "neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM,
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_BF16,
@@ -1051,84 +1059,84 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SSBS, AArch64::AEK_FP16, AArch64::AEK_FP16FML,
                  AArch64::AEK_SB})),
             "9-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a57", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a65", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RCPC,
                  AArch64::AEK_RDM, AArch64::AEK_SIMD, AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a65ae", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RCPC,
                  AArch64::AEK_RDM, AArch64::AEK_SIMD, AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a72", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a73", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a75", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_RAS,
                  AArch64::AEK_LSE, AArch64::AEK_RDM, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a76", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a76ae", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a77", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a78", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
                  AArch64::AEK_PROFILE})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a78c", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_RAS, AArch64::AEK_CRC, AArch64::AEK_AES,
                  AArch64::AEK_SHA2, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM,
@@ -1136,9 +1144,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SSBS, AArch64::AEK_PROFILE, AArch64::AEK_FLAGM,
                  AArch64::AEK_PAUTH, AArch64::AEK_FP16FML})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a710", "armv9-a", "neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM,
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_MTE,
@@ -1147,9 +1155,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PAUTH, AArch64::AEK_FLAGM, AArch64::AEK_SB,
                  AArch64::AEK_I8MM, AArch64::AEK_BF16})),
             "9-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-a715", "armv9-a", "neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC,     AArch64::AEK_FP,
                  AArch64::AEK_BF16,    AArch64::AEK_SIMD,
                  AArch64::AEK_RAS,     AArch64::AEK_LSE,
@@ -1163,9 +1171,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16FML, AArch64::AEK_FP16,
                  AArch64::AEK_FLAGM})),
             "9-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_RAS,     AArch64::AEK_SVE,  AArch64::AEK_SSBS,
                  AArch64::AEK_RCPC,    AArch64::AEK_CRC,  AArch64::AEK_FP,
                  AArch64::AEK_SIMD,    AArch64::AEK_RAS,  AArch64::AEK_LSE,
@@ -1175,9 +1183,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PROFILE, AArch64::AEK_RAND, AArch64::AEK_FP16FML,
                  AArch64::AEK_I8MM})),
             "8.4-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "neoverse-v2", "armv9-a", "neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_RAS,         AArch64::AEK_SVE,
                  AArch64::AEK_SSBS,        AArch64::AEK_RCPC,
                  AArch64::AEK_CRC,         AArch64::AEK_FP,
@@ -1189,35 +1197,35 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16FML,     AArch64::AEK_I8MM,
                  AArch64::AEK_SVE2BITPERM, AArch64::AEK_RAND})),
             "9-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-r82", "armv8-r", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_RDM, AArch64::AEK_SSBS,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_RAS,
                  AArch64::AEK_RCPC, AArch64::AEK_LSE, AArch64::AEK_SB})),
             "8-R"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
                  AArch64::AEK_PROFILE})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-x1c", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_FP16,
                  AArch64::AEK_DOTPROD, AArch64::AEK_RCPC, AArch64::AEK_SSBS,
                  AArch64::AEK_PAUTH, AArch64::AEK_PROFILE})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-x2", "armv9-a", "neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM,
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_MTE,
@@ -1226,9 +1234,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SSBS, AArch64::AEK_SB, AArch64::AEK_FP16,
                  AArch64::AEK_FP16FML})),
             "9-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cortex-x3", "armv9-a", "neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC,     AArch64::AEK_FP,
                  AArch64::AEK_BF16,    AArch64::AEK_SIMD,
                  AArch64::AEK_RAS,     AArch64::AEK_LSE,
@@ -1242,72 +1250,72 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PREDRES, AArch64::AEK_FLAGM,
                  AArch64::AEK_SSBS})),
             "9-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "cyclone", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_NONE, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a7", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_NONE, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a8", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_NONE, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a9", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_NONE, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a10", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_RDM, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a11", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_LSE, AArch64::AEK_RAS,
                  AArch64::AEK_RDM, AArch64::AEK_SIMD, AArch64::AEK_FP16})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a12", "armv8.3-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_LSE,
                  AArch64::AEK_RAS, AArch64::AEK_RDM, AArch64::AEK_RCPC,
                  AArch64::AEK_FP16})),
             "8.3-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a13", "armv8.4-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3})),
             "8.4-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a14", "armv8.5-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3})),
             "8.5-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a15", "armv8.5-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
@@ -1315,9 +1323,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3, AArch64::AEK_BF16,
                  AArch64::AEK_I8MM})),
             "8.5-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-a16", "armv8.5-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
@@ -1325,18 +1333,18 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3, AArch64::AEK_BF16,
                  AArch64::AEK_I8MM})),
             "8.5-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-m1", "armv8.5-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
                  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3})),
             "8.5-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-m2", "armv8.5-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SHA3, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
@@ -1344,76 +1352,76 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16FML, AArch64::AEK_SHA3, AArch64::AEK_BF16,
                  AArch64::AEK_I8MM})),
             "8.5-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-s4", "armv8.3-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_LSE,
                  AArch64::AEK_RAS, AArch64::AEK_RDM, AArch64::AEK_RCPC,
                  AArch64::AEK_FP16})),
             "8.3-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "apple-s5", "armv8.3-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_LSE,
                  AArch64::AEK_RAS, AArch64::AEK_RDM, AArch64::AEK_RCPC,
                  AArch64::AEK_FP16})),
             "8.3-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "exynos-m4", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
                  AArch64::AEK_SIMD})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "exynos-m5", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RDM,
                  AArch64::AEK_SIMD})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "falkor", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_RDM})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "kryo", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "neoverse-e1", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_LSE, AArch64::AEK_RAS, AArch64::AEK_RCPC,
                  AArch64::AEK_RDM, AArch64::AEK_SIMD, AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "neoverse-n1", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_LSE, AArch64::AEK_PROFILE, AArch64::AEK_RAS,
                  AArch64::AEK_RCPC, AArch64::AEK_RDM, AArch64::AEK_SIMD,
                  AArch64::AEK_SSBS})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "neoverse-n2", "armv8.5-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC,         AArch64::AEK_AES,
                  AArch64::AEK_SHA2,        AArch64::AEK_SHA3,
                  AArch64::AEK_SM4,         AArch64::AEK_FP,
@@ -1426,9 +1434,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SVE2BITPERM, AArch64::AEK_BF16,
                  AArch64::AEK_I8MM})),
             "8.5-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "ampere1", "armv8.6-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_SIMD, AArch64::AEK_RAS, AArch64::AEK_LSE,
                  AArch64::AEK_RDM, AArch64::AEK_RCPC, AArch64::AEK_DOTPROD,
@@ -1436,9 +1444,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_AES, AArch64::AEK_I8MM, AArch64::AEK_SSBS,
                  AArch64::AEK_SB, AArch64::AEK_RAND})),
             "8.6-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "ampere1a", "armv8.6-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_FP, AArch64::AEK_FP16,
                  AArch64::AEK_SIMD, AArch64::AEK_RAS, AArch64::AEK_LSE,
                  AArch64::AEK_RDM, AArch64::AEK_RCPC, AArch64::AEK_DOTPROD,
@@ -1447,9 +1455,9 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SSBS, AArch64::AEK_SB, AArch64::AEK_RAND,
                  AArch64::AEK_MTE})),
             "8.6-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_RAS,     AArch64::AEK_SVE,  AArch64::AEK_SSBS,
                  AArch64::AEK_RCPC,    AArch64::AEK_CRC,  AArch64::AEK_FP,
                  AArch64::AEK_SIMD,    AArch64::AEK_RAS,  AArch64::AEK_LSE,
@@ -1459,64 +1467,64 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_PROFILE, AArch64::AEK_RAND, AArch64::AEK_FP16FML,
                  AArch64::AEK_I8MM})),
             "8.4-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "thunderx2t99", "armv8.1-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_LSE, AArch64::AEK_RDM, AArch64::AEK_FP,
                  AArch64::AEK_SIMD})),
             "8.1-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "thunderx3t110", "armv8.3-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_LSE, AArch64::AEK_RDM, AArch64::AEK_FP,
                  AArch64::AEK_SIMD, AArch64::AEK_RAS, AArch64::AEK_RCPC})),
             "8.3-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "thunderx", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SIMD, AArch64::AEK_FP})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "thunderxt81", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SIMD, AArch64::AEK_FP})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "thunderxt83", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SIMD, AArch64::AEK_FP})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "thunderxt88", "armv8-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_SIMD, AArch64::AEK_FP})),
             "8-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "tsv110", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_RAS,
                  AArch64::AEK_LSE, AArch64::AEK_RDM, AArch64::AEK_PROFILE,
                  AArch64::AEK_FP16, AArch64::AEK_FP16FML,
                  AArch64::AEK_DOTPROD})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "a64fx", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_FP16,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_SVE,
                  AArch64::AEK_RDM})),
             "8.2-A"),
-        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_MAX>>(
+        ARMCPUTestParams<Bitset<AArch64::AEK_EXTENSIONS_LAST>>(
             "carmel", "armv8.2-a", "crypto-neon-fp-armv8",
-            (Bitset<AArch64::AEK_EXTENSIONS_MAX>(
+            (Bitset<AArch64::AEK_EXTENSIONS_LAST>(
                 {AArch64::AEK_CRC, AArch64::AEK_AES, AArch64::AEK_SHA2,
                  AArch64::AEK_FP, AArch64::AEK_SIMD, AArch64::AEK_FP16,
                  AArch64::AEK_RAS, AArch64::AEK_LSE, AArch64::AEK_RDM})),
@@ -1691,14 +1699,14 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 
   std::vector<StringRef> Features;
 
-  Bitset<AArch64::AEK_EXTENSIONS_MAX> ExtVal;
+  Bitset<AArch64::AEK_EXTENSIONS_LAST> ExtVal;
   for (auto Ext : Extensions)
     ExtVal.set(Ext);
 
   // NONE has no feature names.
   // We return True here because NONE is a valid choice.
   EXPECT_TRUE(AArch64::getExtensionFeatures(
-      Bitset<AArch64::AEK_EXTENSIONS_MAX>({AArch64::AEK_NONE}), Features));
+      Bitset<AArch64::AEK_EXTENSIONS_LAST>({AArch64::AEK_NONE}), Features));
   EXPECT_TRUE(!Features.size());
 
   AArch64::getExtensionFeatures(ExtVal, Features);
