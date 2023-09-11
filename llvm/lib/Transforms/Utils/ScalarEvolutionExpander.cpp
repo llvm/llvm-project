@@ -1291,8 +1291,8 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     // specified loop.
     BasicBlock *Header = L->getHeader();
     pred_iterator HPB = pred_begin(Header), HPE = pred_end(Header);
-    CanonicalIV = PHINode::Create(Ty, std::distance(HPB, HPE), "indvar",
-                                  &Header->front());
+    CanonicalIV = PHINode::Create(Ty, std::distance(HPB, HPE), "indvar");
+    CanonicalIV->insertBefore(Header->begin());
     rememberInstruction(CanonicalIV);
 
     SmallSet<BasicBlock *, 4> PredSeen;
