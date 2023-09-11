@@ -71,6 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
+void *memcpy(void *dest, const void *src, unsigned long n);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -1710,6 +1711,24 @@ void CWE124_Buffer_Underwrite__malloc_char_ncpy() {
   source[100-1] = '\0'; // null terminate
   strncpy(data, source, 100-1); // expected-warning {{String copy function overflows the destination buffer}}
   data[100-1] = '\0'; // null terminate
+  free(dataBuffer);
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void CWE124_Buffer_Underwrite__malloc_char_memcpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == NULL) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char *data = dataBuffer - 8;
+
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+
+  memcpy(data, source, 100*sizeof(char)); // expected-warning {{Memory copy function overflows the destination buffer}}
+  data[100-1] = '\0';
   free(dataBuffer);
 }
 #endif

@@ -480,6 +480,14 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   if (!Filter.CheckCStringOutOfBounds)
     return State;
 
+  SVal BufStart =
+      svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
+
+  // Check if the first byte of the buffer is accessible.
+  State = CheckLocation(C, State, Buffer, BufStart, Access, CK);
+  if (!State)
+    return nullptr;
+
   // Get the access length and make sure it is known.
   // FIXME: This assumes the caller has already checked that the access length
   // is positive. And that it's unsigned.
@@ -496,8 +504,6 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   NonLoc LastOffset = Offset.castAs<NonLoc>();
 
   // Check that the first buffer is sufficiently long.
-  SVal BufStart =
-      svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
   if (std::optional<Loc> BufLoc = BufStart.getAs<Loc>()) {
 
     SVal BufEnd =
