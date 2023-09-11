@@ -320,7 +320,7 @@ protected:
 
   void createEmptyFiles(llvm::ArrayRef<StringRef> FileNames) {
     for (llvm::StringRef File : FileNames)
-      Inputs.ExtraFiles[File] = "";
+      Inputs.ExtraFiles[File] = "#pragma once";
   }
 };
 
