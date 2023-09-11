@@ -1907,10 +1907,10 @@ unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
 }
 
 HeaderFileInfoTrait::internal_key_type
-HeaderFileInfoTrait::GetInternalKey(const FileEntry *FE) {
-  internal_key_type ikey = {FE->getSize(),
-                            M.HasTimestamps ? FE->getModificationTime() : 0,
-                            FE->getName(), /*Imported*/ false};
+HeaderFileInfoTrait::GetInternalKey(external_key_type FE) {
+  internal_key_type ikey = {FE.getSize(),
+                            M.HasTimestamps ? FE.getModificationTime() : 0,
+                            FE.getName(), /*Imported*/ false};
   return ikey;
 }
 
@@ -6399,11 +6399,11 @@ namespace {
 
   /// Visitor used to search for information about a header file.
   class HeaderFileInfoVisitor {
-    const FileEntry *FE;
+  FileEntryRef FE;
     std::optional<HeaderFileInfo> HFI;
 
   public:
-    explicit HeaderFileInfoVisitor(const FileEntry *FE) : FE(FE) {}
+    explicit HeaderFileInfoVisitor(FileEntryRef FE) : FE(FE) {}
 
     bool operator()(ModuleFile &M) {
       HeaderFileInfoLookupTable *Table
@@ -6425,7 +6425,7 @@ namespace {
 
 } // namespace
 
-HeaderFileInfo ASTReader::GetHeaderFileInfo(const FileEntry *FE) {
+HeaderFileInfo ASTReader::GetHeaderFileInfo(FileEntryRef FE) {
   HeaderFileInfoVisitor Visitor(FE);
   ModuleMgr.visit(Visitor);
   if (std::optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())

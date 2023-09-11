@@ -830,8 +830,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
       // Relative searches begin from CWD.
       auto Dir = CI.getFileManager().getOptionalDirectoryRef(".");
-      SmallVector<std::pair<const FileEntry *, DirectoryEntryRef>, 1> CWD;
-      CWD.push_back({nullptr, *Dir});
+      SmallVector<std::pair<OptionalFileEntryRef, DirectoryEntryRef>, 1> CWD;
+      CWD.push_back({std::nullopt, *Dir});
       OptionalFileEntryRef FE =
           HS.LookupFile(FileName, SourceLocation(),
                         /*Angled*/ Input.getKind().getHeaderUnitKind() ==
