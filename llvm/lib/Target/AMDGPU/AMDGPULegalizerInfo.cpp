@@ -872,6 +872,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FDIVActions.customFor({S16});
   }
 
+  if (ST.hasPackedFP32Ops()) {
+    FPOpActions.legalFor({V2S32});
+    FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
+  }
+
   auto &MinNumMaxNum = getActionDefinitionsBuilder({
       G_FMINNUM, G_FMAXNUM, G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
