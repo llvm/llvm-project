@@ -230,6 +230,11 @@ Response HandleFunction(const FunctionDecl *Function,
 Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
   if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
+    Result.addOuterTemplateArguments(
+        const_cast<FunctionTemplateDecl *>(FTD),
+        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
+        /*Final=*/false);
+
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
 
     while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
