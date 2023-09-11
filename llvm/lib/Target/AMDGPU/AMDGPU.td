@@ -833,6 +833,12 @@ def FeatureBitOp3Insts : SubtargetFeature<"bitop3-insts",
   "Has v_bitop3_b32/v_bitop3_b16 instructions"
 >;
 
+def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
+  "HasTanhInsts",
+  "true",
+  "Has v_tanh_f32/f16/b16 instructions"
+>;
+
 def Feature512AddressableVGPRs : SubtargetFeature<"512-addressable-vgprs",
   "Has512AddressableVGPRs",
   "true",
@@ -1527,6 +1533,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureHasRestrictedSOffset,
    FeatureScalarDwordx3Loads,
    FeatureBitOp3Insts,
+   FeatureTanhInsts,
    FeatureSupportsSRAMECC]>;
 
 //===----------------------------------------------------------------------===//
@@ -2086,6 +2093,9 @@ def HasPseudoScalarTrans : Predicate<"Subtarget->hasPseudoScalarTrans()">,
 
 def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
   AssemblerPredicate<(all_of FeatureBitOp3Insts)>;
+
+def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
+  AssemblerPredicate<(all_of FeatureTanhInsts)>;
 
 def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;

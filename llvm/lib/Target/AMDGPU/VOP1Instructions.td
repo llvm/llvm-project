@@ -355,6 +355,9 @@ defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64_NO_DPP, int_amdgcn_sqrt>;
 let TRANS = 1, SchedRW = [WriteTrans32] in {
 defm V_SIN_F32 : VOP1Inst <"v_sin_f32", VOP_F32_F32, AMDGPUsin>;
 defm V_COS_F32 : VOP1Inst <"v_cos_f32", VOP_F32_F32, AMDGPUcos>;
+
+let SubtargetPredicate = HasTanhInsts in
+defm V_TANH_F32 : VOP1Inst <"v_tanh_f32", VOP_F32_F32, int_amdgcn_tanh>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 defm V_NOT_B32 : VOP1Inst <"v_not_b32", VOP_I32_I32>;
@@ -508,6 +511,11 @@ defm V_LOG_F16 : VOP1Inst_t16 <"v_log_f16", VOP_F16_F16, AMDGPUlogf16>;
 defm V_EXP_F16 : VOP1Inst_t16 <"v_exp_f16", VOP_F16_F16, AMDGPUexpf16>;
 defm V_SIN_F16 : VOP1Inst_t16 <"v_sin_f16", VOP_F16_F16, AMDGPUsin>;
 defm V_COS_F16 : VOP1Inst_t16 <"v_cos_f16", VOP_F16_F16, AMDGPUcos>;
+
+let SubtargetPredicate = HasTanhInsts in {
+defm V_TANH_F16  : VOP1Inst_t16 <"v_tanh_f16",  VOP_F16_F16, int_amdgcn_tanh>;
+defm V_TANH_BF16 : VOP1Inst_t16 <"v_tanh_bf16", VOP_F16_F16>;
+}
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 defm V_FREXP_MANT_F16 : VOP1Inst_t16 <"v_frexp_mant_f16", VOP_F16_F16, int_amdgcn_frexp_mant>;
 let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
@@ -523,6 +531,10 @@ defm V_RNDNE_F16 : VOP1Inst_t16 <"v_rndne_f16", VOP_F16_F16, frint>;
 let FPDPRounding = 1 in {
 defm V_FRACT_F16 : VOP1Inst_t16 <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
 } // End FPDPRounding = 1
+
+let SubtargetPredicate = HasTanhInsts in
+def : GCNPat<(i16 (int_amdgcn_tanh_bf16 i16:$src)),
+             (V_TANH_BF16_t16_e32 $src)>;
 
 let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
 def : GCNPat<
@@ -986,6 +998,10 @@ defm V_CVT_NORM_U16_F16_t16  : VOP1_Real_FULL_t16_gfx11_gfx12<0x064, "v_cvt_norm
 
 defm V_CVT_F16_F32_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00a, "v_cvt_f16_f32">;
 defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_f16">;
+
+defm V_TANH_F32              : VOP1_Real_FULL<GFX12_10Gen, 0x01e>;
+defm V_TANH_F16_t16          : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x01f, "V_TANH_F16_t16",  "v_tanh_f16">;
+defm V_TANH_BF16_t16         : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x04a, "V_TANH_BF16_t16", "v_tanh_bf16">;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

@@ -17368,6 +17368,9 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, { ResultType });
     return Builder.CreateCall(F, { Src });
   }
+  case AMDGPU::BI__builtin_amdgcn_tanhf:
+  case AMDGPU::BI__builtin_amdgcn_tanhh:
+    return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_tanh);
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:
   case AMDGPU::BI__builtin_amdgcn_sicmp:

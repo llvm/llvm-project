@@ -200,6 +200,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has512AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
+  bool HasTanhInsts = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -1207,6 +1208,8 @@ public:
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
 
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
+
+  bool hasTanhInsts() const { return HasTanhInsts; }
 
   bool has512AddressableVGPRs() const { return Has512AddressableVGPRs; }
 

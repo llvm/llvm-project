@@ -567,6 +567,14 @@ def int_amdgcn_ds_fadd : AMDGPULDSIntrin;
 def int_amdgcn_ds_fmin : AMDGPULDSIntrin;
 def int_amdgcn_ds_fmax : AMDGPULDSIntrin;
 
+def int_amdgcn_tanh : DefaultAttrsIntrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_tanh_bf16 : DefaultAttrsIntrinsic<
+  [llvm_i16_ty], [llvm_i16_ty], [IntrNoMem, IntrSpeculatable]
+>, ClangBuiltin<"__builtin_amdgcn_tanh_bf16">;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics

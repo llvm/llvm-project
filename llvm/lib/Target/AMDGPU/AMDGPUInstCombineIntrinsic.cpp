@@ -508,7 +508,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_sqrt:
-  case Intrinsic::amdgcn_rsq: {
+  case Intrinsic::amdgcn_rsq:
+  case Intrinsic::amdgcn_tanh:
+  case Intrinsic::amdgcn_tanh_bf16: {
     Value *Src = II.getArgOperand(0);
 
     // TODO: Move to ConstantFolding/InstSimplify?
