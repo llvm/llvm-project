@@ -292,9 +292,10 @@ C++23, informally referred to as C++26.</p>
       <td><a href="https://wg21.link/P2255R2">P2255R2</a></td>
       <td class="partial" align="center">
         <details><summary>Partial</summary>
-          Clang provides <tt>__reference_constructs_from_temporary</tt> type
-          trait builtin, with which <tt>std::reference_constructs_from_temporary</tt>
-          implemented. <tt>__reference_converts_from_temporary</tt> needs to be
+          Clang provides a <tt>__reference_binds_to_temporary</tt> type trait
+          builtin, with which the library facility can be partially implemented.
+          Both <tt>__reference_constructs_from_temporary</tt> and
+          <tt>__reference_converts_from_temporary</tt> builtins should be
           provided, following the normal cross-vendor convention to implement
           traits requiring compiler support directly.
         </details></td>
