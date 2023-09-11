@@ -232,6 +232,20 @@ add_libc_test(
     libc.src.stdio.vprintf
 )
 
+
+if(LLVM_LIBC_FULL_BUILD)
+  # In fullbuild mode, fscanf's tests use the internal FILE for other functions.
+  list(APPEND fscanf_test_deps
+       libc.src.stdio.fclose
+       libc.src.stdio.ferror
+       libc.src.stdio.fopen
+       libc.src.stdio.fwrite
+  )
+else()
+# Else in overlay mode they use the system's FILE.
+ set(fscanf_test_copts "-DLIBC_COPT_SCANF_USE_SYSTEM_FILE")
+endif()
+
 add_libc_unittest(
   fscanf_test
   SUITE
@@ -240,11 +254,10 @@ add_libc_unittest(
     fscanf_test.cpp
   DEPENDS
     libc.src.stdio.fscanf
-    libc.src.stdio.fclose
-    libc.src.stdio.ferror
-    libc.src.stdio.fopen
-    libc.src.stdio.fwrite
+    ${fscanf_test_deps}
     libc.src.__support.CPP.string_view
+  COMPILE_OPTIONS
+    ${fscanf_test_copts}
 )
 
 add_libc_unittest(

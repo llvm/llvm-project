@@ -8,10 +8,10 @@
 
 #include "src/stdio/sscanf.h"
 
+#include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
-#include "src/stdio/scanf_core/string_reader.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,8 +27,9 @@ LLVM_LIBC_FUNCTION(int, sscanf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  scanf_core::StringReader string_reader(buffer);
-  scanf_core::Reader reader(&string_reader);
+  scanf_core::ReadBuffer rb{const_cast<char *>(buffer),
+                            cpp::numeric_limits<size_t>::max()};
+  scanf_core::Reader reader(&rb);
   int ret_val = scanf_core::scanf_main(&reader, format, args);
   // This is done to avoid including stdio.h in the internals. On most systems
   // EOF is -1, so this will be transformed into just "return ret_val".
