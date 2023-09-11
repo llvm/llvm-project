@@ -33,7 +33,7 @@ public:
   void printAuxiliaryHeader() override;
   void printSectionHeaders() override;
   void printRelocations() override;
-  void printSymbols() override;
+  void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override;
   void printUnwindInfo() override;
   void printStackMap() const override;
@@ -903,7 +903,7 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   }
 }
 
-void XCOFFDumper::printSymbols() {
+void XCOFFDumper::printSymbols(bool /*ExtraSymInfo*/) {
   ListScope Group(W, "Symbols");
   for (const SymbolRef &S : Obj.symbols())
     printSymbol(S);
