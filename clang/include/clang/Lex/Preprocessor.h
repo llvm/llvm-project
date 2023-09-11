@@ -2754,7 +2754,7 @@ private:
   void replayPreambleConditionalStack();
 
   // Macro handling.
-  void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterHeaderGuard, bool AllowRecurse);
+  void HandleDefineDirective(Token &Tok, bool ImmediatelyAfterHeaderGuard);
   void HandleUndefDirective();
 
   // Conditional Inclusion.

@@ -66,11 +66,9 @@ class MacroInfo {
   /// Length in characters of the macro definition.
   mutable unsigned DefinitionLength;
 
-  enum : uint16_t { recursion_depth_limit = 16'000 };
-  /// recursion depth,
-  /// > 0 if we have started an expansion of this macro already.
-  /// for 'define' max is 1, for 'define2' max is depth limit
-  uint16_t Depth = 0;
+  /// True if 'define2' used, enables expansion anyway
+  bool AllowRecurse : 1;
+
   mutable bool IsDefinitionLengthCached : 1;
 
   /// True if this macro is function-like, false if it is object-like.
@@ -102,9 +100,6 @@ class MacroInfo {
   //===--------------------------------------------------------------------===//
   // State that changes as the macro is used.
 
-  // True if 'define2' used, enables expansion anyway
-  bool AllowRecurse : 1;
-
   /// True if this macro is either defined in the main file and has
   /// been used, or if it is not defined in the main file.
   ///
@@ -119,6 +114,12 @@ class MacroInfo {
 
   /// Whether this macro was used as header guard.
   bool UsedForHeaderGuard : 1;
+
+  enum : uint16_t { recursion_depth_limit = 16'000 };
+  /// recursion depth,
+  /// > 0 if we have started an expansion of this macro already.
+  /// for 'define' max is 1, for 'define2' max is depth limit
+  uint16_t Depth = 0;
 
   // Only the Preprocessor gets to create these.
   MacroInfo(SourceLocation DefLoc);
@@ -283,9 +284,7 @@ public:
   /// In other words, that we are not currently in an expansion of this macro.
   bool isEnabled() const {
     // macro disabled if depth exceeds and stops infinite recursion
-    if (AllowRecurse)
-      return Depth < recursion_depth_limit;
-    return Depth == 0;
+    return AllowRecurse ? Depth < recursion_depth_limit : Depth == 0;
   }
   void setAllowRecursive(bool Allow) { AllowRecurse = Allow; }
   bool isAllowRecurse() const { return AllowRecurse; }
@@ -296,8 +295,10 @@ public:
   }
   // returns false if max recursion depth exceeded
   [[nodiscard]] bool TryDisableMacro() {
+    assert((AllowRecurse || Depth == 0) && "Cannot disable an already-disabled macro!");
     return ++Depth < recursion_depth_limit;
   }
+
   /// Determine whether this macro was used for a header guard.
   bool isUsedForHeaderGuard() const { return UsedForHeaderGuard; }
 

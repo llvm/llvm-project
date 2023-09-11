@@ -1109,13 +1109,9 @@ private:
 void Preprocessor::HandleSkippedDirectiveWhileUsingPCH(Token &Result,
                                                        SourceLocation HashLoc) {
   if (const IdentifierInfo *II = Result.getIdentifierInfo()) {
-    if (II->getPPKeywordID() == tok::pp_define) {
+    if (II->getPPKeywordID() == tok::pp_define || II->getPPKeywordID() == tok::pp_define2) {
       return HandleDefineDirective(Result,
-                                   /*ImmediatelyAfterHeaderGuard=*/false, /*AllowRecurse=*/false);
-    }
-    if (II->getPPKeywordID() == tok::pp_define2) {
-      return HandleDefineDirective(Result,
-                                   /*ImmediatelyAfterHeaderGuard=*/false, /*AllowRecurse=*/true);
+                                   /*ImmediatelyAfterHeaderGuard=*/false);
     }
     if (SkippingUntilPCHThroughHeader &&
         II->getPPKeywordID() == tok::pp_include) {
@@ -1254,9 +1250,8 @@ void Preprocessor::HandleDirective(Token &Result) {
 
     // C99 6.10.3 - Macro Replacement.
     case tok::pp_define:
-      return HandleDefineDirective(Result, ImmediatelyAfterTopLevelIfndef, false);
     case tok::pp_define2:
-      return HandleDefineDirective(Result, ImmediatelyAfterTopLevelIfndef, true);
+      return HandleDefineDirective(Result, ImmediatelyAfterTopLevelIfndef);
     case tok::pp_undef:
       return HandleUndefDirective();
 
@@ -3045,7 +3040,7 @@ static bool isObjCProtectedMacro(const IdentifierInfo *II) {
 /// HandleDefineDirective - Implements \#define and define2. This consumes the entire macro
 /// line then lets the caller lex the next real token.
 void Preprocessor::HandleDefineDirective(
-    Token &DefineTok, const bool ImmediatelyAfterHeaderGuard, bool AllowRecurse) {
+    Token &DefineTok, const bool ImmediatelyAfterHeaderGuard) {
   ++NumDefined;
 
   Token MacroNameTok;
@@ -3070,7 +3065,7 @@ void Preprocessor::HandleDefineDirective(
       MacroNameTok, ImmediatelyAfterHeaderGuard);
 
   if (!MI) return;
-  MI->setAllowRecursive(AllowRecurse);
+  MI->setAllowRecursive(DefineTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_define2);
   if (MacroShadowsKeyword &&
       !isConfigurationPattern(MacroNameTok, MI, getLangOpts())) {
     Diag(MacroNameTok, diag::warn_pp_macro_hides_keyword);
