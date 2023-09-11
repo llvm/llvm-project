@@ -216,6 +216,9 @@ TEST(LlvmLibcTypeTraitsTest, is_class) {
 TYPED_TEST(LlvmLibcTypeTraitsTest, is_const, UnqualObjectTypes) {
   EXPECT_FALSE((is_const_v<T>));
   EXPECT_TRUE((is_const_v<const T>));
+
+  using Aliased = const T;
+  EXPECT_TRUE((is_const_v<Aliased>));
 }
 
 // TODO is_convertible
