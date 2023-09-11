@@ -2621,6 +2621,17 @@ struct AAICVTrackerCallSiteReturned : AAICVTracker {
   }
 };
 
+/// Determines if \p BB exits the function unconditionally itself or reaches a
+/// block that does through only unique successors.
+static bool hasFunctionEndAsUniqueSuccessor(const BasicBlock *BB) {
+  if (succ_empty(BB))
+    return true;
+  const BasicBlock *const Successor = BB->getUniqueSuccessor();
+  if (!Successor)
+    return false;
+  return hasFunctionEndAsUniqueSuccessor(Successor);
+}
+
 struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
@@ -2678,11 +2689,11 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
       // We can remove this barrier, if it is one, or aligned barriers reaching
       // the kernel end (if CB is nullptr). Aligned barriers reaching the kernel
-      // end may have other successors besides the kernel end (especially if
-      // they're in loops) with non-local side-effects, so those barriers can
-      // only be removed if they also only reach the kernel end. If those
-      // barriers have other barriers reaching them, those can be transitively
-      // removed as well.
+      // end should only be removed if the kernel end is their unique successor;
+      // otherwise, they may have side-effects that aren't accounted for in the
+      // kernel end in their other successors. If those barriers have other
+      // barriers reaching them, those can be transitively removed as well as
+      // long as the kernel end is also their unique successor.
       if (CB) {
         DeletedBarriers.insert(CB);
         A.deleteAfterManifest(*CB);
@@ -2699,8 +2710,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
             continue;
           if (LastCB->getFunction() != getAnchorScope())
             continue;
-          const ExecutionDomainTy &PostLastED = CEDMap[{LastCB, POST}];
-          if (!PostLastED.IsReachingAlignedBarrierOnly)
+          if (!hasFunctionEndAsUniqueSuccessor(LastCB->getParent()))
             continue;
           if (!DeletedBarriers.count(LastCB)) {
             ++NumBarriersEliminated;

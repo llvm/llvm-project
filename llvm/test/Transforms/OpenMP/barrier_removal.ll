@@ -736,16 +736,13 @@ define void @multiple_blocks_functions_kernel_effects_0(i1 %c0, i1 %c1, ptr %p) 
 ; MODULE-NEXT:    call void @barrier_then_write0(ptr [[P]])
 ; MODULE-NEXT:    br label [[T0B3:%.*]]
 ; MODULE:       t0b3:
-; MODULE-NEXT:    call void @aligned_barrier()
 ; MODULE-NEXT:    br label [[M3:%.*]]
 ; MODULE:       f03:
 ; MODULE-NEXT:    call void @barrier_then_write0(ptr [[P]])
 ; MODULE-NEXT:    br i1 [[C1]], label [[T13:%.*]], label [[F13:%.*]]
 ; MODULE:       t13:
-; MODULE-NEXT:    call void @aligned_barrier()
 ; MODULE-NEXT:    br label [[M3]]
 ; MODULE:       f13:
-; MODULE-NEXT:    call void @aligned_barrier()
 ; MODULE-NEXT:    br label [[M3]]
 ; MODULE:       m3:
 ; MODULE-NEXT:    call void @write_then_barrier0(ptr [[P]])
@@ -1098,8 +1095,144 @@ exit:
   ret void
 }
 
+define void @loop_barrier_end_barriers() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@loop_barrier_end_barriers
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    call void @aligned_barrier()
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], 128
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  call void @unknown()
+  call void @aligned_barrier()
+  %i.next = add nuw nsw i32 %i, 1
+  %cond = icmp ne i32 %i.next, 128
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  ret void
+}
+
+define void @loop_barrier_end_barriers_unknown() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@loop_barrier_end_barriers_unknown
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    call void @aligned_barrier()
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], 128
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  call void @unknown()
+  call void @aligned_barrier()
+  %i.next = add nuw nsw i32 %i, 1
+  %cond = icmp ne i32 %i.next, 128
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  call void @unknown()
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  ret void
+}
+
+define void @loop_barrier_store() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@loop_barrier_store
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[I]], ptr @G1, align 4
+; CHECK-NEXT:    call void @aligned_barrier()
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], 128
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  store i32 %i, ptr @G1
+  call void @aligned_barrier()
+  %i.next = add nuw nsw i32 %i, 1
+  %cond = icmp ne i32 %i.next, 128
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @loop_barrier_end_barriers_store() "kernel" {
+; CHECK-LABEL: define {{[^@]+}}@loop_barrier_end_barriers_store
+; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[I]], ptr @G1, align 4
+; CHECK-NEXT:    call void @aligned_barrier()
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], 128
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    store i32 [[I_NEXT]], ptr @G1, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  store i32 %i, ptr @G1
+  call void @aligned_barrier()
+  %i.next = add nuw nsw i32 %i, 1
+  %cond = icmp ne i32 %i.next, 128
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  store i32 %i.next, ptr @G1
+  call void @aligned_barrier()
+  call void @aligned_barrier()
+  ret void
+}
+
 !llvm.module.flags = !{!16,!15}
-!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14,!17,!18,!19,!20,!21,!22,!23,!24,!25,!26}
+!nvvm.annotations = !{!0,!1,!2,!3,!4,!5,!6,!7,!8,!9,!10,!11,!12,!13,!14,!17,!18,!19,!20,!21,!22,!23,!24,!25,!26,!27,!28,!29,!30}
 
 !0 = !{ptr @pos_empty_1, !"kernel", i32 1}
 !1 = !{ptr @pos_empty_2, !"kernel", i32 1}
@@ -1113,6 +1246,10 @@ exit:
 !24 = !{ptr @caller_barrier1, !"kernel", i32 1}
 !25 = !{ptr @caller_barrier2, !"kernel", i32 1}
 !26 = !{ptr @loop_barrier, !"kernel", i32 1}
+!27 = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
+!28 = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
+!29 = !{ptr @loop_barrier_store, !"kernel", i32 1}
+!30 = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
 !6 = !{ptr @neg_empty_8, !"kernel", i32 1}
 !19 = !{ptr @neg_empty_9, !"kernel", i32 1}
 !20 = !{ptr @pos_empty_10, !"kernel", i32 1}
@@ -1162,5 +1299,9 @@ exit:
 ; CHECK: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
 ; CHECK: [[META24:![0-9]+]] = !{ptr @caller_barrier1, !"kernel", i32 1}
 ; CHECK: [[META25:![0-9]+]] = !{ptr @caller_barrier2, !"kernel", i32 1}
-; CHECK: [[META25:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
+; CHECK: [[META26:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
+; CHECK: [[META27:![0-9]+]] = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
+; CHECK: [[META28:![0-9]+]] = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
+; CHECK: [[META29:![0-9]+]] = !{ptr @loop_barrier_store, !"kernel", i32 1}
+; CHECK: [[META30:![0-9]+]] = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
 ;.
