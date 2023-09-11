@@ -397,28 +397,20 @@ std::error_code DataAggregator::writeAutoFDOData(StringRef OutputFilename) {
   };
 
   OutFile << FallthroughLBRs.size() << "\n";
-  for (const auto &AggrLBR : FallthroughLBRs) {
-    const Trace &Trace = AggrLBR.first;
-    const FTInfo &Info = AggrLBR.second;
-    OutFile << Twine::utohexstr(filterAddress(Trace.From)) << "-"
-            << Twine::utohexstr(filterAddress(Trace.To)) << ":"
-            << (Info.InternCount + Info.ExternCount) << "\n";
+  for (const auto &[Trace, Info] : FallthroughLBRs) {
+    OutFile << formatv("{0:x}-{1:x}:{2}\n", filterAddress(Trace.From),
+                       filterAddress(Trace.To),
+                       Info.InternCount + Info.ExternCount);
   }
 
   OutFile << BasicSamples.size() << "\n";
-  for (const auto &Sample : BasicSamples) {
-    uint64_t PC = Sample.first;
-    uint64_t HitCount = Sample.second;
-    OutFile << Twine::utohexstr(filterAddress(PC)) << ":" << HitCount << "\n";
-  }
+  for (const auto [PC, HitCount] : BasicSamples)
+    OutFile << formatv("{0:x}:{1}\n", filterAddress(PC), HitCount);
 
   OutFile << BranchLBRs.size() << "\n";
-  for (const auto &AggrLBR : BranchLBRs) {
-    const Trace &Trace = AggrLBR.first;
-    const BranchInfo &Info = AggrLBR.second;
-    OutFile << Twine::utohexstr(filterAddress(Trace.From)) << "->"
-            << Twine::utohexstr(filterAddress(Trace.To)) << ":"
-            << Info.TakenCount << "\n";
+  for (const auto &[Trace, Info] : BranchLBRs) {
+    OutFile << formatv("{0:x}->{1:x}:{2}\n", filterAddress(Trace.From),
+                       filterAddress(Trace.To), Info.TakenCount);
   }
 
   outs() << "PERF2BOLT: wrote " << FallthroughLBRs.size() << " unique traces, "
@@ -1983,12 +1975,11 @@ std::error_code DataAggregator::parseMMapEvents() {
   }
 
   LLVM_DEBUG({
-    dbgs() << "FileName -> mmap info:\n";
-    for (const std::pair<const StringRef, MMapInfo> &Pair : GlobalMMapInfo)
-      dbgs() << "  " << Pair.first << " : " << Pair.second.PID << " [0x"
-             << Twine::utohexstr(Pair.second.MMapAddress) << ", "
-             << Twine::utohexstr(Pair.second.Size) << " @ "
-             << Twine::utohexstr(Pair.second.Offset) << "]\n";
+    dbgs() << "FileName -> mmap info:\n"
+           << "  Filename : PID [MMapAddr, Size, Offset]\n";
+    for (const auto &[Name, MMap] : GlobalMMapInfo)
+      dbgs() << formatv("  {0} : {1} [{2:x}, {3:x} @ {4:x}]\n", Name, MMap.PID,
+                        MMap.MMapAddress, MMap.Size, MMap.Offset);
   });
 
   StringRef NameToUse = llvm::sys::path::filename(BC->getFilename());
