@@ -114,7 +114,7 @@ void createRuntimeTypeInfoGlobal(Fortran::lower::AbstractConverter &converter,
 /// Translate the Fortran attributes of \p sym into the FIR variable attribute
 /// representation.
 fir::FortranVariableFlagsAttr
-translateSymbolAttributes(mlir::MLIRContext *mlirContext,
+translateSymbolAttributes(Fortran::lower::AbstractConverter &converter,
                           const Fortran::semantics::Symbol &sym);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an

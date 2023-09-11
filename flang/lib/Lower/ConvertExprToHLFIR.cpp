@@ -465,7 +465,7 @@ private:
     mlir::Type componentType = visitComponentImpl(component, partInfo).second;
     mlir::Type designatorType = fir::ReferenceType::get(componentType);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(getBuilder().getContext(),
+        Fortran::lower::translateSymbolAttributes(getConverter(),
                                                   component.GetLastSymbol());
     return genDesignate(designatorType, partInfo, attributes);
   }
@@ -1764,7 +1764,7 @@ private:
 
       // Convert component symbol attributes to variable attributes.
       fir::FortranVariableFlagsAttr attrs =
-          Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+          Fortran::lower::translateSymbolAttributes(getConverter(), sym);
 
       // Get the component designator.
       auto lhs = builder.create<hlfir::DesignateOp>(

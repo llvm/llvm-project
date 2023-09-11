@@ -1422,7 +1422,8 @@ recoverShapeVector(llvm::ArrayRef<std::int64_t> shapeVec, mlir::Value initVal) {
 }
 
 fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
-    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::semantics::Symbol &sym) {
   fir::FortranVariableFlagsEnum flags = fir::FortranVariableFlagsEnum::None;
   const auto &attrs = sym.attrs();
   if (attrs.test(Fortran::semantics::Attr::ALLOCATABLE))
@@ -1451,9 +1452,11 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
     flags = flags | fir::FortranVariableFlagsEnum::value;
   if (attrs.test(Fortran::semantics::Attr::VOLATILE))
     flags = flags | fir::FortranVariableFlagsEnum::fortran_volatile;
+  if (converter.isHostAssocSymbol(&sym))
+    flags = flags | fir::FortranVariableFlagsEnum::host_assoc;
   if (flags == fir::FortranVariableFlagsEnum::None)
     return {};
-  return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
+  return fir::FortranVariableFlagsAttr::get(&converter.getMLIRContext(), flags);
 }
 
 /// Map a symbol to its FIR address and evaluated specification expressions.
@@ -1493,7 +1496,7 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
       lenParams.emplace_back(len);
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+        Fortran::lower::translateSymbolAttributes(converter, sym);
 
     if (isCrayPointee) {
       mlir::Type baseType =
@@ -1578,7 +1581,7 @@ void Fortran::lower::genDeclareSymbol(
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+        Fortran::lower::translateSymbolAttributes(converter, sym);
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes);

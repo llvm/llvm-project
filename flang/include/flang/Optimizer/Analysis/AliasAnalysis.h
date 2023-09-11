@@ -33,6 +33,9 @@ class AliasAnalysis {
              /// Memory allocated outside of a function and passed
              /// to the function as a by-ref argument.
              Argument,
+             /// Represents memory allocated outside of a function
+             /// and passed to the function via host association tuple.
+             HostAssoc,
              /// Represents memory allocated by unknown means and
              /// with the memory address defined by a memory reading
              /// operation (e.g. fir::LoadOp).
