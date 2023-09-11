@@ -122,20 +122,9 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
           // it will be culled later.
         }
       } else {
-        
-        // WebAssembly Peephole optimisation can remove instructions around wasm unreachable.
-        // This is valid for wasm, as unreachable is operand stack polymorphic. But this is not modeled
-        // in llvm at the moment, and so the stack may not seem to pop all that it pushes.
-        // Clear the stack so we don't violate the assert(Stack.empty()) later on.
-        if (MI.getOpcode() == WebAssembly::UNREACHABLE) {
-          Stack.clear();
-          break;
-        }
-
         // Track stack depth.
         for (MachineOperand &MO : reverse(MI.explicit_uses())) {
           if (MO.isReg() && MFI.isVRegStackified(MO.getReg())) {
-            assert(Stack.size() != 0 && "WebAssemblyDebugFixup: Pop: Operand stack empty!");
             auto Prev = Stack.back();
             Stack.pop_back();
             assert(Prev.Reg == MO.getReg() &&
