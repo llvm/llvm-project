@@ -28,13 +28,17 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
     def isExpressionParsedExpected(self):
         return self.context != "hover"
 
-    def run_test_evaluate_expressions(self, context=None, enableAutoVariableSummaries=False):
+    def run_test_evaluate_expressions(
+        self, context=None, enableAutoVariableSummaries=False
+    ):
         """
         Tests the evaluate expression request at different breakpoints
         """
         self.context = context
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, enableAutoVariableSummaries=enableAutoVariableSummaries)
+        self.build_and_launch(
+            program, enableAutoVariableSummaries=enableAutoVariableSummaries
+        )
         source = "main.cpp"
         self.set_source_breakpoints(
             source,
@@ -55,7 +59,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEvaluate("var2", "21")
         self.assertEvaluate("static_int", "42")
         self.assertEvaluate("non_static_int", "43")
-        self.assertEvaluate("struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x")
+        self.assertEvaluate(
+            "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
+        )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
@@ -85,7 +91,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEvaluate(
             "non_static_int", "10"
         )  # different variable with the same name
-        self.assertEvaluate("struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x")
+        self.assertEvaluate(
+            "struct1", "{foo:15}" if enableAutoVariableSummaries else "my_struct @ 0x"
+        )
         self.assertEvaluate("struct1.foo", "15")
         self.assertEvaluate("struct2->foo", "16")
 
