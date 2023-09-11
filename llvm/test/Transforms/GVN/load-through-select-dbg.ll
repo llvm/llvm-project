@@ -11,9 +11,9 @@ define i32 @foo(ptr %a, ptr %b) {
 ; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr undef, metadata [[META4:![0-9]+]], metadata !DIExpression()), !dbg [[DBG10:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND]], i32 [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND]], ptr [[A]], ptr [[B]]
-; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   %0 = load i32, ptr %a, align 4
