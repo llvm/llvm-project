@@ -163,8 +163,8 @@
 
 #define2 reverse(head, ...) __VA_OPT__(reverse(__VA_ARGS__) , ) head
 
-31: reverse(1, 2, 3)
+31: reverse(1,2,3)
 
-// CHECK: 31: 3, 2, 1
+// CHECK: 31: 3,2,1
 
 #undef reverse
