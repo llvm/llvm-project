@@ -943,7 +943,7 @@ void SymbolCollector::finish() {
         // FIXME: Get rid of this once include-cleaner has support for system
         // headers.
         if (auto Canonical =
-                HeaderFileURIs->mapCanonical(H.physical()->getName());
+                HeaderFileURIs->mapCanonical(H.physical().getName());
             !Canonical.empty())
           SpellingIt->second = Canonical;
         // For physical files, prefer URIs as spellings might change
@@ -951,7 +951,7 @@ void SymbolCollector::finish() {
         else if (tooling::isSelfContainedHeader(H.physical(), SM,
                                                 PP->getHeaderSearchInfo()))
           SpellingIt->second =
-              HeaderFileURIs->toURI(H.physical()->getLastRef());
+              HeaderFileURIs->toURI(H.physical());
       } else {
         SpellingIt->second = include_cleaner::spellHeader(
             {H, PP->getHeaderSearchInfo(),
