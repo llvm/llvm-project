@@ -239,8 +239,8 @@ if [[ "${linux_projects}" != "" ]]; then
 - label: ':linux: Linux x64'
   artifact_paths:
   - artifacts/**/*
-  - '*_result.json'
-  - 'build/monolithic-linux/test-results.xml'
+  - *_result.json
+  - build/test-results.xml
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -262,8 +262,8 @@ if [[ "${windows_projects}" != "" ]]; then
 - label: ':windows: Windows x64'
   artifact_paths:
   - artifacts/**/*
-  - '*_result.json'
-  - 'build/monolithic-windows/test-results.xml'
+  - *_result.json
+  - build/test-results.xml
   agents: ${WINDOWS_AGENTS}
   retry:
     automatic:
