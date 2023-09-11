@@ -2009,6 +2009,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
       SVal maxLastElement =
           svalBuilder.evalBinOpLN(state, BO_Add, *dstRegVal, *maxLastNL, ptrTy);
 
+      // Check if the first byte of the destination is writable.
+      state = CheckLocation(C, state, Dst, DstVal, AccessKind::write);
+      if (!state)
+        return;
+      // Check if the last byte of the destination is writable.
       state = CheckLocation(C, state, Dst, maxLastElement, AccessKind::write);
       if (!state)
         return;
@@ -2021,6 +2026,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 
       // ...and we haven't checked the bound, we'll check the actual copy.
       if (!boundWarning) {
+        // Check if the first byte of the destination is writable.
+        state = CheckLocation(C, state, Dst, DstVal, AccessKind::write);
+        if (!state)
+          return;
+        // Check if the last byte of the destination is writable.
         state = CheckLocation(C, state, Dst, lastElement, AccessKind::write);
         if (!state)
           return;
