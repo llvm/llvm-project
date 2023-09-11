@@ -466,23 +466,58 @@ CachingVPExpander::expandPredicationInReduction(IRBuilder<> &Builder,
 
 Value *CachingVPExpander::expandPredicationToCastIntrinsic(IRBuilder<> &Builder,
                                                            VPIntrinsic &VPI) {
-  // TODO: Add anthor Cast Intrinsic, VP_TRUNC/VP_ZEXT
+  Value *CastOp = nullptr;
   switch (VPI.getIntrinsicID()) {
   default:
     llvm_unreachable("Not a VP memory intrinsic");
-  case Intrinsic::vp_inttoptr: {
-    Value *NewOp =
+  case Intrinsic::vp_sext:
+    CastOp =
+        Builder.CreateSExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_zext:
+    CastOp =
+        Builder.CreateZExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_trunc:
+    CastOp =
+        Builder.CreateTrunc(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_inttoptr:
+    CastOp =
         Builder.CreateIntToPtr(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    replaceOperation(*NewOp, VPI);
-    return NewOp;
-  }
-  case Intrinsic::vp_ptrtoint: {
-    Value *NewOp =
+    break;
+  case Intrinsic::vp_ptrtoint:
+    CastOp =
         Builder.CreatePtrToInt(VPI.getOperand(0), VPI.getType(), VPI.getName());
-    replaceOperation(*NewOp, VPI);
-    return NewOp;
+    break;
+  case Intrinsic::vp_fptosi:
+    CastOp =
+        Builder.CreateFPToSI(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+
+  case Intrinsic::vp_fptoui:
+    CastOp =
+        Builder.CreateFPToUI(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_sitofp:
+    CastOp =
+        Builder.CreateSIToFP(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_uitofp:
+    CastOp =
+        Builder.CreateUIToFP(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_fptrunc:
+    CastOp =
+        Builder.CreateFPTrunc(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
+  case Intrinsic::vp_fpext:
+    CastOp =
+        Builder.CreateFPExt(VPI.getOperand(0), VPI.getType(), VPI.getName());
+    break;
   }
-  }
+  replaceOperation(*CastOp, VPI);
+  return CastOp;
 }
 
 Value *
