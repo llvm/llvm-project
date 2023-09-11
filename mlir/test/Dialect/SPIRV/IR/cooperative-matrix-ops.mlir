@@ -14,7 +14,7 @@ spirv.func @cooperative_matrix_length() -> i32 "None" {
 // -----
 
 spirv.func @cooperative_matrix_length_wrong_matrix() -> i32 "None" {
-  // expected-error @+1 {{'spirv.KHR.CooperativeMatrixLength' op type attribute must be a '!spirv.coopmatrix'}}
+  // expected-error @+1 {{'cooperative_matrix_type' failed to satisfy constraint: type attribute of any SPIR-V cooperative matrix type}}
   %0 = spirv.KHR.CooperativeMatrixLength : !spirv.NV.coopmatrix<8x16xi32, Subgroup>
   spirv.ReturnValue %0 : i32
 }

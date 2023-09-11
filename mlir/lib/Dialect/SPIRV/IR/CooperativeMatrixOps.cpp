@@ -20,20 +20,6 @@ using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
 //===----------------------------------------------------------------------===//
-// spirv.KHR.CooperativeMatrixLength
-//===----------------------------------------------------------------------===//
-
-LogicalResult KHRCooperativeMatrixLengthOp::verify() {
-  if (!isa<CooperativeMatrixType>(getCooperativeMatrixType())) {
-    return emitOpError(
-               "type attribute must be a '!spirv.coopmatrix' type, found ")
-           << getCooperativeMatrixType() << " instead";
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.KHR.CooperativeMatrixLoad
 //===----------------------------------------------------------------------===//
 
