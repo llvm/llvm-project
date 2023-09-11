@@ -16,17 +16,25 @@ namespace __llvm_libc::cpp {
 class Class {};
 union Union {};
 struct Struct {};
+enum Enum {};
+enum class EnumClass {};
 
 using UnqualObjectTypes = testing::TypeList<int, float, Class, Union, Struct>;
 
 TYPED_TEST(LlvmLibcTypeTraitsTest, add_lvalue_reference, UnqualObjectTypes) {
-
   // non-ref cv, adds ref
   EXPECT_TRUE((is_same_v<add_lvalue_reference_t<T>, T &>));
   EXPECT_TRUE((is_same_v<add_lvalue_reference_t<const T>, const T &>));
   EXPECT_TRUE((is_same_v<add_lvalue_reference_t<volatile T>, volatile T &>));
   EXPECT_TRUE((
       is_same_v<add_lvalue_reference_t<const volatile T>, const volatile T &>));
+
+  // pointer cv, adds ref
+  EXPECT_TRUE((is_same_v<add_lvalue_reference_t<T *>, T *&>));
+  EXPECT_TRUE((is_same_v<add_lvalue_reference_t<const T *>, const T *&>));
+  EXPECT_TRUE((is_same_v<add_lvalue_reference_t<volatile T *>, volatile T *&>));
+  EXPECT_TRUE((is_same_v<add_lvalue_reference_t<const volatile T *>,
+                         const volatile T *&>));
 
   // ref cv, returns same type
   EXPECT_TRUE((is_same_v<add_lvalue_reference_t<T &>, T &>));
@@ -52,6 +60,13 @@ TYPED_TEST(LlvmLibcTypeTraitsTest, add_pointer, UnqualObjectTypes) {
   EXPECT_TRUE((is_same_v<add_pointer_t<const T>, const T *>));
   EXPECT_TRUE((is_same_v<add_pointer_t<volatile T>, volatile T *>));
   EXPECT_TRUE((is_same_v<add_pointer_t<const volatile T>, const volatile T *>));
+
+  // pointer types -> pointer type
+  EXPECT_TRUE((is_same_v<add_pointer_t<T *>, T **>));
+  EXPECT_TRUE((is_same_v<add_pointer_t<const T *>, const T **>));
+  EXPECT_TRUE((is_same_v<add_pointer_t<volatile T *>, volatile T **>));
+  EXPECT_TRUE(
+      (is_same_v<add_pointer_t<const volatile T *>, const volatile T **>));
 
   // reference type -> pointer type
   EXPECT_TRUE((is_same_v<add_pointer_t<T &>, T *>));
@@ -130,12 +145,12 @@ TEST(LlvmLibcTypeTraitsTest, integral_constant) {
   EXPECT_EQ((integral_constant<int, 4>::value), 4);
 }
 
-using IntegralTypes =
+using IntegralAndFloatingTypes =
     testing::TypeList<bool, char, short, int, long, long long, unsigned char,
                       unsigned short, unsigned int, unsigned long,
-                      unsigned long long>;
+                      unsigned long long, float, double, long double>;
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, is_arithmetic, IntegralTypes) {
+TYPED_TEST(LlvmLibcTypeTraitsTest, is_arithmetic, IntegralAndFloatingTypes) {
   EXPECT_TRUE((is_arithmetic_v<T>));
   EXPECT_TRUE((is_arithmetic_v<const T>));
   EXPECT_TRUE((is_arithmetic_v<volatile T>));
@@ -149,12 +164,14 @@ TEST(LlvmLibcTypeTraitsTest, is_arithmetic_non_integral) {
   EXPECT_FALSE((is_arithmetic_v<Union>));
   EXPECT_FALSE((is_arithmetic_v<Class>));
   EXPECT_FALSE((is_arithmetic_v<Struct>));
+  EXPECT_FALSE((is_arithmetic_v<Enum>));
 }
 
 TEST(LlvmLibcTypeTraitsTest, is_array) {
   EXPECT_FALSE((is_array_v<int>));
   EXPECT_FALSE((is_array_v<float>));
   EXPECT_FALSE((is_array_v<Struct>));
+  EXPECT_FALSE((is_array_v<int *>));
 
   EXPECT_TRUE((is_array_v<Class[]>));
   EXPECT_TRUE((is_array_v<Union[4]>));
@@ -164,6 +181,7 @@ TEST(LlvmLibcTypeTraitsTest, is_base_of) {
   struct A {};
   EXPECT_TRUE((is_base_of_v<A, A>));
 
+  // Test public, protected and private inheritance.
   struct B : public A {};
   EXPECT_TRUE((is_base_of_v<A, B>));
   EXPECT_FALSE((is_base_of_v<B, A>));
@@ -175,13 +193,24 @@ TEST(LlvmLibcTypeTraitsTest, is_base_of) {
   struct D : private A {};
   EXPECT_TRUE((is_base_of_v<A, D>));
   EXPECT_FALSE((is_base_of_v<D, A>));
+
+  // Test inheritance chain.
+  struct E : private B {};
+  EXPECT_TRUE((is_base_of_v<A, E>));
 }
 
 TEST(LlvmLibcTypeTraitsTest, is_class) {
   EXPECT_TRUE((is_class_v<Struct>));
   EXPECT_TRUE((is_class_v<Class>));
+
+  // Pointer or ref do not qualify.
+  EXPECT_FALSE((is_class_v<Class *>));
+  EXPECT_FALSE((is_class_v<Class &>));
+
+  // Neither other types.
   EXPECT_FALSE((is_class_v<Union>));
   EXPECT_FALSE((is_class_v<int>));
+  EXPECT_FALSE((is_class_v<EnumClass>));
 }
 
 TYPED_TEST(LlvmLibcTypeTraitsTest, is_const, UnqualObjectTypes) {
@@ -205,8 +234,8 @@ TYPED_TEST(LlvmLibcTypeTraitsTest, is_enum, UnqualObjectTypes) {
   EXPECT_FALSE((is_enum_v<T>));
 }
 TEST(LlvmLibcTypeTraitsTest, is_enum_enum) {
-  enum Enum {};
   EXPECT_TRUE((is_enum_v<Enum>));
+  EXPECT_TRUE((is_enum_v<EnumClass>));
 }
 
 // TODO is_floating_point
