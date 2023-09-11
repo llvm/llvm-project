@@ -12,10 +12,6 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
 Nicole and Saiyed:
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
 
-Johannes: AA crashes  smoke/func-ptr
-Revert "[OpenMPOpt] Allow indirect calls in AAKernelInfoCallSite (#65836) "
-  fails: aomp_mappings_newrt flang-340559 func-ptr
-
 Revert: breaks build of libdevice
   15e0fe0b6122 clang/OpenCL: Add inline implementations of sqrt in builtin header
  Need to revisit upstream vs ASO: clang/lib/Headers/__clang_hip_math.h
