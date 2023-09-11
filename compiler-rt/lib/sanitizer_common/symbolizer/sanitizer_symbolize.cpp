@@ -115,14 +115,12 @@ void __sanitizer_symbolize_flush() {
     Symbolizer->flush();
 }
 
-int __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
+bool __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                    int MaxLength) {
   std::string Result =
       llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr);
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
-                                        Result.c_str()) < MaxLength
-             ? static_cast<int>(Result.size() + 1)
-             : 0;
+                                        Result.c_str()) < MaxLength;
 }
 
 bool __sanitizer_symbolize_set_demangle(bool Value) {
