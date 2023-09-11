@@ -16,7 +16,7 @@
 
 2: reverse(1,2,3)
 
-// CHECK: 2: 3,2,1
+// CHECK: 2: 3 , 2 , 1
 
 #undef reverse
 
