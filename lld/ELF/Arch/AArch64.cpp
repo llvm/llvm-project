@@ -770,6 +770,9 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *eh = dyn_cast<EhInputSection>(&sec))
+    if (InputSection *isec = eh->getParent())
+      secAddr += isec->outSecOff;
   AArch64Relaxer relaxer(sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
