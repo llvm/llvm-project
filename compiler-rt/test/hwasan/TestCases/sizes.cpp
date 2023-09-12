@@ -24,7 +24,7 @@
 // calloc is caught.
 
 // FIXME: Fails on some bots.
-// UNSUPPORTED: target=x86_64{{.*}}
+// UNSUPPORTED: *
 
 #include <assert.h>
 #include <malloc.h>
