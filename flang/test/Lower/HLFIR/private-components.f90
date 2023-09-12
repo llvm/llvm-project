@@ -7,6 +7,7 @@ module name_clash
   type:: t
     integer, private :: i
   end type
+  type(t), parameter :: cst = t(42)
 end module
 
 !CHECK-LABEL: func.func @_QPuser_clash(
