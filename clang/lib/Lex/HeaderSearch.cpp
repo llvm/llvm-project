@@ -756,9 +756,10 @@ void HeaderSearch::setTarget(const TargetInfo &Target) {
 /// fails to match the one that Clang would have found with MSVC header search
 /// disabled.
 static bool checkMSVCHeaderSearch(DiagnosticsEngine &Diags,
-                                  const FileEntry *MSFE, const FileEntry *FE,
+                                  OptionalFileEntryRef MSFE,
+                                  const FileEntry *FE,
                                   SourceLocation IncludeLoc) {
-  if (MSFE && FE != MSFE) {
+  if (MSFE && FE != *MSFE) {
     Diags.Report(IncludeLoc, diag::ext_pp_include_search_ms) << MSFE->getName();
     return true;
   }
@@ -1110,8 +1111,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
             getUniqueFrameworkName(StringRef(Filename.begin(), SlashPos));
     }
 
-    if (checkMSVCHeaderSearch(Diags, MSFE ? &MSFE->getFileEntry() : nullptr,
-                              &File->getFileEntry(), IncludeLoc)) {
+    if (checkMSVCHeaderSearch(Diags, MSFE, &File->getFileEntry(), IncludeLoc)) {
       if (SuggestedModule)
         *SuggestedModule = MSSuggestedModule;
       return MSFE;
@@ -1146,7 +1146,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
           Includers.front(), SearchPath, RelativePath, RequestingModule,
           SuggestedModule, IsMapped, /*IsFrameworkFound=*/nullptr);
 
-      if (checkMSVCHeaderSearch(Diags, MSFE ? &MSFE->getFileEntry() : nullptr,
+      if (checkMSVCHeaderSearch(Diags, MSFE,
                                 File ? &File->getFileEntry() : nullptr,
                                 IncludeLoc)) {
         if (SuggestedModule)
@@ -1161,8 +1161,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     }
   }
 
-  if (checkMSVCHeaderSearch(Diags, MSFE ? &MSFE->getFileEntry() : nullptr,
-                            nullptr, IncludeLoc)) {
+  if (checkMSVCHeaderSearch(Diags, MSFE, nullptr, IncludeLoc)) {
     if (SuggestedModule)
       *SuggestedModule = MSSuggestedModule;
     return MSFE;
