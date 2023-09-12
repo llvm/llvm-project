@@ -325,6 +325,8 @@ public:
 
   llvm::StringRef GetAutosuggestionAnsiSuffix() const;
 
+  bool GetShowDontUsePoHint() const;
+
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);
