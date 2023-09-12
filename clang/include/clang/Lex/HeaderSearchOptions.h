@@ -211,6 +211,9 @@ public:
   // validate consistency.
   unsigned ValidateASTInputFilesContent : 1;
 
+  // Whether the input files from C++20 Modules should be checked.
+  unsigned ForceCheckCXX20ModulesInputFiles : 1;
+
   /// Whether the module includes debug information (-gmodules).
   unsigned UseDebugInfo : 1;
 
@@ -236,7 +239,8 @@ public:
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
-        ValidateASTInputFilesContent(false), UseDebugInfo(false),
+        ValidateASTInputFilesContent(false),
+        ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true),
         ModulesSkipDiagnosticOptions(false), ModulesHashContent(false),
         ModulesStrictContextHash(false) {}
