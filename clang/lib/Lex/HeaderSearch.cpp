@@ -915,10 +915,8 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       const FileEntry *Includer = IncluderAndDir.first;
 
       // Concatenate the requested file onto the directory.
-      // FIXME: Portability.  Filename concatenation should be in sys::Path.
       TmpDir = IncluderAndDir.second.getName();
-      TmpDir.push_back('/');
-      TmpDir.append(Filename.begin(), Filename.end());
+      llvm::sys::path::append(TmpDir, Filename);
 
       // FIXME: We don't cache the result of getFileInfo across the call to
       // getFileAndSuggestModule, because it's a reference to an element of
