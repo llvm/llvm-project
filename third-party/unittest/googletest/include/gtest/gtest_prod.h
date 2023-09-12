@@ -27,11 +27,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-// Google C++ Testing and Mocking Framework definitions useful in production
-// code.
+//
+// Google C++ Testing and Mocking Framework definitions useful in production code.
+// GOOGLETEST_CM0003 DO NOT DELETE
 
-#ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_PROD_H_
-#define GOOGLETEST_INCLUDE_GTEST_GTEST_PROD_H_
+#ifndef GTEST_INCLUDE_GTEST_GTEST_PROD_H_
+#define GTEST_INCLUDE_GTEST_GTEST_PROD_H_
 
 // When you need to test the private or protected members of a class,
 // use the FRIEND_TEST macro to declare your tests as friends of the
@@ -54,7 +55,7 @@
 // Note: The test class must be in the same namespace as the class being tested.
 // For example, putting MyClassTest in an anonymous namespace will not work.
 
-#define FRIEND_TEST(test_case_name, test_name) \
-  friend class test_case_name##_##test_name##_Test
+#define FRIEND_TEST(test_case_name, test_name)\
+friend class test_case_name##_##test_name##_Test
 
-#endif  // GOOGLETEST_INCLUDE_GTEST_GTEST_PROD_H_
+#endif  // GTEST_INCLUDE_GTEST_GTEST_PROD_H_
