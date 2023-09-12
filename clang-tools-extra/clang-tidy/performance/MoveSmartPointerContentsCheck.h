@@ -15,7 +15,7 @@
 
 namespace clang::tidy::performance {
 
-/// Checks that std::move is not called on the contents of a smart pointer and
+/// Checks that std::move is not called on the contents of a unique pointer and
 /// suggests moving out of the pointer instead.
 ///
 /// For the user-facing documentation see:
@@ -26,12 +26,10 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
 
 private:
   const std::vector<StringRef> UniquePointerClasses;
-  const ast_matchers::internal::Matcher<RecordDecl> IsAUniquePointer;
-  const std::vector<StringRef> SharedPointerClasses;
-  const ast_matchers::internal::Matcher<RecordDecl> IsASharedPointer;
 };
 
 } // namespace clang::tidy::performance

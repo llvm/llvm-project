@@ -8,9 +8,9 @@
 
 #include <string>
 
-#include "MoveSmartPointerContentsCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
+#include "MoveSmartPointerContentsCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -19,61 +19,42 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
+bool MoveSmartPointerContentsCheck::isLanguageVersionSupported(
+    const LangOptions &LangOptions) const {
+  return LangOptions.CPlusPlus11;
+}
+
 MoveSmartPointerContentsCheck::MoveSmartPointerContentsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       UniquePointerClasses(utils::options::parseStringList(
-          Options.get("UniquePointerClasses", "std::unique_ptr"))),
-      IsAUniquePointer(namedDecl(hasAnyName(UniquePointerClasses))),
-      SharedPointerClasses(utils::options::parseStringList(
-          Options.get("SharedPointerClasses", "std::shared_ptr"))),
-      IsASharedPointer(namedDecl(hasAnyName(SharedPointerClasses))) {}
+          Options.get("UniquePointerClasses", "std::unique_ptr"))) {}
 
 void MoveSmartPointerContentsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "UniquePtrClasses",
                 utils::options::serializeStringList(UniquePointerClasses));
-  Options.store(Opts, "SharedPtrClasses",
-                utils::options::serializeStringList(SharedPointerClasses));
 }
 
 void MoveSmartPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
           callee(functionDecl(hasName("std::move"))),
-          hasArgument(0, cxxOperatorCallExpr(hasOperatorName("*"),
-                                             hasDeclaration(cxxMethodDecl(ofClass(IsAUniquePointer)))).bind("unique_op")))   
-          .bind("unique_call"),
-      this);
-
-  Finder->addMatcher(
-      callExpr(
-          callee(functionDecl(hasName("std::move"))),
-          hasArgument(0, cxxOperatorCallExpr(hasOperatorName("*"),
-                                             hasDeclaration(cxxMethodDecl(ofClass(IsASharedPointer)))).bind("shared_op")))   
-          .bind("shared_call"),
+          hasArgument(0, cxxOperatorCallExpr(hasOverloadedOperatorName("*"),
+                                             callee(cxxMethodDecl(ofClass(
+                                                 matchers::matchesAnyListedName(
+                                                     UniquePointerClasses)))))))
+          .bind("call"),
       this);
 }
-  
+
 void MoveSmartPointerContentsCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *UniqueCall = Result.Nodes.getNodeAs<CallExpr>("unique_call");
-  const auto *SharedCall = Result.Nodes.getNodeAs<CallExpr>("shared_call");
+  const auto *Call = Result.Nodes.getNodeAs<CallExpr>("call");
 
-  if (UniqueCall) {
-    const auto* UniqueOp = Result.Nodes.getNodeAs<Expr>("unique_op");
-
-    diag(UniqueCall->getBeginLoc(),
-         "prefer to move the smart pointer rather than its contents") << FixItHint::CreateInsertion(UniqueCall->getBeginLoc(), "*")
-								      << FixItHint::CreateRemoval(UniqueOp->getBeginLoc());
-  }
-  if (SharedCall) {
-    const auto* SharedOp = Result.Nodes.getNodeAs<Expr>("shared_op");
-
-    diag(SharedCall->getBeginLoc(),
-         "don't move the contents out of a shared pointer, as other accessors "
-         "expect them to remain in a determinate state") << FixItHint::CreateInsertion(SharedCall->getBeginLoc(), "*")
-							 << FixItHint::CreateRemoval(SharedOp->getBeginLoc());
+  if (Call) {
+    diag(Call->getBeginLoc(),
+         "prefer to move the smart pointer rather than its contents");
   }
 }
 
