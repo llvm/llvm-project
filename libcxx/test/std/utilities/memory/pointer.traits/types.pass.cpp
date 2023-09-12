@@ -67,7 +67,7 @@ struct HasPointerTo : std::false_type {};
 template <class T>
 struct HasPointerTo<T,
                     Voidify<decltype(std::pointer_traits<T>::pointer_to(
-                        std::declval<std::add_lvalue_reference_t<typename std::pointer_traits<T>::element_type>>()))>>
+                        std::declval<typename std::add_lvalue_reference<typename std::pointer_traits<T>::element_type>::type>()))>>
     : std::true_type {};
 
 struct Irrelevant;
@@ -85,7 +85,7 @@ struct PtrWithElementType {
   using element_type = int;
   template <typename U>
   using rebind = TemplatedPtr<U, Irrelevant>;
-  static constexpr auto pointer_to(element_type&) { return PtrWithElementType{&global_int}; }
+  static constexpr PtrWithElementType pointer_to(element_type&) { return PtrWithElementType{&global_int}; }
 
   int* ptr;
 };
@@ -94,7 +94,7 @@ template <class T, class Arg>
 struct TemplatedPtr {
   template <typename U, typename = typename std::enable_if<std::is_same<long, U>::value>::type>
   using rebind = LongPtr;
-  static constexpr auto pointer_to(T&) { return TemplatedPtr{&global_int}; }
+  static constexpr TemplatedPtr pointer_to(T&) { return TemplatedPtr{&global_int}; }
 
   T* ptr;
 };
@@ -104,12 +104,15 @@ struct TemplatedPtrWithElementType {
   using element_type = int;
   template <typename U, typename = typename std::enable_if<std::is_same<long, U>::value>::type>
   using rebind = LongPtr;
-  static constexpr auto pointer_to(element_type&) { return TemplatedPtrWithElementType{&global_int}; }
+  static constexpr TemplatedPtrWithElementType pointer_to(element_type&) { return TemplatedPtrWithElementType{&global_int}; }
 
   element_type* ptr;
 };
 
-constexpr bool test() {
+#if TEST_STD_VER >= 14
+constexpr
+#endif
+bool test() {
   {
     using Ptr = NotAPtr;
     assert(!HasElementType<Ptr>::value);
