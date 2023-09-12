@@ -754,14 +754,13 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
-    // For atomic sub, perform scan with add operation and allow one lane to substract the reduced value later.
-    AtomicRMWInst::BinOp ScanOp;
-    if(Op == AtomicRMWInst::Sub ) {
+    // For atomic sub, perform scan with add operation and allow one lane to
+    // substract the reduced value later.
+    AtomicRMWInst::BinOp ScanOp = Op;
+    if (Op == AtomicRMWInst::Sub) {
       ScanOp = AtomicRMWInst::Add;
     } else if (Op == AtomicRMWInst::FSub) {
       ScanOp = AtomicRMWInst::FAdd;
-    } else {
-      ScanOp = Op;
     }
     if (ScanImpl == ScanOptions::DPP) {
       // First we need to set all inactive invocations to the identity value, so
