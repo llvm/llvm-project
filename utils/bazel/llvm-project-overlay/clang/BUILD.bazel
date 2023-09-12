@@ -648,6 +648,14 @@ gentbl(
             "-gen-clang-attr-impl",
             "include/clang/AST/AttrImpl.inc",
         ),
+        (
+            "-gen-clang-attr-can-print-left-list",
+            "include/clang/Basic/AttrLeftSideCanPrintList.inc",
+        ),
+        (
+            "-gen-clang-attr-must-print-left-list",
+            "include/clang/Basic/AttrLeftSideMustPrintList.inc",
+        ),
     ],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Attr.td",
