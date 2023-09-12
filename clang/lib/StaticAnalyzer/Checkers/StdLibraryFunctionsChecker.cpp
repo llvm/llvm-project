@@ -1387,8 +1387,8 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
     if (!NewState)
       continue;
 
-    // It is possible that NewState == State is true.
-    // It can occur if another checker has applied the state before us.
+    // Here it's possible that NewState == State, e.g. when other checkers
+    // already applied the same constraints (or stricter ones).
     // Still add these note tags, the other checker should add only its
     // specialized note tags. These general note tags are handled always by
     // StdLibraryFunctionsChecker.
@@ -1427,7 +1427,12 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
             });
         Pred = C.addTransition(NewState, Pred, Tag);
       }
-      if (!Pred)
+
+      // Pred may be:
+      //  - a nullpointer, if we reach an already existing node (theoretically);
+      //  - a sink, when NewState is posteriorly overconstrained.
+      // In these situations we cannot add the errno note tag.
+      if (!Pred || Pred->isSink())
         continue;
     }
 
