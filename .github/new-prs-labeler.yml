@@ -313,20 +313,13 @@ testing-tools:
   - llvm/utils/update*_test_checks.py
 
 debuginfo:
-  - llvm/include/llvm/DebugInfo/**
-  - llvm/lib/DebugInfo/**
-  - llvm/tools/dsymutil/**
-  - llvm/tools/llvm-debuginfo-analyzer/**
-  - llvm/tools/llvm-dwarfdump/**
-  - llvm/tools/llvm-dwarfutil/**
-  - llvm/tools/llvm-dwp/**
-  - llvm/tools/llvm-gsymutil/**
-  - llvm/tools/llvm-pdbutil/**
-  - llvm/tools/llvm-debuginfod/**
-  - llvm/tools/llvm-debuginfod-find/**
-  - llvm/lib/CodeGen/AsmPrinter/**
   - clang/lib/CodeGen/CGDebugInfo.cpp
   - llvm/include/llvm/BinaryFormat/Dwarf.*
+  - llvm/include/llvm/DebugInfo/**
+  - llvm/include/llvm/IR/Debug*.h
+  - llvm/lib/CodeGen/AsmPrinter/**
+  - llvm/lib/DebugInfo/**
+  - llvm/lib/IR/Debug*.cpp
   - llvm/test/DebugInfo/**
   - llvm/test/tools/dsymutil/**
   - llvm/test/tools/llvm-debuginfo-analyzer/**
@@ -337,8 +330,15 @@ debuginfo:
   - llvm/test/tools/llvm-dwp/**
   - llvm/test/tools/llvm-gsymutil/**
   - llvm/test/tools/llvm-pdbuti/**
-  - llvm/lib/IR/Debug*.cpp
-  - llvm/include/llvm/IR/Debug*.h
+  - llvm/tools/dsymutil/**
+  - llvm/tools/llvm-debuginfo-analyzer/**
+  - llvm/tools/llvm-debuginfod/**
+  - llvm/tools/llvm-debuginfod-find/**
+  - llvm/tools/llvm-dwarfdump/**
+  - llvm/tools/llvm-dwarfutil/**
+  - llvm/tools/llvm-dwp/**
+  - llvm/tools/llvm-gsymutil/**
+  - llvm/tools/llvm-pdbutil/**
 
 github:workflow:
   - .github/workflows/**
