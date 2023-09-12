@@ -29,69 +29,43 @@
 
 // Google Mock - a framework for writing C++ mock classes.
 //
-// This file implements some matchers that depend on gmock-matchers.h.
+// This file implements some matchers that depend on gmock-generated-matchers.h.
 //
 // Note that tests are implemented in gmock-matchers_test.cc rather than
 // gmock-more-matchers-test.cc.
 
+// GOOGLETEST_CM0002 DO NOT DELETE
+
 // IWYU pragma: private, include "gmock/gmock.h"
 // IWYU pragma: friend gmock/.*
 
-#ifndef GOOGLEMOCK_INCLUDE_GMOCK_GMOCK_MORE_MATCHERS_H_
-#define GOOGLEMOCK_INCLUDE_GMOCK_GMOCK_MORE_MATCHERS_H_
+#ifndef GMOCK_INCLUDE_GMOCK_MORE_MATCHERS_H_
+#define GMOCK_INCLUDE_GMOCK_MORE_MATCHERS_H_
 
-#include <ostream>
-#include <string>
-
-#include "gmock/gmock-matchers.h"
+#include "gmock/gmock-generated-matchers.h"
 
 namespace testing {
 
 // Silence C4100 (unreferenced formal
 // parameter) for MSVC
-GTEST_DISABLE_MSC_WARNINGS_PUSH_(4100)
-#if defined(_MSC_VER) && (_MSC_VER == 1900)
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable:4100)
+#if (_MSC_VER == 1900)
 // and silence C4800 (C4800: 'int *const ': forcing value
 // to bool 'true' or 'false') for MSVC 14
-GTEST_DISABLE_MSC_WARNINGS_PUSH_(4800)
+# pragma warning(disable:4800)
+  #endif
 #endif
 
-namespace internal {
-
-// Implements the polymorphic IsEmpty matcher, which
-// can be used as a Matcher<T> as long as T is either a container that defines
-// empty() and size() (e.g. std::vector or std::string), or a C-style string.
-class IsEmptyMatcher {
- public:
-  // Matches anything that defines empty() and size().
-  template <typename MatcheeContainerType>
-  bool MatchAndExplain(const MatcheeContainerType& c,
-                       MatchResultListener* listener) const {
-    if (c.empty()) {
-      return true;
-    }
-    *listener << "whose size is " << c.size();
-    return false;
+// Defines a matcher that matches an empty container. The container must
+// support both size() and empty(), which all STL-like containers provide.
+MATCHER(IsEmpty, negation ? "isn't empty" : "is empty") {
+  if (arg.empty()) {
+    return true;
   }
-
-  // Matches C-style strings.
-  bool MatchAndExplain(const char* s, MatchResultListener* listener) const {
-    return MatchAndExplain(std::string(s), listener);
-  }
-
-  // Describes what this matcher matches.
-  void DescribeTo(std::ostream* os) const { *os << "is empty"; }
-
-  void DescribeNegationTo(std::ostream* os) const { *os << "isn't empty"; }
-};
-
-}  // namespace internal
-
-// Creates a polymorphic matcher that matches an empty container or C-style
-// string. The container must support both size() and empty(), which all
-// STL-like containers provide.
-inline PolymorphicMatcher<internal::IsEmptyMatcher> IsEmpty() {
-  return MakePolymorphicMatcher(internal::IsEmptyMatcher());
+  *result_listener << "whose size is " << arg.size();
+  return false;
 }
 
 // Define a matcher that matches a value that evaluates in boolean
@@ -110,11 +84,11 @@ MATCHER(IsFalse, negation ? "is true" : "is false") {
   return !static_cast<bool>(arg);
 }
 
-#if defined(_MSC_VER) && (_MSC_VER == 1900)
-GTEST_DISABLE_MSC_WARNINGS_POP_()  // 4800
+#ifdef _MSC_VER
+# pragma warning(pop)
 #endif
-GTEST_DISABLE_MSC_WARNINGS_POP_()  // 4100
+
 
 }  // namespace testing
 
-#endif  // GOOGLEMOCK_INCLUDE_GMOCK_GMOCK_MORE_MATCHERS_H_
+#endif  // GMOCK_INCLUDE_GMOCK_MORE_MATCHERS_H_
