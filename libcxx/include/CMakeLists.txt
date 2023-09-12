@@ -904,6 +904,7 @@ set(files
   experimental/__config
   experimental/__memory
   experimental/__simd/abi_tag.h
+  experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/scalar.h
   experimental/__simd/simd.h
