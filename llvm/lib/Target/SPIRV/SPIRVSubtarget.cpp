@@ -47,28 +47,14 @@ static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {
   return Target == 0 || Target >= VerToCompareTo;
 }
 
-static unsigned computePointerSize(const Triple &TT) {
-  const auto Arch = TT.getArch();
-  // TODO: unify this with pointers legalization.
-  assert(TT.isSPIRV());
-
-  if (Arch == Triple::spirv64)
-    return 64;
-
-  // TODO: this probably needs to be revisited:
-  //  AFAIU Logical SPIR-V has no pointer size. So falling-back on ID size.
-  //  Addressing mode can change how some pointers are handled
-  //  (PhysicalStorageBuffer64).
-  return 32;
-}
-
 SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(computePointerSize(TT)), SPIRVVersion(0), OpenCLVersion(0),
-      InstrInfo(), FrameLowering(initSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this), TargetTriple(TT) {
+      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), SPIRVVersion(0),
+      OpenCLVersion(0), InstrInfo(),
+      FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
+      TargetTriple(TT) {
   // The order of initialization is important.
   initAvailableExtensions();
   initAvailableExtInstSets();
