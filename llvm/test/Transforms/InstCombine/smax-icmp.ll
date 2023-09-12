@@ -64,11 +64,11 @@ define i1 @eq_smax4(i32 %a, i32 %y) {
   ret i1 %cmp2
 }
 
-; smax(X, Y) <= X --> X >= Y
+; smax(X, Y) <= X --> Y <= X
 
 define i1 @sle_smax1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sle_smax1(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
@@ -81,7 +81,7 @@ define i1 @sle_smax1(i32 %x, i32 %y) {
 
 define i1 @sle_smax2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sle_smax2(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %y, %x
@@ -176,11 +176,11 @@ define i1 @ne_smax4(i32 %a, i32 %y) {
   ret i1 %cmp2
 }
 
-; smax(X, Y) > X --> X < Y
+; smax(X, Y) > X --> Y > X
 
 define i1 @sgt_smax1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sgt_smax1(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %x, %y
@@ -193,7 +193,7 @@ define i1 @sgt_smax1(i32 %x, i32 %y) {
 
 define i1 @sgt_smax2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sgt_smax2(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp sgt i32 %y, %x
@@ -240,14 +240,12 @@ define void @eq_smax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
@@ -256,9 +254,9 @@ define void @eq_smax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP10]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -299,14 +297,12 @@ define void @eq_smax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
@@ -315,9 +311,9 @@ define void @eq_smax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP7]])
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP8]])
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp sge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP9]])
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp slt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP10]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -358,13 +354,13 @@ define void @slt_smax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP4]])
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
@@ -417,13 +413,13 @@ define void @slt_smax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP4]])
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
@@ -478,9 +474,9 @@ define void @sle_smax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP4]])
@@ -537,9 +533,9 @@ define void @sle_smax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP4]])
@@ -594,14 +590,10 @@ define void @sgt_smax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
@@ -653,14 +645,10 @@ define void @sgt_smax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
@@ -712,14 +700,12 @@ define void @sge_smax_contextual(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[IF:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
@@ -771,14 +757,12 @@ define void @sge_smax_contextual_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[IF:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 [[X]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP2]])
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
-; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
 ; CHECK-NEXT:    call void @use(i1 [[CMP5]])
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
