@@ -208,8 +208,8 @@ InlineAsm::ConstraintCode
 M68kTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
   return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
       .Case("Q", InlineAsm::ConstraintCode::Q)
-      .Case("U",
-            InlineAsm::ConstraintCode::Um) // We borrow Constraint_Um for 'U'.
+      // We borrow ConstraintCode::Um for 'U'.
+      .Case("U", InlineAsm::ConstraintCode::Um)
       .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 
