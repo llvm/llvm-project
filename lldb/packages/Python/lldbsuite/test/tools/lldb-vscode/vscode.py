@@ -649,12 +649,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_disassemble(self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True):
+    def request_disassemble(
+        self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True
+    ):
         args_dict = {
             "memoryReference": memoryReference,
             "offset": offset,
             "instructionCount": instructionCount,
-            "resolveSymbols": resolveSymbols
+            "resolveSymbols": resolveSymbols,
         }
         command_dict = {
             "command": "disassemble",
