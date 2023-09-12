@@ -144,7 +144,7 @@ std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
 
 /// CreateHeaderMap - This method returns a HeaderMap for the specified
 /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
-const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
+const HeaderMap *HeaderSearch::CreateHeaderMap(FileEntryRef FE) {
   // We expect the number of headermaps to be small, and almost always empty.
   // If it ever grows, use of a linear search should be re-evaluated.
   if (!HeaderMaps.empty()) {
@@ -167,7 +167,7 @@ const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
 void HeaderSearch::getHeaderMapFileNames(
     SmallVectorImpl<std::string> &Names) const {
   for (auto &HM : HeaderMaps)
-    Names.push_back(std::string(HM.first->getName()));
+    Names.push_back(std::string(HM.first.getName()));
 }
 
 std::string HeaderSearch::getCachedModuleFileName(Module *Module) {

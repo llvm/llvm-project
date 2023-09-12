@@ -167,7 +167,7 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
   // Check to see if this is an apple-style headermap (which are not allowed to
   // be frameworks).
   if (!isFramework) {
-    if (auto FE = FM.getFile(MappedPathStr)) {
+    if (auto FE = FM.getOptionalFileRef(MappedPathStr)) {
       if (const HeaderMap *HM = Headers.CreateHeaderMap(*FE)) {
         // It is a headermap, add it to the search path.
         IncludePath.emplace_back(
