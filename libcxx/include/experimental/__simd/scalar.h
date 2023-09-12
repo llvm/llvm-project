@@ -44,11 +44,15 @@ template <class _Tp>
 struct __simd_operations<_Tp, simd_abi::__scalar> {
   using _SimdStorage = __simd_storage<_Tp, simd_abi::__scalar>;
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
+
+  static _SimdStorage __broadcast(_Tp __v) noexcept { return {__v}; }
 };
 
 template <class _Tp>
 struct __mask_operations<_Tp, simd_abi::__scalar> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
+
+  static _MaskStorage __broadcast(bool __v) noexcept { return {__v}; }
 };
 
 } // namespace parallelism_v2
