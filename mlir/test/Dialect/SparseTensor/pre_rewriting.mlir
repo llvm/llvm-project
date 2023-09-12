@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -pre-sparsification-rewrite | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{

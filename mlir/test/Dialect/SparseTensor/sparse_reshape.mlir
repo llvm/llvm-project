@@ -3,7 +3,7 @@
 // RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" \
 // RUN: --cse --canonicalize  | FileCheck %s --check-prefix=CHECK-RWT
 
-#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 #SparseMatrix = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
 
 //
