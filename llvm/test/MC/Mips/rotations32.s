@@ -1,8 +1,8 @@
-# RUN: llvm-mc  %s -arch=mips -mcpu=mips32 -show-encoding | FileCheck %s -check-prefix=CHECK-32
-# RUN: llvm-mc  %s -arch=mips -mcpu=mips32r2 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
-# RUN: llvm-mc  %s -arch=mips -mcpu=mips32r3 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
-# RUN: llvm-mc  %s -arch=mips -mcpu=mips32r5 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
-# RUN: llvm-mc  %s -arch=mips -mcpu=mips32r6 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
+# RUN: llvm-mc  %s -triple=mips -mcpu=mips32 -show-encoding | FileCheck %s -check-prefix=CHECK-32
+# RUN: llvm-mc  %s -triple=mips -mcpu=mips32r2 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
+# RUN: llvm-mc  %s -triple=mips -mcpu=mips32r3 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
+# RUN: llvm-mc  %s -triple=mips -mcpu=mips32r5 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
+# RUN: llvm-mc  %s -triple=mips -mcpu=mips32r6 -show-encoding | FileCheck %s -check-prefix=CHECK-32R
 
   .text
 foo:

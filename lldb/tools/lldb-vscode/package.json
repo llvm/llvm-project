@@ -240,6 +240,16 @@
 							"timeout": {
 								"type": "string",
 								"description": "The time in seconds to wait for a program to stop at entry point when launching with \"launchCommands\". Defaults to 30 seconds."
+							},
+							"enableAutoVariableSummaries": {
+								"type": "boolean",
+								"description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+								"default": false
+							},
+							"enableSyntheticChildDebugging": {
+								"type": "boolean",
+								"description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
+								"default": false
 							}
 						}
 					},
@@ -319,6 +329,16 @@
 							"timeout": {
 								"type": "string",
 								"description": "The time in seconds to wait for a program to stop when attaching using \"attachCommands\". Defaults to 30 seconds."
+							},
+							"enableAutoVariableSummaries": {
+								"type": "boolean",
+								"description": "Enable auto generated summaries for variables when no summaries exist for a given type. This feature can cause performance delays in large projects when viewing variables.",
+								"default": false
+							},
+							"enableSyntheticChildDebugging": {
+								"type": "boolean",
+								"description": "If a variable is displayed using a synthetic children, also display the actual contents of the variable at the end under a [raw] entry. This is useful when creating sythetic child plug-ins as it lets you see the actual contents of the variable.",
+								"default": false
 							}
 						}
 					}

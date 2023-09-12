@@ -2439,7 +2439,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // `Caller->isPresplitCoroutine()` would affect AlwaysInliner at O0 only.
   if ((InsertLifetime || Caller->isPresplitCoroutine()) &&
       !IFI.StaticAllocas.empty()) {
-    IRBuilder<> builder(&FirstNewBlock->front());
+    IRBuilder<> builder(&*FirstNewBlock, FirstNewBlock->begin());
     for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
       AllocaInst *AI = IFI.StaticAllocas[ai];
       // Don't mark swifterror allocas. They can't have bitcast uses.

@@ -13371,27 +13371,6 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  // A special case is if the stride is exactly the width of one of the loads,
-  // in which case it's contiguous and can be combined into a regular vle
-  // without changing the element size
-  if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
-      ConstStride && !Reversed &&
-      ConstStride->getZExtValue() == BaseLdVT.getFixedSizeInBits() / 8) {
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(),
-        VT.getStoreSize(), Align);
-    // Can't do the combine if the load isn't naturally aligned with the element
-    // type
-    if (!TLI.allowsMemoryAccessForAlignment(*DAG.getContext(),
-                                            DAG.getDataLayout(), VT, *MMO))
-      return SDValue();
-
-    SDValue WideLoad = DAG.getLoad(VT, DL, BaseLd->getChain(), BasePtr, MMO);
-    for (SDValue Ld : N->ops())
-      DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), WideLoad);
-    return WideLoad;
-  }
-
   // Get the widened scalar type, e.g. v4i8 -> i64
   unsigned WideScalarBitWidth =
       BaseLdVT.getScalarSizeInBits() * BaseLdVT.getVectorNumElements();
@@ -13406,20 +13385,22 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isLegalStridedLoadStore(WideVecVT, Align))
     return SDValue();
 
-  MVT ContainerVT = TLI.getContainerForFixedLengthVector(WideVecVT);
-  SDValue VL =
-      getDefaultVLOps(WideVecVT, ContainerVT, DL, DAG, Subtarget).second;
-  SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+  SDVTList VTs = DAG.getVTList({WideVecVT, MVT::Other});
   SDValue IntID =
-      DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, Subtarget.getXLenVT());
+    DAG.getTargetConstant(Intrinsic::riscv_masked_strided_load, DL,
+                          Subtarget.getXLenVT());
   if (Reversed)
     Stride = DAG.getNegative(Stride, DL, Stride->getValueType(0));
+  SDValue AllOneMask =
+    DAG.getSplat(WideVecVT.changeVectorElementType(MVT::i1), DL,
+                 DAG.getConstant(1, DL, MVT::i1));
+
   SDValue Ops[] = {BaseLd->getChain(),
                    IntID,
-                   DAG.getUNDEF(ContainerVT),
+                   DAG.getUNDEF(WideVecVT),
                    BasePtr,
                    Stride,
-                   VL};
+                   AllOneMask};
 
   uint64_t MemSize;
   if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
@@ -13441,11 +13422,7 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   for (SDValue Ld : N->ops())
     DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), StridedLoad);
 
-  // Note: Perform the bitcast before the convertFromScalableVector so we have
-  // balanced pairs of convertFromScalable/convertToScalable
-  SDValue Res = DAG.getBitcast(
-      TLI.getContainerForFixedLengthVector(VT.getSimpleVT()), StridedLoad);
-  return convertFromScalableVector(VT, Res, DAG, Subtarget);
+  return DAG.getBitcast(VT.getSimpleVT(), StridedLoad);
 }
 
 static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
@@ -14184,6 +14161,25 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       // By default we do not combine any intrinsic.
     default:
       return SDValue();
+    case Intrinsic::riscv_masked_strided_load: {
+      MVT VT = N->getSimpleValueType(0);
+      auto *Load = cast<MemIntrinsicSDNode>(N);
+      SDValue PassThru = N->getOperand(2);
+      SDValue Base = N->getOperand(3);
+      SDValue Stride = N->getOperand(4);
+      SDValue Mask = N->getOperand(5);
+
+      // If the stride is equal to the element size in bytes,  we can use
+      // a masked.load.
+      const unsigned ElementSize = VT.getScalarStoreSize();
+      if (auto *StrideC = dyn_cast<ConstantSDNode>(Stride);
+          StrideC && StrideC->getZExtValue() == ElementSize)
+        return DAG.getMaskedLoad(VT, DL, Load->getChain(), Base,
+                                 DAG.getUNDEF(XLenVT), Mask, PassThru,
+                                 Load->getMemoryVT(), Load->getMemOperand(),
+                                 ISD::UNINDEXED, ISD::NON_EXTLOAD);
+      return SDValue();
+    }
     case Intrinsic::riscv_vcpop:
     case Intrinsic::riscv_vcpop_mask:
     case Intrinsic::riscv_vfirst:

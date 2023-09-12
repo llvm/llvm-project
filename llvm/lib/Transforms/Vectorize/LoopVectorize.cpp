@@ -2986,7 +2986,8 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
 
     // Compute the end value for the additional bypass (if applicable).
     if (AdditionalBypass.first) {
-      B.SetInsertPoint(&(*AdditionalBypass.first->getFirstInsertionPt()));
+      B.SetInsertPoint(AdditionalBypass.first,
+                       AdditionalBypass.first->getFirstInsertionPt());
       EndValueFromAdditionalBypass =
           emitTransformedIndex(B, AdditionalBypass.second, II.getStartValue(),
                                Step, II.getKind(), II.getInductionBinOp());
@@ -3581,7 +3582,8 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
 
   // Fix LCSSA phis not already fixed earlier. Extracts may need to be generated
   // in the exit block, so update the builder.
-  State.Builder.SetInsertPoint(State.CFG.ExitBB->getFirstNonPHI());
+  State.Builder.SetInsertPoint(State.CFG.ExitBB,
+                               State.CFG.ExitBB->getFirstNonPHIIt());
   for (const auto &KV : Plan.getLiveOuts())
     KV.second->fixPhi(Plan, State);
 
@@ -3766,7 +3768,7 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
   }
 
   // Fix the initial value of the original recurrence in the scalar loop.
-  Builder.SetInsertPoint(&*LoopScalarPreHeader->begin());
+  Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
   PHINode *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
   auto *Start = Builder.CreatePHI(Phi->getType(), 2, "scalar.recur.init");
   auto *ScalarInit = PhiR->getStartValue()->getLiveInIRValue();
@@ -3801,7 +3803,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // the PHIs and the values we are going to write.
   // This allows us to write both PHINodes and the extractelement
   // instructions.
-  Builder.SetInsertPoint(&*LoopMiddleBlock->getFirstInsertionPt());
+  Builder.SetInsertPoint(LoopMiddleBlock,
+                         LoopMiddleBlock->getFirstInsertionPt());
 
   State.setDebugLocFrom(LoopExitInst->getDebugLoc());
 
@@ -3866,7 +3869,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
           RdxParts[Part] = Extnd;
         }
     }
-    Builder.SetInsertPoint(&*LoopMiddleBlock->getFirstInsertionPt());
+    Builder.SetInsertPoint(LoopMiddleBlock,
+                           LoopMiddleBlock->getFirstInsertionPt());
     for (unsigned Part = 0; Part < UF; ++Part) {
       RdxParts[Part] = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
       State.reset(LoopExitInstDef, RdxParts[Part], Part);

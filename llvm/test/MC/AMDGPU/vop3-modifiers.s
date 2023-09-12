@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 //---------------------------------------------------------------------------//
 // VOP1/VOP3 F16

@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900  -show-encoding %s | FileCheck -check-prefix=GFX9 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck -check-prefix=GFX10-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900  %s 2>&1 | FileCheck -check-prefix=GFX9-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900  -show-encoding %s | FileCheck -check-prefix=GFX9 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck -check-prefix=GFX10-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900  %s 2>&1 | FileCheck -check-prefix=GFX9-ERR --implicit-check-not=error: %s
 
 v_bfe_u32 v0, 0x3039, v1, s1
 // GFX10:     v_bfe_u32 v0, 0x3039, v1, s1    ; encoding: [0x00,0x00,0x48,0xd5,0xff,0x02,0x06,0x00,0x39,0x30,0x00,0x00]

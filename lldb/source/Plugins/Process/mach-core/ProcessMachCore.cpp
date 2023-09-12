@@ -594,9 +594,34 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
+      std::set<tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
-      for (lldb::tid_t tid = 0; tid < num_threads; ++tid) {
-        ThreadSP thread_sp(new ThreadMachCore(*this, tid));
+      std::vector<tid_t> tids;
+      if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
+        assert(tids.size() == num_threads);
+
+        // Find highest tid value.
+        tid_t highest_tid = 0;
+        for (uint32_t i = 0; i < num_threads; i++) {
+          if (tids[i] != LLDB_INVALID_THREAD_ID && tids[i] > highest_tid)
+            highest_tid = tids[i];
+        }
+        tid_t current_unused_tid = highest_tid + 1;
+        for (uint32_t i = 0; i < num_threads; i++) {
+          if (tids[i] == LLDB_INVALID_THREAD_ID) {
+            tids[i] = current_unused_tid++;
+          }
+        }
+      } else {
+        // No metadata, insert numbers sequentially from 0.
+        for (uint32_t i = 0; i < num_threads; i++) {
+          tids.push_back(i);
+        }
+      }
+
+      for (uint32_t i = 0; i < num_threads; i++) {
+        ThreadSP thread_sp =
+            std::make_shared<ThreadMachCore>(*this, tids[i], i);
         new_thread_list.AddThread(thread_sp);
       }
     }

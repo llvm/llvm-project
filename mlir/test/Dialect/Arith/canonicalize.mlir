@@ -1638,13 +1638,13 @@ func.func @test_minui2(%arg0 : i8) -> (i8, i8, i8, i8) {
 // CHECK-LABEL: @test_minf(
 func.func @test_minf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
-  // CHECK-NEXT:  %[[X:.+]] = arith.minf %arg0, %[[C0]]
+  // CHECK-NEXT:  %[[X:.+]] = arith.minimumf %arg0, %[[C0]]
   // CHECK-NEXT:  return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
   %inf = arith.constant 0x7F800000 : f32
-  %0 = arith.minf %c0, %arg0 : f32
-  %1 = arith.minf %arg0, %arg0 : f32
-  %2 = arith.minf %inf, %arg0 : f32
+  %0 = arith.minimumf %c0, %arg0 : f32
+  %1 = arith.minimumf %arg0, %arg0 : f32
+  %2 = arith.minimumf %inf, %arg0 : f32
   return %0, %1, %2 : f32, f32, f32
 }
 
@@ -1653,13 +1653,13 @@ func.func @test_minf(%arg0 : f32) -> (f32, f32, f32) {
 // CHECK-LABEL: @test_maxf(
 func.func @test_maxf(%arg0 : f32) -> (f32, f32, f32) {
   // CHECK-DAG:   %[[C0:.+]] = arith.constant
-  // CHECK-NEXT:  %[[X:.+]] = arith.maxf %arg0, %[[C0]]
+  // CHECK-NEXT:  %[[X:.+]] = arith.maximumf %arg0, %[[C0]]
   // CHECK-NEXT:   return %[[X]], %arg0, %arg0
   %c0 = arith.constant 0.0 : f32
   %-inf = arith.constant 0xFF800000 : f32
-  %0 = arith.maxf %c0, %arg0 : f32
-  %1 = arith.maxf %arg0, %arg0 : f32
-  %2 = arith.maxf %-inf, %arg0 : f32
+  %0 = arith.maximumf %c0, %arg0 : f32
+  %1 = arith.maximumf %arg0, %arg0 : f32
+  %2 = arith.maximumf %-inf, %arg0 : f32
   return %0, %1, %2 : f32, f32, f32
 }
 

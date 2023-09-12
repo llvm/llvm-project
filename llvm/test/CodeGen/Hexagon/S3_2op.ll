@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj < %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+; RUN: llc -mtriple=hexagon -filetype=obj < %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK-LABEL: <f0>:
 ; CHECK: r{{[1-9]}}:{{[0-9]}} = abs(r{{[1-9]}}:{{[0-9]}})
