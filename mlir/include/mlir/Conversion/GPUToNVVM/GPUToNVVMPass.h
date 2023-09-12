@@ -16,7 +16,9 @@ namespace mlir {
 class LLVMTypeConverter;
 class ConversionTarget;
 class RewritePatternSet;
-class Pass;
+
+template <typename OpT>
+class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
@@ -43,6 +45,14 @@ void populateGpuSubgroupReduceOpLoweringPattern(LLVMTypeConverter &converter,
 /// Collect a set of patterns to convert WMMA ops from GPU dialect to NVVM.
 void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns);
+
+/// Creates a pass that lowers GPU dialect operations to NVVM counterparts. The
+/// index bitwidth used for the lowering of the device side index computations
+/// is configurable.
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>> createLowerGpuOpsToNVVMOpsPass(
+    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
+    bool hasRedux = false);
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTONVVM_GPUTONVVMPASS_H_

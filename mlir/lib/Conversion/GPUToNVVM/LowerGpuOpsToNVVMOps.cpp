@@ -210,7 +210,11 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 /// code.
 struct LowerGpuOpsToNVVMOpsPass
     : public impl::ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
-  using Base::Base;
+  LowerGpuOpsToNVVMOpsPass() = default;
+  LowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth, bool hasRedux = false) {
+    this->indexBitwidth = indexBitwidth;
+    this->hasRedux = hasRedux;
+  }
 
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
@@ -373,4 +377,9 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
                                    "__nv_tanh");
   populateOpPatterns<math::TanOp>(converter, patterns, "__nv_tanf", "__nv_tan");
+}
+
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
+mlir::createLowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth, bool hasRedux) {
+  return std::make_unique<LowerGpuOpsToNVVMOpsPass>(indexBitwidth, hasRedux);
 }
