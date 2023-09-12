@@ -727,9 +727,6 @@ endif()
 pythonize_bool(COMPILER_RT_HAS_LLD)
 pythonize_bool(COMPILER_RT_TEST_USE_LLD)
 
-option(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER "Build Compiler RT linked with in LLVM symbolizer" OFF)
-mark_as_advanced(COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
-
 add_subdirectory(lib)
 
 if(COMPILER_RT_INCLUDE_TESTS)
