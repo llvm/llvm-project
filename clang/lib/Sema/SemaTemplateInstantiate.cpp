@@ -230,15 +230,25 @@ Response HandleFunction(const FunctionDecl *Function,
 Response HandleFunctionTemplateDecl(const FunctionTemplateDecl *FTD,
                                     MultiLevelTemplateArgumentList &Result) {
   if (!isa<ClassTemplateSpecializationDecl>(FTD->getDeclContext())) {
+    Result.addOuterTemplateArguments(
+        const_cast<FunctionTemplateDecl *>(FTD),
+        const_cast<FunctionTemplateDecl *>(FTD)->getInjectedTemplateArgs(),
+        /*Final=*/false);
+
     NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
-    const Type *Ty;
-    const TemplateSpecializationType *TSTy;
-    if (NNS && (Ty = NNS->getAsType()) &&
-        (TSTy = Ty->getAs<TemplateSpecializationType>()))
-      Result.addOuterTemplateArguments(const_cast<FunctionTemplateDecl *>(FTD),
-                                       TSTy->template_arguments(),
-                                       /*Final=*/false);
+
+    while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
+      if (NNS->isInstantiationDependent()) {
+        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>())
+          Result.addOuterTemplateArguments(
+              const_cast<FunctionTemplateDecl *>(FTD), TSTy->template_arguments(),
+              /*Final=*/false);
+      }
+
+      NNS = NNS->getPrefix();
+    }
   }
+
   return Response::ChangeDecl(FTD->getLexicalDeclContext());
 }
 

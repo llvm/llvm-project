@@ -27,8 +27,8 @@ struct TestCallGraphPass
     return "Print the contents of a constructed callgraph.";
   }
   void runOnOperation() override {
-    llvm::errs() << "Testing : " << getOperation()->getAttr("test.name")
-                 << "\n";
+    llvm::errs() << "Testing : "
+                 << getOperation()->getDiscardableAttr("test.name") << "\n";
     getAnalysis<CallGraph>().print(llvm::errs());
   }
 };

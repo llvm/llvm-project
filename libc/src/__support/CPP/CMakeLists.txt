@@ -118,6 +118,7 @@ add_header_library(
     type_traits/is_lvalue_reference.h
     type_traits/is_member_pointer.h
     type_traits/is_null_pointer.h
+    type_traits/is_object.h
     type_traits/is_pointer.h
     type_traits/is_reference.h
     type_traits/is_rvalue_reference.h

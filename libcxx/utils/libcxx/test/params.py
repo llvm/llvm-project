@@ -25,6 +25,8 @@ _warningFlags = [
     "-Wno-aligned-allocation-unavailable",
     "-Wno-atomic-alignment",
     "-Wno-reserved-module-identifier",
+    '-Wdeprecated-copy',
+    '-Wdeprecated-copy-dtor',
     # GCC warns about places where we might want to add sized allocation/deallocation
     # functions, but we know better what we're doing/testing in the test suite.
     "-Wno-sized-deallocation",
