@@ -974,6 +974,7 @@ if (current_toolchain == default_toolchain) {
       "experimental/__config",
       "experimental/__memory",
       "experimental/__simd/abi_tag.h",
+      "experimental/__simd/aligned_tag.h",
       "experimental/__simd/scalar.h",
       "experimental/__simd/simd.h",
       "experimental/__simd/simd_mask.h",
