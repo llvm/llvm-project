@@ -55,7 +55,7 @@ uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
 }
 
 bool AArch64::getExtensionFeatures(
-    const Bitset<AArch64::AEK_EXTENSIONS_LAST> &InputExts,
+    const AArch64::ExtensionBitset &InputExts,
     std::vector<StringRef> &Features) {
   for (const auto &E : Extensions)
     /* INVALID and NONE have no feature name. */
