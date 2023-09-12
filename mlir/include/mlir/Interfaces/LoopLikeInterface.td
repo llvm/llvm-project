@@ -17,8 +17,9 @@ include "mlir/IR/OpBase.td"
 
 def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
   let description = [{
-    Encodes properties of a loop. Operations that implement this interface will
-    be considered by loop-invariant code motion.
+    Contains helper functions to query properties and perform transformations
+    of a loop. Operations that implement this interface will be considered by
+    loop-invariant code motion.
   }];
   let cppNamespace = "::mlir";
 
@@ -30,7 +31,11 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         explicit capture of dependencies, an implementation could check whether
         the value corresponds to a captured dependency.
       }],
-      "bool", "isDefinedOutsideOfLoop", (ins "::mlir::Value ":$value), [{}], [{
+      /*retTy=*/"bool",
+      /*methodName=*/"isDefinedOutsideOfLoop",
+      /*args=*/(ins "::mlir::Value ":$value),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
         return value.getParentRegion()->isProperAncestor(&$_op.getLoopBody());
       }]
     >,
@@ -38,15 +43,17 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         Returns the region that makes up the body of the loop and should be
         inspected for loop-invariant operations.
       }],
-      "::mlir::Region &", "getLoopBody"
+      /*retTy=*/"::mlir::Region &",
+      /*methodName=*/"getLoopBody"
     >,
     InterfaceMethod<[{
         Moves the given loop-invariant operation out of the loop.
       }],
-      "void", "moveOutOfLoop",
-      (ins "::mlir::Operation *":$op), [{}], [{
-        op->moveBefore($_op);
-      }]
+      /*retTy=*/"void",
+      /*methodName=*/"moveOutOfLoop",
+      /*args=*/(ins "::mlir::Operation *":$op),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"op->moveBefore($_op);"
     >,
     InterfaceMethod<[{
         Promotes the loop body to its containing block if the loop is known to
