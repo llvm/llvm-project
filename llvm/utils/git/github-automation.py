@@ -47,10 +47,12 @@ def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
             return team
     return None
 
+
 def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
     return str.replace("@", "@<!-- -->")
+
 
 class IssueSubscriber:
     @property
@@ -74,13 +76,13 @@ class IssueSubscriber:
 
         body = escape_description(self.issue.body)
 
-        comment = ( f"""
+        comment = f"""
 @llvm/{team.slug}
 
 <details>
 {body}
 </details>
-""" )
+"""
 
         self.issue.create_comment(comment)
         return True
