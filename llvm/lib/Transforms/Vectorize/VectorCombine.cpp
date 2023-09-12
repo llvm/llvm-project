@@ -731,7 +731,7 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
 }
 
 /// VP Intrinsics whose vector operands are both splat values may be simplified
-/// into the scalar version of the operation and the result is splatted. This
+/// into the scalar version of the operation and the result splatted. This
 /// can lead to scalarization down the line.
 bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   if (!isa<VPIntrinsic>(I))
@@ -758,15 +758,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
     return false;
 
   // Check to make sure we support scalarization of the intrinsic
-  std::set<Intrinsic::ID> SupportedIntrinsics(
-      {Intrinsic::vp_add, Intrinsic::vp_sub, Intrinsic::vp_mul,
-       Intrinsic::vp_ashr, Intrinsic::vp_lshr, Intrinsic::vp_shl,
-       Intrinsic::vp_or, Intrinsic::vp_and, Intrinsic::vp_xor,
-       Intrinsic::vp_fadd, Intrinsic::vp_fsub, Intrinsic::vp_fmul,
-       Intrinsic::vp_sdiv, Intrinsic::vp_udiv, Intrinsic::vp_srem,
-       Intrinsic::vp_urem});
   Intrinsic::ID IntrID = VPI.getIntrinsicID();
-  if (!SupportedIntrinsics.count(IntrID))
+  if (!VPBinOpIntrinsic::isVPBinOp(IntrID))
     return false;
 
   // Calculate cost of splatting both operands into vectors and the vector
@@ -785,14 +778,39 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   InstructionCost VectorOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
   InstructionCost OldCost = 2 * SplatCost + VectorOpCost;
 
-  // Calculate cost of scalarizing
-  std::optional<unsigned> ScalarOpcodeOpt =
-      VPIntrinsic::getFunctionalOpcodeForVP(IntrID);
-  assert(ScalarOpcodeOpt && "Unable to determine scalar opcode");
-  unsigned ScalarOpcode = *ScalarOpcodeOpt;
+  // Determine scalar opcode
+  std::optional<unsigned> FunctionalOpcode =
+      VPI.getFunctionalOpcode();
+  bool ScalarIsIntr = false;
+  Intrinsic::ID ScalarIntrID;
+  if (!FunctionalOpcode) {
+    // Explicitly handle supported instructions (i.e. those that return
+    // isVPBinOp above, that do not have functional nor constrained opcodes due
+    // their intrinsic definitions.
+    DenseMap<Intrinsic::ID, Intrinsic::ID> VPIntrToIntr(
+        {{Intrinsic::vp_smax, Intrinsic::smax},
+         {Intrinsic::vp_smin, Intrinsic::smin},
+         {Intrinsic::vp_umax, Intrinsic::umax},
+         {Intrinsic::vp_umin, Intrinsic::umin},
+         {Intrinsic::vp_copysign, Intrinsic::copysign},
+         {Intrinsic::vp_minnum, Intrinsic::minnum},
+         {Intrinsic::vp_maxnum, Intrinsic::maxnum}});
+    ScalarIsIntr = true;
+    assert(VPIntrToIntr.contains(IntrID) &&
+           "Unable to determine scalar opcode");
+    ScalarIntrID = VPIntrToIntr[IntrID];
+  }
 
-  InstructionCost ScalarOpCost =
-      TTI.getArithmeticInstrCost(ScalarOpcode, VecTy->getScalarType());
+  // Calculate cost of scalarizing
+  InstructionCost ScalarOpCost = 0;
+  if (ScalarIsIntr) {
+    IntrinsicCostAttributes Attrs(ScalarIntrID, VecTy->getScalarType(), Args);
+    ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  } else {
+    ScalarOpCost =
+        TTI.getArithmeticInstrCost(*FunctionalOpcode, VecTy->getScalarType());
+  }
+
   // The existing splats may be kept around if other instructions use them.
   InstructionCost CostToKeepSplats =
       (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
@@ -814,13 +832,19 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   bool IsKnownNonZeroVL = isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT);
   bool MustHaveNonZeroVL =
       IntrID == Intrinsic::vp_sdiv || IntrID == Intrinsic::vp_udiv ||
-      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem;
+      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem ||
+      IntrID == Intrinsic::vp_fdiv || IntrID  == Intrinsic::vp_frem;
 
   if ((MustHaveNonZeroVL && IsKnownNonZeroVL) || !MustHaveNonZeroVL) {
-    replaceValue(VPI, *Builder.CreateVectorSplat(
-                          EC, Builder.CreateBinOp(
-                                  (Instruction::BinaryOps)ScalarOpcode,
-                                  getSplatValue(Op0), getSplatValue(Op1))));
+    Value *ScalarOp0 = getSplatValue(Op0);
+    Value *ScalarOp1 = getSplatValue(Op1);
+    Value *ScalarVal =
+        ScalarIsIntr
+            ? Builder.CreateIntrinsic(VecTy->getScalarType(), ScalarIntrID,
+                                      {ScalarOp0, ScalarOp1})
+            : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
+                                  ScalarOp0, ScalarOp1);
+    replaceValue(VPI, *Builder.CreateVectorSplat(EC, ScalarVal));
     return true;
   }
   return false;
