@@ -2495,6 +2495,7 @@ SDValue SITargetLowering::LowerFormalArguments(
            !UserSGPRInfo.hasKernargSegmentPtr() && !Info->hasWorkGroupInfo() &&
            !Info->hasLDSKernelId() && !Info->hasWorkItemIDX() &&
            !Info->hasWorkItemIDY() && !Info->hasWorkItemIDZ());
+    (void)UserSGPRInfo;
     if (!Subtarget->enableFlatScratch())
       assert(!UserSGPRInfo.hasFlatScratchInit());
     if (CallConv != CallingConv::AMDGPU_CS || !Subtarget->hasArchitectedSGPRs())
