@@ -3766,6 +3766,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_SEXT:
   case G_ANYEXT:
     return lowerEXT(MI);
+  case G_TRUNC:
+    return lowerTRUNC(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
   }
@@ -5110,13 +5112,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_TRUNC: {
-    Observer.changingInstr(MI);
-    moreElementsVectorSrc(MI, MoreTy, 1);
-    moreElementsVectorDst(MI, MoreTy, 0);
-    Observer.changedInstr(MI);
-    return Legalized;
-  }
+  case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FPEXT: {
     if (TypeIdx != 0)
@@ -6163,6 +6159,57 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerEXT(MachineInstr &MI) {
     return Legalized;
   }
   return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerTRUNC(MachineInstr &MI) {
+  // MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  // Similar to how operand splitting is done in SelectiondDAG, we can handle
+  // %res(v8s8) = G_TRUNC %in(v8s32) by generating:
+  //   %inlo(<4x s32>), %inhi(<4 x s32>) = G_UNMERGE %in(<8 x s32>)
+  //   %lo16(<4 x s16>) = G_TRUNC %inlo
+  //   %hi16(<4 x s16>) = G_TRUNC %inhi
+  //   %in16(<8 x s16>) = G_CONCAT_VECTORS %lo16, %hi16
+  //   %res(<8 x s8>) = G_TRUNC %in16
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
+
+  assert(DstTy.isVector() && "This should be a vector operation");
+
+  // Split input type.
+  LLT SplitSrcTy =
+      SrcTy.changeElementCount(SrcTy.getElementCount().divideCoefficientBy(2));
+
+  // First, split the source into two smaller vectors.
+  SmallVector<Register, 2> SplitSrcs;
+  extractParts(SrcReg, SplitSrcTy, 2, SplitSrcs);
+
+  // Truncate the splits into intermediate narrower elements.
+  LLT InterTy;
+  if (DstTy.getScalarSizeInBits() * 2 < SrcTy.getScalarSizeInBits())
+    InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits() * 2);
+  else
+    InterTy = SplitSrcTy.changeElementSize(DstTy.getScalarSizeInBits());
+  for (unsigned I = 0; I < SplitSrcs.size(); ++I) {
+    SplitSrcs[I] = MIRBuilder.buildTrunc(InterTy, SplitSrcs[I]).getReg(0);
+  }
+
+  // Combine the new truncates into one vector
+  auto Merge = MIRBuilder.buildMergeLikeInstr(
+      DstTy.changeElementSize(InterTy.getScalarSizeInBits()), SplitSrcs);
+
+  // Truncate the new vector to the final result type
+  if (DstTy.getScalarSizeInBits() * 2 < SrcTy.getScalarSizeInBits())
+    MIRBuilder.buildTrunc(MI.getOperand(0).getReg(), Merge.getReg(0));
+  else
+    MIRBuilder.buildCopy(MI.getOperand(0).getReg(), Merge.getReg(0));
+
+  MI.eraseFromParent();
+
+  return Legalized;
 }
 
 LegalizerHelper::LegalizeResult
