@@ -11,7 +11,7 @@
 define amdgpu_kernel void @__omp_offloading_16_dd2df_main_l9()  {
 ; CHECK-LABEL: __omp_offloading_16_dd2df_main_l9:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
+; CHECK-NEXT:    s_add_u32 s0, s0, s13
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
