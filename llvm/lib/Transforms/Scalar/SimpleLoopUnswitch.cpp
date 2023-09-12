@@ -368,10 +368,11 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
                                                       bool FullUnswitch) {
   assert(&ExitBB != &UnswitchedBB &&
          "Must have different loop exit and unswitched blocks!");
-  Instruction *InsertPt = &*UnswitchedBB.begin();
+  BasicBlock::iterator InsertPt = UnswitchedBB.begin();
   for (PHINode &PN : ExitBB.phis()) {
     auto *NewPN = PHINode::Create(PN.getType(), /*NumReservedValues*/ 2,
-                                  PN.getName() + ".split", InsertPt);
+                                  PN.getName() + ".split");
+    NewPN->insertBefore(InsertPt);
 
     // Walk backwards over the old PHI node's inputs to minimize the cost of
     // removing each one. We have to do this weird loop manually so that we
@@ -609,7 +610,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     UnswitchedBB = LoopExitBB;
   } else {
     UnswitchedBB =
-        SplitBlock(LoopExitBB, &LoopExitBB->front(), &DT, &LI, MSSAU);
+        SplitBlock(LoopExitBB, LoopExitBB->begin(), &DT, &LI, MSSAU, "", false);
   }
 
   if (MSSAU && VerifyMemorySSA)
@@ -623,7 +624,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     // If fully unswitching, we can use the existing branch instruction.
     // Splice it into the old PH to gate reaching the new preheader and re-point
     // its successors.
-    OldPH->splice(OldPH->end(), BI.getParent(), BI.getIterator());
+    BI.moveBefore(*OldPH, OldPH->end());
     BI.setCondition(Cond);
     if (MSSAU) {
       // Temporarily clone the terminator, to make MSSA update cheaper by
@@ -882,7 +883,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
       rewritePHINodesForUnswitchedExitBlock(*DefaultExitBB, *ParentBB, *OldPH);
     } else {
       auto *SplitBB =
-          SplitBlock(DefaultExitBB, &DefaultExitBB->front(), &DT, &LI, MSSAU);
+          SplitBlock(DefaultExitBB, DefaultExitBB->begin(), &DT, &LI, MSSAU);
       rewritePHINodesForExitAndUnswitchedBlocks(*DefaultExitBB, *SplitBB,
                                                 *ParentBB, *OldPH,
                                                 /*FullUnswitch*/ true);
@@ -909,7 +910,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     BasicBlock *&SplitExitBB = SplitExitBBMap[ExitBB];
     if (!SplitExitBB) {
       // If this is the first time we see this, do the split and remember it.
-      SplitExitBB = SplitBlock(ExitBB, &ExitBB->front(), &DT, &LI, MSSAU);
+      SplitExitBB = SplitBlock(ExitBB, ExitBB->begin(), &DT, &LI, MSSAU);
       rewritePHINodesForExitAndUnswitchedBlocks(*ExitBB, *SplitExitBB,
                                                 *ParentBB, *OldPH,
                                                 /*FullUnswitch*/ true);
@@ -1210,7 +1211,7 @@ static BasicBlock *buildClonedLoopBlocks(
     // place to merge the CFG, so split the exit first. This is always safe to
     // do because there cannot be any non-loop predecessors of a loop exit in
     // loop simplified form.
-    auto *MergeBB = SplitBlock(ExitBB, &ExitBB->front(), &DT, &LI, MSSAU);
+    auto *MergeBB = SplitBlock(ExitBB, ExitBB->begin(), &DT, &LI, MSSAU);
 
     // Rearrange the names to make it easier to write test cases by having the
     // exit block carry the suffix rather than the merge block carrying the
@@ -1246,8 +1247,8 @@ static BasicBlock *buildClonedLoopBlocks(
         SE->forgetValue(&I);
 
       auto *MergePN =
-          PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi",
-                          &*MergeBB->getFirstInsertionPt());
+          PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi");
+      MergePN->insertBefore(MergeBB->getFirstInsertionPt());
       I.replaceAllUsesWith(MergePN);
       MergePN->addIncoming(&I, ExitBB);
       MergePN->addIncoming(&ClonedI, ClonedExitBB);
@@ -2295,7 +2296,7 @@ static void unswitchNontrivialInvariants(
   if (FullUnswitch) {
     // Splice the terminator from the original loop and rewrite its
     // successors.
-    SplitBB->splice(SplitBB->end(), ParentBB, TI.getIterator());
+    TI.moveBefore(*SplitBB, SplitBB->end());
 
     // Keep a clone of the terminator for MSSA updates.
     Instruction *NewTI = TI.clone();

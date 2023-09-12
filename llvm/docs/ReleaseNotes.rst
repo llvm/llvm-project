@@ -216,6 +216,8 @@ Changes to the LLVM tools
 
 * llvm-symbolizer now treats invalid input as an address for which source
   information is not found.
+* llvm-readelf now supports ``--extra-sym-info`` (``-X``) to display extra
+  information (section name) when showing symbols.
 
 * ``llvm-readobj --elf-output-style=JSON`` no longer prefixes each JSON object
   with the file name. Previously, each object file's output looked like

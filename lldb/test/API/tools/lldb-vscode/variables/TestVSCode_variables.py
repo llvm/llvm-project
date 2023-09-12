@@ -528,9 +528,10 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "[4]": {"equals": {"type": "int", "value": "0"}},
             "[raw]": {"contains": {"type": ["vector"]}},
         }
-        children = self.vscode.request_variables(locals[2]["variablesReference"])["body"]["variables"]
+        children = self.vscode.request_variables(locals[2]["variablesReference"])[
+            "body"
+        ]["variables"]
         self.verify_variables(verify_children, children)
-
 
     @skipIfWindows
     @skipIfRemote
