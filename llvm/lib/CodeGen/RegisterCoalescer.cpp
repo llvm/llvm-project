@@ -2795,10 +2795,15 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
     //
     // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
     // to erase the IMPLICIT_DEF instruction.
+    //
+    // Additionally we must keep an IMPLICIT_DEF if we're redefining an incoming
+    // value.
+
     MachineInstr *OtherImpDef =
         Indexes->getInstructionFromIndex(V.OtherVNI->def);
     MachineBasicBlock *OtherMBB = OtherImpDef->getParent();
-    if (DefMI && DefMI->getParent() != OtherMBB) {
+    if (DefMI &&
+        (DefMI->getParent() != OtherMBB || LIS->isLiveInToMBB(LR, OtherMBB))) {
       LLVM_DEBUG(dbgs() << "IMPLICIT_DEF defined at " << V.OtherVNI->def
                  << " extends into "
                  << printMBBReference(*DefMI->getParent())
