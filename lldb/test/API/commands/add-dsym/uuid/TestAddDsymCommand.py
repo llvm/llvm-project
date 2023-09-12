@@ -57,6 +57,30 @@ class AddDsymCommandCase(TestBase):
         self.exe_name = "a.out"
         self.do_add_dsym_with_dSYM_bundle(self.exe_name)
 
+    @no_debug_info_test
+    def test_report_symbol_change(self):
+        """Test that when adding a symbol file, the eBroadcastBitSymbolChange event gets broadcasted."""
+        self.generate_main_cpp(version=1)
+        self.build(debug_info="dsym")
+
+        self.exe_name = "a.out"
+
+        # Get the broadcaster and listen for the symbol change event
+        self.broadcaster = self.dbg.GetBroadcaster()
+        self.listener = lldbutil.start_listening_from(
+            self.broadcaster, lldb.SBDebugger.eBroadcastBitSymbolChange
+        )
+
+        # Add the dSYM
+        self.do_add_dsym_with_success(self.exe_name)
+
+        # Get the next event
+        event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
+
+        # Check that the event is valid
+        self.assertTrue(event.IsValid(), "Got a valid eBroadcastBitSymbolChange event.")
+
+
     def generate_main_cpp(self, version=0):
         """Generate main.cpp from main.cpp.template."""
         temp = os.path.join(self.getSourceDir(), self.template)

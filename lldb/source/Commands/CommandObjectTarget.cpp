@@ -4504,6 +4504,10 @@ protected:
       if (process)
         process->Flush();
     }
+
+    if (result.Succeeded())
+      Debugger::ReportSymbolChange(module_spec);
+
     return result.Succeeded();
   }
 
