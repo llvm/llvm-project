@@ -42,7 +42,7 @@ steps:
 
   - label: ':linux: Linux x64'
     artifact_paths:
-    - artifacts/**/*
+    - 'artifacts/**/*'
     - '*_result.json'
     - 'build/test-results.xml'
     agents: ${LINUX_AGENTS}
@@ -61,7 +61,7 @@ steps:
 
   - label: ':windows: Windows x64'
     artifact_paths:
-    - artifacts/**/*
+    - 'artifacts/**/*'
     - '*_result.json'
     - 'build/test-results.xml'
     agents: ${WINDOWS_AGENTS}
