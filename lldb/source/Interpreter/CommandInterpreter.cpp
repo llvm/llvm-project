@@ -508,6 +508,11 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp) {
     AddAlias("history", cmd_obj_sp);
   }
+
+  cmd_obj_sp = GetCommandSPExact("help");
+  if (cmd_obj_sp) {
+    AddAlias("h", cmd_obj_sp);
+  }
 }
 
 void CommandInterpreter::Clear() {

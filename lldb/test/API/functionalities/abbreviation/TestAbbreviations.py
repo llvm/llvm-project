@@ -20,8 +20,7 @@ class AbbreviationsTestCase(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual("apropos script", result.GetOutput())
 
-        # "h" could be "help" or "history", "he" can only be "help".
-        command_interpreter.ResolveCommand("he", result)
+        command_interpreter.ResolveCommand("h", result)
         self.assertTrue(result.Succeeded())
         self.assertEqual("help", result.GetOutput())
 
