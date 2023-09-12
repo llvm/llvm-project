@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 v_cmp_class_f32 vcc, v1, v2
 // CHECK: [0x01,0x05,0x20,0x7c]

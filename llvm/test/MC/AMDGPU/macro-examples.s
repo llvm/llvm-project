@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji %s | FileCheck %s --check-prefix=VI
+// RUN: llvm-mc -triple=amdgcn -mcpu=fiji %s | FileCheck %s --check-prefix=VI
 
 //===----------------------------------------------------------------------===//
 // Example of reg[expr] and reg[epxr1:expr2] syntax in macros.
