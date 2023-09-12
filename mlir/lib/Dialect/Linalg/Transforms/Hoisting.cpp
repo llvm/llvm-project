@@ -55,6 +55,7 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
   Value source = transferRead.getSource();
+  // Skip subview and collapse_shape Ops
   while (auto subView = source.getDefiningOp<memref::SubViewOp>())
     source = subView.getSource();
   while (auto collapsed = source.getDefiningOp<memref::CollapseShapeOp>())
