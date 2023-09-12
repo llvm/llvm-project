@@ -467,8 +467,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addRegisterClass(MVT::v2bf16, &NVPTX::Int32RegsRegClass);
 
   // Conversion to/from FP16/FP16x2 is always legal.
-  setOperationAction(ISD::SINT_TO_FP, MVT::f16, Legal);
-  setOperationAction(ISD::FP_TO_SINT, MVT::f16, Legal);
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2f16, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f16, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f16, Expand);
@@ -478,8 +476,6 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setFP16OperationAction(ISD::SETCC, MVT::v2f16, Legal, Expand);
 
   // Conversion to/from BFP16/BFP16x2 is always legal.
-  setOperationAction(ISD::SINT_TO_FP, MVT::bf16, Legal);
-  setOperationAction(ISD::FP_TO_SINT, MVT::bf16, Legal);
   setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Custom);
   setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2bf16, Custom);
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2bf16, Expand);
@@ -643,6 +639,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setI16x2OperationAction(ISD::SHL, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SREM, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::UREM, MVT::v2i16, Legal, Custom);
+
+  // Other arithmetic and logic ops are unsupported.
+  setOperationAction({ISD::AND, ISD::OR, ISD::XOR, ISD::SDIV, ISD::UDIV,
+                      ISD::SRA, ISD::SRL, ISD::MULHS, ISD::MULHU,
+                      ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP,
+                      ISD::UINT_TO_FP},
+                     MVT::v2i16, Expand);
 
   setOperationAction(ISD::ADDC, MVT::i32, Legal);
   setOperationAction(ISD::ADDE, MVT::i32, Legal);
