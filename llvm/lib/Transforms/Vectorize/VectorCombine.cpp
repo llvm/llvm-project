@@ -740,7 +740,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   Value *Op0 = VPI.getArgOperand(0);
   Value *Op1 = VPI.getArgOperand(1);
 
-  if (!getSplatValue(Op0) || !getSplatValue(Op1))
+  if (!isSplatValue(Op0) || !isSplatValue(Op1))
     return false;
 
   // For the binary VP intrinsics supported here, the result on disabled lanes
@@ -793,7 +793,10 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
 
   InstructionCost ScalarOpCost =
       TTI.getArithmeticInstrCost(ScalarOpcode, VecTy->getScalarType());
-  InstructionCost NewCost = ScalarOpCost + SplatCost;
+  // The existing splats may be kept around if other instructions use them.
+  InstructionCost CostToKeepSplats =
+      SplatCost * (Op0->getNumUses() + Op1->getNumUses() - 2);
+  InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
 
   LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
                     << "\n");
