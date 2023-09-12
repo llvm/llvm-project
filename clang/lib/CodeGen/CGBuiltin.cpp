@@ -9642,15 +9642,18 @@ Value *CodeGenFunction::EmitSMEZero(const SVETypeFlags &TypeFlags,
 Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
-  llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
-  llvm::Value *MulVL = Builder.CreateMul(
-      CntsbCall,
-      Builder.getInt64(cast<llvm::ConstantInt>(Ops[1])->getZExtValue()),
-      "mulvl");
-  Ops[2] = Builder.CreateGEP(Int8Ty, Ops[2], MulVL);
-  Ops[0] = EmitTileslice(Ops[1], Ops[0]);
-  Ops.erase(&Ops[1]);
+  if (Ops.size() == 3) {
+    Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
+    llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
+    llvm::Value *MulVL = Builder.CreateMul(
+        CntsbCall,
+        Builder.getInt64(cast<llvm::ConstantInt>(Ops[2])->getZExtValue()),
+        "mulvl");
+
+    Ops[1] = Builder.CreateGEP(Int8Ty, Ops[1], MulVL);
+    Ops[0] = EmitTileslice(Ops[0], Ops[2]);
+    Ops.erase(&Ops[2]);
+  }
   Function *F = CGM.getIntrinsic(IntID, {});
   return Builder.CreateCall(F, Ops);
 }
@@ -10120,7 +10123,9 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
            BuiltinID == SME::BI__builtin_sme_svzero_za)
     return EmitSMEZero(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (BuiltinID == SME::BI__builtin_sme_svldr_vnum_za ||
-           BuiltinID == SME::BI__builtin_sme_svstr_vnum_za)
+           BuiltinID == SME::BI__builtin_sme_svstr_vnum_za ||
+           BuiltinID == SME::BI__builtin_sme_svldr_za ||
+           BuiltinID == SME::BI__builtin_sme_svstr_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     // Predicates must match the main datatype.
