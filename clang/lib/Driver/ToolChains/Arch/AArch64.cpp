@@ -158,7 +158,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
 
     Features.push_back(ArchInfo->ArchFeature);
 
-    llvm::Bitset Extension = CpuInfo->getImpliedExtensions();
+    auto Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
   }

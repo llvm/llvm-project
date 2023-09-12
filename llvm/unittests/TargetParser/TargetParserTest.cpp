@@ -216,7 +216,7 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams<uint64_t>("arm1020t", "armv5t", "none", ARM::AEK_NONE, "5T"),
         ARMCPUTestParams<uint64_t>("arm9e", "armv5te", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "5TE"),
-        ARMCPUTestParams("arm946e-s", "armv5te", "none",
+        ARMCPUTestParams<uint64_t>("arm946e-s", "armv5te", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "5TE"),
         ARMCPUTestParams<uint64_t>("arm966e-s", "armv5te", "none",
                                    ARM::AEK_NONE | ARM::AEK_DSP, "5TE"),
@@ -1015,7 +1015,7 @@ class AArch64CPUTestFixture
           ARMCPUTestParams<AArch64::ExtensionBitset>> {};
 
 TEST_P(AArch64CPUTestFixture, testAArch64CPU) {
-  ARMCPUTestParams params = GetParam();
+  auto params = GetParam();
 
   const std::optional<AArch64::CpuInfo> Cpu = AArch64::parseCpu(params.CPUName);
   EXPECT_TRUE(Cpu);
