@@ -463,18 +463,6 @@ inline Value *getFieldValue(const RecordStorageLocation *Loc,
   return Env.getValue(*FieldLoc);
 }
 
-/// Returns the value of a `Field` on a `Struct.
-/// Returns null if `Struct` is null.
-inline Value *getFieldValue(const RecordValue *Struct, const ValueDecl &Field,
-                            const Environment &Env) {
-  if (Struct == nullptr)
-    return nullptr;
-  StorageLocation *FieldLoc = Struct->getChild(Field);
-  if (FieldLoc == nullptr)
-    return nullptr;
-  return Env.getValue(*FieldLoc);
-}
-
 /// Creates and owns constraints which are boolean values.
 class ConstraintContext {
   unsigned NextAtom = 0;

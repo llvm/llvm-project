@@ -647,26 +647,26 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
         const auto &FooLoc =
             *cast<ScalarStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto &FooVal = *cast<PointerValue>(Env.getValue(FooLoc));
-        const auto &FooPointeeVal =
-            *cast<RecordValue>(Env.getValue(FooVal.getPointeeLoc()));
+        const auto &FooPointeeLoc =
+            cast<RecordStorageLocation>(FooVal.getPointeeLoc());
 
         const auto &BarVal =
-            *cast<PointerValue>(getFieldValue(&FooPointeeVal, *BarDecl, Env));
-        const auto &BarPointeeVal =
-            *cast<RecordValue>(Env.getValue(BarVal.getPointeeLoc()));
+            *cast<PointerValue>(getFieldValue(&FooPointeeLoc, *BarDecl, Env));
+        const auto &BarPointeeLoc =
+            cast<RecordStorageLocation>(BarVal.getPointeeLoc());
 
-        EXPECT_THAT(getFieldValue(&BarPointeeVal, *FooRefDecl, Env), NotNull());
+        EXPECT_THAT(getFieldValue(&BarPointeeLoc, *FooRefDecl, Env), NotNull());
 
         const auto &FooPtrVal = *cast<PointerValue>(
-            getFieldValue(&BarPointeeVal, *FooPtrDecl, Env));
+            getFieldValue(&BarPointeeLoc, *FooPtrDecl, Env));
         const auto &FooPtrPointeeLoc =
             cast<RecordStorageLocation>(FooPtrVal.getPointeeLoc());
         EXPECT_THAT(Env.getValue(FooPtrPointeeLoc), IsNull());
 
-        EXPECT_THAT(getFieldValue(&BarPointeeVal, *BazRefDecl, Env), NotNull());
+        EXPECT_THAT(getFieldValue(&BarPointeeLoc, *BazRefDecl, Env), NotNull());
 
         const auto &BazPtrVal = *cast<PointerValue>(
-            getFieldValue(&BarPointeeVal, *BazPtrDecl, Env));
+            getFieldValue(&BarPointeeLoc, *BazPtrDecl, Env));
         const StorageLocation &BazPtrPointeeLoc = BazPtrVal.getPointeeLoc();
         EXPECT_THAT(Env.getValue(BazPtrPointeeLoc), NotNull());
       });
@@ -2478,9 +2478,10 @@ TEST(TransferTest, BindTemporary) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        const auto &FooVal = *cast<RecordValue>(Env.getValue(*FooDecl));
+        const auto &FooLoc =
+            *cast<RecordStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
-        EXPECT_EQ(BarVal, getFieldValue(&FooVal, *BazDecl, Env));
+        EXPECT_EQ(BarVal, getFieldValue(&FooLoc, *BazDecl, Env));
       });
 }
 
@@ -2970,16 +2971,14 @@ TEST(TransferTest, AggregateInitialization) {
           const auto *BarArgVal = cast<IntegerValue>(Env.getValue(*BarArgDecl));
           const auto *QuxArgVal = cast<IntegerValue>(Env.getValue(*QuxArgDecl));
 
-          const auto *QuuxVal = cast<RecordValue>(Env.getValue(*QuuxDecl));
-          ASSERT_THAT(QuuxVal, NotNull());
+          const auto &QuuxLoc =
+              *cast<RecordStorageLocation>(Env.getStorageLocation(*QuuxDecl));
+          const auto &BazLoc =
+              *cast<RecordStorageLocation>(QuuxLoc.getChild(*BazDecl));
 
-          const auto *BazVal =
-              cast<RecordValue>(getFieldValue(QuuxVal, *BazDecl, Env));
-          ASSERT_THAT(BazVal, NotNull());
-
-          EXPECT_EQ(getFieldValue(QuuxVal, *BarDecl, Env), BarArgVal);
-          EXPECT_EQ(getFieldValue(BazVal, *FooDecl, Env), FooArgVal);
-          EXPECT_EQ(getFieldValue(QuuxVal, *QuxDecl, Env), QuxArgVal);
+          EXPECT_EQ(getFieldValue(&QuuxLoc, *BarDecl, Env), BarArgVal);
+          EXPECT_EQ(getFieldValue(&BazLoc, *FooDecl, Env), FooArgVal);
+          EXPECT_EQ(getFieldValue(&QuuxLoc, *QuxDecl, Env), QuxArgVal);
 
           // Check that fields initialized in an initializer list are always
           // modeled in other instances of the same type.
@@ -3653,8 +3652,9 @@ TEST(TransferTest, AssignMemberBeforeCopy) {
 
         const auto *BarVal = cast<IntegerValue>(Env.getValue(*BarDecl));
 
-        const auto *A2Val = cast<RecordValue>(Env.getValue(*A2Decl));
-        EXPECT_EQ(getFieldValue(A2Val, *FooDecl, Env), BarVal);
+        const auto &A2Loc =
+            *cast<RecordStorageLocation>(Env.getStorageLocation(*A2Decl));
+        EXPECT_EQ(getFieldValue(&A2Loc, *FooDecl, Env), BarVal);
       });
 }
 
