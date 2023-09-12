@@ -389,12 +389,6 @@ public:
     return {};
   }
 
-  lldb::SyntheticChildrenSP
-  GetCxxBridgedSyntheticChildProvider(ValueObjectSP valobj) {
-    STUB_LOG();
-    return {};
-  }
-
   void WillStartExecutingUserExpression(bool runs_in_playground_or_repl) {
     if (!runs_in_playground_or_repl)
       STUB_LOG();
@@ -2492,12 +2486,6 @@ bool SwiftLanguageRuntime::IsValidErrorValue(ValueObject &in_value) {
 lldb::SyntheticChildrenSP
 SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
   FORWARD(GetBridgedSyntheticChildProvider, valobj);
-}
-
-lldb::SyntheticChildrenSP
-SwiftLanguageRuntime::GetCxxBridgedSyntheticChildProvider(
-    ValueObjectSP valobj) {
-  FORWARD(GetCxxBridgedSyntheticChildProvider, valobj);
 }
 
 void SwiftLanguageRuntime::WillStartExecutingUserExpression(
