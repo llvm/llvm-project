@@ -1,9 +1,9 @@
-; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
 ; RUN: llc -mattr=+promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
-; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
 ; RUN: llc -mattr=-promote-alloca,-flat-for-global -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri < %s | FileCheck  --check-prefixes=GCN,GCN-ALLOCA %s
-; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
-; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
+; RUN: llc -mattr=+promote-alloca -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-PROMOTE %s
+; RUN: llc -mattr=-promote-alloca -verify-machineinstrs -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck --check-prefixes=GCN,GCN-ALLOCA %s
 
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -1,6 +1,6 @@
 # Instructions that are invalid.
 #
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips64r5 -mattr=+virt 2>%t1
+# RUN: not llvm-mc %s -triple=mips -mcpu=mips64r5 -mattr=+virt 2>%t1
 # RUN: FileCheck %s < %t1
 
   dmfgc0                # CHECK: :[[@LINE]]:3: error: too few operands for instruction

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: flat_load_ubyte v5, v[1:2]              ; encoding: [0x00,0x00,0x40,0xdc,0x01,0x00,0x00,0x05]
 0x00,0x00,0x40,0xdc,0x01,0x00,0x00,0x05

@@ -344,6 +344,7 @@ public:
       case Kind::Func:
         return "mem";
       }
+      llvm_unreachable("impossible kind");
     }
 
     /// getNumOperandRegisters - Extract the number of registers field from the
@@ -456,6 +457,8 @@ public:
       return "o";
     case InlineAsm::Constraint_v:
       return "v";
+    case InlineAsm::Constraint_A:
+      return "A";
     case InlineAsm::Constraint_Q:
       return "Q";
     case InlineAsm::Constraint_R:

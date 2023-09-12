@@ -1191,7 +1191,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
 
   // Compute offset/size for each PHI incoming pointer.
   for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i) {
-    Builder.SetInsertPoint(&*PHI.getIncomingBlock(i)->getFirstInsertionPt());
+    BasicBlock *IncomingBlock = PHI.getIncomingBlock(i);
+    Builder.SetInsertPoint(IncomingBlock, IncomingBlock->getFirstInsertionPt());
     SizeOffsetEvalType EdgeData = compute_(PHI.getIncomingValue(i));
 
     if (!bothKnown(EdgeData)) {
@@ -1203,8 +1204,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
       InsertedInstructions.erase(SizePHI);
       return unknown();
     }
-    SizePHI->addIncoming(EdgeData.first, PHI.getIncomingBlock(i));
-    OffsetPHI->addIncoming(EdgeData.second, PHI.getIncomingBlock(i));
+    SizePHI->addIncoming(EdgeData.first, IncomingBlock);
+    OffsetPHI->addIncoming(EdgeData.second, IncomingBlock);
   }
 
   Value *Size = SizePHI, *Offset = OffsetPHI;

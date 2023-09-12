@@ -163,10 +163,10 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
       target.addIllegalOp<RawBufferAtomicFmaxOp>();
     }
   }
-  patterns
-      .add<RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
-           RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaxFOp>>(
-          patterns.getContext());
+  patterns.add<
+      RawBufferAtomicByCasPattern<RawBufferAtomicFaddOp, arith::AddFOp>,
+      RawBufferAtomicByCasPattern<RawBufferAtomicFmaxOp, arith::MaximumFOp>>(
+      patterns.getContext());
 }
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {

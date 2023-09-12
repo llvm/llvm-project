@@ -278,7 +278,9 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE
                            ${common_compile_options} --target=${LIBC_GPU_TARGET_TRIPLE})
     if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
-      target_compile_options(${internal_target_name} PRIVATE -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
+      target_compile_options(${internal_target_name} PRIVATE
+                             "SHELL:-Xclang -mcode-object-version=none"
+                             -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto)
     elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
       get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
       target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
