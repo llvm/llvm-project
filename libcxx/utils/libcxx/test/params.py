@@ -293,15 +293,16 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["unchecked", "hardened", "debug"],
+        choices=["unchecked", "hardened", "safe", "debug"],
         type=str,
         default="unchecked",
-        help="Whether to enable the hardened mode or the debug mode when compiling the test suite. This is only "
+        help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
         "meaningful when running the tests against libc++.",
         actions=lambda hardening_mode: filter(
             None,
             [
                 AddCompileFlag("-D_LIBCPP_ENABLE_HARDENED_MODE=1") if hardening_mode == "hardened" else None,
+                AddCompileFlag("-D_LIBCPP_ENABLE_SAFE_MODE=1")     if hardening_mode == "safe" else None,
                 AddCompileFlag("-D_LIBCPP_ENABLE_DEBUG_MODE=1")    if hardening_mode == "debug" else None,
                 AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],

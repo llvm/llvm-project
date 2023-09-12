@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that assertions trigger without the user having to do anything when the debug mode has been enabled
-// by default.
+// This test ensures that assertions trigger without the user having to do anything when the safe mode has been
+// enabled by default.
 
-// REQUIRES: libcpp-hardening-mode=debug
+// REQUIRES: libcpp-hardening-mode=safe
 // `check_assertion.h` is only available starting from C++11.
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.
 // REQUIRES: has-unix-headers
+// XFAIL: availability-verbose_abort-missing
 
 #include <cassert>
 #include "check_assertion.h"
