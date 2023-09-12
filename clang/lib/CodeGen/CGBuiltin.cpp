@@ -9617,11 +9617,10 @@ Value *CodeGenFunction::EmitSMEReadWrite(const SVETypeFlags &TypeFlags,
                                          unsigned IntID) {
   auto *VecTy = getSVEType(TypeFlags);
   Function *F = CGM.getIntrinsic(IntID, VecTy);
-  if (TypeFlags.isReadZA()) {
+  if (TypeFlags.isReadZA())
     Ops[1] = EmitSVEPredicateCast(Ops[1], VecTy);
-  } else if (TypeFlags.isWriteZA()) {
+  else if (TypeFlags.isWriteZA())
     Ops[2] = EmitSVEPredicateCast(Ops[2], VecTy);
-  }
   return Builder.CreateCall(F, Ops);
 }
 
