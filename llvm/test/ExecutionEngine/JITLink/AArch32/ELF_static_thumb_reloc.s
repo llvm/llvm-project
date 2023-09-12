@@ -4,6 +4,8 @@
 # RUN: llvm-jitlink -noexec -slab-address 0x76ff0000 -slab-allocate 10Kb \
 # RUN:              -slab-page-size 4096 -show-entry-es -check %s %t.o
 
+# This test requires the RuntimeDyldChecker fix from review D158280
+# XFAIL: *
 
 	.text
 	.syntax unified
