@@ -505,6 +505,7 @@ namespace {
     SDValue visitUINT_TO_FP(SDNode *N);
     SDValue visitFP_TO_SINT(SDNode *N);
     SDValue visitFP_TO_UINT(SDNode *N);
+    SDValue visitXRINT(SDNode *N);
     SDValue visitFP_ROUND(SDNode *N);
     SDValue visitFP_EXTEND(SDNode *N);
     SDValue visitFNEG(SDNode *N);
@@ -1912,6 +1913,7 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 
 SDValue DAGCombiner::visit(SDNode *N) {
   switch (N->getOpcode()) {
+    // clang-format off
   default: break;
   case ISD::TokenFactor:        return visitTokenFactor(N);
   case ISD::MERGE_VALUES:       return visitMERGE_VALUES(N);
@@ -2011,6 +2013,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::UINT_TO_FP:         return visitUINT_TO_FP(N);
   case ISD::FP_TO_SINT:         return visitFP_TO_SINT(N);
   case ISD::FP_TO_UINT:         return visitFP_TO_UINT(N);
+  case ISD::LRINT:
+  case ISD::LLRINT:             return visitXRINT(N);
   case ISD::FP_ROUND:           return visitFP_ROUND(N);
   case ISD::FP_EXTEND:          return visitFP_EXTEND(N);
   case ISD::FNEG:               return visitFNEG(N);
@@ -2064,6 +2068,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
+    // clang-format on
   }
   return SDValue();
 }
@@ -17478,6 +17483,21 @@ SDValue DAGCombiner::visitFP_TO_UINT(SDNode *N) {
     return DAG.getNode(ISD::FP_TO_UINT, SDLoc(N), VT, N0);
 
   return FoldIntToFPToInt(N, DAG);
+}
+
+SDValue DAGCombiner::visitXRINT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // fold (lrint|llrint undef) -> undef
+  if (N0.isUndef())
+    return DAG.getUNDEF(VT);
+
+  // fold (lrint|llrint c1fp) -> c1
+  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
+    return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N0);
+
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {

@@ -2206,10 +2206,13 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   #endif
       report_fatal_error("Do not know how to promote this operator's operand!");
 
+      // clang-format off
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
     case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT: R = PromoteFloatOp_FP_TO_XINT(N, OpNo); break;
+    case ISD::FP_TO_UINT:
+    case ISD::LRINT:
+    case ISD::LLRINT:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
     case ISD::FP_TO_SINT_SAT:
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
@@ -2217,6 +2220,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::SELECT_CC:  R = PromoteFloatOp_SELECT_CC(N, OpNo); break;
     case ISD::SETCC:      R = PromoteFloatOp_SETCC(N, OpNo); break;
     case ISD::STORE:      R = PromoteFloatOp_STORE(N, OpNo); break;
+                          // clang-format on
   }
 
   if (R.getNode())
@@ -2251,7 +2255,7 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo) {
 }
 
 // Convert the promoted float value to the desired integer type
-SDValue DAGTypeLegalizer::PromoteFloatOp_FP_TO_XINT(SDNode *N, unsigned OpNo) {
+SDValue DAGTypeLegalizer::PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo) {
   SDValue Op = GetPromotedFloat(N->getOperand(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), Op);
 }
