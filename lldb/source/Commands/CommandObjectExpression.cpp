@@ -252,6 +252,10 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     options.SetTimeout(std::chrono::microseconds(timeout));
   else
     options.SetTimeout(std::nullopt);
+
+  // BEGIN SWIFT
+  options.SetBindGenericTypes(bind_generic_types);
+  // END SWIFT
   return options;
 }
 
