@@ -795,7 +795,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
       TTI.getArithmeticInstrCost(ScalarOpcode, VecTy->getScalarType());
   // The existing splats may be kept around if other instructions use them.
   InstructionCost CostToKeepSplats =
-      SplatCost * (Op0->getNumUses() + Op1->getNumUses() - 2);
+      (SplatCost * !Op0->hasOneUse()) + (SplatCost * !Op1->hasOneUse());
   InstructionCost NewCost = ScalarOpCost + SplatCost + CostToKeepSplats;
 
   LLVM_DEBUG(dbgs() << "Found a VP Intrinsic to scalarize: " << VPI
