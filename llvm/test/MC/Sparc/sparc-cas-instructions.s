@@ -28,12 +28,12 @@ casxl [%i0], %l6, %o2
 casxa [%i0] %asi, %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casxa [%i0] #ASI_P, %l6, %o2   ! encoding: [0xd5,0xf6,0x10,0x16]
+! V9: casx [%i0], %l6, %o2   ! encoding: [0xd5,0xf6,0x10,0x16]
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casxa [%i0] 0x80, %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casxa [%i0] #ASI_P, %l6, %o2   ! encoding: [0xd5,0xf6,0x10,0x16]
+! V9: casx [%i0], %l6, %o2   ! encoding: [0xd5,0xf6,0x10,0x16]
 ! LEON: error: instruction requires a CPU feature not currently enabled
 casxa [%i0] (0x40+0x40), %l6, %o2
 
@@ -43,11 +43,11 @@ casxa [%i0] (0x40+0x40), %l6, %o2
 casa [%i0] %asi, %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casa [%i0] #ASI_P, %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
+! V9: cas [%i0], %l6, %o2          ! encoding: [0xd5,0xe6,0x10,0x16]
 ! LEON: casa [%i0] 128, %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
 casa [%i0] 0x80, %l6, %o2
 
 ! V8: error: instruction requires a CPU feature not currently enabled
-! V9: casa [%i0] #ASI_P, %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
+! V9: cas [%i0], %l6, %o2          ! encoding: [0xd5,0xe6,0x10,0x16]
 ! LEON: casa [%i0] 128, %l6, %o2   ! encoding: [0xd5,0xe6,0x10,0x16]
 casa [%i0] (0x40+0x40), %l6, %o2
