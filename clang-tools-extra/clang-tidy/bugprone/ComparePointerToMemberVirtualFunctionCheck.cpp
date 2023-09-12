@@ -23,7 +23,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-// Matches a `UnaryOperator` whose operator is pre-increment:
 AST_MATCHER(CXXMethodDecl, isVirtual) { return Node.isVirtual(); }
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
