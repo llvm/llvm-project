@@ -249,6 +249,23 @@ template <> struct PointerLikeTypeTraits<clang::FileEntryRef> {
       const clang::FileEntryRef::MapEntry *>::NumLowBitsAvailable;
 };
 
+template <> struct PointerLikeTypeTraits<clang::OptionalFileEntryRef> {
+  static inline void *getAsVoidPointer(clang::OptionalFileEntryRef File) {
+    if (!File)
+      return nullptr;
+    return PointerLikeTypeTraits<clang::FileEntryRef>::getAsVoidPointer(*File);
+  }
+
+  static inline clang::OptionalFileEntryRef getFromVoidPointer(void *Ptr) {
+    if (!Ptr)
+      return std::nullopt;
+    return PointerLikeTypeTraits<clang::FileEntryRef>::getFromVoidPointer(Ptr);
+  }
+
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<clang::FileEntryRef>::NumLowBitsAvailable;
+};
+
 /// Specialisation of DenseMapInfo for FileEntryRef.
 template <> struct DenseMapInfo<clang::FileEntryRef> {
   static inline clang::FileEntryRef getEmptyKey() {
