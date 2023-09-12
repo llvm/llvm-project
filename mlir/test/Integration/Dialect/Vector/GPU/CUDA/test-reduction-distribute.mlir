@@ -1,3 +1,5 @@
+// REQUIRES: host-supports-nvptx
+
 // RUN: mlir-opt %s -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" -canonicalize |\
 // RUN: mlir-opt -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if |\
 // RUN: mlir-opt -lower-affine -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm \
