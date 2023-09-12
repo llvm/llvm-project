@@ -100,11 +100,6 @@ class Boolean final {
     return Boolean(!Value.isZero());
   }
 
-  template <bool SrcSign>
-  static Boolean from(Integral<0, SrcSign> Value) {
-    return Boolean(!Value.isZero());
-  }
-
   static Boolean zero() { return from(false); }
 
   template <typename T>
