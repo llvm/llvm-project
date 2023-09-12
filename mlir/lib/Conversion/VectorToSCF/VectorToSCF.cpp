@@ -314,15 +314,18 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
 /// the VectorType into the MemRefType.
 ///
 /// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
-static MemRefType unpackOneDim(MemRefType type) {
+static FailureOr<MemRefType> unpackOneDim(MemRefType type) {
   auto vectorType = dyn_cast<VectorType>(type.getElementType());
+  // Vectors with leading scalable dims are not supported.
+  // It may be possible to support these in future by using dynamic memref dims.
+  if (vectorType.getScalableDims().front())
+    return failure();
   auto memrefShape = type.getShape();
   SmallVector<int64_t, 8> newMemrefShape;
   newMemrefShape.append(memrefShape.begin(), memrefShape.end());
   newMemrefShape.push_back(vectorType.getDimSize(0));
   return MemRefType::get(newMemrefShape,
-                         VectorType::get(vectorType.getShape().drop_front(),
-                                         vectorType.getElementType()));
+                         VectorType::Builder(vectorType).dropDim(0));
 }
 
 /// Given a transfer op, find the memref from which the mask is loaded. This
@@ -541,6 +544,10 @@ LogicalResult checkPrepareXferOp(OpTy xferOp,
   if (xferOp->hasAttr(kPassLabel))
     return failure();
   if (xferOp.getVectorType().getRank() <= options.targetRank)
+    return failure();
+  // Currently the unpacking of the leading dimension into the memref is not
+  // supported for scalable dimensions.
+  if (xferOp.getVectorType().getScalableDims().front())
     return failure();
   if (isTensorOp(xferOp) && !options.lowerTensors)
     return failure();
@@ -866,8 +873,11 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     auto dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
     auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
     auto castedDataType = unpackOneDim(dataBufferType);
+    if (failed(castedDataType))
+      return failure();
+
     auto castedDataBuffer =
-        locB.create<vector::TypeCastOp>(castedDataType, dataBuffer);
+        locB.create<vector::TypeCastOp>(*castedDataType, dataBuffer);
 
     // If the xferOp has a mask: Find and cast mask buffer.
     Value castedMaskBuffer;
@@ -882,7 +892,9 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
         //   be broadcasted.)
         castedMaskBuffer = maskBuffer;
       } else {
-        auto castedMaskType = unpackOneDim(maskBufferType);
+        // It's safe to assume the mask buffer can be unpacked if the data
+        // buffer was unpacked.
+        auto castedMaskType = *unpackOneDim(maskBufferType);
         castedMaskBuffer =
             locB.create<vector::TypeCastOp>(castedMaskType, maskBuffer);
       }
@@ -891,7 +903,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // Loop bounds and step.
     auto lb = locB.create<arith::ConstantIndexOp>(0);
     auto ub = locB.create<arith::ConstantIndexOp>(
-        castedDataType.getDimSize(castedDataType.getRank() - 1));
+        castedDataType->getDimSize(castedDataType->getRank() - 1));
     auto step = locB.create<arith::ConstantIndexOp>(1);
     // TransferWriteOps that operate on tensors return the modified tensor and
     // require a loop state.
@@ -1074,8 +1086,14 @@ struct UnrollTransferReadConversion
     auto vec = getResultVector(xferOp, rewriter);
     auto vecType = dyn_cast<VectorType>(vec.getType());
     auto xferVecType = xferOp.getVectorType();
-    auto newXferVecType = VectorType::get(xferVecType.getShape().drop_front(),
-                                          xferVecType.getElementType());
+
+    if (xferVecType.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
+      return failure();
+    }
+
+    VectorType newXferVecType = VectorType::Builder(xferVecType).dropDim(0);
+
     int64_t dimSize = xferVecType.getShape()[0];
 
     // Generate fully unrolled loop of transfer ops.
