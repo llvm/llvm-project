@@ -23,6 +23,9 @@ TEST(LlvmLibcRandTest, UnsetSeed) {
     vals[i] = val;
   }
 
+  // The C standard specifies that if 'srand' is never called it should behave
+  // as if 'srand' was called with a value of 1. If we seed the value with 1 we
+  // should get the same sequence as the unseeded version.
   __llvm_libc::srand(1);
   for (size_t i = 0; i < 1000; ++i)
     ASSERT_EQ(__llvm_libc::rand(), vals[i]);
