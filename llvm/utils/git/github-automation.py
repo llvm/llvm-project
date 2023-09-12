@@ -83,7 +83,7 @@ class PRSubscriber:
         self.org = github.Github(token).get_organization(self.repo.organization.login)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
         self._team_name = "pr-subscribers-{}".format(
-            label_name.replace('+', 'x')
+            label_name.replace("+", "x")
         ).lower()
 
     def run(self) -> bool:
