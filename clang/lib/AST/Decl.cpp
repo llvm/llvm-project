@@ -4510,7 +4510,8 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   if (!Ctx.getTargetInfo().getCXXABI().isMicrosoft())
     return true;
 
-  // MS ABI: nonzero if class type with class type fields
+  // MS ABI: has nonzero size if it is a class type with class type fields,
+  // whether or not they have nonzero size
   return !llvm::any_of(CXXRD->fields(), [](const FieldDecl *Field) {
     return Field->getType()->getAs<RecordType>();
   });

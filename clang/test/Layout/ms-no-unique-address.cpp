@@ -336,3 +336,46 @@ namespace VBases {
   // CHECK-NEXT:      | [sizeof=16, align=8,
   // CHECK-NEXT:      |  nvsize=16, nvalign=8]
 }
+
+namespace ZeroSize {
+  struct empty {};
+
+  union empty_union {};
+
+  struct empty_union_container {
+    [[msvc::no_unique_address]] empty_union x;
+  };
+
+  union union_of_empty {
+    [[msvc::no_unique_address]] empty x;
+  };
+
+  struct struct_of_empty {
+    [[msvc::no_unique_address]] empty x;
+  };
+
+  struct union_of_empty_container {
+    [[msvc::no_unique_address]] union_of_empty x;
+  };
+  static_assert(sizeof(union_of_empty_container) == 1);
+  // CHECK:*** Dumping AST Record Layout
+  // CHECK:         0 | struct ZeroSize::union_of_empty_container
+  // CHECK-NOT: (empty)
+  // CHECK:         0 |   union ZeroSize::union_of_empty x (empty)
+  // CHECK:         0 |     struct ZeroSize::empty x (empty)
+  // CHECK:           | [sizeof=1, align=1,
+  // CHECK:           |  nvsize=1, nvalign=1] 
+
+  struct struct_of_empty_container {
+    [[msvc::no_unique_address]] struct_of_empty x;
+  }; 
+  static_assert(sizeof(struct_of_empty_container) == 1);
+  // CHECK:*** Dumping AST Record Layout
+  // CHECK:         0 | struct ZeroSize::struct_of_empty_container
+  // CHECK-NOT: (empty)
+  // CHECK:         0 |   struct ZeroSize::struct_of_empty x (empty)
+  // CHECK:         0 |     struct ZeroSize::empty x (empty)
+  // CHECK:           | [sizeof=1, align=1,
+  // CHECK:           |  nvsize=1, nvalign=1] 
+
+}

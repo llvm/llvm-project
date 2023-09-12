@@ -2599,10 +2599,6 @@ public:
       const CXXRecordDecl *RD) const;
   const ASTContext &Context;
   EmptySubobjectMap *EmptySubobjects;
-  llvm::SpecificBumpPtrAllocator<BaseSubobjectInfo> BaseSubobjectInfoAllocator;
-  typedef llvm::DenseMap<const CXXRecordDecl *, BaseSubobjectInfo *>
-      BaseSubobjectInfoMapTy;
-  BaseSubobjectInfoMapTy VirtualBaseInfo;
 
   /// The size of the record being laid out.
   CharUnits Size;
@@ -2873,11 +2869,11 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   bool CheckLeadingLayout = !PrimaryBase;
   // Iterate through the bases and lay out the non-virtual ones.
   for (const CXXBaseSpecifier &Base : RD->bases()) {
-    const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
-    const ASTRecordLayout &BaseLayout = Context.getASTRecordLayout(BaseDecl);
-
     if (Base.isVirtual())
       continue;
+
+    const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    const ASTRecordLayout &BaseLayout = Context.getASTRecordLayout(BaseDecl);
 
     // Only lay out bases without extendable VFPtrs on the second pass.
     if (BaseLayout.hasExtendableVFPtr()) {
@@ -3146,7 +3142,6 @@ void MicrosoftRecordLayoutBuilder::injectVFPtr(const CXXRecordDecl *RD) {
 void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
   if (!HasVBPtr)
     return;
-
   // Vtordisps are always 4 bytes (even in 64-bit mode)
   CharUnits VtorDispSize = CharUnits::fromQuantity(4);
   CharUnits VtorDispAlignment = VtorDispSize;
