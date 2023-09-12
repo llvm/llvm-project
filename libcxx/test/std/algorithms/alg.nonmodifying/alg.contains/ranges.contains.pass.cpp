@@ -200,7 +200,7 @@ public:
 };
 
 constexpr bool test() {
-  types::for_each(types::type_list<char, wchar_t, int, long, 
+  types::for_each(types::type_list<char, short, int, long, long long,
                   TriviallyComparable<char>, TriviallyComparable<wchar_t>>{},
                   []<class T> {
                     types::for_each(types::cpp20_input_iterator_list<T*>{}, 
