@@ -283,7 +283,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
       .minScalar(0, s32)
-      .libcallFor({s32, s64, v2s32, v4s32, v2s64});
+      .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_INSERT)
       .legalIf(all(typeInSet(0, {s32, s64, p0}),
