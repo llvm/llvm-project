@@ -43,12 +43,10 @@ public:
 
   IntegralAP(APInt V) : V(V) {}
   IntegralAP(APSInt V) : V(V) {}
-  IntegralAP(bool b) : V(APInt(8, b, Signed)) {}
-  /// Bullshit value for initialized variables.
+  /// Arbitrary value for initialized variables.
   IntegralAP() : V(APSInt::getMaxValue(1024, Signed)) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
-  // bool operator <=> (const IntegralAP &RHS) const = default;
   bool operator>(IntegralAP RHS) const { return V > RHS.V; }
   bool operator>=(IntegralAP RHS) const { return V >= RHS.V; }
   bool operator<(IntegralAP RHS) const { return V < RHS.V; }
@@ -85,7 +83,7 @@ public:
   template <unsigned Bits, bool InputSigned>
   static IntegralAP from(Integral<Bits, InputSigned> I) {
     assert(InputSigned);
-    /// TODO: Take bits parameter.
+    /// FIXME: Take bits parameter.
     APSInt Copy =
         APSInt(APInt(128, static_cast<int64_t>(I), InputSigned), !Signed);
     Copy.setIsSigned(Signed);
@@ -108,13 +106,13 @@ public:
   APSInt toAPSInt(unsigned Bits = 0) const { return V; }
   APValue toAPValue() const { return APValue(V); }
 
-  bool isZero() const { return false; }
-  bool isPositive() const { return true; }
-  bool isNegative() const { return false; }
-  bool isMin() const { return false; }
-  bool isMax() const { return false; }
+  bool isZero() const { return V.isZero(); }
+  bool isPositive() const { return V.isNonNegative(); }
+  bool isNegative() const { return !V.isNonNegative(); }
+  bool isMin() const { return V.isMinValue(); }
+  bool isMax() const { return V.isMaxValue(); }
   static bool isSigned() { return Signed; }
-  bool isMinusOne() const { return false; }
+  bool isMinusOne() const { return Signed && V == -1; }
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
 
@@ -142,12 +140,11 @@ public:
   }
 
   static bool add(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    /// TODO: Gotta check if the result fits into OpBits bits.
     return CheckAddUB(A, B, OpBits, R);
   }
 
   static bool sub(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
-    /// TODO: Gotta check if the result fits into OpBits bits.
+    /// FIXME: Gotta check if the result fits into OpBits bits.
     return CheckSubUB(A, B, R);
   }
 
