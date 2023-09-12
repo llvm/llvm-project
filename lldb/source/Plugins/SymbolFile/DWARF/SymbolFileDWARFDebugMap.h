@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "UniqueDWARFASTType.h"
+#include "lldb/Utility/StructuredData.h"
 
 class SymbolFileDWARF;
 class DWARFCompileUnit;
@@ -147,6 +148,10 @@ public:
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 
   void DumpClangAST(lldb_private::Stream &s) override;
+
+  /// List separate oso files.
+  bool
+  GetSeparateDebugInfo(lldb_private::StructuredData::Dictionary &d) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
