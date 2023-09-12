@@ -23,9 +23,6 @@ namespace llvm {
 namespace jitlink {
 namespace aarch32 {
 
-/// Check whether the given target flags are set for this Symbol.
-bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags);
-
 /// JITLink-internal AArch32 fixup kinds
 enum EdgeKind_aarch32 : Edge::Kind {
 
