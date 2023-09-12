@@ -59,3 +59,7 @@
 // RUN: not %clang --target=thumbeb-none-elf -o %t.o %s 2> %t.err
 // RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-THUMBEB-INVALID-ENV %s
 // CHECK-THUMBEB-INVALID-ENV: warning: mismatch between architecture and environment in target triple 'thumbeb-none-elf'; did you mean 'thumbeb-none-eabi'? [-Winvalid-command-line-argument]{{$}}
+
+// RUN: not %clang --target=powerpc-apple-darwin -o /dev/null %s 2> %t.err
+// RUN: FileCheck --input-file=%t.err --check-prefix=CHECK-PPCMAC %s
+// CHECK-PPCMAC: error: unknown target triple 'unknown-apple-macosx{{.*}}'
