@@ -275,6 +275,8 @@ set(cuda_wrapper_files
 
 set(cuda_wrapper_bits_files
   cuda_wrappers/bits/shared_ptr_base.h
+  cuda_wrappers/bits/basic_string.h
+  cuda_wrappers/bits/basic_string.tcc
 )
 
 set(ppc_wrapper_files
