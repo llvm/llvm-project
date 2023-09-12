@@ -1504,19 +1504,32 @@ public:
            TTI.isLegalMaskedLoad(DataType, Alignment);
   }
 
+  /// Returns true if the target machine supports masked prefetch operation
+  /// for the given \p DataType and kind of access to \p Ptr.
+  bool isLegalMaskedPrefetch(Type *DataType, Value *Ptr, Align Alignment,
+                             ElementCount VF) const {
+    auto *VTy = DataType;
+    if (VF.isVector())
+      VTy = VectorType::get(DataType, VF);
+    return Legal->isConsecutivePtr(DataType, Ptr) &&
+           TTI.isLegalMaskedPrefetch(VTy, Alignment);
+  }
+
   /// Returns true if the target machine can represent \p V as a masked gather
   /// or scatter operation.
   bool isLegalGatherOrScatter(Value *V, ElementCount VF) {
     bool LI = isa<LoadInst>(V);
     bool SI = isa<StoreInst>(V);
-    if (!LI && !SI)
+    bool PF = isa<PrefetchInst>(V);
+    if (!LI && !SI && !PF)
       return false;
-    auto *Ty = getLoadStoreType(V);
-    Align Align = getLoadStoreAlignment(V);
+    auto *Ty = getLdStPfType(V);
+    Align Align = getLdStPfAlignment(V);
     if (VF.isVector())
       Ty = VectorType::get(Ty, VF);
     return (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
-           (SI && TTI.isLegalMaskedScatter(Ty, Align));
+           (SI && TTI.isLegalMaskedScatter(Ty, Align)) ||
+           (PF && TTI.isLegalMaskedGatherPrefetch(Ty, Align));
   }
 
   /// Returns true if the target machine supports all of the reduction
@@ -3911,11 +3924,21 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   switch(I->getOpcode()) {
   default:
     return true;
-  case Instruction::Call:
+  case Instruction::Call: {
     if (VF.isScalar())
       return true;
-    return CallWideningDecisions.at(std::make_pair(cast<CallInst>(I), VF))
-               .Kind == CM_Scalarize;
+    if (!isa<PrefetchInst>(I))
+      return CallWideningDecisions.at(std::make_pair(cast<CallInst>(I), VF))
+                 .Kind == CM_Scalarize;
+    auto *Ptr = getPrefetchPointerOperand(I);
+    auto *Ty = getPrefetchPseudoType(I);
+    Type *VTy = Ty;
+    if (VF.isVector())
+      VTy = VectorType::get(Ty, VF);
+    const Align Alignment = getPrefetchPseudoAlignment(I);
+    return !(isLegalMaskedPrefetch(Ty, Ptr, Alignment, VF) ||
+             TTI.isLegalMaskedGatherPrefetch(VTy, Alignment));
+  }
   case Instruction::Load:
   case Instruction::Store: {
     auto *Ptr = getLoadStorePointerOperand(I);
@@ -4122,10 +4145,11 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
     Instruction *I, ElementCount VF) {
   // Get and ensure we have a valid memory instruction.
-  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
+  assert((isa<LoadInst, StoreInst, PrefetchInst>(I)) &&
+         "Invalid memory instruction");
 
-  auto *Ptr = getLoadStorePointerOperand(I);
-  auto *ScalarTy = getLoadStoreType(I);
+  auto *Ptr = getLdStPfPointerOperand(I);
+  auto *ScalarTy = getLdStPfType(I);
 
   // In order to be widened, the pointer should be consecutive, first of all.
   if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
@@ -4142,6 +4166,14 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
+  // If the instruction is a prefetch, check if it is supported by the target
+  // machine.
+  if (isa<PrefetchInst>(I)) {
+    auto *Ptr = getPrefetchPointerOperand(I);
+    auto *Ty = getPrefetchPseudoType(I);
+    const Align Alignment = getPrefetchPseudoAlignment(I);
+    return isLegalMaskedPrefetch(Ty, Ptr, Alignment, VF);
+  }
   return true;
 }
 
@@ -6012,11 +6044,11 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  Type *ValTy = getLoadStoreType(I);
+  Type *ValTy = getLdStPfType(I);
   auto SE = PSE.getSE();
 
-  unsigned AS = getLoadStoreAddressSpace(I);
-  Value *Ptr = getLoadStorePointerOperand(I);
+  unsigned AS = getLdStPfAddressSpace(I);
+  Value *Ptr = getLdStPfPointerOperand(I);
   Type *PtrTy = ToVectorTy(Ptr->getType(), VF);
   // NOTE: PtrTy is a vector to signal `TTI::getAddressComputationCost`
   //       that it is being called from this specific place.
@@ -6032,7 +6064,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // Don't pass *I here, since it is scalar but will actually be part of a
   // vectorized loop where the user of it is a vectorized instruction.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  const Align Alignment = getLoadStoreAlignment(I);
+  const Align Alignment = getLdStPfAlignment(I);
   Cost += VF.getKnownMinValue() * TTI.getMemoryOpCost(I->getOpcode(),
                                                       ValTy->getScalarType(),
                                                       Alignment, AS, CostKind);
@@ -6067,16 +6099,16 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 InstructionCost
 LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                                     ElementCount VF) {
-  Type *ValTy = getLoadStoreType(I);
+  Type *ValTy = getLdStPfType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  Value *Ptr = getLoadStorePointerOperand(I);
-  unsigned AS = getLoadStoreAddressSpace(I);
+  Value *Ptr = getLdStPfPointerOperand(I);
+  unsigned AS = getLdStPfAddressSpace(I);
   int ConsecutiveStride = Legal->isConsecutivePtr(ValTy, Ptr);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
          "Stride should be 1 or -1 for consecutive memory access");
-  const Align Alignment = getLoadStoreAlignment(I);
+  const Align Alignment = getLdStPfAlignment(I);
   InstructionCost Cost = 0;
   if (Legal->isMaskRequired(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
@@ -6099,11 +6131,16 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                 ElementCount VF) {
   assert(Legal->isUniformMemOp(*I, VF));
 
-  Type *ValTy = getLoadStoreType(I);
+  Type *ValTy = getLdStPfType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  const Align Alignment = getLoadStoreAlignment(I);
-  unsigned AS = getLoadStoreAddressSpace(I);
+  const Align Alignment = getLdStPfAlignment(I);
+  unsigned AS = getLdStPfAddressSpace(I);
   enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  if (isa<PrefetchInst>(I)) {
+    return TTI.getAddressComputationCost(ValTy) +
+           TTI.getMemoryOpCost(Instruction::Call, ValTy, Alignment, AS,
+                               CostKind);
+  }
   if (isa<LoadInst>(I)) {
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
@@ -6125,10 +6162,10 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
 InstructionCost
 LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                  ElementCount VF) {
-  Type *ValTy = getLoadStoreType(I);
+  Type *ValTy = getLdStPfType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
-  const Align Alignment = getLoadStoreAlignment(I);
-  const Value *Ptr = getLoadStorePointerOperand(I);
+  const Align Alignment = getLdStPfAlignment(I);
+  const Value *Ptr = getLdStPfPointerOperand(I);
 
   return TTI.getAddressComputationCost(VectorTy) +
          TTI.getGatherScatterOpCost(
@@ -6355,9 +6392,9 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // Calculate scalar cost only. Vectorization cost should be ready at this
   // moment.
   if (VF.isScalar()) {
-    Type *ValTy = getLoadStoreType(I);
-    const Align Alignment = getLoadStoreAlignment(I);
-    unsigned AS = getLoadStoreAddressSpace(I);
+    Type *ValTy = getLdStPfType(I);
+    const Align Alignment = getLdStPfAlignment(I);
+    unsigned AS = getLdStPfAddressSpace(I);
 
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
     return TTI.getAddressComputationCost(ValTy) +
@@ -6458,7 +6495,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks()) {
     // For each instruction in the old loop.
     for (Instruction &I : *BB) {
-      Value *Ptr =  getLoadStorePointerOperand(&I);
+      Value *Ptr = getLdStPfPointerOperand(&I);
       if (!Ptr)
         continue;
 
@@ -6518,7 +6555,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       if (memoryInstructionCanBeWidened(&I, VF)) {
         InstructionCost Cost = getConsecutiveMemOpCost(&I, VF);
         int ConsecutiveStride = Legal->isConsecutivePtr(
-            getLoadStoreType(&I), getLoadStorePointerOperand(&I));
+            getLdStPfType(&I), getLdStPfPointerOperand(&I));
         assert((ConsecutiveStride == 1 || ConsecutiveStride == -1) &&
                "Expected consecutive stride.");
         InstWidening Decision =
@@ -7116,8 +7153,23 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
 
     return TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }
-  case Instruction::Call:
+  case Instruction::Call: {
+    if (isa<PrefetchInst>(I)) {
+      ElementCount Width = VF;
+      if (Width.isVector()) {
+        InstWidening Decision = getWideningDecision(I, Width);
+        assert(Decision != CM_Unknown &&
+               "CM decision should be taken at this point");
+        if (getWideningCost(I, VF) == InstructionCost::getInvalid())
+          return InstructionCost::getInvalid();
+        if (Decision == CM_Scalarize)
+          Width = ElementCount::getFixed(1);
+      }
+      VectorTy = ToVectorTy(getLdStPfType(I), Width);
+      return getMemoryInstructionCost(I, VF);
+    }
     return getVectorCallCost(cast<CallInst>(I), VF);
+  }
   case Instruction::ExtractValue:
     return TTI.getInstructionCost(I, TTI::TCK_RecipThroughput);
   case Instruction::Alloca:
@@ -8048,7 +8100,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
                                                 ArrayRef<VPValue *> Operands,
                                                 VFRange &Range,
                                                 VPlanPtr &Plan) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I) || isa<PrefetchInst>(I)) &&
          "Must be called with either a load or store");
 
   auto willWiden = [&](ElementCount VF) -> bool {
@@ -8079,18 +8131,23 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
 
-  VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
+  VPValue *Ptr =
+      (isa<LoadInst>(I) || isa<PrefetchInst>(I)) ? Operands[0] : Operands[1];
   if (Consecutive) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
-    auto *VectorPtr = new VPVectorPointerRecipe(
-        Ptr, getLoadStoreType(I), Reverse, GEP ? GEP->isInBounds() : false,
-        I->getDebugLoc());
+    auto *VectorPtr = new VPVectorPointerRecipe(Ptr, getLdStPfType(I), Reverse,
+                                                GEP ? GEP->isInBounds() : false,
+                                                I->getDebugLoc());
     Builder.getInsertBlock()->appendRecipe(VectorPtr);
     Ptr = VectorPtr;
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenMemoryInstructionRecipe(*Load, Ptr, Mask, Consecutive,
+                                              Reverse);
+
+  if (PrefetchInst *Prefetch = dyn_cast<PrefetchInst>(I))
+    return new VPWidenMemoryInstructionRecipe(*Prefetch, Ptr, Mask, Consecutive,
                                               Reverse);
 
   StoreInst *Store = cast<StoreInst>(I);
@@ -8498,10 +8555,12 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
           [&](ElementCount VF) { return VF.isScalar(); }, Range))
     return nullptr;
 
-  if (auto *CI = dyn_cast<CallInst>(Instr))
+  if (isa<CallInst>(Instr) && !isa<PrefetchInst>(Instr)) {
+    auto *CI = dyn_cast<CallInst>(Instr);
     return toVPRecipeResult(tryToWidenCall(CI, Operands, Range, Plan));
+  }
 
-  if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
+  if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr) || isa<PrefetchInst>(Instr))
     return toVPRecipeResult(tryToWidenMemory(Instr, Operands, Range, Plan));
 
   if (!shouldWiden(Instr, Range))
@@ -9361,7 +9420,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   if (IsUniform) {
     // If the recipe is uniform across all parts (instead of just per VF), only
     // generate a single instance.
-    if ((isa<LoadInst>(UI) || isa<StoreInst>(UI)) &&
+    if ((isa<LoadInst>(UI) || isa<StoreInst>(UI) || isa<PrefetchInst>(UI)) &&
         all_of(operands(), [](VPValue *Op) {
           return Op->isDefinedOutsideVectorRegions();
         })) {
@@ -9391,6 +9450,16 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     return;
   }
 
+  // A prefetch of a loop varying value to a uniform address only needs the last
+  // copy of the store.
+  if (isa<PrefetchInst>(UI) &&
+      vputils::isUniformAfterVectorization(getOperand(0))) {
+    auto Lane = VPLane::getLastLaneForVF(State.VF);
+    State.ILV->scalarizeInstruction(UI, this, VPIteration(State.UF - 1, Lane),
+                                    State);
+    return;
+  }
+
   // Generate scalar instances for all VF lanes of all UF parts.
   assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
   const unsigned EndLane = State.VF.getKnownMinValue();
@@ -9405,15 +9474,17 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   // Attempt to issue a wide load.
   LoadInst *LI = dyn_cast<LoadInst>(&Ingredient);
   StoreInst *SI = dyn_cast<StoreInst>(&Ingredient);
+  PrefetchInst *PF = dyn_cast<PrefetchInst>(&Ingredient);
 
-  assert((LI || SI) && "Invalid Load/Store instruction");
+  assert((LI || SI || PF) && "Invalid Load/Store/Prefetch instruction");
   assert((!SI || StoredValue) && "No stored value provided for widened store");
   assert((!LI || !StoredValue) && "Stored value provided for widened load");
+  assert((!PF || !StoredValue) && "Stored value provided for widened prefetch");
 
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  Type *ScalarDataTy = getLdStPfType(&Ingredient);
 
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  const Align Alignment = getLdStPfAlignment(&Ingredient);
   bool CreateGatherScatter = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -9458,6 +9529,39 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
           NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
       }
       State.addMetadata(NewSI, SI);
+    }
+    return;
+  }
+
+  if (PF) {
+    State.setDebugLocFrom(PF->getDebugLoc());
+
+    Type *ESizeTy = Type::getInt32Ty(PF->getContext());
+    int32_t ESize = ScalarDataTy->getScalarSizeInBits() >> 3;
+    Value *ElemSize = ConstantInt::get(ESizeTy, ESize);
+    Value *RW = PF->getArgOperand(1);
+    Value *Locality = PF->getArgOperand(2);
+
+    for (unsigned Part = 0; Part < State.UF; ++Part) {
+      Instruction *NewPF = nullptr;
+      if (CreateGatherScatter) {
+        Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
+        Value *VectorGep = State.get(getAddr(), Part);
+        NewPF = Builder.CreateMaskedGatherPrefetch(VectorGep, ElemSize,
+                                                   MaskPart, RW, Locality);
+      } else {
+        auto *VecPtr = State.get(getAddr(), Part);
+        if (isMaskRequired)
+          NewPF = Builder.CreateMaskedPrefetch(
+              VecPtr, ElemSize, BlockInMaskParts[Part], RW, Locality);
+        else {
+          auto *MaskPart = Constant::getAllOnesValue(
+              VectorType::get(Type::getInt1Ty(DataTy->getContext()), DataTy));
+          NewPF = Builder.CreateMaskedPrefetch(VecPtr, ElemSize, MaskPart, RW,
+                                               Locality);
+        }
+      }
+      State.addMetadata(NewPF, PF);
     }
     return;
   }

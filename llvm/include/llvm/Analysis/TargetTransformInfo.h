@@ -755,6 +755,8 @@ public:
   bool isLegalMaskedStore(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked load.
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) const;
+  /// Return true if the target supports masked load.
+  bool isLegalMaskedPrefetch(Type *DataType, Align Alignment) const;
 
   /// Return true if the target supports nontemporal store.
   bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -769,6 +771,8 @@ public:
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked gather.
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const;
+  /// Return true if the target supports masked gather prefetch.
+  bool isLegalMaskedGatherPrefetch(Type *DataType, Align Alignment) const;
   /// Return true if the target forces scalarizing of llvm.masked.gather
   /// intrinsics.
   bool forceScalarizeMaskedGather(VectorType *Type, Align Alignment) const;
@@ -1830,12 +1834,14 @@ public:
     getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const = 0;
   virtual bool isLegalMaskedStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedLoad(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedPrefetch(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTStore(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalNTLoad(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalBroadcastLoad(Type *ElementTy,
                                     ElementCount NumElements) const = 0;
   virtual bool isLegalMaskedScatter(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedGather(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalMaskedGatherPrefetch(Type *DataType, Align Alignment) = 0;
   virtual bool forceScalarizeMaskedGather(VectorType *DataType,
                                           Align Alignment) = 0;
   virtual bool forceScalarizeMaskedScatter(VectorType *DataType,
@@ -2304,6 +2310,9 @@ public:
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedLoad(DataType, Alignment);
   }
+  bool isLegalMaskedPrefetch(Type *DataType, Align Alignment) override {
+    return Impl.isLegalMaskedPrefetch(DataType, Alignment);
+  }
   bool isLegalNTStore(Type *DataType, Align Alignment) override {
     return Impl.isLegalNTStore(DataType, Alignment);
   }
@@ -2319,6 +2328,9 @@ public:
   }
   bool isLegalMaskedGather(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedGather(DataType, Alignment);
+  }
+  bool isLegalMaskedGatherPrefetch(Type *DataType, Align Alignment) override {
+    return Impl.isLegalMaskedGatherPrefetch(DataType, Alignment);
   }
   bool forceScalarizeMaskedGather(VectorType *DataType,
                                   Align Alignment) override {

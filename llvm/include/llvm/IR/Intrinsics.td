@@ -2258,6 +2258,21 @@ def int_masked_compressstore:
             [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
              NoCapture<ArgIndex<1>>]>;
 
+def int_masked_prefetch:
+  DefaultAttrsIntrinsic<[],
+            [llvm_anyptr_ty,
+             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty],
+            [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn,
+             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+def int_masked_gather_prefetch:
+  DefaultAttrsIntrinsic<[],
+            [llvm_anyvector_ty,
+             llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn,
+             ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
                               [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;

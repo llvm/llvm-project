@@ -600,7 +600,7 @@ bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
 
 bool LoopVectorizationLegality::isUniformMemOp(Instruction &I,
                                                ElementCount VF) const {
-  Value *Ptr = getLoadStorePointerOperand(&I);
+  Value *Ptr = getLdStPfPointerOperand(&I);
   if (!Ptr)
     return false;
   // Note: There's nothing inherent which prevents predicated loads and
@@ -1286,6 +1286,12 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     // 3) element-by-element predicate check and scalar store.
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       MaskedOp.insert(SI);
+      continue;
+    }
+
+    // Prefetchs are handeled via masking
+    if (auto *PF = dyn_cast<PrefetchInst>(&I)) {
+      MaskedOp.insert(PF);
       continue;
     }
 

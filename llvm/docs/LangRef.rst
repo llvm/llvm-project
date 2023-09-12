@@ -23904,6 +23904,84 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+Masked Vector Prefetch and Gather Prefetch Intrinsics
+-----------------------------------------------------
+
+LLVM provides intrinsics for predicated vector prefetch and gather prefetch operations. The predicate is specified by a mask operand, which holds one bit per vector pointer element, switching a prefetch to the associated pointer on or off.  Masked vector prefetch Intrinsics are designed for  sequential memory access, and masked gather prefetch intrinsics are designed for arbitrary memory accesses.
+
+.. _int_mprefetch:
+
+'``llvm.masked.prefetch.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+       declare void @llvm.masked.prefetch.p0.v16i1(ptr <address>, i32 <element-size>, i32 <rw>, i32 <locality>, <16 x i1> <mask>)
+       declare void @llvm.masked.prefetch.p0.v8i1(ptr <address>, i32 <element-size>, i32 <rw>, i32 <locality>, <8 x i1> <mask>)
+       declare void @llvm.masked.prefetch.p0.v4i1(ptr <address>, i32 <element-size>, i32 <rw>, i32 <locality>, <4 x i1> <mask>)
+       declare void @llvm.masked.prefetch.p0.v2i1(ptr <address>, i32 <element-size>, i32 <rw>, i32 <locality>, <2 x i1> <mask>)
+
+Overview:
+"""""""""
+The '``llvm.masked.prefetch``' intrinsic is a hint to the code generator to insert a masked prefetch instruction if supported.
+Masked prefetches have no effect on the behavior of the program but can change its performance characteristics.
+
+Arguments:
+""""""""""
+address is the address to be prefetched, element-size is the byte size of the data pointed to by ptr, rw is the specifier determining if the fetch should be for a read (0) or write (1), and locality is a temporal locality specifier ranging from (0) - no locality, to (3) - extremely local keep in cache. The rw and locality type arguments must be constant integers.
+
+Semantics:
+""""""""""
+The '``llvm.masked.prefetch``' intrinsic is designed to prefetch to a selected vector address in a single IR operation. It is useful for targets that support vector masked prefetches and allows vectorizing predicated basic blocks on these targets. Other targets may support this intrinsic differently, for example by lowering it into a sequence of branches that guard scalar prefetch operations.
+This intrinsic does not modify the behavior of the program. In particular, prefetches cannot trap and do not produce a value. On targets that support this intrinsic, the prefetch can provide hints to the processor cache for better performance.
+
+.. _int_gather_prefetch:
+
+'``llvm.masked.gather.prefetch.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+        declare void @llvm.masked.gather.prefetch.v2p0(<2 x ptr> <ptrs>, i32 <element-size>, i32 <rw>, i32 <locality>, <2 x i1> <mask>)
+        declare void @llvm.masked.gather.prefetch.v4p0(<4 x ptr> <ptrs>, i32 <element-size>, i32 <rw>, i32 <locality>, <4 x i1> <mask>)
+
+Overview:
+"""""""""
+The '``llvm.masked.gather.prefetch``' intrinsic is a hint to the code generator to insert a masked gather prefetch instruction if supported.
+Masked gather prefetches have no effect on the behavior of the program but can change its performance characteristics.
+
+Arguments:
+""""""""""
+Ptrs is the address to be prefetched, element-size is the byte size of the data element pointed to by ptrs, rw is the specifier determining if the fetch should be for a read (0) or write (1), and locality is a temporal locality specifier ranging from (0) - no locality, to (3) - extremely local keep in cache. The rw and locality type arguments must be constant integers.
+
+Semantics:
+""""""""""
+The '``llvm.masked.gather.prefetch``' intrinsic is designed for conditional prefetch to arbitrary memory locations in a single IR operation. It is useful for targets that support vector masked gather prefetches and allows vectorizing basic blocks with data and control divergence. Other targets may support this intrinsic differently, for example by lowering it into a sequence of scalar prefetch operations. The semantics of this operation are equivalent to a sequence of conditional scalar prefetch. The mask restricts memory access to certain addresses.
+
+::
+
+       call void @llvm.masked.gather.prefetch.v4p0(<4 x ptr> %ptrs, i32 8, i32 0, i32 3, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+
+       ;; The gather with all-true mask is equivalent to the following instruction sequence
+       %ptr0 = extractelement <4 x ptr> %ptrs, i32 0
+       %ptr1 = extractelement <4 x ptr> %ptrs, i32 1
+       %ptr2 = extractelement <4 x ptr> %ptrs, i32 2
+       %ptr3 = extractelement <4 x ptr> %ptrs, i32 3
+
+       call void prefetch(ptr %ptr0, i32 0, i32 3, i32 1)
+       call void prefetch(ptr %ptr1, i32 0, i32 3, i32 1)
+       call void prefetch(ptr %ptr2, i32 0, i32 3, i32 1)
+       call void prefetch(ptr %ptr3, i32 0, i32 3, i32 1)
+
+This intrinsic does not modify the behavior of the program. In particular, prefetches cannot trap and do not produce a value. On targets that support this intrinsic, the prefetch can provide hints to the processor cache for better performance.
 
 Memory Use Markers
 ------------------
