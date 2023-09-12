@@ -55,11 +55,12 @@ uint64_t AArch64::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   return FeaturesMask;
 }
 
-bool AArch64::getExtensionFeatures(uint64_t InputExts,
-                                   std::vector<StringRef> &Features) {
+bool AArch64::getExtensionFeatures(
+    const AArch64::ExtensionBitset &InputExts,
+    std::vector<StringRef> &Features) {
   for (const auto &E : Extensions)
     /* INVALID and NONE have no feature name. */
-    if ((InputExts & E.ID) && !E.Feature.empty())
+    if (InputExts.test(E.ID) && !E.Feature.empty())
       Features.push_back(E.Feature);
 
   return true;
