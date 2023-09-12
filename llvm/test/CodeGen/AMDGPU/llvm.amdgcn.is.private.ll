@@ -1,12 +1,11 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIT %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIH %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}is_private_vgpr:
 ; GCN-DAG: {{flat|global|buffer}}_load_dwordx2 v{{\[[0-9]+}}:[[PTR_HI:[0-9]+]]]
-; CI-DAG: s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CIT: v_cmp_eq_u32_e32 vcc, s4, v[[PTR_HI]]
-; CIH: v_cmp_eq_u32_e32 vcc, s2, v[[PTR_HI]]
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11
+; CI: v_cmp_eq_u32_e32 vcc, [[APERTURE]], v[[PTR_HI]]
 
 ; GFX9: s_mov_b64 s[{{[0-9]+}}:[[HI:[0-9]+]]], src_private_base
 ; GFX9: v_cmp_eq_u32_e32 vcc, s[[HI]], v[[PTR_HI]]
@@ -26,12 +25,12 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; select and vcc branch.
 
 ; GCN-LABEL: {{^}}is_private_sgpr:
-; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x1{{$}}
+; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
 
-; CI-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[4:5], 0x32{{$}}
+; CI-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[6:7], 0x1{{$}}
 ; GFX9-DAG: s_load_dword [[PTR_HI:s[0-9]+]], s[4:5], 0x4{{$}}
 
-; CI: s_cmp_eq_u32 [[APERTURE]], [[PTR_HI]]
+; CI: s_cmp_eq_u32 [[PTR_HI]], [[APERTURE]]
 
 ; GFX9: s_mov_b64 s[{{[0-9]+}}:[[HI:[0-9]+]]], src_private_base
 ; GFX9: s_cmp_eq_u32 [[PTR_HI]], s[[HI]]
