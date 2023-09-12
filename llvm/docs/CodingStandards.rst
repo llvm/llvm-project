@@ -115,10 +115,19 @@ available in this version of Python.
 The Python code within the LLVM repository should adhere to the formatting guidelines
 outlined in `PEP-8 <https://peps.python.org/pep-0008/>`_.
 
-For consistency and to limit churn, code should be automatically formatted with the
-`black <https://github.com/psf/black>`_ utility. Black allows changing the formatting
-rules based on major version. In order to avoid unnecessary churn in the formatting rules
-we currently use black version 23.x in LLVM.
+For consistency and to limit churn, code should be automatically formatted with
+the `black <https://github.com/psf/black>`_ utility with its default rules
+(e.g., avoid specifying ``--line-length`` even though it does not default to
+80). The default rules can change between major versions of black. In order to
+avoid unnecessary churn in the formatting rules we currently use black version
+23.x in LLVM.
+
+When contributing a patch unrelated to formatting, use the `darker
+<https://pypi.org/project/darker/>`_ utility with its default rules to format
+any changed Python code. Doing so should ensure the patch will pass the Python
+format checks in LLVM's pre-commit CI, which also uses darker. When
+contributing a patch specifically for reformatting Python files, use black,
+which currently only supports formatting entire files.
 
 Mechanical Source Issues
 ========================
