@@ -3137,7 +3137,7 @@ bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
 
   // Notify callbacks that we parsed it.
   for (const auto &Cb : Callbacks)
-    Cb->moduleMapFileRead(Start, *File, IsSystem);
+    Cb->moduleMapFileRead(Start, File, IsSystem);
 
   return Result;
 }
