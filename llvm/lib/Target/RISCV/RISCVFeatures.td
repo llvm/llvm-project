@@ -79,6 +79,13 @@ def HasStdExtZihintntl : Predicate<"Subtarget->hasStdExtZihintntl()">,
                                     AssemblerPredicate<(all_of FeatureStdExtZihintntl),
                                     "'Zihintntl' (Non-Temporal Locality Hints)">;
 
+def FeatureStdExtZicfiss
+    : SubtargetFeature<"experimental-zicfiss", "HasStdExtZicfiss", "true",
+                       "'Zicfiss' (Shadow stack)">;
+def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZicfiss),
+                                 "'Zicfiss' (Shadow stack)">;
+
 def FeatureStdExtZifencei
     : SubtargetFeature<"zifencei", "HasStdExtZifencei", "true",
                        "'Zifencei' (fence.i)">;
