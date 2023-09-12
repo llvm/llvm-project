@@ -588,7 +588,6 @@ function(create_entrypoint_object fq_target_name)
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
-    # add_custom_target(${fq_target_name})
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
     add_library(
