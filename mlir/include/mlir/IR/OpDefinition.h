@@ -1769,9 +1769,10 @@ public:
   /// the namespace where the properties are defined. It can also be overridden
   /// in the derived ConcreteOp.
   template <typename PropertiesTy>
-  static LogicalResult setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
-                                             InFlightDiagnostic *diag) {
-    return setPropertiesFromAttribute(prop, attr, diag);
+  static LogicalResult
+  setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
+                        function_ref<InFlightDiagnostic &()> getDiag) {
+    return setPropertiesFromAttribute(prop, attr, getDiag);
   }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that
