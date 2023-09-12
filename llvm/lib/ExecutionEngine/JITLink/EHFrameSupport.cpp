@@ -129,11 +129,18 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
   BlockEdgeMap BlockEdges;
   for (auto &E : B.edges())
     if (E.isRelocation()) {
-      if (BlockEdges.count(E.getOffset()))
+      if (BlockEdges.count(E.getOffset())) {
+        // RISC-V may use ADD/SUB relocation pairs for PC-range and
+        // DW_CFA_advance_loc. We don't need to process these fields here so
+        // just ignore this on RISC-V.
+        if (PC.G.getTargetTriple().isRISCV())
+          continue;
+
         return make_error<JITLinkError>(
             "Multiple relocations at offset " +
             formatv("{0:x16}", E.getOffset()) + " in " + EHFrameSectionName +
             " block at address " + formatv("{0:x16}", B.getAddress()));
+      }
 
       BlockEdges[E.getOffset()] = EdgeTarget(E);
     }

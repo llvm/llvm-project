@@ -203,6 +203,27 @@ enum EdgeKind_riscv : Edge::Kind {
   ///   Fixup <- (Target - Fixup + Addend)
   R_RISCV_32_PCREL,
 
+  /// A 64-bit delta.
+  ///
+  /// Delta from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend : int64
+  ///
+  Delta64,
+
+  /// A 32-bit negative delta.
+  ///
+  /// Delta from the target back to the fixup.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Fixup - Target + Addend : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  NegDelta32,
+
   /// An auipc/jalr pair eligible for linker relaxation.
   ///
   /// Linker relaxation will replace this with R_RISCV_RVC_JUMP or R_RISCV_JAL

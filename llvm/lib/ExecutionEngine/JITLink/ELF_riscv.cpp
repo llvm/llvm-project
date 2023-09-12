@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
+#include "EHFrameSupportImpl.h"
 #include "ELFLinkGraphBuilder.h"
 #include "JITLinkGeneric.h"
 #include "PerGraphGOTAndPLTStubsBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/riscv.h"
 #include "llvm/Object/ELF.h"
@@ -451,6 +453,18 @@ private:
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
       int64_t Word32 = Value & 0xffffffff;
       *(little32_t *)FixupPtr = Word32;
+      break;
+    }
+    case Delta64: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      *(little64_t *)FixupPtr = Value;
+      break;
+    }
+    case NegDelta32: {
+      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      if (LLVM_UNLIKELY(!isInRangeForImm(Value, 32)))
+        return makeTargetOutOfRangeError(G, B, E);
+      *(little32_t *)FixupPtr = Value;
       break;
     }
     case AlignRelaxable:
@@ -959,6 +973,13 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
   const Triple &TT = G->getTargetTriple();
   if (Ctx->shouldAddDefaultTargetPasses(TT)) {
+    // Add eh-frame passses.
+    Config.PrePrunePasses.push_back(DWARFRecordSectionSplitter(".eh_frame"));
+    Config.PrePrunePasses.push_back(
+        EHFrameEdgeFixer(".eh_frame", TT.isRISCV32() ? 4 : 8, riscv::R_RISCV_32,
+                         riscv::R_RISCV_64, riscv::R_RISCV_32_PCREL,
+                         riscv::Delta64, riscv::NegDelta32));
+    Config.PrePrunePasses.push_back(EHFrameNullTerminator(".eh_frame"));
     if (auto MarkLive = Ctx->getMarkLivePass(TT))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
