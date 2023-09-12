@@ -115,8 +115,8 @@ AST_POLYMORPHIC_MATCHER_P(isExpansionInFile,
   auto ExpansionLoc = SourceManager.getExpansionLoc(Node.getBeginLoc());
   if (ExpansionLoc.isInvalid())
     return false;
-  auto *FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(ExpansionLoc));
+  auto FileEntry =
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(ExpansionLoc));
   if (!FileEntry)
     return false;
   return MakeAbsolutePath(SourceManager, FileEntry->getName()) ==
@@ -135,7 +135,7 @@ public:
                           StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
-    if (const auto *FileEntry = SM.getFileEntryForID(SM.getFileID(HashLoc)))
+    if (auto FileEntry = SM.getFileEntryRefForID(SM.getFileID(HashLoc)))
       MoveTool->addIncludes(FileName, IsAngled, SearchPath,
                             FileEntry->getName(), FilenameRange, SM);
   }
@@ -341,7 +341,7 @@ bool isInHeaderFile(const Decl *D, llvm::StringRef OriginalRunningDirectory,
   if (ExpansionLoc.isInvalid())
     return false;
 
-  if (const auto *FE = SM.getFileEntryForID(SM.getFileID(ExpansionLoc))) {
+  if (auto FE = SM.getFileEntryRefForID(SM.getFileID(ExpansionLoc))) {
     return MakeAbsolutePath(SM, FE->getName()) ==
            MakeAbsolutePath(OriginalRunningDirectory, OldHeader);
   }
