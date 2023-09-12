@@ -14,11 +14,18 @@
 #include <stdlib.h>
 
 TEST(LlvmLibcRandTest, UnsetSeed) {
+  static int vals[1000];
+
   for (size_t i = 0; i < 1000; ++i) {
     int val = __llvm_libc::rand();
     ASSERT_GE(val, 0);
     ASSERT_LE(val, RAND_MAX);
+    vals[i] = val;
   }
+
+  __llvm_libc::srand(1);
+  for (size_t i = 0; i < 1000; ++i)
+    ASSERT_EQ(__llvm_libc::rand(), vals[i]);
 }
 
 TEST(LlvmLibcRandTest, SetSeed) {
