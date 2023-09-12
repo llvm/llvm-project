@@ -154,9 +154,6 @@ int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
 int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
-  if (pointer.Elements() == 0) {
-    return StatOk;
-  }
   int stat{RTNAME(PointerAllocate)(
       pointer, hasStat, errMsg, sourceFile, sourceLine)};
   if (stat == StatOk) {
