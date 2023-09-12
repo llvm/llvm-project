@@ -12,11 +12,6 @@
 
 include "NVPTXInstrFormats.td"
 
-// A NOP instruction
-let hasSideEffects = false in {
-  def NOP : NVPTXInst<(outs), (ins), "", []>;
-}
-
 let OperandType = "OPERAND_IMMEDIATE" in {
   def f16imm : Operand<f16>;
   def bf16imm : Operand<bf16>;

@@ -923,10 +923,10 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// MaxFOp
+// MaximumFOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult arith::MaxFOp::fold(FoldAdaptor adaptor) {
+OpFoldResult arith::MaximumFOp::fold(FoldAdaptor adaptor) {
   // maxf(x,x) -> x
   if (getLhs() == getRhs())
     return getRhs();
@@ -991,10 +991,10 @@ OpFoldResult MaxUIOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// MinFOp
+// MinimumFOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult arith::MinFOp::fold(FoldAdaptor adaptor) {
+OpFoldResult arith::MinimumFOp::fold(FoldAdaptor adaptor) {
   // minf(x,x) -> x
   if (getLhs() == getRhs())
     return getRhs();
@@ -2426,8 +2426,8 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           // Floating-point operations.
           .Case([](arith::AddFOp op) { return AtomicRMWKind::addf; })
           .Case([](arith::MulFOp op) { return AtomicRMWKind::mulf; })
-          .Case([](arith::MaxFOp op) { return AtomicRMWKind::maxf; })
-          .Case([](arith::MinFOp op) { return AtomicRMWKind::minf; })
+          .Case([](arith::MaximumFOp op) { return AtomicRMWKind::maxf; })
+          .Case([](arith::MinimumFOp op) { return AtomicRMWKind::minf; })
           // Integer operations.
           .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
           .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
@@ -2483,9 +2483,9 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
   case AtomicRMWKind::muli:
     return builder.create<arith::MulIOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxf:
-    return builder.create<arith::MaxFOp>(loc, lhs, rhs);
+    return builder.create<arith::MaximumFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minf:
-    return builder.create<arith::MinFOp>(loc, lhs, rhs);
+    return builder.create<arith::MinimumFOp>(loc, lhs, rhs);
   case AtomicRMWKind::maxs:
     return builder.create<arith::MaxSIOp>(loc, lhs, rhs);
   case AtomicRMWKind::mins:

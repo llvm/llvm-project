@@ -285,7 +285,7 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
   // Verify default attributes populated post op creation.
   Operation *op = b.create<test::OpAttrMatch1>(b.getUnknownLoc(), req1, nullptr,
                                                nullptr, req2);
-  auto opt = op->getAttr("default_valued_attr");
+  auto opt = op->getInherentAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
 
   op->destroy();
