@@ -31,36 +31,42 @@
 
 #include "test_macros.h"
 
+template <typename... Ts>
+struct VoidifyImpl { using type = void; };
+
+template <typename... Ts>
+using Voidify = typename VoidifyImpl<Ts...>::type;
+
 template <class T, class = void>
 struct HasElementType : std::false_type {};
 
 template <class T>
-struct HasElementType<T, std::void_t<typename std::pointer_traits<T>::element_type>> : std::true_type {};
+struct HasElementType<T, Voidify<typename std::pointer_traits<T>::element_type>> : std::true_type {};
 
 template <class T, class = void>
 struct HasPointerType : std::false_type {};
 
 template <class T>
-struct HasPointerType<T, std::void_t<typename std::pointer_traits<T>::pointer>> : std::true_type {};
+struct HasPointerType<T, Voidify<typename std::pointer_traits<T>::pointer>> : std::true_type {};
 
 template <class T, class = void>
 struct HasDifferenceType : std::false_type {};
 
 template <class T>
-struct HasDifferenceType<T, std::void_t<typename std::pointer_traits<T>::difference_type>> : std::true_type {};
+struct HasDifferenceType<T, Voidify<typename std::pointer_traits<T>::difference_type>> : std::true_type {};
 
 template <class T, class U, class = void>
 struct HasRebind : std::false_type {};
 
 template <class T, class U>
-struct HasRebind<T, U, std::void_t<typename std::pointer_traits<T>::template rebind<U>>> : std::true_type {};
+struct HasRebind<T, U, Voidify<typename std::pointer_traits<T>::template rebind<U>>> : std::true_type {};
 
 template <class T, class = void>
 struct HasPointerTo : std::false_type {};
 
 template <class T>
 struct HasPointerTo<T,
-                    std::void_t<decltype(std::pointer_traits<T>::pointer_to(
+                    Voidify<decltype(std::pointer_traits<T>::pointer_to(
                         std::declval<std::add_lvalue_reference_t<typename std::pointer_traits<T>::element_type>>()))>>
     : std::true_type {};
 
@@ -86,7 +92,7 @@ struct PtrWithElementType {
 
 template <class T, class Arg>
 struct TemplatedPtr {
-  template <typename U, typename = std::enable_if_t<std::is_same_v<long, U>>>
+  template <typename U, typename = typename std::enable_if<std::is_same<long, U>::value>::type>
   using rebind = LongPtr;
   static constexpr auto pointer_to(T&) { return TemplatedPtr{&global_int}; }
 
@@ -96,7 +102,7 @@ struct TemplatedPtr {
 template <class T, class Arg>
 struct TemplatedPtrWithElementType {
   using element_type = int;
-  template <typename U, typename = std::enable_if_t<std::is_same_v<long, U>>>
+  template <typename U, typename = typename std::enable_if<std::is_same<long, U>::value>::type>
   using rebind = LongPtr;
   static constexpr auto pointer_to(element_type&) { return TemplatedPtrWithElementType{&global_int}; }
 
@@ -256,7 +262,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 11
+#if TEST_STD_VER >= 14
   static_assert(test(), "");
 #endif
   return 0;
