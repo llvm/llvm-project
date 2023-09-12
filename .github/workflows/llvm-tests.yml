@@ -6,7 +6,6 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -14,7 +13,6 @@ on:
       - '.github/workflows/llvm-tests.yml'
       - '.github/workflows/llvm-project-tests.yml'
   pull_request:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -78,12 +76,16 @@ jobs:
       - name: Setup Variables
         id: vars
         run: |
-          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 -o ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
-            echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))" >> $GITHUB_OUTPUT
-            echo "ABI_HEADERS=llvm-c" >> $GITHUB_OUTPUT
+          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 ] || [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+            {
+              echo "BASELINE_VERSION_MAJOR=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))"
+              echo "ABI_HEADERS=llvm-c"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}" >> $GITHUB_OUTPUT
-            echo "ABI_HEADERS=." >> $GITHUB_OUTPUT
+            {
+              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}"
+              echo "ABI_HEADERS=."
+            } >> "$GITHUB_OUTPUT"
           fi
 
   abi-dump:
@@ -125,7 +127,7 @@ jobs:
       - name: Configure
         run: |
           mkdir install
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=$(pwd)/install llvm
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
         # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
         run: |
@@ -141,7 +143,7 @@ jobs:
           else
             touch llvm.symbols
           fi
-          abi-dumper $EXTRA_ARGS -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
+          abi-dumper "$EXTRA_ARGS" -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o ${{ matrix.ref }}.abi ./install/lib/libLLVM.so
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
       - name: Upload ABI file
@@ -188,7 +190,7 @@ jobs:
           # FIXME: Reading of gzip'd abi files on the GitHub runners stop
           # working some time in March of 2021, likely due to a change in the
           # runner's environment.
-          abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
+          abi-compliance-checker "$EXTRA_ARGS" -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
         uses: actions/upload-artifact@v3
