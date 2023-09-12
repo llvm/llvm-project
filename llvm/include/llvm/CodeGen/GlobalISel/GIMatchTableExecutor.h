@@ -275,6 +275,12 @@ enum {
   /// - StoreIdx - Store location in RecordedOperands.
   GIM_RecordNamedOperand,
 
+  /// Records an operand's register type into the set of temporary types.
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - TempTypeIdx - Temp Type Index, always negative.
+  GIM_RecordRegType,
+
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
   GIM_Reject,
@@ -355,12 +361,6 @@ enum {
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add
   GIR_AddImm,
-
-  /// Add an CImm to the specified instruction
-  /// - InsnID - Instruction ID to modify
-  /// - Ty - Type of the constant immediate.
-  /// - Imm - The immediate to add
-  GIR_AddCImm,
 
   /// Render complex operands to the specified instruction
   /// - InsnID - Instruction ID to modify
@@ -521,6 +521,10 @@ protected:
     /// emitter, it corresponds to the order in which names appear in argument
     /// list. Currently such predicates don't have more then 3 arguments.
     std::array<const MachineOperand *, 3> RecordedOperands;
+
+    /// Types extracted from an instruction's operand.
+    /// Whenever a type index is negative, we look here instead.
+    SmallVector<LLT, 4> RecordedTypes;
 
     MatcherState(unsigned MaxRenderers);
   };

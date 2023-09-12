@@ -822,6 +822,15 @@ const OperandMatcher &RuleMatcher::getPhysRegOperandMatcher(Record *Reg) const {
   return *I->second;
 }
 
+OperandMatcher &RuleMatcher::getOperandMatcher(StringRef Name) {
+  const auto &I = DefinedOperands.find(Name);
+
+  if (I == DefinedOperands.end())
+    PrintFatalError(SrcLoc, "Operand " + Name + " was not declared in matcher");
+
+  return *I->second;
+}
+
 const OperandMatcher &RuleMatcher::getOperandMatcher(StringRef Name) const {
   const auto &I = DefinedOperands.find(Name);
 
@@ -1081,6 +1090,17 @@ void RecordNamedOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::Comment("Name : " + Name) << MatchTable::LineBreak;
 }
 
+//===- RecordRegisterType ------------------------------------------===//
+
+void RecordRegisterType::emitPredicateOpcodes(MatchTable &Table,
+                                              RuleMatcher &Rule) const {
+  assert(Idx < 0 && "Temp types always have negative indexes!");
+  Table << MatchTable::Opcode("GIM_RecordRegType") << MatchTable::Comment("MI")
+        << MatchTable::IntValue(InsnVarID) << MatchTable::Comment("Op")
+        << MatchTable::IntValue(OpIdx) << MatchTable::Comment("TempTypeIdx")
+        << MatchTable::IntValue(Idx) << MatchTable::LineBreak;
+}
+
 //===- ComplexPatternOperandMatcher ---------------------------------------===//
 
 void ComplexPatternOperandMatcher::emitPredicateOpcodes(
@@ -1195,6 +1215,18 @@ std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
 }
 
 unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
+
+TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
+  if (TTIdx >= 0) {
+    // Temp type index not assigned yet, so assign one and add the necessary
+    // predicate.
+    TTIdx = Rule.getNextTempTypeIdx();
+    assert(TTIdx < 0);
+    addPredicate<RecordRegisterType>(TTIdx);
+    return TTIdx;
+  }
+  return TTIdx;
+}
 
 void OperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                           RuleMatcher &Rule) {
@@ -2092,9 +2124,7 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
                                                RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_MakeTempReg")
         << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
-        << MatchTable::Comment("TypeID")
-        << MatchTable::NamedValue(Ty.getCxxEnumValue())
-        << MatchTable::LineBreak;
+        << MatchTable::Comment("TypeID") << Ty << MatchTable::LineBreak;
 }
 
 } // namespace gi
