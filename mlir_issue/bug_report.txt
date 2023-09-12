@@ -1,0 +1,61 @@
+mlir-opt: /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/Support/MathExtras.h:378: uint64_t llvm::alignTo(uint64_t, uint64_t): 
+Assertion `Align != 0u && "Align can't be 0."' failed.
+PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.
+Stack dump:
+0.      Program arguments: ../build/bin/mlir-opt --affine-loop-tile=cache-size=0 test.mlir
+ #0 0x00005638fd58721b backtrace (../build/bin/mlir-opt+0xb50221b)
+ #1 0x00005638fd7ee1a4 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) /data/swapnil/Git_Clones/llvm-project/llvm/lib/Support/Unix/Signals.inc:727:8
+ #2 0x00005638fd7eecd3 PrintStackTraceSignalHandler(void*) /data/swapnil/Git_Clones/llvm-project/llvm/lib/Support/Unix/Signals.inc:798:1
+ #3 0x00005638fd7e9f4f llvm::sys::RunSignalHandlers() /data/swapnil/Git_Clones/llvm-project/llvm/lib/Support/Signals.cpp:106:18
+ #4 0x00005638fd7ef156 SignalHandler(int) /data/swapnil/Git_Clones/llvm-project/llvm/lib/Support/Unix/Signals.inc:0:3
+ #5 0x00007fe8c8c42520 (/lib/x86_64-linux-gnu/libc.so.6+0x42520)
+ #6 0x00007fe8c8c96a7c __pthread_kill_implementation ./nptl/pthread_kill.c:44:76
+ #7 0x00007fe8c8c96a7c __pthread_kill_internal ./nptl/pthread_kill.c:78:10
+ #8 0x00007fe8c8c96a7c pthread_kill ./nptl/pthread_kill.c:89:10
+ #9 0x00007fe8c8c42476 gsignal ./signal/../sysdeps/posix/raise.c:27:6
+#10 0x00007fe8c8c287f3 abort ./stdlib/abort.c:81:7
+#11 0x00007fe8c8c2871b _nl_load_domain ./intl/loadmsgcat.c:1177:9
+#12 0x00007fe8c8c39e96 (/lib/x86_64-linux-gnu/libc.so.6+0x39e96)
+#13 0x00005638fd9ca306 llvm::alignTo(unsigned long, unsigned long) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/Support/MathExtras.h:378:3
+#14 0x00005638fd9ca306 llvm::divideCeil(unsigned long, unsigned long) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/Support/MathExtras.h:415:10
+#15 0x00005638fd9ca306 (anonymous namespace)::LoopTiling::getTileSizes(llvm::ArrayRef<mlir::affine::AffineForOp>, llvm::SmallVectorImpl<unsigned int>*) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Dialect/Affine/Transforms/LoopTiling.cpp:208:27
+#16 0x00005638fd9ca306 (anonymous namespace)::LoopTiling::runOnOperation() /data/swapnil/Git_Clones/llvm-project/mlir/lib/Dialect/Affine/Transforms/LoopTiling.cpp:254:5
+#17 0x000056390474040d mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int)::$_7::operator()() const /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:0:17
+#18 0x000056390474040d void llvm::function_ref<void ()>::callback_fn<mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int)::$_7>(long) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/ADT/STLFunctionalExtras.h:45:12
+#19 0x0000563904736ce6 mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/ADT/STLFunctionalExtras.h:0:12
+#20 0x0000563904738348 mlir::LogicalResult::failed() const /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:44:33
+#21 0x0000563904738348 mlir::failed(mlir::LogicalResult) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:72:58
+#22 0x0000563904738348 mlir::detail::OpToOpPassAdaptor::runPipeline(mlir::OpPassManager&, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int, mlir::PassInstrumentor*, mlir::PassInstrumentation::PipelineParentInfo const*) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:569:9
+#23 0x00005639047412c5 mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::$_15::operator()(mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo&) const /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:789:36
+#24 0x000056390473add2 mlir::LogicalResult::failed() const /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:44:33
+#25 0x000056390473add2 mlir::failed(mlir::LogicalResult) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:72:58
+#26 0x000056390473add2 mlir::LogicalResult mlir::failableParallelForEach<__gnu_cxx::__normal_iterator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo*, std::vector<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo, std::allocator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo>>>, mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::$_15&>(mlir::MLIRContext*, __gnu_cxx::__normal_iterator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo*, std::vector<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo, std::allocator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo>>>, __gnu_cxx::__normal_iterator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo*, std::vector<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo, std::allocator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo>>>, mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::$_15&) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/IR/Threading.h:46:11
+#27 0x000056390473add2 mlir::LogicalResult mlir::failableParallelForEach<std::vector<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo, std::allocator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo>>&, mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::$_15&>(mlir::MLIRContext*, std::vector<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo, std::allocator<mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::OpPMInfo>>&, mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool)::$_15&) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/IR/Threading.h:92:10
+#28 0x000056390473add2 mlir::detail::OpToOpPassAdaptor::runOnOperationAsyncImpl(bool) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:799:14
+#29 0x0000563904740397 mlir::detail::OpToOpPassAdaptor::runOnOperation(bool) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:0:5
+#30 0x0000563904740397 mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int)::$_7::operator()() const /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:501:20
+#31 0x0000563904740397 void llvm::function_ref<void ()>::callback_fn<mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int)::$_7>(long) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/ADT/STLFunctionalExtras.h:45:12
+#32 0x0000563904736ce6 mlir::detail::OpToOpPassAdaptor::run(mlir::Pass*, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/ADT/STLFunctionalExtras.h:0:12
+#33 0x0000563904738348 mlir::LogicalResult::failed() const /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:44:33
+#34 0x0000563904738348 mlir::failed(mlir::LogicalResult) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:72:58
+#35 0x0000563904738348 mlir::detail::OpToOpPassAdaptor::runPipeline(mlir::OpPassManager&, mlir::Operation*, mlir::AnalysisManager, bool, unsigned int, mlir::PassInstrumentor*, mlir::PassInstrumentation::PipelineParentInfo const*) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:569:9
+#36 0x000056390473d7ba mlir::PassManager::runPasses(mlir::Operation*, mlir::AnalysisManager) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:880:3
+#37 0x000056390473d526 mlir::PassManager::run(mlir::Operation*) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Pass/Pass.cpp:0:0
+#38 0x000056390470cc25 mlir::LogicalResult::failed() const /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:44:33
+#39 0x000056390470cc25 mlir::failed(mlir::LogicalResult) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:72:58
+#40 0x000056390470cc25 performActions(llvm::raw_ostream&, std::shared_ptr<llvm::SourceMgr> const&, mlir::MLIRContext*, mlir::MlirOptMainConfig const&) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Tools/mlir-opt/MlirOptMain.cpp:376:7
+#41 0x000056390470b658 processBuffer(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, mlir::MlirOptMainConfig const&, mlir::DialectRegistry&, llvm::ThreadPool*) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Tools/mlir-opt/MlirOptMain.cpp:431:12
+#42 0x000056390470b658 mlir::MlirOptMain(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, mlir::DialectRegistry&, mlir::MlirOptMainConfig const&)::$_2::operator()(std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::raw_ostream&) const /data/swapnil/Git_Clones/llvm-project/mlir/lib/Tools/mlir-opt/MlirOptMain.cpp:472:12
+#43 0x000056390470b658 mlir::LogicalResult llvm::function_ref<mlir::LogicalResult (std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::raw_ostream&)>::callback_fn<mlir::MlirOptMain(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, mlir::DialectRegistry&, mlir::MlirOptMainConfig const&)::$_2>(long, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::raw_ostream&) /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/ADT/STLFunctionalExtras.h:45:12
+#44 0x00005639049280ba llvm::function_ref<mlir::LogicalResult (std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::raw_ostream&)>::operator()(std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::raw_ostream&) const /data/swapnil/Git_Clones/llvm-project/llvm/include/llvm/ADT/STLFunctionalExtras.h:68:12
+#45 0x0000563904927365 mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::function_ref<mlir::LogicalResult (std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, llvm::raw_ostream&)>, llvm::raw_ostream&, bool, bool) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Support/ToolUtilities.cpp:28:12
+#46 0x0000563904707452 mlir::MlirOptMain(llvm::raw_ostream&, std::unique_ptr<llvm::MemoryBuffer, std::default_delete<llvm::MemoryBuffer>>, mlir::DialectRegistry&, mlir::MlirOptMainConfig const&) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Tools/mlir-opt/MlirOptMain.cpp:475:10
+#47 0x0000563904707c39 mlir::MlirOptMain(int, char**, llvm::StringRef, mlir::DialectRegistry&) /data/swapnil/Git_Clones/llvm-project/mlir/lib/Tools/mlir-opt/MlirOptMain.cpp:531:14
+#48 0x00005638fd60bd13 mlir::LogicalResult::succeeded() const /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Support/LogicalResult.h:41:35
+#49 0x00005638fd60bd13 mlir::asMainReturnCode(mlir::LogicalResult) /data/swapnil/Git_Clones/llvm-project/mlir/include/mlir/Tools/mlir-opt/MlirOptMain.h:259:12
+#50 0x00005638fd60bd13 main /data/swapnil/Git_Clones/llvm-project/mlir/tools/mlir-opt/mlir-opt.cpp:286:10
+#51 0x00007fe8c8c29d90 __libc_start_call_main ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+#52 0x00007fe8c8c29e40 call_init ./csu/../csu/libc-start.c:128:20
+#53 0x00007fe8c8c29e40 __libc_start_main ./csu/../csu/libc-start.c:379:5
+#54 0x00005638fd54b6e5 _start (../build/bin/mlir-opt+0xb4c66e5)
+Aborted (core dumped)
