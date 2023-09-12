@@ -6,21 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test checks that if no hardening mode is defined (i.e., in the unchecked mode), by default assertions aren't
-// triggered.
+// This test ensures that we can disable the safe mode on a per-TU basis.
 
-// REQUIRES: libcpp-hardening-mode=unchecked
+// Other hardening modes would still make the assertions fire (disabling the safe mode doesn't disable e.g. the debug
+// mode).
+// REQUIRES: libcpp-hardening-mode=safe
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_SAFE_MODE=0
 
 #include <cassert>
-
-bool executed_condition = false;
-bool f() { executed_condition = true; return false; }
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Also should not fire");
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(f(), "Should not execute anything");
-  assert(!executed_condition); // Really make sure we did not execute anything.
 
   return 0;
 }
