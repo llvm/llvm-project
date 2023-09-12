@@ -6,14 +6,12 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
       - 'clang/**'
       - '.github/workflows/libclang-abi-tests.yml'
   pull_request:
-    ignore-forks: true
     branches:
       - 'release/**'
     paths:
@@ -52,32 +50,35 @@ jobs:
       - name: Setup Variables
         id: vars
         run: |
-          minor_version=0
           remote_repo='https://github.com/llvm/llvm-project'
-          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 -o ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 ] || [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
             major_version=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
             baseline_ref="llvmorg-$major_version.0.0"
 
             # If there is a minor release, we want to use that as the base line.
-            minor_ref=$(git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9] | tail -n1 | grep -o 'llvmorg-.\+' || true)
+            minor_ref=$(git ls-remote --refs -t "$remote_repo" llvmorg-"$major_version".[1-9].[0-9] | tail -n1 | grep -o 'llvmorg-.\+' || true)
             if [ -n "$minor_ref" ]; then
-               baseline_ref=$minor_ref
+               baseline_ref="$minor_ref"
             else
               # Check if we have a release candidate
-              rc_ref=$(git ls-remote --refs -t $remote_repo llvmorg-$major_version.[1-9].[0-9]-rc* | tail -n1 | grep -o 'llvmorg-.\+' || true)
+              rc_ref=$(git ls-remote --refs -t "$remote_repo" llvmorg-"$major_version".[1-9].[0-9]-rc* | tail -n1 | grep -o 'llvmorg-.\+' || true)
               if [ -n "$rc_ref" ]; then
-                baseline_ref=$rc_ref
+                baseline_ref="$rc_ref"
               fi
             fi
-            echo "BASELINE_VERSION_MAJOR=$major_version" >> $GITHUB_OUTPUT
-            echo "BASELINE_REF=$baseline_ref" >> $GITHUB_OUTPUT
-            echo "ABI_HEADERS=clang-c" >> $GITHUB_OUTPUT
-            echo "ABI_LIBS=libclang.so" >> $GITHUB_OUTPUT
+            {
+              echo "BASELINE_VERSION_MAJOR=$major_version"
+              echo "BASELINE_REF=$baseline_ref"
+              echo "ABI_HEADERS=clang-c"
+              echo "ABI_LIBS=libclang.so"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}" >> $GITHUB_OUTPUT
-            echo "BASELINE_REF=llvmorg-${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.0.0" >> $GITHUB_OUTPUT
-            echo "ABI_HEADERS=." >> $GITHUB_OUTPUT
-            echo "ABI_LIBS=libclang.so libclang-cpp.so" >> $GITHUB_OUTPUT
+            {
+              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}"
+              echo "BASELINE_REF=llvmorg-${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.0.0"
+              echo "ABI_HEADERS=."
+              echo "ABI_LIBS=libclang.so libclang-cpp.so"
+            } >> "$GITHUB_OUTPUT"
           fi
 
   abi-dump:
@@ -119,7 +120,7 @@ jobs:
       - name: Configure
         run: |
           mkdir install
-          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX=$(pwd)/install llvm
+          cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_C_FLAGS_DEBUG="-g1 -Og" -DCMAKE_CXX_FLAGS_DEBUG="-g1 -Og" -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
         run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
       - name: Dump ABI
