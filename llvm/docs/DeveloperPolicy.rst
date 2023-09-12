@@ -54,7 +54,7 @@ are interested in and watching the flow of the project as a whole.
 
 Contibutions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
 You can subscribe to notification for areas of the codebase by joining
-one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=issue-subscribers>`_
+one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
 GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
 indicates which team is associated with a particular paths in the repository.
 
