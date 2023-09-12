@@ -21,29 +21,16 @@ define ptr addrspace(1) @flat_to_gobal_addrspacecast(ptr %ptr) {
 }
 
 define ptr @group_to_flat_addrspacecast(ptr addrspace(3) %ptr) {
-; SDAG-LABEL: group_to_flat_addrspacecast:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_mov_b64 s[4:5], 0
-; SDAG-NEXT:    s_load_dword s4, s[4:5], 0x0
-; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b32_e32 v1, s4
-; SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: group_to_flat_addrspacecast:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0xc4
-; GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: group_to_flat_addrspacecast:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_load_dword s4, s[6:7], 0x10
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(3) %ptr to ptr
   ret ptr %stof
 }
@@ -60,29 +47,16 @@ define ptr addrspace(3) @flat_to_group_addrspacecast(ptr %ptr) {
 }
 
 define ptr @private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
-; SDAG-LABEL: private_to_flat_addrspacecast:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_mov_b64 s[4:5], 0
-; SDAG-NEXT:    s_load_dword s4, s[4:5], 0x0
-; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    v_mov_b32_e32 v1, s4
-; SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-LABEL: private_to_flat_addrspacecast:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0xc0
-; GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    v_mov_b32_e32 v1, s4
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-LABEL: private_to_flat_addrspacecast:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_load_dword s4, s[6:7], 0x11
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(5) %ptr to ptr
   ret ptr %stof
 }

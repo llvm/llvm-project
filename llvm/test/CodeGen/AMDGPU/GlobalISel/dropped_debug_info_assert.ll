@@ -7,42 +7,43 @@ declare void @callee()
 define amdgpu_kernel void @call_debug_loc() {
   ; CHECK-LABEL: name: call_debug_loc
   ; CHECK: bb.1.entry:
-  ; CHECK-NEXT:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
+  ; CHECK-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr2, debug-location !6
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1, debug-location !6
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0, debug-location !6
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr14, debug-location !6
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr13, debug-location !6
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr12, debug-location !6
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9, debug-location !6
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5, debug-location !6
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $sgpr6_sgpr7
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr16, debug-location !6
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr15, debug-location !6
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sgpr_32 = COPY $sgpr14, debug-location !6
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sgpr_64 = COPY $sgpr10_sgpr11, debug-location !6
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7, debug-location !6
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5, debug-location !6
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc, debug-location !6
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY [[COPY7]], debug-location !6
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF debug-location !6
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64 = COPY [[COPY6]], debug-location !6
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_32 = COPY [[COPY5]], debug-location !6
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_32 = COPY [[COPY4]], debug-location !6
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY3]], debug-location !6
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF debug-location !6
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:sreg_64 = COPY [[COPY8]], debug-location !6
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[COPY7]], debug-location !6
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[COPY6]], debug-location !6
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY5]], debug-location !6
+  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[COPY4]], debug-location !6
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[COPY3]], debug-location !6
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF debug-location !6
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 10, debug-location !6
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]], debug-location !6
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY14]], [[COPY1]], implicit $exec, debug-location !6
+  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]], debug-location !6
+  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY16]], [[COPY1]], implicit $exec, debug-location !6
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 20, debug-location !6
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]], debug-location !6
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY15]], [[COPY]], implicit $exec, debug-location !6
+  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]], debug-location !6
+  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY17]], [[COPY]], implicit $exec, debug-location !6
   ; CHECK-NEXT:   [[V_OR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR3_B32_e64 [[COPY2]], [[V_LSHLREV_B32_e64_]], [[V_LSHLREV_B32_e64_1]], implicit $exec, debug-location !6
-  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3, debug-location !6
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY16]], debug-location !6
-  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY9]], debug-location !6
-  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[DEF]], debug-location !6
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY8]], debug-location !6
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY10]], debug-location !6
-  ; CHECK-NEXT:   $sgpr12 = COPY [[COPY11]], debug-location !6
-  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY12]], debug-location !6
-  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY13]], debug-location !6
-  ; CHECK-NEXT:   $sgpr15 = COPY [[DEF1]], debug-location !6
+  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3, debug-location !6
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY18]], debug-location !6
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY10]], debug-location !6
+  ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY11]], debug-location !6
+  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY9]], debug-location !6
+  ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[COPY12]], debug-location !6
+  ; CHECK-NEXT:   $sgpr12 = COPY [[COPY13]], debug-location !6
+  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY14]], debug-location !6
+  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY15]], debug-location !6
+  ; CHECK-NEXT:   $sgpr15 = COPY [[DEF]], debug-location !6
   ; CHECK-NEXT:   $vgpr31 = COPY [[V_OR3_B32_e64_]], debug-location !6
   ; CHECK-NEXT:   [[SI_PC_ADD_REL_OFFSET:%[0-9]+]]:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def $scc, debug-location !6
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[SI_PC_ADD_REL_OFFSET]], 0, 0, debug-location !6 :: (dereferenceable invariant load (p0) from got, addrspace 4)

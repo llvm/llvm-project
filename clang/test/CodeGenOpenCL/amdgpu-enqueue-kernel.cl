@@ -703,7 +703,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900: attributes #8 = { nounwind }
 // GFX900: attributes #9 = { convergent nounwind }
 //.
-// NOCPU: !0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+// NOCPU: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
 // NOCPU: !1 = !{i32 1, !"wchar_size", i32 4}
 // NOCPU: !2 = !{i32 2, i32 0}
 // NOCPU: !3 = !{i32 1, i32 0, i32 1, i32 0}
@@ -721,7 +721,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU: !15 = !{i32 1}
 // NOCPU: !16 = !{!"int*"}
 //.
-// GFX900: !0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+// GFX900: !0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
 // GFX900: !1 = !{i32 1, !"wchar_size", i32 4}
 // GFX900: !2 = !{i32 2, i32 0}
 // GFX900: !3 = !{!4, !4, i64 0}

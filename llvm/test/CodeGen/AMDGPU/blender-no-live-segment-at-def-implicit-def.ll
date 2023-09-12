@@ -4,16 +4,15 @@
 define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %extractVec358.i.i, i32 %cmp5.i.i.arg, float %i1.i, i32 %cmp221.i.i.arg, i32 %cmp262.i.i.arg, ptr addrspace(1) %arg) {
 ; CHECK-LABEL: blender_no_live_segment_at_def_error:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_add_u32 s10, s10, s15
-; CHECK-NEXT:    s_addc_u32 s11, s11, 0
+; CHECK-NEXT:    s_add_u32 s12, s12, s17
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s10
-; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s11
-; CHECK-NEXT:    s_load_dwordx8 s[36:43], s[6:7], 0x0
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
+; CHECK-NEXT:    s_addc_u32 s13, s13, 0
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
+; CHECK-NEXT:    s_load_dwordx8 s[36:43], s[8:9], 0x0
+; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    s_mov_b64 s[34:35], s[6:7]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s40, 0
@@ -23,13 +22,13 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_4
 ; CHECK-NEXT:  ; %bb.2: ; %if.else251.i.i
 ; CHECK-NEXT:    s_cmp_lg_u32 s43, 0
-; CHECK-NEXT:    s_mov_b32 s6, 0
-; CHECK-NEXT:    s_cselect_b32 s7, -1, 0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s7
+; CHECK-NEXT:    s_mov_b32 s12, 0
+; CHECK-NEXT:    s_cselect_b32 s8, -1, 0
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    s_mov_b32 s36, 0
-; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s7
+; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_6
 ; CHECK-NEXT:    s_branch .LBB0_7
 ; CHECK-NEXT:  .LBB0_4:
@@ -40,31 +39,34 @@ define amdgpu_kernel void @blender_no_live_segment_at_def_error(<4 x float> %ext
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; CHECK-NEXT:    s_branch .LBB0_7
 ; CHECK-NEXT:  .LBB0_5: ; %if.then263.i.i
-; CHECK-NEXT:    v_cmp_lt_f32_e64 s7, s41, 0
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s8, s41, 0
 ; CHECK-NEXT:    s_mov_b32 s36, 1.0
-; CHECK-NEXT:    s_mov_b32 s6, 0x7fc00000
+; CHECK-NEXT:    s_mov_b32 s12, 0x7fc00000
 ; CHECK-NEXT:    s_mov_b32 s37, s36
 ; CHECK-NEXT:    s_mov_b32 s38, s36
 ; CHECK-NEXT:    s_mov_b32 s39, s36
-; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s7
+; CHECK-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
 ; CHECK-NEXT:  .LBB0_6: ; %if.end273.i.i
 ; CHECK-NEXT:    s_add_u32 s8, s34, 40
 ; CHECK-NEXT:    s_addc_u32 s9, s35, 0
-; CHECK-NEXT:    s_getpc_b64 s[16:17]
-; CHECK-NEXT:    s_add_u32 s16, s16, _Z3dotDv3_fS_@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3dotDv3_fS_@gotpcrel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[18:19]
+; CHECK-NEXT:    s_add_u32 s18, s18, _Z3dotDv3_fS_@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s19, s19, _Z3dotDv3_fS_@gotpcrel32@hi+12
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[18:19], 0x0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 10, v1
-; CHECK-NEXT:    v_add_f32_e64 v1, s6, s36
-; CHECK-NEXT:    s_mov_b32 s36, 0
+; CHECK-NEXT:    v_add_f32_e64 v1, s12, s36
+; CHECK-NEXT:    s_mov_b32 s12, s14
+; CHECK-NEXT:    s_mov_b32 s13, s15
+; CHECK-NEXT:    s_mov_b32 s14, s16
 ; CHECK-NEXT:    v_or3_b32 v31, v0, v3, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    s_mov_b32 s36, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    s_mov_b32 s37, s36
 ; CHECK-NEXT:    s_mov_b32 s38, s36
 ; CHECK-NEXT:    s_mov_b32 s39, s36
