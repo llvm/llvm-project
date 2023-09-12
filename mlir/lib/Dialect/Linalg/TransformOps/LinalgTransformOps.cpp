@@ -1683,9 +1683,10 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
     options.packPaddings = packPaddings;
-    if (getCopyBackOp() == bufferization::CopyTensorOp::getOperationName()) {
-      options.copyBackOp =
-          LinalgPaddingOptions::CopyBackOp::BufferizationCopyTensor;
+    if (getCopyBackOp() ==
+        bufferization::MaterializeInDestinationOp::getOperationName()) {
+      options.copyBackOp = LinalgPaddingOptions::CopyBackOp::
+          BufferizationMaterializeInDestination;
     } else if (getCopyBackOp() == linalg::CopyOp::getOperationName()) {
       options.copyBackOp = LinalgPaddingOptions::CopyBackOp::LinalgCopy;
     } else if (getCopyBackOp() == kCopyOpNone) {
@@ -1761,7 +1762,8 @@ LogicalResult transform::PadOp::verify() {
              << attr;
     }
   }
-  if (getCopyBackOp() != bufferization::CopyTensorOp::getOperationName() &&
+  if (getCopyBackOp() !=
+          bufferization::MaterializeInDestinationOp::getOperationName() &&
       getCopyBackOp() != linalg::CopyOp::getOperationName() &&
       getCopyBackOp() != kCopyOpNone)
     return emitOpError() << "invalid copy_back_op";
