@@ -28,14 +28,14 @@ define dso_local signext i32 @main() nounwind {
 ; CHECK-LE-NEXT:    bl pluto
 ; CHECK-LE-NEXT:    nop
 ; CHECK-LE-NEXT:    addis 3, 2, global.1@toc@ha
-; CHECK-LE-NEXT:    li 4, 0
+; CHECK-LE-NEXT:    li 4, 257
 ; CHECK-LE-NEXT:    li 7, 0
 ; CHECK-LE-NEXT:    li 8, 0
 ; CHECK-LE-NEXT:    li 9, 0
 ; CHECK-LE-NEXT:    addi 5, 3, global.1@toc@l
-; CHECK-LE-NEXT:    ori 6, 4, 32768
+; CHECK-LE-NEXT:    li 3, 0
+; CHECK-LE-NEXT:    ori 6, 3, 32768
 ; CHECK-LE-NEXT:    li 3, 6
-; CHECK-LE-NEXT:    li 4, 257
 ; CHECK-LE-NEXT:    bl snork
 ; CHECK-LE-NEXT:    nop
 ; CHECK-LE-NEXT:    mr 30, 3

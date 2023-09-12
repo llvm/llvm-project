@@ -1,3 +1,5 @@
+// REQUIRES: host-supports-nvptx
+//
 // RUN: mlir-opt %s \
 // RUN:   -test-transform-dialect-interpreter \
 // RUN: | FileCheck %s --check-prefix=CHECK-MMA-SYNC

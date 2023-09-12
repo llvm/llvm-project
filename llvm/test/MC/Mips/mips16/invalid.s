@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=mips -mcpu=mips32r2 -mattr=+mips16 < %s 2> %t
+# RUN: not llvm-mc -triple=mips -mcpu=mips32r2 -mattr=+mips16 < %s 2> %t
 # RUN: FileCheck %s < %t
 
 # Instructions which are invalid.

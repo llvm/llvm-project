@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        insert.b        $w23[3], $sp            # encoding: [0x79,0x03,0xed,0xd9]
 # CHECK:        insert.h        $w20[2], $5             # encoding: [0x79,0x22,0x2d,0x19]

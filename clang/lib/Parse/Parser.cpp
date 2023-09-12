@@ -615,6 +615,11 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
                                Sema::ModuleImportState &ImportState) {
   DestroyTemplateIdAnnotationsRAIIObj CleanupRAII(*this);
 
+  // Skip over the EOF token, flagging end of previous input for incremental
+  // processing
+  if (PP.isIncrementalProcessingEnabled() && Tok.is(tok::eof))
+    ConsumeToken();
+
   Result = nullptr;
   switch (Tok.getKind()) {
   case tok::annot_pragma_unused:
@@ -706,7 +711,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
 
     // Late template parsing can begin.
     Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
-    Actions.ActOnEndOfTranslationUnit();
+    if (!PP.isIncrementalProcessingEnabled())
+      Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
 
@@ -1038,7 +1044,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       ConsumeToken();
       return nullptr;
     }
-    if (PP.isIncrementalProcessingEnabled() &&
+    if (getLangOpts().IncrementalExtensions &&
         !isDeclarationStatement(/*DisambiguatingWithExpression=*/true))
       return ParseTopLevelStmtDecl();
 

@@ -215,11 +215,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P8-NEXT:    .cfi_offset v31, -16
 ; P8-NEXT:    xxsldwi vs0, v2, v2, 3
 ; P8-NEXT:    li r3, 128
+; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 160
-; P8-NEXT:    xscvspdpn f1, vs0
 ; P8-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    vmr v31, v2
 ; P8-NEXT:    bl nearbyintf
@@ -243,11 +243,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %vf1, <4 x float> %vf2) strictfp
 ; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs0, v30, vs1
 ; P8-NEXT:    li r3, 160
+; P8-NEXT:    xvcvdpsp v2, vs0
 ; P8-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 144
 ; P8-NEXT:    lxvd2x v30, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    li r3, 128
-; P8-NEXT:    xvcvdpsp v2, vs0
 ; P8-NEXT:    vmrgew v2, v2, v29
 ; P8-NEXT:    lxvd2x v29, r1, r3 # 16-byte Folded Reload
 ; P8-NEXT:    addi r1, r1, 176
@@ -380,14 +380,14 @@ define <4 x double> @fpext_v4f64_v4f32(<4 x float> %vf1) strictfp {
 ; P8-LABEL: fpext_v4f64_v4f32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    xxsldwi vs0, v2, v2, 1
+; P8-NEXT:    xscvspdpn f3, v2
 ; P8-NEXT:    xxsldwi vs1, v2, v2, 3
-; P8-NEXT:    xxswapd vs3, v2
-; P8-NEXT:    xscvspdpn f2, v2
+; P8-NEXT:    xxswapd vs2, v2
 ; P8-NEXT:    xscvspdpn f0, vs0
-; P8-NEXT:    xscvspdpn f1, vs1
-; P8-NEXT:    xscvspdpn f3, vs3
-; P8-NEXT:    xxmrghd v2, vs2, vs0
-; P8-NEXT:    xxmrghd v3, vs3, vs1
+; P8-NEXT:    xxmrghd v2, vs3, vs0
+; P8-NEXT:    xscvspdpn f0, vs1
+; P8-NEXT:    xscvspdpn f1, vs2
+; P8-NEXT:    xxmrghd v3, vs1, vs0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: fpext_v4f64_v4f32:

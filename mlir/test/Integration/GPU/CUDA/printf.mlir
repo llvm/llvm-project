@@ -1,6 +1,7 @@
+// REQUIRES: host-supports-nvptx
+
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,gpu-to-cubin))' \
-// RUN: | mlir-opt -gpu-to-llvm \
+// RUN: | mlir-opt -test-lower-to-nvvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mv65 -mhvx -filetype=asm < %s | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mv65 -mhvx -filetype=asm < %s | FileCheck %s
 
 # Test that a slot error is not reported for a packet with a load and a
 # vscatter.

@@ -30,8 +30,9 @@ function(add_header target_name)
   )
 
   get_fq_target_name(${target_name} fq_target_name)
+  set(copied_hdr_target ${fq_target_name}.__copied_hdr__)
   add_custom_target(
-    ${fq_target_name}
+    ${copied_hdr_target}
     DEPENDS ${dest_file}
   )
 
@@ -46,10 +47,15 @@ function(add_header target_name)
       endif()
     endforeach()
     add_dependencies(
-      ${fq_target_name} ${fq_deps_list}
+      ${copied_hdr_target} ${fq_deps_list}
     )
   endif()
 
+  add_header_library(
+    ${target_name}
+    HDRS
+      ${dest_file}
+  )
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
@@ -159,9 +165,16 @@ function(add_gen_header target_name)
       endif()
     endforeach()
   endif()
+  set(generated_hdr_target ${fq_target_name}.__generated_hdr__)
   add_custom_target(
-    ${fq_target_name}
+    ${generated_hdr_target}
     DEPENDS ${out_file} ${fq_deps_list} ${decl_out_file}
+  )
+
+  add_header_library(
+    ${target_name}
+    HDRS
+      ${out_file}
   )
 
   set_target_properties(

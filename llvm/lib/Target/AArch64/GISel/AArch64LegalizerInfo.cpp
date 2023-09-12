@@ -283,7 +283,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
       .minScalar(0, s32)
-      .libcallFor({s32, s64, v2s32, v4s32, v2s64});
+      .libcallFor({s32, s64});
 
   getActionDefinitionsBuilder(G_INSERT)
       .legalIf(all(typeInSet(0, {s32, s64, p0}),
@@ -732,8 +732,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64}))
-      .clampMinNumElements(0, s16, 4)
-      .clampMaxNumElements(0, s16, 8);
+      .widenVectorEltsToVectorMinSize(0, 64);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},

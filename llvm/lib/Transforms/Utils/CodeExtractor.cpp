@@ -721,7 +721,8 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
       // Create a new PHI node in the new region, which has an incoming value
       // from OldPred of PN.
       PHINode *NewPN = PHINode::Create(PN->getType(), 1 + NumPredsFromRegion,
-                                       PN->getName() + ".ce", &NewBB->front());
+                                       PN->getName() + ".ce");
+      NewPN->insertBefore(NewBB->begin());
       PN->replaceAllUsesWith(NewPN);
       NewPN->addIncoming(PN, OldPred);
 
@@ -775,9 +776,9 @@ void CodeExtractor::severSplitPHINodesOfExits(
       }
 
       // Split this PHI.
-      PHINode *NewPN =
-          PHINode::Create(PN.getType(), IncomingVals.size(),
-                          PN.getName() + ".ce", NewBB->getFirstNonPHI());
+      PHINode *NewPN = PHINode::Create(PN.getType(), IncomingVals.size(),
+                                       PN.getName() + ".ce");
+      NewPN->insertBefore(NewBB->getFirstNonPHIIt());
       for (unsigned i : IncomingVals)
         NewPN->addIncoming(PN.getIncomingValue(i), PN.getIncomingBlock(i));
       for (unsigned i : reverse(IncomingVals))

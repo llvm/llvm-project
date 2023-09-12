@@ -89,7 +89,7 @@ void assertHintsWithHeader(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
                            ExpectedHints... Expected) {
   Annotations Source(AnnotatedSource);
   TestTU TU = TestTU::withCode(Source.code());
-  TU.ExtraArgs.push_back("-std=c++20");
+  TU.ExtraArgs.push_back("-std=c++23");
   TU.HeaderCode = HeaderContent;
   auto AST = TU.build();
 
@@ -805,6 +805,42 @@ TEST(ParameterHints, Operator) {
       a + b;
     }
   )cpp");
+}
+
+TEST(ParameterHints, FunctionCallOperator) {
+  assertParameterHints(R"cpp(
+    struct W {
+      void operator()(int x);
+    };
+    struct S : W {
+      using W::operator();
+      static void operator()(int x, int y);
+    };
+    void bar() {
+      auto l1 = [](int x) {};
+      auto l2 = [](int x) static {};
+
+      S s;
+      s($1[[1]]);
+      s.operator()($2[[1]]);
+      s.operator()($3[[1]], $4[[2]]);
+      S::operator()($5[[1]], $6[[2]]);
+
+      l1($7[[1]]);
+      l1.operator()($8[[1]]);
+      l2($9[[1]]);
+      l2.operator()($10[[1]]);
+
+      void (*ptr)(int a, int b) = &S::operator();
+      ptr($11[[1]], $12[[2]]);
+    }
+  )cpp",
+                       ExpectedHint{"x: ", "1"}, ExpectedHint{"x: ", "2"},
+                       ExpectedHint{"x: ", "3"}, ExpectedHint{"y: ", "4"},
+                       ExpectedHint{"x: ", "5"}, ExpectedHint{"y: ", "6"},
+                       ExpectedHint{"x: ", "7"}, ExpectedHint{"x: ", "8"},
+                       ExpectedHint{"x: ", "9"}, ExpectedHint{"x: ", "10"},
+                       ExpectedHint{"a: ", "11"}, ExpectedHint{"b: ", "12"});
 }
 
 TEST(ParameterHints, Macros) {

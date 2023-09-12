@@ -423,7 +423,7 @@ public:
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
                              PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
-    InsertNewInstBefore(SI, *InsertAt);
+    InsertNewInstBefore(SI, InsertAt->getIterator());
   }
 
   /// Combiner aware instruction erasure.
@@ -611,6 +611,9 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
+  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
+                                      Value *Z, ICmpInst::Predicate Pred);
+  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);

@@ -1433,8 +1433,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
 
   // Create a PHI node at the start of the block for the PRE'd load value.
   pred_iterator PB = pred_begin(LoadBB), PE = pred_end(LoadBB);
-  PHINode *PN = PHINode::Create(LoadI->getType(), std::distance(PB, PE), "",
-                                &LoadBB->front());
+  PHINode *PN = PHINode::Create(LoadI->getType(), std::distance(PB, PE), "");
+  PN->insertBefore(LoadBB->begin());
   PN->takeName(LoadI);
   PN->setDebugLoc(LoadI->getDebugLoc());
 

@@ -68,4 +68,18 @@ TEST(InterfaceTest, TestCustomClassOf) {
   EXPECT_TRUE(isa<TestOptionallyImplementedOpInterface>(*op));
   op.setImplementsInterface(false);
   EXPECT_FALSE(isa<TestOptionallyImplementedOpInterface>(*op));
+  op.erase();
+}
+
+TEST(InterfaceTest, TestImplicitConversion) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  TestBaseTypeInterfacePrintTypeB typeB;
+  TestBaseTypeInterfacePrintTypeA typeA = typeB;
+  EXPECT_EQ(typeA, nullptr);
+
+  typeB = TestType::get(&context);
+  typeA = typeB;
+  EXPECT_EQ(typeA, typeB);
 }

@@ -130,19 +130,19 @@ define dso_local void @test_iequs_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-BE-LABEL: test_iequs_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_iequs_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    cntlzw r3, r3
 ; CHECK-LE-NEXT:    srwi r3, r3, 5
-; CHECK-LE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i16 %a, %b
@@ -165,21 +165,21 @@ define dso_local void @test_iequs_sext_store(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-BE-LABEL: test_iequs_sext_store:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xor r3, r3, r4
-; CHECK-BE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-BE-NEXT:    cntlzw r3, r3
 ; CHECK-BE-NEXT:    srwi r3, r3, 5
 ; CHECK-BE-NEXT:    neg r3, r3
-; CHECK-BE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-BE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_iequs_sext_store:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xor r3, r3, r4
-; CHECK-LE-NEXT:    addis r5, r2, glob@toc@ha
+; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
 ; CHECK-LE-NEXT:    cntlzw r3, r3
 ; CHECK-LE-NEXT:    srwi r3, r3, 5
 ; CHECK-LE-NEXT:    neg r3, r3
-; CHECK-LE-NEXT:    sth r3, glob@toc@l(r5)
+; CHECK-LE-NEXT:    sth r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i16 %a, %b

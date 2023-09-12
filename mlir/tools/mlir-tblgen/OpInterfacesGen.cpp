@@ -571,6 +571,7 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
     // Allow implicit conversion to the base interface.
     os << "  operator " << baseQualName << " () const {\n"
+       << "    if (!*this) return nullptr;\n"
        << "    return " << baseQualName << "(*this, getImpl()->impl"
        << base.getName() << ");\n"
        << "  }\n\n";
@@ -584,10 +585,10 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
     auto extraClassOfFmt = tblgen::FmtContext();
     extraClassOfFmt.addSubst(substVar, "odsInterfaceInstance");
     os << "  static bool classof(" << valueType << " base) {\n"
-       << "    auto* concept = getInterfaceFor(base);\n"
-       << "    if (!concept)\n"
+       << "    auto* interface = getInterfaceFor(base);\n"
+       << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, concept);\n"
+          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }

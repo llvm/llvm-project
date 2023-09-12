@@ -351,14 +351,23 @@ public:
   }
 
   void mergeDeps(ModuleDepsGraph Graph, size_t InputIndex) {
-    std::unique_lock<std::mutex> ul(Lock);
-    for (const ModuleDeps &MD : Graph) {
-      auto I = Modules.find({MD.ID, 0});
-      if (I != Modules.end()) {
-        I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
-        continue;
+    std::vector<ModuleDeps *> NewMDs;
+    {
+      std::unique_lock<std::mutex> ul(Lock);
+      for (const ModuleDeps &MD : Graph) {
+        auto I = Modules.find({MD.ID, 0});
+        if (I != Modules.end()) {
+          I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
+          continue;
+        }
+        auto Res = Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
+        NewMDs.push_back(&Res->second);
       }
-      Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
+      // First call to \c getBuildArguments is somewhat expensive. Let's call it
+      // on the current thread (instead of the main one), and outside the
+      // critical section.
+      for (ModuleDeps *MD : NewMDs)
+        (void)MD->getBuildArguments();
     }
   }
 
@@ -382,7 +391,7 @@ public:
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
-      if (roundTripCommand(M.second.BuildArguments, *Diags))
+      if (roundTripCommand(M.second.getBuildArguments(), *Diags))
         return true;
 
     for (auto &&I : Inputs)
@@ -411,7 +420,7 @@ public:
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.BuildArguments},
+          {"command-line", MD.getBuildArguments()},
       };
       OutModules.push_back(std::move(O));
     }

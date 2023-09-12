@@ -10,6 +10,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 import sys
 
+
 class TestGuiSpawnThreadsTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
@@ -18,12 +19,14 @@ class TestGuiSpawnThreadsTest(PExpectTest):
     def test_gui(self):
         self.build()
 
-        self.launch(executable=self.getBuildArtifact('a.out'), dimensions=(100, 500))
+        self.launch(executable=self.getBuildArtifact("a.out"), dimensions=(100, 500))
         self.expect(
-            'breakpoint set -f main.cpp -p "break here"', substrs=['Breakpoint 1', 'address =']
+            'breakpoint set -f main.cpp -p "break here"',
+            substrs=["Breakpoint 1", "address ="],
         )
         self.expect(
-            'breakpoint set -f main.cpp -p "before join"', substrs=['Breakpoint 2', 'address =']
+            'breakpoint set -f main.cpp -p "before join"',
+            substrs=["Breakpoint 2", "address ="],
         )
         self.expect("run", substrs=["stop reason ="])
 

@@ -1,2 +1,0 @@
-RUN: touch %t
-RUN: @echo < %t

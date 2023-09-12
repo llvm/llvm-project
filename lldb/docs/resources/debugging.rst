@@ -195,6 +195,11 @@ automatically debug the ``gdbserver`` process as it's created. However this
 author has not been able to get either to work in this scenario so we suggest
 making a more specific command wherever possible instead.
 
+Another option is to let ``lldb-server`` start up, then attach to the process
+that's interesting to you. It's less automated and won't work if the bug occurs
+during startup. However it is a good way to know you've found the right one,
+then you can take its command line and run that directly.
+
 Output From ``lldb-server``
 ***************************
 
@@ -258,3 +263,320 @@ then ``lldb B`` to trigger ``lldb-server B`` to go into that code and hit the
 breakpoint. ``lldb-server A`` is only here to let us debug ``lldb-server B``
 remotely.
 
+Debugging The Remote Protocol
+-----------------------------
+
+LLDB mostly follows the `GDB Remote Protocol <https://sourceware.org/gdb/onlinedocs/gdb/Remote-Protocol.html>`_
+. Where there are differences it tries to handle both LLDB and GDB behaviour.
+
+LLDB does have extensions to the protocol which are documented in
+`lldb-gdb-remote.txt <https://github.com/llvm/llvm-project/blob/main/lldb/docs/lldb-gdb-remote.txt>`_
+and `lldb/docs/lldb-platform-packets.txt <https://github.com/llvm/llvm-project/blob/main/lldb/docs/lldb-platform-packets.txt>`_.
+
+Logging Packets
+***************
+
+If you just want to observe packets, you can enable the ``gdb-remote packets``
+log channel.
+
+::
+
+  (lldb) log enable gdb-remote packets
+  (lldb) run
+  lldb             <   1> send packet: +
+  lldb             history[1] tid=0x264bfd <   1> send packet: +
+  lldb             <  19> send packet: $QStartNoAckMode#b0
+  lldb             <   1> read packet: +
+
+You can do this on the ``lldb-server`` end as well by passing the option
+``--log-channels "gdb-remote packets"``. Then you'll see both sides of the
+connection.
+
+Some packets may be printed in a nicer way than others. For example XML packets
+will print the literal XML, some binary packets may be decoded. Others will just
+be printed unmodified. So do check what format you expect, a common one is hex
+encoded bytes.
+
+You can enable this logging even when you are connecting to an ``lldb-server``
+in platform mode, this protocol is used for that too.
+
+Debugging Packet Exchanges
+**************************
+
+Say you want to make ``lldb`` send a packet to ``lldb-server``, then debug
+how the latter builds its response. Maybe even see how ``lldb`` handles it once
+it's sent back.
+
+That all takes time, so LLDB will likely time out and think the remote has gone
+away. You can change the ``plugin.process.gdb-remote.packet-timeout`` setting
+to prevent this.
+
+Here's an example, first we'll start an ``lldb-server`` being debugged by
+``lldb``. Placing a breakpoint on a packet handler we know will be hit once
+another ``lldb`` connects.
+
+::
+
+  $ lldb -- lldb-server gdbserver :1234 -- /tmp/test.o
+  <...>
+  (lldb) b GDBRemoteCommunicationServerCommon::Handle_qSupported
+  Breakpoint 1: where = <...>
+  (lldb) run
+  <...>
+
+Next we connect another ``lldb`` to this, with a timeout of 5 minutes:
+
+::
+
+  $ lldb /tmp/test.o
+  <...>
+  (lldb) settings set plugin.process.gdb-remote.packet-timeout 300
+  (lldb) gdb-remote 1234
+
+Doing so triggers the breakpoint in ``lldb-server``, bringing us back into
+``lldb``. Now we've got 5 minutes to do whatever we need before LLDB decides
+the connection has failed.
+
+::
+
+  * thread #1, name = 'lldb-server', stop reason = breakpoint 1.1
+      frame #0: 0x0000aaaaaacc6848 lldb-server<...>
+  lldb-server`lldb_private::process_gdb_remote::GDBRemoteCommunicationServerCommon::Handle_qSupported:
+  ->  0xaaaaaacc6848 <+0>:  sub    sp, sp, #0xc0
+  <...>
+  (lldb)
+
+Once you're done simply ``continue`` the ``lldb-server``. Back in the other
+``lldb``, the connection process will continue as normal.
+
+::
+
+  Process 2510266 stopped
+  * thread #1, name = 'test.o', stop reason = signal SIGSTOP
+      frame #0: 0x0000fffff7fcd100 ld-2.31.so`_start
+  ld-2.31.so`_start:
+  ->  0xfffff7fcd100 <+0>: mov    x0, sp
+  <...>
+  (lldb)
+
+Reducing Bugs
+-------------
+
+This section covers reducing a bug that happens in LLDB itself, or where you
+suspect that LLDB causes something else to behave abnormally.
+
+Since bugs vary wildly, the advice here is general and incomplete. Let your
+instincts guide you and don't feel the need to try everything before reporting
+an issue or asking for help. This is simply inspiration.
+
+Reduction
+*********
+
+The first step is to reduce uneeded compexity where it is cheap to do so. If
+something is easily removed or frozen to a cerain value, do so. The goal is to
+keep the failure mode the same, with fewer dependencies.
+
+This includes, but is not limited to:
+
+* Removing test cases that don't crash.
+* Replacing dynamic lookups with constant values.
+* Replace supporting functions with stubs that do nothing.
+* Moving the test case to less unqiue system. If your machine has an exotic
+  extension, try it on a readily available commodity machine.
+* Removing irrelevant parts of the test program.
+* Reproducing the issue without using the LLDB test runner.
+* Converting a remote debuging scenario into a local one.
+
+Now we hopefully have a smaller reproducer than we started with. Next we need to
+find out what components of the software stack might be failing.
+
+Some examples are listed below with suggestions for how to investigate them.
+
+* Debugger
+
+  * Use a `released version of LLDB <https://github.com/llvm/llvm-project/releases>`_.
+
+  * If on MacOS, try the system ``lldb``.
+
+  * Try GDB or any other system debugger you might have e.g. Microsoft Visual
+    Studio.
+
+* Kernel
+
+  * Start a virtual machine running a different version. ``qemu-system`` is
+    useful here.
+
+  * Try a different physical system running a different version.
+
+  * Remember that for most kernels, userspace crashing the kernel is always a
+    kernel bug. Even if the userspace program is doing something unconventional.
+    So it could be a bug in the application and the kernel.
+
+* Compiler and compiler options
+
+  * Try other versions of the same compiler or your system compiler.
+
+  * Emit older versions of DWARF info, particularly DWARFv4 to v5, some tools
+    did/do not understand the new constructs.
+
+  * Reduce optimisation options as much as possible.
+
+  * Try all the language modes e.g. C++17/20 for C++.
+
+  * Link against LLVM's libcxx if you suspect a bug involving the system C++
+    library.
+
+  * For languages other than C/C++ e.g. Rust, try making an equivalent program
+    in C/C++. LLDB tends to try to fit other languages into a C/C++ mould, so
+    porting the program can make triage and reporting much easier.
+
+* Operating system
+
+  * Use docker to try various versions of Linux.
+
+  * Use ``qemu-system`` to emulate other operating systems e.g. FreeBSD.
+
+* Architecture
+
+  * Use `QEMU user space emulation <https://www.qemu.org/docs/master/user/main.html>`_
+    to quickly test other architectures. Note that ``lldb-server`` cannot be used
+    with this as the ptrace APIs are not emulated.
+
+  * If you need to test a big endian system use QEMU to emulate s390x (user
+    space emulation for just ``lldb``, ``qemu-system`` for testing
+    ``lldb-server``).
+
+.. note:: When using QEMU you may need to use the built in GDB stub, instead of
+          ``lldb-server``. For example if you wanted to debug ``lldb`` running
+          inside ``qemu-user-s390x`` you would connect to the GDB stub provided
+          by QEMU.
+
+          The same applies if you want to see how ``lldb`` would debug a test
+          program that is running on s390x. It's not totally accurate because
+          you're not using ``lldb-server``, but this is fine for features that
+          are mostly implemented in ``lldb``.
+
+          If you are running a full system using ``qemu-system``, you likely
+          want to connect to the ``lldb-server`` running within the userspace
+          of that system.
+
+          If your test program is bare metal (meaning it requires no supporting
+          operating system) then connect to the built in GDB stub. This can be
+          useful when testing embedded systems or kernel debugging.
+
+Reducing Ptrace Related Bugs
+****************************
+
+This section is written Linux specific but the same can likely be done on
+other Unix or Unix like operating systems.
+
+Sometimes you will find ``lldb-server`` doing something with ptrace that causes
+a problem. Your reproducer involves running ``lldb`` as well, this is not going
+to go over well with kernel and is generally more difficult to explain if you
+want to get help with it.
+
+If you think you can get your point across without this, no need. If you're
+pretty sure you have for example found a Linux Kernel bug, doing this greatly
+increases the chances it'll get fixed.
+
+We'll remove the LLDB dependency by making a smaller standalone program that
+does the same actions. Starting with a skeleton program that forks and debugs
+the inferior process.
+
+The program presented `here <https://eli.thegreenplace.net/2011/01/23/how-debuggers-work-part-1>`_
+(`source <https://github.com/eliben/code-for-blog/blob/master/2011/simple_tracer.c>`_)
+is a great starting point. There is also an AArch64 specific example in
+`the LLDB examples folder <https://github.com/llvm/llvm-project/tree/main/lldb/examples/ptrace_example.c>`_.
+
+For either, you'll need to modify that to fit your architecture. An tip for this
+is to take any constants used in it, find in which function(s) they are used in
+LLDB and then you'll find the equivalent constants in the same LLDB functions
+for your architecture.
+
+Once that is running as expected we can convert ``lldb-server``'s into calls in
+this program. To get a log of those, run ``lldb-server`` with
+``--log-channels "posix ptrace"``. You'll see output like:
+
+::
+
+  $ lldb-server gdbserver :1234 --log-channels "posix ptrace" -- /tmp/test.o
+  1694099878.829990864 <...> ptrace(16896, 2659963, 0x0000000000000000, 0x000000000000007E, 0)=0x0
+  1694099878.830722332 <...> ptrace(16900, 2659963, 0x0000FFFFD14BF7CC, 0x0000FFFFD14BF7D0, 16)=0x0
+  1694099878.831967115 <...> ptrace(16900, 2659963, 0x0000FFFFD14BF66C, 0x0000FFFFD14BF630, 16)=0xffffffffffffffff
+  1694099878.831982136 <...> ptrace() failed: Invalid argument
+  Launched '/tmp/test.o' as process 2659963...
+
+Each call is logged with its parameters and its result as the ``=`` on the end.
+
+From here you will need to use a combination of the `ptrace documentation <https://man7.org/linux/man-pages/man2/ptrace.2.html>`_
+and Linux Kernel headers (``uapi/linux/ptrace.h`` mainly) to figure out what
+the calls are.
+
+The most important parameter is the first, which is the request number. In the
+example above ``16896``, which is hex ``0x4200``, is ``PTRACE_SETOPTIONS``.
+
+Luckily, you don't usually have to figure out all those early calls. Our
+skeleton program will be doing all that, successfully we hope.
+
+What you should do is record just the interesting bit to you. Let's say
+something odd is happening when you read the ``tpidr`` register (this is an
+AArch64 register, just for example purposes).
+
+First, go to the ``lldb-server`` terminal and press enter a few times to put
+some blank lines after the last logging output.
+
+Then go to your ``lldb`` and:
+
+::
+
+  (lldb) register read tpidr
+  tpidr = 0x0000fffff7fef320
+
+You'll see this from ``lldb-server``:
+
+::
+
+  <...> ptrace(16900, 2659963, 0x0000FFFFD14BF6CC, 0x0000FFFFD14BF710, 8)=0x0
+
+If you don't see that, it may be because ``lldb`` has cached it. The easiest way
+to clear that cache is to step. Remember that some registers are read every
+step, so you'll have to adjust depending on the situation.
+
+Assuming you've got that line, you would look up what ``116900`` is. This is
+``0x4204`` in hex, which is ``PTRACE_GETREGSET``. As we expected.
+
+The following parameters are not as we might expect because what we log is a bit
+different from the literal ptrace call. See your platform's definition of
+``PtraceWrapper`` for the exact form.
+
+The point of all this is that by doing a single action you can get a few
+isolated ptrace calls and you can then fill in the blanks and write
+equivalent calls in the skeleton program.
+
+The final piece of this is likely breakpoints. Assuming your bug does not
+require a hardware breakpoint, you can get software breakpoints by inserting
+a break instruction into the inferior's code at compile time. Usually by using
+an architecture specific assembly statement, as you will need to know exactly
+how many instructions to overwrite later.
+
+Doing it this way instead of exactly copying what LLDB does will save a few
+ptrace calls. The AArch64 example program shows how to do this.
+
+* The inferior contains ``BRK #0`` then ``NOP``.
+* 2 4 byte instructins means 8 bytes of data to replace, which matches the
+  minimum size you can write with ``PTRACE_POKETEXT``.
+* The inferior runs to the ``BRK``, which brings us into the debugger.
+* The debugger reads ``PC`` and writes ``NOP`` then ``NOP`` to the location
+  pointed to by ``PC``.
+* The debugger then single steps the inferior to the next instruction
+  (this is not required in this specific scenario, you could just continue but
+  it is included because this more cloesly matches what ``lldb`` does).
+* The debugger then continues the inferior.
+* The inferior exits, and the whole program exits.
+
+Using this technique you can emulate the usual "run to main, do a thing" type
+reproduction steps.
+
+Finally, that "thing" is the ptrace calls you got from the ``lldb-server`` logs.
+Add those to the debugger function and you now have a reproducer that doesn't
+need any part of LLDB.

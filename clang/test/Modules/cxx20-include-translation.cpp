@@ -81,7 +81,7 @@ module /*nothing here*/;
 
 // This should be include-translated, when the header unit for h1 is available.
  // expected-warning@+1 {{the implementation of header units is in an experimental phase}}
-#include "h1.h" // expected-remark {{treating #include as an import of module './h1.h'}}
+#include "h1.h" // expected-remark-re {{treating #include as an import of module '.{{/|\\\\?}}h1.h'}}
 // Import of a header unit is allowed, named modules are not.
 import "h2.h"; // expected-warning {{the implementation of header units is in an experimental phase}}
 // A regular, untranslated, header
@@ -104,7 +104,7 @@ export void charlie() {
   five();
 }
 
-// CHECK: #pragma clang module import "./h1.h"
-// CHECK: import ./h2.h
-// CHECK: import ./h3.h
-// CHECK-NOT: #pragma clang module import "./h4.h"
+// CHECK: #pragma clang module import ".{{/|\\\\?}}h1.h"
+// CHECK: import .{{/|\\\\?}}h2.h
+// CHECK: import .{{/|\\\\?}}h3.h
+// CHECK-NOT: #pragma clang module import ".{{/|\\\\?}}h4.h"

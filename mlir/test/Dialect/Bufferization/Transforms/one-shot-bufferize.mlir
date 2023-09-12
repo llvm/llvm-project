@@ -224,6 +224,6 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
   // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   %dest = bufferization.alloc_tensor() : tensor<5xf32>
-  %0 = bufferization.copy_tensor %arg0, %dest : tensor<5xf32>
+  %0 = bufferization.materialize_in_destination %arg0 in %dest : tensor<5xf32>
   return %0 : tensor<5xf32>
 }

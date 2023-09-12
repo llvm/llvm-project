@@ -4,10 +4,10 @@
 
 ; CHECK: %f.Frame = type { i32 }
 
-define { i8*, i32 } @f(i8* %buffer, i32 %n) {
+define { ptr, i32 } @f(ptr %buffer, i32 %n) {
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, i8* %buffer, i8* bitcast ({ i8*, i32 } (i8*, i1)* @f_prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @f_prototype, ptr @allocate, ptr @deallocate)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
 loop:
@@ -31,19 +31,19 @@ resume1:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
   unreachable
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(i8*, i1)
-declare i8* @llvm.coro.prepare.retcon(i8*)
+declare i1 @llvm.coro.end(ptr, i1)
+declare ptr @llvm.coro.prepare.retcon(ptr)
 
-declare { i8*, i32 } @f_prototype(i8*, i1 zeroext)
+declare { ptr, i32 } @f_prototype(ptr, i1 zeroext)
 
-declare noalias i8* @allocate(i32 %size)
-declare void @deallocate(i8* %ptr)
+declare noalias ptr @allocate(i32 %size)
+declare void @deallocate(ptr %ptr)
 
 declare void @print(i32)

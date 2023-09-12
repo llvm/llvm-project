@@ -58,11 +58,11 @@ entry:
 define void @test_llltui_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_llltui_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    stw r3, 0(r5)
+; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b
@@ -75,11 +75,11 @@ entry:
 define void @test_llltui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: test_llltui_sext_store:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r5, r2, .LC0@toc@ha
 ; CHECK-NEXT:    sub r3, r3, r4
-; CHECK-NEXT:    ld r5, .LC0@toc@l(r5)
+; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
+; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
 ; CHECK-NEXT:    sradi r3, r3, 63
-; CHECK-NEXT:    stw r3, 0(r5)
+; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp ult i32 %a, %b

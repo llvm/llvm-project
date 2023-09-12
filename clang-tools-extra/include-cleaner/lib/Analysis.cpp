@@ -13,6 +13,7 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -86,12 +87,17 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   llvm::StringSet<> Missing;
   if (!HeaderFilter)
     HeaderFilter = [](llvm::StringRef) { return false; };
+  const DirectoryEntry *ResourceDir =
+      PP.getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   walkUsed(ASTRoots, MacroRefs, PI, PP,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              bool Satisfied = false;
              for (const Header &H : Providers) {
-               if (H.kind() == Header::Physical && H.physical() == MainFile)
+               if (H.kind() == Header::Physical &&
+                   (H.physical() == MainFile ||
+                    H.physical().getDir() == ResourceDir)) {
                  Satisfied = true;
+               }
                for (const Include *I : Inc.match(H)) {
                  Used.insert(I);
                  Satisfied = true;
@@ -107,7 +113,8 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   AnalysisResults Results;
   for (const Include &I : Inc.all()) {
     if (Used.contains(&I) || !I.Resolved ||
-        HeaderFilter(I.Resolved->getFileEntry().tryGetRealPathName()))
+        HeaderFilter(I.Resolved->getFileEntry().tryGetRealPathName()) ||
+        I.Resolved->getFileEntry().getDir() == ResourceDir)
       continue;
     if (PI) {
       if (PI->shouldKeep(*I.Resolved))
