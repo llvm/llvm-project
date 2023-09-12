@@ -17,6 +17,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
@@ -159,8 +160,8 @@ static void AddPointerLayoutOffset(CIRGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
   assert(offset.getQuantity() == 0 && "NYI");
-  builder.add(mlir::cir::NullAttr::get(CGM.getBuilder().getContext(),
-                                       CGM.getBuilder().getUInt8PtrTy()));
+  builder.add(mlir::cir::ConstPtrAttr::get(
+      CGM.getBuilder().getContext(), CGM.getBuilder().getUInt8PtrTy(), 0));
 }
 
 static void AddRelativeLayoutOffset(CIRGenModule &CGM,

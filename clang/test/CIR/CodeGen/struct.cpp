@@ -103,7 +103,7 @@ void m() { Adv C; }
 // CHECK:     %4 = cir.const(#cir.int<1000024001> : !u32i) : !u32i
 // CHECK:     cir.store %4, %3 : !u32i, cir.ptr <!u32i>
 // CHECK:     %5 = cir.get_member %2[1] {name = "n"} : !cir.ptr<!ty_22Mandalore22> -> !cir.ptr<!cir.ptr<!void>>
-// CHECK:     %6 = cir.const(#cir.null : !cir.ptr<!void>) : !cir.ptr<!void>
+// CHECK:     %6 = cir.const(#cir.ptr<null> : !cir.ptr<!void>) : !cir.ptr<!void>
 // CHECK:     cir.store %6, %5 : !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>
 // CHECK:     %7 = cir.get_member %2[2] {name = "d"} : !cir.ptr<!ty_22Mandalore22> -> !cir.ptr<!s32i>
 // CHECK:     %8 = cir.const(#cir.int<0> : !s32i) : !s32i

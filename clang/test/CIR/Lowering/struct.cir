@@ -33,21 +33,21 @@ module {
   // CHECK:   %1 = llvm.alloca %0 x !llvm.struct<"struct.S2A", (i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
   // CHECK:   %2 = llvm.mlir.undef : !llvm.struct<"struct.S2A", (i32)>
   // CHECK:   %3 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.struct<"struct.S2A", (i32)> 
+  // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.struct<"struct.S2A", (i32)>
   // CHECK:   llvm.store %4, %1 : !llvm.struct<"struct.S2A", (i32)>, !llvm.ptr
   // CHECK:   llvm.return
   // CHECK: }
 
   // Should lower basic #cir.const_struct initializer.
-  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.null : !cir.ptr<!s32i>}> : !ty_22S122
+  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.ptr<null> : !cir.ptr<!s32i>}> : !ty_22S122
   // CHECK: llvm.mlir.global external @s1() {addr_space = 0 : i32} : !llvm.struct<"struct.S1", (i32, f32, ptr)> {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %1 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK:   %2 = llvm.insertvalue %1, %0[0] : !llvm.struct<"struct.S1", (i32, f32, ptr)> 
+  // CHECK:   %2 = llvm.insertvalue %1, %0[0] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %3 = llvm.mlir.constant(1.000000e-01 : f32) : f32
-  // CHECK:   %4 = llvm.insertvalue %3, %2[1] : !llvm.struct<"struct.S1", (i32, f32, ptr)> 
+  // CHECK:   %4 = llvm.insertvalue %3, %2[1] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   %5 = llvm.mlir.zero : !llvm.ptr
-  // CHECK:   %6 = llvm.insertvalue %5, %4[2] : !llvm.struct<"struct.S1", (i32, f32, ptr)> 
+  // CHECK:   %6 = llvm.insertvalue %5, %4[2] : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK:   llvm.return %6 : !llvm.struct<"struct.S1", (i32, f32, ptr)>
   // CHECK: }
 
@@ -57,8 +57,8 @@ module {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)>
   // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"struct.S2A", (i32)>
   // CHECK:   %2 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S2A", (i32)> 
-  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)> 
+  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S2A", (i32)>
+  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)>
   // CHECK:   llvm.return %4 : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)>
   // CHECK: }
 
@@ -67,16 +67,16 @@ module {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"struct.S3", (i32)>
   // CHECK:   %2 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S3", (i32)> 
-  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
+  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S3", (i32)>
+  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK:   %5 = llvm.mlir.undef : !llvm.struct<"struct.S3", (i32)>
   // CHECK:   %6 = llvm.mlir.constant(2 : i32) : i32
-  // CHECK:   %7 = llvm.insertvalue %6, %5[0] : !llvm.struct<"struct.S3", (i32)> 
-  // CHECK:   %8 = llvm.insertvalue %7, %4[1] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
+  // CHECK:   %7 = llvm.insertvalue %6, %5[0] : !llvm.struct<"struct.S3", (i32)>
+  // CHECK:   %8 = llvm.insertvalue %7, %4[1] : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK:   %9 = llvm.mlir.undef : !llvm.struct<"struct.S3", (i32)>
   // CHECK:   %10 = llvm.mlir.constant(3 : i32) : i32
-  // CHECK:   %11 = llvm.insertvalue %10, %9[0] : !llvm.struct<"struct.S3", (i32)> 
-  // CHECK:   %12 = llvm.insertvalue %11, %8[2] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
+  // CHECK:   %11 = llvm.insertvalue %10, %9[0] : !llvm.struct<"struct.S3", (i32)>
+  // CHECK:   %12 = llvm.insertvalue %11, %8[2] : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK:   llvm.return %12 : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK: }
 

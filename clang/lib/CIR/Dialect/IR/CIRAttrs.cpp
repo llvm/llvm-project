@@ -156,6 +156,43 @@ void LangAttr::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// ConstPtrAttr definitions
+//===----------------------------------------------------------------------===//
+
+Attribute ConstPtrAttr::parse(AsmParser &parser, Type odsType) {
+  uint64_t value;
+
+  if (!odsType.isa<cir::PointerType>())
+    return {};
+
+  // Consume the '<' symbol.
+  if (parser.parseLess())
+    return {};
+
+  if (parser.parseKeyword("null").succeeded()) {
+    value = 0;
+  } else {
+    if (parser.parseInteger(value))
+      parser.emitError(parser.getCurrentLocation(), "expected integer value");
+  }
+
+  // Consume the '>' symbol.
+  if (parser.parseGreater())
+    return {};
+
+  return ConstPtrAttr::get(odsType, value);
+}
+
+void ConstPtrAttr::print(AsmPrinter &printer) const {
+  printer << '<';
+  if (isNullValue())
+      printer << "null";
+  else
+      printer << getValue();
+  printer << '>';
+}
+
+//===----------------------------------------------------------------------===//
 // IntAttr definitions
 //===----------------------------------------------------------------------===//
 

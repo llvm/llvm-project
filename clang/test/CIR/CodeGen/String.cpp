@@ -22,7 +22,7 @@ void test() {
 // CHECK-NEXT:   cir.store %arg0, %0
 // CHECK-NEXT:   %1 = cir.load %0
 // CHECK-NEXT:   %2 = cir.get_member %1[0] {name = "storage"}
-// CHECK-NEXT:   %3 = cir.const(#cir.null : !cir.ptr<!s8i>) : !cir.ptr<!s8i>
+// CHECK-NEXT:   %3 = cir.const(#cir.ptr<null> : !cir.ptr<!s8i>) : !cir.ptr<!s8i>
 // CHECK-NEXT:   cir.store %3, %2 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
 // CHECK-NEXT:   %4 = cir.get_member %1[1] {name = "size"} : !cir.ptr<!ty_22String22> -> !cir.ptr<!s64i>
 // CHECK-NEXT:   %5 = cir.const(#cir.int<0> : !s32i) : !s32i
@@ -37,7 +37,7 @@ void test() {
 // CHECK-NEXT:   cir.store %arg1, %1
 // CHECK-NEXT:   %2 = cir.load %0
 // CHECK-NEXT:   %3 = cir.get_member %2[0] {name = "storage"}
-// CHECK-NEXT:   %4 = cir.const(#cir.null : !cir.ptr<!s8i>)
+// CHECK-NEXT:   %4 = cir.const(#cir.ptr<null> : !cir.ptr<!s8i>)
 // CHECK-NEXT:   cir.store %4, %3
 // CHECK-NEXT:   %5 = cir.get_member %2[1] {name = "size"} : !cir.ptr<!ty_22String22> -> !cir.ptr<!s64i>
 // CHECK-NEXT:   %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
@@ -53,7 +53,7 @@ void test() {
 // CHECK-NEXT:   cir.store %arg1, %1 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
 // CHECK-NEXT:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22String22>>, !cir.ptr<!ty_22String22>
 // CHECK-NEXT:   %3 = cir.get_member %2[0] {name = "storage"} : !cir.ptr<!ty_22String22> -> !cir.ptr<!cir.ptr<!s8i>>
-// CHECK-NEXT:   %4 = cir.const(#cir.null : !cir.ptr<!s8i>) : !cir.ptr<!s8i>
+// CHECK-NEXT:   %4 = cir.const(#cir.ptr<null> : !cir.ptr<!s8i>) : !cir.ptr<!s8i>
 // CHECK-NEXT:   cir.store %4, %3 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
 // CHECK-NEXT:   cir.return
 

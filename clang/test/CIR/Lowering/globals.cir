@@ -141,7 +141,7 @@ module {
   // MLIR: llvm.mlir.global external @zeroInitFlt(dense<0.000000e+00> : tensor<2xf32>) {addr_space = 0 : i32} : !llvm.array<2 x f32>
   cir.global "private" internal @staticVar = #cir.int<0> : !s32i
   // MLIR: llvm.mlir.global internal @staticVar(0 : i32) {addr_space = 0 : i32} : i32
-  cir.global external @nullPtr = #cir.null : !cir.ptr<!s32i>
+  cir.global external @nullPtr = #cir.ptr<null> : !cir.ptr<!s32i>
   // MLIR: llvm.mlir.global external @nullPtr()
   // MLIR:   %0 = llvm.mlir.zero : !llvm.ptr
   // MLIR:   llvm.return %0 : !llvm.ptr

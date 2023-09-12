@@ -244,7 +244,9 @@ def ConstantOp : CIR_Op<"const",
 
   let extraClassDeclaration = [{
      bool isNullPtr() {
-       return getValue().isa<mlir::cir::NullAttr>();
+      if (const auto ptrAttr = getValue().dyn_cast<mlir::cir::ConstPtrAttr>())
+       return ptrAttr.isNullValue();
+      return false;
      }
   }];
 

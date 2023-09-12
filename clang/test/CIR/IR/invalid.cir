@@ -5,7 +5,7 @@
 
 // expected-error@+2 {{'cir.const' op nullptr expects pointer type}}
 cir.func @p0() {
-  %1 = cir.const(#cir.null : !cir.ptr<!u32i>) : !u32i
+  %1 = cir.const(#cir.ptr<null> : !cir.ptr<!u32i>) : !u32i
   cir.return
 }
 

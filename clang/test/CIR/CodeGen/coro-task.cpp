@@ -158,7 +158,7 @@ VoidTask silly_task() {
 
 // Get coroutine id with __builtin_coro_id.
 
-// CHECK: %[[#NullPtr:]] = cir.const(#cir.null : !cir.ptr<!void>) : !cir.ptr<!void>
+// CHECK: %[[#NullPtr:]] = cir.const(#cir.ptr<null> : !cir.ptr<!void>) : !cir.ptr<!void>
 // CHECK: %[[#Align:]] = cir.const(#cir.int<16> : !u32i) : !u32i
 // CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
 
@@ -264,7 +264,7 @@ VoidTask silly_task() {
 
 // Call builtin coro end and return
 
-// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.null : !cir.ptr<!void>)
+// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.ptr<null> : !cir.ptr<!void>)
 // CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const(#false) : !cir.bool
 // CHECK-NEXT: = cir.call @__builtin_coro_end(%[[#CoroEndArg0]], %[[#CoroEndArg1]])
 
@@ -363,7 +363,7 @@ folly::coro::Task<int> go4() {
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
 // CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22anon221>) -> !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
-// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>> 
+// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
 // CHECK:   cir.yield %19 : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
 // CHECK: }
 // CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, cir.ptr <!cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>>
