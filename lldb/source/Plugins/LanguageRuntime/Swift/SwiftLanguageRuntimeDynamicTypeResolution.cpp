@@ -667,9 +667,9 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     auto *cti = reflection_ctx->GetClassInstanceTypeInfo(tr, &tip);
     if (auto *rti =
             llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(cti)) {
-      LLDB_LOG(GetLog(LLDBLog::Types),
-               "%s: class RecordTypeInfo(num_fields=%i)",
-               type.GetMangledTypeName().GetCString(), rti->getNumFields());
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "%s: class RecordTypeInfo(num_fields=%i)",
+                type.GetMangledTypeName().GetCString(), rti->getNumFields());
 
       // The superclass, if any, is an extra child.
       if (reflection_ctx->LookupSuperclass(tr))
@@ -680,8 +680,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
     return {};
   }
   // FIXME: Implement more cases.
-  LLDB_LOG(GetLog(LLDBLog::Types), "%s: unimplemented type info",
-           type.GetMangledTypeName().GetCString());
+  LLDB_LOGF(GetLog(LLDBLog::Types), "%s: unimplemented type info",
+            type.GetMangledTypeName().GetCString());
   return {};
 }
 
