@@ -139,10 +139,6 @@ class VirtRegMap;
       return LI;
     }
 
-    LiveInterval &getOrCreateEmptyInterval(Register Reg) {
-      return hasInterval(Reg) ? getInterval(Reg) : createEmptyInterval(Reg);
-    }
-
     /// Interval removal.
     void removeInterval(Register Reg) {
       delete VirtRegIntervals[Reg];
