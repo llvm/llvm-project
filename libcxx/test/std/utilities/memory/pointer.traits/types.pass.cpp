@@ -191,7 +191,8 @@ bool test() {
     assert(HasDifferenceType<Ptr>::value);
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
-    // TODO: Consider supporting SFINAE testing of std::pointer_traits<Ptr>.
+    // TODO: Maybe support SFINAE testing of std::pointer_traits<Ptr>::rebind
+    // and std::pointer_traits<Ptr>::pointer_to.
     assert((HasRebind<Ptr, long>::value));
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, TemplatedPtr<long, Irrelevant>);
 
