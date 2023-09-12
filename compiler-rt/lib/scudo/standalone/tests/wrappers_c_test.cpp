@@ -391,18 +391,18 @@ TEST_F(ScudoWrappersCTest, MallInfo) {
   // mallinfo is deprecated.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  const size_t BypassQuarantineSize = 1024U;
+  const int BypassQuarantineSize = 1024;
   struct mallinfo MI = mallinfo();
-  size_t Allocated = MI.uordblks;
+  int Allocated = MI.uordblks;
   void *P = malloc(BypassQuarantineSize);
   EXPECT_NE(P, nullptr);
   MI = mallinfo();
-  EXPECT_GE(static_cast<size_t>(MI.uordblks), Allocated + BypassQuarantineSize);
-  EXPECT_GT(static_cast<size_t>(MI.hblkhd), 0U);
-  size_t Free = MI.fordblks;
+  EXPECT_GE(MI.uordblks, Allocated + BypassQuarantineSize);
+  EXPECT_GT(MI.hblkhd, 0);
+  int Free = MI.fordblks;
   free(P);
   MI = mallinfo();
-  EXPECT_GE(static_cast<size_t>(MI.fordblks), Free + BypassQuarantineSize);
+  EXPECT_GE(MI.fordblks, Free + BypassQuarantineSize);
 #pragma clang diagnostic pop
 }
 #endif
