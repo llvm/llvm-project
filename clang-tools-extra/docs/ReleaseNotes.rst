@@ -227,7 +227,7 @@ Changes in existing checks
   `DeduplicateFindings` to output one finding per symbol occurrence.
 
 - Improved :doc:`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert 
+  <clang-tidy/checks/misc/include-cleaner>` check to avoid fixes insert
   same include header multiple times.
 
 - Improved :doc:`misc-redundant-expression
@@ -241,6 +241,10 @@ Changes in existing checks
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
   false-positives when special member function is actually used or implicit.
+
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check by adding option
+  `IgnoredTypes` that can be used to exclude some pointer types.
 
 - Improved :doc:`modernize-use-std-print
   <clang-tidy/checks/modernize/use-std-print>` check to accurately generate
