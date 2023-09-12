@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon --filetype=obj < %s -o - | llvm-objdump -d - | FileCheck %s
+; RUN: llc -mtriple=hexagon --filetype=obj < %s -o - | llvm-objdump -d - | FileCheck %s
 
 @g0 = common global double 0.000000e+00, align 8
 @g1 = common global double 0.000000e+00, align 8
