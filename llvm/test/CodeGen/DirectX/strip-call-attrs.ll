@@ -1,6 +1,5 @@
-; RUN: opt -S -dxil-prepare < %s | FileCheck %s
-; REQUIRES: directx-registered-target
 
+; RUN: opt -S -dxil-prepare < %s | FileCheck %s
 target triple = "dxil-unknown-unknown"
 
 @f = internal unnamed_addr global float 0.000000e+00, align 4

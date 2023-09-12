@@ -1,5 +1,4 @@
 ; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
-; REQUIRES: directx-registered-target
 
 ; Make sure dxil operation function calls for sin are generated for float and half.
 ; CHECK:call float @dx.op.unary.f32(i32 13, float %{{.*}})

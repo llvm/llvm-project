@@ -1,5 +1,4 @@
 ; RUN: opt -S -dxil-op-lower < %s | FileCheck %s
-; REQUIRES: directx-registered-target
 
 ; Make sure dxil operation function calls for umax are generated for i32/i64.
 

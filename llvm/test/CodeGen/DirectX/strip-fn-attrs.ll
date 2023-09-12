@@ -1,6 +1,4 @@
 ; RUN: llc %s --filetype=asm -o - | FileCheck %s
-; REQUIRES: directx-registered-target
-
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 ; CHECK: Function Attrs: nounwind memory(none)

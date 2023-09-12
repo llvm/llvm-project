@@ -1,6 +1,5 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
 ; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
-; REQUIRES: directx-registered-target
 
 target triple = "dxil-pc-shadermodel6.7-library"
 

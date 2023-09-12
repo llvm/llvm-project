@@ -1,6 +1,4 @@
 ; RUN: llc --filetype=asm %s -o - | FileCheck %s
-; REQUIRES: directx-registered-target
-
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 define i64 @test(ptr %p) {
