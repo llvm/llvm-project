@@ -218,9 +218,6 @@ Bug Fixes in This Version
   (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
 - Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
   an invalid conversion during method function overload resolution.
-- Clang now properly handles out of line template specializations when there is
-  a non-template inner-class between the function and the class template
-  (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -277,6 +274,10 @@ Bug Fixes to C++ Support
   lambda refers to an init-capture.
   (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
   `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+
+- Clang now properly handles out of line template specializations when there is
+  a non-template inner-class between the function and the class template.
+  (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
