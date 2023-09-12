@@ -214,6 +214,15 @@ class StmtComparer {
     return E1->size() == E2->size();
   }
 
+  bool IsStmtEquivalent(const DeclRefExpr *DRE1, const DeclRefExpr *DRE2) {
+    const ValueDecl *Decl1 = DRE1->getDecl();
+    const ValueDecl *Decl2 = DRE2->getDecl();
+    if (!Decl1 || !Decl2)
+      return false;
+    return IsStructurallyEquivalent(Context, const_cast<ValueDecl *>(Decl1),
+                                    const_cast<ValueDecl *>(Decl2));
+  }
+
   bool IsStmtEquivalent(const DependentScopeDeclRefExpr *DE1,
                         const DependentScopeDeclRefExpr *DE2) {
     if (!IsStructurallyEquivalent(Context, DE1->getDeclName(),
