@@ -69,7 +69,8 @@ void GPUToSPIRVPass::runOnOperation() {
       std::unique_ptr<ConversionTarget> target =
           spirv::getMemorySpaceToStorageClassTarget(*context);
       spirv::MemorySpaceToStorageClassMap memorySpaceMap =
-          spirv::mapMemorySpaceToVulkanStorageClass;
+          this->useOpenCL ? spirv::mapMemorySpaceToOpenCLStorageClass :
+              spirv::mapMemorySpaceToVulkanStorageClass;
       spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
 
       RewritePatternSet patterns(context);
