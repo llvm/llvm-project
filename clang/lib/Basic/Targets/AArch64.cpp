@@ -979,7 +979,7 @@ bool AArch64TargetInfo::initFeatureMap(
   // Parse the CPU and add any implied features.
   std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
   if (CpuInfo) {
-    llvm::Bitset Exts = CpuInfo->getImpliedExtensions();
+    auto Exts = CpuInfo->getImpliedExtensions();
     std::vector<StringRef> CPUFeats;
     llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
     for (auto F : CPUFeats) {
