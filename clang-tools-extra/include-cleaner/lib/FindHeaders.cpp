@@ -24,6 +24,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
+#include <cassert>
+#include <cstddef>
+#include <map>
 #include <optional>
 #include <queue>
 #include <set>
@@ -176,6 +180,104 @@ headersForSpecialSymbol(const Symbol &S, const SourceManager &SM,
   return std::nullopt;
 }
 
+// A hand-mainained list of include mappings for system headers.
+// The first element is the suffix of the physical file path for the system
+// header, the second element is the final verbatim header spelling.
+const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
+    {"bits/types/struct_timeval.h", "<sys/time.h>"},
+    {"bits/pthreadtypes.h", "<pthread.h>"},
+    {"bits/types/struct_iovec.h", "<sys/uio.h>"},
+    {"linux/limits.h", "<limits.h>"},
+    {"bits/getopt_core.h", "<getopt.h>"},
+    {"asm-generic/socket.h", "<sys/socket.h>"},
+    {"bits/posix1_lim.h", "<limits.h>"},
+    {"bits/time.h", "time.h"},
+    {"bits/getopt_ext.h", "<getopt.h>"},
+    {"bits/types/sigset_t.h", "<signal.h>"},
+    {"bits/types/siginfo_t.h", "<signal.h>"},
+    {"bits/types/FILE.h", "<stdio.h>"},
+    {"asm/unistd_64.h", "<asm/unistd.h>"},
+    {"bits/stat.h", "<sys/stat.h>"},
+    {"asm-generic/ioctls.h", "<sys/ioctls.h>"},
+    {"asm-generic/errno.h", "<errno.h>"},
+    {"asm-generic/int-ll64.h", "<asm/types.h>"},
+    {"bits/sigaction.h", "<signal.h>"},
+    {"bits/types/struct_rusage.h", "<sys/resource.h>"},
+    {"sys/syscall.h", "<syscall.h>"},
+    {"linux/prctl.h", "<sys/prctl.h>"},
+    {"sys/ucontext.h", "<ucontext.h>"},
+    {"bits/types/clockid_t.h", "<time.h>"},
+    {"bits/types/mbstate_t.h", "<uchar.h>"},
+    {"bits/types/mbstate_t.h", "<wchar.h>"},
+    {"bits/types/struct_itimerspec.h", "<time.h>"},
+    {"bits/types/time_t.h", "<time.h>"},
+    {"bits/sockaddr.h", "<time.h>"},
+};
+// The maximum number of path components in a key from SuffixHeaderMapping.
+// Used to minimize the number of lookups in suffix path mappings.
+constexpr int MaxSuffixComponents = 3;
+
+// A mapping for system headers based on a set of filename rules.
+class SystemIncludeMap {
+public:
+  static const SystemIncludeMap &get() {
+    static SystemIncludeMap Instance;
+    static const auto *SystemHeaderMap = [] {
+      const size_t Size = sizeof(IncludeMappings) / sizeof(IncludeMappings[0]);
+      auto *HeaderMap = new std::multimap<llvm::StringRef, llvm::StringRef>();
+      for (size_t I = 0; I < Size; I++) {
+        HeaderMap->insert(IncludeMappings[I]);
+      }
+      return HeaderMap;
+    }();
+
+    // // Check MaxSuffixComponents constant is correct.
+    assert(llvm::all_of(*SystemHeaderMap, [](const auto &KeyAndValue) {
+      return std::distance(
+                 llvm::sys::path::begin(KeyAndValue.first,
+                                        llvm::sys::path::Style::posix),
+                 llvm::sys::path::end(KeyAndValue.first)) <=
+             MaxSuffixComponents;
+    }));
+    // ... and precise.
+    assert(llvm::any_of(*SystemHeaderMap, [](const auto &KeyAndValue) {
+      return std::distance(
+                 llvm::sys::path::begin(KeyAndValue.first,
+                                        llvm::sys::path::Style::posix),
+                 llvm::sys::path::end(KeyAndValue.first)) ==
+             MaxSuffixComponents;
+    }));
+
+    Instance.SuffixHeaderMapping = SystemHeaderMap;
+    return Instance;
+  }
+
+  // Returns the overridden verbatim spellings for HeaderPath that can be
+  // directly included.
+  llvm::SmallVector<llvm::StringRef>
+  mapHeader(llvm::StringRef HeaderPath) const {
+    if (!SuffixHeaderMapping)
+      return {};
+
+    int Components = 1;
+    llvm::SmallVector<llvm::StringRef> Headers;
+    for (auto It = llvm::sys::path::rbegin(HeaderPath),
+              End = llvm::sys::path::rend(HeaderPath);
+         It != End && Components <= MaxSuffixComponents; ++It, ++Components) {
+      auto SubPath = HeaderPath.substr(It->data() - HeaderPath.begin());
+      auto FoundRange = SuffixHeaderMapping->equal_range(SubPath);
+      for (auto It = FoundRange.first; It != FoundRange.second; ++It)
+        Headers.push_back(It->second);
+    }
+    return Headers;;
+  }
+
+private:
+  // A map from a suffix path to a verbatim header spelling (with <>).
+  const std::multimap<llvm::StringRef, llvm::StringRef>
+      *SuffixHeaderMapping = nullptr;
+};
+
 } // namespace
 
 llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
@@ -188,6 +290,20 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
     OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
     if (!FE)
       return {};
+
+    if (SrcMgr::isSystem(
+            SM.getSLocEntry(FID).getFile().getFileCharacteristic())) {
+      if (auto MappingHeader = SystemIncludeMap::get().mapHeader(FE->getName());
+          !MappingHeader.empty()) {
+        for (auto &Header : MappingHeader)
+          Results.emplace_back(Header, Hints::PublicHeader);
+        assert(!Results.empty());
+        Results.front().Hint |= Hints::PreferredHeader;
+        // FIXME: should we include the original header as well?
+        return Results;
+      }
+    }
+
     if (!PI)
       return {{*FE, Hints::PublicHeader | Hints::OriginHeader}};
     bool IsOrigin = true;

@@ -597,5 +597,53 @@ TEST_F(HeadersForSymbolTest, StandardHeaders) {
                            tooling::stdlib::Header::named("<assert.h>")));
 }
 
+TEST_F(HeadersForSymbolTest, SystemHeadersMapping) {
+  Inputs.Code = R"cpp(
+    #include <bits/types/struct_timeval.h>
+
+    timeval t;
+  )cpp";
+  Inputs.ExtraFiles["bits/types/struct_timeval.h"] = guard(R"cpp(
+    struct timeval {};
+    )cpp");
+  Inputs.ExtraArgs.push_back("-isystem.");
+  buildAST();
+  EXPECT_THAT(
+      headersFor("timeval"),
+      UnorderedElementsAre(Header("<sys/time.h>")));
+}
+
+TEST_F(HeadersForSymbolTest, SystemHeadersMappingNonSystem) {
+  Inputs.Code = R"cpp(
+    #include "bits/types/struct_timeval.h"
+
+    timeval t;
+  )cpp";
+  Inputs.ExtraFiles["bits/types/struct_timeval.h"] = guard(R"cpp(
+    struct timeval {};
+    )cpp");
+  buildAST();
+  EXPECT_THAT(
+      headersFor("timeval"),
+      UnorderedElementsAre(physicalHeader("bits/types/struct_timeval.h")));
+}
+
+TEST_F(HeadersForSymbolTest, SystemHeadersMappingMultiple) {
+  Inputs.Code = R"cpp(
+    #include <bits/types/mbstate_t.h>
+
+    mbstate_t t;
+  )cpp";
+  Inputs.ExtraFiles["bits/types/mbstate_t.h"] = guard(R"cpp(
+    struct mbstate_t {};
+  )cpp");
+  Inputs.ExtraArgs.push_back("-isystem.");
+  buildAST();
+  EXPECT_THAT(
+      headersFor("mbstate_t"),
+      // Respect the ordering from the stdlib mapping.
+      UnorderedElementsAre(Header("<uchar.h>"), Header("<wchar.h>")));
+}
+
 } // namespace
 } // namespace clang::include_cleaner
