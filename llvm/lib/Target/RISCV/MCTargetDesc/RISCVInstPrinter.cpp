@@ -282,7 +282,7 @@ void RISCVInstPrinter::printSpimm(const MCInst *MI, unsigned OpNo,
     Spimm = -Spimm;
 
   // RAII guard for ANSI color escape sequences
-  auto OS = markup(O, Markup::Immediate);
+  WithMarkup ScopedMarkup = markup(O, Markup::Immediate);
   RISCVZC::printSpimm(Spimm, O);
 }
 
@@ -295,7 +295,8 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
   if (MO.getReg() == RISCV::NoRegister)
     return;
   O << ", ";
-  markup(O, Markup::Register) << getRegisterName(MO.getReg()) << ".t";
+  printRegName(O, MO.getReg());
+  O << ".t";
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {

@@ -45,4 +45,4 @@
 
 # mask registers
 0x57 0x04 0x4a 0x00
-# ASM-NEXT:	vadd.vv	[0;36mv8[0m, [0;36mv4[0m, [0;36mv20[0m, [0;36mv0.t[0m
+# ASM-NEXT:	vadd.vv	[0;36mv8[0m, [0;36mv4[0m, [0;36mv20[0m, [0;36mv0[0m.t
