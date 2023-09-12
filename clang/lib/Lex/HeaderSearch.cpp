@@ -1923,11 +1923,8 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(
-    const FileEntry *File, llvm::StringRef MainFile, bool *IsAngled) const {
-  // FIXME: We assume that the path name currently cached in the FileEntry is
-  // the most appropriate one for this analysis (and that it's spelled the
-  // same way as the corresponding header search path).
-  return suggestPathToFileForDiagnostics(File->getName(), /*WorkingDir=*/"",
+    FileEntryRef File, llvm::StringRef MainFile, bool *IsAngled) const {
+  return suggestPathToFileForDiagnostics(File.getName(), /*WorkingDir=*/"",
                                          MainFile, IsAngled);
 }
 

@@ -870,7 +870,7 @@ public:
   ///
   /// \param IsAngled If non-null, filled in to indicate whether the suggested
   ///        path should be referenced as <Header.h> instead of "Header.h".
-  std::string suggestPathToFileForDiagnostics(const FileEntry *File,
+  std::string suggestPathToFileForDiagnostics(FileEntryRef File,
                                               llvm::StringRef MainFile,
                                               bool *IsAngled = nullptr) const;
 
