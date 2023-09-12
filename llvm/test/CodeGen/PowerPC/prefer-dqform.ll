@@ -35,7 +35,7 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P9-NEXT:    addi r8, r5, -8
 ; CHECK-P9-NEXT:    lwz r5, 0(r7)
 ; CHECK-P9-NEXT:    extsw r7, r4
-; CHECK-P9-NEXT:    rldic r4, r3, 3, 29
+; CHECK-P9-NEXT:    sldi r4, r3, 3
 ; CHECK-P9-NEXT:    sub r3, r7, r3
 ; CHECK-P9-NEXT:    addi r10, r4, 8
 ; CHECK-P9-NEXT:    lxvdsx vs0, 0, r8
@@ -87,7 +87,7 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P10-NEXT:    addi r8, r5, -8
 ; CHECK-P10-NEXT:    lwz r5, 0(r7)
 ; CHECK-P10-NEXT:    extsw r7, r4
-; CHECK-P10-NEXT:    rldic r4, r3, 3, 29
+; CHECK-P10-NEXT:    sldi r4, r3, 3
 ; CHECK-P10-NEXT:    addi r10, r4, 8
 ; CHECK-P10-NEXT:    sub r3, r7, r3
 ; CHECK-P10-NEXT:    lxvdsx vs0, 0, r8

@@ -208,11 +208,10 @@ entry:
 define dso_local i128 @ld_or2___int128___int128(i64 %ptr, i8 zeroext %off) {
 ; CHECK-LABEL: ld_or2___int128___int128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicr 5, 3, 0, 51
-; CHECK-NEXT:    rotldi 6, 3, 52
-; CHECK-NEXT:    ldx 3, 5, 4
-; CHECK-NEXT:    rldimi 4, 6, 12, 0
-; CHECK-NEXT:    ld 4, 8(4)
+; CHECK-NEXT:    rldicr 3, 3, 0, 51
+; CHECK-NEXT:    or 5, 3, 4
+; CHECK-NEXT:    ldx 3, 3, 4
+; CHECK-NEXT:    ld 4, 8(5)
 ; CHECK-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
@@ -740,11 +739,10 @@ entry:
 define dso_local void @st_or2__int128___int128(i64 %ptr, i8 zeroext %off, i128 %str) {
 ; CHECK-LABEL: st_or2__int128___int128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rldicr 7, 3, 0, 51
-; CHECK-NEXT:    rotldi 3, 3, 52
-; CHECK-NEXT:    stdx 5, 7, 4
-; CHECK-NEXT:    rldimi 4, 3, 12, 0
-; CHECK-NEXT:    std 6, 8(4)
+; CHECK-NEXT:    rldicr 3, 3, 0, 51
+; CHECK-NEXT:    or 7, 3, 4
+; CHECK-NEXT:    stdx 5, 3, 4
+; CHECK-NEXT:    std 6, 8(7)
 ; CHECK-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096

@@ -17,11 +17,8 @@ entry:
 define i64 @rldimi2(i64 %a) {
 ; CHECK-LABEL: rldimi2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
-; CHECK-NEXT:    rlwimi 4, 3, 8, 16, 23
-; CHECK-NEXT:    rlwimi 4, 3, 16, 8, 15
-; CHECK-NEXT:    rldimi 4, 3, 24, 0
-; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    rldimi 3, 3, 8, 0
+; CHECK-NEXT:    rldimi 3, 3, 16, 0
 ; CHECK-NEXT:    blr
 entry:
   %x0 = shl i64 %a, 8
@@ -36,15 +33,9 @@ entry:
 define i64 @rldimi3(i64 %a) {
 ; CHECK-LABEL: rldimi3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rotldi 4, 3, 32
-; CHECK-NEXT:    rlwimi 4, 3, 0, 24, 31
-; CHECK-NEXT:    rlwimi 4, 3, 8, 16, 23
-; CHECK-NEXT:    rlwimi 4, 3, 16, 8, 15
-; CHECK-NEXT:    rlwimi 4, 3, 24, 0, 7
-; CHECK-NEXT:    rldimi 4, 3, 40, 16
-; CHECK-NEXT:    rldimi 4, 3, 48, 8
-; CHECK-NEXT:    rldimi 4, 3, 56, 0
-; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    rldimi 3, 3, 8, 0
+; CHECK-NEXT:    rldimi 3, 3, 16, 0
+; CHECK-NEXT:    rlwinm 3, 3, 0, 1, 0
 ; CHECK-NEXT:    blr
 entry:
   %0 = shl i64 %a, 8

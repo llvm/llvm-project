@@ -628,6 +628,14 @@ define i64 @test_ds_cross_basic_blocks(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    sub r30, r30, r29
 ; CHECK-NEXT:    clrlwi r30, r30, 24
 ; CHECK-NEXT:    cmplwi r30, 1
+; CHECK-NEXT:    lbzu r0, 1(r5)
+; CHECK-NEXT:    mulli r29, r0, 171
+; CHECK-NEXT:    srwi r28, r29, 9
+; CHECK-NEXT:    rlwinm r29, r29, 24, 8, 30
+; CHECK-NEXT:    add r29, r28, r29
+; CHECK-NEXT:    sub r0, r0, r29
+; CHECK-NEXT:    clrlwi r0, r0, 24
+; CHECK-NEXT:    cmplwi r0, 1
 ; CHECK-NEXT:    beq cr0, .LBB6_2
 ; CHECK-NEXT:  # %bb.5: # %bb28
 ; CHECK-NEXT:    #

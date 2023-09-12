@@ -1630,30 +1630,41 @@ class BitPermutationSelector {
     bool &Interesting = ValueEntry->first;
     SmallVector<ValueBit, 64> &Bits = ValueEntry->second;
     Bits.resize(NumBits);
+    SDValue LHS = V.getNumOperands() > 0 ? V.getOperand(0) : SDValue();
+    SDValue RHS = V.getNumOperands() > 1 ? V.getOperand(1) : SDValue();
 
     switch (V.getOpcode()) {
     default: break;
     case ISD::ROTL:
-      if (isa<ConstantSDNode>(V.getOperand(1))) {
+      if (isa<ConstantSDNode>(RHS)) {
         unsigned RotAmt = V.getConstantOperandVal(1);
 
-        const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
-
-        for (unsigned i = 0; i < NumBits; ++i)
-          Bits[i] = LHSBits[i < RotAmt ? i + (NumBits - RotAmt) : i - RotAmt];
+        if (LHS.hasOneUse()) {
+          const auto &LHSBits = *getValueBits(LHS, NumBits).second;
+          for (unsigned i = 0; i < NumBits; ++i)
+            Bits[i] = LHSBits[i < RotAmt ? i + (NumBits - RotAmt) : i - RotAmt];
+        } else {
+          for (unsigned i = 0; i < NumBits; ++i)
+            Bits[i] =
+                ValueBit(LHS, i < RotAmt ? i + (NumBits - RotAmt) : i - RotAmt);
+        }
 
         return std::make_pair(Interesting = true, &Bits);
       }
       break;
     case ISD::SHL:
     case PPCISD::SHL:
-      if (isa<ConstantSDNode>(V.getOperand(1))) {
+      if (isa<ConstantSDNode>(RHS)) {
         unsigned ShiftAmt = V.getConstantOperandVal(1);
 
-        const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
-
-        for (unsigned i = ShiftAmt; i < NumBits; ++i)
-          Bits[i] = LHSBits[i - ShiftAmt];
+        if (LHS.hasOneUse()) {
+          const auto &LHSBits = *getValueBits(LHS, NumBits).second;
+          for (unsigned i = ShiftAmt; i < NumBits; ++i)
+            Bits[i] = LHSBits[i - ShiftAmt];
+        } else {
+          for (unsigned i = ShiftAmt; i < NumBits; ++i)
+            Bits[i] = ValueBit(LHS, i - ShiftAmt);
+        }
 
         for (unsigned i = 0; i < ShiftAmt; ++i)
           Bits[i] = ValueBit(ValueBit::ConstZero);
@@ -1663,13 +1674,17 @@ class BitPermutationSelector {
       break;
     case ISD::SRL:
     case PPCISD::SRL:
-      if (isa<ConstantSDNode>(V.getOperand(1))) {
+      if (isa<ConstantSDNode>(RHS)) {
         unsigned ShiftAmt = V.getConstantOperandVal(1);
 
-        const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
-
-        for (unsigned i = 0; i < NumBits - ShiftAmt; ++i)
-          Bits[i] = LHSBits[i + ShiftAmt];
+        if (LHS.hasOneUse()) {
+          const auto &LHSBits = *getValueBits(LHS, NumBits).second;
+          for (unsigned i = 0; i < NumBits - ShiftAmt; ++i)
+            Bits[i] = LHSBits[i + ShiftAmt];
+        } else {
+          for (unsigned i = 0; i < NumBits - ShiftAmt; ++i)
+            Bits[i] = ValueBit(LHS, i + ShiftAmt);
+        }
 
         for (unsigned i = NumBits - ShiftAmt; i < NumBits; ++i)
           Bits[i] = ValueBit(ValueBit::ConstZero);
@@ -1678,23 +1693,27 @@ class BitPermutationSelector {
       }
       break;
     case ISD::AND:
-      if (isa<ConstantSDNode>(V.getOperand(1))) {
+      if (isa<ConstantSDNode>(RHS)) {
         uint64_t Mask = V.getConstantOperandVal(1);
 
-        const SmallVector<ValueBit, 64> *LHSBits;
+        const SmallVector<ValueBit, 64> *LHSBits = nullptr;
         // Mark this as interesting, only if the LHS was also interesting. This
         // prevents the overall procedure from matching a single immediate 'and'
         // (which is non-optimal because such an and might be folded with other
         // things if we don't select it here).
-        std::tie(Interesting, LHSBits) = getValueBits(V.getOperand(0), NumBits);
+        if (LHS.hasOneUse())
+          std::tie(Interesting, LHSBits) = getValueBits(LHS, NumBits);
 
         for (unsigned i = 0; i < NumBits; ++i)
-          if (((Mask >> i) & 1) == 1)
-            Bits[i] = (*LHSBits)[i];
-          else {
+          if (((Mask >> i) & 1) == 1) {
+            if (LHS.hasOneUse())
+              Bits[i] = (*LHSBits)[i];
+            else
+              Bits[i] = ValueBit(LHS, i);
+          } else {
             // AND instruction masks this bit. If the input is already zero,
             // we have nothing to do here. Otherwise, make the bit ConstZero.
-            if ((*LHSBits)[i].isZero())
+            if (LHS.hasOneUse() && (*LHSBits)[i].isZero())
               Bits[i] = (*LHSBits)[i];
             else
               Bits[i] = ValueBit(ValueBit::ConstZero);
@@ -1704,34 +1723,44 @@ class BitPermutationSelector {
       }
       break;
     case ISD::OR: {
-      const auto &LHSBits = *getValueBits(V.getOperand(0), NumBits).second;
-      const auto &RHSBits = *getValueBits(V.getOperand(1), NumBits).second;
+      const auto *LHSBits =
+          LHS.hasOneUse() ? getValueBits(LHS, NumBits).second : nullptr;
+      const auto *RHSBits =
+          RHS.hasOneUse() ? getValueBits(RHS, NumBits).second : nullptr;
 
       bool AllDisjoint = true;
       SDValue LastVal = SDValue();
       unsigned LastIdx = 0;
       for (unsigned i = 0; i < NumBits; ++i) {
-        if (LHSBits[i].isZero() && RHSBits[i].isZero()) {
+        if (LHSBits && RHSBits && (*LHSBits)[i].isZero() &&
+            (*RHSBits)[i].isZero()) {
           // If both inputs are known to be zero and one is ConstZero and
           // another is VariableKnownToBeZero, we can select whichever
           // we like. To minimize the number of bit groups, we select
           // VariableKnownToBeZero if this bit is the next bit of the same
           // input variable from the previous bit. Otherwise, we select
           // ConstZero.
-          if (LHSBits[i].hasValue() && LHSBits[i].getValue() == LastVal &&
-              LHSBits[i].getValueBitIndex() == LastIdx + 1)
-            Bits[i] = LHSBits[i];
-          else if (RHSBits[i].hasValue() && RHSBits[i].getValue() == LastVal &&
-                   RHSBits[i].getValueBitIndex() == LastIdx + 1)
-            Bits[i] = RHSBits[i];
+          const auto &LBits = *LHSBits;
+          const auto &RBits = *RHSBits;
+          if (LBits[i].hasValue() && LBits[i].getValue() == LastVal &&
+              LBits[i].getValueBitIndex() == LastIdx + 1)
+            Bits[i] = LBits[i];
+          else if (RBits[i].hasValue() && RBits[i].getValue() == LastVal &&
+                   RBits[i].getValueBitIndex() == LastIdx + 1)
+            Bits[i] = RBits[i];
           else
             Bits[i] = ValueBit(ValueBit::ConstZero);
-        }
-        else if (LHSBits[i].isZero())
-          Bits[i] = RHSBits[i];
-        else if (RHSBits[i].isZero())
-          Bits[i] = LHSBits[i];
-        else {
+        } else if (LHSBits && (*LHSBits)[i].isZero()) {
+          if (RHSBits)
+            Bits[i] = (*RHSBits)[i];
+          else
+            Bits[i] = ValueBit(RHS, i);
+        } else if (RHSBits && (*RHSBits)[i].isZero()) {
+          if (LHSBits)
+            Bits[i] = (*LHSBits)[i];
+          else
+            Bits[i] = ValueBit(LHS, i);
+        } else {
           AllDisjoint = false;
           break;
         }
@@ -1739,9 +1768,9 @@ class BitPermutationSelector {
         if (Bits[i].hasValue()) {
           LastVal = Bits[i].getValue();
           LastIdx = Bits[i].getValueBitIndex();
-        }
-        else {
-          if (LastVal) LastVal = SDValue();
+        } else {
+          if (LastVal)
+            LastVal = SDValue();
           LastIdx = 0;
         }
       }
@@ -1753,17 +1782,19 @@ class BitPermutationSelector {
     }
     case ISD::ZERO_EXTEND: {
       // We support only the case with zero extension from i32 to i64 so far.
-      if (V.getValueType() != MVT::i64 ||
-          V.getOperand(0).getValueType() != MVT::i32)
+      if (V.getValueType() != MVT::i64 || LHS.getValueType() != MVT::i32)
         break;
 
-      const SmallVector<ValueBit, 64> *LHSBits;
       const unsigned NumOperandBits = 32;
-      std::tie(Interesting, LHSBits) = getValueBits(V.getOperand(0),
-                                                    NumOperandBits);
-
-      for (unsigned i = 0; i < NumOperandBits; ++i)
-        Bits[i] = (*LHSBits)[i];
+      if (LHS.hasOneUse()) {
+        const SmallVector<ValueBit, 64> *LHSBits;
+        std::tie(Interesting, LHSBits) = getValueBits(LHS, NumOperandBits);
+        for (unsigned i = 0; i < NumOperandBits; ++i)
+          Bits[i] = (*LHSBits)[i];
+      } else {
+        for (unsigned i = 0; i < NumOperandBits; ++i)
+          Bits[i] = ValueBit(LHS, i);
+      }
 
       for (unsigned i = NumOperandBits; i < NumBits; ++i)
         Bits[i] = ValueBit(ValueBit::ConstZero);
@@ -1771,15 +1802,14 @@ class BitPermutationSelector {
       return std::make_pair(Interesting, &Bits);
     }
     case ISD::TRUNCATE: {
-      EVT FromType = V.getOperand(0).getValueType();
+      EVT FromType = LHS.getValueType();
       EVT ToType = V.getValueType();
       // We support only the case with truncate from i64 to i32.
-      if (FromType != MVT::i64 || ToType != MVT::i32)
+      if (FromType != MVT::i64 || ToType != MVT::i32 || !LHS.hasOneUse())
         break;
       const unsigned NumAllBits = FromType.getSizeInBits();
       SmallVector<ValueBit, 64> *InBits;
-      std::tie(Interesting, InBits) = getValueBits(V.getOperand(0),
-                                                    NumAllBits);
+      std::tie(Interesting, InBits) = getValueBits(LHS, NumAllBits);
       const unsigned NumValidBits = ToType.getSizeInBits();
 
       // A 32-bit instruction cannot touch upper 32-bit part of 64-bit value.
@@ -1802,22 +1832,28 @@ class BitPermutationSelector {
       // For AssertZext, we look through the operand and
       // mark the bits known to be zero.
       const SmallVector<ValueBit, 64> *LHSBits;
-      std::tie(Interesting, LHSBits) = getValueBits(V.getOperand(0),
-                                                    NumBits);
 
-      EVT FromType = cast<VTSDNode>(V.getOperand(1))->getVT();
+      EVT FromType = cast<VTSDNode>(RHS)->getVT();
       const unsigned NumValidBits = FromType.getSizeInBits();
-      for (unsigned i = 0; i < NumValidBits; ++i)
-        Bits[i] = (*LHSBits)[i];
 
       // These bits are known to be zero but the AssertZext may be from a value
       // that already has some constant zero bits (i.e. from a masking and).
-      for (unsigned i = NumValidBits; i < NumBits; ++i)
-        Bits[i] = (*LHSBits)[i].hasValue()
-                      ? ValueBit((*LHSBits)[i].getValue(),
-                                 (*LHSBits)[i].getValueBitIndex(),
-                                 ValueBit::VariableKnownToBeZero)
-                      : ValueBit(ValueBit::ConstZero);
+      if (LHS.hasOneUse()) {
+        std::tie(Interesting, LHSBits) = getValueBits(LHS, NumBits);
+        for (unsigned i = 0; i < NumValidBits; ++i)
+          Bits[i] = (*LHSBits)[i];
+        for (unsigned i = NumValidBits; i < NumBits; ++i)
+          Bits[i] = (*LHSBits)[i].hasValue()
+                        ? ValueBit((*LHSBits)[i].getValue(),
+                                   (*LHSBits)[i].getValueBitIndex(),
+                                   ValueBit::VariableKnownToBeZero)
+                        : ValueBit(ValueBit::ConstZero);
+      } else {
+        for (unsigned i = 0; i < NumValidBits; ++i)
+          Bits[i] = ValueBit(LHS, i);
+        for (unsigned i = NumValidBits; i < NumBits; ++i)
+          Bits[i] = ValueBit(LHS, i, ValueBit::VariableKnownToBeZero);
+      }
 
       return std::make_pair(Interesting, &Bits);
     }
