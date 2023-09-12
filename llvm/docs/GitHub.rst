@@ -39,7 +39,8 @@ recommended.
 
 Creating Pull Requests
 ----------------------
-Keep in mind that each pull request should generally only contain one commit.
+Keep in mind that when creating a pull request, it should generally only contain one
+self-contained commit initially.
 This makes it easier for reviewers to understand the introduced changes and
 provide feedback. It also helps maintain a clear and organized commit history
 for the project. If you have multiple changes you want to introduce, it's
