@@ -38,6 +38,21 @@ void PresburgerRelation::insertVarInPlace(VarKind kind, unsigned pos,
   space.insertVar(kind, pos, num);
 }
 
+void PresburgerRelation::convertVarKind(VarKind srcKind, unsigned srcPos,
+                                        unsigned num, VarKind dstKind,
+                                        unsigned dstPos) {
+  assert(srcKind != dstKind && "cannot convert variables to the same kind");
+  assert(srcPos + num <= space.getNumVarKind(srcKind) &&
+         "invalid range for source variables");
+  assert(dstPos <= space.getNumVarKind(dstKind) &&
+         "invalid position for destination variables");
+
+  space.convertVarKind(srcKind, srcPos, num, dstKind, dstPos);
+
+  for (IntegerRelation &disjunct : disjuncts)
+    disjunct.convertVarKind(srcKind, srcPos, srcPos + num, dstKind, dstPos);
+}
+
 unsigned PresburgerRelation::getNumDisjuncts() const {
   return disjuncts.size();
 }
