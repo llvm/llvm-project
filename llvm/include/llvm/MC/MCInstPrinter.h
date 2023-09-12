@@ -154,9 +154,6 @@ public:
 
   WithMarkup markup(raw_ostream &OS, Markup M) const;
 
-  /// Utility functions to make adding mark ups simpler.
-  StringRef markup(StringRef s) const;
-
   bool getPrintImmHex() const { return PrintImmHex; }
   void setPrintImmHex(bool Value) { PrintImmHex = Value; }
 
