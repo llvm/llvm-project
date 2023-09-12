@@ -95,6 +95,7 @@ public:
 
     switch (V.getKind()) {
     case Value::Kind::Integer:
+    case Value::Kind::Record:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
@@ -102,14 +103,6 @@ public:
     case Value::Kind::Pointer:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
-      break;
-    case Value::Kind::Record:
-      for (const auto &Child : cast<RecordValue>(V).getLoc().children())
-        JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
-          if (Child.second)
-            if (Value *Val = Env.getValue(*Child.second))
-              dump(*Val);
-        });
       break;
     }
 
@@ -136,6 +129,15 @@ public:
     JOS.attribute("type", L.getType().getAsString());
     if (auto *V = Env.getValue(L))
       dump(*V);
+
+    if (auto *RLoc = dyn_cast<RecordStorageLocation>(&L)) {
+      for (const auto &Child : RLoc->children())
+        JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
+          if (Child.second)
+            if (Value *Val = Env.getValue(*Child.second))
+              dump(*Val);
+        });
+    }
   }
 
   llvm::DenseSet<const void*> Visited;
