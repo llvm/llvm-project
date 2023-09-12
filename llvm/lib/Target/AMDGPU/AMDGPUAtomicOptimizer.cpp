@@ -742,7 +742,16 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
   Function *F = I.getFunction();
   LLVMContext &C = F->getContext();
-  Value *Identity = getIdentityValueForAtomicOp(Ty, Op);
+  
+  // For atomic sub, perform scan with add operation and allow one lane to
+  // subtract the reduced value later.
+  AtomicRMWInst::BinOp ScanOp = Op;
+  if (Op == AtomicRMWInst::Sub) {
+    ScanOp = AtomicRMWInst::Add;
+  } else if (Op == AtomicRMWInst::FSub) {
+    ScanOp = AtomicRMWInst::FAdd;
+  }
+  Value *Identity = getIdentityValueForAtomicOp(Ty, ScanOp);
 
   Value *ExclScan = nullptr;
   Value *NewV = nullptr;
@@ -754,14 +763,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
-    // For atomic sub, perform scan with add operation and allow one lane to
-    // substract the reduced value later.
-    AtomicRMWInst::BinOp ScanOp = Op;
-    if (Op == AtomicRMWInst::Sub) {
-      ScanOp = AtomicRMWInst::Add;
-    } else if (Op == AtomicRMWInst::FSub) {
-      ScanOp = AtomicRMWInst::FAdd;
-    }
     if (ScanImpl == ScanOptions::DPP) {
       // First we need to set all inactive invocations to the identity value, so
       // that they can correctly contribute to the final result.
