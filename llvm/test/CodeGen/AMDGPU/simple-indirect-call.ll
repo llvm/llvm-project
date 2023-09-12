@@ -43,9 +43,9 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ; GFX9-LABEL: test_simple_indirect_call:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x4
-; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
-; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
-; GFX9-NEXT:    s_add_u32 s0, s0, s15
+; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
+; GFX9-NEXT:    s_add_u32 s0, s0, s17
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshr_b32 s4, s4, 16
