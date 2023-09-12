@@ -13,7 +13,7 @@
 # CHECK-NEXT:     DataEncoding: LittleEndian (0x1)
 # CHECK-NEXT:     FileVersion: 1
 # CHECK-NEXT:     OS/ABI: AMDGPU_HSA (0x40)
-# CHECK-NEXT:     ABIVersion: 2
+# CHECK-NEXT:     ABIVersion: 3
 # CHECK-NEXT:     Unused: (00 00 00 00 00 00 00)
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Type: Executable (0x2)

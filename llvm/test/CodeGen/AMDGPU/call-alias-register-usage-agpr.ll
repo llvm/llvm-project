@@ -9,10 +9,10 @@
 
 ; ALL-LABEL: {{^}}kernel:
 ; GFX908: .amdhsa_next_free_vgpr 32
-; GFX908-NEXT: .amdhsa_next_free_sgpr 36
+; GFX908-NEXT: .amdhsa_next_free_sgpr 33
 
-; GFX90A: .amdhsa_next_free_vgpr 65
-; GFX90A-NEXT: .amdhsa_next_free_sgpr 36
+; GFX90A: .amdhsa_next_free_vgpr 59
+; GFX90A-NEXT: .amdhsa_next_free_sgpr 33
 ; GFX90A-NEXT: .amdhsa_accum_offset 32
 define amdgpu_kernel void @kernel() #0 {
 bb:

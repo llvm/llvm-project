@@ -11,10 +11,10 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-LABEL: name: extract_w_offset_vgpr
   ; GCN: bb.0.entry:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr2_sgpr3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY killed $vgpr0
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr2_sgpr3, 36, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
   ; GCN-NEXT:   renamable $sgpr6 = COPY renamable $sgpr1
   ; GCN-NEXT:   renamable $sgpr0 = COPY renamable $sgpr0, implicit killed $sgpr0_sgpr1
   ; GCN-NEXT:   renamable $sgpr4 = S_MOV_B32 61440
@@ -56,22 +56,22 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   [[COPY14:%[0-9]+]]:vgpr_32 = COPY killed renamable $sgpr2
   ; GCN-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY killed renamable $sgpr1
   ; GCN-NEXT:   [[COPY16:%[0-9]+]]:vgpr_32 = COPY killed renamable $sgpr0
-  ; GCN-NEXT:   undef %35.sub0:vreg_512 = COPY [[COPY1]]
-  ; GCN-NEXT:   %35.sub1:vreg_512 = COPY [[COPY2]]
-  ; GCN-NEXT:   %35.sub2:vreg_512 = COPY [[COPY3]]
-  ; GCN-NEXT:   %35.sub3:vreg_512 = COPY [[COPY4]]
-  ; GCN-NEXT:   %35.sub4:vreg_512 = COPY [[COPY5]]
-  ; GCN-NEXT:   %35.sub5:vreg_512 = COPY [[COPY6]]
-  ; GCN-NEXT:   %35.sub6:vreg_512 = COPY [[COPY7]]
-  ; GCN-NEXT:   %35.sub7:vreg_512 = COPY [[COPY8]]
-  ; GCN-NEXT:   %35.sub8:vreg_512 = COPY [[COPY9]]
-  ; GCN-NEXT:   %35.sub9:vreg_512 = COPY [[COPY10]]
-  ; GCN-NEXT:   %35.sub10:vreg_512 = COPY [[COPY11]]
-  ; GCN-NEXT:   %35.sub11:vreg_512 = COPY [[COPY12]]
-  ; GCN-NEXT:   %35.sub12:vreg_512 = COPY [[COPY13]]
-  ; GCN-NEXT:   %35.sub13:vreg_512 = COPY [[COPY14]]
-  ; GCN-NEXT:   %35.sub14:vreg_512 = COPY [[COPY15]]
-  ; GCN-NEXT:   %35.sub15:vreg_512 = COPY [[COPY16]]
+  ; GCN-NEXT:   undef %34.sub0:vreg_512 = COPY [[COPY1]]
+  ; GCN-NEXT:   %34.sub1:vreg_512 = COPY [[COPY2]]
+  ; GCN-NEXT:   %34.sub2:vreg_512 = COPY [[COPY3]]
+  ; GCN-NEXT:   %34.sub3:vreg_512 = COPY [[COPY4]]
+  ; GCN-NEXT:   %34.sub4:vreg_512 = COPY [[COPY5]]
+  ; GCN-NEXT:   %34.sub5:vreg_512 = COPY [[COPY6]]
+  ; GCN-NEXT:   %34.sub6:vreg_512 = COPY [[COPY7]]
+  ; GCN-NEXT:   %34.sub7:vreg_512 = COPY [[COPY8]]
+  ; GCN-NEXT:   %34.sub8:vreg_512 = COPY [[COPY9]]
+  ; GCN-NEXT:   %34.sub9:vreg_512 = COPY [[COPY10]]
+  ; GCN-NEXT:   %34.sub10:vreg_512 = COPY [[COPY11]]
+  ; GCN-NEXT:   %34.sub11:vreg_512 = COPY [[COPY12]]
+  ; GCN-NEXT:   %34.sub12:vreg_512 = COPY [[COPY13]]
+  ; GCN-NEXT:   %34.sub13:vreg_512 = COPY [[COPY14]]
+  ; GCN-NEXT:   %34.sub14:vreg_512 = COPY [[COPY15]]
+  ; GCN-NEXT:   %34.sub15:vreg_512 = COPY [[COPY16]]
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_MOV_B64 $exec
   ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -85,7 +85,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   renamable $sgpr2 = V_READFIRSTLANE_B32 [[COPY]](s32), implicit $exec
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = V_CMP_EQ_U32_e64 $sgpr2, [[COPY]](s32), implicit $exec
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_AND_SAVEEXEC_B64 killed renamable $sgpr0_sgpr1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 %35, killed $sgpr2, 11, implicit-def $m0, implicit $m0, implicit $exec
+  ; GCN-NEXT:   [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 %34, killed $sgpr2, 11, implicit-def $m0, implicit $m0, implicit $exec
   ; GCN-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]]
   ; GCN-NEXT:   renamable $sgpr2_sgpr3 = COPY renamable $sgpr0_sgpr1
   ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)

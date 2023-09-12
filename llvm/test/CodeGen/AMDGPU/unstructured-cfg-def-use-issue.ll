@@ -31,13 +31,13 @@ define hidden void @widget() {
 ; GCN-NEXT:    v_writelane_b32 v40, s46, 14
 ; GCN-NEXT:    v_writelane_b32 v40, s47, 15
 ; GCN-NEXT:    v_mov_b32_e32 v41, v31
+; GCN-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; GCN-NEXT:    s_mov_b32 s42, s15
 ; GCN-NEXT:    s_mov_b32 s43, s14
 ; GCN-NEXT:    s_mov_b32 s44, s13
 ; GCN-NEXT:    s_mov_b32 s45, s12
-; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; GCN-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -60,9 +60,9 @@ define hidden void @widget() {
 ; GCN-NEXT:    s_add_u32 s16, s16, wibble@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, wibble@rel32@hi+12
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; GCN-NEXT:    s_mov_b32 s12, s45
 ; GCN-NEXT:    s_mov_b32 s13, s44
 ; GCN-NEXT:    s_mov_b32 s14, s43
@@ -92,9 +92,9 @@ define hidden void @widget() {
 ; GCN-NEXT:    s_add_u32 s16, s16, wibble@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, wibble@rel32@hi+12
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; GCN-NEXT:    s_mov_b32 s12, s45
 ; GCN-NEXT:    s_mov_b32 s13, s44
 ; GCN-NEXT:    s_mov_b32 s14, s43
@@ -303,14 +303,14 @@ define hidden void @blam() {
 ; GCN-NEXT:    v_writelane_b32 v40, s57, 25
 ; GCN-NEXT:    v_writelane_b32 v40, s58, 26
 ; GCN-NEXT:    v_writelane_b32 v40, s59, 27
+; GCN-NEXT:    s_mov_b64 s[34:35], s[6:7]
 ; GCN-NEXT:    v_mov_b32_e32 v41, v31
 ; GCN-NEXT:    s_mov_b32 s46, s15
 ; GCN-NEXT:    s_mov_b32 s47, s14
 ; GCN-NEXT:    s_mov_b32 s48, s13
 ; GCN-NEXT:    s_mov_b32 s49, s12
-; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
-; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
-; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[36:37], s[10:11]
+; GCN-NEXT:    s_mov_b64 s[38:39], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
 ; GCN-NEXT:    s_mov_b64 s[50:51], 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -353,9 +353,9 @@ define hidden void @blam() {
 ; GCN-NEXT:  ; %bb.4: ; %bb11
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
-; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
-; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[34:35]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[36:37]
 ; GCN-NEXT:    s_mov_b32 s12, s49
 ; GCN-NEXT:    s_mov_b32 s13, s48
 ; GCN-NEXT:    s_mov_b32 s14, s47

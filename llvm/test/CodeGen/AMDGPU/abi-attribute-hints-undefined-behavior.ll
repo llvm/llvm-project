@@ -276,16 +276,16 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
 ; FIXEDABI-SDAG-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x40
+; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
-; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s5
-; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
-; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, 1
+; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v4, s4
+; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
+; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
+; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v4, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
 ; FIXEDABI-SDAG-NEXT:    flat_store_dword v[2:3], v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -297,12 +297,16 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
 ; FIXEDABI-GISEL-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x40
+; FIXEDABI-GISEL-NEXT:    s_movk_i32 s4, 0xc0
+; FIXEDABI-GISEL-NEXT:    s_mov_b32 s5, 0
+; FIXEDABI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x0
+; FIXEDABI-GISEL-NEXT:    s_movk_i32 s4, 0xc4
+; FIXEDABI-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s5
-; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
+; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v3, s6
+; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
@@ -322,16 +326,29 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
 }
 
 define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
-; FIXEDABI-LABEL: is_shared_requires_queue_ptr:
-; FIXEDABI:       ; %bb.0:
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_load_dword s4, s[6:7], 0x40
-; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
-; FIXEDABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; FIXEDABI-NEXT:    flat_store_dword v[0:1], v0
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
+; FIXEDABI-SDAG-LABEL: is_shared_requires_queue_ptr:
+; FIXEDABI-SDAG:       ; %bb.0:
+; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x0
+; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; FIXEDABI-SDAG-NEXT:    flat_store_dword v[0:1], v0
+; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; FIXEDABI-GISEL-LABEL: is_shared_requires_queue_ptr:
+; FIXEDABI-GISEL:       ; %bb.0:
+; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc4
+; FIXEDABI-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
+; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; FIXEDABI-GISEL-NEXT:    flat_store_dword v[0:1], v0
+; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
   store volatile i32 %zext, ptr addrspace(1) undef
@@ -339,16 +356,29 @@ define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
 }
 
 define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
-; FIXEDABI-LABEL: is_private_requires_queue_ptr:
-; FIXEDABI:       ; %bb.0:
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_load_dword s4, s[6:7], 0x44
-; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
-; FIXEDABI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; FIXEDABI-NEXT:    flat_store_dword v[0:1], v0
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
+; FIXEDABI-SDAG-LABEL: is_private_requires_queue_ptr:
+; FIXEDABI-SDAG:       ; %bb.0:
+; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x0
+; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; FIXEDABI-SDAG-NEXT:    flat_store_dword v[0:1], v0
+; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; FIXEDABI-GISEL-LABEL: is_private_requires_queue_ptr:
+; FIXEDABI-GISEL:       ; %bb.0:
+; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc0
+; FIXEDABI-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
+; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
+; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; FIXEDABI-GISEL-NEXT:    flat_store_dword v[0:1], v0
+; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
   store volatile i32 %zext, ptr addrspace(1) undef
@@ -356,11 +386,21 @@ define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
 }
 
 define void @trap_requires_queue() #0 {
-; FIXEDABI-LABEL: trap_requires_queue:
-; FIXEDABI:       ; %bb.0:
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_mov_b64 s[0:1], s[6:7]
-; FIXEDABI-NEXT:    s_trap 2
+; FIXEDABI-SDAG-LABEL: trap_requires_queue:
+; FIXEDABI-SDAG:       ; %bb.0:
+; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; FIXEDABI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-SDAG-NEXT:    s_trap 2
+;
+; FIXEDABI-GISEL-LABEL: trap_requires_queue:
+; FIXEDABI-GISEL:       ; %bb.0:
+; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc8
+; FIXEDABI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-GISEL-NEXT:    s_trap 2
   call void @llvm.trap()
   unreachable
 }
