@@ -185,4 +185,36 @@ module {
   // MLIR-NEXT:  ^bb6:
   // MLIR-NEXT:    llvm.br ^bb7
 
+  // Test endless cir.loop lowering.
+  cir.func @testEndless() {
+    cir.scope {
+      cir.loop for(cond : {
+        cir.yield continue
+      }, step : {
+        cir.yield
+      }) {
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  //      MLIR: llvm.func @testEndless()
+  // MLIR-NEXT:   llvm.br ^bb1
+  // MLIR-NEXT:   ^bb1:
+  // MLIR-NEXT:     llvm.br ^bb2
+  // ============= Condition block =============
+  // MLIR-NEXT:   ^bb2:
+  // MLIR-NEXT:     llvm.br ^bb3
+  // ============= Body block =============
+  // MLIR-NEXT:   ^bb3:
+  // MLIR-NEXT:     llvm.br ^bb4
+  // ============= Step block =============
+  // MLIR-NEXT:   ^bb4:
+  // MLIR-NEXT:     llvm.br ^bb2
+  // ============= Exit block =============
+  // MLIR-NEXT:   ^bb5:
+  // MLIR-NEXT:     llvm.br ^bb6
+  // MLIR-NEXT:   ^bb6:
+  // MLIR-NEXT:     llvm.return
 }
