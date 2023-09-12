@@ -611,6 +611,23 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                     DemandedMask, Known))
             return R;
 
+      // Do not simplify if lshr is part of fshl rotate pattern
+      if (I->hasOneUser()) {
+        auto *Op = I->user_back();
+        if (Op->getOpcode() == BinaryOperator::Or) {
+          const APInt *LShrAmt;
+          Value *LShrVal;
+          auto *Operand =
+              Op->getOperand(0) == I ? Op->getOperand(1) : Op->getOperand(0);
+          if (match(Operand,
+                    m_OneUse(m_LShr(m_Value(LShrVal), m_APInt(LShrAmt)))))
+            if (I->getOperand(0) == LShrVal)
+              if (SA->ult(BitWidth) && LShrAmt->ult(BitWidth) &&
+                  (*SA + *LShrAmt) == BitWidth)
+                return nullptr;
+        }
+      }
+
       // TODO: If we only want bits that already match the signbit then we don't
       // need to shift.
 
@@ -668,6 +685,22 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
+
+      // Do not simplify if shl is part of fshl rotate pattern
+      if (I->hasOneUser()) {
+        auto *Op = I->user_back();
+        if (Op->getOpcode() == BinaryOperator::Or) {
+          const APInt *ShlAmt;
+          Value *ShlVal;
+          auto *Operand =
+              Op->getOperand(0) == I ? Op->getOperand(1) : Op->getOperand(0);
+          if (match(Operand, m_OneUse(m_Shl(m_Value(ShlVal), m_APInt(ShlAmt)))))
+            if (I->getOperand(0) == ShlVal)
+              if (SA->ult(BitWidth) && ShlAmt->ult(BitWidth) &&
+                  (*SA + *ShlAmt) == BitWidth)
+                return nullptr;
+        }
+      }
 
       // If we are just demanding the shifted sign bit and below, then this can
       // be treated as an ASHR in disguise.
