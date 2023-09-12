@@ -196,6 +196,15 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
   str.clear();
 
   info.Clear();
+
+  // Test for symbolizer markup
+  info.address = 0xaa00;
+  RenderFrame(&str, "", frame_no, info.address, &info,  false, true);
+  EXPECT_NE(nullptr, internal_strstr(str.data(), "{{{bt:42:"));
+  EXPECT_NE(nullptr, internal_strstr(str.data(), "aa00"));
+  EXPECT_NE(nullptr, internal_strstr(str.data(), "}}}"));
+  str.clear();
+  info.Clear();
 }
 
 }  // namespace __sanitizer

@@ -12,7 +12,6 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
-#include "sanitizer_placement_new.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_stacktrace_printer.h"
 #include "sanitizer_symbolizer.h"
@@ -28,10 +27,10 @@ class StackTraceTextPrinter {
                         InternalScopedString *output,
                         InternalScopedString *dedup_token)
       : stack_trace_fmt_(stack_trace_fmt),
-        dedup_token_(dedup_token),
-        symbolize_(RenderNeedsSymbolization(stack_trace_fmt, false)),
         frame_delimiter_(frame_delimiter),
-        output_(output) {}
+        output_(output),
+        dedup_token_(dedup_token),
+        symbolize_(RenderNeedsSymbolization(stack_trace_fmt, false)){}
 
   bool ProcessAddressFrames(uptr pc) {
     SymbolizedStack *frames = symbolize_
@@ -72,20 +71,18 @@ class StackTraceTextPrinter {
   }
 
   const char *stack_trace_fmt_;
+  const char frame_delimiter_;
   int dedup_frames_ = common_flags()->dedup_token_length;
+  uptr frame_num_ = 0;
+  InternalScopedString *output_;
   InternalScopedString *dedup_token_;
   const bool symbolize_ = false;
-
- protected:
-  uptr frame_num_ = 0;
-  const char frame_delimiter_;
-  InternalScopedString *output_;
 };
 
-class StackTraceMarkupPrinter : public StackTraceTextPrinter {
+class StackTraceMarkupPrinter {
  public:
   StackTraceMarkupPrinter(InternalScopedString *output)
-      : StackTraceTextPrinter("", '\n', output, nullptr){};
+      : output_(output) {}
 
   bool ProcessAddressFrames(uptr pc) {
     SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(pc);
@@ -106,11 +103,15 @@ class StackTraceMarkupPrinter : public StackTraceTextPrinter {
                   common_flags()->strip_path_prefix);
 
       if (prev_len != output_->length())
-        output_->append("%c", frame_delimiter_);
+        output_->append("%c", '\n');
     }
     frames->ClearAll();
     return true;
   }
+
+ private:
+  InternalScopedString *output_;
+  uptr frame_num_ = 0;
 };
 
 static void CopyStringToBuffer(const InternalScopedString &str, char *out_buf,
@@ -130,12 +131,11 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
   CHECK(output);
 
   InternalScopedString dedup_token;
-  StackTraceTextPrinter printer =
-      common_flags()->enable_symbolizer_markup
-          ? StackTraceMarkupPrinter(output)
-          : StackTraceTextPrinter(common_flags()->stack_trace_format, '\n',
-                                  output, &dedup_token);
 
+  StackTraceMarkupPrinter markup_printer(output);
+  StackTraceTextPrinter text_printer(common_flags()->stack_trace_format, '\n',
+                                  output, &dedup_token);
+      
   if (trace == nullptr || size == 0) {
     output->append("    <empty stack>\n\n");
     return;
@@ -145,7 +145,10 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
     // PCs in stack traces are actually the return addresses, that is,
     // addresses of the next instructions after the call.
     uptr pc = GetPreviousInstructionPc(trace[i]);
-    CHECK(printer.ProcessAddressFrames(pc));
+    bool result = common_flags()->enable_symbolizer_markup ?
+              markup_printer.ProcessAddressFrames(pc) :
+              text_printer.ProcessAddressFrames(pc);
+    CHECK(result);
   }
 
   // Always add a trailing empty line after stack trace.
@@ -233,12 +236,14 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
   pc = StackTrace::GetPreviousInstructionPc(pc);
 
   InternalScopedString output;
-  StackTraceTextPrinter printer =
-      common_flags()->enable_symbolizer_markup
-          ? StackTraceMarkupPrinter(&output)
-          : StackTraceTextPrinter(fmt, '\0', &output, nullptr);
+  StackTraceMarkupPrinter markup_printer(&output);
+  StackTraceTextPrinter text_printer(fmt, '\0', &output, nullptr);
+                                  
+  bool result = common_flags()->enable_symbolizer_markup ?
+        markup_printer.ProcessAddressFrames(pc) :
+        text_printer.ProcessAddressFrames(pc);
 
-  if (!printer.ProcessAddressFrames(pc)) {
+  if (!result) {
     output.clear();
     output.append("<can't symbolize>");
   }

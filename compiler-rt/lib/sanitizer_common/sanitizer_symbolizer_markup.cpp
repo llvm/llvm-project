@@ -95,8 +95,7 @@ void RenderModulesMarkup(InternalScopedString *buffer,
     }
     buffer->append("}}}\n");
 
-    const auto ranges = module.ranges();
-    for (const auto &range : ranges) {
+    for (const auto &range : module.ranges()) {
       buffer->append("{{{mmap:%p:%p:load:%d:r", range.beg,
                      range.end - range.beg, renderedModules.size());
       if (range.writable)
@@ -120,10 +119,6 @@ void RenderModulesMarkup(InternalScopedString *buffer,
 
     curModule.base_address = module.base_address();
   }
-}
-
-MarkupSymbolizer *MarkupSymbolizer::get(LowLevelAllocator *alloc) {
-  return new (*alloc) MarkupSymbolizer();
 }
 
 bool MarkupSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
@@ -227,7 +222,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
 
 Symbolizer *Symbolizer::PlatformInit() {
   IntrusiveList<SymbolizerTool> tools;
-  SymbolizerTool *tool = MarkupSymbolizer::get(&symbolizer_allocator_);
+  SymbolizerTool *tool = new(symbolizer_allocator_) MarkupSymbolizer();
   tools.push_back(tool);
   return new (symbolizer_allocator_) Symbolizer(tools);
 }

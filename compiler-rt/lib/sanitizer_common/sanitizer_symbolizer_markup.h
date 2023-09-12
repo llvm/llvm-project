@@ -31,8 +31,6 @@ namespace __sanitizer {
 
 class MarkupSymbolizer final : public SymbolizerTool {
  public:
-  static MarkupSymbolizer *get(LowLevelAllocator *alloc);
-
   // This is used in some places for suppression checking, which we
   // don't really support for Fuchsia.  It's also used in UBSan to
   // identify a PC location to a function name, so we always fill in

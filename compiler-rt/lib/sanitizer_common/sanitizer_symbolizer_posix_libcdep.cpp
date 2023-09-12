@@ -473,8 +473,7 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   }
   if (common_flags()->enable_symbolizer_markup) {
     VReport(2, "Using symbolizer markup.\n");
-    SymbolizerTool *tool = MarkupSymbolizer::get(allocator);
-    list->push_back(tool);
+    list->push_back(new(*allocator) MarkupSymbolizer());
     return;
   }
   if (IsAllocatorOutOfMemory()) {
