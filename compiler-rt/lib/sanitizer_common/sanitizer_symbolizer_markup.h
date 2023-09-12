@@ -52,16 +52,15 @@ class MarkupSymbolizer final : public SymbolizerTool {
 };
 
 // We ignore the format argument to __sanitizer_symbolize_global.
-void RenderDataMarkup(InternalScopedString *, const char *, const DataInfo *,
-                      const char *);
+void RenderDataMarkup(InternalScopedString *buffer, const DataInfo *DI);
 
-bool RenderNeedsSymbolizationMarkup(const char *format);
+bool RenderNeedsSymbolizationMarkup();
 
 // We don't support the stack_trace_format flag at all.
-void RenderFrameMarkup(InternalScopedString *, const char *, int, uptr,
-                       const AddressInfo *, bool, const char *);
+void RenderFrameMarkup(InternalScopedString *buffer, int frame_no, uptr address);
 
-void RenderModulesMarkup(InternalScopedString *, const ListOfModules *);
+void RenderModulesMarkup(InternalScopedString *buffer, const ListOfModules *modules);
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_SYMBOLIZER_MARKUP_H
+

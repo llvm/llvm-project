@@ -23,17 +23,14 @@
 
 namespace __sanitizer {
 
-void RenderDataMarkup(InternalScopedString *buffer, const char *format,
-                      const DataInfo *DI, const char *strip_path_prefix) {
+void RenderDataMarkup(InternalScopedString *buffer, const DataInfo *DI) {
   buffer->append(kFormatData, DI->start);
 }
 
-bool RenderNeedsSymbolizationMarkup(const char *format) { return false; }
+bool RenderNeedsSymbolizationMarkup() { return false; }
 
-void RenderFrameMarkup(InternalScopedString *buffer, const char *format,
-                       int frame_no, uptr address, const AddressInfo *info,
-                       bool vs_style, const char *strip_path_prefix) {
-  CHECK(!RenderNeedsSymbolizationMarkup(format));
+void RenderFrameMarkup(InternalScopedString *buffer, int frame_no, uptr address) {
+  CHECK(!RenderNeedsSymbolizationMarkup());
   buffer->append(kFormatFrame, frame_no, address);
 }
 
@@ -205,19 +202,18 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
 void RenderData(InternalScopedString *buffer, const char *format,
                 const DataInfo *DI, bool symbolizer_markup,
                 const char *strip_path_prefix) {
-  RenderDataMarkup(buffer, format, DI, strip_path_prefix);
+  RenderDataMarkup(buffer, DI);
 }
 
 bool RenderNeedsSymbolization(const char *format, bool symbolizer_markup) {
-  return RenderNeedsSymbolizationMarkup(format);
+  return RenderNeedsSymbolizationMarkup();
 }
 
 // We don't support the stack_trace_format flag at all.
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
                  const char *strip_path_prefix) {
-  RenderFrameMarkup(buffer, format, frame_no, address, info, vs_style,
-                    strip_path_prefix);
+  RenderFrameMarkup(buffer, frame_no, address);
 }
 
 Symbolizer *Symbolizer::PlatformInit() {
@@ -234,7 +230,7 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {}
 
-#  if SANITIZER_CAN_SLOW_UNWIND
+#if SANITIZER_CAN_SLOW_UNWIND
 struct UnwindTraceArg {
   BufferedStackTrace *stack;
   u32 max_depth;
@@ -244,8 +240,7 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   UnwindTraceArg *arg = static_cast<UnwindTraceArg *>(param);
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = _Unwind_GetIP(ctx);
-  if (pc < PAGE_SIZE)
-    return _URC_NORMAL_STOP;
+  if (pc < PAGE_SIZE) return _URC_NORMAL_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
   return (arg->stack->size == arg->max_depth ? _URC_NORMAL_STOP
                                              : _URC_NO_REASON);
@@ -271,7 +266,7 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   UNREACHABLE("signal context doesn't exist");
 }
-#  endif  // SANITIZER_CAN_SLOW_UNWIND
+#endif  // SANITIZER_CAN_SLOW_UNWIND
 
 #endif  // SANITIZER_SYMBOLIZER_MARKUP
 

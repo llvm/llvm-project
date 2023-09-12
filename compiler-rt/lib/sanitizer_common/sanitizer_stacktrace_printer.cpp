@@ -145,8 +145,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
                  bool symbolizer_markup, const char *strip_path_prefix) {
   if (symbolizer_markup) {
-    RenderFrameMarkup(buffer, format, frame_no, address, info, vs_style,
-                      strip_path_prefix);
+    RenderFrameMarkup(buffer, frame_no, address);
     return;
   }
   // info will be null in the case where symbolization is not needed for the
@@ -286,7 +285,7 @@ void RenderData(InternalScopedString *buffer, const char *format,
                 const DataInfo *DI, bool symbolizer_markup,
                 const char *strip_path_prefix) {
   if (symbolizer_markup) {
-    RenderDataMarkup(buffer, format, DI, strip_path_prefix);
+    RenderDataMarkup(buffer, DI);
     return;
   }
   for (const char *p = format; *p != '\0'; p++) {
