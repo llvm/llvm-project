@@ -2014,6 +2014,16 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
     EraseInstAction::emitActionOpcodes(Table, Rule, /*InsnID*/ 0);
 }
 
+//===- BuildConstantAction ------------------------------------------------===//
+
+void BuildConstantAction::emitActionOpcodes(MatchTable &Table,
+                                            RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIR_BuildConstant")
+        << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
+        << MatchTable::Comment("Val") << MatchTable::IntValue(Val)
+        << MatchTable::LineBreak;
+}
+
 //===- EraseInstAction ----------------------------------------------------===//
 
 void EraseInstAction::emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,

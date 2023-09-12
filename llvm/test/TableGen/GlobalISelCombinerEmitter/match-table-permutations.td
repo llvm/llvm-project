@@ -159,9 +159,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const int64_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static int64_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ 746,
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ 682,
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, TargetOpcode::G_AND,
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 1*/ 111, // Rule ID 0 //
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 1*/ 103, // Rule ID 0 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -203,9 +203,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/7,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[0]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -213,8 +211,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 1: @111
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ 208, // Rule ID 1 //
+// CHECK-NEXT:       // Label 1: @103
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ 192, // Rule ID 1 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -252,9 +250,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[0], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -262,8 +258,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 2: @208
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 3*/ 305, // Rule ID 2 //
+// CHECK-NEXT:       // Label 2: @192
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 3*/ 281, // Rule ID 2 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -301,9 +297,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[0]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -311,8 +305,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 3: @305
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 4*/ 393, // Rule ID 3 //
+// CHECK-NEXT:       // Label 3: @281
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 4*/ 361, // Rule ID 3 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -346,9 +340,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[0], b[1], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -356,8 +348,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 4: @393
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 5*/ 490, // Rule ID 4 //
+// CHECK-NEXT:       // Label 4: @361
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 5*/ 450, // Rule ID 4 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -395,9 +387,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/6,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[0], c[0]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -405,8 +395,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 5: @490
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 6*/ 578, // Rule ID 5 //
+// CHECK-NEXT:       // Label 5: @450
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 6*/ 530, // Rule ID 5 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -440,9 +430,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[0], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -450,8 +438,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 6: @578
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 7*/ 666, // Rule ID 6 //
+// CHECK-NEXT:       // Label 6: @530
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 7*/ 610, // Rule ID 6 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -485,9 +473,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/5,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[0]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -495,8 +481,8 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 7: @666
-// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 8*/ 745, // Rule ID 7 //
+// CHECK-NEXT:       // Label 7: @610
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 8*/ 681, // Rule ID 7 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GICXXPred_Simple_IsRule0Enabled,
 // CHECK-NEXT:         // MIs[0] dst
 // CHECK-NEXT:         // No operand predicates
@@ -526,9 +512,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/3,
 // CHECK-NEXT:         GIM_CheckIsSafeToFold, /*InsnID*/4,
 // CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
-// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/TargetOpcode::G_CONSTANT,
-// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/0,
-// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/1, /*Type*/GILLT_s32, /*Imm*/0,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/0, /*Val*/0,
 // CHECK-NEXT:         // Combiner Rule #0: Test0 @ [a[1], b[1], c[1]]
 // CHECK-NEXT:         GIR_BuildMI, /*InsnID*/0, /*Opcode*/TargetOpcode::COPY,
 // CHECK-NEXT:         GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
@@ -536,9 +520,9 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         GIR_EraseFromParent, /*InsnID*/0,
 // CHECK-NEXT:         GIR_CustomAction, GICXXCustomAction_CombineApplyGICombiner0,
 // CHECK-NEXT:         GIR_Done,
-// CHECK-NEXT:       // Label 8: @745
+// CHECK-NEXT:       // Label 8: @681
 // CHECK-NEXT:       GIM_Reject,
-// CHECK-NEXT:     // Label 0: @746
+// CHECK-NEXT:     // Label 0: @682
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     };
 // CHECK-NEXT:   return MatchTable0;

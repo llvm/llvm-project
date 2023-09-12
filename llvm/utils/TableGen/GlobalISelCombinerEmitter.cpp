@@ -3108,13 +3108,10 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
   }
 
   unsigned TempRegID = M.allocateTempRegID();
-  auto ActIt = M.insertAction<BuildMIAction>(
-      M.actions_begin(), M.allocateOutputInsnID(), &getGConstant());
-  // Ensure MakeTempReg occurs before the BuildMI of th G_CONSTANT.
-  M.insertAction<MakeTempRegisterAction>(ActIt, LLT, TempRegID);
-  auto &ConstantMI = *static_cast<BuildMIAction *>(ActIt->get());
-  ConstantMI.addRenderer<TempRegRenderer>(TempRegID);
-  ConstantMI.addRenderer<ImmRenderer>(O.getImmValue(), LLT);
+  // Ensure MakeTempReg & the BuildConstantAction occur at the beginning.
+  auto InsertIt =
+      M.insertAction<MakeTempRegisterAction>(M.actions_begin(), LLT, TempRegID);
+  M.insertAction<BuildConstantAction>(++InsertIt, TempRegID, O.getImmValue());
   DstMI.addRenderer<TempRegRenderer>(TempRegID);
   return true;
 }
