@@ -20,13 +20,13 @@ function(add_math_entrypoint_object name)
 
   # The GPU optionally depends on vendor libraries. If we emitted one of these
   # entrypoints it means the user requested it and we should use it instead.
-  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.vendor.${name}" fq_vendor_specific_target_name)
+  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.vendor.${LIBC_GPU_VENDOR}.${name}" fq_vendor_specific_target_name)
   if(TARGET ${fq_vendor_specific_target_name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .${LIBC_TARGET_ARCHITECTURE}.vendor.${name}
+        .${LIBC_TARGET_ARCHITECTURE}.vendor.${LIBC_GPU_VENDOR}.${name}
       VENDOR
     )
     return()

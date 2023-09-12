@@ -12,7 +12,7 @@ add_subdirectory(vendor)
 # basis.
 option(LIBC_GPU_VENDOR_MATH "Use vendor wrappers for GPU math" ON)
 function(add_math_entrypoint_gpu_object name)
-  get_fq_target_name("vendor.${name}" fq_vendor_specific_target_name)
+  get_fq_target_name("vendor.${LIBC_GPU_VENDOR}.${name}" fq_vendor_specific_target_name)
   if(TARGET ${fq_vendor_specific_target_name} AND ${LIBC_GPU_VENDOR_MATH})
     return()
   endif()
