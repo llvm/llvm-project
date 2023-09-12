@@ -293,11 +293,8 @@ extern char &AMDGPURewriteUndefForPHILegacyPassID;
 
 class AMDGPURewriteUndefForPHIPass
     : public PassInfoMixin<AMDGPURewriteUndefForPHIPass> {
-private:
-  TargetMachine &TM;
-
 public:
-  AMDGPURewriteUndefForPHIPass(TargetMachine &TM) : TM(TM){};
+  AMDGPURewriteUndefForPHIPass() = default;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
