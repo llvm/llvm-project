@@ -577,7 +577,7 @@ multiclass RVVIndexedLoad<string op> {
       foreach eew_list = EEWList[0-2] in {
         defvar eew = eew_list[0];
         defvar eew_type = eew_list[1];
-        let Name = op # eew # "_v", IRName = op, MaskedIRName = op # "_mask", 
+        let Name = op # eew # "_v", IRName = op, MaskedIRName = op # "_mask",
             RequiredFeatures = !if(!eq(type, "x"), ["ZvfhminOrZvfh"],
                                                    []<string>) in {
           def: RVVOutOp1Builtin<"v", "vPCe" # eew_type # "Uv", type>;
@@ -1783,7 +1783,7 @@ let HasMasked = false,
                                    [["v", "Uv", "UvUv"]]>;
     defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "csilfd",
                                    [["v", "v", "vv"]]>;
-    let RequiredFeatures = ["ZvfhminOrZvfh"] in                               
+    let RequiredFeatures = ["ZvfhminOrZvfh"] in
       defm vmv_v : RVVOutBuiltinSet<"vmv_v_v", "x",
                                     [["v", "v", "vv"]]>;
   let SupportOverloading = false in
