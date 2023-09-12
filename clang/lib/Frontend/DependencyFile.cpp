@@ -106,7 +106,7 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
   DependencyCollector &DepCollector;
   DepCollectorMMCallbacks(DependencyCollector &DC) : DepCollector(DC) {}
 
-  void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
+  void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
                          bool IsSystem) override {
     StringRef Filename = Entry.getName();
     DepCollector.maybeAddDependency(Filename,
@@ -126,7 +126,7 @@ struct DFGMMCallback : public ModuleMapCallbacks {
   DFGMMCallback(DependencyCollector &DC, bool SkipUnusedModuleMaps)
       : DepCollector(DC), SkipUnusedModuleMaps(SkipUnusedModuleMaps) {}
 
-  void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
+  void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
                          bool IsSystem) override {
     if (SkipUnusedModuleMaps)
       return;
