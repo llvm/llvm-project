@@ -10,7 +10,22 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// Tests that pointer_traits has the expected members.
+// template <class Ptr>
+// struct pointer_traits
+// {
+//     <details>
+// };
+//
+// template <class T>
+// struct pointer_traits<T*>
+// {
+//     using pointer = T*;
+//     using element_type = T;
+//     using difference_type = ptrdiff_t;
+//     template <class U> using rebind = U*;
+//     static constexpr pointer pointer_to(<details>) noexcept;
+//     ...
+// };
 
 #include <memory>
 #include <cassert>
@@ -98,6 +113,51 @@ constexpr bool test() {
     assert(!HasDifferenceType<Ptr>::value);
     assert((!HasRebind<Ptr, long>::value));
     assert(!HasPointerTo<Ptr>::value);
+  }
+
+  {
+    using Ptr = int*;
+
+    assert(HasElementType<Ptr>::value);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, int);
+
+    assert(HasPointerType<Ptr>::value);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
+
+    assert(HasDifferenceType<Ptr>::value);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
+
+    assert((HasRebind<Ptr, long>::value));
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
+
+    assert(HasPointerTo<Ptr>::value);
+    int variable;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), int*);
+    assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
+  }
+
+  {
+    using Ptr = const int*;
+
+    assert(HasElementType<Ptr>::value);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, const int);
+
+    assert(HasPointerType<Ptr>::value);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
+
+    assert(HasDifferenceType<Ptr>::value);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
+
+    assert((HasRebind<Ptr, long>::value));
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
+
+    assert(HasPointerTo<Ptr>::value);
+    const int const_variable = 0;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(const_variable)), const int*);
+    assert(std::pointer_traits<Ptr>::pointer_to(const_variable) == &const_variable);
+    int variable = 0;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), const int*);
+    assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
   }
 
   {
