@@ -8,8 +8,6 @@
 
 // <memory>
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
 // template <class Ptr>
 // struct pointer_traits
 // {
@@ -131,9 +129,13 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
 
     assert(HasPointerTo<Ptr>::value);
-    int variable;
-    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), int*);
-    assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
+    int variable = 0;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), Ptr);
+#if TEST_STD_VER >= 17
+    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
+      assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
+    }
+#endif
   }
 
   {
@@ -153,11 +155,19 @@ constexpr bool test() {
 
     assert(HasPointerTo<Ptr>::value);
     const int const_variable = 0;
-    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(const_variable)), const int*);
-    assert(std::pointer_traits<Ptr>::pointer_to(const_variable) == &const_variable);
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(const_variable)), Ptr);
+#if TEST_STD_VER >= 17
+    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
+      assert(std::pointer_traits<Ptr>::pointer_to(const_variable) == &const_variable);
+    }
+#endif
     int variable = 0;
-    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), const int*);
-    assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), Ptr);
+#if TEST_STD_VER >= 17
+    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
+      assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
+    }
+#endif
   }
 
   {
@@ -177,8 +187,13 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, TemplatedPtr<long, Irrelevant>);
 
     assert(HasPointerTo<Ptr>::value);
-    int ignored;
-    assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
+    int ignored = 0;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(ignored)), Ptr);
+#if TEST_STD_VER >= 17
+    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
+      assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
+    }
+#endif
   }
 
   {
@@ -199,8 +214,13 @@ constexpr bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long long>, TemplatedPtr<long long, Irrelevant>);
 
     assert(HasPointerTo<Ptr>::value);
-    int ignored;
-    assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
+    int ignored = 0;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(ignored)), Ptr);
+#if TEST_STD_VER >= 17
+    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
+      assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
+    }
+#endif
   }
 
   {
@@ -222,8 +242,13 @@ constexpr bool test() {
         typename std::pointer_traits<Ptr>::rebind<long long>, TemplatedPtrWithElementType<long long, Irrelevant>);
 
     assert(HasPointerTo<Ptr>::value);
-    int ignored;
-    assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
+    int ignored = 0;
+    ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(ignored)), Ptr);
+#if TEST_STD_VER >= 17
+    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
+      assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
+    }
+#endif
   }
 
   return true;
@@ -231,6 +256,8 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  static_assert(test());
+#if TEST_STD_VER >= 11
+  static_assert(test(), "");
+#endif
   return 0;
 }
