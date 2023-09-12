@@ -1119,11 +1119,8 @@ mlir::Attribute ConstantLValueEmitter::tryEmitAbsolute(mlir::Type destTy) {
   // If we're producing a pointer, this is easy.
   auto destPtrTy = destTy.dyn_cast<mlir::cir::PointerType>();
   assert(destPtrTy && "expected !cir.ptr type");
-  if (Value.isNullPointer()) {
-    // FIXME: integer offsets from non-zero null pointers.
-    return CGM.getBuilder().getNullPtrAttr(destPtrTy);
-  }
-  llvm_unreachable("NYI");
+  return CGM.getBuilder().getConstPtrAttr(
+      destPtrTy, Value.getLValueOffset().getQuantity());
 }
 
 ConstantLValue

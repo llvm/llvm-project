@@ -23,6 +23,7 @@
 #include "CIRGenBuilder.h"
 #include "ConstantInitFuture.h"
 
+#include <cstdint>
 #include <vector>
 
 using namespace clang;
@@ -194,9 +195,9 @@ public:
                                llvm::APInt{intTy.getWidth(), value, isSigned}));
   }
 
-  /// Add a null pointer of a specific type.
-  void addNullPointer(mlir::cir::PointerType ptrTy) {
-    add(mlir::cir::NullAttr::get(ptrTy.getContext(), ptrTy));
+  /// Add a pointer of a specific type.
+  void addPointer(mlir::cir::PointerType ptrTy, uint64_t value) {
+    add(mlir::cir::ConstPtrAttr::get(ptrTy.getContext(), ptrTy, value));
   }
 
   /// Add a bitcast of a value to a specific type.

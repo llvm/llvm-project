@@ -1395,7 +1395,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     mlir::Type Ty = CGF.getCIRType(DestTy);
     return Builder.create<mlir::cir::ConstantOp>(
         CGF.getLoc(E->getExprLoc()), Ty,
-        mlir::cir::NullAttr::get(Builder.getContext(), Ty));
+        mlir::cir::ConstPtrAttr::get(Builder.getContext(), Ty, 0));
   }
 
   case CK_NullToMemberPointer:

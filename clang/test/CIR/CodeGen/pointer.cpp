@@ -3,4 +3,4 @@
 
 // Global pointer should be zero initialized by default.
 int *ptr;
-// CHECK: cir.global external @ptr = #cir.null : !cir.ptr<!s32i>
+// CHECK: cir.global external @ptr = #cir.ptr<null> : !cir.ptr<!s32i>

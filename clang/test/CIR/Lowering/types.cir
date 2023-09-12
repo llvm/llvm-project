@@ -5,9 +5,9 @@
 module {
   cir.func @testTypeLowering() {
     // Should lower void pointers as opaque pointers.
-    %0 = cir.const(#cir.null : !cir.ptr<!void>) : !cir.ptr<!void>
+    %0 = cir.const(#cir.ptr<null> : !cir.ptr<!void>) : !cir.ptr<!void>
     // CHECK: llvm.mlir.zero : !llvm.ptr
-    %1 = cir.const(#cir.null : !cir.ptr<!cir.ptr<!void>>) : !cir.ptr<!cir.ptr<!void>>
+    %1 = cir.const(#cir.ptr<null> : !cir.ptr<!cir.ptr<!void>>) : !cir.ptr<!cir.ptr<!void>>
     // CHECK: llvm.mlir.zero : !llvm.ptr
     cir.return
   }

@@ -46,7 +46,7 @@ struct S1 {
   float f;
   int *p;
 } s1 = {1, .1, 0};
-// CHECK-DAG: cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.null : !cir.ptr<!s32i>}> : !ty_22S122
+// CHECK-DAG: cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.ptr<null> : !cir.ptr<!s32i>}> : !ty_22S122
 
 // Should initialize global nested structs.
 struct S2 {
