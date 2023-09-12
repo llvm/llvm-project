@@ -50,8 +50,8 @@ template <class Range, class ValT>
 concept HasContainsR = requires(Range&& range) { std::ranges::contains(std::forward<Range>(range), ValT{}); };
 
 static_assert(!HasContainsR<int, int>);
-static_assert(HasContainsR<std::array<int, 1>, int>);
-static_assert(!HasContainsR<std::array<NotEqualityComparable, 1>, NotEqualityComparable>);
+static_assert(HasContainsR<int[1], int>);
+static_assert(!HasContainsR<NotEqualityComparable[1], NotEqualityComparable>);
 static_assert(!HasContainsR<InputRangeNotDerivedFrom, int>);
 static_assert(!HasContainsR<InputRangeNotIndirectlyReadable, int>);
 static_assert(!HasContainsR<InputRangeNotInputOrOutputIterator, int>);
