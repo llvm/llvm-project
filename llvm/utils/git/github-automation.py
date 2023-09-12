@@ -49,7 +49,8 @@ def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
 
 def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
-    return html.escape(str.replace("@", "@<!-- -->"), False)
+    str = html.escape(str, False)
+    return str.replace("@", "@<!-- -->")
 
 class IssueSubscriber:
     @property
