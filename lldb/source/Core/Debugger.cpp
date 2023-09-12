@@ -435,8 +435,8 @@ llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
 }
 
 bool Debugger::GetShowDontUsePoHint() const {
-  const uint32_t idx = ePropertyShowDontUsePoHint;  
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr,
+  const uint32_t idx = ePropertyShowDontUsePoHint;
+  return GetPropertyAtIndexAs<bool>(
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
 
