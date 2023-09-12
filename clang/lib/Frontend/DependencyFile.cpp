@@ -126,7 +126,7 @@ struct DFGMMCallback : public ModuleMapCallbacks {
   DFGMMCallback(DependencyCollector &DC, bool SkipUnusedModuleMaps)
       : DepCollector(DC), SkipUnusedModuleMaps(SkipUnusedModuleMaps) {}
 
-  void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
+  void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
                          bool IsSystem) override {
     if (SkipUnusedModuleMaps)
       return;
