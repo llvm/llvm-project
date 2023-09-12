@@ -1459,13 +1459,13 @@ SwiftLanguage::GetFormatterPrefixSuffix(llvm::StringRef type_hint) {
   static const llvm::StringMap<
       std::pair<const llvm::StringRef, const llvm::StringRef>>
       g_affix_map = {
-          {"NSNumber::char", {"UInt8(", ")"}},
-          {"NSNumber::short", {"Int16(", ")"}},
-          {"NSNumber::int", {"Int32(", ")"}},
-          {"NSNumber::long", {"Int64(", ")"}},
-          {"NSNumber::int128_t", {"Int128(", ")"}},
-          {"NSNumber::float", {"Float(", ")"}},
-          {"NSNumber::double", {"Double(", ")"}},
+          {"NSNumber:char", {"UInt8(", ")"}},
+          {"NSNumber:short", {"Int16(", ")"}},
+          {"NSNumber:int", {"Int32(", ")"}},
+          {"NSNumber:long", {"Int64(", ")"}},
+          {"NSNumber:int128_t", {"Int128(", ")"}},
+          {"NSNumber:float", {"Float(", ")"}},
+          {"NSNumber:double", {"Double(", ")"}},
       };
 
   return g_affix_map.lookup(type_hint);
