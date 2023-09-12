@@ -1,3 +1,5 @@
+// REQUIRES: host-supports-nvptx
+
 // Run the test cases without distributing ops to test default lowering. Run
 // everything on the same thread.
 // RUN: mlir-opt %s -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
