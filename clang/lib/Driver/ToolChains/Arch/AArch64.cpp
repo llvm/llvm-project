@@ -158,7 +158,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
 
     Features.push_back(ArchInfo->ArchFeature);
 
-    uint64_t Extension = CpuInfo->getImpliedExtensions();
+    llvm::Bitset Extension = CpuInfo->getImpliedExtensions();
     if (!llvm::AArch64::getExtensionFeatures(Extension, Features))
       return false;
   }
