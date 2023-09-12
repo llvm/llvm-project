@@ -1790,7 +1790,7 @@ bool AArch64LegalizerInfo::legalizeFCopySign(MachineInstr &MI,
   if (DstSize == 64)
     Mask = MIRBuilder.buildFNeg(VecTy, Mask);
 
-  auto Sel = MIRBuilder.buildInstr(AArch64::G_BSP, {VecTy}, {Mask, Ins1, Ins2});
+  auto Sel = MIRBuilder.buildInstr(AArch64::G_BIT, {VecTy}, {Ins1, Ins2, Mask});
 
   // Build an unmerge whose 0th elt is the original G_FCOPYSIGN destination. We
   // want this to eventually become an EXTRACT_SUBREG.
