@@ -400,6 +400,11 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits())
       return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
 
+    if (auto TargetLowered = TLI.lowerVectorCopyReg(IsABIRegCopy, DAG, DL, Val,
+                                                    PartEVT, ValueVT, false)) {
+      // Give targets a chance to custom lower mismatched sizes
+      return TargetLowered;
+    }
     // If the parts vector has more elements than the value vector, then we
     // have a vector widening case (e.g. <2 x float> -> <4 x float>).
     // Extract the elements we want.
@@ -765,6 +770,10 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   } else if (ValueVT.getSizeInBits() == BuiltVectorTy.getSizeInBits()) {
     // Bitconvert vector->vector case.
     Val = DAG.getNode(ISD::BITCAST, DL, BuiltVectorTy, Val);
+  } else if (SDValue TargetLowered = TLI.lowerVectorCopyReg(
+                 IsABIRegCopy, DAG, DL, Val, ValueVT, BuiltVectorTy)) {
+    // Give targets a chance to custom lower mismatched sizes
+    Val = TargetLowered;
   } else {
     if (BuiltVectorTy.getVectorElementType().bitsGT(
             ValueVT.getVectorElementType())) {

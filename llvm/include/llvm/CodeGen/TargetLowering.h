@@ -1076,10 +1076,10 @@ public:
   /// This method returns the number of registers needed, and the VT for each
   /// register.  It also returns the VT and quantity of the intermediate values
   /// before they are promoted/expanded.
-  unsigned getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
-                                  EVT &IntermediateVT,
-                                  unsigned &NumIntermediates,
-                                  MVT &RegisterVT) const;
+  virtual unsigned getVectorTypeBreakdown(LLVMContext &Context, EVT VT,
+                                          EVT &IntermediateVT,
+                                          unsigned &NumIntermediates,
+                                          MVT &RegisterVT) const;
 
   /// Certain targets such as MIPS require that some types such as vectors are
   /// always broken down into scalars in some contexts. This occurs even if the
@@ -1090,6 +1090,16 @@ public:
     return getVectorTypeBreakdown(Context, VT, IntermediateVT, NumIntermediates,
                                   RegisterVT);
   }
+
+  /// Certain targets, such as AMDGPU, may coerce vectors of one type to another
+  /// to produce optimal code for CopyToReg / CopyFromReg pairs when dealing
+  /// with non-legal types -- e.g. v7i8 -> v2i32. This gives targets an
+  /// opportunity to do custom lowering in such cases.
+  virtual SDValue lowerVectorCopyReg(bool ISABIRegCopy, SelectionDAG &DAG,
+                                     const SDLoc &DL, SDValue &Val, EVT Source,
+                                     EVT Dest, bool IsCopyTo = true) const {
+    return SDValue();
+  };
 
   struct IntrinsicInfo {
     unsigned     opc = 0;          // target opcode
@@ -1598,7 +1608,7 @@ public:
   }
 
   /// Return the type of registers that this ValueType will eventually require.
-  MVT getRegisterType(LLVMContext &Context, EVT VT) const {
+  virtual MVT getRegisterType(LLVMContext &Context, EVT VT) const {
     if (VT.isSimple())
       return getRegisterType(VT.getSimpleVT());
     if (VT.isVector()) {
