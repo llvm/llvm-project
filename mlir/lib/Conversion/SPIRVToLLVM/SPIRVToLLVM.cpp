@@ -30,6 +30,12 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Constants
+//===----------------------------------------------------------------------===//
+
+constexpr unsigned defaultAddressSpace = 0;
+
+//===----------------------------------------------------------------------===//
 // Utility functions
 //===----------------------------------------------------------------------===//
 
@@ -260,31 +266,49 @@ static std::optional<Type> convertArrayType(spirv::ArrayType type,
   return LLVM::LLVMArrayType::get(llvmElementType, numElements);
 }
 
-unsigned storageClassToAddressSpace(spirv::StorageClass SC) {
-  switch (SC) {
-  case spirv::StorageClass::Function:
-    return 0;
-  case spirv::StorageClass::CrossWorkgroup:
-    return 1;
-  case spirv::StorageClass::UniformConstant:
-    return 2;
-  case spirv::StorageClass::Workgroup:
-    return 3;
-  case spirv::StorageClass::Generic:
-    return 4;
-  case spirv::StorageClass::Input:
-    return 1;  // 7
+static unsigned mapToOpenCLAddressSpace(spirv::StorageClass storageClass) {
+  // Based on
+  // https://registry.khronos.org/SPIR-V/specs/unified1/OpenCL.ExtendedInstructionSet.100.html#_binary_form
+  // and clang/lib/Basic/Targets/SPIR.h.
+  switch (storageClass) {
+#define STORAGE_SPACE_MAP(storage, space)                                      \
+  case spirv::StorageClass::storage:                                           \
+    return space;
+    STORAGE_SPACE_MAP(Function, 0)
+    STORAGE_SPACE_MAP(CrossWorkgroup, 1)
+    STORAGE_SPACE_MAP(Input, 1)
+    STORAGE_SPACE_MAP(UniformConstant, 2)
+    STORAGE_SPACE_MAP(Workgroup, 3)
+    STORAGE_SPACE_MAP(Generic, 4)
+    STORAGE_SPACE_MAP(DeviceOnlyINTEL, 5)
+    STORAGE_SPACE_MAP(HostOnlyINTEL, 6)
+#undef STORAGE_SPACE_MAP
   default:
-    llvm_unreachable("Unable to get address space id:");
+    return defaultAddressSpace;
+  }
+}
+
+static unsigned mapToAddressSpace(spirv::ClientAPI clientAPI,
+                                  spirv::StorageClass storageClass) {
+  switch (clientAPI) {
+#define CLIENT_MAP(client, storage)                                            \
+  case spirv::ClientAPI::client:                                               \
+    return mapTo##client##AddressSpace(storage);
+    CLIENT_MAP(OpenCL, storageClass)
+#undef CLIENT_MAP
+  default:
+    return defaultAddressSpace;
   }
 }
 
 /// Converts SPIR-V pointer type to LLVM pointer. Pointer's storage class is not
 /// modelled at the moment.
 static Type convertPointerType(spirv::PointerType type,
-                               LLVMTypeConverter &converter) {
+                               LLVMTypeConverter &converter,
+                               spirv::ClientAPI clientAPI) {
   auto pointeeType = converter.convertType(type.getPointeeType());
-  return converter.getPointerType(pointeeType, storageClassToAddressSpace(type.getStorageClass()));
+  unsigned addressSpace = mapToAddressSpace(clientAPI, type.getStorageClass());
+  return converter.getPointerType(pointeeType, addressSpace);
 }
 
 /// Converts SPIR-V runtime array to LLVM array. Since LLVM allows indexing over
@@ -357,19 +381,8 @@ public:
     auto dstType = typeConverter.convertType(op.getPointer().getType());
     if (!dstType)
       return failure();
-    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType, op.getVariable());    
-#if 0
-    auto global = dyn_cast_or_null<spirv::GlobalVariableOp>(op.getVariable());
-
-    if (global && 
-        storageClassToAddressSpace(global.getStorageClass()) != 
-        dstType.cast<LLVM::LLVMPointerType>().getAddressSpace()) {
-      auto globalPtr = rewriter.create<spirv::AddressOfOp>(op.getLoc(), global);
-      rewriter.replaceOpWithNewOp<LLVM::AddrSpaceCastOp>(op, dstType, globalPtr);
-    } else {
-      rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType, op.getVariable());
-    }
-#endif
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, dstType,
+                                                   op.getVariable());
     return success();
   }
 };
@@ -752,7 +765,11 @@ public:
 class GlobalVariablePattern
     : public SPIRVToLLVMConversion<spirv::GlobalVariableOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::GlobalVariableOp>::SPIRVToLLVMConversion;
+  template <typename... Args>
+  GlobalVariablePattern(spirv::ClientAPI clientAPI, Args &&...args)
+      : SPIRVToLLVMConversion<spirv::GlobalVariableOp>(
+            std::forward<Args>(args)...),
+        clientAPI(clientAPI) {}
 
   LogicalResult
   matchAndRewrite(spirv::GlobalVariableOp op, OpAdaptor adaptor,
@@ -797,15 +814,17 @@ public:
                        : LLVM::Linkage::External;
     auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.getSymName(), Attribute(),
-        /*alignment=*/0);
-    newGlobalOp->setAttr(newGlobalOp.getAddrSpaceAttrName(), 
-      rewriter.getI32IntegerAttr(storageClassToAddressSpace(storageClass)));
+        /*alignment=*/0, mapToAddressSpace(clientAPI, storageClass));
+
     // Attach location attribute if applicable
     if (op.getLocationAttr())
       newGlobalOp->setAttr(op.getLocationAttrName(), op.getLocationAttr());
 
     return success();
   }
+
+private:
+  spirv::ClientAPI clientAPI;
 };
 
 /// Converts SPIR-V cast ops that do not have straightforward LLVM
@@ -1535,12 +1554,13 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter) {
+void mlir::populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter,
+                                             spirv::ClientAPI clientAPI) {
   typeConverter.addConversion([&](spirv::ArrayType type) {
     return convertArrayType(type, typeConverter);
   });
-  typeConverter.addConversion([&](spirv::PointerType type) {
-    return convertPointerType(type, typeConverter);
+  typeConverter.addConversion([&, clientAPI](spirv::PointerType type) {
+    return convertPointerType(type, typeConverter, clientAPI);
   });
   typeConverter.addConversion([&](spirv::RuntimeArrayType type) {
     return convertRuntimeArrayType(type, typeConverter);
@@ -1551,7 +1571,8 @@ void mlir::populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter) {
 }
 
 void mlir::populateSPIRVToLLVMConversionPatterns(
-    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns,
+    spirv::ClientAPI clientAPI) {
   patterns.add<
       // Arithmetic ops
       DirectConversionPattern<spirv::IAddOp, LLVM::AddOp>,
@@ -1646,9 +1667,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       NotPattern<spirv::LogicalNotOp>,
 
       // Memory ops
-      AccessChainPattern, AddressOfPattern, GlobalVariablePattern,
-      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
-      VariablePattern,
+      AccessChainPattern, AddressOfPattern, LoadStorePattern<spirv::LoadOp>,
+      LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
       CompositeExtractPattern, CompositeInsertPattern,
@@ -1663,6 +1683,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Return ops
       ReturnPattern, ReturnValuePattern>(patterns.getContext(), typeConverter);
+
+  patterns.add<GlobalVariablePattern>(clientAPI, patterns.getContext(),
+                                      typeConverter);
 }
 
 void mlir::populateSPIRVToLLVMFunctionConversionPatterns(
@@ -1682,7 +1705,6 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 /// Hook for descriptor set and binding number encoding.
 static constexpr StringRef kBinding = "binding";
 static constexpr StringRef kDescriptorSet = "descriptor_set";
-// static constexpr StringRef kBuiltin = "builtin";
 void mlir::encodeBindAttribute(ModuleOp module) {
   auto spvModules = module.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
@@ -1690,8 +1712,6 @@ void mlir::encodeBindAttribute(ModuleOp module) {
       IntegerAttr descriptorSet =
           op->getAttrOfType<IntegerAttr>(kDescriptorSet);
       IntegerAttr binding = op->getAttrOfType<IntegerAttr>(kBinding);
-//      IntegerAttr builtin = op->getAttrOfType<IntegerAttr>(kBuiltin);
-
       // For every global variable in the module, get the ones with descriptor
       // set and binding numbers.
       if (descriptorSet && binding) {
@@ -1715,37 +1735,6 @@ void mlir::encodeBindAttribute(ModuleOp module) {
         op->removeAttr(kDescriptorSet);
         op->removeAttr(kBinding);
       }
-#if 0
-      if (builtin){
-        switch (static_cast<spirv::BuiltIn>(builtin.getInt())) {
-        case spirv::BuiltIn::NumWorkgroups:
-        case spirv::BuiltIn::WorkgroupSize:
-        case spirv::BuiltIn::WorkgroupId:
-        case spirv::BuiltIn::LocalInvocationId:
-        case spirv::BuiltIn::GlobalInvocationId: {
-          auto ptrType = spirv::PointerType::get(VectorType::get({3}, integerType),
-                                                spirv::StorageClass::Input);
-          std::string name = getBuiltinVarName(builtin);
-          newVarOp =
-              builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
-          break;
-        }
-        case spirv::BuiltIn::SubgroupId:
-        case spirv::BuiltIn::NumSubgroups:
-        case spirv::BuiltIn::SubgroupSize: {
-          auto ptrType =
-              spirv::PointerType::get(integerType, spirv::StorageClass::Input);
-          std::string name = getBuiltinVarName(builtin);
-          newVarOp =
-              builder.create<spirv::GlobalVariableOp>(loc, ptrType, name, builtin);
-          break;
-        }
-        default:
-          emitError(loc, "unimplemented builtin variable generation for ")
-              << stringifyBuiltIn(builtin);
-        }          
-      }
-#endif
     });
   }
 }
