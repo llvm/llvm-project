@@ -500,9 +500,9 @@ func.func @assumingOp(
 //       CHECK: test.copy
 //       CHECK: [[BASE0:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V0]]#0
 //       CHECK: [[BASE1:%[a-zA-Z0-9_]+]],{{.*}} = memref.extract_strided_metadata [[V1]]#0
-//       CHECK: bufferization.dealloc ([[BASE0]] :{{.*}}) if ([[V0]]#1)
-//   CHECK-NOT: retain
 //       CHECK: bufferization.dealloc ([[BASE1]] :{{.*}}) if ([[V1]]#1)
+//   CHECK-NOT: retain
+//       CHECK: bufferization.dealloc ([[BASE0]] :{{.*}}) if ([[V0]]#1)
 //   CHECK-NOT: retain
 //       CHECK: return
 
