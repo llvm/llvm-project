@@ -184,14 +184,12 @@ define <4 x float> @nofold_insertps(ptr %a, <4 x float> %b) {
 ; X86-LABEL: nofold_insertps:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vmovups (%eax), %xmm1
-; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[2]
+; X86-NEXT:    vinsertps $48, 8(%eax), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: nofold_insertps:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovups (%rdi), %xmm1
-; X64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[2]
+; X64-NEXT:    vinsertps $48, 8(%rdi), %xmm0, %xmm0 ## xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    retq
   %1 = load <4 x float>, ptr %a, align 1
   %2 = shufflevector <4 x float> %b, <4 x float> %1, <4 x i32> <i32 0, i32 1, i32 2, i32 6>
