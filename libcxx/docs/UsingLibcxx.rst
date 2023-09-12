@@ -43,6 +43,13 @@ the Standard but whose implementation is not complete or stable yet in libc++. T
 are disabled by default because they are neither API nor ABI stable. However, the
 ``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
+
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::chrono::tzdb`` and related time zone functionality
+
 .. warning::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
