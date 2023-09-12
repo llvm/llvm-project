@@ -20,6 +20,18 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 // GPU object attribute.
 //===----------------------------------------------------------------------===//
 
+def GPU_ObjectOffload : I32EnumAttrCase<"Offload", 1, "offload">;
+def GPU_ObjectISA : I32EnumAttrCase<"Assembly", 2, "assembly">;
+def GPU_ObjectBinary : I32EnumAttrCase<"Binary", 3, "bin">;
+def GPU_ObjectFatbin : I32EnumAttrCase<"Fatbin", 4, "fatbin">;
+def GPU_CompilationTargetEnum : GPU_I32Enum<
+  "CompilationTarget", "GPU object format", [
+    GPU_ObjectOffload,
+    GPU_ObjectISA,
+    GPU_ObjectBinary,
+    GPU_ObjectFatbin
+  ]>;
+
 def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
   let description = [{
     A GPU object attribute pairs a GPU target with a binary string,
@@ -32,8 +44,17 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
       #gpu.object<#nvvm.target, "...">
     ```
   }];
-  let parameters = (ins "Attribute":$target, "StringAttr":$object);
-  let assemblyFormat = [{`<` $target `,` $object `>`}];
+  let parameters = (ins
+    "Attribute":$target,
+    DefaultValuedParameter<"CompilationTarget", "CompilationTarget::Fatbin">:$format,
+    "StringAttr":$object,
+    OptionalParameter<"DictionaryAttr">:$properties
+  );
+  let assemblyFormat = [{ `<`
+      $target `,`  (`properties` `=` $properties ^ `,`)?
+      custom<Object>($format, $object)
+    `>`
+  }];
   let genVerifyDecl = 1;
 }
 

@@ -60,6 +60,10 @@ public:
   std::optional<SmallVector<char, 0>>
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
+
+  Attribute createObject(Attribute attribute,
+                         const SmallVector<char, 0> &object,
+                         const gpu::TargetOptions &options) const;
 };
 } // namespace
 
@@ -417,7 +421,7 @@ AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule,
                  << llvmModule << "\n";
   });
 #undef DEBUG_TYPE
-  if (targetOptions.getCompilationTarget() == gpu::TargetOptions::offload)
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
     return SerializeGPUModuleBase::moduleToObject(llvmModule, targetMachine);
 
   // Translate the Module to ISA.
@@ -434,7 +438,7 @@ AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule,
   });
 #undef DEBUG_TYPE
   // Return ISA assembly code if the compilation target is assembly.
-  if (targetOptions.getCompilationTarget() == gpu::TargetOptions::assembly)
+  if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
     return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
 
   // Compile to binary.
@@ -462,4 +466,17 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
                     "building LLVM.");
   return std::nullopt;
 #endif // MLIR_ROCM_CONVERSIONS_ENABLED == 1
+}
+
+Attribute
+ROCDLTargetAttrImpl::createObject(Attribute attribute,
+                                  const SmallVector<char, 0> &object,
+                                  const gpu::TargetOptions &options) const {
+  gpu::CompilationTarget format = options.getCompilationTarget();
+  Builder builder(attribute.getContext());
+  return builder.getAttr<gpu::ObjectAttr>(
+      attribute,
+      format > gpu::CompilationTarget::Binary ? gpu::CompilationTarget::Binary
+                                              : format,
+      builder.getStringAttr(StringRef(object.data(), object.size())), nullptr);
 }
