@@ -339,7 +339,7 @@ public:
     }
 
     // Succeed only if both yields are found.
-    if (!yieldToBody || !yieldToCont)
+    if (!yieldToBody)
       return mlir::failure();
     return mlir::success();
   }
@@ -428,8 +428,10 @@ public:
     rewriter.create<mlir::cir::BrOp>(loopOp.getLoc(), &entry);
 
     // Set loop exit point to continue block.
-    rewriter.setInsertionPoint(yieldToCont);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToCont, continueBlock);
+    if (yieldToCont) {
+      rewriter.setInsertionPoint(yieldToCont);
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToCont, continueBlock);
+    }
 
     // Branch from condition to body.
     rewriter.setInsertionPoint(yieldToBody);
