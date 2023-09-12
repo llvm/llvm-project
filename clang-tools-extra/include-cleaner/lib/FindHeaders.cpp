@@ -50,8 +50,7 @@ llvm::SmallVector<Header> ranked(llvm::SmallVector<Hinted<Header>> Headers) {
 // name.
 llvm::StringRef basename(llvm::StringRef Header) {
   Header = Header.trim("<>\"");
-  if (auto LastSlash = Header.rfind('/'); LastSlash != Header.npos)
-    Header = Header.drop_front(LastSlash + 1);
+  Header = llvm::sys::path::filename(Header);
   // Drop everything after first `.` (dot).
   // foo.h -> foo
   // foo.cu.h -> foo
