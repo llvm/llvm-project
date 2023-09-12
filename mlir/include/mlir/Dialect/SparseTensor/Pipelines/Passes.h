@@ -93,8 +93,7 @@ struct SparseCompilerOptions
       desc("Specify if the temporary buffers created by the sparse "
            "compiler should be deallocated. For compatibility with core "
            "bufferization passes. "
-           "This option is only used when enable-runtime-library=false. "
-           "See also create-deallocs for BufferizationOption."),
+           "This option is only used when enable-runtime-library=false."),
       init(true)};
 
   PassOptions::Option<int32_t> vectorLength{
