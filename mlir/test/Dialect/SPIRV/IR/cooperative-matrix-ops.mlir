@@ -69,10 +69,10 @@ spirv.func @cooperative_matrix_load_stride_i16(%ptr : !spirv.ptr<i32, StorageBuf
 // CHECK-LABEL: @cooperative_matrix_store
 spirv.func @cooperative_matrix_store(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32,
                                      %m : !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>) "None" {
-  // CHECK:      spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, {{%.*}}, RowMajor :
-  // CHECK-SAME:   !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>
-  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, RowMajor :
-    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>
+  // CHECK:      spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, {{%.*}}, <RowMajor> :
+  // CHECK-SAME:   !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>, i32
+  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <RowMajor> :
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>, i32
   spirv.Return
 }
 
@@ -80,10 +80,21 @@ spirv.func @cooperative_matrix_store(%ptr : !spirv.ptr<i32, StorageBuffer>, %str
 spirv.func @cooperative_matrix_store_memoperand(%ptr : !spirv.ptr<i32, StorageBuffer>,
                                                 %m : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>,
                                                 %stride : i32) "None" {
-  // CHECK:       spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, {{%.*}}, ColumnMajor ["Volatile"] :
-  // CHECK-SAME:    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
-  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, ColumnMajor ["Volatile"] :
-    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
+  // CHECK:       spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, {{%.*}}, <ColumnMajor>, <Volatile> :
+  // CHECK-SAME:    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i32
+  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <ColumnMajor>, <Volatile> :
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @cooperative_matrix_store_stride_i16
+spirv.func @cooperative_matrix_store_stride_i16(%ptr : !spirv.ptr<i32, StorageBuffer>,
+                                                %m : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>,
+                                                %stride : i16) "None" {
+  // CHECK:       spirv.KHR.CooperativeMatrixStore {{%.*}}, {{%.*}}, {{%.*}}, <ColumnMajor> :
+  // CHECK-SAME:    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i16
+  spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, <ColumnMajor> :
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>, i16
   spirv.Return
 }
 
@@ -137,9 +148,9 @@ spirv.func @cooperative_matrix_store_missing_attr(%ptr : !spirv.ptr<i32, Storage
 
 spirv.func @cooperative_matrix_store_missing_attr(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32,
                                                   %m : !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>) "None" {
-  // expected-error @+1 {{expected valid keyword}}
+  // expected-error @+1 {{expected '<'}}
   spirv.KHR.CooperativeMatrixStore %ptr, %m, %stride, :
-    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>
+    !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<8x16xi32, Workgroup, MatrixA>, i32
   spirv.Return
 }
 
@@ -148,8 +159,8 @@ spirv.func @cooperative_matrix_store_missing_attr(%ptr : !spirv.ptr<i32, Storage
 spirv.func @cooperative_matrix_store_bad_object_type(%ptr : !spirv.ptr<i32, StorageBuffer>,
                                                      %stride : i32) "None" {
   // expected-error @+1 {{op operand #1 must be any SPIR-V cooperative matrix type}}
-  spirv.KHR.CooperativeMatrixStore %ptr, %stride, %stride, RowMajor :
-    !spirv.ptr<i32, StorageBuffer>, i32
+  spirv.KHR.CooperativeMatrixStore %ptr, %stride, %stride, <RowMajor> :
+    !spirv.ptr<i32, StorageBuffer>, i32, i32
   spirv.Return
 }
 
