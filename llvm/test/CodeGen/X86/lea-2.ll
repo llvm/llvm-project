@@ -26,7 +26,7 @@ define i32 @test1(i32 %A, i32 %B) {
   ret i32 %t4
 }
 
-; TODO: The addlike OR instruction should fold into the LEA.
+; The addlike OR instruction should fold into the LEA.
 
 define i64 @test2(i32 %a0, i64 %a1) {
 ; X32-LABEL: test2:
@@ -44,8 +44,7 @@ define i64 @test2(i32 %a0, i64 %a1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    andl $-8, %edi
-; X64-NEXT:    orl $2, %edi
-; X64-NEXT:    leaq (%rsi,%rdi,2), %rax
+; X64-NEXT:    leaq 4(%rsi,%rdi,2), %rax
 ; X64-NEXT:    retq
   %x1 = and i32 %a0, -8
   %x2 = or i32 %x1, 2
