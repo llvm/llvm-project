@@ -54,15 +54,15 @@ using FPToSIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToSIOp, LLVM::FPToSIOp>;
 using FPToUIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToUIOp, LLVM::FPToUIOp>;
-using MaxFOpLowering =
-    VectorConvertToLLVMPattern<arith::MaxFOp, LLVM::MaximumOp,
+using MaximumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaximumFOp, LLVM::MaximumOp,
                                arith::AttrConvertFastMathToLLVM>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxUIOp, LLVM::UMaxOp>;
-using MinFOpLowering =
-    VectorConvertToLLVMPattern<arith::MinFOp, LLVM::MinimumOp,
+using MinimumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinimumFOp, LLVM::MinimumOp,
                                arith::AttrConvertFastMathToLLVM>;
 using MinSIOpLowering =
     VectorConvertToLLVMPattern<arith::MinSIOp, LLVM::SMinOp>;
@@ -495,10 +495,10 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     FPToUIOpLowering,
     IndexCastOpSILowering,
     IndexCastOpUILowering,
-    MaxFOpLowering,
+    MaximumFOpLowering,
     MaxSIOpLowering,
     MaxUIOpLowering,
-    MinFOpLowering,
+    MinimumFOpLowering,
     MinSIOpLowering,
     MinUIOpLowering,
     MulFOpLowering,

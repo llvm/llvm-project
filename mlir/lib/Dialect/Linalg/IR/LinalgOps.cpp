@@ -449,22 +449,22 @@ public:
     case BinaryFn::max_signed:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_signed:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_unsigned:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MaxUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_unsigned:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
     }
     llvm_unreachable("unsupported binary function");
@@ -2555,8 +2555,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();
-  Value max =
-      reduce<arith::MaxFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
+  Value max = reduce<arith::MaximumFOp>(b, loc, input, neutralForMaxFInit,
+                                        reductionDim);
 
   // Step 2: Subtract max from input and exponentiate.
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
