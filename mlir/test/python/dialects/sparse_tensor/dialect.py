@@ -16,7 +16,7 @@ def testEncodingAttr1D():
     with Context() as ctx:
         parsed = Attribute.parse(
             "#sparse_tensor.encoding<{"
-            '  map = (d0) -> (d0 : compressed),'
+            "  map = (d0) -> (d0 : compressed),"
             "  posWidth = 16,"
             "  crdWidth = 32"
             "}>"
@@ -56,7 +56,7 @@ def testEncodingAttr2D():
     with Context() as ctx:
         parsed = Attribute.parse(
             "#sparse_tensor.encoding<{"
-            '  lvlTypes = [ "dense", "compressed" ],'
+            "  lvlTypes = [ "dense", "compressed" ],"
             "  dimToLvl = affine_map<(d0, d1) -> (d1, d0)>,"
             "  posWidth = 8,"
             "  crdWidth = 32"
@@ -94,7 +94,7 @@ def testEncodingAttrOnTensorType():
         encoding = st.EncodingAttr(
             Attribute.parse(
                 "#sparse_tensor.encoding<{"
-                '  map = (d0) -> (d0 : compressed), '
+                "  map = (d0) -> (d0 : compressed), "
                 "  posWidth = 64,"
                 "  crdWidth = 32"
                 "}>"
