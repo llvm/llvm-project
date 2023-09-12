@@ -83,10 +83,11 @@ static lldb_private::RegisterInfo g_register_infos_tls[] = {
     // Only present when SME is present
     DEFINE_EXTENSION_REG(tpidr2)};
 
-static lldb_private::RegisterInfo g_register_infos_sme[] =
+static lldb_private::RegisterInfo g_register_infos_sme[] = {
+    DEFINE_EXTENSION_REG(svg),
     // 16 is a default size we will change later.
-    {{"za", nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
-      KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
+    {"za", nullptr, 16, 0, lldb::eEncodingVector, lldb::eFormatVectorOfUInt8,
+     KIND_ALL_INVALID, nullptr, nullptr, nullptr}};
 
 // Number of register sets provided by this context.
 enum {
@@ -96,7 +97,7 @@ enum {
   k_num_mte_register = 1,
   // Number of TLS registers is dynamic so it is not listed here.
   k_num_pauth_register = 2,
-  k_num_sme_register = 1,
+  k_num_sme_register = 2,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
 };
@@ -448,7 +449,7 @@ void RegisterInfoPOSIX_arm64::ConfigureVectorLengthZA(uint32_t za_vq) {
   // dynamic set and is just 1 register so we make an exception to const here.
   lldb_private::RegisterInfo *non_const_reginfo =
       const_cast<lldb_private::RegisterInfo *>(m_register_info_p);
-  non_const_reginfo[m_sme_regnum_collection[0]].byte_size =
+  non_const_reginfo[m_sme_regnum_collection[1]].byte_size =
       (za_vq * 16) * (za_vq * 16);
 }
 
@@ -469,6 +470,10 @@ bool RegisterInfoPOSIX_arm64::IsSVEPReg(unsigned reg) const {
 
 bool RegisterInfoPOSIX_arm64::IsSVERegVG(unsigned reg) const {
   return sve_vg == reg;
+}
+
+bool RegisterInfoPOSIX_arm64::IsSMERegZA(unsigned reg) const {
+  return reg == m_sme_regnum_collection[1];
 }
 
 bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {
@@ -496,6 +501,10 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPSR() const { return fpu_fpsr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEVG() const { return sve_vg; }
+
+uint32_t RegisterInfoPOSIX_arm64::GetRegNumSMESVG() const {
+  return m_sme_regnum_collection[0];
+}
 
 uint32_t RegisterInfoPOSIX_arm64::GetPAuthOffset() const {
   return m_register_info_p[pauth_regnum_collection[0]].byte_offset;
