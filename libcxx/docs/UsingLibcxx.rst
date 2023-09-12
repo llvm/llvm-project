@@ -49,6 +49,7 @@ when ``-fexperimental-library`` is passed:
 * The parallel algorithms library (``<execution>`` and the associated algorithms)
 * ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
 * ``std::chrono::tzdb`` and related time zone functionality
+* ``std::ranges::join_view``
 
 .. warning::
   Experimental libraries are experimental.
