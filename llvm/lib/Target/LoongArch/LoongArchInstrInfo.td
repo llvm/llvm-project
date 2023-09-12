@@ -377,6 +377,10 @@ def simm20_lu32id : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "lu32id">;
 }
 
+def simm20_pcaddu18i : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
+}
+
 def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
@@ -832,7 +836,7 @@ def LU32I_D : Fmt1RI20<0x16000000, (outs GPR:$dst),
                        "$rd, $imm20">;
 }
 def LU52I_D : ALU_2RI12<0x03000000, simm12_lu52id>;
-def PCADDU18I : ALU_1RI20<0x1e000000, simm20>;
+def PCADDU18I : ALU_1RI20<0x1e000000, simm20_pcaddu18i>;
 def MUL_D     : ALU_3R<0x001d8000>;
 def MULH_D    : ALU_3R<0x001e0000>;
 def MULH_DU   : ALU_3R<0x001e8000>;
@@ -1396,7 +1400,7 @@ def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
           (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins simm26_symbol:$func)>;
+def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func)>;
 
 def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
@@ -1416,7 +1420,7 @@ def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
-def PseudoTAIL : Pseudo<(outs), (ins simm26_symbol:$dst)>;
+def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 def : Pat<(loongarch_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL tglobaladdr:$dst)>;
@@ -1438,6 +1442,19 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
+
+/// call36/taill36 macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], Size = 8, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL36 : Pseudo<(outs), (ins bare_symbol:$dst), [],
+                          "call36", "$dst">,
+                   Requires<[IsLA64]>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Size = 8, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL36 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                          "tail36", "$tmp, $dst">,
+                   Requires<[IsLA64]>;
 
 /// Load address (la*) macro instructions.
 
