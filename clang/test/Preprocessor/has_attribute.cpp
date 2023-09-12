@@ -55,7 +55,7 @@ CXX11(unlikely)
 // CHECK: likely: 201803L
 // CHECK: maybe_unused: 201603L
 // ITANIUM: no_unique_address: 201803L
-// WINDOWS: no_unique_address: 0
+// WINDOWS: no_unique_address: 201803L 
 // CHECK: nodiscard: 201907L
 // CHECK: noreturn: 200809L
 // CHECK: unlikely: 201803L

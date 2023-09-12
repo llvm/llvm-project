@@ -4505,19 +4505,15 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   if (!CXXRD->isEmpty())
     return false;
 
-  // MS ABI: nonzero if class type with class type fields
-  if (Ctx.getTargetInfo().getCXXABI().isMicrosoft() &&
-      llvm::any_of(CXXRD->fields(), [](const FieldDecl *Field) {
-        return Field->getType()->getAs<RecordType>();
-      })) {
-    return false;
-  }
-
   // Otherwise, [...] the circumstances under which the object has zero size
   // are implementation-defined.
-  // FIXME: This might be Itanium ABI specific; we don't yet know what the MS
-  // ABI will do.
-  return true;
+  if (!Ctx.getTargetInfo().getCXXABI().isMicrosoft())
+    return true;
+
+  // MS ABI: nonzero if class type with class type fields
+  return !llvm::any_of(CXXRD->fields(), [](const FieldDecl *Field) {
+    return Field->getType()->getAs<RecordType>();
+  });
 }
 
 bool FieldDecl::isPotentiallyOverlapping() const {

@@ -148,27 +148,27 @@ namespace Empty {
     ~OversizedEmpty();
     [[msvc::no_unique_address]] A a;
   };
-  static_assert(sizeof(OversizedEmpty) == 2);
+  static_assert(sizeof(OversizedEmpty) == 1);
 
   // CHECK:*** Dumping AST Record Layout
   // CHECK:          0 | struct Empty::OversizedEmpty
   // CHECK-NEXT:     0 |   struct Empty::A (base) (empty)
-  // CHECK-NEXT:     1 |   struct Empty::A a (empty)
-  // CHECK-NEXT:       | [sizeof=2, align=1,
-  // CHECK-NEXT:       |  nvsize=2, nvalign=1]
+  // CHECK-NEXT:     0 |   struct Empty::A a (empty)
+  // CHECK-NEXT:       | [sizeof=1, align=1,
+  // CHECK-NEXT:       |  nvsize=1, nvalign=1]
 
   struct HasOversizedEmpty {
     [[msvc::no_unique_address]] OversizedEmpty m;
   };
-  static_assert(sizeof(HasOversizedEmpty) == 2);
+  static_assert(sizeof(HasOversizedEmpty) == 1);
 
   // CHECK:*** Dumping AST Record Layout
   // CHECK:          0 | struct Empty::HasOversizedEmpty
   // CHECK-NEXT:     0 |   struct Empty::OversizedEmpty m (empty)
   // CHECK-NEXT:     0 |     struct Empty::A (base) (empty)
-  // CHECK-NEXT:     1 |     struct Empty::A a (empty)
-  // CHECK-NEXT:       | [sizeof=2, align=1,
-  // CHECK-NEXT:       |  nvsize=2, nvalign=1]
+  // CHECK-NEXT:     0 |     struct Empty::A a (empty)
+  // CHECK-NEXT:       | [sizeof=1, align=1,
+  // CHECK-NEXT:       |  nvsize=1, nvalign=1]
 
   struct EmptyWithNonzeroDSize {
     [[msvc::no_unique_address]] A a;
@@ -279,7 +279,7 @@ namespace VBases {
   // CHECK:*** Dumping AST Record Layout
   // CHECK:          0 | struct VBases::D
   // CHECK-NEXT:     0 |   (D vbtable pointer)
-  // CHECK-NEXT:     9 |   struct VBases::Empty a
+  // CHECK-NEXT:     8 |   struct VBases::Empty a
   // CHECK-NEXT:    16 |   struct VBases::Empty (virtual base) (empty)
   // CHECK-NEXT:       | [sizeof=16, align=8,
   // CHECK-NEXT:       |  nvsize=16, nvalign=8]
@@ -305,20 +305,20 @@ namespace VBases {
     [[msvc::no_unique_address]] A a;
     [[msvc::no_unique_address]] X x;
   };
-  static_assert(sizeof(F) == 32);
+  static_assert(sizeof(F) == 24);
 
   // MSVC places x after a and the total size is 48.
   // CHECK:*** Dumping AST Record Layout
   // CHECK:          0 | struct VBases::F
   // CHECK-NEXT:     0 |   (F vbtable pointer)
-  // CHECK-NEXT:    16 |   struct VBases::A a (empty)
+  // CHECK-NEXT:     8 |   struct VBases::A a (empty)
   // CHECK-NEXT:     8 |   struct VBases::X x
   // CHECK-NEXT:     8 |     (X vbtable pointer)
-  // CHECK-NEXT:    24 |     struct VBases::A a (empty)
-  // CHECK-NEXT:    32 |     struct VBases::A (virtual base) (empty)
-  // CHECK-NEXT:    32 |   struct VBases::A (virtual base) (empty)
-  // CHECK-NEXT:       | [sizeof=32, align=8,
-  // CHECK-NEXT:       |  nvsize=32, nvalign=8]
+  // CHECK-NEXT:    16 |     struct VBases::A a (empty)
+  // CHECK-NEXT:    24 |     struct VBases::A (virtual base) (empty)
+  // CHECK-NEXT:    24 |   struct VBases::A (virtual base) (empty)
+  // CHECK-NEXT:       | [sizeof=24, align=8,
+  // CHECK-NEXT:       |  nvsize=24, nvalign=8]
 
   struct G : virtual Empty {
     int i;
