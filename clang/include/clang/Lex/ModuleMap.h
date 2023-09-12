@@ -202,7 +202,7 @@ public:
     }
   };
 
-  using AdditionalModMapsSet = llvm::SmallPtrSet<const FileEntry *, 1>;
+  using AdditionalModMapsSet = llvm::SmallPtrSet<FileEntryRef, 1>;
 
 private:
   friend class ModuleMapParser;
@@ -664,7 +664,7 @@ public:
     return &I->second;
   }
 
-  void addAdditionalModuleMapFile(const Module *M, const FileEntry *ModuleMap);
+  void addAdditionalModuleMapFile(const Module *M, FileEntryRef ModuleMap);
 
   /// Resolve all of the unresolved exports in the given module.
   ///

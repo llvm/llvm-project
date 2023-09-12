@@ -1348,7 +1348,7 @@ ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
 }
 
 void ModuleMap::addAdditionalModuleMapFile(const Module *M,
-                                           const FileEntry *ModuleMap) {
+                                           FileEntryRef ModuleMap) {
   AdditionalModMaps[M].insert(ModuleMap);
 }
 
