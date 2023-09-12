@@ -754,8 +754,15 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
-    const AtomicRMWInst::BinOp ScanOp =
-        Op == AtomicRMWInst::Sub ? AtomicRMWInst::Add : Op;
+    // For atomic sub, perform scan with add operation and allow one lane to substract the reduced value later.
+    AtomicRMWInst::BinOp ScanOp;
+    if(Op == AtomicRMWInst::Sub ) {
+      ScanOp = AtomicRMWInst::Add;
+    } else if (Op == AtomicRMWInst::FSub) {
+      ScanOp = AtomicRMWInst::FAdd;
+    } else {
+      ScanOp = Op;
+    }
     if (ScanImpl == ScanOptions::DPP) {
       // First we need to set all inactive invocations to the identity value, so
       // that they can correctly contribute to the final result.
@@ -766,8 +773,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       NewV = B.CreateBitCast(NewV, Ty);
       V = B.CreateBitCast(V, Ty);
       Identity = B.CreateBitCast(Identity, Ty);
-      const AtomicRMWInst::BinOp ScanOp =
-          Op == AtomicRMWInst::Sub ? AtomicRMWInst::Add : Op;
       if (!NeedResult && ST->hasPermLaneX16()) {
         // On GFX10 the permlanex16 instruction helps us build a reduction
         // without too many readlanes and writelanes, which are generally bad
