@@ -457,6 +457,14 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/include/PBQPRAConstraint.h @llvm/pr-subscribers-regalloc
 /llvm/include/llvm/CodeGen/Spiller.h @llvm/pr-subscribers-regalloc
 
+# inliner
+/llvm/**/Analysis/Inline* @llvm/pr-subscribers-inliner
+/llvm/**/Analysis/MLInlineAdvisor* @llvm/pr-subscribers-inliner
+/llvm/**/Analysis/ReplayInlineAdvisor* @llvm/pr-subscribers-inliner
+/llvm/**/Analysis/DevelopmentModeInlineAdvisor* @llvm/pr-subscribers-inliner
+/llvm/**/Transforms/IPO/Inliner* @llvm/pr-subscribers-inliner
+/llvm/lib/Transforms/Utils/InlineFunction.cpp @llvm/pr-subscribers-inliner
+
 # function-specialization
 /llvm/include/llvm/Transforms/Utils/SCCPSolver.h @llvm/pr-subscribers-function-specialization
 /llvm/lib/Transforms/Utils/SCCPSolver.cpp @llvm/pr-subscribers-function-specialization
