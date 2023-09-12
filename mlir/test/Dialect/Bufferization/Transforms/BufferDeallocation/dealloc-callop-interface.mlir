@@ -3,6 +3,9 @@
 // RUN: mlir-opt -verify-diagnostics -buffer-deallocation=private-function-dynamic-ownership=true \
 // RUN:   --buffer-deallocation-simplification -split-input-file %s | FileCheck %s --check-prefix=CHECK-DYNAMIC
 
+// RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file > /dev/null
+// RUN: mlir-opt %s -buffer-deallocation-pipeline=private-function-dynamic-ownership --split-input-file > /dev/null
+
 func.func private @f(%arg0: memref<f64>) -> memref<f64> {
   return %arg0 : memref<f64>
 }
