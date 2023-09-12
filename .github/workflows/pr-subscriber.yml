@@ -27,5 +27,5 @@ jobs:
           ./github-automation.py \
           --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
           pr-subscriber \
-          --issue-number '${{ github.event.pull_request.number }}'
+          --issue-number '${{ github.event.pull_request.number }}' \
           --label-name "$LABEL_NAME"
