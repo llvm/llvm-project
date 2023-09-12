@@ -226,8 +226,7 @@ set(COMPILER_RT_SUPPORTED_ARCH)
 # platform. We use the results of these tests to build only the various target
 # runtime libraries supported by our current compilers cross-compiling
 # abilities.
-set(SIMPLE_SOURCE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/simple.cc)
-file(WRITE ${SIMPLE_SOURCE} "#include <stdlib.h>\n#include <stdio.h>\nint main(void) { printf(\"hello, world\"); }\n")
+set(SIMPLE_SOURCE "#include <stdlib.h>\n#include <stdio.h>\nint main(void) { printf(\"hello, world\"); }\n")
 
 # Detect whether the current target platform is 32-bit or 64-bit, and setup
 # the correct commandline flags needed to attempt to target 32-bit and 64-bit.
