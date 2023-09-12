@@ -194,8 +194,8 @@ DiagnosticBuilder ClangTidyContext::diag(
 
 DiagnosticBuilder ClangTidyContext::diag(const tooling::Diagnostic &Error) {
   SourceManager &SM = DiagEngine->getSourceManager();
-  llvm::ErrorOr<const FileEntry *> File =
-      SM.getFileManager().getFile(Error.Message.FilePath);
+  OptionalFileEntryRef File =
+      SM.getFileManager().getOptionalFileRef(Error.Message.FilePath);
   FileID ID = SM.getOrCreateFileID(*File, SrcMgr::C_User);
   SourceLocation FileStartLoc = SM.getLocForStartOfFile(ID);
   SourceLocation Loc = FileStartLoc.getLocWithOffset(
