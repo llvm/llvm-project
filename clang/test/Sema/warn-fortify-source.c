@@ -85,7 +85,7 @@ void call_memset(void) {
   __builtin_memset(buf, 0xff, 11); // expected-warning {{'memset' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
 
-void call_snprintf(double d) {
+void call_snprintf(double d, int n) {
   char buf[10];
   __builtin_snprintf(buf, 10, "merp");
   __builtin_snprintf(buf, 11, "merp"); // expected-warning {{'snprintf' size argument is too large; destination buffer has size 10, but size argument is 11}}
@@ -96,6 +96,13 @@ void call_snprintf(double d) {
   __builtin_snprintf(buf, 1, "%.1000g", d); // expected-warning {{'snprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
   __builtin_snprintf(buf, 5, "%.1000g", d);
   __builtin_snprintf(buf, 5, "%.1000G", d);
+  __builtin_snprintf(buf, 10, " %#08x", n);
+  __builtin_snprintf(buf, 2, "%#x", n);
+  __builtin_snprintf(buf, 2, "%#X", n);
+  __builtin_snprintf(buf, 2, "%#o", n);
+  __builtin_snprintf(buf, 1, "%#x", n); // expected-warning {{'snprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
+  __builtin_snprintf(buf, 1, "%#X", n); // expected-warning {{'snprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
+  __builtin_snprintf(buf, 1, "%#o", n); // expected-warning {{'snprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
 }
 
 void call_vsnprintf(void) {
@@ -110,6 +117,13 @@ void call_vsnprintf(void) {
   __builtin_vsnprintf(buf, 1, "%.1000g", list); // expected-warning {{'vsnprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
   __builtin_vsnprintf(buf, 5, "%.1000g", list);
   __builtin_vsnprintf(buf, 5, "%.1000G", list);
+  __builtin_vsnprintf(buf, 10, " %#08x", list);
+  __builtin_vsnprintf(buf, 2, "%#x", list);
+  __builtin_vsnprintf(buf, 2, "%#X", list);
+  __builtin_vsnprintf(buf, 2, "%#o", list);
+  __builtin_vsnprintf(buf, 1, "%#x", list); // expected-warning {{'vsnprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
+  __builtin_vsnprintf(buf, 1, "%#X", list); // expected-warning {{'vsnprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
+  __builtin_vsnprintf(buf, 1, "%#o", list); // expected-warning {{'vsnprintf' will always be truncated; specified size is 1, but format string expands to at least 2}}
 }
 
 void call_sprintf_chk(char *buf) {
@@ -147,7 +161,7 @@ void call_sprintf_chk(char *buf) {
   __builtin___sprintf_chk(buf, 1, 2, "%%");
   __builtin___sprintf_chk(buf, 1, 1, "%%"); // expected-warning {{'sprintf' will always overflow; destination buffer has size 1, but format string expands to at least 2}}
   __builtin___sprintf_chk(buf, 1, 4, "%#x", 9);
-  __builtin___sprintf_chk(buf, 1, 3, "%#x", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 3, but format string expands to at least 4}}
+  __builtin___sprintf_chk(buf, 1, 3, "%#x", 9);
   __builtin___sprintf_chk(buf, 1, 4, "%p", (void *)9);
   __builtin___sprintf_chk(buf, 1, 3, "%p", (void *)9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 3, but format string expands to at least 4}}
   __builtin___sprintf_chk(buf, 1, 3, "%+d", 9);
@@ -184,7 +198,7 @@ void call_sprintf(void) {
   sprintf(buf, "1234%lld", 9ll);
   sprintf(buf, "12345%lld", 9ll); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "12%#x", 9);
-  sprintf(buf, "123%#x", 9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+  sprintf(buf, "123%#x", 9);
   sprintf(buf, "12%p", (void *)9);
   sprintf(buf, "123%p", (void *)9); // expected-warning {{'sprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
   sprintf(buf, "123%+d", 9);

@@ -434,7 +434,7 @@ struct TransferReadToVectorLoadLowering
                                                   vectorShape.end());
     for (unsigned i : broadcastedDims)
       unbroadcastedVectorShape[i] = 1;
-    VectorType unbroadcastedVectorType = VectorType::get(
+    VectorType unbroadcastedVectorType = read.getVectorType().cloneWith(
         unbroadcastedVectorShape, read.getVectorType().getElementType());
 
     // `vector.load` supports vector types as memref's elements only when the

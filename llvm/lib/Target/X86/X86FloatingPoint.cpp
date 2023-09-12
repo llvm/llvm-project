@@ -1598,8 +1598,9 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     for (unsigned i = InlineAsm::MIOp_FirstOperand, e = MI.getNumOperands();
          i != e && MI.getOperand(i).isImm(); i += 1 + NumOps) {
       unsigned Flags = MI.getOperand(i).getImm();
+      const InlineAsm::Flag F(Flags);
 
-      NumOps = InlineAsm::getNumOperandRegisters(Flags);
+      NumOps = F.getNumOperandRegisters();
       if (NumOps != 1)
         continue;
       const MachineOperand &MO = MI.getOperand(i + 1);
@@ -1611,12 +1612,12 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 
       // If the flag has a register class constraint, this must be an operand
       // with constraint "f". Record its index and continue.
-      if (InlineAsm::hasRegClassConstraint(Flags, RCID)) {
+      if (F.hasRegClassConstraint(RCID)) {
         FRegIdx.insert(i + 1);
         continue;
       }
 
-      switch (InlineAsm::getKind(Flags)) {
+      switch (F.getKind()) {
       case InlineAsm::Kind::RegUse:
         STUses |= (1u << STReg);
         break;

@@ -551,12 +551,12 @@ struct TestRegionRewriteBlockMovement : public ConversionPattern {
     // Inline this region into the parent region.
     auto &parentRegion = *op->getParentRegion();
     auto &opRegion = op->getRegion(0);
-    if (op->getAttr("legalizer.should_clone"))
+    if (op->getDiscardableAttr("legalizer.should_clone"))
       rewriter.cloneRegionBefore(opRegion, parentRegion, parentRegion.end());
     else
       rewriter.inlineRegionBefore(opRegion, parentRegion, parentRegion.end());
 
-    if (op->getAttr("legalizer.erase_old_blocks")) {
+    if (op->getDiscardableAttr("legalizer.erase_old_blocks")) {
       while (!opRegion.empty())
         rewriter.eraseBlock(&opRegion.front());
     }

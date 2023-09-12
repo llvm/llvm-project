@@ -30,6 +30,16 @@ clang_tablegen(AttrList.inc -gen-clang-attr-list
   SOURCE Attr.td
   TARGET ClangAttrList)
 
+clang_tablegen(AttrLeftSideCanPrintList.inc -gen-clang-attr-can-print-left-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrCanPrintLeftList)
+
+clang_tablegen(AttrLeftSideMustPrintList.inc -gen-clang-attr-must-print-left-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET ClangAttrMustPrintLeftList)
+
 clang_tablegen(AttrSubMatchRulesList.inc -gen-clang-attr-subject-match-rule-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
   SOURCE Attr.td

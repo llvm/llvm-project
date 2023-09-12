@@ -318,10 +318,11 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return false;
 
   // Don't create a 'hanging' indent if there are multiple blocks in a single
-  // statement.
+  // statement and we are aligning lambda blocks to their signatures.
   if (Previous.is(tok::l_brace) && State.Stack.size() > 1 &&
       State.Stack[State.Stack.size() - 2].NestedBlockInlined &&
-      State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks) {
+      State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks &&
+      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature) {
     return false;
   }
 
@@ -335,6 +336,11 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.
   if (!Current.isOneOf(TT_BinaryOperator, tok::comma) &&
+      // Allow breaking opening brace of lambdas (when passed as function
+      // arguments) to a new line when BeforeLambdaBody brace wrapping is
+      // enabled.
+      (!Style.BraceWrapping.BeforeLambdaBody ||
+       Current.isNot(TT_LambdaLBrace)) &&
       CurrentState.NoLineBreakInOperand) {
     return false;
   }
@@ -662,34 +668,37 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   const FormatToken &Previous = *State.NextToken->Previous;
   auto &CurrentState = State.Stack.back();
 
-  bool DisallowLineBreaksOnThisLine = Style.isCpp() && [&Current] {
-    // Deal with lambda arguments in C++. The aim here is to ensure that we
-    // don't over-indent lambda function bodies when lambdas are passed as
-    // arguments to function calls. We do this by ensuring that either all
-    // arguments (including any lambdas) go on the same line as the function
-    // call, or we break before the first argument.
-    auto PrevNonComment = Current.getPreviousNonComment();
-    if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
-      return false;
-    if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
-      return false;
-    auto BlockParameterCount = PrevNonComment->BlockParameterCount;
-    if (BlockParameterCount == 0)
-      return false;
+  bool DisallowLineBreaksOnThisLine =
+      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
+      Style.isCpp() && [&Current] {
+        // Deal with lambda arguments in C++. The aim here is to ensure that we
+        // don't over-indent lambda function bodies when lambdas are passed as
+        // arguments to function calls. We do this by ensuring that either all
+        // arguments (including any lambdas) go on the same line as the function
+        // call, or we break before the first argument.
+        auto PrevNonComment = Current.getPreviousNonComment();
+        if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
+          return false;
+        if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
+          return false;
+        auto BlockParameterCount = PrevNonComment->BlockParameterCount;
+        if (BlockParameterCount == 0)
+          return false;
 
-    // Multiple lambdas in the same function call.
-    if (BlockParameterCount > 1)
-      return true;
+        // Multiple lambdas in the same function call.
+        if (BlockParameterCount > 1)
+          return true;
 
-    // A lambda followed by another arg.
-    if (!PrevNonComment->Role)
-      return false;
-    auto Comma = PrevNonComment->Role->lastComma();
-    if (!Comma)
-      return false;
-    auto Next = Comma->getNextNonComment();
-    return Next && !Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
-  }();
+        // A lambda followed by another arg.
+        if (!PrevNonComment->Role)
+          return false;
+        auto Comma = PrevNonComment->Role->lastComma();
+        if (!Comma)
+          return false;
+        auto Next = Comma->getNextNonComment();
+        return Next &&
+               !Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
+      }();
 
   if (DisallowLineBreaksOnThisLine)
     State.NoLineBreak = true;
@@ -1067,9 +1076,40 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       NestedBlockSpecialCase ||
       (Current.MatchingParen &&
        Current.MatchingParen->is(TT_RequiresExpressionLBrace));
-  if (!NestedBlockSpecialCase)
-    for (ParenState &PState : llvm::drop_end(State.Stack))
-      PState.BreakBeforeParameter = true;
+  if (!NestedBlockSpecialCase) {
+    auto ParentLevelIt = std::next(State.Stack.rbegin());
+    if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+        Current.MatchingParen && Current.MatchingParen->is(TT_LambdaLBrace)) {
+      // If the first character on the new line is a lambda's closing brace, the
+      // stack still contains that lambda's parenthesis. As such, we need to
+      // recurse further down the stack than usual to find the parenthesis level
+      // containing the lambda, which is where we want to set
+      // BreakBeforeParameter.
+      //
+      // We specifically special case "OuterScope"-formatted lambdas here
+      // because, when using that setting, breaking before the parameter
+      // directly following the lambda is particularly unsightly. However, when
+      // "OuterScope" is not set, the logic to find the parent parenthesis level
+      // still appears to be sometimes incorrect. It has not been fixed yet
+      // because it would lead to significant changes in existing behaviour.
+      //
+      // TODO: fix the non-"OuterScope" case too.
+      auto FindCurrentLevel = [&](const auto &It) {
+        return std::find_if(It, State.Stack.rend(), [](const auto &PState) {
+          return PState.Tok != nullptr; // Ignore fake parens.
+        });
+      };
+      auto MaybeIncrement = [&](const auto &It) {
+        return It != State.Stack.rend() ? std::next(It) : It;
+      };
+      auto LambdaLevelIt = FindCurrentLevel(State.Stack.rbegin());
+      auto LevelContainingLambdaIt =
+          FindCurrentLevel(MaybeIncrement(LambdaLevelIt));
+      ParentLevelIt = MaybeIncrement(LevelContainingLambdaIt);
+    }
+    for (auto I = ParentLevelIt, E = State.Stack.rend(); I != E; ++I)
+      I->BreakBeforeParameter = true;
+  }
 
   if (PreviousNonComment &&
       !PreviousNonComment->isOneOf(tok::comma, tok::colon, tok::semi) &&
@@ -1079,7 +1119,11 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       !PreviousNonComment->isOneOf(
           TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
           TT_LeadingJavaAnnotation) &&
-      Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope()) {
+      Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
+      // We don't want to enforce line breaks for subsequent arguments just
+      // because we have been forced to break before a lambda body.
+      (!Style.BraceWrapping.BeforeLambdaBody ||
+       Current.isNot(TT_LambdaLBrace))) {
     CurrentState.BreakBeforeParameter = true;
   }
 
@@ -1098,7 +1142,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
 
   if (CurrentState.AvoidBinPacking) {
     // If we are breaking after '(', '{', '<', or this is the break after a ':'
-    // to start a member initializater list in a constructor, this should not
+    // to start a member initializer list in a constructor, this should not
     // be considered bin packing unless the relevant AllowAll option is false or
     // this is a dict/object literal.
     bool PreviousIsBreakingCtorInitializerColon =

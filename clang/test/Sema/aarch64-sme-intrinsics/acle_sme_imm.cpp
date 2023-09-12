@@ -184,9 +184,9 @@ void test_range_0_15(uint32_t slice, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svst1_ver_vnum_za8,,,)(0, -1, 16, pg, ptr, 1);
 
   // expected-error@+1 {{argument value 16 is outside the valid range [0, 15]}}
-  SVE_ACLE_FUNC(svldr_vnum_za,,,)(-1, 16, ptr);
+  SVE_ACLE_FUNC(svldr_vnum_za,,,)(-1, ptr, 16);
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
-  SVE_ACLE_FUNC(svstr_vnum_za,,,)(-1, -1, ptr);
+  SVE_ACLE_FUNC(svstr_vnum_za,,,)(-1, ptr, -1);
 
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
   SVE_ACLE_FUNC(svread_hor_za128, _s8, _m,)(svundef_s8(), pg, -1, slice);
@@ -215,8 +215,8 @@ void test_constant(uint64_t u64, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svst1_hor_vnum_za32,,,)(u64, u64, 0, pg, ptr, u64); // expected-error {{argument to 'svst1_hor_vnum_za32' must be a constant integer}}
   SVE_ACLE_FUNC(svst1_ver_vnum_za64,,,)(0, u64, u64, pg, ptr, u64); // expected-error {{argument to 'svst1_ver_vnum_za64' must be a constant integer}}
 
-  SVE_ACLE_FUNC(svldr_vnum_za,,,)(u64, u64, ptr); // expected-error {{argument to 'svldr_vnum_za' must be a constant integer}}
-  SVE_ACLE_FUNC(svstr_vnum_za,,,)(u64, u64, ptr); // expected-error {{argument to 'svstr_vnum_za' must be a constant integer}}
+  SVE_ACLE_FUNC(svldr_vnum_za,,,)(u64, ptr, u64); // expected-error {{argument to 'svldr_vnum_za' must be a constant integer}}
+  SVE_ACLE_FUNC(svstr_vnum_za,,,)(u64, ptr, u64); // expected-error {{argument to 'svstr_vnum_za' must be a constant integer}}
 
   SVE_ACLE_FUNC(svread_ver_za16, _s16, _m,)(svundef_s16(), pg, u64, 0);  // expected-error-re {{argument to 'svread_ver_za16{{.*}}_m' must be a constant integer}}
   SVE_ACLE_FUNC(svwrite_ver_za64, _s64, _m,)(u64, 0, pg, svundef_s64()); // expected-error-re {{argument to 'svwrite_ver_za64{{.*}}_m' must be a constant integer}}

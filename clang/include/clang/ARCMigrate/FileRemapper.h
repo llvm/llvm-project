@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_ARCMIGRATE_FILEREMAPPER_H
 #define LLVM_CLANG_ARCMIGRATE_FILEREMAPPER_H
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -23,7 +24,6 @@ namespace llvm {
 
 namespace clang {
   class FileManager;
-  class FileEntry;
   class DiagnosticsEngine;
   class PreprocessorOptions;
 
@@ -33,11 +33,11 @@ class FileRemapper {
   // FIXME: Reuse the same FileManager for multiple ASTContexts.
   std::unique_ptr<FileManager> FileMgr;
 
-  typedef llvm::PointerUnion<const FileEntry *, llvm::MemoryBuffer *> Target;
-  typedef llvm::DenseMap<const FileEntry *, Target> MappingsTy;
+  typedef llvm::PointerUnion<FileEntryRef, llvm::MemoryBuffer *> Target;
+  using MappingsTy = llvm::DenseMap<FileEntryRef, Target>;
   MappingsTy FromToMappings;
 
-  llvm::DenseMap<const FileEntry *, const FileEntry *> ToFromMappings;
+  llvm::DenseMap<const FileEntry *, FileEntryRef> ToFromMappings;
 
 public:
   FileRemapper();
@@ -66,10 +66,10 @@ public:
   void clear(StringRef outputDir = StringRef());
 
 private:
-  void remap(const FileEntry *file, std::unique_ptr<llvm::MemoryBuffer> memBuf);
-  void remap(const FileEntry *file, const FileEntry *newfile);
+  void remap(FileEntryRef file, std::unique_ptr<llvm::MemoryBuffer> memBuf);
+  void remap(FileEntryRef file, FileEntryRef newfile);
 
-  const FileEntry *getOriginalFile(StringRef filePath);
+  OptionalFileEntryRef getOriginalFile(StringRef filePath);
   void resetTarget(Target &targ);
 
   bool report(const Twine &err, DiagnosticsEngine &Diag);

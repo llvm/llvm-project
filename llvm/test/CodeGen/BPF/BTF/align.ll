@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=obj < %s | llvm-readelf -S - | FileCheck %s
-; RUN: llc -march=bpfeb -filetype=obj < %s | llvm-readelf -S - | FileCheck %s
+; RUN: llc -mtriple=bpfel -filetype=obj < %s | llvm-readelf -S - | FileCheck %s
+; RUN: llc -mtriple=bpfeb -filetype=obj < %s | llvm-readelf -S - | FileCheck %s
 ; Source:
 ;   int foo() { return 0; }
 ; Compilation flags:

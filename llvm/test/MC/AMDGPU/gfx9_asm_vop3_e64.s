@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 v_mad_legacy_f32 v5, v1, v2, v3
 // CHECK: [0x05,0x00,0xc0,0xd1,0x01,0x05,0x0e,0x04]

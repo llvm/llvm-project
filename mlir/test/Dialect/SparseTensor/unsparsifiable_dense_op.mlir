@@ -42,7 +42,7 @@ func.func @dense_op_without_sp_dep(%169: tensor<2x10x8xf32>,
       %180 = arith.mulf %in_60, %in_60 : f32
       %181 = arith.mulf %in_59, %cst_13 : f32
       %182 = arith.subf %181, %180 : f32
-      %183 = arith.maxf %182, %cst_13 : f32
+      %183 = arith.maximumf %182, %cst_13 : f32
       %184 = arith.addf %183, %cst_13 : f32
       %185 = math.rsqrt %184 : f32 // data dependent on sparse value.
       %186 = arith.mulf %185, %in_61 : f32
@@ -80,7 +80,7 @@ func.func @dense_op_with_sp_dep(%169: tensor<2x10x8xf32>,
       %180 = arith.mulf %in_60, %in_60 : f32
       %181 = arith.mulf %in_59, %cst_13 : f32
       %182 = arith.subf %181, %180 : f32
-      %183 = arith.maxf %182, %cst_13 : f32
+      %183 = arith.maximumf %182, %cst_13 : f32
       %184 = arith.addf %183, %cst_13 : f32
       %185 = math.rsqrt %184 : f32
       %186 = arith.mulf %185, %in_61 : f32

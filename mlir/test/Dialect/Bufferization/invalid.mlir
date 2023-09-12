@@ -99,9 +99,9 @@ func.func @invalid_writable_on_op() {
 // -----
 
 // expected-note @below{{prior use here}}
-func.func @invalid_tensor_copy(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
+func.func @invalid_materialize_in_destination(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
   // expected-error @below{{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<5xf32>'}}
-  bufferization.copy_tensor %arg0, %arg1 : tensor<?xf32>
+  bufferization.materialize_in_destination %arg0 in %arg1 : tensor<?xf32>
 }
 
 // -----

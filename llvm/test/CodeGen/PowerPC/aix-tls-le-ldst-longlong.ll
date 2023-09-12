@@ -707,13 +707,6 @@ entry:
   ret i64 %add
 }
 
-; (64-bit only) External symbol reference checks for __tls_get_addr[DS]
-
-; SMALL64: .ref __tls_get_addr[DS]
-; SMALL64: .extern __tls_get_addr[DS]
-; LARGE64: .ref __tls_get_addr[DS]
-; LARGE64: .extern __tls_get_addr[DS]
-
 ; TOC Entry Checks.
 
 ; SMALL64-LABEL: .toc

@@ -88,6 +88,7 @@ protected:
 };
 using HlfirSumLowering = HlfirReductionIntrinsic<hlfir::SumOp, true>;
 using HlfirProductLowering = HlfirReductionIntrinsic<hlfir::ProductOp, true>;
+using HlfirMaxvalLowering = HlfirReductionIntrinsic<hlfir::MaxvalOp, true>;
 using HlfirAnyLowering = HlfirReductionIntrinsic<hlfir::AnyOp, false>;
 using HlfirAllLowering = HlfirReductionIntrinsic<hlfir::AllOp, false>;
 
@@ -227,6 +228,10 @@ HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
     mlir::Type elementType = array.getEleTy();
     return hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
                                 /*polymorphic=*/false);
+  } else if (auto resCharType =
+                 mlir::dyn_cast<fir::CharacterType>(stmtResultType)) {
+    normalisedResult = hlfir::ExprType::get(
+        builder.getContext(), hlfir::ExprType::Shape{}, resCharType, false);
   }
   return normalisedResult;
 }
@@ -348,6 +353,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "count")
     return HlfirCountLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                   stmtResultType);
+  if (name == "maxval")
+    return HlfirMaxvalLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,

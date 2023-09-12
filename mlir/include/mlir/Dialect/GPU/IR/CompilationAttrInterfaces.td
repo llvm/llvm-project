@@ -42,7 +42,15 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
   ];
 }
 
-def GPUTargetArrayAttr : TypedArrayAttrBase<GPUTargetAttrInterface,
+def GPUTargetAttr :
+    ConfinedAttr<AnyAttr, [PromisedAttrInterface<GPUTargetAttrInterface>]> {
+  let description = [{
+    Generic GPU target attribute. These attributes must implement or promise
+    the `GPUTargetAttrInterface` interface.
+  }];
+}
+
+def GPUTargetArrayAttr : TypedArrayAttrBase<GPUTargetAttr,
   "array of GPU target attributes">;
 
 def GPUNonEmptyTargetArrayAttr :
@@ -51,6 +59,7 @@ def GPUNonEmptyTargetArrayAttr :
 //===----------------------------------------------------------------------===//
 // GPU offloading translation attribute trait.
 //===----------------------------------------------------------------------===//
+
 def OffloadingTranslationAttrTrait :
    NativeTrait<"OffloadingTranslationAttrTrait", ""> {
   let cppNamespace = "::mlir::gpu";
@@ -65,7 +74,7 @@ def OffloadingTranslationAttr :
     ConfinedAttr<AnyAttr, [HasOffloadingTranslationAttrTrait]> {
   let description = [{
     Generic GPU offloading translation attribute. These attributes must
-    implement an interface for handling the translation of PU offloading
+    implement an interface for handling the translation of GPU offloading
     operations like `gpu.binary` & `gpu.launch_func`. An example of such
     interface is the `OffloadingLLVMTranslationAttrInterface` interface.
   }];

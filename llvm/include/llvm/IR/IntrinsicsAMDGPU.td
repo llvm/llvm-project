@@ -1677,6 +1677,11 @@ def int_amdgcn_s_sleep :
                                 IntrHasSideEffects]> {
 }
 
+def int_amdgcn_s_nop :
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                IntrHasSideEffects]> {
+}
+
 def int_amdgcn_s_incperflevel :
   ClangBuiltin<"__builtin_amdgcn_s_incperflevel">,
   DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,

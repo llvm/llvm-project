@@ -36,8 +36,8 @@ using namespace llvm;
 using clang::detail::SarifArtifact;
 using clang::detail::SarifArtifactLocation;
 
-static StringRef getFileName(const FileEntry &FE) {
-  StringRef Filename = FE.tryGetRealPathName();
+static StringRef getFileName(FileEntryRef FE) {
+  StringRef Filename = FE.getFileEntry().tryGetRealPathName();
   if (Filename.empty())
     Filename = FE.getName();
   return Filename;
@@ -215,8 +215,8 @@ SarifDocumentWriter::createPhysicalLocation(const CharSourceRange &R) {
   assert(R.isCharRange() &&
          "Cannot create a physicalLocation from a token range!");
   FullSourceLoc Start{R.getBegin(), SourceMgr};
-  const FileEntry *FE = Start.getExpansionLoc().getFileEntry();
-  assert(FE != nullptr && "Diagnostic does not exist within a valid file!");
+  OptionalFileEntryRef FE = Start.getExpansionLoc().getFileEntryRef();
+  assert(FE && "Diagnostic does not exist within a valid file!");
 
   const std::string &FileURI = fileNameToURI(getFileName(*FE));
   auto I = CurrentArtifacts.find(FileURI);

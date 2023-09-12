@@ -101,7 +101,7 @@ def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
                 "Use Main Inference profile."),
                clEnumValN(mlir::tosa::TosaProfileEnum::MainTraining, "mt",
                 "Use Main Training profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::MainTraining, "undefined",
+               clEnumValN(mlir::tosa::TosaProfileEnum::Undefined, "undefined",
                 "Do not define a profile.")
               )}]>,
       Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",

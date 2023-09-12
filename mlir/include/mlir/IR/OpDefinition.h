@@ -341,6 +341,7 @@ LogicalResult verifySameOperandsAndResultShape(Operation *op);
 LogicalResult verifySameOperandsElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultElementType(Operation *op);
 LogicalResult verifySameOperandsAndResultType(Operation *op);
+LogicalResult verifySameOperandsAndResultRank(Operation *op);
 LogicalResult verifyResultsAreBoolLike(Operation *op);
 LogicalResult verifyResultsAreFloatLike(Operation *op);
 LogicalResult verifyResultsAreSignlessIntegerLike(Operation *op);
@@ -1114,6 +1115,17 @@ public:
   }
 };
 
+/// This class verifies that op has same ranks for all
+/// operands and results types, if known.
+template <typename ConcreteType>
+class SameOperandsAndResultRank
+    : public TraitBase<ConcreteType, SameOperandsAndResultRank> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifySameOperandsAndResultRank(op);
+  }
+};
+
 /// This class verifies that any results of the specified op have a boolean
 /// type, a vector thereof, or a tensor thereof.
 template <typename ConcreteType>
@@ -1757,9 +1769,10 @@ public:
   /// the namespace where the properties are defined. It can also be overridden
   /// in the derived ConcreteOp.
   template <typename PropertiesTy>
-  static LogicalResult setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
-                                             InFlightDiagnostic *diag) {
-    return setPropertiesFromAttribute(prop, attr, diag);
+  static LogicalResult
+  setPropertiesFromAttr(PropertiesTy &prop, Attribute attr,
+                        function_ref<InFlightDiagnostic &()> getDiag) {
+    return setPropertiesFromAttribute(prop, attr, getDiag);
   }
   /// Convert the provided properties to an attribute. This default
   /// implementation forwards to a free function `getPropertiesAsAttribute` that

@@ -870,6 +870,8 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
 
 // This is hasSideEffects to allow its use in readcyclecounter selection.
 // FIXME: Need to truncate immediate to 16-bits.
+// FIXME: Missing mode register use. Should have separate pseudos for
+// known may read MODE and only read MODE.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
@@ -1161,7 +1163,10 @@ multiclass SOPP_With_Relaxation <string opName, dag ins,
   def _pad_s_nop : SOPP_Pseudo <opName # "_pad_s_nop", ins, asmOps, pattern, " ", opName>;
 }
 
-def S_NOP : SOPP_Pseudo<"s_nop" , (ins i16imm:$simm16), "$simm16">;
+def S_NOP : SOPP_Pseudo<"s_nop" , (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_nop timm:$simm16)]> {
+  let hasSideEffects = 1;
+}
 
 let isTerminator = 1 in {
 def S_ENDPGM : SOPP_Pseudo<"s_endpgm", (ins Endpgm:$simm16), "$simm16", [], ""> {
@@ -1420,6 +1425,66 @@ def : GCNPat <
   (int_amdgcn_s_wait_event_export_ready),
     (S_WAIT_EVENT (i16 0))
 >;
+
+// The first 10 bits of the mode register are the core FP mode on all
+// subtargets.
+//
+// The high bits include additional fields, intermixed with some
+// non-floating point environment information. We extract the full
+// register and clear non-relevant bits.
+//
+// EXCP_EN covers floating point exceptions, but also some other
+// non-FP exceptions.
+//
+// Bits 12-18 cover the relevant exception mask on all subtargets.
+//
+// FIXME: Bit 18 is int_div0, should this be in the FP environment? I
+// think the only source is v_rcp_iflag_i32.
+//
+// On GFX9+:
+// Bit 23 is the additional FP16_OVFL mode.
+//
+// Bits 19, 20, and 21 cover non-FP exceptions and differ between
+// gfx9/10/11, so we ignore them here.
+
+// TODO: Would it be cheaper to emit multiple s_getreg_b32 calls for
+// the ranges and combine the results?
+
+defvar fp_round_mask = !add(!shl(1, 4), -1);
+defvar fp_denorm_mask = !shl(!add(!shl(1, 4), -1), 4);
+defvar dx10_clamp_mask = !shl(1, 8);
+defvar ieee_mode_mask = !shl(1, 9);
+
+// Covers fp_round, fp_denorm, dx10_clamp, and IEEE bit.
+defvar fpmode_mask =
+  !or(fp_round_mask, fp_denorm_mask, dx10_clamp_mask, ieee_mode_mask);
+
+defvar fp_excp_en_mask = !shl(!add(!shl(1, 7), -1), 12);
+defvar fp16_ovfl = !shl(1, 23);
+defvar fpmode_mask_gfx6plus = !or(fpmode_mask, fp_excp_en_mask);
+defvar fpmode_mask_gfx9plus = !or(fpmode_mask_gfx6plus, fp16_ovfl);
+
+class GetFPModePat<int fpmode_mask> : GCNPat<
+  (i32 get_fpmode),
+  (S_AND_B32 (i32 fpmode_mask),
+             (S_GETREG_B32 getHwRegImm<
+                HWREG.MODE, 0,
+                !add(!logtwo(fpmode_mask), 1)>.ret))
+>;
+
+// TODO: Might be worth moving to custom lowering so the and is
+// exposed to demanded bits optimizations. Most users probably only
+// care about the rounding or denorm mode bits. We also can reduce the
+// demanded read from the getreg immediate.
+let SubtargetPredicate = isGFX9Plus in {
+// Last bit = FP16_OVFL
+def : GetFPModePat<fpmode_mask_gfx9plus>;
+}
+
+// Last bit = EXCP_EN.int_div0
+let SubtargetPredicate = isNotGFX9Plus in {
+def : GetFPModePat<fpmode_mask_gfx6plus>;
+}
 
 //===----------------------------------------------------------------------===//
 // SOP2 Patterns

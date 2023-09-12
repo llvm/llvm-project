@@ -213,7 +213,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 
 // -----
 
-func.func @testloopop() -> () {
+func.func @testloopop(%a : memref<10xf32>) -> () {
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 128 : i32
   %idxValue = arith.constant 8 : index
@@ -279,6 +279,11 @@ func.func @testloopop() -> () {
     acc.yield
   }
   acc.loop gang(dim=%i64Value : i64, static=%i64Value: i64) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  }
+  %b = acc.cache varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  acc.loop cache(%b : memref<10xf32>) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
@@ -349,6 +354,11 @@ func.func @testloopop() -> () {
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(dim=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: }
+// CHECK:      %{{.*}} = acc.cache varPtr(%{{.*}} : memref<10xf32>) -> memref<10xf32>
+// CHECK-NEXT: acc.loop cache(%{{.*}} : memref<10xf32>) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }

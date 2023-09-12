@@ -140,10 +140,14 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
       break;
   }
 
-  SmallVector<StringRef> ExpectedIncludes{
+  SmallVector<std::string> IncludedFilesSlash;
+  for (StringRef IncludedFile : IncludedFiles)
+    IncludedFilesSlash.push_back(
+        llvm::sys::path::convert_to_slash(IncludedFile));
+  SmallVector<std::string> ExpectedIncludes{
       "main.c", "./head1.h", "./head2.h", "./head2.h", "./head3.h", "./head3.h",
   };
-  EXPECT_EQ(IncludedFiles, ExpectedIncludes);
+  EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
 }
 
 } // anonymous namespace

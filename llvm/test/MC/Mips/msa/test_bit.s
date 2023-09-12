@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        bclri.b         $w21, $w30, 2           # encoding: [0x79,0xf2,0xf5,0x49]
 # CHECK:        bclri.h         $w24, $w21, 0           # encoding: [0x79,0xe0,0xae,0x09]

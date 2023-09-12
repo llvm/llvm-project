@@ -39,7 +39,8 @@ recommended.
 
 Creating Pull Requests
 ----------------------
-Keep in mind that each pull request should generally only contain one commit.
+Keep in mind that when creating a pull request, it should generally only contain one
+self-contained commit initially.
 This makes it easier for reviewers to understand the introduced changes and
 provide feedback. It also helps maintain a clear and organized commit history
 for the project. If you have multiple changes you want to introduce, it's
@@ -142,7 +143,7 @@ CLI:
   gh pr checkout <PR Number>
 
 This is also possible with the web interface and the normal git command line
-tools, but the process is a bit more complicated. See GitHubs
+tools, but the process is a bit more complicated. See GitHub's
 `documentation <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally?platform=linux&tool=webui#modifying-an-inactive-pull-request-locally>`_
 on the topic.
 
@@ -183,24 +184,132 @@ Here is an example for creating a Pull Request with the GitHub CLI:
   # Commit your changes
   git commit file.cpp -m "Code Review adjustments"
 
+  # Format changes
+  git clang-format HEAD~
+
+  # Recommit if any formatting changes
+  git commit -a --amend
+
   # Push your changes to your fork branch, be mindful of
   # your remotes here, if you don't remember what points to your
   # fork, use git remote -v to see. Usually origin points to your
   # fork and upstream to llvm/llvm-project
   git push origin my_change
 
-  # When your PR is accepted, you can now rebase it and make sure
-  # you have all the latest changes.
-  git rebase -i origin/main
+Before merging the PR, it is recommended that you rebase locally and re-run test
+checks:
 
-  # If this PR is older and you get a lot of new commits with the
-  # rebase, you might want to re-run tests and make sure nothing
-  # broke.
-  ninja check-llvm
+::
+
+  # Add upstream as a remote (if you don't have it already)
+  git remote add upstream https://github.com/llvm/llvm-project.git
+
+  # Make sure you have all the latest changes
+  git fetch upstream && git rebase -i upstream/main
+
+  # Make sure tests pass with latest changes and your change
+  ninja check
+
+  # Push the rebased changes to your fork.
+  git push origin my_change -f
 
   # Now merge it
   gh pr merge --squash --delete
 
+
+See more in-depth information about how to contribute in the following documentation:
+
+* :doc:`Contributing`
+* :doc:`MyFirstTypoFix`
+
+Example Pull Request with git
+====================================
+
+Instead of using the GitHub CLI to create a PR, you can push your code to a
+remote branch on your fork and create the PR to upstream using the GitHub web
+interface.
+
+Here is an example of making a PR using git and the GitHub web interface:
+
+First follow the instructions to [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository).
+
+Next follow the instructions to [clone your forked repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository).
+
+Once you've cloned your forked repository,
+
+::
+
+  # Switch to the forked repo
+  cd llvm-project
+
+  # Create a new branch
+  git switch -c my_change
+
+  # Create your changes
+  $EDITOR file.cpp
+
+  # Don't forget clang-format
+  git clang-format
+
+  # and don't forget running your tests
+  ninja check-llvm
+
+  # Commit, use a good commit message
+  git commit file.cpp
+
+  # Push your changes to your fork branch, be mindful of
+  # your remotes here, if you don't remember what points to your
+  # fork, use git remote -v to see. Usually origin points to your
+  # fork and upstream to llvm/llvm-project
+  git push origin my_change
+
+Navigate to the URL printed to the console from the git push command in the last step.
+Create a pull request from your branch to llvm::main.
+
+::
+
+  # If you get any review comments, come back to the branch and
+  # adjust them.
+  git switch my_change
+  $EDITOR file.cpp
+
+  # Commit your changes
+  git commit file.cpp -m "Code Review adjustments"
+
+  # Format changes
+  git clang-format HEAD~
+
+  # Recommit if any formatting changes
+  git commit -a --amend
+
+  # Re-run tests and make sure nothing broke.
+  ninja check
+
+  # Push your changes to your fork branch, be mindful of
+  # your remotes here, if you don't remember what points to your
+  # fork, use git remote -v to see. Usually origin points to your
+  # fork and upstream to llvm/llvm-project
+  git push origin my_change
+
+Before merging the PR, it is recommended that you rebase locally and re-run test
+checks:
+
+::
+
+  # Add upstream as a remote (if you don't have it already)
+  git remote add upstream https://github.com/llvm/llvm-project.git
+
+  # Make sure you have all the latest changes
+  git fetch upstream && git rebase -i upstream/main
+
+  # Make sure tests pass with latest changes and your change
+  ninja check
+
+  # Push the rebased changes to your fork.
+  git push origin my_change -f
+
+Once your PR is approved, rebased, and tests are passing, click `Squash and
+Merge` on your PR in the GitHub web interface.
 
 See more in-depth information about how to contribute in the following documentation:
 

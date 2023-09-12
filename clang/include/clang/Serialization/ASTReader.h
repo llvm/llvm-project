@@ -1632,9 +1632,18 @@ public:
   /// \param ClientLoadCapabilities The set of client load-failure
   /// capabilities, represented as a bitset of the enumerators of
   /// LoadFailureCapabilities.
+  ///
+  /// \param LoadedModuleFile The optional out-parameter refers to the new
+  /// loaded modules. In case the module specified by FileName is already
+  /// loaded, the module file pointer referred by NewLoadedModuleFile wouldn't
+  /// change. Otherwise if the AST file get loaded successfully,
+  /// NewLoadedModuleFile would refer to the address of the new loaded top level
+  /// module. The state of NewLoadedModuleFile is unspecified if the AST file
+  /// isn't loaded successfully.
   ASTReadResult ReadAST(StringRef FileName, ModuleKind Type,
                         SourceLocation ImportLoc,
-                        unsigned ClientLoadCapabilities);
+                        unsigned ClientLoadCapabilities,
+                        ModuleFile **NewLoadedModuleFile = nullptr);
 
   /// Make the entities in the given module and any of its (non-explicit)
   /// submodules visible to name lookup.

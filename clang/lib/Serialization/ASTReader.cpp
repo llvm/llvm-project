@@ -2428,6 +2428,16 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // For standard C++ modules, we don't need to check the inputs.
   bool SkipChecks = F.StandardCXXModule;
 
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // The option ForceCheckCXX20ModulesInputFiles is only meaningful for C++20
+  // modules.
+  if (F.StandardCXXModule && HSOpts.ForceCheckCXX20ModulesInputFiles) {
+    SkipChecks = false;
+    Overridden = false;
+  }
+
   OptionalFileEntryRefDegradesToFileEntryPtr File = OptionalFileEntryRef(
       expectedToOptional(FileMgr.getFileRef(Filename, /*OpenFile=*/false)));
 
@@ -4086,13 +4096,13 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     // Check any additional module map files (e.g. module.private.modulemap)
     // that are not in the pcm.
     if (auto *AdditionalModuleMaps = Map.getAdditionalModuleMapFiles(M)) {
-      for (const FileEntry *ModMap : *AdditionalModuleMaps) {
+      for (FileEntryRef ModMap : *AdditionalModuleMaps) {
         // Remove files that match
         // Note: SmallPtrSet::erase is really remove
         if (!AdditionalStoredMaps.erase(ModMap)) {
           if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
             Diag(diag::err_module_different_modmap)
-              << F.ModuleName << /*new*/0 << ModMap->getName();
+              << F.ModuleName << /*new*/0 << ModMap.getName();
           return OutOfDate;
         }
       }
@@ -4311,10 +4321,10 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   }
 }
 
-ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
-                                            ModuleKind Type,
+ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
                                             SourceLocation ImportLoc,
-                                            unsigned ClientLoadCapabilities) {
+                                            unsigned ClientLoadCapabilities,
+                                            ModuleFile **NewLoadedModuleFile) {
   llvm::TimeTraceScope scope("ReadAST", FileName);
 
   llvm::SaveAndRestore SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
@@ -4343,6 +4353,9 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     ModuleMgr.setGlobalIndex(nullptr);
     return ReadResult;
   }
+
+  if (NewLoadedModuleFile && !Loaded.empty())
+    *NewLoadedModuleFile = Loaded.back().Mod;
 
   // Here comes stuff that we only do once the entire chain is loaded. Do *not*
   // remove modules from this point. Various fields are updated during reading
@@ -5676,7 +5689,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                                        "too many submodules");
 
       if (!ParentModule) {
-        if (const FileEntry *CurFile = CurrentModule->getASTFile()) {
+        if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                     DisableValidationForModuleKind::Module) &&
@@ -5708,12 +5721,6 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
-
-      // If we're loading a module before we initialize the sema, it implies
-      // we're performing eagerly loading.
-      if (!getSema() && CurrentModule->isModulePurview() &&
-          !getContext().getLangOpts().isCompilingModule())
-        Diag(clang::diag::warn_eagerly_load_for_standard_cplusplus_modules);
 
       SubmodulesLoaded[GlobalIndex] = CurrentModule;
 

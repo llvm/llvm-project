@@ -558,7 +558,7 @@ void MemCmpExpansion::setupResultBlockPHINodes() {
 }
 
 void MemCmpExpansion::setupEndBlockPHINodes() {
-  Builder.SetInsertPoint(&EndBlock->front());
+  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
   PhiRes = Builder.CreatePHI(Type::getInt32Ty(CI->getContext()), 2, "phi.res");
 }
 

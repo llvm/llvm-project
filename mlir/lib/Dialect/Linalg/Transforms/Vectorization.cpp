@@ -505,10 +505,10 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
       .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
       .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
-      .Case<arith::MaxFOp>([&](auto op) { return CombiningKind::MAXF; })
+      .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXF; })
       .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
       .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
-      .Case<arith::MinFOp>([&](auto op) { return CombiningKind::MINF; })
+      .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
