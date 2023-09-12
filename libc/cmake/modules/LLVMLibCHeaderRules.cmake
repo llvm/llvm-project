@@ -55,6 +55,8 @@ function(add_header target_name)
     ${target_name}
     HDRS
       ${dest_file}
+    DEPENDS
+      ${copied_hdr_target}
   )
   set_target_properties(
     ${fq_target_name}
@@ -175,6 +177,8 @@ function(add_gen_header target_name)
     ${target_name}
     HDRS
       ${out_file}
+    DEPENDS
+      ${generated_hdr_target}
   )
 
   set_target_properties(
