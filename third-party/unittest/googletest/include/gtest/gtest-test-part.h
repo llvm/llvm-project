@@ -26,19 +26,18 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// GOOGLETEST_CM0001 DO NOT DELETE
 
 // IWYU pragma: private, include "gtest/gtest.h"
 // IWYU pragma: friend gtest/.*
 // IWYU pragma: friend gmock/.*
 
-#ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
-#define GOOGLETEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
+#ifndef GTEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
+#define GTEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
 
 #include <iosfwd>
-#include <ostream>
-#include <string>
 #include <vector>
-
 #include "gtest/internal/gtest-internal.h"
 #include "gtest/internal/gtest-string.h"
 
@@ -133,7 +132,7 @@ std::ostream& operator<<(std::ostream& os, const TestPartResult& result);
 // virtual.
 class GTEST_API_ TestPartResultArray {
  public:
-  TestPartResultArray() = default;
+  TestPartResultArray() {}
 
   // Appends the given TestPartResult to the array.
   void Append(const TestPartResult& result);
@@ -147,14 +146,13 @@ class GTEST_API_ TestPartResultArray {
  private:
   std::vector<TestPartResult> array_;
 
-  TestPartResultArray(const TestPartResultArray&) = delete;
-  TestPartResultArray& operator=(const TestPartResultArray&) = delete;
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(TestPartResultArray);
 };
 
 // This interface knows how to report a test part result.
 class GTEST_API_ TestPartResultReporterInterface {
  public:
-  virtual ~TestPartResultReporterInterface() = default;
+  virtual ~TestPartResultReporterInterface() {}
 
   virtual void ReportTestPartResult(const TestPartResult& result) = 0;
 };
@@ -174,13 +172,11 @@ class GTEST_API_ HasNewFatalFailureHelper
   ~HasNewFatalFailureHelper() override;
   void ReportTestPartResult(const TestPartResult& result) override;
   bool has_new_fatal_failure() const { return has_new_fatal_failure_; }
-
  private:
   bool has_new_fatal_failure_;
   TestPartResultReporterInterface* original_reporter_;
 
-  HasNewFatalFailureHelper(const HasNewFatalFailureHelper&) = delete;
-  HasNewFatalFailureHelper& operator=(const HasNewFatalFailureHelper&) = delete;
+  GTEST_DISALLOW_COPY_AND_ASSIGN_(HasNewFatalFailureHelper);
 };
 
 }  // namespace internal
@@ -189,4 +185,4 @@ class GTEST_API_ HasNewFatalFailureHelper
 
 GTEST_DISABLE_MSC_WARNINGS_POP_()  //  4251
 
-#endif  // GOOGLETEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
+#endif  // GTEST_INCLUDE_GTEST_GTEST_TEST_PART_H_
