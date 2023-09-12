@@ -1371,12 +1371,12 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(*MF)) {
     Register MaxReg = getMaxPushPopReg(*MF, CSI);
-    unsigned PushedRegNum =
-        getPushPopEncoding(MaxReg) - llvm::RISCVZC::RLISTENCODE::RA + 1;
-    RVFI->setRVPushRegs(PushedRegNum);
-    RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
-
     if (MaxReg != RISCV::NoRegister) {
+      unsigned PushedRegNum =
+          getPushPopEncoding(MaxReg) - llvm::RISCVZC::RLISTENCODE::RA + 1;
+      RVFI->setRVPushRegs(PushedRegNum);
+      RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
+
       // Use encoded number to represent registers to spill.
       unsigned RegEnc = getPushPopEncoding(MaxReg);
       RVFI->setRVPushRlist(RegEnc);
