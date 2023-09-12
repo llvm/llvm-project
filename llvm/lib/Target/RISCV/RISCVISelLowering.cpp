@@ -7345,6 +7345,32 @@ RISCVTargetLowering::lowerVectorFPExtendOrRoundLike(SDValue Op,
   return Result;
 }
 
+// Given a scalable vector type and an index into it, returns the type for the
+// smallest subvector that the index fits in. This can be used to reduce LMUL
+// for operations like vslidedown.
+//
+// E.g. With Zvl128b, index 3 in a nxv4i32 fits within the first nxv2i32.
+static std::optional<MVT>
+getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
+                      const RISCVSubtarget &Subtarget) {
+  assert(VecVT.isScalableVector());
+  const unsigned EltSize = VecVT.getScalarSizeInBits();
+  const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
+  const unsigned MinVLMAX = VectorBitsMin / EltSize;
+  MVT SmallerVT;
+  if (MaxIdx < MinVLMAX)
+    SmallerVT = getLMUL1VT(VecVT);
+  else if (MaxIdx < MinVLMAX * 2)
+    SmallerVT = getLMUL1VT(VecVT).getDoubleNumVectorElementsVT();
+  else if (MaxIdx < MinVLMAX * 4)
+    SmallerVT = getLMUL1VT(VecVT)
+                    .getDoubleNumVectorElementsVT()
+                    .getDoubleNumVectorElementsVT();
+  if (!SmallerVT.isValid() || !VecVT.bitsGT(SmallerVT))
+    return std::nullopt;
+  return SmallerVT;
+}
+
 // Custom-legalize INSERT_VECTOR_ELT so that the value is inserted into the
 // first position of a vector, and that vector is slid up to the insert index.
 // By limiting the active vector length to index+1 and merging with the
@@ -7464,32 +7490,6 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   if (!VecVT.isFixedLengthVector())
     return Slideup;
   return convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
-}
-
-// Given a scalable vector type and an index into it, returns the type for the
-// smallest subvector that the index fits in. This can be used to reduce LMUL
-// for operations like vslidedown.
-//
-// E.g. With Zvl128b, index 3 in a nxv4i32 fits within the first nxv2i32.
-static std::optional<MVT>
-getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
-                      const RISCVSubtarget &Subtarget) {
-  assert(VecVT.isScalableVector());
-  const unsigned EltSize = VecVT.getScalarSizeInBits();
-  const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
-  const unsigned MinVLMAX = VectorBitsMin / EltSize;
-  MVT SmallerVT;
-  if (MaxIdx < MinVLMAX)
-    SmallerVT = getLMUL1VT(VecVT);
-  else if (MaxIdx < MinVLMAX * 2)
-    SmallerVT = getLMUL1VT(VecVT).getDoubleNumVectorElementsVT();
-  else if (MaxIdx < MinVLMAX * 4)
-    SmallerVT = getLMUL1VT(VecVT)
-                    .getDoubleNumVectorElementsVT()
-                    .getDoubleNumVectorElementsVT();
-  if (!SmallerVT.isValid() || !VecVT.bitsGT(SmallerVT))
-    return std::nullopt;
-  return SmallerVT;
 }
 
 // Custom-lower EXTRACT_VECTOR_ELT operations to slide the vector down, then
