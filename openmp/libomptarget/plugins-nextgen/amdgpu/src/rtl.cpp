@@ -870,7 +870,7 @@ private:
       return Plugin::success();
     }
 
-    /// Schedule a release buffer action on the slot.
+    /// Schedule a signal release action on the slot.
     Error schedReleaseSignal(AMDGPUSignalTy *SignalToRelease,
                              AMDGPUSignalManagerTy *SignalManager) {
       ActionFunction = releaseSignalAction;
