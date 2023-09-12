@@ -4990,8 +4990,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   // unimported module.
   Function->setVisibleDespiteOwningModule();
 
-  // Copy the inner loc start from the pattern.
+  // Copy the source locations from the pattern.
+  Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
+  Function->setRangeEnd(PatternDecl->getEndLoc());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
