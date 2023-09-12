@@ -317,6 +317,7 @@ Clang-Tidy Checks
    :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes"
    :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
    :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
+   :doc:`performance-move-smart-pointer-contents <performance/move-smart-pointer-contents>`, "Yes"
    :doc:`performance-no-automatic-move <performance/no-automatic-move>`,
    :doc:`performance-no-int-to-ptr <performance/no-int-to-ptr>`,
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"

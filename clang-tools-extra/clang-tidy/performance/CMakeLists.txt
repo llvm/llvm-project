@@ -14,6 +14,7 @@ add_clang_library(clangTidyPerformanceModule
   InefficientVectorOperationCheck.cpp
   MoveConstArgCheck.cpp
   MoveConstructorInitCheck.cpp
+  MoveSmartPointerContentsCheck.cpp
   NoAutomaticMoveCheck.cpp
   NoIntToPtrCheck.cpp
   NoexceptDestructorCheck.cpp

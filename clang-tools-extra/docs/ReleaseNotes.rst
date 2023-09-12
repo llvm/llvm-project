@@ -168,6 +168,11 @@ New checks
   Recommends the smallest possible underlying type for an ``enum`` or ``enum``
   class based on the range of its enumerators.
 
+- New :doc:`performance-move-smart-pointer-contents
+  <clang-tidy/checks/performance/move-smart-pointer-contents>` check.
+
+  Recommends moving a smart pointer rather than its contents.
+
 - New :doc:`readability-reference-to-constructed-temporary
   <clang-tidy/checks/readability/reference-to-constructed-temporary>` check.
 
