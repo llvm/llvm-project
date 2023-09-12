@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: c-index-test core -print-source-symbols -- %s -target x86_64-apple-macosx10.7 | FileCheck %s
 
 #define EXT_DECL(mod_name) __attribute__((external_source_symbol(language="Swift", defined_in=mod_name)))
