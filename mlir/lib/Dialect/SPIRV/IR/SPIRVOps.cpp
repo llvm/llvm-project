@@ -1612,7 +1612,7 @@ LogicalResult spirv::MatrixTimesScalarOp::verify() {
               [](auto matrixType) { return matrixType.getElementType(); })
           .Default([](Type) { return nullptr; });
 
-  assert(elementType && "Unhandld type");
+  assert(elementType && "Unhandled type");
 
   // Check that the scalar type is the same as the matrix element type.
   if (getScalar().getType() != elementType)
