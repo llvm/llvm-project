@@ -4,6 +4,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class FunctionOpInterface;
 class ModuleOp;
 class RewritePatternSet;
 class OpBuilder;
@@ -125,7 +126,8 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
 /// Run buffer deallocation.
-LogicalResult deallocateBuffers(Operation *op);
+LogicalResult deallocateBuffers(FunctionOpInterface op,
+                                bool privateFuncDynamicOwnership);
 
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.
