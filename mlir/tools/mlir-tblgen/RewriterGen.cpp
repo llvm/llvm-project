@@ -878,7 +878,8 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we
     // should just capture a mlir::Attribute() to signal the missing state.
-    // That is precisely what getAttr() returns on missing attributes.
+    // That is precisely what getDiscardableAttr() returns on missing
+    // attributes.
   } else {
     emitMatchCheck(opName, tgfmt("tblgen_attr", &fmtCtx),
                    formatv("\"expected op '{0}' to have attribute '{1}' "
