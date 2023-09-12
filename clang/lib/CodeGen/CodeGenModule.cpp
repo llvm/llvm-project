@@ -3222,7 +3222,7 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind, llvm::Function *Fn,
     return true;
   // NoSanitize by location. Check "mainfile" prefix.
   auto &SM = Context.getSourceManager();
-  const FileEntry &MainFile = *SM.getFileEntryForID(SM.getMainFileID());
+  FileEntryRef MainFile = *SM.getFileEntryRefForID(SM.getMainFileID());
   if (NoSanitizeL.containsMainFile(Kind, MainFile.getName()))
     return true;
 
@@ -3243,7 +3243,8 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
     return true;
   auto &SM = Context.getSourceManager();
   if (NoSanitizeL.containsMainFile(
-          Kind, SM.getFileEntryForID(SM.getMainFileID())->getName(), Category))
+          Kind, SM.getFileEntryRefForID(SM.getMainFileID())->getName(),
+          Category))
     return true;
   if (NoSanitizeL.containsLocation(Kind, Loc, Category))
     return true;
@@ -3309,7 +3310,7 @@ CodeGenModule::isFunctionBlockedByProfileList(llvm::Function *Fn,
   // If location is unknown, this may be a compiler-generated function. Assume
   // it's located in the main file.
   auto &SM = Context.getSourceManager();
-  if (const auto *MainFile = SM.getFileEntryForID(SM.getMainFileID()))
+  if (auto MainFile = SM.getFileEntryRefForID(SM.getMainFileID()))
     if (auto V = ProfileList.isFileExcluded(MainFile->getName(), Kind))
       return *V;
   return ProfileList.getDefault(Kind);
