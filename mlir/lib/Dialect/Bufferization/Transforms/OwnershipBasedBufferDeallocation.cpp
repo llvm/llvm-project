@@ -994,6 +994,11 @@ namespace {
 struct OwnershipBasedBufferDeallocationPass
     : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
           OwnershipBasedBufferDeallocationPass> {
+  OwnershipBasedBufferDeallocationPass() = default;
+  OwnershipBasedBufferDeallocationPass(bool privateFuncDynamicOwnership)
+      : OwnershipBasedBufferDeallocationPass() {
+    this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
+  }
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     if (func.isExternal())
@@ -1025,6 +1030,8 @@ LogicalResult bufferization::deallocateBuffersOwnershipBased(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<Pass>
-mlir::bufferization::createOwnershipBasedBufferDeallocationPass() {
-  return std::make_unique<OwnershipBasedBufferDeallocationPass>();
+mlir::bufferization::createOwnershipBasedBufferDeallocationPass(
+    bool privateFuncDynamicOwnership) {
+  return std::make_unique<OwnershipBasedBufferDeallocationPass>(
+      privateFuncDynamicOwnership);
 }

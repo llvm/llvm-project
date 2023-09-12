@@ -1,6 +1,8 @@
 // RUN: mlir-opt -verify-diagnostics -expand-realloc=emit-deallocs=false -ownership-based-buffer-deallocation \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s
 
+// RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file > /dev/null
+
 func.func @auto_dealloc() {
   %c10 = arith.constant 10 : index
   %c100 = arith.constant 100 : index
