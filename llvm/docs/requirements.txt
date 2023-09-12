@@ -1,0 +1,5 @@
+sphinx
+myst-parser
+sphinx-markdown-tables
+sphinx-automodapi
+furo

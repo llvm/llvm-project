@@ -171,20 +171,12 @@ Generating the documentation
 You can generate the HTML documentation from the sources locally if you want to
 see what they would look like. In addition to the normal
 `build tools <docs/GettingStarted.html>`_
-you need to install `Sphinx`_ and the
-`myst-parser <https://myst-parser.readthedocs.io/en/latest/>`_ extension.
-
-On Debian you can install these with:
+you need to install `Sphinx`_ and the necessary extensions
+using the following command inside the ``llvm-project`` checkout:
 
 .. code-block:: console
 
-   sudo apt install -y sphinx-doc python3-myst-parser
-
-On Ubuntu use pip to get an up-to-date version of python3-myst-parser:
-
-.. code-block:: console
-
-   sudo pip install sphinx myst-parser
+   pip install --user -r ./llvm/docs/requirements.txt
 
 Then run cmake to build the documentation inside the ``llvm-project`` checkout:
 
