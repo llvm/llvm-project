@@ -57,10 +57,11 @@ void RenderDataMarkup(InternalScopedString *buffer, const DataInfo *DI);
 bool RenderNeedsSymbolizationMarkup();
 
 // We don't support the stack_trace_format flag at all.
-void RenderFrameMarkup(InternalScopedString *buffer, int frame_no, uptr address);
+void RenderFrameMarkup(InternalScopedString *buffer, int frame_no,
+                       uptr address);
 
-void RenderModulesMarkup(InternalScopedString *buffer, const ListOfModules *modules);
+void RenderModulesMarkup(InternalScopedString *buffer,
+                         const ListOfModules *modules);
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_SYMBOLIZER_MARKUP_H
-

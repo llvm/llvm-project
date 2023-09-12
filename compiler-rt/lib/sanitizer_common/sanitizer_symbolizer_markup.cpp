@@ -29,7 +29,8 @@ void RenderDataMarkup(InternalScopedString *buffer, const DataInfo *DI) {
 
 bool RenderNeedsSymbolizationMarkup() { return false; }
 
-void RenderFrameMarkup(InternalScopedString *buffer, int frame_no, uptr address) {
+void RenderFrameMarkup(InternalScopedString *buffer, int frame_no,
+                       uptr address) {
   CHECK(!RenderNeedsSymbolizationMarkup());
   buffer->append(kFormatFrame, frame_no, address);
 }
@@ -230,7 +231,7 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {}
 
-#if SANITIZER_CAN_SLOW_UNWIND
+#  if SANITIZER_CAN_SLOW_UNWIND
 struct UnwindTraceArg {
   BufferedStackTrace *stack;
   u32 max_depth;
@@ -240,7 +241,8 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   UnwindTraceArg *arg = static_cast<UnwindTraceArg *>(param);
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = _Unwind_GetIP(ctx);
-  if (pc < PAGE_SIZE) return _URC_NORMAL_STOP;
+  if (pc < PAGE_SIZE)
+    return _URC_NORMAL_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
   return (arg->stack->size == arg->max_depth ? _URC_NORMAL_STOP
                                              : _URC_NO_REASON);
@@ -266,7 +268,7 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   UNREACHABLE("signal context doesn't exist");
 }
-#endif  // SANITIZER_CAN_SLOW_UNWIND
+#  endif  // SANITIZER_CAN_SLOW_UNWIND
 
 #endif  // SANITIZER_SYMBOLIZER_MARKUP
 
