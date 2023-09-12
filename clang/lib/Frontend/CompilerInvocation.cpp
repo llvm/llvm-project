@@ -4143,7 +4143,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Validate options for HLSL
   if (Opts.HLSL) {
-    bool SupportedTarget = T.getArch() == llvm::Triple::dxil &&
+    bool SupportedTarget = (T.getArch() == llvm::Triple::dxil ||
+                            T.getArch() == llvm::Triple::spirv) &&
                            T.getOS() == llvm::Triple::ShaderModel;
     if (!SupportedTarget)
       Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();

@@ -278,13 +278,13 @@ private:
 
   // These facilities are used for validation in debug builds.
   class UnparsedFileStatus {
-    llvm::PointerIntPair<const FileEntry *, 1, bool> Data;
+    llvm::PointerIntPair<OptionalFileEntryRef, 1, bool> Data;
 
   public:
-    UnparsedFileStatus(const FileEntry *File, bool FoundDirectives)
+    UnparsedFileStatus(OptionalFileEntryRef File, bool FoundDirectives)
         : Data(File, FoundDirectives) {}
 
-    const FileEntry *getFile() const { return Data.getPointer(); }
+    OptionalFileEntryRef getFile() const { return Data.getPointer(); }
     bool foundDirectives() const { return Data.getInt(); }
   };
 

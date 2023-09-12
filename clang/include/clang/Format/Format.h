@@ -593,6 +593,47 @@ struct FormatStyle {
   /// \version 3.3
   bool AllowAllParametersOfDeclarationOnNextLine;
 
+  /// Different ways to break before a noexcept specifier.
+  enum BreakBeforeNoexceptSpecifierStyle : int8_t {
+    /// No line break allowed.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2) noexcept(
+    ///       noexcept(baz(arg1)) &&
+    ///       noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Never,
+    /// For a simple ``noexcept`` there is no line break allowed, but when we
+    /// have a condition it is.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_OnlyWithParen,
+    /// Line breaks are allowed. But note that because of the associated
+    /// penalties ``clang-format`` often prefers not to break before the
+    /// ``noexcept``.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Always,
+  };
+
+  /// Controls if there could be a line break before a ``noexcept`` specifier.
+  /// \version 18
+  BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -4310,7 +4351,7 @@ struct FormatStyle {
     SIPO_Custom,
   };
 
-  /// If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
   /// This option is **deprecated**. The previous behavior is preserved by using
   /// ``SpacesInParens`` with ``Custom`` and by setting all
   /// ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
@@ -4576,6 +4617,8 @@ struct FormatStyle {
            AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
+           AllowBreakBeforeNoexceptSpecifier ==
+               R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&

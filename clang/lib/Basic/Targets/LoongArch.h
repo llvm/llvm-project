@@ -36,6 +36,7 @@ public:
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
+    MCountName = "_mcount";
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;

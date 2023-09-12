@@ -318,6 +318,17 @@ __builtin_exp2(f);       __builtin_exp2f(f);      __builtin_exp2l(f); __builtin_
 // HAS_ERRNO: declare x86_fp80 @exp2l(x86_fp80 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare fp128 @exp2f128(fp128 noundef) [[NOT_READNONE]]
 
+__builtin_exp10(f);       __builtin_exp10f(f);      __builtin_exp10l(f); __builtin_exp10f128(f);
+
+// NO__ERRNO: declare double @llvm.exp10.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.exp10.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.exp10.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @llvm.exp10.f128(fp128) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare double @exp10(double noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @exp10f(float noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @exp10l(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare fp128 @exp10f128(fp128 noundef) [[NOT_READNONE]]
+
 __builtin_expm1(f);      __builtin_expm1f(f);     __builtin_expm1l(f); __builtin_expm1f128(f);
 
 // NO__ERRNO: declare double @expm1(double noundef) [[READNONE]]

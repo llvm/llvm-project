@@ -173,18 +173,18 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: lshr_16bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 0(3)
-; LE-64BIT-NEXT:    ld 3, 8(3)
+; LE-64BIT-NEXT:    ld 6, 8(3)
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
-; LE-64BIT-NEXT:    srd 6, 6, 4
-; LE-64BIT-NEXT:    addi 8, 4, -64
-; LE-64BIT-NEXT:    sld 7, 3, 7
-; LE-64BIT-NEXT:    or 6, 6, 7
-; LE-64BIT-NEXT:    srd 7, 3, 8
-; LE-64BIT-NEXT:    or 6, 6, 7
+; LE-64BIT-NEXT:    ld 3, 0(3)
 ; LE-64BIT-NEXT:    srd 3, 3, 4
-; LE-64BIT-NEXT:    std 3, 8(5)
-; LE-64BIT-NEXT:    std 6, 0(5)
+; LE-64BIT-NEXT:    sld 7, 6, 7
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    addi 7, 4, -64
+; LE-64BIT-NEXT:    srd 4, 6, 4
+; LE-64BIT-NEXT:    srd 7, 6, 7
+; LE-64BIT-NEXT:    std 4, 8(5)
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    std 3, 0(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: lshr_16bytes:
@@ -260,18 +260,18 @@ define void @shl_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: shl_16bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 8(3)
-; LE-64BIT-NEXT:    ld 3, 0(3)
+; LE-64BIT-NEXT:    ld 6, 0(3)
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
-; LE-64BIT-NEXT:    sld 6, 6, 4
-; LE-64BIT-NEXT:    addi 8, 4, -64
-; LE-64BIT-NEXT:    srd 7, 3, 7
-; LE-64BIT-NEXT:    or 6, 6, 7
-; LE-64BIT-NEXT:    sld 7, 3, 8
-; LE-64BIT-NEXT:    or 6, 6, 7
+; LE-64BIT-NEXT:    ld 3, 8(3)
 ; LE-64BIT-NEXT:    sld 3, 3, 4
-; LE-64BIT-NEXT:    std 3, 0(5)
-; LE-64BIT-NEXT:    std 6, 8(5)
+; LE-64BIT-NEXT:    srd 7, 6, 7
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    addi 7, 4, -64
+; LE-64BIT-NEXT:    sld 4, 6, 4
+; LE-64BIT-NEXT:    sld 7, 6, 7
+; LE-64BIT-NEXT:    std 4, 0(5)
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    std 3, 8(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: shl_16bytes:
@@ -346,19 +346,19 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: ashr_16bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 0(3)
-; LE-64BIT-NEXT:    ld 3, 8(3)
+; LE-64BIT-NEXT:    ld 6, 8(3)
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
-; LE-64BIT-NEXT:    srd 6, 6, 4
-; LE-64BIT-NEXT:    addi 8, 4, -64
-; LE-64BIT-NEXT:    sld 7, 3, 7
-; LE-64BIT-NEXT:    cmpwi 8, 1
-; LE-64BIT-NEXT:    or 6, 6, 7
-; LE-64BIT-NEXT:    srad 7, 3, 8
-; LE-64BIT-NEXT:    isellt 6, 6, 7
-; LE-64BIT-NEXT:    srad 3, 3, 4
-; LE-64BIT-NEXT:    std 3, 8(5)
-; LE-64BIT-NEXT:    std 6, 0(5)
+; LE-64BIT-NEXT:    ld 3, 0(3)
+; LE-64BIT-NEXT:    srd 3, 3, 4
+; LE-64BIT-NEXT:    sld 7, 6, 7
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    addi 7, 4, -64
+; LE-64BIT-NEXT:    srad 4, 6, 4
+; LE-64BIT-NEXT:    cmpwi 7, 1
+; LE-64BIT-NEXT:    srad 8, 6, 7
+; LE-64BIT-NEXT:    std 4, 8(5)
+; LE-64BIT-NEXT:    isellt 3, 3, 8
+; LE-64BIT-NEXT:    std 3, 0(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: ashr_16bytes:
@@ -440,42 +440,42 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: lshr_32bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    li 6, 16
-; LE-64BIT-NEXT:    lxvd2x 2, 0, 3
-; LE-64BIT-NEXT:    xxlxor 0, 0, 0
-; LE-64BIT-NEXT:    lwz 4, 0(4)
+; LE-64BIT-NEXT:    lxvd2x 1, 0, 3
+; LE-64BIT-NEXT:    xxlxor 2, 2, 2
 ; LE-64BIT-NEXT:    addi 7, 1, -64
 ; LE-64BIT-NEXT:    li 8, 32
-; LE-64BIT-NEXT:    lxvd2x 1, 3, 6
-; LE-64BIT-NEXT:    li 3, 48
-; LE-64BIT-NEXT:    stxvd2x 0, 7, 3
-; LE-64BIT-NEXT:    stxvd2x 0, 7, 8
-; LE-64BIT-NEXT:    rlwinm 3, 4, 29, 27, 31
-; LE-64BIT-NEXT:    stxvd2x 1, 7, 6
-; LE-64BIT-NEXT:    stxvd2x 2, 0, 7
-; LE-64BIT-NEXT:    ldux 6, 3, 7
-; LE-64BIT-NEXT:    li 7, 7
-; LE-64BIT-NEXT:    nand 7, 4, 7
-; LE-64BIT-NEXT:    clrlwi 4, 4, 29
-; LE-64BIT-NEXT:    clrlwi 7, 7, 26
-; LE-64BIT-NEXT:    subfic 11, 4, 64
-; LE-64BIT-NEXT:    ld 8, 16(3)
-; LE-64BIT-NEXT:    ld 9, 8(3)
-; LE-64BIT-NEXT:    ld 3, 24(3)
-; LE-64BIT-NEXT:    srd 6, 6, 4
+; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
+; LE-64BIT-NEXT:    lwz 3, 0(4)
+; LE-64BIT-NEXT:    li 4, 48
+; LE-64BIT-NEXT:    stxvd2x 2, 7, 4
+; LE-64BIT-NEXT:    stxvd2x 2, 7, 8
+; LE-64BIT-NEXT:    rlwinm 4, 3, 29, 27, 31
+; LE-64BIT-NEXT:    stxvd2x 0, 7, 6
+; LE-64BIT-NEXT:    stxvd2x 1, 0, 7
+; LE-64BIT-NEXT:    li 6, 7
+; LE-64BIT-NEXT:    ldux 7, 4, 7
+; LE-64BIT-NEXT:    ld 8, 16(4)
+; LE-64BIT-NEXT:    nand 6, 3, 6
+; LE-64BIT-NEXT:    ld 9, 8(4)
+; LE-64BIT-NEXT:    clrlwi 3, 3, 29
+; LE-64BIT-NEXT:    ld 4, 24(4)
+; LE-64BIT-NEXT:    clrlwi 6, 6, 26
+; LE-64BIT-NEXT:    srd 7, 7, 3
 ; LE-64BIT-NEXT:    sldi 10, 8, 1
-; LE-64BIT-NEXT:    srd 8, 8, 4
-; LE-64BIT-NEXT:    sld 7, 10, 7
-; LE-64BIT-NEXT:    srd 10, 9, 4
-; LE-64BIT-NEXT:    sld 9, 9, 11
-; LE-64BIT-NEXT:    sld 11, 3, 11
-; LE-64BIT-NEXT:    or 7, 10, 7
-; LE-64BIT-NEXT:    or 8, 11, 8
-; LE-64BIT-NEXT:    or 6, 9, 6
-; LE-64BIT-NEXT:    std 7, 8(5)
-; LE-64BIT-NEXT:    srd 3, 3, 4
-; LE-64BIT-NEXT:    std 6, 0(5)
-; LE-64BIT-NEXT:    std 8, 16(5)
+; LE-64BIT-NEXT:    srd 11, 9, 3
+; LE-64BIT-NEXT:    srd 8, 8, 3
+; LE-64BIT-NEXT:    sld 6, 10, 6
+; LE-64BIT-NEXT:    subfic 10, 3, 64
+; LE-64BIT-NEXT:    srd 3, 4, 3
+; LE-64BIT-NEXT:    or 6, 11, 6
+; LE-64BIT-NEXT:    sld 11, 4, 10
+; LE-64BIT-NEXT:    sld 9, 9, 10
 ; LE-64BIT-NEXT:    std 3, 24(5)
+; LE-64BIT-NEXT:    or 7, 9, 7
+; LE-64BIT-NEXT:    or 3, 11, 8
+; LE-64BIT-NEXT:    std 6, 8(5)
+; LE-64BIT-NEXT:    std 7, 0(5)
+; LE-64BIT-NEXT:    std 3, 16(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: lshr_32bytes:
@@ -628,44 +628,44 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    li 6, 16
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    xxlxor 1, 1, 1
-; LE-64BIT-NEXT:    lxvd2x 2, 0, 3
-; LE-64BIT-NEXT:    li 7, 48
-; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
-; LE-64BIT-NEXT:    addi 3, 1, -64
-; LE-64BIT-NEXT:    rlwinm 8, 4, 29, 27, 31
-; LE-64BIT-NEXT:    stxvd2x 1, 3, 6
-; LE-64BIT-NEXT:    li 6, 32
-; LE-64BIT-NEXT:    stxvd2x 0, 3, 7
-; LE-64BIT-NEXT:    neg 7, 8
+; LE-64BIT-NEXT:    xxlxor 2, 2, 2
+; LE-64BIT-NEXT:    addi 7, 1, -64
+; LE-64BIT-NEXT:    lxvd2x 1, 0, 3
 ; LE-64BIT-NEXT:    addi 8, 1, -32
-; LE-64BIT-NEXT:    stxvd2x 2, 3, 6
+; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
+; LE-64BIT-NEXT:    stxvd2x 2, 7, 6
+; LE-64BIT-NEXT:    li 6, 48
+; LE-64BIT-NEXT:    rlwinm 3, 4, 29, 27, 31
+; LE-64BIT-NEXT:    neg 3, 3
+; LE-64BIT-NEXT:    stxvd2x 0, 7, 6
+; LE-64BIT-NEXT:    li 6, 32
+; LE-64BIT-NEXT:    extsw 3, 3
+; LE-64BIT-NEXT:    stxvd2x 1, 7, 6
+; LE-64BIT-NEXT:    stxvd2x 2, 0, 7
 ; LE-64BIT-NEXT:    li 6, 7
-; LE-64BIT-NEXT:    stxvd2x 1, 0, 3
-; LE-64BIT-NEXT:    extsw 3, 7
-; LE-64BIT-NEXT:    nand 6, 4, 6
-; LE-64BIT-NEXT:    clrlwi 4, 4, 29
 ; LE-64BIT-NEXT:    ldux 3, 8, 3
-; LE-64BIT-NEXT:    clrlwi 6, 6, 26
-; LE-64BIT-NEXT:    subfic 11, 4, 64
 ; LE-64BIT-NEXT:    ld 7, 8(8)
+; LE-64BIT-NEXT:    nand 6, 4, 6
 ; LE-64BIT-NEXT:    ld 9, 16(8)
+; LE-64BIT-NEXT:    clrlwi 4, 4, 29
 ; LE-64BIT-NEXT:    ld 8, 24(8)
+; LE-64BIT-NEXT:    clrlwi 6, 6, 26
 ; LE-64BIT-NEXT:    rldicl 10, 7, 63, 1
 ; LE-64BIT-NEXT:    sld 8, 8, 4
+; LE-64BIT-NEXT:    sld 7, 7, 4
 ; LE-64BIT-NEXT:    srd 6, 10, 6
 ; LE-64BIT-NEXT:    sld 10, 9, 4
-; LE-64BIT-NEXT:    srd 9, 9, 11
-; LE-64BIT-NEXT:    srd 11, 3, 11
 ; LE-64BIT-NEXT:    or 6, 10, 6
-; LE-64BIT-NEXT:    sld 7, 7, 4
-; LE-64BIT-NEXT:    or 8, 8, 9
-; LE-64BIT-NEXT:    std 6, 16(5)
-; LE-64BIT-NEXT:    or 7, 7, 11
+; LE-64BIT-NEXT:    subfic 10, 4, 64
+; LE-64BIT-NEXT:    srd 9, 9, 10
+; LE-64BIT-NEXT:    srd 10, 3, 10
 ; LE-64BIT-NEXT:    sld 3, 3, 4
-; LE-64BIT-NEXT:    std 8, 24(5)
+; LE-64BIT-NEXT:    std 6, 16(5)
+; LE-64BIT-NEXT:    or 7, 7, 10
 ; LE-64BIT-NEXT:    std 3, 0(5)
+; LE-64BIT-NEXT:    or 3, 8, 9
 ; LE-64BIT-NEXT:    std 7, 8(5)
+; LE-64BIT-NEXT:    std 3, 24(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: shl_32bytes:
@@ -812,44 +812,44 @@ define void @shl_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 define void @ashr_32bytes(ptr %src.ptr, ptr %bitOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: ashr_32bytes:
 ; LE-64BIT:       # %bb.0:
-; LE-64BIT-NEXT:    ld 7, 16(3)
-; LE-64BIT-NEXT:    ld 8, 24(3)
 ; LE-64BIT-NEXT:    lxvd2x 0, 0, 3
+; LE-64BIT-NEXT:    ld 6, 24(3)
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    addi 6, 1, -64
-; LE-64BIT-NEXT:    sradi 3, 8, 63
-; LE-64BIT-NEXT:    std 8, 24(6)
-; LE-64BIT-NEXT:    std 7, 16(6)
-; LE-64BIT-NEXT:    std 3, 56(6)
-; LE-64BIT-NEXT:    rlwinm 7, 4, 29, 27, 31
-; LE-64BIT-NEXT:    std 3, 48(6)
-; LE-64BIT-NEXT:    std 3, 40(6)
-; LE-64BIT-NEXT:    std 3, 32(6)
-; LE-64BIT-NEXT:    stxvd2x 0, 0, 6
-; LE-64BIT-NEXT:    ldux 3, 7, 6
-; LE-64BIT-NEXT:    li 6, 7
-; LE-64BIT-NEXT:    nand 6, 4, 6
+; LE-64BIT-NEXT:    addi 7, 1, -64
+; LE-64BIT-NEXT:    ld 3, 16(3)
+; LE-64BIT-NEXT:    sradi 8, 6, 63
+; LE-64BIT-NEXT:    rlwinm 9, 4, 29, 27, 31
+; LE-64BIT-NEXT:    std 6, 24(7)
+; LE-64BIT-NEXT:    std 3, 16(7)
+; LE-64BIT-NEXT:    li 3, 7
+; LE-64BIT-NEXT:    std 8, 56(7)
+; LE-64BIT-NEXT:    std 8, 48(7)
+; LE-64BIT-NEXT:    std 8, 40(7)
+; LE-64BIT-NEXT:    std 8, 32(7)
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 7
+; LE-64BIT-NEXT:    nand 3, 4, 3
 ; LE-64BIT-NEXT:    clrlwi 4, 4, 29
-; LE-64BIT-NEXT:    clrlwi 6, 6, 26
-; LE-64BIT-NEXT:    subfic 11, 4, 64
-; LE-64BIT-NEXT:    ld 8, 16(7)
-; LE-64BIT-NEXT:    ld 9, 8(7)
-; LE-64BIT-NEXT:    ld 7, 24(7)
-; LE-64BIT-NEXT:    srd 3, 3, 4
-; LE-64BIT-NEXT:    sldi 10, 8, 1
-; LE-64BIT-NEXT:    srd 8, 8, 4
-; LE-64BIT-NEXT:    sld 6, 10, 6
-; LE-64BIT-NEXT:    srd 10, 9, 4
-; LE-64BIT-NEXT:    sld 9, 9, 11
-; LE-64BIT-NEXT:    sld 11, 7, 11
-; LE-64BIT-NEXT:    or 6, 10, 6
-; LE-64BIT-NEXT:    or 8, 11, 8
-; LE-64BIT-NEXT:    or 3, 9, 3
-; LE-64BIT-NEXT:    std 6, 8(5)
-; LE-64BIT-NEXT:    srad 4, 7, 4
-; LE-64BIT-NEXT:    std 3, 0(5)
-; LE-64BIT-NEXT:    std 8, 16(5)
+; LE-64BIT-NEXT:    ldux 6, 9, 7
+; LE-64BIT-NEXT:    ld 7, 16(9)
+; LE-64BIT-NEXT:    ld 8, 8(9)
+; LE-64BIT-NEXT:    clrlwi 3, 3, 26
+; LE-64BIT-NEXT:    ld 9, 24(9)
+; LE-64BIT-NEXT:    srd 6, 6, 4
+; LE-64BIT-NEXT:    sldi 10, 7, 1
+; LE-64BIT-NEXT:    srd 11, 8, 4
+; LE-64BIT-NEXT:    srd 7, 7, 4
+; LE-64BIT-NEXT:    sld 3, 10, 3
+; LE-64BIT-NEXT:    subfic 10, 4, 64
+; LE-64BIT-NEXT:    srad 4, 9, 4
+; LE-64BIT-NEXT:    or 3, 11, 3
+; LE-64BIT-NEXT:    sld 11, 9, 10
+; LE-64BIT-NEXT:    sld 8, 8, 10
 ; LE-64BIT-NEXT:    std 4, 24(5)
+; LE-64BIT-NEXT:    or 6, 8, 6
+; LE-64BIT-NEXT:    or 4, 11, 7
+; LE-64BIT-NEXT:    std 3, 8(5)
+; LE-64BIT-NEXT:    std 6, 0(5)
+; LE-64BIT-NEXT:    std 4, 16(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: ashr_32bytes:

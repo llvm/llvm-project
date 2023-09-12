@@ -70,11 +70,11 @@ define dso_local <2 x double> @test2(ptr nocapture readonly %a, ptr nocapture re
 ; AIX-32:       # %bb.0: # %entry
 ; AIX-32-NEXT:    li r5, 4
 ; AIX-32-NEXT:    lxsiwzx v3, 0, r3
-; AIX-32-NEXT:    lxsiwzx v5, 0, r4
+; AIX-32-NEXT:    lxsiwzx v4, 0, r4
 ; AIX-32-NEXT:    lxsiwzx v2, r3, r5
-; AIX-32-NEXT:    lxsiwzx v4, r4, r5
 ; AIX-32-NEXT:    vmrgow v2, v3, v2
-; AIX-32-NEXT:    vmrgow v3, v5, v4
+; AIX-32-NEXT:    lxsiwzx v3, r4, r5
+; AIX-32-NEXT:    vmrgow v3, v4, v3
 ; AIX-32-NEXT:    xvsubsp vs0, v2, v3
 ; AIX-32-NEXT:    xxsldwi vs1, vs0, vs0, 1
 ; AIX-32-NEXT:    xscvspdpn f0, vs0
@@ -114,11 +114,11 @@ define dso_local <2 x double> @test3(ptr nocapture readonly %a, ptr nocapture re
 ; AIX-32:       # %bb.0: # %entry
 ; AIX-32-NEXT:    li r5, 4
 ; AIX-32-NEXT:    lxsiwzx v3, 0, r3
-; AIX-32-NEXT:    lxsiwzx v5, 0, r4
+; AIX-32-NEXT:    lxsiwzx v4, 0, r4
 ; AIX-32-NEXT:    lxsiwzx v2, r3, r5
-; AIX-32-NEXT:    lxsiwzx v4, r4, r5
 ; AIX-32-NEXT:    vmrgow v2, v3, v2
-; AIX-32-NEXT:    vmrgow v3, v5, v4
+; AIX-32-NEXT:    lxsiwzx v3, r4, r5
+; AIX-32-NEXT:    vmrgow v3, v4, v3
 ; AIX-32-NEXT:    xvaddsp vs0, v2, v3
 ; AIX-32-NEXT:    xxsldwi vs1, vs0, vs0, 1
 ; AIX-32-NEXT:    xscvspdpn f0, vs0
@@ -158,11 +158,11 @@ define dso_local <2 x double> @test4(ptr nocapture readonly %a, ptr nocapture re
 ; AIX-32:       # %bb.0: # %entry
 ; AIX-32-NEXT:    li r5, 4
 ; AIX-32-NEXT:    lxsiwzx v3, 0, r3
-; AIX-32-NEXT:    lxsiwzx v5, 0, r4
+; AIX-32-NEXT:    lxsiwzx v4, 0, r4
 ; AIX-32-NEXT:    lxsiwzx v2, r3, r5
-; AIX-32-NEXT:    lxsiwzx v4, r4, r5
 ; AIX-32-NEXT:    vmrgow v2, v3, v2
-; AIX-32-NEXT:    vmrgow v3, v5, v4
+; AIX-32-NEXT:    lxsiwzx v3, r4, r5
+; AIX-32-NEXT:    vmrgow v3, v4, v3
 ; AIX-32-NEXT:    xvmulsp vs0, v2, v3
 ; AIX-32-NEXT:    xxsldwi vs1, vs0, vs0, 1
 ; AIX-32-NEXT:    xscvspdpn f0, vs0
@@ -260,8 +260,8 @@ define dso_local i32 @test6() #0 {
 ;
 ; AIX-64-LABEL: test6:
 ; AIX-64:       # %bb.0: # %bb
-; AIX-64-NEXT:    ld r3, L..C1(r2) # @Glob1
 ; AIX-64-NEXT:    lis r4, 8
+; AIX-64-NEXT:    ld r3, L..C1(r2) # @Glob1
 ; AIX-64-NEXT:    xxlxor vs1, vs1, vs1
 ; AIX-64-NEXT:    ori r4, r4, 38248
 ; AIX-64-NEXT:    lfdx f0, r3, r4
@@ -278,8 +278,8 @@ define dso_local i32 @test6() #0 {
 ;
 ; AIX-32-LABEL: test6:
 ; AIX-32:       # %bb.0: # %bb
-; AIX-32-NEXT:    lwz r3, L..C1(r2) # @Glob1
 ; AIX-32-NEXT:    lis r4, 8
+; AIX-32-NEXT:    lwz r3, L..C1(r2) # @Glob1
 ; AIX-32-NEXT:    ori r4, r4, 38248
 ; AIX-32-NEXT:    lfsux f0, r3, r4
 ; AIX-32-NEXT:    lfs f1, 4(r3)

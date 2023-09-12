@@ -464,6 +464,24 @@ def : InstAlias<"neg $rd", (SUBrr IntRegs:$rd, G0, IntRegs:$rd), 0>;
 // neg reg, rd -> sub %g0, reg, rd
 def : InstAlias<"neg $rs2, $rd", (SUBrr IntRegs:$rd, G0, IntRegs:$rs2), 0>;
 
+let Predicates = [HasV9] in {
+  // cas [rs1], rs2, rd -> casa [rs1] #ASI_P, rs2, rd
+  def : InstAlias<"cas [$rs1], $rs2, $rd",
+                  (CASArr IntRegs:$rd, IntRegs:$rs1, IntRegs:$rs2, 0x80)>;
+
+  // casl [rs1], rs2, rd -> casa [rs1] #ASI_P_L, rs2, rd
+  def : InstAlias<"casl [$rs1], $rs2, $rd",
+                  (CASArr IntRegs:$rd, IntRegs:$rs1, IntRegs:$rs2, 0x88)>;
+
+  // casx [rs1], rs2, rd -> casxa [rs1] #ASI_P, rs2, rd
+  def : InstAlias<"casx [$rs1], $rs2, $rd",
+                  (CASXArr I64Regs:$rd, I64Regs:$rs1, I64Regs:$rs2, 0x80)>;
+
+  // casxl [rs1], rs2, rd -> casxa [rs1] #ASI_P_L, rs2, rd
+  def : InstAlias<"casxl [$rs1], $rs2, $rd",
+                  (CASXArr I64Regs:$rd, I64Regs:$rs1, I64Regs:$rs2, 0x88)>;
+}
+
 // inc rd -> add rd, 1, rd
 def : InstAlias<"inc $rd", (ADDri IntRegs:$rd, IntRegs:$rd, 1), 0>;
 

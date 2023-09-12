@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
 v_dot2_f32_f16 v0, v1, v2, v3 neg_lo:[0,0,0] neg_hi:[0,0,0] quad_perm:[2,2,3,1] bound_ctrl:0 fi:1
 // GFX11: v_dot2_f32_f16_e64_dpp v0, v1, v2, v3 quad_perm:[2,2,3,1] row_mask:0xf bank_mask:0xf fi:1 ; encoding: [0x00,0x00,0x13,0xcc,0xfa,0x04,0x0e,0x04,0x01,0x7a,0x04,0xff]

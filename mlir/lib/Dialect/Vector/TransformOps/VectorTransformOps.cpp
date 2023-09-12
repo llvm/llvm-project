@@ -64,6 +64,11 @@ void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
   vector::populateVectorReductionToContractPatterns(patterns);
 }
 
+void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorMaskOpLoweringPatterns(patterns);
+}
+
 void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferDropUnitDimsPatterns(patterns);

@@ -486,7 +486,6 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 
 def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
-  let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",

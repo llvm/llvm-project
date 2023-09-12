@@ -25,6 +25,11 @@ namespace llvm {
 namespace jitlink {
 namespace aarch32 {
 
+/// Check whether the given target flags are set for this Symbol.
+bool hasTargetFlags(Symbol &Sym, TargetFlagsType Flags) {
+  return static_cast<TargetFlagsType>(Sym.getTargetFlags()) & Flags;
+}
+
 /// Encode 22-bit immediate value for branch instructions without J1J2 range
 /// extension (formats B T4, BL T1 and BLX T2).
 ///
@@ -287,7 +292,7 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
-  assert(!TargetSymbol.hasTargetFlags(ThumbSymbol));
+  assert(!hasTargetFlags(TargetSymbol, ThumbSymbol));
 
   // Regular data relocations have size 4, alignment 1 and write the full 32-bit
   // result to the place; no need for overflow checking. There are three
@@ -341,14 +346,14 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
-  if (TargetSymbol.hasTargetFlags(ThumbSymbol))
+  if (hasTargetFlags(TargetSymbol, ThumbSymbol))
     TargetAddress |= 0x01;
 
   switch (Kind) {
   case Thumb_Jump24: {
     if (!checkOpcode<Thumb_Jump24>(R))
       return makeUnexpectedOpcodeError(G, R, Kind);
-    if (!(TargetSymbol.hasTargetFlags(ThumbSymbol)))
+    if (!hasTargetFlags(TargetSymbol, ThumbSymbol))
       return make_error<JITLinkError>("Branch relocation needs interworking "
                                       "stub when bridging to ARM: " +
                                       StringRef(G.getEdgeKindName(Kind)));
@@ -375,7 +380,7 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
 
     // The call instruction itself is Thumb. The call destination can either be
     // Thumb or Arm. We use BL to stay in Thumb and BLX to change to Arm.
-    bool TargetIsArm = !TargetSymbol.hasTargetFlags(ThumbSymbol);
+    bool TargetIsArm = !hasTargetFlags(TargetSymbol, ThumbSymbol);
     bool InstrIsBlx = (R.Lo & FixupInfo<Thumb_Call>::LoBitNoBlx) == 0;
     if (TargetIsArm != InstrIsBlx) {
       if (LLVM_LIKELY(TargetIsArm)) {

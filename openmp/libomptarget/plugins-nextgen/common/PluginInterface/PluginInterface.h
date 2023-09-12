@@ -611,7 +611,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deinitialize the device and free all its resources. After this call, the
   /// device is no longer considered ready, so no queries or modifications are
   /// allowed.
-  Error deinit();
+  Error deinit(GenericPluginTy &Plugin);
   virtual Error deinitImpl() = 0;
 
   /// Load the binary image into the device and return the target table.
@@ -946,6 +946,12 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
+  /// Get the plugin-specific device identifier offset.
+  int32_t getDeviceIdStartIndex() const { return DeviceIdStartIndex; }
+
+  /// Set the plugin-specific device identifier offset.
+  void setDeviceIdStartIndex(int32_t Offset) { DeviceIdStartIndex = Offset; }
+
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
@@ -1009,6 +1015,11 @@ protected:
 private:
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
+
+  /// Index offset, which when added to a DeviceId, will yield a unique
+  /// user-observable device identifier. This is especially important when
+  /// DeviceIds of multiple plugins / RTLs need to be distinguishable.
+  int32_t DeviceIdStartIndex = 0;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given

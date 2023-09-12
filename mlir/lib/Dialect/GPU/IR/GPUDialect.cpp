@@ -1955,6 +1955,20 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// GPU object attribute
+//===----------------------------------------------------------------------===//
+
+LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 Attribute target, StringAttr object) {
+  if (!target)
+    return emitError() << "the target attribute cannot be null";
+  if (target.hasPromiseOrImplementsInterface<TargetAttrInterface>())
+    return success();
+  return emitError() << "the target attribute must implement or promise the "
+                        "`gpu::TargetAttrInterface`";
+}
+
+//===----------------------------------------------------------------------===//
 // GPU select object attribute
 //===----------------------------------------------------------------------===//
 
@@ -1965,11 +1979,11 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (target) {
     if (auto intAttr = mlir::dyn_cast<IntegerAttr>(target)) {
       if (intAttr.getInt() < 0) {
-        return emitError() << "The object index must be positive.";
+        return emitError() << "the object index must be positive";
       }
-    } else if (!(::mlir::isa<TargetAttrInterface>(target))) {
+    } else if (!target.hasPromiseOrImplementsInterface<TargetAttrInterface>()) {
       return emitError()
-             << "The target attribute must be a GPU Target attribute.";
+             << "the target attribute must be a GPU Target attribute";
     }
   }
   return success();
@@ -1979,20 +1993,20 @@ gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // GPU target options
 //===----------------------------------------------------------------------===//
 
-TargetOptions::TargetOptions(StringRef toolkitPath,
-                             ArrayRef<std::string> linkFiles,
-                             StringRef cmdOptions,
-                             CompilationTarget compilationTarget)
+TargetOptions::TargetOptions(
+    StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef cmdOptions, CompilationTarget compilationTarget,
+    function_ref<SymbolTable *()> getSymbolTableCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget) {}
+                    cmdOptions, compilationTarget, getSymbolTableCallback) {}
 
-TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
-                             ArrayRef<std::string> linkFiles,
-                             StringRef cmdOptions,
-                             CompilationTarget compilationTarget)
+TargetOptions::TargetOptions(
+    TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef cmdOptions, CompilationTarget compilationTarget,
+    function_ref<SymbolTable *()> getSymbolTableCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
-      typeID(typeID) {}
+      getSymbolTableCallback(getSymbolTableCallback), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -2001,6 +2015,10 @@ StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
 ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+SymbolTable *TargetOptions::getSymbolTable() const {
+  return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
+}
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
 TargetOptions::tokenizeCmdOptions() const {

@@ -39,7 +39,7 @@ int baz(int);
 // expected-no-diagnostics
 
 // CHECK-HU:  ====== C++20 Module structure ======
-// CHECK-HU-NEXT:  Header Unit './hu-01.h' is the Primary Module at index #1
+// CHECK-HU-NEXT:  Header Unit '.{{/|\\\\?}}hu-01.h' is the Primary Module at index #1
 
 //--- hu-02.h
 export import "hu-01.h"; // expected-warning {{the implementation of header units is in an experimental phase}}
@@ -73,11 +73,11 @@ inline int bar(int x) {
 }
 #endif
 
-// CHECK-IMP: remark: importing module './hu-01.h' from 'hu-01.pcm'
+// CHECK-IMP: remark: importing module '.{{/|\\\\?}}hu-01.h' from 'hu-01.pcm'
 // CHECK-HU2:  ====== C++20 Module structure ======
-// CHECK-HU2-NEXT:  Header Unit './hu-02.h' is the Primary Module at index #2
+// CHECK-HU2-NEXT:  Header Unit '.{{/|\\\\?}}hu-02.h' is the Primary Module at index #2
 // CHECK-HU2-NEXT:   Exports:
-// CHECK-HU2-NEXT:    Header Unit './hu-01.h' is at index #1
+// CHECK-HU2-NEXT:    Header Unit '.{{/|\\\\?}}hu-01.h' is at index #1
 // expected-no-diagnostics
 
 //--- importer-01.cpp
@@ -101,5 +101,5 @@ int success(int x) {
   return foo(FORTYTWO + x + KAP);
 }
 
-// CHECK-IMP-HU2: remark: importing module './hu-02.h' from 'hu-02.pcm'
-// CHECK-IMP-HU2: remark: importing module './hu-01.h' into './hu-02.h' from '[[TDIR]]{{[/\\]}}hu-01.pcm'
+// CHECK-IMP-HU2: remark: importing module '.{{/|\\\\?}}hu-02.h' from 'hu-02.pcm'
+// CHECK-IMP-HU2: remark: importing module '.{{/|\\\\?}}hu-01.h' into '.{{/|\\\\?}}hu-02.h' from '[[TDIR]]{{[/\\]}}hu-01.pcm'

@@ -88,7 +88,7 @@ static bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym) {
 
 // Does this variable have a finalization?
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
-  if (sym.has<Fortran::semantics::ObjectEntityDetails>() && sym.size())
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
     if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
       if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
               declTypeSpec->AsDerived())

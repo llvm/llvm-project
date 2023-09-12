@@ -1,11 +1,11 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SI,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,VI,SICIVI,FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,FUNC %s
+; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,SI,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,VI,SICIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-enable-ds128 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=EG -check-prefix=FUNC %s
 
 ; Testing for ds_read/write_b128
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=+enable-ds128 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=CIVI,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i8:
 ; GCN-NOT: s_wqm_b64

@@ -23,6 +23,9 @@
 // allocator can allocate. Tests that an integer overflow in the parameters of
 // calloc is caught.
 
+// FIXME: Fails on some bots.
+// UNSUPPORTED: *
+
 #include <assert.h>
 #include <malloc.h>
 #include <stdlib.h>

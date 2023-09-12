@@ -405,15 +405,15 @@ namespace {
     const PCHContainerReader &PCHContainerRdr;
 
     /// Mapping from files to module file information.
-    typedef llvm::MapVector<const FileEntry *, ModuleFileInfo> ModuleFilesMap;
+    using ModuleFilesMap = llvm::MapVector<FileEntryRef, ModuleFileInfo>;
 
     /// Information about each of the known module files.
     ModuleFilesMap ModuleFiles;
 
     /// Mapping from the imported module file to the imported
     /// information.
-    typedef std::multimap<const FileEntry *, ImportedModuleFileInfo>
-        ImportedModuleFilesMap;
+    using ImportedModuleFilesMap =
+        std::multimap<FileEntryRef, ImportedModuleFileInfo>;
 
     /// Information about each importing of a module file.
     ImportedModuleFilesMap ImportedModuleFiles;
@@ -430,9 +430,8 @@ namespace {
     void emitBlockInfoBlock(llvm::BitstreamWriter &Stream);
 
     /// Retrieve the module file information for the given file.
-    ModuleFileInfo &getModuleFileInfo(const FileEntry *File) {
-      llvm::MapVector<const FileEntry *, ModuleFileInfo>::iterator Known
-        = ModuleFiles.find(File);
+    ModuleFileInfo &getModuleFileInfo(FileEntryRef File) {
+      auto Known = ModuleFiles.find(File);
       if (Known != ModuleFiles.end())
         return Known->second;
 
@@ -448,7 +447,7 @@ namespace {
         : FileMgr(FileMgr), PCHContainerRdr(PCHContainerRdr) {}
 
     /// Load the contents of the given module file into the builder.
-    llvm::Error loadModuleFile(const FileEntry *File);
+    llvm::Error loadModuleFile(FileEntryRef File);
 
     /// Write the index to the given bitstream.
     /// \returns true if an error occurred, false otherwise.
@@ -519,7 +518,7 @@ namespace {
   };
 }
 
-llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
+llvm::Error GlobalModuleIndexBuilder::loadModuleFile(FileEntryRef File) {
   // Open the module file.
 
   auto Buffer = FileMgr.getBufferForFile(File, /*isVolatile=*/true);
@@ -653,9 +652,9 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
         Idx += Length;
 
         // Find the imported module file.
-        auto DependsOnFile
-          = FileMgr.getFile(ImportedFile, /*OpenFile=*/false,
-                            /*CacheFailure=*/false);
+        auto DependsOnFile =
+            FileMgr.getOptionalFileRef(ImportedFile, /*OpenFile=*/false,
+                                       /*CacheFailure=*/false);
 
         if (!DependsOnFile)
           return llvm::createStringError(std::errc::bad_file_descriptor,
@@ -754,14 +753,14 @@ public:
 
 bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
   for (auto MapEntry : ImportedModuleFiles) {
-    auto *File = MapEntry.first;
+    auto File = MapEntry.first;
     ImportedModuleFileInfo &Info = MapEntry.second;
     if (getModuleFileInfo(File).Signature) {
       if (getModuleFileInfo(File).Signature != Info.StoredSignature)
         // Verify Signature.
         return true;
-    } else if (Info.StoredSize != File->getSize() ||
-               Info.StoredModTime != File->getModificationTime())
+    } else if (Info.StoredSize != File.getSize() ||
+               Info.StoredModTime != File.getModificationTime())
       // Verify Size and ModTime.
       return true;
   }
@@ -792,11 +791,11 @@ bool GlobalModuleIndexBuilder::writeIndex(llvm::BitstreamWriter &Stream) {
        M != MEnd; ++M) {
     Record.clear();
     Record.push_back(M->second.ID);
-    Record.push_back(M->first->getSize());
-    Record.push_back(M->first->getModificationTime());
+    Record.push_back(M->first.getSize());
+    Record.push_back(M->first.getModificationTime());
 
     // File name
-    StringRef Name(M->first->getName());
+    StringRef Name(M->first.getName());
     Record.push_back(Name.size());
     Record.append(Name.begin(), Name.end());
 
@@ -892,7 +891,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
     }
 
     // If we can't find the module file, skip it.
-    auto ModuleFile = FileMgr.getFile(D->path());
+    auto ModuleFile = FileMgr.getOptionalFileRef(D->path());
     if (!ModuleFile)
       continue;
 

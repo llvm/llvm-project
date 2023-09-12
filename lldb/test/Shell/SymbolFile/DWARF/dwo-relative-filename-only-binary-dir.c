@@ -1,5 +1,6 @@
 /// Check that LLDB can find a relative DWO file next to a binary just using the
 /// filename of that DWO. For example "main.dwo" not "a/b/main.dwo".
+// UNSUPPORTED: system-darwin
 // RUN: rm -rf %t.compdir/
 // RUN: mkdir -p %t.compdir/a/b/
 // RUN: cp %s %t.compdir/a/b/main.c

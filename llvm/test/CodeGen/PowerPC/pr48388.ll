@@ -5,25 +5,25 @@
 define i64 @julia_div_i64(i64 %0, i64 %1) local_unnamed_addr #0 {
 ; CHECK-LABEL: julia_div_i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    divd r6, r3, r4
-; CHECK-NEXT:    lis r5, -1592
-; CHECK-NEXT:    ori r7, r5, 21321
-; CHECK-NEXT:    ori r5, r5, 65519
+; CHECK-NEXT:    divd r5, r3, r4
+; CHECK-NEXT:    lis r6, -1592
 ; CHECK-NEXT:    cmpdi r3, 0
+; CHECK-NEXT:    ori r7, r6, 21321
+; CHECK-NEXT:    ori r6, r6, 65519
 ; CHECK-NEXT:    rldic r7, r7, 4, 17
-; CHECK-NEXT:    rldic r5, r5, 4, 17
-; CHECK-NEXT:    iselgt r9, r5, r7
+; CHECK-NEXT:    rldic r6, r6, 4, 17
+; CHECK-NEXT:    iselgt r8, r6, r7
 ; CHECK-NEXT:    cmpdi r4, 0
-; CHECK-NEXT:    mulld r8, r6, r4
-; CHECK-NEXT:    iselgt r4, r5, r7
-; CHECK-NEXT:    xor r4, r9, r4
-; CHECK-NEXT:    cntlzd r4, r4
-; CHECK-NEXT:    rldicl r4, r4, 58, 63
-; CHECK-NEXT:    xor r3, r8, r3
-; CHECK-NEXT:    addic r5, r3, -1
-; CHECK-NEXT:    subfe r3, r5, r3
-; CHECK-NEXT:    and r3, r4, r3
-; CHECK-NEXT:    add r3, r6, r3
+; CHECK-NEXT:    iselgt r6, r6, r7
+; CHECK-NEXT:    xor r6, r8, r6
+; CHECK-NEXT:    cntlzd r6, r6
+; CHECK-NEXT:    rldicl r6, r6, 58, 63
+; CHECK-NEXT:    mulld r4, r5, r4
+; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    addic r4, r3, -1
+; CHECK-NEXT:    subfe r3, r4, r3
+; CHECK-NEXT:    and r3, r6, r3
+; CHECK-NEXT:    add r3, r5, r3
 ; CHECK-NEXT:    blr
 entry:
   %2 = sdiv i64 %0, %1
