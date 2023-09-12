@@ -24,7 +24,7 @@
 // calloc is caught.
 
 // FIXME: Fails on some bots.
-// UNSUPPORTED: *
+// UNSUPPORTED: target={{.*}}
 
 #include <assert.h>
 #include <malloc.h>
