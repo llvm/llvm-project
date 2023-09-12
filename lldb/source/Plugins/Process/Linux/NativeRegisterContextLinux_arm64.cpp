@@ -147,6 +147,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   ::memset(&m_sve_header, 0, sizeof(m_sve_header));
   ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
   ::memset(&m_tls_regs, 0, sizeof(m_tls_regs));
+  ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));
 
   m_mte_ctrl_reg = 0;
 
@@ -329,30 +330,40 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     assert(offset < GetMTEControlSize());
     src = (uint8_t *)GetMTEControl() + offset;
   } else if (IsSME(reg)) {
-    error = ReadZAHeader();
-    if (error.Fail())
-      return error;
-
-    // If there is only a header and no registers, ZA is inactive. Read as 0
-    // in this case.
-    if (m_za_header.size == sizeof(m_za_header)) {
-      // This will get reconfigured/reset later, so we are safe to use it.
-      // ZA is a square of VL * VL and the ptrace buffer also includes the
-      // header itself.
-      m_za_ptrace_payload.resize(((m_za_header.vl) * (m_za_header.vl)) +
-                                 GetZAHeaderSize());
-      std::fill(m_za_ptrace_payload.begin(), m_za_ptrace_payload.end(), 0);
-    } else {
-      // ZA is active, read the real register.
-      error = ReadZA();
+    if (GetRegisterInfo().IsSMERegZA(reg)) {
+      error = ReadZAHeader();
       if (error.Fail())
         return error;
-    }
 
-    // ZA is part of the SME set but uses a seperate member buffer for storage.
-    // Therefore its effective byte offset is always 0 even if it isn't 0 within
-    // the SME register set.
-    src = (uint8_t *)GetZABuffer() + GetZAHeaderSize();
+      // If there is only a header and no registers, ZA is inactive. Read as 0
+      // in this case.
+      if (m_za_header.size == sizeof(m_za_header)) {
+        // This will get reconfigured/reset later, so we are safe to use it.
+        // ZA is a square of VL * VL and the ptrace buffer also includes the
+        // header itself.
+        m_za_ptrace_payload.resize(((m_za_header.vl) * (m_za_header.vl)) +
+                                   GetZAHeaderSize());
+        std::fill(m_za_ptrace_payload.begin(), m_za_ptrace_payload.end(), 0);
+      } else {
+        // ZA is active, read the real register.
+        error = ReadZA();
+        if (error.Fail())
+          return error;
+      }
+
+      // ZA is part of the SME set but uses a seperate member buffer for
+      // storage. Therefore its effective byte offset is always 0 even if it
+      // isn't 0 within the SME register set.
+      src = (uint8_t *)GetZABuffer() + GetZAHeaderSize();
+    } else {
+      error = ReadSMESVG();
+      if (error.Fail())
+        return error;
+
+      offset = reg_info->byte_offset - GetRegisterInfo().GetSMEOffset();
+      assert(offset < GetSMEPseudoBufferSize());
+      src = (uint8_t *)GetSMEPseudoBuffer() + offset;
+    }
   } else
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
@@ -538,6 +549,9 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     return WriteTLS();
   } else if (IsSME(reg)) {
+    if (!GetRegisterInfo().IsSMERegZA(reg))
+      return Status("Writing to SVG is not supported.");
+
     error = ReadZA();
     if (error.Fail())
       return error;
@@ -1357,6 +1371,16 @@ uint32_t NativeRegisterContextLinux_arm64::CalculateSVEOffset(
   return sve_reg_offset;
 }
 
+Status NativeRegisterContextLinux_arm64::ReadSMESVG() {
+  // This register is the streaming vector length, so we will get it from
+  // NT_ARM_ZA regardless of the current streaming mode.
+  Status error = ReadZAHeader();
+  if (error.Success())
+    m_sme_pseudo_regs.svg_reg = m_za_header.vl / 8;
+
+  return error;
+}
+
 std::vector<uint32_t> NativeRegisterContextLinux_arm64::GetExpeditedRegisters(
     ExpeditedRegs expType) const {
   std::vector<uint32_t> expedited_reg_nums =
@@ -1364,6 +1388,10 @@ std::vector<uint32_t> NativeRegisterContextLinux_arm64::GetExpeditedRegisters(
   // SVE, non-streaming vector length.
   if (m_sve_state == SVEState::FPSIMD || m_sve_state == SVEState::Full)
     expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSVEVG());
+  // SME, streaming vector length. This is used by the ZA register which is
+  // present even when streaming mode is not enabled.
+  if (GetRegisterInfo().IsSSVEEnabled())
+    expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSMESVG());
 
   return expedited_reg_nums;
 }
