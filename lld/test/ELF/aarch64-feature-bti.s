@@ -185,7 +185,7 @@
 # RELV-NEXT:           nop
 # RELV-LABEL: <funcRelVtable@plt>:
 # RELV-NEXT:   103c8:  bti     c
-# RELV-NEXT:           adrp    x16, 0x30000 <_DYNAMIC+0xfc20>
+# RELV-NEXT:           adrp    x16, 0x30000
 # RELV-NEXT:           ldr     x17, [x16, #1216]
 # RELV-NEXT:           add     x16, x16, #1216
 # RELV-NEXT:           br      x17
