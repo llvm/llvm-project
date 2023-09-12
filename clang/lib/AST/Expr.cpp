@@ -727,6 +727,26 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedExpr::IdentKind IK) {
 std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
   ASTContext &Context = CurrentDecl->getASTContext();
 
+  if (CurrentDecl->getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+      IK == PredefinedExpr::Function) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
+      SmallString<256> Name;
+      llvm::raw_svector_ostream Out(Name);
+      PrintingPolicy Policy(Context.getLangOpts());
+      Policy.AlwaysIncludeTypeForTemplateArgument = true;
+      std::string Proto;
+      llvm::raw_string_ostream POut(Proto);
+      const FunctionDecl *Decl = FD;
+      if (const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
+        Decl = Pattern;
+      const FunctionType *AFT = Decl->getType()->getAs<FunctionType>();
+      const FunctionProtoType *FT = nullptr;
+      if (FD->hasWrittenPrototype())
+        FT = dyn_cast<FunctionProtoType>(AFT);
+      FD->printQualifiedName(POut, Policy);
+      return std::string(POut.str());
+    }
+  }
   if (IK == PredefinedExpr::FuncDName) {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(CurrentDecl)) {
       std::unique_ptr<MangleContext> MC;
