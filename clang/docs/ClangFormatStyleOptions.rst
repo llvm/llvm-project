@@ -1108,6 +1108,54 @@ the configuration (without a prefix: ``Auto``).
                     int d,
                     int e);
 
+.. _AllowBreakBeforeNoexceptSpecifier:
+
+**AllowBreakBeforeNoexceptSpecifier** (``BreakBeforeNoexceptSpecifierStyle``) :versionbadge:`clang-format 18` :ref:`¶ <AllowBreakBeforeNoexceptSpecifier>`
+  Controls if there could be a line break before a ``noexcept`` specifier.
+
+  Possible values:
+
+  * ``BBNSS_Never`` (in configuration: ``Never``)
+    No line break allowed.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2) noexcept(
+          noexcept(baz(arg1)) &&
+          noexcept(baz(arg2)));
+
+  * ``BBNSS_OnlyWithParen`` (in configuration: ``OnlyWithParen``)
+    For a simple ``noexcept`` there is no line break allowed, but when we
+    have a condition it is.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2)
+          noexcept(noexcept(baz(arg1)) &&
+                   noexcept(baz(arg2)));
+
+  * ``BBNSS_Always`` (in configuration: ``Always``)
+    Line breaks are allowed. But note that because of the associated
+    penalties ``clang-format`` often prefers not to break before the
+    ``noexcept``.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2)
+          noexcept(noexcept(baz(arg1)) &&
+                   noexcept(baz(arg2)));
+
+
+
 .. _AllowShortBlocksOnASingleLine:
 
 **AllowShortBlocksOnASingleLine** (``ShortBlockStyle``) :versionbadge:`clang-format 3.5` :ref:`¶ <AllowShortBlocksOnASingleLine>`
