@@ -347,7 +347,7 @@ inline constexpr ArchInfo ARMV9_3A  = { VersionTuple{9, 3}, AProfile, "armv9.3-a
 inline constexpr ArchInfo ARMV9_4A  = { VersionTuple{9, 4}, AProfile, "armv9.4-a", "+v9.4a", (ARMV9_3A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SPECRES2, AArch64::AEK_CSSC, AArch64::AEK_RASv2}))};
 // For v8-R, we do not enable crypto and align with GCC that enables a more minimal set of optional architecture extensions.
-inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", (Bitset(ARMV8_5A.DefaultExts) |
+inline constexpr ArchInfo ARMV8R    = { VersionTuple{8, 0}, RProfile, "armv8-r", "+v8r", (ARMV8_5A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_SSBS,
                                         AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SB}).flip(AArch64::AEK_LSE))};
 // clang-format on

@@ -862,7 +862,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 
   bool NeedsFlatScratchInit =
-      MFI->hasFlatScratchInit() &&
+      MFI->getUserSGPRInfo().hasFlatScratchInit() &&
       (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
        (!allStackObjectsAreDead(MF) && ST.enableFlatScratch()));
 
@@ -945,7 +945,7 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     // Use relocations to get the pointer, and setup the other bits manually.
     uint64_t Rsrc23 = TII->getScratchRsrcWords23();
 
-    if (MFI->hasImplicitBufferPtr()) {
+    if (MFI->getUserSGPRInfo().hasImplicitBufferPtr()) {
       Register Rsrc01 = TRI->getSubReg(ScratchRsrcReg, AMDGPU::sub0_sub1);
 
       if (AMDGPU::isCompute(MF.getFunction().getCallingConv())) {
@@ -984,7 +984,6 @@ void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
       BuildMI(MBB, I, DL, SMovB32, Rsrc1)
         .addExternalSymbol("SCRATCH_RSRC_DWORD1")
         .addReg(ScratchRsrcReg, RegState::ImplicitDefine);
-
     }
 
     BuildMI(MBB, I, DL, SMovB32, Rsrc2)
