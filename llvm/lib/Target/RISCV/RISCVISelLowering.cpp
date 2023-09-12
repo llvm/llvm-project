@@ -7460,8 +7460,8 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
   MVT OrigContainerVT = ContainerVT;
   SDValue OrigVec = Vec;
-  // If we know the index we're going to insert at, we can shrink down Vec so
-  // we're performing the vslide1down on a smaller LMUL.
+  // If we know the index we're going to insert at, we can shrink Vec so that
+  // we're performing the scalar inserts and slideup on a smaller LMUL.
   if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
     if (auto ShrunkVT = getSmallestVTForIndex(ContainerVT, CIdx->getZExtValue(),
                                               DL, DAG, Subtarget)) {
