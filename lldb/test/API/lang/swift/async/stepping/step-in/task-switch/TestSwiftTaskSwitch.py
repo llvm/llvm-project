@@ -15,7 +15,10 @@ class TestCase(lldbtest.TestBase):
         target, _, thread, _ = lldbutil.run_to_source_breakpoint(self, "await f()", src)
         self.assertEqual(thread.frame[0].function.mangled, "$s1a5entryO4mainyyYaFZ")
 
-        function = target.FindFunctions("$s1a5entryO4mainyyYaFZTQ0_")[0].function
+        sym_ctx_list = target.FindFunctions("$s1a5entryO4mainyyYaFZTQ0_")
+        self.assertEqual(sym_ctx_list.GetSize(), 1)
+        function = sym_ctx_list[0].function
+        self.assertIsNotNone(function)
         instructions = list(function.GetInstructions(target))
 
         # Expected to be a trampoline that tail calls `swift_task_switch`.
