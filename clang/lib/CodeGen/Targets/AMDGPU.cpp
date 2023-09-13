@@ -362,7 +362,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     CodeGen::CodeGenModule &CGM) const {
   StringRef Name = "llvm.amdgcn.abi.version";
-  if (CGM.getModule().getNamedGlobal(Name))
+  llvm::GlobalVariable *OriginalGV = CGM.getModule().getNamedGlobal(Name);
+  if (OriginalGV && !llvm::GlobalVariable::isExternalLinkage(OriginalGV->getLinkage()))
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);
@@ -377,6 +378,13 @@ void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
       CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   GV->setVisibility(llvm::GlobalValue::VisibilityTypes::HiddenVisibility);
+
+  // Replace any external references to this variable with the new global.
+  if (OriginalGV) {
+    OriginalGV->replaceAllUsesWith(GV);
+    GV->takeName(OriginalGV);
+    OriginalGV->eraseFromParent();
+  }
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
