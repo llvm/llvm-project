@@ -1494,14 +1494,13 @@ define i8 @freeToInvert_two_minmax_ops_use3(i8 %x, i8 %y, i8 %z, i8 %w) {
 
 define i8 @sub_not_min_max(i8 %r, i8 %g, i8 %b) {
 ; CHECK-LABEL: @sub_not_min_max(
-; CHECK-NEXT:    [[NOTR:%.*]] = xor i8 [[R:%.*]], -1
 ; CHECK-NEXT:    [[NOTG:%.*]] = xor i8 [[G:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTG]])
 ; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTB]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
-; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
-; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[R:%.*]], i8 [[G]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[B]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[TMP2]], [[R]]
 ; CHECK-NEXT:    ret i8 [[CK]]
 ;
   %notr = xor i8 %r, -1
@@ -1523,9 +1522,9 @@ define i8 @sub_not_min_max_uses1(i8 %r, i8 %g, i8 %b) {
 ; CHECK-NEXT:    call void @use(i8 [[NOTG]])
 ; CHECK-NEXT:    [[NOTB:%.*]] = xor i8 [[B:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTB]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTR]], i8 [[NOTG]])
-; CHECK-NEXT:    [[K:%.*]] = call i8 @llvm.smin.i8(i8 [[M]], i8 [[NOTB]])
-; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[NOTR]], [[K]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[R]], i8 [[G]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[B]])
+; CHECK-NEXT:    [[CK:%.*]] = sub i8 [[TMP2]], [[R]]
 ; CHECK-NEXT:    ret i8 [[CK]]
 ;
   %notr = xor i8 %r, -1
