@@ -435,7 +435,7 @@ llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
 }
 
 bool Debugger::GetShowDontUsePoHint() const {
-  const uint32_t idx = ePropertyShowDontUsePoHint;  
+  const uint32_t idx = ePropertyShowDontUsePoHint;
   return GetPropertyAtIndexAs<bool>(
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
@@ -1272,17 +1272,17 @@ bool Debugger::InterruptRequested() {
   return GetCommandInterpreter().WasInterrupted();
 }
 
-Debugger::InterruptionReport::InterruptionReport(std::string function_name, 
-    const llvm::formatv_object_base &payload) :  
-        m_function_name(std::move(function_name)), 
-        m_interrupt_time(std::chrono::system_clock::now()),
-        m_thread_id(llvm::get_threadid()) {
+Debugger::InterruptionReport::InterruptionReport(
+    std::string function_name, const llvm::formatv_object_base &payload)
+    : m_function_name(std::move(function_name)),
+      m_interrupt_time(std::chrono::system_clock::now()),
+      m_thread_id(llvm::get_threadid()) {
   llvm::raw_string_ostream desc(m_description);
   desc << payload << "\n";
 }
 
 void Debugger::ReportInterruption(const InterruptionReport &report) {
-    // For now, just log the description:
+  // For now, just log the description:
   Log *log = GetLog(LLDBLog::Host);
   LLDB_LOG(log, "Interruption: {0}", report.m_description);
 }
