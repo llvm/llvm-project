@@ -36,7 +36,7 @@ virtual function and anything other than null-pointer-constant.
     }
 
 
-This check warns on equality comparisons involve pointers to member virtual
+Provide warnings on equality comparisons involve pointers to member virtual
 function or variables which is potential pointer to member virtual function and
 any entity other than a null-pointer constant.
 
@@ -61,6 +61,6 @@ only advisable to employ ``nullptr`` for comparisons.
 Limitations
 -----------
 
-The check will not analyze values stored in a variable. For variable, the check
-will analyze all virtual methods in the same ``class`` or ``struct`` and diagnose
-when assigning a pointer to member virtual function to this variable is possible.
+Not analyze values stored in a variable. For variable, only analyze all virtual
+methods in the same ``class`` or ``struct`` and diagnose when assigning a pointer
+to member virtual function to this variable is possible.
