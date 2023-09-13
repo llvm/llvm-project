@@ -2152,9 +2152,10 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
 
 Fortran::semantics::SymbolRef
 Fortran::lower::getCrayPointer(Fortran::semantics::SymbolRef sym) {
-  assert(!sym->owner().crayPointers().empty() &&
+  assert(!sym->GetUltimate().owner().crayPointers().empty() &&
          "empty Cray pointer/pointee map");
-  for (const auto &[pointee, pointer] : sym->owner().crayPointers()) {
+  for (const auto &[pointee, pointer] :
+       sym->GetUltimate().owner().crayPointers()) {
     if (pointee == sym->name()) {
       Fortran::semantics::SymbolRef v{pointer.get()};
       return v;
