@@ -30,7 +30,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/TypeTraits.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -5411,15 +5410,14 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   if (Kind <= UTT_Last)
     return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]->getType());
 
-  // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
-  // alongside the IsConstructible traits to avoid duplication.
-  if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary && Kind != BTT_ReferenceConstructsFromTemporary)
+  // Evaluate BTT_ReferenceBindsToTemporary alongside the IsConstructible
+  // traits to avoid duplication.
+  if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary)
     return EvaluateBinaryTypeTrait(S, Kind, Args[0]->getType(),
                                    Args[1]->getType(), RParenLoc);
 
   switch (Kind) {
   case clang::BTT_ReferenceBindsToTemporary:
-  case clang::BTT_ReferenceConstructsFromTemporary:
   case clang::TT_IsConstructible:
   case clang::TT_IsNothrowConstructible:
   case clang::TT_IsTriviallyConstructible: {
@@ -5496,23 +5494,11 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     if (Kind == clang::TT_IsConstructible)
       return true;
 
-    if (Kind == clang::BTT_ReferenceBindsToTemporary || Kind == clang::BTT_ReferenceConstructsFromTemporary) {
+    if (Kind == clang::BTT_ReferenceBindsToTemporary) {
       if (!T->isReferenceType())
         return false;
 
-      if (!Init.isDirectReferenceBinding())
-        return true;
-
-      if (Kind == clang::BTT_ReferenceBindsToTemporary)
-        return false;
-
-      QualType U = Args[1]->getType();
-      if (U->isReferenceType())
-        return false;
-
-      QualType TPtr = S.BuiltinAddPointer(S.BuiltinRemoveReference(T, UnaryTransformType::RemoveCVRef, {}), {});
-      QualType UPtr = S.BuiltinAddPointer(S.BuiltinRemoveReference(U, UnaryTransformType::RemoveCVRef, {}), {});
-      return EvaluateBinaryTypeTrait(S, TypeTrait::BTT_IsConvertibleTo, UPtr, TPtr, RParenLoc);
+      return !Init.isDirectReferenceBinding();
     }
 
     if (Kind == clang::TT_IsNothrowConstructible)
