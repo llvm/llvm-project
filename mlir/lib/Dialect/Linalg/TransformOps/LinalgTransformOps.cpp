@@ -2535,8 +2535,11 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
       return diag;
     }
     if (tileSizes.size() > tilingInterface.getLoopIteratorTypes().size()) {
-      DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                         << "too many tiles for";
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "too many tiles provided, expected at most "
+          << tilingInterface.getLoopIteratorTypes().size() << " found "
+          << tileSizes.size();
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }
