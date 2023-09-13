@@ -14,15 +14,15 @@ define void @fred(<16 x i32> %a0, <16 x i32> %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = combine(#-1,#32)
 ; CHECK-NEXT:     v2 = vxor(v2,v2)
-; CHECK-NEXT:     q0 = vcmp.eq(v0.w,v1.w)
+; CHECK-NEXT:     q1 = vcmp.eq(v0.w,v1.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r7 = ##g0
-; CHECK-NEXT:     q1 = vsetq(r0)
-; CHECK-NEXT:     v0 = vmux(q0,v0,v2)
+; CHECK-NEXT:     q0 = vsetq(r0)
+; CHECK-NEXT:     v0 = vmux(q1,v0,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v30 = vand(q1,r1)
+; CHECK-NEXT:     v30 = vand(q0,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0.h = vpacke(v0.w,v0.w)
