@@ -3058,12 +3058,16 @@ public:
   /// store the data for the anonymous union or struct.
   bool isAnonymousStructOrUnion() const;
 
+  /// Returns the expression that represents the bit width, if this field
+  /// is a bit field. For non-bitfields, this returns \c nullptr.
   Expr *getBitWidth() const {
     if (!BitField)
       return nullptr;
     return hasInClassInitializer() ? InitAndBitWidth->BitWidth : BitWidth;
   }
 
+  /// Computes the bit width of this field, if this is a bit field.
+  /// May not be called on non-bitfields.
   unsigned getBitWidthValue(const ASTContext &Ctx) const;
 
   /// Set the bit-field width for this member.
