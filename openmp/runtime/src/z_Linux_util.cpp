@@ -2744,4 +2744,28 @@ void __kmp_hidden_helper_threads_deinitz_release() {
 }
 #endif // KMP_OS_LINUX
 
+bool __kmp_detect_shm() {
+  DIR *dir = opendir("/dev/shm");
+  if (dir) { // /dev/shm exists
+    closedir(dir);
+    return true;
+  } else if (ENOENT == errno) { // /dev/shm does not exist
+    return false;
+  } else { // opendir() failed
+    return false;
+  }
+}
+
+bool __kmp_detect_tmp() {
+  DIR *dir = opendir("/tmp");
+  if (dir) { // /tmp exists
+    closedir(dir);
+    return true;
+  } else if (ENOENT == errno) { // /tmp does not exist
+    return false;
+  } else { // opendir() failed
+    return false;
+  }
+}
+
 // end of file //

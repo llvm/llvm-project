@@ -32,7 +32,7 @@
 
 // Reduction in this file _are_ supported by the AArch64 SVE backend
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait_reduction = {
   indexing_maps = [

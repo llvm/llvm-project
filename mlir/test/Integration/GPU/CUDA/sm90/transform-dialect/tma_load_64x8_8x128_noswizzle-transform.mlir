@@ -1,5 +1,3 @@
-// REQUIRES: host-supports-nvptx
-
 // RUN: mlir-opt %s \
 // RUN:     -test-transform-dialect-interpreter \
 // RUN:     -test-transform-dialect-erase-schedule \

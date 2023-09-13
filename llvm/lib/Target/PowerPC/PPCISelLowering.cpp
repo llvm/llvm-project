@@ -10314,11 +10314,6 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   bool isLittleEndian = Subtarget.isLittleEndian();
   bool isPPC64 = Subtarget.isPPC64();
 
-  // Only need to place items backwards in LE,
-  // the mask will be properly calculated.
-  if (isLittleEndian)
-    std::swap(V1, V2);
-
   if (Subtarget.hasVSX() && Subtarget.hasP9Vector() &&
       (V1->hasOneUse() || V2->hasOneUse())) {
     LLVM_DEBUG(dbgs() << "At least one of two input vectors are dead - using "
@@ -10328,7 +10323,8 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
     // The second input to XXPERM is also an output so if the second input has
     // multiple uses then copying is necessary, as a result we want the
     // single-use operand to be used as the second input to prevent copying.
-    if (!V2->hasOneUse() && V1->hasOneUse()) {
+    if ((!isLittleEndian && !V2->hasOneUse() && V1->hasOneUse()) ||
+        (isLittleEndian && !V1->hasOneUse() && V2->hasOneUse())) {
       std::swap(V1, V2);
       NeedSwap = !NeedSwap;
     }
@@ -10367,27 +10363,24 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
     unsigned SrcElt = PermMask[i] < 0 ? 0 : PermMask[i];
 
-    if (Opcode == PPCISD::XXPERM) {
-      if (V1HasXXSWAPD) {
-        if (SrcElt < 8)
-          SrcElt += 8;
-        else if (SrcElt < 16)
-          SrcElt -= 8;
-      }
-      if (V2HasXXSWAPD) {
-        if (SrcElt > 23)
-          SrcElt -= 8;
-        else if (SrcElt > 15)
-          SrcElt += 8;
-      }
-      if (NeedSwap) {
-        if (SrcElt < 16)
-          SrcElt += 16;
-        else
-          SrcElt -= 16;
-      }
+    if (V1HasXXSWAPD) {
+      if (SrcElt < 8)
+        SrcElt += 8;
+      else if (SrcElt < 16)
+        SrcElt -= 8;
     }
-
+    if (V2HasXXSWAPD) {
+      if (SrcElt > 23)
+        SrcElt -= 8;
+      else if (SrcElt > 15)
+        SrcElt += 8;
+    }
+    if (NeedSwap) {
+      if (SrcElt < 16)
+        SrcElt += 16;
+      else
+        SrcElt -= 16;
+    }
     for (unsigned j = 0; j != BytesPerElement; ++j)
       if (isLittleEndian)
         ResultMask.push_back(
@@ -10397,18 +10390,19 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
             DAG.getConstant(SrcElt * BytesPerElement + j, dl, MVT::i32));
   }
 
-  if (Opcode == PPCISD::XXPERM && (V1HasXXSWAPD || V2HasXXSWAPD)) {
-    if (V1HasXXSWAPD) {
-      dl = SDLoc(V1->getOperand(0));
-      V1 = V1->getOperand(0)->getOperand(1);
-    }
-    if (V2HasXXSWAPD) {
-      dl = SDLoc(V2->getOperand(0));
-      V2 = V2->getOperand(0)->getOperand(1);
-    }
-    if (isPPC64 && ValType != MVT::v2f64)
+  if (V1HasXXSWAPD) {
+    dl = SDLoc(V1->getOperand(0));
+    V1 = V1->getOperand(0)->getOperand(1);
+  }
+  if (V2HasXXSWAPD) {
+    dl = SDLoc(V2->getOperand(0));
+    V2 = V2->getOperand(0)->getOperand(1);
+  }
+
+  if (isPPC64 && (V1HasXXSWAPD || V2HasXXSWAPD)) {
+    if (ValType != MVT::v2f64)
       V1 = DAG.getBitcast(MVT::v2f64, V1);
-    if (isPPC64 && V2.getValueType() != MVT::v2f64)
+    if (V2.getValueType() != MVT::v2f64)
       V2 = DAG.getBitcast(MVT::v2f64, V2);
   }
 
@@ -10428,6 +10422,11 @@ SDValue PPCTargetLowering::LowerVPERM(SDValue Op, SelectionDAG &DAG,
 
   if (Opcode == PPCISD::XXPERM)
     VPermMask = DAG.getBitcast(MVT::v4i32, VPermMask);
+
+  // Only need to place items backwards in LE,
+  // the mask was properly calculated.
+  if (isLittleEndian)
+    std::swap(V1, V2);
 
   SDValue VPERMNode =
       DAG.getNode(Opcode, dl, V1.getValueType(), V1, V2, VPermMask);

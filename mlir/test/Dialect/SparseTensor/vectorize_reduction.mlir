@@ -55,7 +55,7 @@
 // CHECK-OFF:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<i13>
 // CHECK-OFF:           return %[[VAL_16]] : tensor<i13>
 // CHECK-OFF:         }
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -132,7 +132,7 @@ func.func @sparse_reduction_ori(%argx: tensor<i13>,
 // CHECK-OFF:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<i13>
 // CHECK-OFF:           return %[[VAL_16]] : tensor<i13>
 // CHECK-OFF:         }
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -207,7 +207,7 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i13>,
 // CHECK-OFF:           %[[VAL_16:.*]] = bufferization.to_tensor %[[VAL_6]] : memref<i32>
 // CHECK-OFF:           return %[[VAL_16]] : tensor<i32>
 // CHECK-OFF:         }
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -283,7 +283,7 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<i32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -359,7 +359,7 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<i32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -435,7 +435,7 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<f32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
@@ -511,7 +511,7 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 // CHECK-OFF:   return %[[VAL_16]] : tensor<f32>
 // CHECK-OFF: }
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [
