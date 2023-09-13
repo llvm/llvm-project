@@ -782,29 +782,18 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   std::optional<unsigned> FunctionalOpcode =
       VPI.getFunctionalOpcode();
   bool ScalarIsIntr = false;
-  Intrinsic::ID ScalarIntrID;
+  std::optional<Intrinsic::ID> ScalarIntrID;
   if (!FunctionalOpcode) {
-    // Explicitly handle supported instructions (i.e. those that return
-    // isVPBinOp above, that do not have functional nor constrained opcodes due
-    // their intrinsic definitions.
-    DenseMap<Intrinsic::ID, Intrinsic::ID> VPIntrToIntr(
-        {{Intrinsic::vp_smax, Intrinsic::smax},
-         {Intrinsic::vp_smin, Intrinsic::smin},
-         {Intrinsic::vp_umax, Intrinsic::umax},
-         {Intrinsic::vp_umin, Intrinsic::umin},
-         {Intrinsic::vp_copysign, Intrinsic::copysign},
-         {Intrinsic::vp_minnum, Intrinsic::minnum},
-         {Intrinsic::vp_maxnum, Intrinsic::maxnum}});
+    ScalarIntrID = VPI.getFunctionalIntrinsicID();
+    if (!ScalarIntrID)
+      return false;
     ScalarIsIntr = true;
-    assert(VPIntrToIntr.contains(IntrID) &&
-           "Unable to determine scalar opcode");
-    ScalarIntrID = VPIntrToIntr[IntrID];
   }
 
   // Calculate cost of scalarizing
   InstructionCost ScalarOpCost = 0;
   if (ScalarIsIntr) {
-    IntrinsicCostAttributes Attrs(ScalarIntrID, VecTy->getScalarType(), Args);
+    IntrinsicCostAttributes Attrs(*ScalarIntrID, VecTy->getScalarType(), Args);
     ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
   } else {
     ScalarOpCost =
@@ -840,7 +829,7 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
     Value *ScalarOp1 = getSplatValue(Op1);
     Value *ScalarVal =
         ScalarIsIntr
-            ? Builder.CreateIntrinsic(VecTy->getScalarType(), ScalarIntrID,
+            ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
                                       {ScalarOp0, ScalarOp1})
             : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
                                   ScalarOp0, ScalarOp1);
