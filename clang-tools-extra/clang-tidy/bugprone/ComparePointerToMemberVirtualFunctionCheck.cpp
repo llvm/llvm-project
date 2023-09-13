@@ -76,11 +76,25 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
   const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
   if (RD == nullptr)
     return;
-  for (const auto *D : RD->decls()) {
-    const auto *MD = dyn_cast<CXXMethodDecl>(D);
-    if (MD && MD->isVirtual() && MD->getType() == MPT->getPointeeType())
-      SameSignatureVirtualMethods.push_back(MD->getBeginLoc());
+
+  const bool StopVisit = false;
+
+  auto VisitSameSignatureVirtualMethods =
+      [&](const CXXRecordDecl *CurrentRecordDecl) -> bool {
+    bool Ret = !StopVisit;
+    for (const auto *MD : CurrentRecordDecl->methods()) {
+      if (MD->isVirtual() && MD->getType() == MPT->getPointeeType()) {
+        SameSignatureVirtualMethods.push_back(MD->getBeginLoc());
+        Ret = StopVisit;
+      }
+    }
+    return Ret;
+  };
+
+  if (StopVisit != VisitSameSignatureVirtualMethods(RD)) {
+    RD->forallBases(VisitSameSignatureVirtualMethods);
   }
+
   if (!SameSignatureVirtualMethods.empty()) {
     diag(BO->getOperatorLoc(), ErrorMsg);
     for (const auto Loc : SameSignatureVirtualMethods)

@@ -71,3 +71,20 @@ void typedefRecordName() {
   // CHECK-MESSAGES: :7:3: note: potential member virtual function.
   // CHECK-MESSAGES: :8:3: note: potential member virtual function.
 }
+
+
+struct A1 : public A {
+};
+
+void inheritClass() {
+  Result = (&A1::f1 == &A1::f3);
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: A pointer to member virtual function shall only be tested for equality with null-pointer-constant.
+
+  void (A1::*V1)() = &A1::f1;
+  Result = (V1 == &A1::f1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: A pointer to member virtual function shall only be tested for equality with null-pointer-constant.
+  // CHECK-MESSAGES: :7:3: note: potential member virtual function.
+  // CHECK-MESSAGES: :8:3: note: potential member virtual function.
+}
+
+
