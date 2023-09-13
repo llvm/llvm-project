@@ -26,8 +26,7 @@ struct OneShotBufferizationOptions;
 
 /// Creates an instance of the BufferDeallocation pass to free all allocated
 /// buffers.
-std::unique_ptr<Pass>
-createBufferDeallocationPass(bool privateFuncDynamicOwnership = false);
+std::unique_ptr<Pass> createBufferDeallocationPass();
 
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using
