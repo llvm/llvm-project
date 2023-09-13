@@ -430,7 +430,8 @@ bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
 }
 
 bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
-  return ShouldKeep.contains(FE->getUniqueID());
+  return ShouldKeep.contains(FE->getUniqueID()) ||
+         NonSelfContainedFiles.contains(FE->getUniqueID());
 }
 
 namespace {
