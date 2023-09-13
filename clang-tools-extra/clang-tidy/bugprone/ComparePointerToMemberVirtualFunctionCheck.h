@@ -13,13 +13,19 @@
 
 namespace clang::tidy::bugprone {
 
-/// [expr.eq] If either is a pointer to a virtual member function, the result is unspecified.
+/// Detects unspecified behavior about equality comparison between pointer to
+/// member virtual function and anything other than null-pointer-constant.
+///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function.html
 class ComparePointerToMemberVirtualFunctionCheck : public ClangTidyCheck {
 public:
   ComparePointerToMemberVirtualFunctionCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
+
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus;
+  }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
