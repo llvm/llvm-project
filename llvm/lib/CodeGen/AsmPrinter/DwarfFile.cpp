@@ -108,6 +108,7 @@ void DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
   if (unsigned ArgNum = DV->getArg()) {
     auto Ret = ScopeVars.Args.insert({ArgNum, Var});
     assert(Ret.second);
+    (void)Ret;
   } else {
     ScopeVars.Locals.push_back(Var);
   }
