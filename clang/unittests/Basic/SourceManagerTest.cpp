@@ -69,8 +69,8 @@ TEST_F(SourceManagerTest, isInMemoryBuffersNoSourceLocationInfo) {
 
   std::unique_ptr<llvm::MemoryBuffer> BuiltInBuf =
       llvm::MemoryBuffer::getMemBuffer(Source);
-  const FileEntry *BuiltInFile =
-      FileMgr.getVirtualFile("<built-in>", BuiltInBuf->getBufferSize(), 0);
+  FileEntryRef BuiltInFile =
+      FileMgr.getVirtualFileRef("<built-in>", BuiltInBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(BuiltInFile, std::move(BuiltInBuf));
   FileID BuiltInFileID =
       SourceMgr.getOrCreateFileID(BuiltInFile, SrcMgr::C_User);
@@ -82,7 +82,7 @@ TEST_F(SourceManagerTest, isInMemoryBuffersNoSourceLocationInfo) {
 
   std::unique_ptr<llvm::MemoryBuffer> CommandLineBuf =
       llvm::MemoryBuffer::getMemBuffer(Source);
-  const FileEntry *CommandLineFile = FileMgr.getVirtualFile(
+  FileEntryRef CommandLineFile = FileMgr.getVirtualFileRef(
       "<command line>", CommandLineBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(CommandLineFile, std::move(CommandLineBuf));
   FileID CommandLineFileID =
@@ -95,7 +95,7 @@ TEST_F(SourceManagerTest, isInMemoryBuffersNoSourceLocationInfo) {
 
   std::unique_ptr<llvm::MemoryBuffer> ScratchSpaceBuf =
       llvm::MemoryBuffer::getMemBuffer(Source);
-  const FileEntry *ScratchSpaceFile = FileMgr.getVirtualFile(
+  FileEntryRef ScratchSpaceFile = FileMgr.getVirtualFileRef(
       "<scratch space>", ScratchSpaceBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(ScratchSpaceFile, std::move(ScratchSpaceBuf));
   FileID ScratchSpaceFileID =
@@ -311,12 +311,12 @@ TEST_F(SourceManagerTest, locationPrintTest) {
   std::unique_ptr<llvm::MemoryBuffer> Buf =
       llvm::MemoryBuffer::getMemBuffer(Source);
 
-  const FileEntry *SourceFile =
-      FileMgr.getVirtualFile("/mainFile.cpp", Buf->getBufferSize(), 0);
+  FileEntryRef SourceFile =
+      FileMgr.getVirtualFileRef("/mainFile.cpp", Buf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(SourceFile, std::move(Buf));
 
-  const FileEntry *HeaderFile =
-      FileMgr.getVirtualFile("/test-header.h", HeaderBuf->getBufferSize(), 0);
+  FileEntryRef HeaderFile = FileMgr.getVirtualFileRef(
+      "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(HeaderFile, std::move(HeaderBuf));
 
   FileID MainFileID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
@@ -431,8 +431,8 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   FileID mainFileID = SourceMgr.createFileID(std::move(MainBuf));
   SourceMgr.setMainFileID(mainFileID);
 
-  const FileEntry *headerFile = FileMgr.getVirtualFile("/test-header.h",
-                                                 HeaderBuf->getBufferSize(), 0);
+  FileEntryRef headerFile = FileMgr.getVirtualFileRef(
+      "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   TrivialModuleLoader ModLoader;
@@ -555,8 +555,8 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
       llvm::MemoryBuffer::getMemBuffer(main);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(MainBuf)));
 
-  const FileEntry *headerFile = FileMgr.getVirtualFile("/test-header.h",
-                                                 HeaderBuf->getBufferSize(), 0);
+  FileEntryRef headerFile = FileMgr.getVirtualFileRef(
+      "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
   TrivialModuleLoader ModLoader;
@@ -640,14 +640,14 @@ TEST_F(SourceManagerTest, isMainFile) {
 
   std::unique_ptr<llvm::MemoryBuffer> Buf =
       llvm::MemoryBuffer::getMemBuffer(Source);
-  const FileEntry *SourceFile =
-      FileMgr.getVirtualFile("mainFile.cpp", Buf->getBufferSize(), 0);
+  FileEntryRef SourceFile =
+      FileMgr.getVirtualFileRef("mainFile.cpp", Buf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(SourceFile, std::move(Buf));
 
   std::unique_ptr<llvm::MemoryBuffer> Buf2 =
       llvm::MemoryBuffer::getMemBuffer(Source);
-  const FileEntry *SecondFile =
-      FileMgr.getVirtualFile("file2.cpp", Buf2->getBufferSize(), 0);
+  FileEntryRef SecondFile =
+      FileMgr.getVirtualFileRef("file2.cpp", Buf2->getBufferSize(), 0);
   SourceMgr.overrideFileContents(SecondFile, std::move(Buf2));
 
   FileID MainFileID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
