@@ -424,3 +424,18 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             thisFileContent.append(line)
         if currentFile is not None:
             yield (currentFile, '\n'.join(thisFileContent))
+
+# Workaround for https://gitlab.kitware.com/cmake/cmake/-/issues/19180.
+#
+# On Apple platforms, CMake resolves the compiler to the final binary using
+# `$(xcrun --find <compiler>`). Unfortunately, running this compiler as-is
+# doesn't work because it doesn't have knowledge of the SDK root. To work
+# around that, we run the compiler binary under `xcrun`, which sets the
+# SDK root properly via the SDKROOT environment variable. Ideally, CMake
+# would not resolve the compiler to its final binary and CMAKE_CXX_COMPILER
+# would be a shim in /usr/bin, which sets the SDK root properly.
+def cmake_workaround_for_cxx_on_Apple(cxx):
+    import sys
+    if sys.platform == "darwin":
+        return f"xcrun {cxx}"
+    return cxx

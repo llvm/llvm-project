@@ -11,7 +11,7 @@
 # loading the file and then setting up the remaining Lit substitutions.
 #
 
-import os, site
+import os, site, shlex
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
 import libcxx.test.format
 
@@ -23,8 +23,8 @@ config.recursiveExpansionLimit = 10
 config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
 
 # Add substitutions for bootstrapping the test suite configuration
-import shlex
-config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
+cxx = libcxx.test.format.cmake_workaround_for_cxx_on_Apple(shlex.quote('@CMAKE_CXX_COMPILER@'))
+config.substitutions.append(('%{cxx}', cxx))
 config.substitutions.append(('%{libcxx}', '@LIBCXX_SOURCE_DIR@'))
 config.substitutions.append(('%{include}', '@LIBCXX_GENERATED_INCLUDE_DIR@'))
 config.substitutions.append(('%{target-include}', '@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@'))

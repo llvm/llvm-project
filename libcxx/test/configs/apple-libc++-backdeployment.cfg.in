@@ -41,9 +41,7 @@ BACKDEPLOYMENT_PARAMETERS = [
         """),
 ]
 
-config.substitutions.append(('%{flags}',
-    '-isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else ''
-))
+config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{libcxx}/test/support'
 ))

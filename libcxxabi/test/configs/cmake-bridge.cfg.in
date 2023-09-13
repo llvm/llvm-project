@@ -11,7 +11,7 @@
 # loading the file and then setting up the remaining Lit substitutions.
 #
 
-import os, site
+import os, site, shlex
 site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
 site.addsitedir(os.path.join('@LIBCXXABI_SOURCE_DIR@', 'test'))
 import libcxx.test.format
@@ -26,7 +26,8 @@ config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
 # TODO: This is a non-standard Lit attribute and we should have another way of accessing this.
 config.host_triple = '@LLVM_HOST_TRIPLE@'
 
-config.substitutions.append(('%{cxx}', '@CMAKE_CXX_COMPILER@'))
+cxx = libcxx.test.format.cmake_workaround_for_cxx_on_Apple(shlex.quote('@CMAKE_CXX_COMPILER@'))
+config.substitutions.append(('%{cxx}', cxx))
 config.substitutions.append(('%{libcxx}', '@LIBCXXABI_LIBCXX_PATH@'))
 config.substitutions.append(('%{include}', '@LIBCXXABI_SOURCE_DIR@/include'))
 config.substitutions.append(('%{cxx-include}', '@LIBCXXABI_HEADER_DIR@/include/c++/v1'))

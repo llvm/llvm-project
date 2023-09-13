@@ -11,7 +11,7 @@
 # loading the file and then setting up the remaining Lit substitutions.
 #
 
-import os, site
+import os, site, shlex
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
 import libcxx.test.format
 
@@ -29,8 +29,8 @@ if not @LIBUNWIND_ENABLE_THREADS@:
     config.available_features.add('libunwind-no-threads')
 
 # Add substitutions for bootstrapping the test suite configuration
-import shlex
-config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
+cxx = libcxx.test.format.cmake_workaround_for_cxx_on_Apple(shlex.quote('@CMAKE_CXX_COMPILER@'))
+config.substitutions.append(('%{cxx}', cxx))
 config.substitutions.append(('%{executor}', '@LIBUNWIND_EXECUTOR@'))
 config.substitutions.append(('%{include}', '@LIBUNWIND_SOURCE_DIR@/include'))
 config.substitutions.append(('%{lib}', '@LIBUNWIND_LIBRARY_DIR@'))
