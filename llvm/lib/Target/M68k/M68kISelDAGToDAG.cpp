@@ -227,10 +227,9 @@ private:
   bool SelectPCD(SDNode *Parent, SDValue N, SDValue &Imm);
   bool SelectPCI(SDNode *Parent, SDValue N, SDValue &Imm, SDValue &Index);
 
-  bool
-  SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               const InlineAsm::ConstraintCode ConstraintID,
-                               std::vector<SDValue> &OutOps) override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
   // If Address Mode represents Frame Index store FI in Disp and
   // Displacement bit size in Base. These values are read symmetrically by
@@ -955,7 +954,7 @@ bool M68kDAGToDAGISel::SelectARI(SDNode *Parent, SDValue N, SDValue &Base) {
 }
 
 bool M68kDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
     std::vector<SDValue> &OutOps) {
   // In order to tell AsmPrinter the exact addressing mode we select here, which
   // might comprise of multiple SDValues (hence MachineOperands), a 32-bit

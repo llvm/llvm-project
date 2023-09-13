@@ -201,7 +201,7 @@ unsigned AVRDAGToDAGISel::selectIndexedProgMemLoad(const LoadSDNode *LD, MVT VT,
 }
 
 bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintCode,
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintCode,
     std::vector<SDValue> &OutOps) {
   assert((ConstraintCode == InlineAsm::ConstraintCode::m ||
           ConstraintCode == InlineAsm::ConstraintCode::Q) &&

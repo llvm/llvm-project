@@ -331,10 +331,9 @@ private:
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
-  bool
-  SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               const InlineAsm::ConstraintCode ConstraintID,
-                               std::vector<SDValue> &OutOps) override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
   // Form pairs of consecutive R, S, D, or Q registers.
   SDNode *createGPRPairNode(EVT VT, SDValue V0, SDValue V1);
@@ -5867,7 +5866,7 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
 }
 
 bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
     std::vector<SDValue> &OutOps) {
   switch(ConstraintID) {
   default:

@@ -91,7 +91,7 @@ public:
   /// OutOps vector.
   virtual bool
   SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               const InlineAsm::ConstraintCode ConstraintID,
+                               InlineAsm::ConstraintCode ConstraintID,
                                std::vector<SDValue> &OutOps) {
     return true;
   }

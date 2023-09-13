@@ -43,10 +43,9 @@ public:
 
   void Select(SDNode *Node) override;
 
-  bool
-  SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               const InlineAsm::ConstraintCode ConstraintID,
-                               std::vector<SDValue> &OutOps) override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrFrameIndex(SDValue Addr, SDValue &Base, SDValue &Offset);
   bool SelectFrameAddrRegImm(SDValue Addr, SDValue &Base, SDValue &Offset);

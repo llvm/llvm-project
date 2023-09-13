@@ -61,10 +61,9 @@ public:
 
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
-  bool
-  SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               const InlineAsm::ConstraintCode ConstraintID,
-                               std::vector<SDValue> &OutOps) override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
   template <signed Low, signed High, signed Scale>
   bool SelectRDVLImm(SDValue N, SDValue &Imm);

@@ -48,10 +48,9 @@ public:
 
   SDNode *createGPRPairNode(EVT VT, SDValue V0, SDValue V1);
 
-  bool
-  SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               const InlineAsm::ConstraintCode ConstraintID,
-                               std::vector<SDValue> &OutOps) override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
 #include "CSKYGenDAGISel.inc"
 };

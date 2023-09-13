@@ -258,10 +258,9 @@ namespace {
     bool isProfitableToFormMaskedOp(SDNode *N) const;
 
     /// Implement addressing mode selection for inline asm expressions.
-    bool
-    SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                 const InlineAsm::ConstraintCode ConstraintID,
-                                 std::vector<SDValue> &OutOps) override;
+    bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                      InlineAsm::ConstraintCode ConstraintID,
+                                      std::vector<SDValue> &OutOps) override;
 
     void emitSpecialCodeForMain();
 
@@ -6325,7 +6324,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 }
 
 bool X86DAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
     std::vector<SDValue> &OutOps) {
   SDValue Op0, Op1, Op2, Op3, Op4;
   switch (ConstraintID) {

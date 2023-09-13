@@ -443,7 +443,7 @@ public:
     return Result;
   }
 
-  static StringRef getMemConstraintName(const ConstraintCode C) {
+  static StringRef getMemConstraintName(ConstraintCode C) {
     switch (C) {
     case ConstraintCode::es:
       return "es";

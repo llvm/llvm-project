@@ -2163,7 +2163,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
     std::vector<SDValue> &OutOps) {
   // Always produce a register and immediate operand, as expected by
   // RISCVAsmPrinter::PrintAsmMemoryOperand.
