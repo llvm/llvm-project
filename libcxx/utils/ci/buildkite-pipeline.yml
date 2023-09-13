@@ -499,6 +499,24 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
+  - label: "Safe mode"
+    command: "libcxx/utils/ci/run-buildbot generic-safe-mode"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "Debug mode"
     command: "libcxx/utils/ci/run-buildbot generic-debug-mode"
     artifact_paths:
