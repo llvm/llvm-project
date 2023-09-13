@@ -29,6 +29,12 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+namespace llvm::RISCVTuneInfoTable {
+
+#define GET_RISCVTuneInfoTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace llvm::RISCVTuneInfoTable
+
 static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
                                           cl::init(true), cl::Hidden);
 
@@ -66,6 +72,7 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
     TuneCPU = CPU;
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
+  TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;

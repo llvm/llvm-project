@@ -10,12 +10,28 @@
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
+class RISCVTuneInfo {
+  bits<8> PrefFunctionAlignment = 1;
+  bits<8> PrefLoopAlignment = 1;
+}
+
+def RISCVTuneInfoTable : GenericTable {
+  let FilterClass = "RISCVTuneInfo";
+  let CppTypeName = "RISCVTuneInfo";
+  let Fields = ["Name", "PrefFunctionAlignment", "PrefLoopAlignment"];
+}
+
+def getRISCVTuneInfo : SearchIndex {
+  let Table = RISCVTuneInfoTable;
+  let Key = ["Name"];
+}
+
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
                           list<SubtargetFeature> f,
                           list<SubtargetFeature> tunef = [],
                           string default_march = "">
-      :  ProcessorModel<n, m, f, tunef> {
+      :  ProcessorModel<n, m, f, tunef>, RISCVTuneInfo {
   string DefaultMarch = default_march;
 }
 
@@ -23,7 +39,7 @@ class RISCVTuneProcessorModel<string n,
                               SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-      : ProcessorModel<n, m, f,tunef>;
+      : ProcessorModel<n, m, f,tunef>, RISCVTuneInfo;
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
