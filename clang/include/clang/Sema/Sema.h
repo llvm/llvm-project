@@ -3499,9 +3499,8 @@ public:
 
   void ActOnLastBitfield(SourceLocation DeclStart,
                          SmallVectorImpl<Decl *> &AllIvarDecls);
-  Decl *ActOnIvar(Scope *S, SourceLocation DeclStart,
-                  Declarator &D, Expr *BitfieldWidth,
-                  tok::ObjCKeywordKind visibility);
+  Decl *ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
+                  Expr *BitWidth, tok::ObjCKeywordKind visibility);
 
   // This is used for both record definitions and ObjC interface declarations.
   void ActOnFields(Scope *S, SourceLocation RecLoc, Decl *TagDecl,
