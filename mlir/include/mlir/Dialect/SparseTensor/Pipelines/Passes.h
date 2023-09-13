@@ -144,6 +144,22 @@ struct SparseCompilerOptions
                                            desc("GPU target architecture")};
   PassOptions::Option<std::string> gpuFeatures{*this, "gpu-features",
                                                desc("GPU target features")};
+  /// For NVIDIA GPUs there are 3 compilation format options:
+  /// 1. `isa`: the compiler generates PTX and the runtime JITs the PTX.
+  /// 2. `bin`: generates a CUBIN object for `chip=gpuChip`.
+  /// 3. `fatbin`: generates a fat binary with a CUBIN object for `gpuChip` and
+  /// also embeds the PTX in the fat binary.
+  /// Notes:
+  /// Option 1 adds a significant runtime performance hit, however, tests are
+  /// more likely to pass with this option.
+  /// Option 2 is better for execution time as there is no JIT; however, the
+  /// program will fail if there's an arch mismatch between `gpuChip` and the
+  /// GPU running the program.
+  /// Option 3 is the best compromise between options 1 & 2 as it can JIT in
+  /// case of an arch mismatch, however, it's only possible to JIT to a higher
+  /// CC than `gpuChip`.
+  PassOptions::Option<std::string> gpuFormat{
+      *this, "gpu-format", desc("GPU compilation format"), init("isa")};
 
   /// This option is used to enable GPU library generation.
   PassOptions::Option<bool> enableGPULibgen{
