@@ -1,0 +1,31 @@
+// RUN: cir-opt %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+
+!ty_22Class22 = !cir.struct<class "Class" {!u16i, !u32i}>
+!ty_22Incomplete22 = !cir.struct<struct "Incomplete" incomplete>
+!ty_22Struct22 = !cir.struct<struct "Struct" {!u16i, !u32i}>
+
+module  {
+  cir.func @shouldGetStructMember(%arg0 : !cir.ptr<!ty_22Struct22>) {
+    // CHECK: cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Struct22> -> !cir.ptr<!u32i>
+    %0 = cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Struct22> -> !cir.ptr<!u32i>
+    cir.return
+  }
+
+  // FIXME: remove bypass once codegen for CIR records is patched.
+  cir.func @shouldBypassMemberIndexCheckForIncompleteRecords(%arg0 : !cir.ptr<!ty_22Incomplete22>) {
+    // CHECK: cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Incomplete22> -> !cir.ptr<!u32i>
+    %0 = cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Incomplete22> -> !cir.ptr<!u32i>
+    cir.return
+  }
+
+  // FIXME: remove bypass once codegen for CIR class records is patched.
+  cir.func @shouldBypassMemberTypeCheckForClassRecords(%arg0 : !cir.ptr<!ty_22Class22>) {
+    // CHECK: cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Class22> -> !cir.ptr<!cir.ptr<!u32i>> 
+    %0 = cir.get_member %arg0[1] {name = "test"} : !cir.ptr<!ty_22Class22> -> !cir.ptr<!cir.ptr<!u32i>>
+    cir.return
+  }
+}
