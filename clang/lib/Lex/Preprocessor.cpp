@@ -391,10 +391,9 @@ void Preprocessor::recomputeCurLexerKind() {
     CurLexerKind = CLK_CachingLexer;
 }
 
-bool Preprocessor::SetCodeCompletionPoint(const FileEntry *File,
+bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
                                           unsigned CompleteLine,
                                           unsigned CompleteColumn) {
-  assert(File);
   assert(CompleteLine && CompleteColumn && "Starts from 1:1");
   assert(!CodeCompletionFile && "Already set");
 
