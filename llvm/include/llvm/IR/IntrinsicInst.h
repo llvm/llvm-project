@@ -596,6 +596,11 @@ public:
     return getFunctionalOpcodeForVP(getIntrinsicID());
   }
 
+  // Equivalent non-predicated intrinsic ID
+  std::optional<unsigned> getFunctionalIntrinsicID() const {
+    return getFunctionalIntrinsicIDForVP(getIntrinsicID());
+  }
+
   // Equivalent non-predicated constrained ID
   std::optional<unsigned> getConstrainedIntrinsicID() const {
     return getConstrainedIntrinsicIDForVP(getIntrinsicID());
@@ -604,8 +609,12 @@ public:
   // Equivalent non-predicated opcode
   static std::optional<unsigned> getFunctionalOpcodeForVP(Intrinsic::ID ID);
 
+  // Equivalent non-predicated intrinsic ID
+  static std::optional<Intrinsic::ID>
+  getFunctionalIntrinsicIDForVP(Intrinsic::ID ID);
+
   // Equivalent non-predicated constrained ID
-  static std::optional<unsigned>
+  static std::optional<Intrinsic::ID>
   getConstrainedIntrinsicIDForVP(Intrinsic::ID ID);
 };
 
