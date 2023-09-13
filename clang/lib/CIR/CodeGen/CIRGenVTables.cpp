@@ -13,14 +13,17 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/Attributes.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/VTTBuilder.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
@@ -151,7 +154,7 @@ void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
   assert(!UnimplementedFeature::generateDebugInfo());
 
   if (RD->getNumVBases())
-    llvm_unreachable("NYI");
+    CGM.getCXXABI().emitVirtualInheritanceTables(RD);
 
   CGM.getCXXABI().emitVTableDefinitions(*this, RD);
 }
@@ -159,9 +162,9 @@ void CIRGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
 static void AddPointerLayoutOffset(CIRGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
-  assert(offset.getQuantity() == 0 && "NYI");
-  builder.add(mlir::cir::ConstPtrAttr::get(
-      CGM.getBuilder().getContext(), CGM.getBuilder().getUInt8PtrTy(), 0));
+  builder.add(mlir::cir::ConstPtrAttr::get(CGM.getBuilder().getContext(),
+                                           CGM.getBuilder().getUInt8PtrTy(),
+                                           offset.getQuantity()));
 }
 
 static void AddRelativeLayoutOffset(CIRGenModule &CGM,
@@ -413,6 +416,118 @@ CIRGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("Invalid TemplateSpecializationKind!");
+}
+
+mlir::cir::GlobalOp
+getAddrOfVTTVTable(CIRGenVTables &CGVT, CIRGenModule &CGM,
+                   const CXXRecordDecl *MostDerivedClass,
+                   const VTTVTable &vtable,
+                   mlir::cir::GlobalLinkageKind linkage,
+                   VTableLayout::AddressPointsMapTy &addressPoints) {
+  if (vtable.getBase() == MostDerivedClass) {
+    assert(vtable.getBaseOffset().isZero() &&
+           "Most derived class vtable must have a zero offset!");
+    // This is a regular vtable.
+    return CGM.getCXXABI().getAddrOfVTable(MostDerivedClass, CharUnits());
+  }
+
+  llvm_unreachable("generateConstructionVTable NYI");
+}
+
+mlir::cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *RD)
+{
+  assert(RD->getNumVBases() && "Only classes with virtual bases need a VTT");
+
+  SmallString<256> OutName;
+  llvm::raw_svector_ostream Out(OutName);
+  cast<ItaniumMangleContext>(CGM.getCXXABI().getMangleContext())
+      .mangleCXXVTT(RD, Out);
+  StringRef Name = OutName.str();
+
+  // This will also defer the definition of the VTT.
+  (void)CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
+
+  VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/false);
+
+  auto ArrayType = mlir::cir::ArrayType::get(CGM.getBuilder().getContext(),
+                                             CGM.getBuilder().getUInt8PtrTy(),
+                                             Builder.getVTTComponents().size());
+  auto Align =
+      CGM.getDataLayout().getABITypeAlign(CGM.getBuilder().getUInt8PtrTy());
+  auto VTT = CGM.createOrReplaceCXXRuntimeVariable(
+      CGM.getLoc(RD->getSourceRange()), Name, ArrayType,
+      mlir::cir::GlobalLinkageKind::ExternalLinkage,
+      CharUnits::fromQuantity(Align));
+  CGM.setGVProperties(VTT, RD);
+  return VTT;
+}
+
+/// Emit the definition of the given vtable.
+void CIRGenVTables::buildVTTDefinition(mlir::cir::GlobalOp VTT,
+                                       mlir::cir::GlobalLinkageKind Linkage,
+                                       const CXXRecordDecl *RD) {
+  VTTBuilder Builder(CGM.getASTContext(), RD, /*GenerateDefinition=*/true);
+
+  auto ArrayType = mlir::cir::ArrayType::get(CGM.getBuilder().getContext(),
+                                             CGM.getBuilder().getUInt8PtrTy(),
+                                             Builder.getVTTComponents().size());
+
+  SmallVector<mlir::cir::GlobalOp, 8> VTables;
+  SmallVector<VTableAddressPointsMapTy, 8> VTableAddressPoints;
+  for (const VTTVTable *i = Builder.getVTTVTables().begin(),
+                       *e = Builder.getVTTVTables().end();
+       i != e; ++i) {
+    VTableAddressPoints.push_back(VTableAddressPointsMapTy());
+    VTables.push_back(getAddrOfVTTVTable(*this, CGM, RD, *i, Linkage,
+                                         VTableAddressPoints.back()));
+  }
+
+  SmallVector<mlir::Attribute, 8> VTTComponents;
+  for (const VTTComponent *i = Builder.getVTTComponents().begin(),
+                          *e = Builder.getVTTComponents().end();
+       i != e; ++i) {
+    const VTTVTable &VTTVT = Builder.getVTTVTables()[i->VTableIndex];
+    mlir::cir::GlobalOp VTable = VTables[i->VTableIndex];
+    VTableLayout::AddressPointLocation AddressPoint;
+    if (VTTVT.getBase() == RD) {
+      // Just get the address point for the regular vtable.
+      AddressPoint =
+          getItaniumVTableContext().getVTableLayout(RD).getAddressPoint(
+              i->VTableBase);
+    } else {
+      AddressPoint = VTableAddressPoints[i->VTableIndex].lookup(i->VTableBase);
+      assert(AddressPoint.AddressPointIndex != 0 &&
+             "Did not find ctor vtable address point!");
+    }
+
+    mlir::Attribute Idxs[3] = {
+        CGM.getBuilder().getI32IntegerAttr(0),
+        CGM.getBuilder().getI32IntegerAttr(AddressPoint.VTableIndex),
+        CGM.getBuilder().getI32IntegerAttr(AddressPoint.AddressPointIndex),
+    };
+
+    auto Init = mlir::cir::GlobalViewAttr::get(
+        CGM.getBuilder().getUInt8PtrTy(),
+        mlir::FlatSymbolRefAttr::get(VTable.getSymNameAttr()),
+        mlir::ArrayAttr::get(CGM.getBuilder().getContext(), Idxs));
+
+    VTTComponents.push_back(Init);
+  }
+
+  auto Init = CGM.getBuilder().getConstArray(
+      mlir::ArrayAttr::get(CGM.getBuilder().getContext(), VTTComponents),
+      ArrayType);
+
+  VTT.setInitialValueAttr(Init);
+
+  // Set the correct linkage.
+  VTT.setLinkage(Linkage);
+  mlir::SymbolTable::setSymbolVisibility(VTT,
+                                         CIRGenModule::getMLIRVisibility(VTT));
+
+  if (CGM.supportsCOMDAT() && VTT.isWeakForLinker()) {
+    assert(!UnimplementedFeature::setComdat());
+  }
 }
 
 void CIRGenVTables::buildThunks(GlobalDecl GD) {

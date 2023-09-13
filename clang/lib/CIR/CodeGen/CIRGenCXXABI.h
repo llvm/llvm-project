@@ -188,6 +188,11 @@ public:
   /// Emits the VTable definitions required for the given record type.
   virtual void emitVTableDefinitions(CIRGenVTables &CGVT,
                                      const CXXRecordDecl *RD) = 0;
+
+  /// Emit any tables needed to implement virtual inheritance.  For Itanium,
+  /// this emits virtual table tables.
+  virtual void emitVirtualInheritanceTables(const CXXRecordDecl *RD) = 0;
+
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType Ty) = 0;
   virtual CatchTypeInfo
@@ -279,6 +284,12 @@ public:
   // Determine if references to thread_local global variables can be made
   // directly or require access through a thread wrapper function.
   virtual bool usesThreadWrapperFunction(const VarDecl *VD) const = 0;
+
+  /// Emit the code to initialize hidden members required to handle virtual
+  /// inheritance, if needed by the ABI.
+  virtual void
+  initializeHiddenVirtualInheritanceMembers(CIRGenFunction &CGF,
+                                            const CXXRecordDecl *RD) {}
 
   /// Emit a single constructor/destructor with the gien type from a C++
   /// constructor Decl.
