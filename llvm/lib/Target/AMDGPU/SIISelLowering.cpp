@@ -9589,7 +9589,7 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const DenormalMode DenormMode = Info->getMode().FP32Denormals;
 
-  const bool HasFP32Denormals = DenormMode == DenormalMode::getIEEE();
+  const bool HasFP32Denormals = DenormMode != DenormalMode::getPreserveSign();
 
   if (!HasFP32Denormals) {
     // Note we can't use the STRICT_FMA/STRICT_FMUL for the non-strict FDIV
