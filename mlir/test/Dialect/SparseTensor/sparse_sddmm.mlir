@@ -22,7 +22,7 @@
 
 // CHECK-LABEL: func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
 // CHECK:         %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : tensor<1024x1024xf64>
-// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false]} : tensor<1024x1024xf64>
+// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) : tensor<1024x1024xf64>
 // CHECK:         return %[[VAL_1]] : tensor<1024x1024xf64>
 // CHECK:       }
 func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
@@ -41,7 +41,7 @@ func.func @fold_yield_arg_zero() -> tensor<1024x1024xf64> {
 
 // CHECK-LABEL: func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK:         %[[VAL_0:.*]] = arith.constant dense<0.000000e+00> : tensor<32xf64>
-// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) {bufferization.escape = [false]} : tensor<32xf64>
+// CHECK:         %[[VAL_1:.*]] = bufferization.alloc_tensor() copy(%[[VAL_0]]) : tensor<32xf64>
 // CHECK:         return %[[VAL_1]] : tensor<32xf64>
 // CHECK:       }
 func.func @fold_yield_direct_zero() -> tensor<32xf64> {
@@ -64,8 +64,8 @@ func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant dense<0.000000e+00> : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_7:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false]} : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<8x8xf64>
+// CHECK-DAG:       %[[VAL_7:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) : tensor<8x8xf64>
+// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {memory_space = 0 : i64} : tensor<8x8xf64>
 // CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>
@@ -132,8 +132,8 @@ func.func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant false
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant true
 // CHECK-DAG:       %[[VAL_8:.*]] = arith.constant dense<0.000000e+00> : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.alloc_tensor() copy(%[[VAL_8]]) {bufferization.escape = [false]} : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.alloc_tensor() {bufferization.escape = [false]} : tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
+// CHECK-DAG:       %[[VAL_9:.*]] = bufferization.alloc_tensor() copy(%[[VAL_8]]) : tensor<8x8xf64>
+// CHECK-DAG:       %[[VAL_10:.*]] = bufferization.alloc_tensor() : tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK-DAG:       %[[VAL_11:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_12:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> to memref<?xindex>
