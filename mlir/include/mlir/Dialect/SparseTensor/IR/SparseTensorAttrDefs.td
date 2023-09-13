@@ -438,6 +438,10 @@ class RankedSparseTensorOf<list<Type> allowedTypes>
 
 def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
 
+class ScalarLikeOf<list<Type> allowedTypes>
+  : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>]>;
+
+
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Sorting Algorithm Attribute.
 //===----------------------------------------------------------------------===//
