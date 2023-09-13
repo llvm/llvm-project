@@ -18,5 +18,6 @@ Navigate to the links below for information on the respective topics:
    header_generation
    implementation_standard
    undefined_behavior
+   printf_behavior
    api_test
    mechanics_of_public_api

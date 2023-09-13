@@ -32,11 +32,12 @@
 // This file implements just enough of the matcher interface to allow
 // EXPECT_DEATH and friends to accept a matcher argument.
 
-#include "gtest/internal/gtest-internal.h"
-#include "gtest/internal/gtest-port.h"
 #include "gtest/gtest-matchers.h"
 
 #include <string>
+
+#include "gtest/internal/gtest-internal.h"
+#include "gtest/internal/gtest-port.h"
 
 namespace testing {
 
@@ -58,40 +59,40 @@ Matcher<std::string>::Matcher(const std::string& s) { *this = Eq(s); }
 // s.
 Matcher<std::string>::Matcher(const char* s) { *this = Eq(std::string(s)); }
 
-#if GTEST_HAS_ABSL
-// Constructs a matcher that matches a const absl::string_view& whose value is
+#if GTEST_INTERNAL_HAS_STRING_VIEW
+// Constructs a matcher that matches a const StringView& whose value is
 // equal to s.
-Matcher<const absl::string_view&>::Matcher(const std::string& s) {
+Matcher<const internal::StringView&>::Matcher(const std::string& s) {
   *this = Eq(s);
 }
 
-// Constructs a matcher that matches a const absl::string_view& whose value is
+// Constructs a matcher that matches a const StringView& whose value is
 // equal to s.
-Matcher<const absl::string_view&>::Matcher(const char* s) {
+Matcher<const internal::StringView&>::Matcher(const char* s) {
   *this = Eq(std::string(s));
 }
 
-// Constructs a matcher that matches a const absl::string_view& whose value is
+// Constructs a matcher that matches a const StringView& whose value is
 // equal to s.
-Matcher<const absl::string_view&>::Matcher(absl::string_view s) {
+Matcher<const internal::StringView&>::Matcher(internal::StringView s) {
   *this = Eq(std::string(s));
 }
 
-// Constructs a matcher that matches a absl::string_view whose value is equal to
+// Constructs a matcher that matches a StringView whose value is equal to
 // s.
-Matcher<absl::string_view>::Matcher(const std::string& s) { *this = Eq(s); }
+Matcher<internal::StringView>::Matcher(const std::string& s) { *this = Eq(s); }
 
-// Constructs a matcher that matches a absl::string_view whose value is equal to
+// Constructs a matcher that matches a StringView whose value is equal to
 // s.
-Matcher<absl::string_view>::Matcher(const char* s) {
+Matcher<internal::StringView>::Matcher(const char* s) {
   *this = Eq(std::string(s));
 }
 
-// Constructs a matcher that matches a absl::string_view whose value is equal to
+// Constructs a matcher that matches a StringView whose value is equal to
 // s.
-Matcher<absl::string_view>::Matcher(absl::string_view s) {
+Matcher<internal::StringView>::Matcher(internal::StringView s) {
   *this = Eq(std::string(s));
 }
-#endif  // GTEST_HAS_ABSL
+#endif  // GTEST_INTERNAL_HAS_STRING_VIEW
 
 }  // namespace testing

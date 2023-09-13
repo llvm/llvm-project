@@ -2501,14 +2501,14 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (I.getType()->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ true))
-        return I;
+        return R;
     }
     if (auto *SI1 = dyn_cast<SelectInst>(Op1)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op0, *SI1, /* IsAnd */ true))
-        return I;
+        return R;
     }
   }
 
@@ -3287,14 +3287,14 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op1, *SI0, /* IsAnd */ false))
-        return I;
+        return R;
     }
     if (auto *SI1 = dyn_cast<SelectInst>(Op1)) {
-      if (auto *I =
+      if (auto *R =
               foldAndOrOfSelectUsingImpliedCond(Op0, *SI1, /* IsAnd */ false))
-        return I;
+        return R;
     }
   }
 
