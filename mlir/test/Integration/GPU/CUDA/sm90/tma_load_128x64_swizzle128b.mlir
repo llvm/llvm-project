@@ -17,9 +17,11 @@
 // RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
 // RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
 // RUN:  | mlir-opt --gpu-to-llvm --gpu-module-to-binary -canonicalize -cse -reconcile-unrealized-casts \
-// RUN:  | mlir-translate --mlir-to-llvmir -o %t.ll 
-// RUN: clang %t.ll -O3 %mlir_cuda_runtime %mlir_runner_utils -o %t.exe
-// RUN: LD_LIBRARY_PATH=%shlibdir %t.exe | FileCheck %s
+// RUN:  | mlir-cpu-runner \
+// RUN:   --shared-libs=%mlir_cuda_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --entry-point-result=void \
+// RUN:  | FileCheck %s
 
 
 // Test swizzling with TMA load
