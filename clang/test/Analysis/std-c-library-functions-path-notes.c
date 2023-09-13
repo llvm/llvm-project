@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:     -analyzer-checker=core,alpha.unix.StdCLibraryFunctions \
-// RUN:     -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:     -analyzer-checker=core,unix.StdCLibraryFunctions \
+// RUN:     -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true \
 // RUN:     -analyzer-output=text
 
 #include "Inputs/std-c-library-functions-POSIX.h"
