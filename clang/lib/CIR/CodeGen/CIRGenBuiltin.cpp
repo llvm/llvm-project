@@ -142,8 +142,13 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fabsf:
     case Builtin::BI__builtin_fabsf16:
     case Builtin::BI__builtin_fabsl:
-    case Builtin::BI__builtin_fabsf128:
-      llvm_unreachable("NYI");
+    case Builtin::BI__builtin_fabsf128: {
+      mlir::Value Src0 = buildScalarExpr(E->getArg(0));
+      auto SrcType = Src0.getType();
+      auto Call =
+          builder.create<mlir::cir::FAbsOp>(Src0.getLoc(), SrcType, Src0);
+      return RValue::get(Call->getResult(0));
+    }
 
     case Builtin::BIfloor:
     case Builtin::BIfloorf:

@@ -2024,6 +2024,31 @@ def MemCpyOp : CIR_Op<"libc.memcpy"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FAbsOp
+//===----------------------------------------------------------------------===//
+
+def FAbsOp : CIR_Op<"fabs", [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins AnyFloat:$src);
+  let results = (outs AnyFloat:$result);
+  let summary = "Returns absolute value for floating-point input.";
+  let description = [{
+    Equivalent to libc's `fabs` and LLVM's intrinsic with the same name.
+
+    Examples:
+
+    ```mlir
+      %1 = cir.const(1.0 : f64) : f64
+      %2 = cir.fabs %1 : f64
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src `:` type($src) attr-dict
+  }];
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
 
