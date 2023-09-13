@@ -314,6 +314,11 @@ static cl::opt<bool> AnnotateSampleProfileInlinePhase(
     cl::desc("Annotate LTO phase (prelink / postlink), or main (no LTO) for "
              "sample-profile inline pass name."));
 
+static cl::opt<bool>
+    BitCodeUseSampleProfile("bitcode-use-sample-profile", cl::Hidden,
+                            cl::init(false),
+                            cl::desc("Bitcode file uses sampling profile"));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 }
@@ -1885,6 +1890,10 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
   if (!ProfileTopDownLoad && UseProfiledCallGraph)
     errs() << "WARNING: -use-profiled-call-graph ignored, should be used "
               "together with -sample-profile-top-down-load.\n";
+
+  for (Function &F : M)
+    if (!F.isDeclaration() && BitCodeUseSampleProfile)
+      F.addFnAttr("use-sample-profile");
 
   if (!ProfileTopDownLoad) {
     if (ProfileMergeInlinee) {
