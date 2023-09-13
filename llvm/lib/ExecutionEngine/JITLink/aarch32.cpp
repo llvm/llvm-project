@@ -400,8 +400,6 @@ Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
-  if (hasTargetFlags(TargetSymbol, ThumbSymbol))
-    TargetAddress |= 0x01;
 
   switch (Kind) {
   case Arm_Jump24: {
@@ -437,11 +435,9 @@ Error applyFixupArm(LinkGraph &G, Block &B, const Edge &E) {
     bool InstrIsBlx = (~R.Wd & FixupInfo<Arm_Call>::BitBlx) == 0;
     if (TargetIsThumb != InstrIsBlx) {
       if (LLVM_LIKELY(TargetIsThumb)) {
-        // Change opcode BL -> BLX and fix range value
+        // Change opcode BL -> BLX
         R.Wd = R.Wd | FixupInfo<Arm_Call>::BitBlx;
         R.Wd = R.Wd & ~FixupInfo<Arm_Call>::BitH;
-        // Set Thumb bit
-        Value |= 0x01;
       } else {
         // Change opcode BLX -> BL
         R.Wd = R.Wd & ~FixupInfo<Arm_Call>::BitBlx;
@@ -473,8 +469,6 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
   int64_t Addend = E.getAddend();
   Symbol &TargetSymbol = E.getTarget();
   uint64_t TargetAddress = TargetSymbol.getAddress().getValue();
-  if (hasTargetFlags(TargetSymbol, ThumbSymbol))
-    TargetAddress |= 0x01;
 
   switch (Kind) {
   case Thumb_Jump24: {
@@ -511,16 +505,14 @@ Error applyFixupThumb(LinkGraph &G, Block &B, const Edge &E,
     bool InstrIsBlx = (R.Lo & FixupInfo<Thumb_Call>::LoBitNoBlx) == 0;
     if (TargetIsArm != InstrIsBlx) {
       if (LLVM_LIKELY(TargetIsArm)) {
-        // Change opcode BL -> BLX and fix range value (account for 4-byte
+        // Change opcode BL -> BLX and fix range value: account for 4-byte
         // aligned destination while instruction may only be 2-byte aligned
-        // and clear Thumb bit).
         R.Lo = R.Lo & ~FixupInfo<Thumb_Call>::LoBitNoBlx;
         R.Lo = R.Lo & ~FixupInfo<Thumb_Call>::LoBitH;
         Value = alignTo(Value, 4);
       } else {
-        // Change opcode BLX -> BL and set Thumb bit
+        // Change opcode BLX -> BL
         R.Lo = R.Lo & ~FixupInfo<Thumb_Call>::LoBitNoBlx;
-        Value |= 0x01;
       }
     }
 
