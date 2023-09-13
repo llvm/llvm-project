@@ -20,9 +20,6 @@
 using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
-//===----------------------------------------------------------------------===//
-// spirv.KHR.CooperativeMatrixLoad
-//===----------------------------------------------------------------------===//
 
 static LogicalResult
 verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
@@ -35,13 +32,31 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
            << pointeeType;
   }
 
-  // The 'Aligned' memory operand requires an alignment literal to follow, which
-  // needs to be implemented on the level of op parsing and (de-)serialization.
-  // TODO: Consider adding support for this attribute value.
-  if (memoryOperand &&
-      spirv::bitEnumContainsAll(memoryOperand.getValue(),
-                                spirv::MemoryAccess::Aligned)) {
-    return op->emitOpError("has unhandled memory operand 'Aligned'");
+  if (memoryOperand) {
+    spirv::MemoryAccess operandSet = memoryOperand.getValue();
+
+    if (isa<spirv::KHRCooperativeMatrixLoadOp>(op) &&
+        spirv::bitEnumContainsAll(operandSet,
+                                  spirv::MemoryAccess::MakePointerAvailable)) {
+      return op->emitOpError(
+          "not compatible with memory operand 'MakePointerAvailable'");
+    }
+
+    if (isa<spirv::KHRCooperativeMatrixStoreOp>(op) &&
+        spirv::bitEnumContainsAll(operandSet,
+                                  spirv::MemoryAccess::MakePointerVisible)) {
+      return op->emitOpError(
+          "not compatible with memory operand 'MakePointerVisible'");
+    }
+
+    // The 'Aligned' memory operand requires an alignment literal to follow,
+    // which needs to be implemented on the level of op parsing and
+    // (de-)serialization.
+    // TODO: Consider adding support for this attribute value.
+    if (spirv::bitEnumContainsAll(memoryOperand.getValue(),
+                                  spirv::MemoryAccess::Aligned)) {
+      return op->emitOpError("has unhandled memory operand 'Aligned'");
+    }
   }
 
   // TODO: Verify the memory object behind the pointer:
@@ -50,6 +65,10 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.CooperativeMatrixLoad
+//===----------------------------------------------------------------------===//
 
 LogicalResult KHRCooperativeMatrixLoadOp::verify() {
   return verifyCoopMatrixAccess(*this, getPointer().getType(),
