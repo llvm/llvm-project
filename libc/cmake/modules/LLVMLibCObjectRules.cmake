@@ -559,6 +559,8 @@ function(create_entrypoint_object fq_target_name)
     return()
   endif()
 
+  set(internal_target_name ${fq_target_name}.__internal__)
+
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
     # One can use alias targets setup OS/machine independent entrypoint targets.
@@ -586,10 +588,22 @@ function(create_entrypoint_object fq_target_name)
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
-    add_custom_target(${fq_target_name})
-    add_dependencies(${fq_target_name} ${fq_dep_name})
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
+    add_library(
+      ${internal_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file_raw}
+    )
+    add_dependencies(${internal_target_name} ${fq_dep_name})
+    add_library(
+      ${fq_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file}
+    )
+    add_dependencies(${fq_target_name} ${fq_dep_name} ${internal_target_name})
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
@@ -619,7 +633,6 @@ function(create_entrypoint_object fq_target_name)
     "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
-  set(internal_target_name ${fq_target_name}.__internal__)
   set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
