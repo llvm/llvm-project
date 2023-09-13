@@ -42,11 +42,14 @@ struct TLSImage {
 // ABI specifies it as an 8 byte value. Likewise, in the ARM64 ABI, arguments
 // are usually passed in registers.  x0 is a doubleword register, so this is
 // 64 bit for aarch64 as well.
-typedef uint64_t ArgcType;
+typedef uintptr_t ArgcType;
 
 // At the language level, argv is a char** value. However, we use uint64_t as
 // ABIs specify the argv vector be an |argc| long array of 8-byte values.
-typedef uint64_t ArgVEntryType;
+typedef uintptr_t ArgVEntryType;
+
+typedef uintptr_t EnvironType;
+typedef uintptr_t AuxEntryType;
 #else
 #error "argc and argv types are not defined for the target platform."
 #endif
@@ -74,7 +77,7 @@ struct AppProperties {
   TLSImage tls;
 
   // Environment data.
-  uint64_t *envPtr;
+  EnvironType *envPtr;
 };
 
 extern AppProperties app;
