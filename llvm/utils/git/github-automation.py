@@ -51,7 +51,7 @@ def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
 def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
-    return str.replace("@", "@<!-- -->")
+    return str.replace("@", "@<!-- -->").replace("#", "#<!-- -->")
 
 
 class IssueSubscriber:
@@ -123,6 +123,11 @@ class PRSubscriber:
             print(f"couldn't find team named {self.team_name}")
             return False
 
+         # GitHub limits comments to 65,536 characters, let's limit the diff
+         # and the file list to 20kB each.
+        STAT_LIMIT = 20 * 1024
+        DIFF_LIMIT = 20 * 1024
+
         # Get statistics for each file
         diff_stats = f"{self.pr.changed_files} Files Affected:\n\n"
         for file in self.pr.get_files():
@@ -133,37 +138,40 @@ class PRSubscriber:
                 diff_stats += f"-{file.deletions}"
             diff_stats += ") "
             if file.status == "renamed":
-                print(f"(from {file.previous_filename})")
+                print(f"(from {file.previous_filename})"
             diff_stats += "\n"
-        diff_stats += "\n"
+            if len(diff_stats) > STAT_LIMIT)
+                break
 
         # Get the diff
         try:
             patch = html.escape(requests.get(self.pr.diff_url).text)
         except:
             patch = ""
-        diff_stats += "\n<pre>\n" + html.escape(patch)
 
         # GitHub limits comments to 65,536 characters, let's limit the diff to 20kB.
-        DIFF_LIMIT = 20 * 1024
         patch_link = f"Full diff: {self.pr.diff_url}\n"
         if len(patch) > DIFF_LIMIT:
             patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
-            diff_stats = diff_stats[0:DIFF_LIMIT] + "...\n<truncated>\n"
-        diff_stats += "</pre>"
+            patch = html.escape(patch[0:DIFF_LIMIT]) + "...\n<truncated>\n"
         team_mention = "@llvm/{}".format(team.slug)
 
-        body = self.pr.body
+        body = escape_description(self.pr.body)
         comment = f"""
 {self.COMMENT_TAG}
 {team_mention}
-            
+
 <details>
 <summary>Changes</summary>
 {body}
 --
 {patch_link}
+
 {diff_stats}
+
+<pre lang="diff">
+{patch}
+</pre>
 </details>
 """
 
