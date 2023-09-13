@@ -27,7 +27,7 @@
 #include <vector>
 
 namespace llvm::CodeGenOpt {
-enum Level : int;
+enum class Level : int;
 } // namespace llvm::CodeGenOpt
 
 namespace lld {

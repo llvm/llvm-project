@@ -310,7 +310,7 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
 }
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
-  if (getOptLevel() == CodeGenOpt::Aggressive)
+  if (getOptLevel() == CodeGenOpt::Level::Aggressive)
     addPass(createGVNPass());
   else
     addPass(createEarlyCSEPass());
@@ -373,7 +373,7 @@ void NVPTXPassConfig::addIRPasses() {
   const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
   addPass(createNVVMReflectPass(ST.getSmVersion()));
 
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::Level::None)
     addPass(createNVPTXImageOptimizerPass());
   addPass(createNVPTXAssignValidGlobalNamesPass());
   addPass(createGenericToNVVMLegacyPass());
@@ -381,7 +381,7 @@ void NVPTXPassConfig::addIRPasses() {
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
   addPass(createNVPTXLowerArgsPass());
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
   }
@@ -403,7 +403,7 @@ void NVPTXPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     addEarlyCSEOrGVNPass();
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
@@ -434,7 +434,7 @@ void NVPTXPassConfig::addPreRegAlloc() {
 
 void NVPTXPassConfig::addPostRegAlloc() {
   addPass(createNVPTXPrologEpilogPass());
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and
     // will replace VRFrame with VRFrameLocal when possible.

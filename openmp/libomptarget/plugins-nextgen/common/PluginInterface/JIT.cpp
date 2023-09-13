@@ -182,7 +182,8 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
       reinterpret_cast<LLVMTargetMachine *>(TM));
   TM->addPassesToEmitFile(PM, OS, nullptr,
-                          TT.isNVPTX() ? CGFT_AssemblyFile : CGFT_ObjectFile,
+                          TT.isNVPTX() ? CodeGenFileType::AssemblyFile
+                                       : CodeGenFileType::ObjectFile,
                           /* DisableVerify */ false, MMIWP);
 
   PM.run(M);

@@ -194,7 +194,7 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
   LLVMContext &Ctx = F.getContext();
 
   size_t ResumesLeft = Resumes.size();
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOpt::Level::None) {
     ResumesLeft = pruneUnreachableResumes(Resumes, CleanupLPads);
 #if LLVM_ENABLE_STATS
     unsigned NumRemainingLPs = 0;
@@ -329,7 +329,8 @@ class DwarfEHPrepareLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  DwarfEHPrepareLegacyPass(CodeGenOpt::Level OptLevel = CodeGenOpt::Default)
+  DwarfEHPrepareLegacyPass(
+      CodeGenOpt::Level OptLevel = CodeGenOpt::Level::Default)
       : FunctionPass(ID), OptLevel(OptLevel) {}
 
   bool runOnFunction(Function &F) override {
@@ -340,7 +341,7 @@ public:
     const TargetTransformInfo *TTI = nullptr;
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
       DT = &DTWP->getDomTree();
-    if (OptLevel != CodeGenOpt::None) {
+    if (OptLevel != CodeGenOpt::Level::None) {
       if (!DT)
         DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
       TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
@@ -351,7 +352,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    if (OptLevel != CodeGenOpt::None) {
+    if (OptLevel != CodeGenOpt::Level::None) {
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<TargetTransformInfoWrapperPass>();
     }

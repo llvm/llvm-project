@@ -62,7 +62,7 @@ public:
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
   explicit SelectionDAGISel(char &ID, TargetMachine &tm,
-                            CodeGenOpt::Level OL = CodeGenOpt::Default);
+                            CodeGenOpt::Level OL = CodeGenOpt::Level::Default);
   ~SelectionDAGISel() override;
 
   const TargetLowering *getTargetLowering() const { return TLI; }

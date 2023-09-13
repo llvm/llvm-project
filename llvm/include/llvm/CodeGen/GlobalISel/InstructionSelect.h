@@ -58,7 +58,7 @@ protected:
   BlockFrequencyInfo *BFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
 
-  CodeGenOpt::Level OptLevel = CodeGenOpt::None;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Level::None;
 };
 } // End namespace llvm.
 

@@ -237,7 +237,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048",
           TT, CPU, FS, Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small),
-          (HexagonNoOpt ? CodeGenOpt::None : OL)),
+          (HexagonNoOpt ? CodeGenOpt::Level::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()) {
   initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
@@ -330,7 +330,7 @@ TargetPassConfig *HexagonTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void HexagonPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
-  bool NoOpt = (getOptLevel() == CodeGenOpt::None);
+  bool NoOpt = (getOptLevel() == CodeGenOpt::Level::None);
 
   if (!NoOpt) {
     if (EnableInstSimplify)
@@ -363,7 +363,7 @@ void HexagonPassConfig::addIRPasses() {
 
 bool HexagonPassConfig::addInstSelector() {
   HexagonTargetMachine &TM = getHexagonTargetMachine();
-  bool NoOpt = (getOptLevel() == CodeGenOpt::None);
+  bool NoOpt = (getOptLevel() == CodeGenOpt::Level::None);
 
   if (!NoOpt)
     addPass(createHexagonOptimizeSZextends());
@@ -401,7 +401,7 @@ bool HexagonPassConfig::addInstSelector() {
 }
 
 void HexagonPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     if (EnableCExtOpt)
       addPass(createHexagonConstExtenders());
     if (EnableExpandCondsets)
@@ -411,12 +411,12 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops());
   }
-  if (TM->getOptLevel() >= CodeGenOpt::Default)
+  if (TM->getOptLevel() >= CodeGenOpt::Level::Default)
     addPass(&MachinePipelinerID);
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     if (EnableRDFOpt)
       addPass(createHexagonRDFOpt());
     if (!DisableHexagonCFGOpt)
@@ -428,13 +428,13 @@ void HexagonPassConfig::addPostRegAlloc() {
 
 void HexagonPassConfig::addPreSched2() {
   addPass(createHexagonCopyToCombine());
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::Level::None)
     addPass(&IfConverterID);
   addPass(createHexagonSplitConst32AndConst64());
 }
 
 void HexagonPassConfig::addPreEmitPass() {
-  bool NoOpt = (getOptLevel() == CodeGenOpt::None);
+  bool NoOpt = (getOptLevel() == CodeGenOpt::Level::None);
 
   if (!NoOpt)
     addPass(createHexagonNewValueJump());

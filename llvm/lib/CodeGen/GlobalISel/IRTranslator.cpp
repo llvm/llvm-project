@@ -173,7 +173,7 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOpt::Level::None) {
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
   }
@@ -578,7 +578,8 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
 
   if (BrInst.isUnconditional()) {
     // If the unconditional target is the layout successor, fallthrough.
-    if (OptLevel == CodeGenOpt::None || !CurMBB.isLayoutSuccessor(Succ0MBB))
+    if (OptLevel == CodeGenOpt::Level::None ||
+        !CurMBB.isLayoutSuccessor(Succ0MBB))
       MIRBuilder.buildBr(*Succ0MBB);
 
     // Link successors.
@@ -1974,7 +1975,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     // No stack colouring in O0, discard region information.
-    if (MF->getTarget().getOptLevel() == CodeGenOpt::None)
+    if (MF->getTarget().getOptLevel() == CodeGenOpt::Level::None)
       return true;
 
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
@@ -3488,7 +3489,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   const TargetMachine &TM = MF->getTarget();
   TM.resetTargetOptions(F);
-  EnableOpts = OptLevel != CodeGenOpt::None && !skipFunction(F);
+  EnableOpts = OptLevel != CodeGenOpt::Level::None && !skipFunction(F);
   FuncInfo.MF = MF;
   if (EnableOpts) {
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

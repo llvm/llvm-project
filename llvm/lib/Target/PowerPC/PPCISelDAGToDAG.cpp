@@ -756,8 +756,8 @@ static bool isThreadPointerAcquisitionNode(SDValue Base, SelectionDAG *CurDAG) {
 static bool canOptimizeTLSDFormToXForm(SelectionDAG *CurDAG, SDValue Base) {
 
   // Do not do this transformation at -O0.
-  if (CurDAG->getTarget().getOptLevel() == CodeGenOpt::None)
-    return false;
+  if (CurDAG->getTarget().getOptLevel() == CodeGenOpt::Level::None)
+      return false;
 
   // In order to perform this optimization inside tryTLSXForm[Load|Store],
   // Base is expected to be an ADD_TLS node.
@@ -4055,7 +4055,7 @@ bool PPCDAGToDAGISel::tryIntCompareInGPR(SDNode *N) {
   // This optimization will emit code that assumes 64-bit registers
   // so we don't want to run it in 32-bit mode. Also don't run it
   // on functions that are not to be optimized.
-  if (TM.getOptLevel() == CodeGenOpt::None || !TM.isPPC64())
+  if (TM.getOptLevel() == CodeGenOpt::Level::None || !TM.isPPC64())
     return false;
 
   // For POWER10, it is more profitable to use the set boolean extension
@@ -6667,7 +6667,7 @@ void PPCDAGToDAGISel::PreprocessISelDAG() {
 /// on the DAG representation.
 void PPCDAGToDAGISel::PostprocessISelDAG() {
   // Skip peepholes at -O0.
-  if (TM.getOptLevel() == CodeGenOpt::None)
+  if (TM.getOptLevel() == CodeGenOpt::Level::None)
     return;
 
   PeepholePPC64();

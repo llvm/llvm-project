@@ -129,11 +129,11 @@ bool DirectXTargetMachine::addPassesToEmitFile(
   PassConfig->addCodeGenPrepare();
 
   switch (FileType) {
-  case CGFT_AssemblyFile:
+  case CodeGenFileType::AssemblyFile:
     PM.add(createDXILPrettyPrinterPass(Out));
     PM.add(createPrintModulePass(Out, "", true));
     break;
-  case CGFT_ObjectFile:
+  case CodeGenFileType::ObjectFile:
     if (TargetPassConfig::willCompleteCodeGenPipeline()) {
       PM.add(createDXILEmbedderPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
@@ -149,7 +149,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     } else
       PM.add(createDXILWriterPass(Out));
     break;
-  case CGFT_Null:
+  case CodeGenFileType::Null:
     break;
   }
   return false;

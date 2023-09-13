@@ -51,7 +51,7 @@ typedef void (*LLVMFunc)(int*, int*, int*, int);
 static CodeGenOpt::Level
 getOptLevel(const std::vector<const char *> &ExtraArgs) {
   // Find the optimization level from the command line args
-  CodeGenOpt::Level OLvl = CodeGenOpt::Default;
+  CodeGenOpt::Level OLvl = CodeGenOpt::Level::Default;
   for (auto &A : ExtraArgs) {
     if (A[0] == '-' && A[1] == 'O') {
       if (auto Level = CodeGenOpt::parseLevel(A[2])) {
@@ -76,16 +76,16 @@ static void RunOptimizationPasses(raw_ostream &OS, Module &M,
                                   CodeGenOpt::Level OptLevel) {
   llvm::OptimizationLevel OL;
   switch (OptLevel) {
-  case CodeGenOpt::None:
+  case CodeGenOpt::Level::None:
     OL = OptimizationLevel::O0;
     break;
-  case CodeGenOpt::Less:
+  case CodeGenOpt::Level::Less:
     OL = OptimizationLevel::O1;
     break;
-  case CodeGenOpt::Default:
+  case CodeGenOpt::Level::Default:
     OL = OptimizationLevel::O2;
     break;
-  case CodeGenOpt::Aggressive:
+  case CodeGenOpt::Level::Aggressive:
     OL = OptimizationLevel::O3;
     break;
   }
@@ -205,7 +205,8 @@ static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
 #endif
 
   // Figure out if we are running the optimized func or the unoptimized func
-  RunFuncOnInputs(f, (OLvl == CodeGenOpt::None) ? UnoptArrays : OptArrays);
+  RunFuncOnInputs(f,
+                  (OLvl == CodeGenOpt::Level::None) ? UnoptArrays : OptArrays);
 
   EE->runStaticConstructorsDestructors(true);
 }
@@ -225,7 +226,7 @@ void clang_fuzzer::HandleLLVM(const std::string &IR,
   std::string OptIR = OptLLVM(IR, OLvl);
 
   CreateAndRunJITFunc(OptIR, OLvl);
-  CreateAndRunJITFunc(IR, CodeGenOpt::None);
+  CreateAndRunJITFunc(IR, CodeGenOpt::Level::None);
 
   if (memcmp(OptArrays, UnoptArrays, kTotalSize))
     ErrorAndExit("!!!BUG!!!");

@@ -130,16 +130,16 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
   CodeGenOpt::Level OL;
   switch (Level) {
     case LLVMCodeGenLevelNone:
-      OL = CodeGenOpt::None;
+      OL = CodeGenOpt::Level::None;
       break;
     case LLVMCodeGenLevelLess:
-      OL = CodeGenOpt::Less;
+      OL = CodeGenOpt::Level::Less;
       break;
     case LLVMCodeGenLevelAggressive:
-      OL = CodeGenOpt::Aggressive;
+      OL = CodeGenOpt::Level::Aggressive;
       break;
     default:
-      OL = CodeGenOpt::Default;
+      OL = CodeGenOpt::Level::Default;
       break;
   }
 
@@ -195,10 +195,10 @@ static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,
   CodeGenFileType ft;
   switch (codegen) {
     case LLVMAssemblyFile:
-      ft = CGFT_AssemblyFile;
+      ft = CodeGenFileType::AssemblyFile;
       break;
     default:
-      ft = CGFT_ObjectFile;
+      ft = CodeGenFileType::ObjectFile;
       break;
   }
   if (TM->addPassesToEmitFile(pass, OS, nullptr, ft)) {

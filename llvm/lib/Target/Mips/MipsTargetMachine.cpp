@@ -347,7 +347,7 @@ bool MipsPassConfig::addLegalizeMachineIR() {
 }
 
 void MipsPassConfig::addPreRegBankSelect() {
-  bool IsOptNone = getOptLevel() == CodeGenOpt::None;
+  bool IsOptNone = getOptLevel() == CodeGenOpt::Level::None;
   addPass(createMipsPostLegalizeCombiner(IsOptNone));
 }
 

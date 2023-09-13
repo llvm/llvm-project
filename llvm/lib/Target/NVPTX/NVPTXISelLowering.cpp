@@ -4810,7 +4810,7 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
     return FMAContractLevelOpt > 0;
 
   // Do not contract if we're not optimizing the code.
-  if (OptLevel == 0)
+  if (OptLevel == CodeGenOpt::Level::None)
     return false;
 
   // Honor TargetOptions flags that explicitly say fusion is okay.
@@ -4852,7 +4852,7 @@ static SDValue PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
     // Since integer multiply-add costs the same as integer multiply
     // but is more costly than integer add, do the fusion only when
     // the mul is only used in the add.
-    if (OptLevel==CodeGenOpt::None || VT != MVT::i32 ||
+    if (OptLevel == CodeGenOpt::Level::None || VT != MVT::i32 ||
         !N0.getNode()->hasOneUse())
       return SDValue();
 
@@ -5043,7 +5043,7 @@ static SDValue PerformREMCombine(SDNode *N,
   assert(N->getOpcode() == ISD::SREM || N->getOpcode() == ISD::UREM);
 
   // Don't do anything at less than -O2.
-  if (OptLevel < CodeGenOpt::Default)
+  if (OptLevel < CodeGenOpt::Level::Default)
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -5210,7 +5210,7 @@ static SDValue TryMULWIDECombine(SDNode *N,
 static SDValue PerformMULCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOpt::Level OptLevel) {
-  if (OptLevel > 0) {
+  if (OptLevel > CodeGenOpt::Level::None) {
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
@@ -5223,7 +5223,7 @@ static SDValue PerformMULCombine(SDNode *N,
 static SDValue PerformSHLCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOpt::Level OptLevel) {
-  if (OptLevel > 0) {
+  if (OptLevel > CodeGenOpt::Level::None) {
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;

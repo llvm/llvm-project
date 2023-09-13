@@ -426,7 +426,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   addPass(createWebAssemblyFixFunctionBitcasts());
 
   // Optimize "returned" function attributes.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::Level::None)
     addPass(createWebAssemblyOptimizeReturned());
 
   basicCheckForEHAndSjLj(TM);
@@ -503,7 +503,7 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
   // usually not used for production builds.
   // TODO Investigate why RegisterCoalesce degrades debug info quality and fix
   // it properly
-  if (getOptLevel() == CodeGenOpt::Less)
+  if (getOptLevel() == CodeGenOpt::Level::Less)
     disablePass(&RegisterCoalescerID);
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -550,7 +550,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyReplacePhysRegs());
 
   // Preparations and optimizations related to register stackification.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     // Depend on LiveIntervals and perform some optimizations on it.
     addPass(createWebAssemblyOptimizeLiveIntervals());
 
@@ -585,7 +585,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyLowerBrUnless());
 
   // Perform the very last peephole optimizations on the code.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::Level::None)
     addPass(createWebAssemblyPeephole());
 
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.

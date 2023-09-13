@@ -469,8 +469,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::Level::None &&
+                   !skipFunction(F);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const AMDGPULegalizerInfo *LI =

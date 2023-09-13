@@ -43,7 +43,7 @@ INITIALIZE_PASS(NVPTXDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                                      CodeGenOpt::Level OptLevel)
     : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {
-  doMulWide = (OptLevel > 0);
+  doMulWide = (OptLevel > CodeGenOpt::Level::None);
 }
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {

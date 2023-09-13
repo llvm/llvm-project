@@ -54,7 +54,7 @@ namespace llvm {
   /// Type for the unique integer IDs of code generation optimization levels.
   using IDType = int;
   /// Code generation optimization level.
-  enum Level : IDType {
+  enum class Level : IDType {
     None = 0,      ///< -O0
     Less = 1,      ///< -O1
     Default = 2,   ///< -O2, -Os
@@ -81,10 +81,10 @@ namespace llvm {
   /// These enums are meant to be passed into addPassesToEmitFile to indicate
   /// what type of file to emit, and returned by it to indicate what type of
   /// file could actually be made.
-  enum CodeGenFileType {
-    CGFT_AssemblyFile,
-    CGFT_ObjectFile,
-    CGFT_Null         // Do not emit any output.
+  enum class CodeGenFileType {
+    AssemblyFile,
+    ObjectFile,
+    Null // Do not emit any output.
   };
 
   // Specify what functions should keep the frame pointer.

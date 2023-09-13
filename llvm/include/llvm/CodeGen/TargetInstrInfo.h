@@ -2109,7 +2109,7 @@ public:
   /// This value will be used if the tail-dup-placement-threshold argument is
   /// not provided.
   virtual unsigned getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
-    return OptLevel >= CodeGenOpt::Aggressive ? 4 : 2;
+    return OptLevel >= CodeGenOpt::Level::Aggressive ? 4 : 2;
   }
 
   /// Returns the callee operand from the given \p MI.

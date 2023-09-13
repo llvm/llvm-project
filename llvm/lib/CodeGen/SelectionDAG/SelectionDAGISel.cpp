@@ -225,9 +225,9 @@ namespace llvm {
       IS.TM.setOptLevel(NewOptLevel);
       LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
                         << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel << " ; After: -O"
-                        << NewOptLevel << "\n");
-      if (NewOptLevel == CodeGenOpt::None) {
+      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel) << " ; After: -O"
+                        << static_cast<int>(NewOptLevel) << "\n");
+      if (NewOptLevel == CodeGenOpt::Level::None) {
         IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
         LLVM_DEBUG(
             dbgs() << "\tFastISel is "
@@ -241,8 +241,8 @@ namespace llvm {
         return;
       LLVM_DEBUG(dbgs() << "\nRestoring optimization level for Function "
                         << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel << " ; After: -O"
-                        << SavedOptLevel << "\n");
+      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(IS.OptLevel)
+                        << " ; After: -O" << static_cast<int>(SavedOptLevel) << "\n");
       IS.OptLevel = SavedOptLevel;
       IS.TM.setOptLevel(SavedOptLevel);
       IS.TM.setFastISel(SavedFastISel);
@@ -262,7 +262,7 @@ namespace llvm {
       return SchedulerCtor(IS, OptLevel);
     }
 
-    if (OptLevel == CodeGenOpt::None ||
+    if (OptLevel == CodeGenOpt::Level::None ||
         (ST.enableMachineScheduler() && ST.enableMachineSchedDefaultSched()) ||
         TLI->getSchedulingPreference() == Sched::Source)
       return createSourceListDAGScheduler(IS, OptLevel);
@@ -335,23 +335,23 @@ SelectionDAGISel::~SelectionDAGISel() {
 }
 
 void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
-  if (OptLevel != CodeGenOpt::None)
-    AU.addRequired<AAResultsWrapperPass>();
+  if (OptLevel != CodeGenOpt::Level::None)
+      AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<StackProtector>();
   AU.addPreserved<GCModuleInfo>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
-  if (UseMBPI && OptLevel != CodeGenOpt::None)
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
+  if (UseMBPI && OptLevel != CodeGenOpt::Level::None)
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   // AssignmentTrackingAnalysis only runs if assignment tracking is enabled for
   // the module.
   AU.addRequired<AssignmentTrackingAnalysis>();
   AU.addPreserved<AssignmentTrackingAnalysis>();
-  if (OptLevel != CodeGenOpt::None)
-    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+  if (OptLevel != CodeGenOpt::Level::None)
+      LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -404,8 +404,8 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   TM.resetTargetOptions(Fn);
   // Reset OptLevel to None for optnone functions.
   CodeGenOpt::Level NewOptLevel = OptLevel;
-  if (OptLevel != CodeGenOpt::None && skipFunction(Fn))
-    NewOptLevel = CodeGenOpt::None;
+  if (OptLevel != CodeGenOpt::Level::None && skipFunction(Fn))
+    NewOptLevel = CodeGenOpt::Level::None;
   OptLevelChanger OLC(*this, NewOptLevel);
 
   TII = MF->getSubtarget().getInstrInfo();
@@ -417,7 +417,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(mf.getFunction());
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI = nullptr;
-  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
+  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::Level::None)
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   FunctionVarLocs const *FnVarLocs = nullptr;
@@ -438,12 +438,12 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // into account).  That's unfortunate but OK because it just means we won't
   // ask for passes that have been required anyway.
 
-  if (UseMBPI && OptLevel != CodeGenOpt::None)
+  if (UseMBPI && OptLevel != CodeGenOpt::Level::None)
     FuncInfo->BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
   else
     FuncInfo->BPI = nullptr;
 
-  if (OptLevel != CodeGenOpt::None)
+  if (OptLevel != CodeGenOpt::Level::None)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   else
     AA = nullptr;
@@ -456,7 +456,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // We split CSR if the target supports it for the given function
   // and the function has only return exits.
-  if (OptLevel != CodeGenOpt::None && TLI->supportSplitCSR(MF)) {
+  if (OptLevel != CodeGenOpt::Level::None && TLI->supportSplitCSR(MF)) {
     FuncInfo->SplitCSR = true;
 
     // Collect all the return blocks.
@@ -935,7 +935,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->VerifyDAGDivergence();
 #endif
 
-  if (OptLevel != CodeGenOpt::None)
+  if (OptLevel != CodeGenOpt::Level::None)
     ComputeLiveOutVRegInfo();
 
   if (ViewISelDAGs && MatchFilterBB)
@@ -1512,7 +1512,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Iterate over all basic blocks in the function.
   StackProtector &SP = getAnalysis<StackProtector>();
   for (const BasicBlock *LLVMBB : RPOT) {
-    if (OptLevel != CodeGenOpt::None) {
+    if (OptLevel != CodeGenOpt::Level::None) {
       bool AllPredsVisited = true;
       for (const BasicBlock *Pred : predecessors(LLVMBB)) {
         if (!FuncInfo->VisitedBBs.count(Pred)) {
@@ -2180,7 +2180,8 @@ static bool findNonImmUse(SDNode *Root, SDNode *Def, SDNode *ImmedUse,
 /// operand node N of U during instruction selection that starts at Root.
 bool SelectionDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {
-  if (OptLevel == CodeGenOpt::None) return false;
+  if (OptLevel == CodeGenOpt::Level::None)
+    return false;
   return N.hasOneUse();
 }
 
@@ -2189,7 +2190,8 @@ bool SelectionDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
 bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
                                      CodeGenOpt::Level OptLevel,
                                      bool IgnoreChains) {
-  if (OptLevel == CodeGenOpt::None) return false;
+  if (OptLevel == CodeGenOpt::Level::None)
+    return false;
 
   // If Root use can somehow reach N through a path that doesn't contain
   // U then folding N would create a cycle. e.g. In the following

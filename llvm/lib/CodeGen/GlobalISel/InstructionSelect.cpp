@@ -65,14 +65,14 @@ InstructionSelect::InstructionSelect(CodeGenOpt::Level OL)
 // we use the default opt level here instead of None, so that the addRequired()
 // calls are made in getAnalysisUsage().
 InstructionSelect::InstructionSelect()
-    : MachineFunctionPass(ID), OptLevel(CodeGenOpt::Default) {}
+    : MachineFunctionPass(ID), OptLevel(CodeGenOpt::Level::Default) {}
 
 void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
 
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOpt::Level::None) {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   }
@@ -93,11 +93,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   CodeGenOpt::Level OldOptLevel = OptLevel;
   auto RestoreOptLevel = make_scope_exit([=]() { OptLevel = OldOptLevel; });
-  OptLevel = MF.getFunction().hasOptNone() ? CodeGenOpt::None
+  OptLevel = MF.getFunction().hasOptNone() ? CodeGenOpt::Level::None
                                            : MF.getTarget().getOptLevel();
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOpt::Level::None) {
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     if (PSI && PSI->hasProfileSummary())
       BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();

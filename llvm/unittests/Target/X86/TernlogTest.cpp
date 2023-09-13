@@ -29,7 +29,8 @@ static std::unique_ptr<LLVMTargetMachine> initTM() {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, "", "", TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOpt::Default)));
+                                     std::nullopt,
+                                     CodeGenOpt::Level::Default)));
 }
 
 struct TernTester {

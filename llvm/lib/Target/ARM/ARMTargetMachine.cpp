@@ -422,7 +422,7 @@ void ARMPassConfig::addIRPasses() {
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
+  if (TM->getOptLevel() != CodeGenOpt::Level::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(
         SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true),
         [this](const Function &F) {
@@ -436,15 +436,15 @@ void ARMPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   // Run the parallel DSP pass.
-  if (getOptLevel() == CodeGenOpt::Aggressive)
+  if (getOptLevel() == CodeGenOpt::Level::Aggressive)
     addPass(createARMParallelDSPPass());
 
   // Match complex arithmetic patterns
-  if (TM->getOptLevel() >= CodeGenOpt::Default)
+  if (TM->getOptLevel() >= CodeGenOpt::Level::Default)
     addPass(createComplexDeinterleavingPass(TM));
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOpt::Level::None)
     addPass(createInterleavedAccessPass());
 
   // Add Control Flow Guard checks.
@@ -456,13 +456,13 @@ void ARMPassConfig::addIRPasses() {
 }
 
 void ARMPassConfig::addCodeGenPrepare() {
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOpt::Level::None)
     addPass(createTypePromotionLegacyPass());
   TargetPassConfig::addCodeGenPrepare();
 }
 
 bool ARMPassConfig::addPreISel() {
-  if ((TM->getOptLevel() != CodeGenOpt::None &&
+  if ((TM->getOptLevel() != CodeGenOpt::Level::None &&
        EnableGlobalMerge == cl::BOU_UNSET) ||
       EnableGlobalMerge == cl::BOU_TRUE) {
     // FIXME: This is using the thumb1 only constant value for
@@ -470,8 +470,9 @@ bool ARMPassConfig::addPreISel() {
     // to look into using the old value for non-thumb1 code of
     // 4095 based on the TargetMachine, but this starts to become
     // tricky when doing code gen per function.
-    bool OnlyOptimizeForSize = (TM->getOptLevel() < CodeGenOpt::Aggressive) &&
-                               (EnableGlobalMerge == cl::BOU_UNSET);
+    bool OnlyOptimizeForSize =
+        (TM->getOptLevel() < CodeGenOpt::Level::Aggressive) &&
+        (EnableGlobalMerge == cl::BOU_UNSET);
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
     // is disabled as we emit the .subsections_via_symbols directive which
@@ -481,7 +482,7 @@ bool ARMPassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
-  if (TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getOptLevel() != CodeGenOpt::Level::None) {
     addPass(createHardwareLoopsLegacyPass());
     addPass(createMVETailPredicationPass());
     // FIXME: IR passes can delete address-taken basic blocks, deleting
@@ -523,8 +524,8 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 }
 
 void ARMPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOpt::None) {
-    if (getOptLevel() == CodeGenOpt::Aggressive)
+  if (getOptLevel() != CodeGenOpt::Level::None) {
+    if (getOptLevel() == CodeGenOpt::Level::Aggressive)
       addPass(&MachinePipelinerID);
 
     addPass(createMVETPAndVPTOptimisationsPass());
@@ -540,7 +541,7 @@ void ARMPassConfig::addPreRegAlloc() {
 }
 
 void ARMPassConfig::addPreSched2() {
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     if (EnableARMLoadStoreOpt)
       addPass(createARMLoadStoreOptimizationPass());
 
@@ -552,7 +553,7 @@ void ARMPassConfig::addPreSched2() {
   // proper scheduling.
   addPass(createARMExpandPseudoPass());
 
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     // When optimising for size, always run the Thumb2SizeReduction pass before
     // IfConversion. Otherwise, check whether IT blocks are restricted
     // (e.g. in v8, IfConversion depends on Thumb instruction widths)
@@ -569,7 +570,7 @@ void ARMPassConfig::addPreSched2() {
 
   // Add both scheduling passes to give the subtarget an opportunity to pick
   // between them.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     addPass(&PostMachineSchedulerID);
     addPass(&PostRASchedulerID);
   }
@@ -588,7 +589,7 @@ void ARMPassConfig::addPreEmitPass() {
   }));
 
   // Don't optimize barriers or block placement at -O0.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOpt::Level::None) {
     addPass(createARMBlockPlacementPass());
     addPass(createARMOptimizeBarriersPass());
   }

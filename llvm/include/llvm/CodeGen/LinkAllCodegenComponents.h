@@ -37,16 +37,18 @@ namespace {
       (void) llvm::createGreedyRegisterAllocator();
       (void) llvm::createDefaultPBQPRegisterAllocator();
 
-      (void) llvm::createBURRListDAGScheduler(nullptr,
-                                              llvm::CodeGenOpt::Default);
-      (void) llvm::createSourceListDAGScheduler(nullptr,
-                                                llvm::CodeGenOpt::Default);
-      (void) llvm::createHybridListDAGScheduler(nullptr,
-                                                llvm::CodeGenOpt::Default);
-      (void) llvm::createFastDAGScheduler(nullptr, llvm::CodeGenOpt::Default);
-      (void) llvm::createDefaultScheduler(nullptr, llvm::CodeGenOpt::Default);
-      (void) llvm::createVLIWDAGScheduler(nullptr, llvm::CodeGenOpt::Default);
-
+      (void)llvm::createBURRListDAGScheduler(nullptr,
+                                             llvm::CodeGenOpt::Level::Default);
+      (void)llvm::createSourceListDAGScheduler(
+          nullptr, llvm::CodeGenOpt::Level::Default);
+      (void)llvm::createHybridListDAGScheduler(
+          nullptr, llvm::CodeGenOpt::Level::Default);
+      (void)llvm::createFastDAGScheduler(nullptr,
+                                         llvm::CodeGenOpt::Level::Default);
+      (void)llvm::createDefaultScheduler(nullptr,
+                                         llvm::CodeGenOpt::Level::Default);
+      (void)llvm::createVLIWDAGScheduler(nullptr,
+                                         llvm::CodeGenOpt::Level::Default);
     }
   } ForceCodegenLinking; // Force link by creating a global definition.
 }

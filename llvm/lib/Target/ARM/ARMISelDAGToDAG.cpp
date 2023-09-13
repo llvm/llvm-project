@@ -499,7 +499,7 @@ void ARMDAGToDAGISel::PreprocessISelDAG() {
 /// node. VFP / NEON fp VMLA / VMLS instructions have special RAW hazards (at
 /// least on current ARM implementations) which should be avoidded.
 bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOpt::Level::None)
     return true;
 
   if (!Subtarget->hasVMLxHazards())

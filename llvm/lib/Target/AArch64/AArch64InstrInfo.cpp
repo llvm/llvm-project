@@ -8534,7 +8534,7 @@ bool AArch64InstrInfo::isWhileOpcode(unsigned Opc) const {
 
 unsigned int
 AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
-  return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
+  return OptLevel >= CodeGenOpt::Level::Aggressive ? 6 : 2;
 }
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {

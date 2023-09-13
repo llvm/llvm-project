@@ -100,7 +100,7 @@ protected: // Can only create subclasses.
 
   Reloc::Model RM = Reloc::Static;
   CodeModel::Model CMModel = CodeModel::Small;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Level::Default;
 
   /// Contains target specific asm information.
   std::unique_ptr<const MCAsmInfo> AsmInfo;

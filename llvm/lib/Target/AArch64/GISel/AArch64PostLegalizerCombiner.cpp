@@ -433,8 +433,8 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
          "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::Level::None &&
+                   !skipFunction(F);
 
   const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
   const auto *LI = ST.getLegalizerInfo();

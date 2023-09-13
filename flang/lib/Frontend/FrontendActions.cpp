@@ -847,9 +847,10 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   assert(tlii && "Failed to create TargetLibraryInfo");
   codeGenPasses.add(new llvm::TargetLibraryInfoWrapperPass(*tlii));
 
-  llvm::CodeGenFileType cgft = (act == BackendActionTy::Backend_EmitAssembly)
-                                   ? llvm::CodeGenFileType::CGFT_AssemblyFile
-                                   : llvm::CodeGenFileType::CGFT_ObjectFile;
+  llvm::CodeGenFileType cgft =
+      (act == BackendActionTy::Backend_EmitAssembly)
+          ? llvm::CodeGenFileType::CodeGenFileType::AssemblyFile
+          : llvm::CodeGenFileType::CodeGenFileType::ObjectFile;
   if (tm.addPassesToEmitFile(codeGenPasses, os, nullptr, cgft)) {
     unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,

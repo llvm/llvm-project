@@ -170,7 +170,7 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
     llvm::legacy::PassManager codegenPasses;
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                          llvm::CGFT_AssemblyFile))
+                                          llvm::CodeGenFileType::AssemblyFile))
       return std::nullopt;
 
     codegenPasses.run(llvmModule);

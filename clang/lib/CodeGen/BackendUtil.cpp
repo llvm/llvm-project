@@ -314,12 +314,12 @@ getCodeModel(const CodeGenOptions &CodeGenOpts) {
 
 static CodeGenFileType getCodeGenFileType(BackendAction Action) {
   if (Action == Backend_EmitObj)
-    return CGFT_ObjectFile;
+    return CodeGenFileType::ObjectFile;
   else if (Action == Backend_EmitMCNull)
-    return CGFT_Null;
+    return CodeGenFileType::Null;
   else {
     assert(Action == Backend_EmitAssembly && "Invalid action!");
-    return CGFT_AssemblyFile;
+    return CodeGenFileType::AssemblyFile;
   }
 }
 

@@ -478,11 +478,13 @@ public:
   /// feature set; it should always be provided. Generally this should be
   /// either the target triple from the module, or the target triple of the
   /// host if that does not exist.
-  TargetMachine *createTargetMachine(
-      StringRef TT, StringRef CPU, StringRef Features,
-      const TargetOptions &Options, std::optional<Reloc::Model> RM,
-      std::optional<CodeModel::Model> CM = std::nullopt,
-      CodeGenOpt::Level OL = CodeGenOpt::Default, bool JIT = false) const {
+  TargetMachine *
+  createTargetMachine(StringRef TT, StringRef CPU, StringRef Features,
+                      const TargetOptions &Options,
+                      std::optional<Reloc::Model> RM,
+                      std::optional<CodeModel::Model> CM = std::nullopt,
+                      CodeGenOpt::Level OL = CodeGenOpt::Level::Default,
+                      bool JIT = false) const {
     if (!TargetMachineCtorFn)
       return nullptr;
     return TargetMachineCtorFn(*this, Triple(TT), CPU, Features, Options, RM,

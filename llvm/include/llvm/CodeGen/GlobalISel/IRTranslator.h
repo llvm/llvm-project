@@ -716,7 +716,7 @@ private:
       BranchProbability Prob = BranchProbability::getUnknown());
 
 public:
-  IRTranslator(CodeGenOpt::Level OptLevel = CodeGenOpt::None);
+  IRTranslator(CodeGenOpt::Level OptLevel = CodeGenOpt::Level::None);
 
   StringRef getPassName() const override { return "IRTranslator"; }
 

@@ -159,7 +159,7 @@ void LoongArchPassConfig::addIRPasses() {
   //
   // Run this before LSR to remove the multiplies involved in computing the
   // pointer values N iterations ahead.
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableLoopDataPrefetch)
+  if (TM->getOptLevel() != CodeGenOpt::Level::None && EnableLoopDataPrefetch)
     addPass(createLoopDataPrefetchPass());
   addPass(createAtomicExpandPass());
 

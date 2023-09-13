@@ -136,8 +136,9 @@ public:
   /// overrides defaults if explicitly used. Otherwise its default will
   /// be used given that a pass shall work at an optimization \p Level
   /// minimum.
-  bool isPassEnabled(const cl::opt<bool> &Opt,
-                     CodeGenOpt::Level Level = CodeGenOpt::Default) const {
+  bool
+  isPassEnabled(const cl::opt<bool> &Opt,
+                CodeGenOpt::Level Level = CodeGenOpt::Level::Default) const {
     if (Opt.getNumOccurrences())
       return Opt;
     if (TM->getOptLevel() < Level)

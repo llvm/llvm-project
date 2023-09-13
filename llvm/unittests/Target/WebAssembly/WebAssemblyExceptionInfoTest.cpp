@@ -36,7 +36,8 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
 
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOpt::Default)));
+                                     std::nullopt,
+                                     CodeGenOpt::Level::Default)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,

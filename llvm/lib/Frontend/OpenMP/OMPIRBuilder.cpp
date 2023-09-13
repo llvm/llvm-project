@@ -3344,7 +3344,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
 
   // Assume the user requests the most aggressive unrolling, even if the rest of
   // the code is optimized using a lower setting.
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Aggressive;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Level::Aggressive;
   std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
 
   FunctionAnalysisManager FAM;
@@ -3377,7 +3377,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   TargetTransformInfo::UnrollingPreferences UP =
       gatherUnrollingPreferences(L, SE, TTI,
                                  /*BlockFrequencyInfo=*/nullptr,
-                                 /*ProfileSummaryInfo=*/nullptr, ORE, OptLevel,
+                                 /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
                                  /*UserThreshold=*/std::nullopt,
                                  /*UserCount=*/std::nullopt,
                                  /*UserAllowPartial=*/true,

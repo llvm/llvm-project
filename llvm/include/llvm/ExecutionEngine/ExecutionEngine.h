@@ -586,7 +586,7 @@ public:
   }
 
   /// setOptLevel - Set the optimization level for the JIT.  This option
-  /// defaults to CodeGenOpt::Default.
+  /// defaults to CodeGenOpt::Level::Default.
   EngineBuilder &setOptLevel(CodeGenOpt::Level l) {
     OptLevel = l;
     return *this;

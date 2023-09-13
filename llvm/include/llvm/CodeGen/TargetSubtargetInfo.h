@@ -266,7 +266,7 @@ public:
   // For use with PostRAScheduling: get the minimum optimization level needed
   // to enable post-RA scheduling.
   virtual CodeGenOpt::Level getOptLevelToEnablePostRAScheduler() const {
-    return CodeGenOpt::Default;
+    return CodeGenOpt::Level::Default;
   }
 
   /// True if the subtarget should run the local reassignment

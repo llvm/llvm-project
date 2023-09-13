@@ -150,7 +150,7 @@ private:
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
+  CodeGenOpt::Level OptLevel = CodeGenOpt::Level::Default;
 };
 
 #ifndef NDEBUG

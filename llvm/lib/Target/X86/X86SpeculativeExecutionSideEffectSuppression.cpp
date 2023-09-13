@@ -95,7 +95,8 @@ bool X86SpeculativeExecutionSideEffectSuppression::runOnMachineFunction(
   // user explicitly passed an SESES flag, or whether the SESES target feature
   // was set.
   if (!EnableSpeculativeExecutionSideEffectSuppression &&
-      !(Subtarget.useLVILoadHardening() && OptLevel == CodeGenOpt::None) &&
+      !(Subtarget.useLVILoadHardening() &&
+        OptLevel == CodeGenOpt::Level::None) &&
       !Subtarget.useSpeculativeExecutionSideEffectSuppression())
     return false;
 

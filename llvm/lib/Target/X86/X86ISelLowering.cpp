@@ -116,7 +116,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
 
   // Bypass expensive divides and use cheaper ones.
-  if (TM.getOptLevel() >= CodeGenOpt::Default) {
+  if (TM.getOptLevel() >= CodeGenOpt::Level::Default) {
     if (Subtarget.hasSlowDivide32())
       addBypassSlowDiv(32, 8);
     if (Subtarget.hasSlowDivide64() && Subtarget.is64Bit())

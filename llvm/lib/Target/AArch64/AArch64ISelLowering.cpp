@@ -15695,8 +15695,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
 
 bool AArch64TargetLowering::generateFMAsInMachineCombiner(
     EVT VT, CodeGenOpt::Level OptLevel) const {
-  return (OptLevel >= CodeGenOpt::Aggressive) && !VT.isScalableVector() &&
-         !useSVEForFixedLengthVectorVT(VT);
+  return (OptLevel >= CodeGenOpt::Level::Aggressive) &&
+         !VT.isScalableVector() && !useSVEForFixedLengthVectorVT(VT);
 }
 
 const MCPhysReg *
@@ -24414,7 +24414,7 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   // stack and close enough to the spill slot, this can lead to a situation
   // where the monitor always gets cleared and the atomic operation can never
   // succeed. So at -O0 lower this operation to a CAS loop.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::Level::None)
     return AtomicExpansionKind::CmpXChg;
 
   // Using CAS for an atomic load has a better chance of succeeding under high
@@ -24466,7 +24466,7 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // where the monitor always gets cleared and the atomic operation can never
   // succeed. So at -O0 lower this operation to a CAS loop. Also worthwhile if
   // we have a single CAS instruction that can replace the loop.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None ||
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::Level::None ||
       Subtarget->hasLSE())
     return AtomicExpansionKind::CmpXChg;
 
@@ -24484,7 +24484,7 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
   // on the stack and close enough to the spill slot, this can lead to a
   // situation where the monitor always gets cleared and the atomic operation
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::Level::None)
     return AtomicExpansionKind::None;
 
   // 128-bit atomic cmpxchg is weird; AtomicExpand doesn't know how to expand
