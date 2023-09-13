@@ -1350,10 +1350,14 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
             llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                 .extOrTrunc(SizeTypeWidth);
         if (FormatSize > *SourceSize && *SourceSize != 0) {
-          DiagID = diag::warn_fortify_source_format_truncation;
-          DestinationSize = SourceSize;
-          SourceSize = FormatSize;
-          break;
+          SmallString<16> SpecifiedSizeStr;
+          SmallString<16> FormatSizeStr;
+          SourceSize->toString(SpecifiedSizeStr, /*Radix=*/10);
+          FormatSize.toString(FormatSizeStr, /*Radix=*/10);
+          DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                              PDiag(diag::warn_fortify_source_format_truncation)
+                                  << GetFunctionName() << SpecifiedSizeStr
+                                  << FormatSizeStr);
         }
       }
     }

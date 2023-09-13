@@ -857,12 +857,12 @@ def warn_fortify_strlen_overflow: Warning<
 def warn_fortify_source_format_overflow : Warning<
   "'%0' will always overflow; destination buffer has size %1,"
   " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  InGroup<DiagGroup<"format-overflow">>;
 
 def warn_fortify_source_format_truncation: Warning<
   "'%0' will always be truncated; specified size is %1,"
   " but format string expands to at least %2">,
-  InGroup<FortifySource>;
+  InGroup<DiagGroup<"format-truncation">>;
 
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
