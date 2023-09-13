@@ -360,6 +360,11 @@ debuginfo:
 github:workflow:
   - .github/workflows/**
 
+cmake:
+  - cmake/**
+  - llvm/cmake/**
+  - runtimes/**
+
 flang:driver:
   - flang/tools/flang-driver/**
   - flang/unittests/Frontend/**
@@ -379,15 +384,12 @@ backend:m68k:
 
 libc++:
   - libcxx/**
-  - runtimes/**
 
 libc++abi:
   - libcxxabi/**
-  - runtimes/**
 
 libunwind:
   - libunwind/**
-  - runtimes/**
 
 objectyaml:
   - llvm/include/llvm/ObjectYAML/**
