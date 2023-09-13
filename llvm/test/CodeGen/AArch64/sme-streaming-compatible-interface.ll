@@ -120,7 +120,7 @@ define void @streaming_compatible_caller_and_callee() "aarch64_pstate_sm_compati
 ; Handle special cases here.
 ;
 
-define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind #0 {
+define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: streaming_compatible_with_neon_vectors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp d15, d14, [sp, #-96]! // 16-byte Folded Spill
@@ -166,7 +166,7 @@ define <2 x double> @streaming_compatible_with_neon_vectors(<2 x double> %arg) "
 }
 declare <2 x double> @normal_callee_vec_arg(<2 x double>)
 
-define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale x 2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind #0 {
+define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale x 2 x double> %arg) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: streaming_compatible_with_scalable_vectors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
@@ -258,7 +258,7 @@ define <vscale x 2 x double> @streaming_compatible_with_scalable_vectors(<vscale
 
 declare <vscale x 2 x double> @normal_callee_scalable_vec_arg(<vscale x 2 x double>)
 
-define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 2 x i1> %arg) "aarch64_pstate_sm_compatible" nounwind #0 {
+define <vscale x 2 x i1> @streaming_compatible_with_predicate_vectors(<vscale x 2 x i1> %arg) "aarch64_pstate_sm_compatible" nounwind {
 ; CHECK-LABEL: streaming_compatible_with_predicate_vectors:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
@@ -436,6 +436,3 @@ define void @disable_tailcallopt() "aarch64_pstate_sm_compatible" nounwind {
   tail call void @normal_callee();
   ret void;
 }
-
-
-attributes #0 = { nounwind "target-features"="+sve" }
