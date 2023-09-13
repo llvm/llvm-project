@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -linalg-bufferize \
 // RUN: -arith-bufferize -tensor-bufferize -func-bufferize \
-// RUN: -finalizing-bufferize -buffer-deallocation  \
-// RUN: -expand-strided-metadata -lower-affine \
+// RUN: -finalizing-bufferize -buffer-deallocation -convert-bufferization-to-memref \
+// RUN: -convert-scf-to-cf -expand-strided-metadata -lower-affine -convert-cf-to-llvm -convert-arith-to-llvm \
 // RUN: -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_runner_utils \
