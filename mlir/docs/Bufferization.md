@@ -222,6 +222,84 @@ Alternatively,
 skips the analysis and inserts a copy on every buffer write, just like the
 dialect conversion-based bufferization.
 
+## Buffer Deallocation
+
+One-Shot Bufferize deallocates all buffers that it allocates. This is in
+contrast to the dialect conversion-based bufferization that delegates this job
+to the
+[`-buffer-deallocation`](https://mlir.llvm.org/docs/Passes/#-buffer-deallocation-adds-all-required-dealloc-operations-for-all-allocations-in-the-input-program)
+pass. By default, One-Shot Bufferize rejects IR where a newly allocated buffer
+is returned from a block. Such IR will fail bufferization.
+
+A new buffer allocation is returned from a block when the result of an op that
+is not in destination-passing style is returned. E.g.:
+
+```mlir
+%0 = scf.if %c -> (tensor<?xf32>) {
+  %1 = tensor.generate ... -> tensor<?xf32>
+  scf.yield %1 : tensor<?xf32>
+} else {
+  scf.yield %another_tensor : tensor<?xf32>
+}
+```
+
+The `scf.yield` in the "else" branch is OK, but the `scf.yield` in the "then"
+branch will be rejected.
+
+Another case in which a buffer allocation may be returned is when a buffer copy
+must be inserted due to a RaW conflict. E.g.:
+
+```mlir
+%0 = scf.if %c -> (tensor<?xf32>) {
+  %1 = tensor.insert %cst into %another_tensor[%idx] : tensor<?xf32>
+  "my_dialect.reading_tensor_op"(%another_tensor) : (tensor<?xf32>) -> ()
+  ...
+  scf.yield %1 : tensor<?xf32>
+} else {
+  scf.yield %yet_another_tensor : tensor<?xf32>
+}
+```
+
+In the above example, a buffer copy of buffer(`%another_tensor`) (with `%cst`
+inserted) is yielded from the "then" branch.
+
+In both examples, a buffer is allocated inside of a block and then yielded from
+the block. Deallocation of such buffers is tricky and not currently implemented
+in an efficient way. For this reason, One-Shot Bufferize must be explicitly
+configured with `allow-return-allocs` to support such IR.
+
+When running with `allow-return-allocs`, One-Shot Bufferize may introduce
+allocations that cannot be deallocated by One-Shot Bufferize yet. For that
+reason, `-buffer-deallocation` must be run after One-Shot Bufferize. This buffer
+deallocation pass resolves yields of newly allocated buffers with copies. E.g.,
+the `scf.if` example above would bufferize to IR similar to the following:
+
+```mlir
+%0 = scf.if %c -> (memref<?xf32>) {
+  %1 = memref.alloc(...) : memref<?xf32>
+  ...
+  scf.yield %1 : memref<?xf32>
+} else {
+  %2 = memref.alloc(...) : memref<?xf32>
+  memref.copy %another_memref, %2
+  scf.yield %2 : memref<?xf32>
+}
+```
+
+In the bufferized IR, both branches return a newly allocated buffer, so it does
+not matter which if-branch was taken. In both cases, the resulting buffer `%0`
+must be deallocated at some point after the `scf.if` (unless the `%0` is
+returned/yielded from its block).
+
+Note: Buffer allocations that are returned from a function are not deallocated,
+not even with `-buffer-deallocation`. It is the caller's responsibility to
+deallocate the buffer. In the future, this could be automated with allocation
+hoisting (across function boundaries) or reference counting.
+
+One-Shot Bufferize can be configured to leak all memory and not generate any
+buffer deallocations with `create-deallocs=0`. This can be useful for
+compatibility with legacy code that has its own method of deallocating buffers.
+
 ## Memory Layouts
 
 One-Shot Bufferize bufferizes ops from top to bottom. This works well when all
