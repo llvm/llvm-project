@@ -33,7 +33,7 @@ class FileRemapper {
   // FIXME: Reuse the same FileManager for multiple ASTContexts.
   std::unique_ptr<FileManager> FileMgr;
 
-  typedef llvm::PointerUnion<const FileEntry *, llvm::MemoryBuffer *> Target;
+  typedef llvm::PointerUnion<FileEntryRef, llvm::MemoryBuffer *> Target;
   using MappingsTy = llvm::DenseMap<FileEntryRef, Target>;
   MappingsTy FromToMappings;
 
@@ -67,7 +67,7 @@ public:
 
 private:
   void remap(FileEntryRef file, std::unique_ptr<llvm::MemoryBuffer> memBuf);
-  void remap(FileEntryRef file, const FileEntry *newfile);
+  void remap(FileEntryRef file, FileEntryRef newfile);
 
   OptionalFileEntryRef getOriginalFile(StringRef filePath);
   void resetTarget(Target &targ);
