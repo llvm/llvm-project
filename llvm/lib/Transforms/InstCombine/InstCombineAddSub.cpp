@@ -2222,14 +2222,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   }
 
   // (~X) - (~Y) --> Y - X
-  // This is placed after the other reassociations and explicitly excludes a
-  // sub-of-sub pattern to avoid infinite looping.
-  if (isFreeToInvert(Op0, Op0->hasOneUse()) &&
-      isFreeToInvert(Op1, Op1->hasOneUse()) &&
-      !match(Op0, m_Sub(m_ImmConstant(), m_Value()))) {
-    Value *NotOp0 = Builder.CreateNot(Op0);
-    Value *NotOp1 = Builder.CreateNot(Op1);
-    return BinaryOperator::CreateSub(NotOp1, NotOp0);
+  {
+    // Need to ensure we can consume at least one of the `not` instructions,
+    // otherwise this can inf loop.
+    bool ConsumesOp0, ConsumesOp1;
+    if (isFreeToInvert(Op0, Op0->hasOneUse(), ConsumesOp0) &&
+        isFreeToInvert(Op1, Op1->hasOneUse(), ConsumesOp1) &&
+        (ConsumesOp0 || ConsumesOp1)) {
+      Value *NotOp0 = Builder.CreateNot(Op0);
+      Value *NotOp1 = Builder.CreateNot(Op1);
+      return BinaryOperator::CreateSub(NotOp1, NotOp0);
+    }
   }
 
   auto m_AddRdx = [](Value *&Vec) {
