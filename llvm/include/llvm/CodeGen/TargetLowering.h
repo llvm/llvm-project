@@ -4833,16 +4833,17 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const;
 
-  virtual unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  virtual InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const {
     if (ConstraintCode == "m")
-      return InlineAsm::Constraint_m;
+      return InlineAsm::ConstraintCode::m;
     if (ConstraintCode == "o")
-      return InlineAsm::Constraint_o;
+      return InlineAsm::ConstraintCode::o;
     if (ConstraintCode == "X")
-      return InlineAsm::Constraint_X;
+      return InlineAsm::ConstraintCode::X;
     if (ConstraintCode == "p")
-      return InlineAsm::Constraint_p;
-    return InlineAsm::Constraint_Unknown;
+      return InlineAsm::ConstraintCode::p;
+    return InlineAsm::ConstraintCode::Unknown;
   }
 
   /// Try to replace an X constraint, which matches anything, with another that
