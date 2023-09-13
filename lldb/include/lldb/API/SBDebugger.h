@@ -13,7 +13,6 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBPlatform.h"
-#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
@@ -47,7 +46,6 @@ public:
       eBroadcastBitProgress = (1 << 0),
       eBroadcastBitWarning = (1 << 1),
       eBroadcastBitError = (1 << 2),
-      eBroadcastBitSymbolChange = (1 << 3),
   };
 
   SBDebugger();

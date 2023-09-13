@@ -1536,7 +1536,7 @@ void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
       EventSP event_sp = std::make_shared<Event>(
-          Debugger::eBroadcastBitSymbolChange,
+          Debugger::eBroadcastBitSymbolFileChange,
           new SymbolChangeEventData(debugger_sp, module_spec));
       debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
     }
@@ -1844,7 +1844,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
 
   listener_sp->StartListeningForEvents(
       &m_broadcaster, eBroadcastBitProgress | eBroadcastBitWarning |
-                          eBroadcastBitError | eBroadcastBitSymbolChange);
+                          eBroadcastBitError | eBroadcastBitSymbolFileChange);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed

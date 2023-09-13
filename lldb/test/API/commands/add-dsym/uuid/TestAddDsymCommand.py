@@ -58,27 +58,31 @@ class AddDsymCommandCase(TestBase):
         self.do_add_dsym_with_dSYM_bundle(self.exe_name)
 
     @no_debug_info_test
-    def test_report_symbol_change(self):
-        """Test that when adding a symbol file, the eBroadcastBitSymbolChange event gets broadcasted."""
+    def test_report_symbol_load(self):
+        """Test that when adding a symbol file, the eBroadcastBitSymbolsLoaded event gets broadcasted."""
         self.generate_main_cpp(version=1)
         self.build(debug_info="dsym")
 
-        self.exe_name = "a.out"
-
-        # Get the broadcaster and listen for the symbol change event
-        self.broadcaster = self.dbg.GetBroadcaster()
-        self.listener = lldbutil.start_listening_from(
-            self.broadcaster, lldb.SBDebugger.eBroadcastBitSymbolChange
+        listener = lldb.SBListener("listener")
+        listener.StartListeningForEventClass(
+            self.dbg,
+            lldb.SBTarget.GetBroadcasterClassName(),
+            lldb.SBTarget.eBroadcastBitSymbolsLoaded,
         )
+
+
+        self.exe_name = "a.out"
 
         # Add the dSYM
         self.do_add_dsym_with_success(self.exe_name)
 
         # Get the next event
-        event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
+        # event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
+        event = lldb.SBEvent()
+        listener.WaitForEvent(1, event)
 
         # Check that the event is valid
-        self.assertTrue(event.IsValid(), "Got a valid eBroadcastBitSymbolChange event.")
+        self.assertTrue(event.IsValid(), "Got a valid eBroadcastBitSymbolsLoaded event.")
 
 
     def generate_main_cpp(self, version=0):

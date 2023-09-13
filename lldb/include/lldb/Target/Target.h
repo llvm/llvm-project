@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_TARGET_H
 #define LLDB_TARGET_TARGET_H
 
+#include <_types/_uint32_t.h>
 #include <list>
 #include <map>
 #include <memory>
@@ -875,7 +876,7 @@ public:
 
   void ModulesDidUnload(ModuleList &module_list, bool delete_locations);
 
-  void SymbolsDidLoad(ModuleList &module_list);
+  void SymbolsDidLoad(ModuleList &module_list, uint32_t load_or_change_broadcast_bit);
 
   void ClearModules(bool delete_locations);
 
