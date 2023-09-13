@@ -5028,9 +5028,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     const auto *AACE =
         A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::OPTIONAL);
     if (!AACE || !AACE->getState().isValidState() || AACE->hasUnknownCallee()) {
-      Function *F = getAssociatedFunction();
-      if (F)
-        CheckCallee(getAssociatedFunction(), /*NumCallees=*/1);
+      if (Function *F = getAssociatedFunction())
+        CheckCallee(F, /*NumCallees=*/1);
     } else {
       const auto &OptimisticEdges = AACE->getOptimisticEdges();
       for (auto *Callee : OptimisticEdges) {
