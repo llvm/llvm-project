@@ -54,6 +54,7 @@ def Enqueue : BuiltinGroup;
 def AsyncCopy : BuiltinGroup;
 def VectorLoadStore : BuiltinGroup;
 def LoadStore : BuiltinGroup;
+def ExpectAssume : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
