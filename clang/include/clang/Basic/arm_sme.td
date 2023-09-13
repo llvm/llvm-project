@@ -96,42 +96,42 @@ def SVSTR_ZA : MInst<"svstr_za", "vm%", "",
 
 multiclass ZARead<string n_suffix, string t, string i_prefix, list<ImmCheck> ch> {
   let TargetGuard = "sme" in {
-    def NAME # _H : SInst<"svread_hor_" # n_suffix # "[_{d}]", "ddPimi", t,
+    def NAME # _H : SInst<"svread_hor_" # n_suffix # "[_{d}]", "ddPim", t,
                           MergeOp1, i_prefix # "_horiz",
                           [IsReadZA, IsStreaming, IsSharedZA, IsPreservesZA], ch>;
 
-    def NAME # _V : SInst<"svread_ver_" # n_suffix # "[_{d}]", "ddPimi", t,
+    def NAME # _V : SInst<"svread_ver_" # n_suffix # "[_{d}]", "ddPim", t,
                           MergeOp1, i_prefix # "_vert",
                           [IsReadZA, IsStreaming, IsSharedZA, IsPreservesZA], ch>;
   }
 }
 
-defm SVREAD_ZA8 : ZARead<"za8", "cUc", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_0>, ImmCheck<4, ImmCheck0_15>]>;
-defm SVREAD_ZA16 : ZARead<"za16", "sUshb", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_1>, ImmCheck<4, ImmCheck0_7>]>;
-defm SVREAD_ZA32 : ZARead<"za32", "iUif", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
-defm SVREAD_ZA64 : ZARead<"za64", "lUld", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_7>, ImmCheck<4, ImmCheck0_1>]>;
-defm SVREAD_ZA128 : ZARead<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_readq", [ImmCheck<2, ImmCheck0_15>, ImmCheck<4, ImmCheck0_0>]>;
+defm SVREAD_ZA8 : ZARead<"za8", "cUc", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_0>]>;
+defm SVREAD_ZA16 : ZARead<"za16", "sUshb", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_1>]>;
+defm SVREAD_ZA32 : ZARead<"za32", "iUif", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_3>]>;
+defm SVREAD_ZA64 : ZARead<"za64", "lUld", "aarch64_sme_read", [ImmCheck<2, ImmCheck0_7>]>;
+defm SVREAD_ZA128 : ZARead<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_readq", [ImmCheck<2, ImmCheck0_15>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Write horizontal/vertical ZA slices
 
 multiclass ZAWrite<string n_suffix, string t, string i_prefix, list<ImmCheck> ch> {
   let TargetGuard = "sme" in {
-    def NAME # _H : SInst<"svwrite_hor_" # n_suffix # "[_{d}]", "vimiPd", t,
+    def NAME # _H : SInst<"svwrite_hor_" # n_suffix # "[_{d}]", "vimPd", t,
                           MergeOp1, i_prefix # "_horiz",
                           [IsWriteZA, IsStreaming, IsSharedZA], ch>;
 
-    def NAME # _V : SInst<"svwrite_ver_" # n_suffix # "[_{d}]", "vimiPd", t,
+    def NAME # _V : SInst<"svwrite_ver_" # n_suffix # "[_{d}]", "vimPd", t,
                           MergeOp1, i_prefix # "_vert",
                           [IsWriteZA, IsStreaming, IsSharedZA], ch>;
   }
 }
 
-defm SVWRITE_ZA8 : ZAWrite<"za8", "cUc", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_15>]>;
-defm SVWRITE_ZA16 : ZAWrite<"za16", "sUshb", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_1>, ImmCheck<2, ImmCheck0_7>]>;
-defm SVWRITE_ZA32 : ZAWrite<"za32", "iUif", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>, ImmCheck<2, ImmCheck0_3>]>;
-defm SVWRITE_ZA64 : ZAWrite<"za64", "lUld", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>, ImmCheck<2, ImmCheck0_1>]>;
-defm SVWRITE_ZA128 : ZAWrite<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_writeq", [ImmCheck<0, ImmCheck0_15>, ImmCheck<2, ImmCheck0_0>]>;
+defm SVWRITE_ZA8 : ZAWrite<"za8", "cUc", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVWRITE_ZA16 : ZAWrite<"za16", "sUshb", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_1>]>;
+defm SVWRITE_ZA32 : ZAWrite<"za32", "iUif", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>]>;
+defm SVWRITE_ZA64 : ZAWrite<"za64", "lUld", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>]>;
+defm SVWRITE_ZA128 : ZAWrite<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_writeq", [ImmCheck<0, ImmCheck0_15>]>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SME - Zero

@@ -654,4 +654,42 @@ func.func @_QPs(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "x"}) {
   %0 = fir.alloca !fir.complex<4> {bindc_name = "v", uniq_name = "_QFsEv"}
   omp.atomic.read %0 = %arg0   : !fir.ref<!fir.complex<4>>, !fir.complex<4>
   return
-} 
+}
+
+// -----
+// Test if llvm.alloca is properly inserted in the omp section
+
+//CHECK:  %[[CONST:.*]] = llvm.mlir.constant(1 : i64) : i64
+//CHECK:  %[[ALLOCA:.*]] = llvm.alloca %[[CONST]] x !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)> {bindc_name = "iattr", in_type = !fir.box<!fir.ptr<i32>>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFEiattr"} : (i64) -> !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:  omp.parallel   {
+//CHECK:    %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+//CHECK:    %[[ALLOCA_1:.*]] = llvm.alloca %[[CONST_1:.*]] x !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:    %[[LOAD:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:    llvm.store %[[LOAD]], %[[ALLOCA_1]] : !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:    %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA_1]][0, 0] : (!llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>) -> !llvm.ptr<ptr<i32>>
+//CHECK:    %[[LOAD_2:.*]] = llvm.load %[[GEP]] : !llvm.ptr<ptr<i32>>
+//CHECK:    omp.terminator
+//CHECK:  }
+
+func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
+  %0 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "iattr", uniq_name = "_QFEiattr"}
+  %1 = fir.zero_bits !fir.ptr<i32>
+  %2 = fir.embox %1 : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+  fir.store %2 to %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %3 = fir.address_of(@_QFEx) : !fir.ref<i32>
+  %4 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+  %5 = fir.embox %3 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+  fir.store %5 to %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  omp.parallel   {
+    %6 = fir.load %4 : !fir.ref<i32>
+    %7 = fir.load %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %8 = fir.box_addr %7 : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+    fir.store %6 to %8 : !fir.ptr<i32>
+    omp.terminator
+  }
+  return
+}
+fir.global internal @_QFEx target : i32 {
+  %0 = fir.zero_bits i32
+  fir.has_value %0 : i32
+}
