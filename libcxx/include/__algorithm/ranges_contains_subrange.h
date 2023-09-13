@@ -53,15 +53,15 @@ struct __fn {
     if (__offset < 0)
       return false;
     else {
-      for (; __offset >= 0; __offset --, __first1 ++) {
+      for (; __offset >= 0; __offset--, __first1++) {
         auto result = ranges::starts_with(
-          std::move(__first1),
-          std::move(__last1),
-          std::move(__first2),
-          std::move(__last2),
-          std::ref(__pred),
-          std::ref(__proj1),
-          std::ref(__proj2));
+            std::move(__first1),
+            std::move(__last1),
+            std::move(__first2),
+            std::move(__last2),
+            std::ref(__pred),
+            std::ref(__proj1),
+            std::ref(__proj2));
         if (result)
           return true;
       }
