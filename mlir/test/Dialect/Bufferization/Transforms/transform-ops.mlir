@@ -21,6 +21,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
+  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
 }
@@ -49,6 +50,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
+  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
 }
@@ -115,6 +117,7 @@ module {
     // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
     %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
+    // CHECK: memref.dealloc %[[alloc]]
     // CHECK: return %[[res_tensor]]
     return %0 : tensor<?xf32>
   }

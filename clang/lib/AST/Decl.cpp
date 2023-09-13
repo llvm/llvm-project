@@ -87,7 +87,7 @@ void PrettyDeclStackTraceEntry::print(raw_ostream &OS) const {
   }
   OS << Message;
 
-  if (auto *ND = dyn_cast_or_null<NamedDecl>(TheDecl)) {
+  if (auto *ND = dyn_cast_if_present<NamedDecl>(TheDecl)) {
     OS << " '";
     ND->getNameForDiagnostic(OS, Context.getPrintingPolicy(), true);
     OS << "'";
@@ -1948,7 +1948,7 @@ bool NamedDecl::isCXXInstanceMember() const {
 
   if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D) || isa<MSPropertyDecl>(D))
     return true;
-  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()))
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(D->getAsFunction()))
     return MD->isInstance();
   return false;
 }
@@ -2944,7 +2944,7 @@ Expr *ParmVarDecl::getDefaultArg() {
          "Default argument is not yet instantiated!");
 
   Expr *Arg = getInit();
-  if (auto *E = dyn_cast_or_null<FullExpr>(Arg))
+  if (auto *E = dyn_cast_if_present<FullExpr>(Arg))
     return E->getSubExpr();
 
   return Arg;
@@ -2983,7 +2983,7 @@ void ParmVarDecl::setUninstantiatedDefaultArg(Expr *arg) {
 Expr *ParmVarDecl::getUninstantiatedDefaultArg() {
   assert(hasUninstantiatedDefaultArg() &&
          "Wrong kind of initialization expression!");
-  return cast_or_null<Expr>(Init.get<Stmt *>());
+  return cast_if_present<Expr>(Init.get<Stmt *>());
 }
 
 bool ParmVarDecl::hasDefaultArg() const {
@@ -3950,7 +3950,7 @@ FunctionDecl::setInstantiationOfMemberFunction(ASTContext &C,
 }
 
 FunctionTemplateDecl *FunctionDecl::getDescribedFunctionTemplate() const {
-  return dyn_cast_or_null<FunctionTemplateDecl>(
+  return dyn_cast_if_present<FunctionTemplateDecl>(
       TemplateOrSpecialization.dyn_cast<NamedDecl *>());
 }
 
@@ -3968,7 +3968,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 }
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
-  return dyn_cast_or_null<FunctionDecl>(
+  return dyn_cast_if_present<FunctionDecl>(
       TemplateOrSpecialization.dyn_cast<NamedDecl *>());
 }
 
@@ -4452,7 +4452,7 @@ Expr *FieldDecl::getInClassInitializer() const {
     return nullptr;
 
   LazyDeclStmtPtr InitPtr = BitField ? InitAndBitWidth->Init : Init;
-  return cast_or_null<Expr>(
+  return cast_if_present<Expr>(
       InitPtr.isOffset() ? InitPtr.get(getASTContext().getExternalSource())
                          : InitPtr.get(nullptr));
 }

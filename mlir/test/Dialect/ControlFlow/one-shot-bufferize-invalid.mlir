@@ -1,4 +1,4 @@
-// RUN: mlir-opt -one-shot-bufferize="bufferize-function-boundaries" -split-input-file %s -verify-diagnostics
+// RUN: mlir-opt -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -split-input-file %s -verify-diagnostics
 
 // expected-error @below{{failed to bufferize op}}
 // expected-error @below{{incoming operands of block argument have inconsistent memory spaces}}

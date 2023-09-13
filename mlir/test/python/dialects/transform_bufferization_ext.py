@@ -86,8 +86,10 @@ def testOneShotBufferizeOpAttributes():
     with InsertionPoint(sequence.body):
         bufferization.OneShotBufferizeOp(
             sequence.bodyTarget,
+            allow_return_allocs=True,
             allow_unknown_ops=True,
             bufferize_function_boundaries=True,
+            create_deallocs=False,
             function_boundary_type_conversion=LayoutMapOption.IdentityLayoutMap,
             memcpy_op="linalg.copy",
             print_conflicts=True,
@@ -97,8 +99,10 @@ def testOneShotBufferizeOpAttributes():
     # CHECK-LABEL: TEST: testOneShotBufferizeOpAttributes
     # CHECK: = transform.bufferization.one_shot_bufferize
     # CHECK-SAME: layout{IdentityLayoutMap}
+    # CHECK-SAME: allow_return_allocs = true
     # CHECK-SAME: allow_unknown_ops = true
     # CHECK-SAME: bufferize_function_boundaries = true
+    # CHECK-SAME: create_deallocs = false
     # CHECK-SAME: memcpy_op = "linalg.copy"
     # CHECK-SAME: print_conflicts = true
     # CHECK-SAME: test_analysis_only = true

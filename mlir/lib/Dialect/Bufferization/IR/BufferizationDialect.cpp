@@ -28,6 +28,9 @@ constexpr const ::llvm::StringLiteral BufferizationDialect::kWritableAttrName;
 constexpr const ::llvm::StringLiteral
     BufferizationDialect::kBufferLayoutAttrName;
 
+/// Attribute name used to mark escaping behavior of buffer allocations.
+constexpr const ::llvm::StringLiteral BufferizationDialect::kEscapeAttrName;
+
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Interfaces
 //===----------------------------------------------------------------------===//
@@ -104,6 +107,38 @@ LogicalResult
 BufferizationDialect::verifyOperationAttribute(Operation *op,
                                                NamedAttribute attr) {
   using bufferization::BufferizableOpInterface;
+
+  if (attr.getName() == kEscapeAttrName) {
+    auto arrayAttr = llvm::dyn_cast<ArrayAttr>(attr.getValue());
+    if (!arrayAttr)
+      return op->emitError() << "'" << kEscapeAttrName
+                             << "' is expected to be a bool array attribute";
+    if (arrayAttr.size() != op->getNumResults())
+      return op->emitError()
+             << "'" << kEscapeAttrName
+             << "' has wrong number of elements, expected "
+             << op->getNumResults() << ", got " << arrayAttr.size();
+    auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
+    if (!bufferizableOp)
+      return op->emitError()
+             << "'" << kEscapeAttrName << "' only valid on bufferizable ops";
+    for (const auto &it : llvm::enumerate(arrayAttr)) {
+      auto attr = it.value();
+      auto boolAttr = llvm::dyn_cast<BoolAttr>(attr);
+      if (!boolAttr)
+        return op->emitError() << "'" << kEscapeAttrName
+                               << "' is expected to be a bool array attribute";
+      if (!boolAttr.getValue())
+        continue;
+      if (!llvm::isa<TensorType>(op->getResult(it.index()).getType()))
+        return op->emitError()
+               << "'" << kEscapeAttrName << "' only valid for tensor results";
+      if (!bufferizableOp.bufferizesToAllocation(op->getOpResult(it.index())))
+        return op->emitError() << "'" << kEscapeAttrName
+                               << "' only valid for allocation results";
+    }
+    return success();
+  }
 
   return op->emitError()
          << "attribute '" << attr.getName()
