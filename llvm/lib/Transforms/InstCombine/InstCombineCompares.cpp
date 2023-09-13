@@ -4163,6 +4163,7 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
 /// a check for a lossy truncation.
 /// Folds:
 ///   icmp SrcPred (x & Mask), x    to    icmp DstPred x, Mask
+///   icmp eq/ne (x & ~Mask), 0     to    icmp DstPred x, Mask
 /// Where Mask is some pattern that produces all-ones in low bits:
 ///    (-1 >> y)
 ///    ((-1 << y) >> y)     <- non-canonical, has extra uses
@@ -4174,7 +4175,7 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
 static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
                                           Value *Op1, const SimplifyQuery &Q,
                                           InstCombiner &IC) {
-  Value *M;
+  Value *X, *M;
   bool NeedsNot = false;
 
   auto CheckMask = [&](Value *V, bool Not) {
@@ -4183,11 +4184,20 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
     return isMaskOrZero(V, Not, Q);
   };
 
-  if (!match(Op0, m_c_And(m_Specific(Op1), m_Value(M))))
+  if (match(Op0, m_c_And(m_Specific(Op1), m_Value(M))) &&
+      CheckMask(M, /*Not*/ false)) {
+    X = Op1;
+  } else if (match(Op1, m_Zero()) && ICmpInst::isEquality(Pred) &&
+             match(Op0, m_OneUse(m_And(m_Value(X), m_Value(M))))) {
+    NeedsNot = true;
+    if (IC.isFreeToInvert(X, X->hasOneUse()) && CheckMask(X, /*Not*/ true))
+      std::swap(X, M);
+    else if (!IC.isFreeToInvert(M, M->hasOneUse()) ||
+             !CheckMask(M, /*Not*/ true))
+      return nullptr;
+  } else {
     return nullptr;
-
-  if (!CheckMask(M, /*Not*/ false))
-    return nullptr;
+  }
 
   ICmpInst::Predicate DstPred;
   switch (Pred) {
@@ -4258,7 +4268,7 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
 
   if (NeedsNot)
     M = IC.Builder.CreateNot(M);
-  return IC.Builder.CreateICmp(DstPred, Op1, M);
+  return IC.Builder.CreateICmp(DstPred, X, M);
 }
 
 /// Some comparisons can be simplified.
