@@ -34,7 +34,6 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRPass
   MLIRTensorDialect
   MLIRSCFDialect
-  MLIRControlFlowDialect
   MLIRSideEffectInterfaces
   MLIRTransforms
   MLIRViewLikeInterface
