@@ -29,7 +29,7 @@ end
 ! CHECK:           %[[VAL_2:.*]] = arith.constant false
 ! CHECK:           %[[VAL_3:.*]] = arith.constant false
 ! CHECK:           %[[VAL_4:.*]] = fir.call @_FortranAStopStatement(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]]) {{.*}} : (i32, i1, i1) -> none
-! CHECK:           acc.yield
+! CHECK:           fir.unreachable
 ! CHECK:         }
 ! CHECK:         return
 ! CHECK:       }
