@@ -10,21 +10,22 @@
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_INVOKE_H
 
 #include "src/__support/CPP/type_traits/decay.h"
+#include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/is_base_of.h"
+#include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/utility/forward.h"
-
-// BEWARE : this implementation is not fully conformant as it doesn't take
-// `cpp::reference_wrapper` into account.
 
 namespace __llvm_libc::cpp {
 
 namespace detail {
 
-// Catch all function types.
+// Catch all function and functor types.
 template <class FunctionPtrType> struct invoke_dispatcher {
-  template <class... Args>
-  static auto call(FunctionPtrType &&fun, Args &&...args) {
-    return cpp::forward<FunctionPtrType>(fun)(cpp::forward<Args>(args)...);
+  template <class T, class... Args,
+            typename = cpp::enable_if_t<
+                cpp::is_same_v<cpp::decay_t<T>, FunctionPtrType>>>
+  static auto call(T &&fun, Args &&...args) {
+    return cpp::forward<T>(fun)(cpp::forward<Args>(args)...);
   }
 };
 

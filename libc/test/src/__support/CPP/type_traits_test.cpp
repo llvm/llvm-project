@@ -196,6 +196,9 @@ TEST(LlvmLibcTypeTraitsTest, invoke) {
   { // lambda
     EXPECT_EQ(cpp::invoke([]() -> int { return 2; }), 2);
     EXPECT_EQ(cpp::invoke([](int value) -> int { return value; }, 1), 1);
+
+    const auto lambda = [](int) { return 0; };
+    EXPECT_EQ(cpp::invoke(lambda, 1), 0);
   }
 }
 
