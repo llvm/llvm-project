@@ -530,7 +530,7 @@ VPIntrinsic::getFunctionalOpcodeForVP(Intrinsic::ID ID) {
 }
 
 // Equivalent non-predicated intrinsic
-std::optional<unsigned>
+std::optional<Intrinsic::ID>
 VPIntrinsic::getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
   switch (ID) {
   default:
@@ -544,7 +544,7 @@ VPIntrinsic::getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
 }
 
 // Equivalent non-predicated constrained intrinsic
-std::optional<unsigned>
+std::optional<Intrinsic::ID>
 VPIntrinsic::getConstrainedIntrinsicIDForVP(Intrinsic::ID ID) {
   switch (ID) {
   default:

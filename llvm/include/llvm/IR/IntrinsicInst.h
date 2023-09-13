@@ -610,11 +610,11 @@ public:
   static std::optional<unsigned> getFunctionalOpcodeForVP(Intrinsic::ID ID);
 
   // Equivalent non-predicated intrinsic ID
-  static std::optional<unsigned>
+  static std::optional<Intrinsic::ID>
   getFunctionalIntrinsicIDForVP(Intrinsic::ID ID);
 
   // Equivalent non-predicated constrained ID
-  static std::optional<unsigned>
+  static std::optional<Intrinsic::ID>
   getConstrainedIntrinsicIDForVP(Intrinsic::ID ID);
 };
 
