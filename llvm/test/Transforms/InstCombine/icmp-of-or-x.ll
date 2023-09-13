@@ -380,10 +380,9 @@ define i1 @pr64610(ptr %b) {
 
 define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y, i8 %z) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
-; CHECK-NEXT:    [[ZZ:%.*]] = xor i8 [[Z:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = select i1 [[Y:%.*]], i8 7, i8 [[ZZ]]
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[YY]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[YY]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zz = xor i8 %z, -1
