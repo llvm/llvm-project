@@ -29,11 +29,11 @@ define i1 @src_is_mask_zext(i16 %x_in, i8 %y) {
 
 define i1 @src_is_mask_zext_fail_not_mask(i16 %x_in, i8 %y) {
 ; CHECK-LABEL: @src_is_mask_zext_fail_not_mask(
-; CHECK-NEXT:    [[X:%.*]] = xor i16 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[M_IN:%.*]] = lshr i8 -2, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = zext i8 [[M_IN]] to i16
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = or i16 [[TMP1]], [[MASK]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i16 %x_in, 123
@@ -106,12 +106,12 @@ define i1 @src_is_mask_and(i8 %x_in, i8 %y, i8 %z) {
 
 define i1 @src_is_mask_and_fail_mixed(i8 %x_in, i8 %y, i8 %z) {
 ; CHECK-LABEL: @src_is_mask_and_fail_mixed(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[MY:%.*]] = ashr i8 -8, [[Y:%.*]]
 ; CHECK-NEXT:    [[MZ:%.*]] = lshr i8 -1, [[Z:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[MY]], [[MZ]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[MASK]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -159,11 +159,11 @@ define i1 @src_is_mask_xor(i8 %x_in, i8 %y) {
 
 define i1 @src_is_mask_xor_fail_notmask(i8 %x_in, i8 %y) {
 ; CHECK-LABEL: @src_is_mask_xor_fail_notmask(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = xor i8 [[TMP1]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[NOTMASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[NOTMASK]], [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -349,12 +349,12 @@ define i1 @src_is_mask_umin(i8 %x_in, i8 %y, i8 %z) {
 
 define i1 @src_is_mask_umin_fail_mismatch(i8 %x_in, i8 %y) {
 ; CHECK-LABEL: @src_is_mask_umin_fail_mismatch(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[Y_M1:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[MASK:%.*]] = call i8 @llvm.umin.i8(i8 [[YMASK]], i8 -32)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[MASK]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -500,12 +500,12 @@ define i1 @src_is_notmask_lshr_shl(i8 %x_in, i8 %y) {
 
 define i1 @src_is_notmask_lshr_shl_fail_mismatch_shifts(i8 %x_in, i8 %y, i8 %z) {
 ; CHECK-LABEL: @src_is_notmask_lshr_shl_fail_mismatch_shifts(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[MASK_SHR:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[NMASK:%.*]] = shl i8 [[MASK_SHR]], [[Z:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = xor i8 [[NMASK]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X_IN:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[MASK]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
