@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # Ideally, we would use the PR number in the concurrency group, but we don't
+  # have access to it here.  We need to ensure only one job is running for
+  # each PR at a time, because there is a potential race condition when
+  # updating the issue comment.
+  group: "PR Subscriber"
+  cancel-in-progress: false
+
 jobs:
   auto-subscribe:
     runs-on: ubuntu-latest
