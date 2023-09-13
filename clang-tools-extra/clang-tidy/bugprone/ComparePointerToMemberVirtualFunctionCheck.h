@@ -1,4 +1,5 @@
-//===--- ComparePointerToMemberVirtualFunctionCheck.h - clang-tidy *- C++ -*-===//
+//===--- ComparePointerToMemberVirtualFunctionCheck.h - clang-tidy *- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +21,8 @@ namespace clang::tidy::bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function.html
 class ComparePointerToMemberVirtualFunctionCheck : public ClangTidyCheck {
 public:
-  ComparePointerToMemberVirtualFunctionCheck(StringRef Name, ClangTidyContext *Context)
+  ComparePointerToMemberVirtualFunctionCheck(StringRef Name,
+                                             ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {

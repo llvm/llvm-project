@@ -28,9 +28,10 @@ namespace {
 AST_MATCHER(CXXMethodDecl, isVirtual) { return Node.isVirtual(); }
 
 static const char *const ErrorMsg =
-    "A pointer to member virtual function shall only be tested for equality "
-    "with null-pointer-constant.";
-
+    "comparing a pointer to member virtual function with other pointer is "
+    "unspecified behavior, only compare it with a null-pointer constant for "
+    "equality.";
+    
 } // namespace
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
@@ -77,7 +78,7 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
   if (RD == nullptr)
     return;
 
-  const bool StopVisit = false;
+  constexpr bool StopVisit = false;
 
   auto VisitSameSignatureVirtualMethods =
       [&](const CXXRecordDecl *CurrentRecordDecl) -> bool {
@@ -98,7 +99,8 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
   if (!SameSignatureVirtualMethods.empty()) {
     diag(BO->getOperatorLoc(), ErrorMsg);
     for (const auto Loc : SameSignatureVirtualMethods)
-      diag(Loc, "potential member virtual function.", DiagnosticIDs::Note);
+      diag(Loc, "potential member virtual function is declared here.",
+           DiagnosticIDs::Note);
   }
 }
 
