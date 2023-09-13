@@ -194,7 +194,7 @@ struct ArmRelocation {
 Error makeUnexpectedOpcodeError(const LinkGraph &G, const ThumbRelocation &R,
                                 Edge::Kind Kind) {
   return make_error<JITLinkError>(
-      formatv("Invalid opcode [ 0x{0:x4}, 0x{1:x4} ] for relocation: {2}",
+      formatv("Invalid opcode [ {0:x4}, {1:x4} ] for relocation: {2}",
               static_cast<uint16_t>(R.Hi), static_cast<uint16_t>(R.Lo),
               G.getEdgeKindName(Kind)));
 }
@@ -202,7 +202,7 @@ Error makeUnexpectedOpcodeError(const LinkGraph &G, const ThumbRelocation &R,
 Error makeUnexpectedOpcodeError(const LinkGraph &G, const ArmRelocation &R,
                                 Edge::Kind Kind) {
   return make_error<JITLinkError>(
-      formatv("Invalid opcode [ 0x{0:x8} ] for relocation: {1}",
+      formatv("Invalid opcode {0:x8} for relocation: {1}",
               static_cast<uint32_t>(R.Wd), G.getEdgeKindName(Kind)));
 }
 
