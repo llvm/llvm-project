@@ -148,6 +148,18 @@ public:
   }
 }; // class stride_view
 
+template<class _View>
+struct __stride_view_iterator_concept { using type = input_iterator_tag; };
+
+template<random_access_range _View>
+struct __stride_view_iterator_concept<_View> { using type = random_access_iterator_tag; };
+
+template<bidirectional_range _View>
+struct __stride_view_iterator_concept<_View> { using type = bidirectional_iterator_tag; };
+
+template<forward_range _View>
+struct __stride_view_iterator_concept<_View> { using type = forward_iterator_tag; };
+
 template <class _View>
 struct __stride_iterator_category {};
 
@@ -170,14 +182,7 @@ class stride_view<_View>::__iterator : public __stride_iterator_category<_View> 
 public:
   using difference_type = range_difference_t<_Base>;
   using value_type      = range_value_t<_Base>;
-  using iterator_concept =
-      _If<random_access_range<_Base>,
-          random_access_iterator_tag,
-          _If<bidirectional_range<_Base>,
-              bidirectional_iterator_tag,
-              _If<forward_range<_Base>,
-                  forward_iterator_tag,
-                  /* else */ input_iterator_tag >>>;
+  using iterator_concept = typename __stride_view_iterator_concept<_View>::type;
 
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_     = iterator_t<_Base>();
   _LIBCPP_NO_UNIQUE_ADDRESS ranges::sentinel_t<_Base> __end_ = ranges::sentinel_t<_Base>();
@@ -392,7 +397,6 @@ stride_view(_Range&&) -> stride_view<views::all_t<_Range>>;
 
 namespace views {
 namespace __stride {
-// removed this.
 struct __fn {
   template <viewable_range _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
