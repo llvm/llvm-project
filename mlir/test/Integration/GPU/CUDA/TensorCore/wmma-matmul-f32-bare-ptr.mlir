@@ -1,3 +1,5 @@
+// REQUIRES: host-supports-nvptx
+
 // Tests memref bare pointer lowering convention both host side and kernel-side;
 // this works for only statically shaped memrefs.
 // Similar to the wmma-matmul-f32 but but with the memref bare pointer lowering convention.
