@@ -45,6 +45,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -531,6 +532,105 @@ static bool hasEquivalentValueInReverseUseDefChain(AnalysisState &state,
               .empty();
 }
 
+/// Return "true" if `value` is originating from a subset that is equivalent to
+/// the subset that `subsetOp` inserts into.
+static bool matchesInsertDestination(const AnalysisState &state, Value value,
+                                     SubsetInsertionOpInterface subsetOp) {
+  auto matchingSubset = [&](Value val) {
+    if (auto opResult = dyn_cast<OpResult>(val))
+      if (subsetOp.isEquivalentSubset(opResult, [&](Value v1, Value v2) {
+            return state.areEquivalentBufferizedValues(v1, v2);
+          }))
+        return true;
+    return false;
+  };
+  // There may be multiple leaves at which the reverse SSA use-def chain lookup
+  // terminates. All of them must be equivalent subsets.
+  SetVector<Value> backwardSlice =
+      state.findValueInReverseUseDefChain(value, matchingSubset);
+  return static_cast<bool>(llvm::all_of(backwardSlice, matchingSubset));
+}
+
+/// Return "true" if the given "read" and potentially conflicting "write" are
+/// not conflicting due to their subset relationship. The comments in this
+/// function are expressed in terms of tensor.extract_slice/tensor.insert_slice
+/// pairs, but apply to any subset ops that implement the
+/// `SubsetInsertionOpInterface`.
+static bool areNonConflictingSubsets(OpOperand *uRead,
+                                     OpOperand *uConflictingWrite,
+                                     const AnalysisState &state) {
+  Operation *readingOp = uRead->getOwner();
+  Operation *conflictingWritingOp = uConflictingWrite->getOwner();
+
+  // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
+  // uRead is an InsertSliceOp...
+  if (auto subsetOp = dyn_cast<SubsetInsertionOpInterface>(readingOp)) {
+    // As an example, consider the following IR.
+    //
+    // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
+    // %1 = linalg.fill %cst, %0 {inplace= [true] }
+    // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+    //     {inplace= [true] }
+
+    if (uRead == &subsetOp.getDestinationOperand() &&
+        matchesInsertDestination(state, uConflictingWrite->get(), subsetOp))
+      // Case 1: The main insight is that InsertSliceOp reads only part of
+      // the destination tensor. The overwritten area is not read. If
+      // uConflictingWrite writes into exactly the memory location that is
+      // being read by uRead, this is not a conflict.
+      //
+      // In the above example:
+      // uRead             = OpOperand 1 (%t) of tensor.insert_slice
+      // uConflictingWrite = OpOperand 1 (%0) of linalg.fill
+      //
+      // The read of %t does not conflict with the write of the FillOp
+      // (same aliases!) because the area that the FillOp operates on is
+      // exactly the one that is *not* read via %t.
+      return true;
+
+    if (uRead == &subsetOp.getSourceOperand() &&
+        uConflictingWrite == &subsetOp.getDestinationOperand() &&
+        matchesInsertDestination(state, uRead->get(), subsetOp))
+      // Case 2: The read of the source tensor and the write to the dest
+      // tensor via an InsertSliceOp is not a conflict if the read is
+      // reading exactly that part of an equivalent tensor that the
+      // InsertSliceOp is writing.
+      //
+      // In the above example:
+      // uRead             = OpOperand 0 (%1) of tensor.insert_slice
+      // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+      return true;
+  }
+
+  // If uConflictingWrite is an InsertSliceOp...
+  if (auto subsetOp =
+          dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp))
+    // As an example, consider the following IR.
+    //
+    // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
+    // %1 = linalg.fill %cst, %0 {inplace= [true] }
+    // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+    //     {inplace= [true] }
+    // %3 = vector.transfer_read %1, %cst
+    //
+    // In the above example:
+    // uRead             = OpOperand 0 (%1) of vector.transfer_read
+    // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+    // definition        = %1
+    //
+    // This is not a conflict because the InsertSliceOp overwrites the
+    // memory segment of %1 with the exact same data. (Effectively, there
+    // is no memory write here.)
+    if (uConflictingWrite == &subsetOp.getDestinationOperand() &&
+        state.areEquivalentBufferizedValues(
+            uRead->get(), subsetOp.getSourceOperand().get()) &&
+        matchesInsertDestination(state, subsetOp.getSourceOperand().get(),
+                                 subsetOp))
+      return true;
+
+  return false;
+}
+
 /// Given sets of uses and writes, return true if there is a RaW conflict under
 /// the assumption that all given reads/writes alias the same buffer and that
 /// all given writes bufferize inplace.
@@ -682,6 +782,12 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
             }
           }
         }
+      }
+
+      // No conflict if the operands are non-conflicting subsets.
+      if (areNonConflictingSubsets(uRead, uConflictingWrite, state)) {
+        LLVM_DEBUG(llvm::dbgs() << "  no conflict: non-conflicting subsets\n");
+        continue;
       }
 
       // No conflict if the op interface says so.
