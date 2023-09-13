@@ -135,7 +135,7 @@ define amdgpu_kernel void @kernel_store_stacksave_nocall() {
 ; WAVE32-O0-NEXT:    s_load_dwordx4 s[12:15], s[12:13], 0x0
 ; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_bitset0_b32 s15, 21
-; WAVE32-O0-NEXT:    s_add_u32 s12, s12, s11
+; WAVE32-O0-NEXT:    s_add_u32 s12, s12, s9
 ; WAVE32-O0-NEXT:    s_addc_u32 s13, s13, 0
 ; WAVE32-O0-NEXT:    s_mov_b32 s0, s32
 ; WAVE32-O0-NEXT:    s_lshr_b32 s0, s0, 5
@@ -150,7 +150,7 @@ define amdgpu_kernel void @kernel_store_stacksave_nocall() {
 ; WAVE64-O0-NEXT:    s_mov_b32 s12, s0
 ; WAVE64-O0-NEXT:    s_load_dwordx4 s[12:15], s[12:13], 0x0
 ; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; WAVE64-O0-NEXT:    s_add_u32 s12, s12, s11
+; WAVE64-O0-NEXT:    s_add_u32 s12, s12, s9
 ; WAVE64-O0-NEXT:    s_addc_u32 s13, s13, 0
 ; WAVE64-O0-NEXT:    s_mov_b32 s0, s32
 ; WAVE64-O0-NEXT:    s_lshr_b32 s0, s0, 6
@@ -669,7 +669,7 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) {
 ;
 ; WAVE32-O0-LABEL: kernel_stacksave_sgpr:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
+; WAVE32-O0-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_mov_b32 s1, s0
 ; WAVE32-O0-NEXT:    ;;#ASMSTART
@@ -681,7 +681,7 @@ define amdgpu_kernel void @kernel_stacksave_sgpr(ptr addrspace(5) %stack) {
 ;
 ; WAVE64-O0-LABEL: kernel_stacksave_sgpr:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_load_dword s0, s[4:5], 0x0
+; WAVE64-O0-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_mov_b32 s1, s0
 ; WAVE64-O0-NEXT:    ;;#ASMSTART
@@ -759,15 +759,14 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
 ; WAVE32-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE32-O0-NEXT:    s_bitset0_b32 s23, 21
-; WAVE32-O0-NEXT:    s_add_u32 s20, s20, s11
+; WAVE32-O0-NEXT:    s_add_u32 s20, s20, s9
 ; WAVE32-O0-NEXT:    s_addc_u32 s21, s21, 0
 ; WAVE32-O0-NEXT:    ; implicit-def: $vgpr3
-; WAVE32-O0-NEXT:    s_mov_b32 s14, s10
-; WAVE32-O0-NEXT:    s_mov_b32 s13, s9
-; WAVE32-O0-NEXT:    s_mov_b32 s12, s8
-; WAVE32-O0-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; WAVE32-O0-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; WAVE32-O0-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; WAVE32-O0-NEXT:    s_mov_b32 s14, s8
+; WAVE32-O0-NEXT:    s_mov_b32 s13, s7
+; WAVE32-O0-NEXT:    s_mov_b32 s12, s6
+; WAVE32-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
+; WAVE32-O0-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; WAVE32-O0-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; WAVE32-O0-NEXT:    s_mov_b32 s0, s32
 ; WAVE32-O0-NEXT:    v_writelane_b32 v3, s0, 0
@@ -781,17 +780,18 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-O0-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; WAVE32-O0-NEXT:    s_mov_b64 s[2:3], s[22:23]
-; WAVE32-O0-NEXT:    s_mov_b32 s15, s32
+; WAVE32-O0-NEXT:    s_mov_b32 s6, s32
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v3, 17
-; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], s15 offset:4
+; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], s6 offset:4
 ; WAVE32-O0-NEXT:    s_getpc_b64 s[16:17]
 ; WAVE32-O0-NEXT:    s_add_u32 s16, s16, stack_passed_argument@rel32@lo+4
 ; WAVE32-O0-NEXT:    s_addc_u32 s17, s17, stack_passed_argument@rel32@hi+12
-; WAVE32-O0-NEXT:    s_mov_b32 s15, 20
-; WAVE32-O0-NEXT:    v_lshlrev_b32_e64 v2, s15, v2
-; WAVE32-O0-NEXT:    s_mov_b32 s15, 10
-; WAVE32-O0-NEXT:    v_lshlrev_b32_e64 v1, s15, v1
+; WAVE32-O0-NEXT:    s_mov_b32 s6, 20
+; WAVE32-O0-NEXT:    v_lshlrev_b32_e64 v2, s6, v2
+; WAVE32-O0-NEXT:    s_mov_b32 s6, 10
+; WAVE32-O0-NEXT:    v_lshlrev_b32_e64 v1, s6, v1
 ; WAVE32-O0-NEXT:    v_or3_b32 v31, v0, v1, v2
+; WAVE32-O0-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; WAVE32-O0-NEXT:    ; implicit-def: $sgpr15
 ; WAVE32-O0-NEXT:    ; implicit-def: $sgpr18
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, s18
@@ -876,15 +876,14 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    s_mov_b32 s24, s0
 ; WAVE64-O0-NEXT:    s_load_dwordx4 s[24:27], s[24:25], 0x0
 ; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; WAVE64-O0-NEXT:    s_add_u32 s24, s24, s11
+; WAVE64-O0-NEXT:    s_add_u32 s24, s24, s9
 ; WAVE64-O0-NEXT:    s_addc_u32 s25, s25, 0
 ; WAVE64-O0-NEXT:    ; implicit-def: $vgpr3
-; WAVE64-O0-NEXT:    s_mov_b32 s14, s10
-; WAVE64-O0-NEXT:    s_mov_b32 s13, s9
-; WAVE64-O0-NEXT:    s_mov_b32 s12, s8
-; WAVE64-O0-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; WAVE64-O0-NEXT:    s_mov_b64 s[8:9], s[4:5]
-; WAVE64-O0-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; WAVE64-O0-NEXT:    s_mov_b32 s14, s8
+; WAVE64-O0-NEXT:    s_mov_b32 s13, s7
+; WAVE64-O0-NEXT:    s_mov_b32 s12, s6
+; WAVE64-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
+; WAVE64-O0-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; WAVE64-O0-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; WAVE64-O0-NEXT:    s_mov_b32 s0, s32
 ; WAVE64-O0-NEXT:    v_writelane_b32 v3, s0, 0
@@ -898,17 +897,18 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-O0-NEXT:    s_mov_b64 s[0:1], s[24:25]
 ; WAVE64-O0-NEXT:    s_mov_b64 s[2:3], s[26:27]
-; WAVE64-O0-NEXT:    s_mov_b32 s15, s32
+; WAVE64-O0-NEXT:    s_mov_b32 s6, s32
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v3, 17
-; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], s15 offset:4
+; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], s6 offset:4
 ; WAVE64-O0-NEXT:    s_getpc_b64 s[16:17]
 ; WAVE64-O0-NEXT:    s_add_u32 s16, s16, stack_passed_argument@rel32@lo+4
 ; WAVE64-O0-NEXT:    s_addc_u32 s17, s17, stack_passed_argument@rel32@hi+12
-; WAVE64-O0-NEXT:    s_mov_b32 s15, 20
-; WAVE64-O0-NEXT:    v_lshlrev_b32_e64 v2, s15, v2
-; WAVE64-O0-NEXT:    s_mov_b32 s15, 10
-; WAVE64-O0-NEXT:    v_lshlrev_b32_e64 v1, s15, v1
+; WAVE64-O0-NEXT:    s_mov_b32 s6, 20
+; WAVE64-O0-NEXT:    v_lshlrev_b32_e64 v2, s6, v2
+; WAVE64-O0-NEXT:    s_mov_b32 s6, 10
+; WAVE64-O0-NEXT:    v_lshlrev_b32_e64 v1, s6, v1
 ; WAVE64-O0-NEXT:    v_or3_b32 v31, v0, v1, v2
+; WAVE64-O0-NEXT:    ; implicit-def: $sgpr6_sgpr7
 ; WAVE64-O0-NEXT:    ; implicit-def: $sgpr15
 ; WAVE64-O0-NEXT:    ; implicit-def: $sgpr18
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, s18
