@@ -117,6 +117,14 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* The LLVM filesystem class ``UniqueID`` and function ``equivalent()``
+  no longer determine that distinct different path names for the same
+  hard linked file actually are equal. This is an intentional tradeoff in a
+  bug fix, where the bug used to cause distinct files to be considered
+  equivalent on some file systems. This change fixed the issues
+  https://github.com/llvm/llvm-project/issues/61401 and
+  https://github.com/llvm/llvm-project/issues/22079.
+
 Changes to the X86 Backend
 --------------------------
 
