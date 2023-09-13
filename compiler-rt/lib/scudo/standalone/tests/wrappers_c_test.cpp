@@ -386,28 +386,38 @@ TEST_F(ScudoWrappersCTest, OtherAlloc) {
 #endif
 }
 
-#if !SCUDO_FUCHSIA
-TEST_F(ScudoWrappersCTest, MallInfo) {
+template<typename FieldType>
+void MallInfoTest() {
   // mallinfo is deprecated.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  const int BypassQuarantineSize = 1024;
+  const FieldType BypassQuarantineSize = 1024U;
   struct mallinfo MI = mallinfo();
-  int Allocated = MI.uordblks;
+  FieldType Allocated = MI.uordblks;
   void *P = malloc(BypassQuarantineSize);
   EXPECT_NE(P, nullptr);
   MI = mallinfo();
   EXPECT_GE(MI.uordblks, Allocated + BypassQuarantineSize);
-  EXPECT_GT(MI.hblkhd, 0);
-  int Free = MI.fordblks;
+  EXPECT_GT(MI.hblkhd, 0U);
+  FieldType Free = MI.fordblks;
   free(P);
   MI = mallinfo();
   EXPECT_GE(MI.fordblks, Free + BypassQuarantineSize);
 #pragma clang diagnostic pop
 }
+
+#if !SCUDO_FUCHSIA
+TEST_F(ScudoWrappersCTest, MallInfo) {
+#if SCUDO_ANDROID
+  // Android accidentally set the fields to size_t instead of int.
+  MallInfoTest<size_t>();
+#else
+  MallInfoTest<int>();
+#endif
+}
 #endif
 
-#if __GLIBC_PREREQ(2, 33)
+#if __GLIBC_PREREQ(2, 33) || SCUDO_ANDROID
 TEST_F(ScudoWrappersCTest, MallInfo2) {
   const size_t BypassQuarantineSize = 1024U;
   struct mallinfo2 MI = mallinfo2();

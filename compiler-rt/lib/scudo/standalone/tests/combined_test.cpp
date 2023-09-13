@@ -54,7 +54,7 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
-          reinterpret_cast<char *>(P)[-1] = '\xaa';
+          reinterpret_cast<char *>(P)[-1] = 'A';
         },
         "");
   if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
@@ -63,7 +63,7 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
     EXPECT_DEATH(
         {
           disableDebuggerdMaybe();
-          reinterpret_cast<char *>(P)[Size] = '\xaa';
+          reinterpret_cast<char *>(P)[Size] = 'A';
         },
         "");
   }
@@ -345,7 +345,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeIncreasing) {
   // we preserve the data in the process.
   scudo::uptr Size = 16;
   void *P = Allocator->allocate(Size, Origin);
-  const char Marker = '\xab';
+  const char Marker = 'A';
   memset(P, Marker, Size);
   while (Size < TypeParam::Primary::SizeClassMap::MaxSize * 4) {
     void *NewP = Allocator->reallocate(P, Size * 2);
@@ -367,7 +367,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateLargeDecreasing) {
   scudo::uptr Size = TypeParam::Primary::SizeClassMap::MaxSize * 2;
   const scudo::uptr DataSize = 2048U;
   void *P = Allocator->allocate(Size, Origin);
-  const char Marker = '\xab';
+  const char Marker = 'A';
   memset(P, Marker, scudo::Min(Size, DataSize));
   while (Size > 1U) {
     Size /= 2U;
@@ -390,7 +390,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
   constexpr scudo::uptr ReallocSize =
       TypeParam::Primary::SizeClassMap::MaxSize - 64;
   void *P = Allocator->allocate(ReallocSize, Origin);
-  const char Marker = '\xab';
+  const char Marker = 'A';
   memset(P, Marker, ReallocSize);
   for (scudo::sptr Delta = -32; Delta < 32; Delta += 8) {
     const scudo::uptr NewSize =
@@ -447,7 +447,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
           disableDebuggerdMaybe();
           void *P = Allocator->allocate(Size, Origin);
           Allocator->deallocate(P, Origin);
-          reinterpret_cast<char *>(P)[0] = '\xaa';
+          reinterpret_cast<char *>(P)[0] = 'A';
         },
         "");
     EXPECT_DEATH(
@@ -455,7 +455,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, UseAfterFree) {
           disableDebuggerdMaybe();
           void *P = Allocator->allocate(Size, Origin);
           Allocator->deallocate(P, Origin);
-          reinterpret_cast<char *>(P)[Size - 1] = '\xaa';
+          reinterpret_cast<char *>(P)[Size - 1] = 'A';
         },
         "");
   }
@@ -467,15 +467,15 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
   if (Allocator->useMemoryTaggingTestOnly()) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
-    EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = '\xaa', "");
+    EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 'A', "");
     scudo::ScopedDisableMemoryTagChecks NoTagChecks;
     Allocator->disableMemoryTagging();
-    reinterpret_cast<char *>(P)[2048] = '\xaa';
+    reinterpret_cast<char *>(P)[2048] = 'A';
     Allocator->deallocate(P, Origin);
 
     P = Allocator->allocate(2048, Origin);
     EXPECT_EQ(scudo::untagPointer(P), P);
-    reinterpret_cast<char *>(P)[2048] = '\xaa';
+    reinterpret_cast<char *>(P)[2048] = 'A';
     Allocator->deallocate(P, Origin);
 
     Allocator->releaseToOS(scudo::ReleaseToOS::Force);
