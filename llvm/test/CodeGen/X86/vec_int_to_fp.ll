@@ -2169,17 +2169,13 @@ define <4 x float> @uitofp_4i64_to_4f32_undef(<2 x i64> %a) {
 ; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
 ; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
 ; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vmovq %xmm1, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm1
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[0]
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm1
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
+; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],xmm2[0]
 ; AVX1-NEXT:    vaddps %xmm1, %xmm1, %xmm2
-; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX1-NEXT:    vzeroupper
