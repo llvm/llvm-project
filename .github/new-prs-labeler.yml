@@ -724,3 +724,6 @@ backend:X86:
   - llvm/include/llvm/TargetParser/X86*
   - llvm/lib/TargetParser/X86*
   - llvm/utils/TableGen/X86*
+
+third-party:unittests:
+  - third-party/unittests/**
