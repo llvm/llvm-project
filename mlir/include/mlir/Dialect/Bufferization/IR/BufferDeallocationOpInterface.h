@@ -142,8 +142,8 @@ public:
   /// a new SSA value, returned as the first element of the pair, which has
   /// 'Unique' ownership and can be used instead of the passed Value with the
   /// the ownership indicator returned as the second element of the pair.
-  std::pair<Value, Value>
-  getMemrefWithUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
+  std::pair<Value, Value> getMemrefWithUniqueOwnership(OpBuilder &builder,
+                                                       Value memref);
 
   /// Given two basic blocks and the values passed via block arguments to the
   /// destination block, compute the list of MemRefs that have to be retained in
