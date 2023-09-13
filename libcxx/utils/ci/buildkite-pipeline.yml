@@ -505,8 +505,11 @@ steps:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        # Note: Modules require an absolute path for `clang-scan-deps` (see
+        # https://github.com/llvm/llvm-project/issues/61006).
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
         ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
