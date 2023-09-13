@@ -232,3 +232,596 @@ define i1 @ult_umin4(i32 %a, i32 %y) {
   ret i1 %cmp2
 }
 
+declare void @use(i1 %c)
+
+define void @eq_umin_contextual(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @eq_umin_contextual(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp eq i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %x, i32 %y)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @eq_umin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @eq_umin_contextual_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp eq i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @ult_umin_contextual(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ult_umin_contextual(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ult i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %x, i32 %y)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @ult_umin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ult_umin_contextual_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ult i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @ule_umin_contextual(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ule_umin_contextual(
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ule i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %x, i32 %y)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @ule_umin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ule_umin_contextual_commuted(
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ule i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @ugt_umin_contextual(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ugt_umin_contextual(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ugt i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %x, i32 %y)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @ugt_umin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ugt_umin_contextual_commuted(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ugt i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @uge_umin_contextual(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @uge_umin_contextual(
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp uge i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %x, i32 %y)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+define void @uge_umin_contextual_commuted(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @uge_umin_contextual_commuted(
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ult i32 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.umin.i32(i32 [[Y:%.*]], i32 [[X]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP1]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sle i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP2]])
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp sgt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP4]])
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP6]])
+; CHECK-NEXT:    [[CMP7:%.*]] = icmp ugt i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP7]])
+; CHECK-NEXT:    [[CMP8:%.*]] = icmp uge i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP8]])
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp eq i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP9]])
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp ne i32 [[COND]], [[Z]]
+; CHECK-NEXT:    call void @use(i1 [[CMP10]])
+; CHECK-NEXT:    ret void
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp uge i32 %x, %z
+  br i1 %cmp, label %if, label %end
+if:
+  %cond = call i32 @llvm.umin.i32(i32 %y, i32 %x)
+  %cmp1 = icmp slt i32 %cond, %z
+  call void @use(i1 %cmp1)
+  %cmp2 = icmp sle i32 %cond, %z
+  call void @use(i1 %cmp2)
+  %cmp3 = icmp sgt i32 %cond, %z
+  call void @use(i1 %cmp3)
+  %cmp4 = icmp sge i32 %cond, %z
+  call void @use(i1 %cmp4)
+  %cmp5 = icmp ult i32 %cond, %z
+  call void @use(i1 %cmp5)
+  %cmp6 = icmp ule i32 %cond, %z
+  call void @use(i1 %cmp6)
+  %cmp7 = icmp ugt i32 %cond, %z
+  call void @use(i1 %cmp7)
+  %cmp8 = icmp uge i32 %cond, %z
+  call void @use(i1 %cmp8)
+  %cmp9 = icmp eq i32 %cond, %z
+  call void @use(i1 %cmp9)
+  %cmp10 = icmp ne i32 %cond, %z
+  call void @use(i1 %cmp10)
+  ret void
+end:
+  ret void
+}
+
+declare i32 @llvm.umin.i32(i32, i32)
