@@ -16,6 +16,8 @@
 using namespace mlir;
 using namespace mlir::bufferization;
 
+static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
+
 namespace {
 /// Provides custom logic to materialize ownership indicator values for the
 /// result value of 'arith.select'. Instead of cloning or runtime alias
