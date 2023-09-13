@@ -52,7 +52,10 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Arm and Thumb).
   Arm_Call = FirstArmRelocation,
 
-  LastArmRelocation = Arm_Call,
+  /// Write immediate value for (unconditional) PC-relative branch without link.
+  Arm_Jump24,
+
+  LastArmRelocation = Arm_Jump24,
 
   ///
   /// Relocations of class Thumb16 and Thumb32 (covers Thumb instruction subset)
@@ -149,12 +152,16 @@ struct HalfWords {
 ///
 template <EdgeKind_aarch32 Kind> struct FixupInfo {};
 
-template <> struct FixupInfo<Arm_Call> {
+template <> struct FixupInfo<Arm_Jump24> {
   static constexpr uint32_t Opcode = 0x0a000000;
-  static constexpr uint32_t OpcodeMask = 0x0e000000;
+  static constexpr uint32_t OpcodeMask = 0x0f000000;
   static constexpr uint32_t ImmMask = 0x00ffffff;
   static constexpr uint32_t Unconditional = 0xe0000000;
   static constexpr uint32_t CondMask = 0xe0000000; // excluding BLX bit
+};
+
+template <> struct FixupInfo<Arm_Call> : public FixupInfo<Arm_Jump24> {
+  static constexpr uint32_t OpcodeMask = 0x0e000000;
   static constexpr uint32_t BitH = 0x01000000;
   static constexpr uint32_t BitBlx = 0x10000000;
 };
