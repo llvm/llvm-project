@@ -32,6 +32,7 @@
 #include "src/__support/CPP/type_traits/is_lvalue_reference.h"
 #include "src/__support/CPP/type_traits/is_member_pointer.h"
 #include "src/__support/CPP/type_traits/is_null_pointer.h"
+#include "src/__support/CPP/type_traits/is_object.h"
 #include "src/__support/CPP/type_traits/is_pointer.h"
 #include "src/__support/CPP/type_traits/is_reference.h"
 #include "src/__support/CPP/type_traits/is_rvalue_reference.h"
