@@ -183,7 +183,7 @@ TEST(AArch32_Relocations, Arm_Call_Bare) {
       0xffffffff, // ones
   };
 
-  auto EncodeDecode = [](int64_t In, MutableWord &Mem) {
+  auto EncodeDecode = [=](int64_t In, MutableWord &Mem) {
     Mem.patch(encodeImmBA1BlA1BlxA2(In), ImmMask);
     return decodeImmBA1BlA1BlxA2(Mem.Wd);
   };
