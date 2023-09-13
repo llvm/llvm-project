@@ -15,6 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVModuleAnalysis.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -523,6 +525,12 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
           SPIRV::OperandCategory::CapabilityOperand, Cap));
 }
 
+void SPIRV::RequirementHandler::removeCapabilityIf(const Capability::Capability ToRemove, 
+                                                   const Capability::Capability IfPresent) {
+  if (AvailableCaps.contains(IfPresent))
+    AvailableCaps.erase(ToRemove);
+}
+
 namespace llvm {
 namespace SPIRV {
 void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
@@ -734,6 +742,11 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   }
   case SPIRV::OpBitReverse:
+  case SPIRV::OpBitFieldInsert:
+  case SPIRV::OpBitFieldSExtract:
+  case SPIRV::OpBitFieldUExtract:
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+    break;
   case SPIRV::OpTypeRuntimeArray:
     Reqs.addCapability(SPIRV::Capability::Shader);
     break;
@@ -887,6 +900,12 @@ void addInstrRequirements(const MachineInstr &MI,
   default:
     break;
   }
+
+  // If we require capability Shader, then we can remove the requirement for
+  // the BitInstructions capability, since Shader is a superset capability
+  // of BitInstructions.
+  Reqs.removeCapabilityIf(SPIRV::Capability::Shader,
+                          SPIRV::Capability::BitInstructions);
 }
 
 static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,

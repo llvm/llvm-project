@@ -1,5 +1,8 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
+; CHECK-SPIRV:      OpCapability BitInstructions
+; CHECK-SPIRV-NEXT: OpExtension "SPV_KHR_bit_instructions"
+
 ; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32
 ; CHECK-SPIRV: OpBitReverse %[[#int]]
 
