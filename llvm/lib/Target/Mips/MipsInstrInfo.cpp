@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -118,7 +119,8 @@ bool MipsInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
 void MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 const DebugLoc &DL,
-                                ArrayRef<MachineOperand> Cond) const {
+                                ArrayRef<MachineOperand> Cond,
+                                SlotIndexes *Indexes) const {
   unsigned Opc = Cond[0].getImm();
   const MCInstrDesc &MCID = get(Opc);
   MachineInstrBuilder MIB = BuildMI(&MBB, DL, MCID);
@@ -129,14 +131,16 @@ void MipsInstrInfo::BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
     MIB.add(Cond[i]);
   }
   MIB.addMBB(TBB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MIB);
 }
 
 unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *TBB,
                                      MachineBasicBlock *FBB,
                                      ArrayRef<MachineOperand> Cond,
-                                     const DebugLoc &DL,
-                                     int *BytesAdded) const {
+                                     const DebugLoc &DL, int *BytesAdded,
+                                     SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
@@ -151,22 +155,26 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Two-way Conditional branch.
   if (FBB) {
-    BuildCondBr(MBB, TBB, DL, Cond);
-    BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(FBB);
+    BuildCondBr(MBB, TBB, DL, Cond, Indexes);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(FBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 2;
   }
 
   // One way branch.
   // Unconditional branch.
-  if (Cond.empty())
-    BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(TBB);
-  else // Conditional branch.
-    BuildCondBr(MBB, TBB, DL, Cond);
+  if (Cond.empty()) {
+    MachineInstr *MI = BuildMI(&MBB, DL, get(UncondBrOpc)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
+  } else // Conditional branch.
+    BuildCondBr(MBB, TBB, DL, Cond, Indexes);
   return 1;
 }
 
-unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                     int *BytesRemoved) const {
+unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                     SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::reverse_iterator I = MBB.rbegin(), REnd = MBB.rend();
@@ -183,6 +191,8 @@ unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (!getAnalyzableBrOpc(I->getOpcode()))
       break;
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.rbegin();
     ++removed;

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -227,7 +228,8 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *TBB,
                                    MachineBasicBlock *FBB,
                                    ArrayRef<MachineOperand> Cond,
-                                   const DebugLoc &DL, int *BytesAdded) const {
+                                   const DebugLoc &DL, int *BytesAdded,
+                                   SlotIndexes *Indexes) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "VE branch conditions should have three component!");
@@ -235,8 +237,9 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (Cond.empty()) {
     // Uncondition branch
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(VE::BRCFLa_t))
-        .addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(VE::BRCFLa_t)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
@@ -266,30 +269,35 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
       opc[1] = VE::BRCFDrr;
     }
   }
+  MachineInstr *CondMI;
   if (Cond[1].isImm()) {
-      BuildMI(&MBB, DL, get(opc[0]))
-          .add(Cond[0]) // condition code
-          .add(Cond[1]) // lhs
-          .add(Cond[2]) // rhs
-          .addMBB(TBB);
+    CondMI = BuildMI(&MBB, DL, get(opc[0]))
+                 .add(Cond[0]) // condition code
+                 .add(Cond[1]) // lhs
+                 .add(Cond[2]) // rhs
+                 .addMBB(TBB);
   } else {
-      BuildMI(&MBB, DL, get(opc[1]))
-          .add(Cond[0])
-          .add(Cond[1])
-          .add(Cond[2])
-          .addMBB(TBB);
+    CondMI = BuildMI(&MBB, DL, get(opc[1]))
+                 .add(Cond[0])
+                 .add(Cond[1])
+                 .add(Cond[2])
+                 .addMBB(TBB);
   }
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*CondMI);
 
   if (!FBB)
     return 1;
 
-  BuildMI(&MBB, DL, get(VE::BRCFLa_t))
-      .addMBB(FBB);
+  MachineInstr *MI = BuildMI(&MBB, DL, get(VE::BRCFLa_t)).addMBB(FBB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MI);
+
   return 2;
 }
 
-unsigned VEInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                   int *BytesRemoved) const {
+unsigned VEInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                   SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -304,6 +312,8 @@ unsigned VEInstrInfo::removeBranch(MachineBasicBlock &MBB,
         !isCondBranchOpcode(I->getOpcode()))
       break; // Not a branch
 
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;

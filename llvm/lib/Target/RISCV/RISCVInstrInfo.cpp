@@ -923,8 +923,8 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      SlotIndexes *Indexes) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -938,6 +938,8 @@ unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Remove the branch.
   if (BytesRemoved)
     *BytesRemoved += getInstSizeInBytes(*I);
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -951,15 +953,20 @@ unsigned RISCVInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Remove the branch.
   if (BytesRemoved)
     *BytesRemoved += getInstSizeInBytes(*I);
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
 
 // Inserts a branch into the end of the specific MachineBasicBlock, returning
 // the number of instructions inserted.
-unsigned RISCVInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned RISCVInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      SlotIndexes *Indexes) const {
   if (BytesAdded)
     *BytesAdded = 0;
 
@@ -973,6 +980,8 @@ unsigned RISCVInstrInfo::insertBranch(
     MachineInstr &MI = *BuildMI(&MBB, DL, get(RISCV::PseudoBR)).addMBB(TBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(MI);
     return 1;
   }
 
@@ -982,6 +991,8 @@ unsigned RISCVInstrInfo::insertBranch(
       *BuildMI(&MBB, DL, getBrCond(CC)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(CondMI);
 
   // One-way conditional branch.
   if (!FBB)
@@ -991,6 +1002,8 @@ unsigned RISCVInstrInfo::insertBranch(
   MachineInstr &MI = *BuildMI(&MBB, DL, get(RISCV::PseudoBR)).addMBB(FBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(MI);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(MI);
   return 2;
 }
 

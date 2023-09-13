@@ -2843,14 +2843,16 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   return analyzeBranchImpl(MBB, I, TBB, FBB, Cond, AllowModify);
 }
 
-unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                   int *BytesRemoved) const {
+unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                   SlotIndexes *Indexes) const {
   unsigned Count = 0;
   unsigned RemovedSize = 0;
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB.terminators())) {
     // Skip over artificial terminators when removing instructions.
     if (MI.isBranch() || MI.isReturn()) {
       RemovedSize += getInstSizeInBytes(MI);
+      if (Indexes)
+        Indexes->removeMachineInstrFromMaps(MI);
       MI.eraseFromParent();
       ++Count;
     }
@@ -2873,21 +2875,26 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *TBB,
                                    MachineBasicBlock *FBB,
                                    ArrayRef<MachineOperand> Cond,
-                                   const DebugLoc &DL,
-                                   int *BytesAdded) const {
+                                   const DebugLoc &DL, int *BytesAdded,
+                                   SlotIndexes *Indexes) const {
   if (!FBB && Cond.empty()) {
-    BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
-      .addMBB(TBB);
+    MachineInstr *UncondBr =
+        BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH)).addMBB(TBB);
     if (BytesAdded)
       *BytesAdded = ST.hasOffset3fBug() ? 8 : 4;
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*UncondBr);
     return 1;
   }
 
-  if(Cond.size() == 1 && Cond[0].isReg()) {
-     BuildMI(&MBB, DL, get(AMDGPU::SI_NON_UNIFORM_BRCOND_PSEUDO))
-       .add(Cond[0])
-       .addMBB(TBB);
-     return 1;
+  if (Cond.size() == 1 && Cond[0].isReg()) {
+    MachineInstr *UncondBr =
+        BuildMI(&MBB, DL, get(AMDGPU::SI_NON_UNIFORM_BRCOND_PSEUDO))
+            .add(Cond[0])
+            .addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*UncondBr);
+    return 1;
   }
 
   assert(TBB && Cond[0].isImm());
@@ -2899,6 +2906,8 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     MachineInstr *CondBr =
       BuildMI(&MBB, DL, get(Opcode))
       .addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*CondBr);
 
     // Copy the flags onto the implicit condition register operand.
     preserveCondRegFlags(CondBr->getOperand(1), Cond[1]);
@@ -2911,12 +2920,9 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   assert(TBB && FBB);
 
-  MachineInstr *CondBr =
-    BuildMI(&MBB, DL, get(Opcode))
-    .addMBB(TBB);
+  MachineInstr *CondBr = BuildMI(&MBB, DL, get(Opcode)).addMBB(TBB);
   fixImplicitOperands(*CondBr);
-  BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
-    .addMBB(FBB);
+  MachineInstr *UncondBr = BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH)).addMBB(FBB);
 
   MachineOperand &CondReg = CondBr->getOperand(1);
   CondReg.setIsUndef(Cond[1].isUndef());
@@ -2924,6 +2930,10 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   if (BytesAdded)
     *BytesAdded = ST.hasOffset3fBug() ? 16 : 8;
+  if (Indexes) {
+    Indexes->insertMachineInstrInMaps(*CondBr);
+    Indexes->insertMachineInstrInMaps(*UncondBr);
+  }
 
   return 2;
 }

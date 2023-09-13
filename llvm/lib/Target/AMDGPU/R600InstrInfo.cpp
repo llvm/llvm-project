@@ -19,6 +19,7 @@
 #include "R600Subtarget.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 
 using namespace llvm;
 
@@ -730,14 +731,16 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *TBB,
                                      MachineBasicBlock *FBB,
                                      ArrayRef<MachineOperand> Cond,
-                                     const DebugLoc &DL,
-                                     int *BytesAdded) const {
+                                     const DebugLoc &DL, int *BytesAdded,
+                                     SlotIndexes *Indexes) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
 
   if (!FBB) {
     if (Cond.empty()) {
-      BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(TBB);
+      MachineInstr *MI = BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(TBB);
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
       return 1;
     } else {
       MachineInstr *PredSet = findFirstPredicateSetterFrom(MBB, MBB.end());
@@ -745,9 +748,11 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
       addFlag(*PredSet, 0, MO_FLAG_PUSH);
       PredSet->getOperand(2).setImm(Cond[1].getImm());
 
-      BuildMI(&MBB, DL, get(R600::JUMP_COND))
-             .addMBB(TBB)
-             .addReg(R600::PREDICATE_BIT, RegState::Kill);
+      MachineInstr *MI = BuildMI(&MBB, DL, get(R600::JUMP_COND))
+                             .addMBB(TBB)
+                             .addReg(R600::PREDICATE_BIT, RegState::Kill);
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
       MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
       if (CfAlu == MBB.end())
         return 1;
@@ -760,10 +765,14 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
     assert(PredSet && "No previous predicate !");
     addFlag(*PredSet, 0, MO_FLAG_PUSH);
     PredSet->getOperand(2).setImm(Cond[1].getImm());
-    BuildMI(&MBB, DL, get(R600::JUMP_COND))
-            .addMBB(TBB)
-            .addReg(R600::PREDICATE_BIT, RegState::Kill);
-    BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(FBB);
+    MachineInstr *CondBr = BuildMI(&MBB, DL, get(R600::JUMP_COND))
+                               .addMBB(TBB)
+                               .addReg(R600::PREDICATE_BIT, RegState::Kill);
+    MachineInstr *UncondBr = BuildMI(&MBB, DL, get(R600::JUMP)).addMBB(FBB);
+    if (Indexes) {
+      Indexes->insertMachineInstrInMaps(*CondBr);
+      Indexes->insertMachineInstrInMaps(*UncondBr);
+    }
     MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
     if (CfAlu == MBB.end())
       return 2;
@@ -773,8 +782,8 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
   }
 }
 
-unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                     int *BytesRemoved) const {
+unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                     SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   // Note : we leave PRED* instructions there.
@@ -792,6 +801,8 @@ unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
   case R600::JUMP_COND: {
     MachineInstr *predSet = findFirstPredicateSetterFrom(MBB, I);
     clearFlag(*predSet, 0, MO_FLAG_PUSH);
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
     if (CfAlu == MBB.end())
@@ -801,6 +812,8 @@ unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
     break;
   }
   case R600::JUMP:
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     break;
   }
@@ -817,6 +830,8 @@ unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
   case R600::JUMP_COND: {
     MachineInstr *predSet = findFirstPredicateSetterFrom(MBB, I);
     clearFlag(*predSet, 0, MO_FLAG_PUSH);
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
     if (CfAlu == MBB.end())
@@ -826,6 +841,8 @@ unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
     break;
   }
   case R600::JUMP:
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     break;
   }

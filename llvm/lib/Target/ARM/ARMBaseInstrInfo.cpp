@@ -469,7 +469,8 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned ARMBaseInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -481,6 +482,8 @@ unsigned ARMBaseInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 0;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -491,6 +494,8 @@ unsigned ARMBaseInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 1;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
@@ -499,8 +504,8 @@ unsigned ARMBaseInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                         MachineBasicBlock *TBB,
                                         MachineBasicBlock *FBB,
                                         ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL,
-                                        int *BytesAdded) const {
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        SlotIndexes *Indexes) const {
   assert(!BytesAdded && "code size not handled");
   ARMFunctionInfo *AFI = MBB.getParent()->getInfo<ARMFunctionInfo>();
   int BOpc   = !AFI->isThumbFunction()
@@ -517,33 +522,44 @@ unsigned ARMBaseInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // For conditional branches, we use addOperand to preserve CPSR flags.
 
   if (!FBB) {
+    MachineInstr *MI;
     if (Cond.empty()) { // Unconditional branch?
       if (isThumb)
-        BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB).add(predOps(ARMCC::AL));
+        MI = BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB).add(predOps(ARMCC::AL));
       else
-        BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
+        MI = BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
     } else if (Cond.size() == 2) {
-      BuildMI(&MBB, DL, get(BccOpc))
-          .addMBB(TBB)
-          .addImm(Cond[0].getImm())
-          .add(Cond[1]);
+      MI = BuildMI(&MBB, DL, get(BccOpc))
+               .addMBB(TBB)
+               .addImm(Cond[0].getImm())
+               .add(Cond[1]);
     } else
-      BuildMI(&MBB, DL, get(Cond[0].getImm())).add(Cond[1]).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(Cond[0].getImm())).add(Cond[1]).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   // Two-way conditional branch.
+  MachineInstr *CondBr, *UncondBr;
   if (Cond.size() == 2)
-    BuildMI(&MBB, DL, get(BccOpc))
-        .addMBB(TBB)
-        .addImm(Cond[0].getImm())
-        .add(Cond[1]);
+    CondBr = BuildMI(&MBB, DL, get(BccOpc))
+                 .addMBB(TBB)
+                 .addImm(Cond[0].getImm())
+                 .add(Cond[1]);
   else if (Cond.size() == 3)
-    BuildMI(&MBB, DL, get(Cond[0].getImm())).add(Cond[1]).addMBB(TBB);
+    CondBr = BuildMI(&MBB, DL, get(Cond[0].getImm())).add(Cond[1]).addMBB(TBB);
+
   if (isThumb)
-    BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB).add(predOps(ARMCC::AL));
+    UncondBr = BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB).add(predOps(ARMCC::AL));
   else
-    BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB);
+    UncondBr = BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB);
+
+  if (Indexes) {
+    Indexes->insertMachineInstrInMaps(*CondBr);
+    Indexes->insertMachineInstrInMaps(*UncondBr);
+  }
+
   return 2;
 }
 

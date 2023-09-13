@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -328,29 +329,34 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TBB,
                                       MachineBasicBlock *FBB,
                                       ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      SlotIndexes *Indexes) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() <= 3) &&
          "Sparc branch conditions should have at most three components!");
 
   if (Cond.empty()) {
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(SP::BA)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(SP::BA)).addMBB(TBB);
     if (BytesAdded)
       *BytesAdded = 8;
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   // Conditional branch
+  MachineInstr *CondMI;
   unsigned Opc = Cond[0].getImm();
   unsigned CC = Cond[1].getImm();
   if (isRegCondBranchOpcode(Opc)) {
     Register Reg = Cond[2].getReg();
-    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC).addReg(Reg);
+    CondMI = BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC).addReg(Reg);
   } else {
-    BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
+    CondMI = BuildMI(&MBB, DL, get(Opc)).addMBB(TBB).addImm(CC);
   }
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*CondMI);
 
   if (!FBB) {
     if (BytesAdded)
@@ -358,14 +364,17 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
     return 1;
   }
 
-  BuildMI(&MBB, DL, get(SP::BA)).addMBB(FBB);
+  MachineInstr *MI = BuildMI(&MBB, DL, get(SP::BA)).addMBB(FBB);
   if (BytesAdded)
     *BytesAdded = 16;
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MI);
+
   return 2;
 }
 
-unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      SlotIndexes *Indexes) const {
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
   int Removed = 0;
@@ -380,6 +389,8 @@ unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
       break; // Not a branch
 
     Removed += getInstSizeInBytes(*I);
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;

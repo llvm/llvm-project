@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -534,7 +535,8 @@ bool AArch64InstrInfo::reverseBranchCondition(
 }
 
 unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        SlotIndexes *Indexes) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return 0;
@@ -544,6 +546,8 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 0;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -561,6 +565,8 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
   }
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   if (BytesRemoved)
     *BytesRemoved = 8;
@@ -568,12 +574,18 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-void AArch64InstrInfo::instantiateCondBranch(
-    MachineBasicBlock &MBB, const DebugLoc &DL, MachineBasicBlock *TBB,
-    ArrayRef<MachineOperand> Cond) const {
+void AArch64InstrInfo::instantiateCondBranch(MachineBasicBlock &MBB,
+                                             const DebugLoc &DL,
+                                             MachineBasicBlock *TBB,
+                                             ArrayRef<MachineOperand> Cond,
+                                             SlotIndexes *Indexes) const {
   if (Cond[0].getImm() != -1) {
     // Regular Bcc
-    BuildMI(&MBB, DL, get(AArch64::Bcc)).addImm(Cond[0].getImm()).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(AArch64::Bcc))
+                           .addImm(Cond[0].getImm())
+                           .addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
   } else {
     // Folded compare-and-branch
     // Note that we use addOperand instead of addReg to keep the flags.
@@ -582,20 +594,27 @@ void AArch64InstrInfo::instantiateCondBranch(
     if (Cond.size() > 3)
       MIB.addImm(Cond[3].getImm());
     MIB.addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MIB);
   }
 }
 
-unsigned AArch64InstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned AArch64InstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                        MachineBasicBlock *TBB,
+                                        MachineBasicBlock *FBB,
+                                        ArrayRef<MachineOperand> Cond,
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
 
   if (!FBB) {
-    if (Cond.empty()) // Unconditional branch?
-      BuildMI(&MBB, DL, get(AArch64::B)).addMBB(TBB);
-    else
-      instantiateCondBranch(MBB, DL, TBB, Cond);
+    if (Cond.empty()) { // Unconditional branch?
+      MachineInstr *MI = BuildMI(&MBB, DL, get(AArch64::B)).addMBB(TBB);
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
+    } else
+      instantiateCondBranch(MBB, DL, TBB, Cond, Indexes);
 
     if (BytesAdded)
       *BytesAdded = 4;
@@ -604,8 +623,11 @@ unsigned AArch64InstrInfo::insertBranch(
   }
 
   // Two-way conditional branch.
-  instantiateCondBranch(MBB, DL, TBB, Cond);
-  BuildMI(&MBB, DL, get(AArch64::B)).addMBB(FBB);
+  instantiateCondBranch(MBB, DL, TBB, Cond, Indexes);
+  MachineInstr *MI = BuildMI(&MBB, DL, get(AArch64::B)).addMBB(FBB);
+
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MI);
 
   if (BytesAdded)
     *BytesAdded = 8;

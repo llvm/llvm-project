@@ -53,6 +53,7 @@ class ScheduleDAGMI;
 class ScheduleHazardRecognizer;
 class SDNode;
 class SelectionDAG;
+class SlotIndexes;
 class SMSchedule;
 class SwingSchedulerDAG;
 class RegScavenger;
@@ -682,7 +683,8 @@ public:
   /// If \p BytesRemoved is non-null, report the change in code size from the
   /// removed instructions.
   virtual unsigned removeBranch(MachineBasicBlock &MBB,
-                                int *BytesRemoved = nullptr) const {
+                                int *BytesRemoved = nullptr,
+                                SlotIndexes *Indexes = nullptr) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::removeBranch!");
   }
 
@@ -702,17 +704,18 @@ public:
   virtual unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 MachineBasicBlock *FBB,
                                 ArrayRef<MachineOperand> Cond,
-                                const DebugLoc &DL,
-                                int *BytesAdded = nullptr) const {
+                                const DebugLoc &DL, int *BytesAdded = nullptr,
+                                SlotIndexes *Indexes = nullptr) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertBranch!");
   }
 
   unsigned insertUnconditionalBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *DestBB,
                                      const DebugLoc &DL,
-                                     int *BytesAdded = nullptr) const {
+                                     int *BytesAdded = nullptr,
+                                     SlotIndexes *Indexes = nullptr) const {
     return insertBranch(MBB, DestBB, nullptr, ArrayRef<MachineOperand>(), DL,
-                        BytesAdded);
+                        BytesAdded, Indexes);
   }
 
   /// Object returned by analyzeLoopForPipelining. Allows software pipelining

@@ -65,13 +65,13 @@ public:
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
 
-  unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemoved = nullptr) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB, int *BytesRemoved = nullptr,
+                        SlotIndexes *Indexes = nullptr) const override;
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &DL,
-                        int *BytesAdded = nullptr) const override;
+                        const DebugLoc &DL, int *BytesAdded = nullptr,
+                        SlotIndexes *Indexes = nullptr) const override;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
@@ -206,7 +206,8 @@ private:
                      SmallVectorImpl<MachineOperand> &Cond) const;
 
   void BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
-                   const DebugLoc &DL, ArrayRef<MachineOperand> Cond) const;
+                   const DebugLoc &DL, ArrayRef<MachineOperand> Cond,
+                   SlotIndexes *Indexes = nullptr) const;
 };
 
 /// Create MipsInstrInfo objects.

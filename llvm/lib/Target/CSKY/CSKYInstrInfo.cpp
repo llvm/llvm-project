@@ -15,6 +15,7 @@
 #include "CSKYMachineFunctionInfo.h"
 #include "CSKYTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/MCContext.h"
 
 #define DEBUG_TYPE "csky-instr-info"
@@ -110,8 +111,8 @@ bool CSKYInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned CSKYInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                     int *BytesRemoved) const {
+unsigned CSKYInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                     SlotIndexes *Indexes) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -125,6 +126,8 @@ unsigned CSKYInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Remove the branch.
   if (BytesRemoved)
     *BytesRemoved += getInstSizeInBytes(*I);
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -138,6 +141,8 @@ unsigned CSKYInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Remove the branch.
   if (BytesRemoved)
     *BytesRemoved += getInstSizeInBytes(*I);
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
@@ -151,9 +156,12 @@ CSKYInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   return MI.getOperand(NumOp - 1).getMBB();
 }
 
-unsigned CSKYInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned CSKYInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                     MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB,
+                                     ArrayRef<MachineOperand> Cond,
+                                     const DebugLoc &DL, int *BytesAdded,
+                                     SlotIndexes *Indexes) const {
   if (BytesAdded)
     *BytesAdded = 0;
 
@@ -167,6 +175,8 @@ unsigned CSKYInstrInfo::insertBranch(
     MachineInstr &MI = *BuildMI(&MBB, DL, get(CSKY::BR32)).addMBB(TBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(MI);
     return 1;
   }
 
@@ -175,6 +185,8 @@ unsigned CSKYInstrInfo::insertBranch(
   MachineInstr &CondMI = *BuildMI(&MBB, DL, get(Opc)).add(Cond[1]).addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(CondMI);
 
   // One-way conditional branch.
   if (!FBB)
@@ -184,6 +196,8 @@ unsigned CSKYInstrInfo::insertBranch(
   MachineInstr &MI = *BuildMI(&MBB, DL, get(CSKY::BR32)).addMBB(FBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(MI);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(MI);
   return 2;
 }
 

@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -221,8 +222,8 @@ unsigned BPFInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL,
-                                    int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    SlotIndexes *Indexes) const {
   assert(!BytesAdded && "code size not handled");
 
   // Shouldn't be a fall through.
@@ -231,15 +232,17 @@ unsigned BPFInstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (Cond.empty()) {
     // Unconditional branch
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(BPF::JMP)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(BPF::JMP)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   llvm_unreachable("Unexpected conditional branch");
 }
 
-unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -252,6 +255,8 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (I->getOpcode() != BPF::JMP)
       break;
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;

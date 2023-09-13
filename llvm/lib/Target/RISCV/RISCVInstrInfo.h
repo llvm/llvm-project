@@ -102,16 +102,16 @@ public:
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &dl,
-                        int *BytesAdded = nullptr) const override;
+                        const DebugLoc &dl, int *BytesAdded = nullptr,
+                        SlotIndexes *Indexes = nullptr) const override;
 
   void insertIndirectBranch(MachineBasicBlock &MBB,
                             MachineBasicBlock &NewDestBB,
                             MachineBasicBlock &RestoreBB, const DebugLoc &DL,
                             int64_t BrOffset, RegScavenger *RS) const override;
 
-  unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemoved = nullptr) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB, int *BytesRemoved = nullptr,
+                        SlotIndexes *Indexes = nullptr) const override;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;

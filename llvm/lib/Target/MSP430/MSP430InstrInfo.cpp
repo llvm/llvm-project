@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -104,7 +105,8 @@ void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                       int *BytesRemoved) const {
+                                       int *BytesRemoved,
+                                       SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -121,6 +123,8 @@ unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
         I->getOpcode() != MSP430::Bm)
       break;
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;
@@ -254,8 +258,8 @@ unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                        MachineBasicBlock *TBB,
                                        MachineBasicBlock *FBB,
                                        ArrayRef<MachineOperand> Cond,
-                                       const DebugLoc &DL,
-                                       int *BytesAdded) const {
+                                       const DebugLoc &DL, int *BytesAdded,
+                                       SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&
@@ -265,18 +269,25 @@ unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (Cond.empty()) {
     // Unconditional branch?
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(MSP430::JMP)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(MSP430::JMP)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   // Conditional branch.
   unsigned Count = 0;
-  BuildMI(&MBB, DL, get(MSP430::JCC)).addMBB(TBB).addImm(Cond[0].getImm());
+  MachineInstr *CondBr =
+      BuildMI(&MBB, DL, get(MSP430::JCC)).addMBB(TBB).addImm(Cond[0].getImm());
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*CondBr);
   ++Count;
 
   if (FBB) {
     // Two-way Conditional branch. Insert the second branch.
-    BuildMI(&MBB, DL, get(MSP430::JMP)).addMBB(FBB);
+    MachineInstr *UncondBr = BuildMI(&MBB, DL, get(MSP430::JMP)).addMBB(FBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*UncondBr);
     ++Count;
   }
   return Count;

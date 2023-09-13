@@ -681,7 +681,7 @@ static int findJumpTableIndex(const MachineBasicBlock &MBB) {
 }
 
 void MachineBasicBlock::updateTerminator(
-    MachineBasicBlock *PreviousLayoutSuccessor) {
+    MachineBasicBlock *PreviousLayoutSuccessor, SlotIndexes *Indexes) {
   LLVM_DEBUG(dbgs() << "Updating terminators on " << printMBBReference(*this)
                     << "\n");
 
@@ -693,7 +693,7 @@ void MachineBasicBlock::updateTerminator(
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
   DebugLoc DL = findBranchDebugLoc();
-  bool B = TII->analyzeBranch(*this, TBB, FBB, Cond);
+  bool B = TII->analyzeBranch(*this, TBB, FBB, Cond, /*AllowModify=*/false);
   (void) B;
   assert(!B && "UpdateTerminators requires analyzable predecessors!");
   if (Cond.empty()) {
@@ -701,7 +701,7 @@ void MachineBasicBlock::updateTerminator(
       // The block has an unconditional branch. If its successor is now its
       // layout successor, delete the branch.
       if (isLayoutSuccessor(TBB))
-        TII->removeBranch(*this);
+        TII->removeBranch(*this, nullptr, Indexes);
     } else {
       // The block has an unconditional fallthrough, or the end of the block is
       // unreachable.
@@ -717,7 +717,8 @@ void MachineBasicBlock::updateTerminator(
       // If the unconditional successor block is not the current layout
       // successor, insert a branch to jump to it.
       if (!isLayoutSuccessor(PreviousLayoutSuccessor))
-        TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL);
+        TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL,
+                          nullptr, Indexes);
     }
     return;
   }
@@ -729,11 +730,11 @@ void MachineBasicBlock::updateTerminator(
     if (isLayoutSuccessor(TBB)) {
       if (TII->reverseBranchCondition(Cond))
         return;
-      TII->removeBranch(*this);
-      TII->insertBranch(*this, FBB, nullptr, Cond, DL);
+      TII->removeBranch(*this, nullptr, Indexes);
+      TII->insertBranch(*this, FBB, nullptr, Cond, DL, nullptr, Indexes);
     } else if (isLayoutSuccessor(FBB)) {
-      TII->removeBranch(*this);
-      TII->insertBranch(*this, TBB, nullptr, Cond, DL);
+      TII->removeBranch(*this, nullptr, Indexes);
+      TII->insertBranch(*this, TBB, nullptr, Cond, DL, nullptr, Indexes);
     }
     return;
   }
@@ -747,10 +748,10 @@ void MachineBasicBlock::updateTerminator(
     // We had a fallthrough to the same basic block as the conditional jump
     // targets.  Remove the conditional jump, leaving an unconditional
     // fallthrough or an unconditional jump.
-    TII->removeBranch(*this);
+    TII->removeBranch(*this, nullptr, Indexes);
     if (!isLayoutSuccessor(TBB)) {
       Cond.clear();
-      TII->insertBranch(*this, TBB, nullptr, Cond, DL);
+      TII->insertBranch(*this, TBB, nullptr, Cond, DL, nullptr, Indexes);
     }
     return;
   }
@@ -760,14 +761,17 @@ void MachineBasicBlock::updateTerminator(
     if (TII->reverseBranchCondition(Cond)) {
       // We can't reverse the condition, add an unconditional branch.
       Cond.clear();
-      TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL);
+      TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL,
+                        nullptr, Indexes);
       return;
     }
-    TII->removeBranch(*this);
-    TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL);
+    TII->removeBranch(*this, nullptr, Indexes);
+    TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL,
+                      nullptr, Indexes);
   } else if (!isLayoutSuccessor(PreviousLayoutSuccessor)) {
-    TII->removeBranch(*this);
-    TII->insertBranch(*this, TBB, PreviousLayoutSuccessor, Cond, DL);
+    TII->removeBranch(*this, nullptr, Indexes);
+    TII->insertBranch(*this, TBB, PreviousLayoutSuccessor, Cond, DL, nullptr,
+                      Indexes);
   }
 }
 
@@ -1166,51 +1170,20 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
 
   ReplaceUsesOfBlockWith(Succ, NMBB);
 
-  // If updateTerminator() removes instructions, we need to remove them from
-  // SlotIndexes.
-  SmallVector<MachineInstr*, 4> Terminators;
-  if (Indexes) {
-    for (MachineInstr &MI :
-         llvm::make_range(getFirstInstrTerminator(), instr_end()))
-      Terminators.push_back(&MI);
-  }
-
   // Since we replaced all uses of Succ with NMBB, that should also be treated
   // as the fallthrough successor
   if (Succ == PrevFallthrough)
     PrevFallthrough = NMBB;
 
   if (!ChangedIndirectJump)
-    updateTerminator(PrevFallthrough);
-
-  if (Indexes) {
-    SmallVector<MachineInstr*, 4> NewTerminators;
-    for (MachineInstr &MI :
-         llvm::make_range(getFirstInstrTerminator(), instr_end()))
-      NewTerminators.push_back(&MI);
-
-    for (MachineInstr *Terminator : Terminators) {
-      if (!is_contained(NewTerminators, Terminator))
-        Indexes->removeMachineInstrFromMaps(*Terminator);
-    }
-  }
+    updateTerminator(PrevFallthrough, Indexes);
 
   // Insert unconditional "jump Succ" instruction in NMBB if necessary.
   NMBB->addSuccessor(Succ);
   if (!NMBB->isLayoutSuccessor(Succ)) {
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-    TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
-
-    if (Indexes) {
-      for (MachineInstr &MI : NMBB->instrs()) {
-        // Some instructions may have been moved to NMBB by updateTerminator(),
-        // so we first remove any instruction that already has an index.
-        if (Indexes->hasIndex(MI))
-          Indexes->removeMachineInstrFromMaps(MI);
-        Indexes->insertMachineInstrInMaps(MI);
-      }
-    }
+    TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL, nullptr, Indexes);
   }
 
   // Fix PHI nodes in Succ so they refer to NMBB instead of this.

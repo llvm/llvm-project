@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/Function.h"
 
 using namespace llvm;
@@ -146,8 +147,8 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
   MachineBasicBlock::iterator I = MBB.end();
   if (I == MBB.begin())
@@ -157,6 +158,8 @@ unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 0;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -168,6 +171,8 @@ unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 1;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
@@ -176,8 +181,8 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TBB,
                                       MachineBasicBlock *FBB,
                                       ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      SlotIndexes *Indexes) const {
   assert(!BytesAdded && "code size not handled");
 
   // Shouldn't be a fall through.
@@ -187,15 +192,23 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // One-way branch.
   if (!FBB) {
+    MachineInstr *MI;
     if (Cond.empty()) // Unconditional branch
-      BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
     else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
-  BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
+  MachineInstr *CondBr =
+      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+  MachineInstr *UncondBr = BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
+  if (Indexes) {
+    Indexes->insertMachineInstrInMaps(*CondBr);
+    Indexes->insertMachineInstrInMaps(*UncondBr);
+  }
   return 2;
 }

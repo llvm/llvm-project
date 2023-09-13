@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
@@ -272,8 +273,8 @@ unsigned XCoreInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TBB,
                                       MachineBasicBlock *FBB,
                                       ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 2 || Cond.size() == 0) &&
@@ -281,29 +282,35 @@ unsigned XCoreInstrInfo::insertBranch(MachineBasicBlock &MBB,
   assert(!BytesAdded && "code size not handled");
 
   if (!FBB) { // One way branch.
+    MachineInstr *MI;
     if (Cond.empty()) {
       // Unconditional branch
-      BuildMI(&MBB, DL, get(XCore::BRFU_lu6)).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(XCore::BRFU_lu6)).addMBB(TBB);
     } else {
       // Conditional branch.
       unsigned Opc = GetCondBranchFromCond((XCore::CondCode)Cond[0].getImm());
-      BuildMI(&MBB, DL, get(Opc)).addReg(Cond[1].getReg())
-                             .addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(Opc)).addReg(Cond[1].getReg()).addMBB(TBB);
     }
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   // Two-way Conditional branch.
   assert(Cond.size() == 2 && "Unexpected number of components!");
   unsigned Opc = GetCondBranchFromCond((XCore::CondCode)Cond[0].getImm());
-  BuildMI(&MBB, DL, get(Opc)).addReg(Cond[1].getReg())
-                         .addMBB(TBB);
-  BuildMI(&MBB, DL, get(XCore::BRFU_lu6)).addMBB(FBB);
+  MachineInstr *CondBr =
+      BuildMI(&MBB, DL, get(Opc)).addReg(Cond[1].getReg()).addMBB(TBB);
+  MachineInstr *UncondBr = BuildMI(&MBB, DL, get(XCore::BRFU_lu6)).addMBB(FBB);
+  if (Indexes) {
+    Indexes->insertMachineInstrInMaps(*CondBr);
+    Indexes->insertMachineInstrInMaps(*UncondBr);
+  }
   return 2;
 }
 
-unsigned
-XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
+unsigned XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -314,6 +321,8 @@ XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
     return 0;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -324,6 +333,8 @@ XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
     return 1;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }

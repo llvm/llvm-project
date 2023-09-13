@@ -17,6 +17,7 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/MCInstBuilder.h"
 
 using namespace llvm;
@@ -319,7 +320,8 @@ bool LoongArchInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 }
 
 unsigned LoongArchInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                          int *BytesRemoved) const {
+                                          int *BytesRemoved,
+                                          SlotIndexes *Indexes) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -332,6 +334,8 @@ unsigned LoongArchInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Remove the branch.
   if (BytesRemoved)
     *BytesRemoved += getInstSizeInBytes(*I);
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -345,15 +349,20 @@ unsigned LoongArchInstrInfo::removeBranch(MachineBasicBlock &MBB,
   // Remove the branch.
   if (BytesRemoved)
     *BytesRemoved += getInstSizeInBytes(*I);
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
 
 // Inserts a branch into the end of the specific MachineBasicBlock, returning
 // the number of instructions inserted.
-unsigned LoongArchInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned LoongArchInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                          MachineBasicBlock *TBB,
+                                          MachineBasicBlock *FBB,
+                                          ArrayRef<MachineOperand> Cond,
+                                          const DebugLoc &DL, int *BytesAdded,
+                                          SlotIndexes *Indexes) const {
   if (BytesAdded)
     *BytesAdded = 0;
 
@@ -367,6 +376,8 @@ unsigned LoongArchInstrInfo::insertBranch(
     MachineInstr &MI = *BuildMI(&MBB, DL, get(LoongArch::PseudoBR)).addMBB(TBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(MI);
     return 1;
   }
 
@@ -377,6 +388,8 @@ unsigned LoongArchInstrInfo::insertBranch(
   MIB.addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(*MIB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MIB);
 
   // One-way conditional branch.
   if (!FBB)
@@ -386,6 +399,8 @@ unsigned LoongArchInstrInfo::insertBranch(
   MachineInstr &MI = *BuildMI(&MBB, DL, get(LoongArch::PseudoBR)).addMBB(FBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(MI);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(MI);
   return 2;
 }
 

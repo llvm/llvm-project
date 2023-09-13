@@ -693,7 +693,8 @@ public:
   /// layout was modified.  If the block previously fell through to that block,
   /// it may now need a branch. If it previously branched to another block, it
   /// may now be able to fallthrough to the current layout successor.
-  void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor);
+  void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor,
+                        SlotIndexes *Indexes = nullptr);
 
   // Machine-CFG mutators
 

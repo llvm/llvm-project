@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -603,7 +604,8 @@ bool HexagonInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned HexagonInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   LLVM_DEBUG(dbgs() << "\nRemoving branches out of " << printMBBReference(MBB));
@@ -618,7 +620,9 @@ unsigned HexagonInstrInfo::removeBranch(MachineBasicBlock &MBB,
       return Count;
     if (Count && (I->getOpcode() == Hexagon::J2_jump))
       llvm_unreachable("Malformed basic block: unconditional branch not last");
-    MBB.erase(&MBB.back());
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
+    I->eraseFromParent();
     I = MBB.end();
     ++Count;
   }
@@ -629,8 +633,8 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                         MachineBasicBlock *TBB,
                                         MachineBasicBlock *FBB,
                                         ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL,
-                                        int *BytesAdded) const {
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        SlotIndexes *Indexes) const {
   unsigned BOpc   = Hexagon::J2_jump;
   unsigned BccOpc = Hexagon::J2_jumpt;
   assert(validateBranchCond(Cond) && "Invalid branching condition");
@@ -656,10 +660,12 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
           !analyzeBranch(MBB, NewTBB, NewFBB, Cond, false) &&
           MachineFunction::iterator(NewTBB) == ++MBB.getIterator()) {
         reverseBranchCondition(Cond);
-        removeBranch(MBB);
-        return insertBranch(MBB, TBB, nullptr, Cond, DL);
+        removeBranch(MBB, nullptr, Indexes);
+        return insertBranch(MBB, TBB, nullptr, Cond, DL, nullptr, Indexes);
       }
-      BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
+      MachineInstr *MI = BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
     } else if (isEndLoopN(Cond[0].getImm())) {
       int EndLoopOp = Cond[0].getImm();
       assert(Cond[1].isMBB());
@@ -671,7 +677,9 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
       assert(Loop != nullptr && "Inserting an ENDLOOP without a LOOP");
       Loop->getOperand(0).setMBB(TBB);
       // Add the ENDLOOP after the finding the LOOP0.
-      BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
+      MachineInstr *MI = BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
     } else if (isNewValueJump(Cond[0].getImm())) {
       assert((Cond.size() == 3) && "Only supporting rr/ri version of nvjump");
       // New value jump
@@ -680,20 +688,30 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
       unsigned Flags1 = getUndefRegState(Cond[1].isUndef());
       LLVM_DEBUG(dbgs() << "\nInserting NVJump for "
                         << printMBBReference(MBB););
+      MachineInstr *MI = nullptr;
       if (Cond[2].isReg()) {
         unsigned Flags2 = getUndefRegState(Cond[2].isUndef());
-        BuildMI(&MBB, DL, get(BccOpc)).addReg(Cond[1].getReg(), Flags1).
-          addReg(Cond[2].getReg(), Flags2).addMBB(TBB);
+        MI = BuildMI(&MBB, DL, get(BccOpc))
+                 .addReg(Cond[1].getReg(), Flags1)
+                 .addReg(Cond[2].getReg(), Flags2)
+                 .addMBB(TBB);
       } else if(Cond[2].isImm()) {
-        BuildMI(&MBB, DL, get(BccOpc)).addReg(Cond[1].getReg(), Flags1).
-          addImm(Cond[2].getImm()).addMBB(TBB);
+        MI = BuildMI(&MBB, DL, get(BccOpc))
+                 .addReg(Cond[1].getReg(), Flags1)
+                 .addImm(Cond[2].getImm())
+                 .addMBB(TBB);
       } else
         llvm_unreachable("Invalid condition for branching");
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
     } else {
       assert((Cond.size() == 2) && "Malformed cond vector");
       const MachineOperand &RO = Cond[1];
       unsigned Flags = getUndefRegState(RO.isUndef());
-      BuildMI(&MBB, DL, get(BccOpc)).addReg(RO.getReg(), Flags).addMBB(TBB);
+      MachineInstr *MI =
+          BuildMI(&MBB, DL, get(BccOpc)).addReg(RO.getReg(), Flags).addMBB(TBB);
+      if (Indexes)
+        Indexes->insertMachineInstrInMaps(*MI);
     }
     return 1;
   }
@@ -713,13 +731,20 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
     assert(Loop != nullptr && "Inserting an ENDLOOP without a LOOP");
     Loop->getOperand(0).setMBB(TBB);
     // Add the ENDLOOP after the finding the LOOP0.
-    BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
   } else {
     const MachineOperand &RO = Cond[1];
     unsigned Flags = getUndefRegState(RO.isUndef());
-    BuildMI(&MBB, DL, get(BccOpc)).addReg(RO.getReg(), Flags).addMBB(TBB);
+    MachineInstr *MI =
+        BuildMI(&MBB, DL, get(BccOpc)).addReg(RO.getReg(), Flags).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
   }
-  BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB);
+  MachineInstr *MI = BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MI);
 
   return 2;
 }

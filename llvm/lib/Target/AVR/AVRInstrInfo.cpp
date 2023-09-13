@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
@@ -399,7 +400,8 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL, int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    SlotIndexes *Indexes) const {
   if (BytesAdded)
     *BytesAdded = 0;
 
@@ -413,6 +415,8 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
     auto &MI = *BuildMI(&MBB, DL, get(AVR::RJMPk)).addMBB(TBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(MI);
     return 1;
   }
 
@@ -423,6 +427,8 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(CondMI);
   ++Count;
 
   if (FBB) {
@@ -430,14 +436,16 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
     auto &MI = *BuildMI(&MBB, DL, get(AVR::RJMPk)).addMBB(FBB);
     if (BytesAdded)
       *BytesAdded += getInstSizeInBytes(MI);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(MI);
     ++Count;
   }
 
   return Count;
 }
 
-unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    SlotIndexes *Indexes) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
 
@@ -459,6 +467,8 @@ unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
     // Remove the branch.
     if (BytesRemoved)
       *BytesRemoved += getInstSizeInBytes(*I);
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;

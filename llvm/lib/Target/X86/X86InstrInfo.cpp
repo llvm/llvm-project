@@ -3342,8 +3342,8 @@ bool X86InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -3357,6 +3357,8 @@ unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB,
         X86::getCondFromBranch(*I) == X86::COND_INVALID)
       break;
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;
@@ -3369,8 +3371,8 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL,
-                                    int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&
@@ -3380,7 +3382,9 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (Cond.empty()) {
     // Unconditional branch?
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(X86::JMP_1)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(X86::JMP_1)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
@@ -3388,15 +3392,15 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
   bool FallThru = FBB == nullptr;
 
   // Conditional branch.
-  unsigned Count = 0;
+  SmallVector<MachineInstr *> Instrs;
   X86::CondCode CC = (X86::CondCode)Cond[0].getImm();
   switch (CC) {
   case X86::COND_NE_OR_P:
     // Synthesize NE_OR_P with two branches.
-    BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(X86::COND_NE);
-    ++Count;
-    BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(X86::COND_P);
-    ++Count;
+    Instrs.push_back(
+        BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(X86::COND_NE));
+    Instrs.push_back(
+        BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(X86::COND_P));
     break;
   case X86::COND_E_AND_NP:
     // Use the next block of MBB as FBB if it is null.
@@ -3406,22 +3410,24 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
                     "body is a fall-through.");
     }
     // Synthesize COND_E_AND_NP with two branches.
-    BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(FBB).addImm(X86::COND_NE);
-    ++Count;
-    BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(X86::COND_NP);
-    ++Count;
+    Instrs.push_back(
+        BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(FBB).addImm(X86::COND_NE));
+    Instrs.push_back(
+        BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(X86::COND_NP));
     break;
   default: {
-    BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(CC);
-    ++Count;
+    Instrs.push_back(BuildMI(&MBB, DL, get(X86::JCC_1)).addMBB(TBB).addImm(CC));
   }
   }
   if (!FallThru) {
     // Two-way Conditional branch. Insert the second branch.
-    BuildMI(&MBB, DL, get(X86::JMP_1)).addMBB(FBB);
-    ++Count;
+    Instrs.push_back(BuildMI(&MBB, DL, get(X86::JMP_1)).addMBB(FBB));
   }
-  return Count;
+  if (Indexes) {
+    for (MachineInstr *MI : Instrs)
+      Indexes->insertMachineInstrInMaps(*MI);
+  }
+  return Instrs.size();
 }
 
 bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,

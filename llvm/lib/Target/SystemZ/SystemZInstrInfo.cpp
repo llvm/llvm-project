@@ -447,7 +447,8 @@ bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned SystemZInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   // Most of the code and comments here are boilerplate.
@@ -464,6 +465,8 @@ unsigned SystemZInstrInfo::removeBranch(MachineBasicBlock &MBB,
       break;
     // Remove the branch.
     I->eraseFromParent();
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I = MBB.end();
     ++Count;
   }
@@ -482,8 +485,8 @@ unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                         MachineBasicBlock *TBB,
                                         MachineBasicBlock *FBB,
                                         ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL,
-                                        int *BytesAdded) const {
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        SlotIndexes *Indexes) const {
   // In this function we output 32-bit branches, which should always
   // have enough range.  They can be shortened and relaxed by later code
   // in the pipeline, if desired.
@@ -497,7 +500,9 @@ unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
   if (Cond.empty()) {
     // Unconditional branch?
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(SystemZ::J)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(SystemZ::J)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
@@ -505,14 +510,20 @@ unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
   unsigned Count = 0;
   unsigned CCValid = Cond[0].getImm();
   unsigned CCMask = Cond[1].getImm();
-  BuildMI(&MBB, DL, get(SystemZ::BRC))
-    .addImm(CCValid).addImm(CCMask).addMBB(TBB);
+  MachineInstr *TrueMI = BuildMI(&MBB, DL, get(SystemZ::BRC))
+                             .addImm(CCValid)
+                             .addImm(CCMask)
+                             .addMBB(TBB);
   ++Count;
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*TrueMI);
 
   if (FBB) {
     // Two-way Conditional branch. Insert the second branch.
-    BuildMI(&MBB, DL, get(SystemZ::J)).addMBB(FBB);
+    MachineInstr *FalseMI = BuildMI(&MBB, DL, get(SystemZ::J)).addMBB(FBB);
     ++Count;
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*FalseMI);
   }
   return Count;
 }

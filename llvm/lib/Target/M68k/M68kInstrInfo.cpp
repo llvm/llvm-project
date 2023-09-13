@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
@@ -254,8 +255,8 @@ bool M68kInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return AnalyzeBranchImpl(MBB, TBB, FBB, Cond, AllowModify);
 }
 
-unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                     int *BytesRemoved) const {
+unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                     SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -269,6 +270,8 @@ unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB,
         getCondFromBranchOpc(I->getOpcode()) == M68k::COND_INVALID)
       break;
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.end();
     ++Count;
@@ -277,9 +280,12 @@ unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned M68kInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned M68kInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                     MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB,
+                                     ArrayRef<MachineOperand> Cond,
+                                     const DebugLoc &DL, int *BytesAdded,
+                                     SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "InsertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&
@@ -289,7 +295,9 @@ unsigned M68kInstrInfo::insertBranch(
   if (Cond.empty()) {
     // Unconditional branch?
     assert(!FBB && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(M68k::BRA8)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(M68k::BRA8)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
@@ -300,11 +308,15 @@ unsigned M68kInstrInfo::insertBranch(
   unsigned Count = 0;
   M68k::CondCode CC = (M68k::CondCode)Cond[0].getImm();
   unsigned Opc = GetCondBranchFromCond(CC);
-  BuildMI(&MBB, DL, get(Opc)).addMBB(TBB);
+  MachineInstr *CondMI = BuildMI(&MBB, DL, get(Opc)).addMBB(TBB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*CondMI);
   ++Count;
   if (!FallThru) {
     // Two-way Conditional branch. Insert the second branch.
-    BuildMI(&MBB, DL, get(M68k::BRA8)).addMBB(FBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(M68k::BRA8)).addMBB(FBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     ++Count;
   }
   return Count;

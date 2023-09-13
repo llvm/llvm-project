@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 
@@ -251,8 +252,8 @@ bool ARCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "Code size not handled");
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
@@ -263,6 +264,8 @@ unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 0;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -274,6 +277,8 @@ unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 1;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
@@ -370,7 +375,8 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL, int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    SlotIndexes *Indexes) const {
   assert(!BytesAdded && "Code size not handled.");
 
   // Shouldn't be a fall through.
@@ -379,7 +385,9 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
          "ARC branch conditions have two components!");
 
   if (Cond.empty()) {
-    BuildMI(&MBB, DL, get(ARC::BR)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(ARC::BR)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
   int BccOpc = Cond[1].isImm() ? ARC::BRcc_ru6_p : ARC::BRcc_rr_p;
@@ -388,6 +396,8 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
   for (unsigned i = 0; i < 3; i++) {
     MIB.add(Cond[i]);
   }
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MIB);
 
   // One-way conditional branch.
   if (!FBB) {
@@ -395,7 +405,9 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
   }
 
   // Two-way conditional branch.
-  BuildMI(&MBB, DL, get(ARC::BR)).addMBB(FBB);
+  MachineInstr *MI = BuildMI(&MBB, DL, get(ARC::BR)).addMBB(FBB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MI);
   return 2;
 }
 

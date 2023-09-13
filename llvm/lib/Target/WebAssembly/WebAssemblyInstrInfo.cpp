@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-instr-info"
@@ -135,7 +136,8 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                            int *BytesRemoved) const {
+                                            int *BytesRemoved,
+                                            SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::instr_iterator I = MBB.instr_end();
@@ -148,6 +150,8 @@ unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
     if (!I->isTerminator())
       break;
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*I);
     I->eraseFromParent();
     I = MBB.instr_end();
     ++Count;
@@ -156,29 +160,42 @@ unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned WebAssemblyInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned WebAssemblyInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                            MachineBasicBlock *TBB,
+                                            MachineBasicBlock *FBB,
+                                            ArrayRef<MachineOperand> Cond,
+                                            const DebugLoc &DL, int *BytesAdded,
+                                            SlotIndexes *Indexes) const {
   assert(!BytesAdded && "code size not handled");
 
   if (Cond.empty()) {
     if (!TBB)
       return 0;
 
-    BuildMI(&MBB, DL, get(WebAssembly::BR)).addMBB(TBB);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(WebAssembly::BR)).addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   assert(Cond.size() == 2 && "Expected a flag and a successor block");
 
-  if (Cond[0].getImm())
-    BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);
-  else
-    BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS)).addMBB(TBB).add(Cond[1]);
+  MachineInstr *CondMI;
+  if (Cond[0].getImm()) {
+    CondMI =
+        BuildMI(&MBB, DL, get(WebAssembly::BR_IF)).addMBB(TBB).add(Cond[1]);
+  } else {
+    CondMI =
+        BuildMI(&MBB, DL, get(WebAssembly::BR_UNLESS)).addMBB(TBB).add(Cond[1]);
+  }
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*CondMI);
   if (!FBB)
     return 1;
 
-  BuildMI(&MBB, DL, get(WebAssembly::BR)).addMBB(FBB);
+  MachineInstr *MI = BuildMI(&MBB, DL, get(WebAssembly::BR)).addMBB(FBB);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*MI);
   return 2;
 }
 

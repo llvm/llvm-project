@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -657,8 +658,8 @@ unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TrueBlock,
                                       MachineBasicBlock *FalseBlock,
                                       ArrayRef<MachineOperand> Condition,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TrueBlock && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
@@ -666,7 +667,9 @@ unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
   // If condition is empty then an unconditional branch is being inserted.
   if (Condition.empty()) {
     assert(!FalseBlock && "Unconditional branch with multiple successors!");
-    BuildMI(&MBB, DL, get(Lanai::BT)).addMBB(TrueBlock);
+    MachineInstr *MI = BuildMI(&MBB, DL, get(Lanai::BT)).addMBB(TrueBlock);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
@@ -674,19 +677,25 @@ unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
   assert((Condition.size() == 1) &&
          "Lanai branch conditions should have one component.");
   unsigned ConditionalCode = Condition[0].getImm();
-  BuildMI(&MBB, DL, get(Lanai::BRCC)).addMBB(TrueBlock).addImm(ConditionalCode);
+  MachineInstr *CondBr = BuildMI(&MBB, DL, get(Lanai::BRCC))
+                             .addMBB(TrueBlock)
+                             .addImm(ConditionalCode);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*CondBr);
 
   // If no false block, then false behavior is fall through and no branch needs
   // to be inserted.
   if (!FalseBlock)
     return 1;
 
-  BuildMI(&MBB, DL, get(Lanai::BT)).addMBB(FalseBlock);
+  MachineInstr *UncondBr = BuildMI(&MBB, DL, get(Lanai::BT)).addMBB(FalseBlock);
+  if (Indexes)
+    Indexes->insertMachineInstrInMaps(*UncondBr);
   return 2;
 }
 
-unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator Instruction = MBB.end();
@@ -702,6 +711,8 @@ unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB,
     }
 
     // Remove the branch.
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*Instruction);
     Instruction->eraseFromParent();
     Instruction = MBB.end();
     ++Count;

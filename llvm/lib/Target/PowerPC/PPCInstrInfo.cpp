@@ -1440,8 +1440,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned PPCInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned PPCInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    SlotIndexes *Indexes) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -1455,6 +1455,8 @@ unsigned PPCInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 0;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
 
   I = MBB.end();
@@ -1468,6 +1470,8 @@ unsigned PPCInstrInfo::removeBranch(MachineBasicBlock &MBB,
     return 1;
 
   // Remove the branch.
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(*I);
   I->eraseFromParent();
   return 2;
 }
@@ -1476,8 +1480,8 @@ unsigned PPCInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL,
-                                    int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    SlotIndexes *Indexes) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 2 || Cond.size() == 0) &&
@@ -1488,39 +1492,49 @@ unsigned PPCInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // One-way branch.
   if (!FBB) {
+    MachineInstr *MI;
     if (Cond.empty())   // Unconditional branch
-      BuildMI(&MBB, DL, get(PPC::B)).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(PPC::B)).addMBB(TBB);
     else if (Cond[1].getReg() == PPC::CTR || Cond[1].getReg() == PPC::CTR8)
-      BuildMI(&MBB, DL, get(Cond[0].getImm() ?
-                              (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ) :
-                              (isPPC64 ? PPC::BDZ8  : PPC::BDZ))).addMBB(TBB);
+      MI = BuildMI(&MBB, DL,
+                   get(Cond[0].getImm() ? (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ)
+                                        : (isPPC64 ? PPC::BDZ8 : PPC::BDZ)))
+               .addMBB(TBB);
     else if (Cond[0].getImm() == PPC::PRED_BIT_SET)
-      BuildMI(&MBB, DL, get(PPC::BC)).add(Cond[1]).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(PPC::BC)).add(Cond[1]).addMBB(TBB);
     else if (Cond[0].getImm() == PPC::PRED_BIT_UNSET)
-      BuildMI(&MBB, DL, get(PPC::BCn)).add(Cond[1]).addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(PPC::BCn)).add(Cond[1]).addMBB(TBB);
     else                // Conditional branch
-      BuildMI(&MBB, DL, get(PPC::BCC))
-          .addImm(Cond[0].getImm())
-          .add(Cond[1])
-          .addMBB(TBB);
+      MI = BuildMI(&MBB, DL, get(PPC::BCC))
+               .addImm(Cond[0].getImm())
+               .add(Cond[1])
+               .addMBB(TBB);
+    if (Indexes)
+      Indexes->insertMachineInstrInMaps(*MI);
     return 1;
   }
 
   // Two-way Conditional Branch.
+  MachineInstr *CondBr;
   if (Cond[1].getReg() == PPC::CTR || Cond[1].getReg() == PPC::CTR8)
-    BuildMI(&MBB, DL, get(Cond[0].getImm() ?
-                            (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ) :
-                            (isPPC64 ? PPC::BDZ8  : PPC::BDZ))).addMBB(TBB);
+    CondBr = BuildMI(&MBB, DL,
+                     get(Cond[0].getImm() ? (isPPC64 ? PPC::BDNZ8 : PPC::BDNZ)
+                                          : (isPPC64 ? PPC::BDZ8 : PPC::BDZ)))
+                 .addMBB(TBB);
   else if (Cond[0].getImm() == PPC::PRED_BIT_SET)
-    BuildMI(&MBB, DL, get(PPC::BC)).add(Cond[1]).addMBB(TBB);
+    CondBr = BuildMI(&MBB, DL, get(PPC::BC)).add(Cond[1]).addMBB(TBB);
   else if (Cond[0].getImm() == PPC::PRED_BIT_UNSET)
-    BuildMI(&MBB, DL, get(PPC::BCn)).add(Cond[1]).addMBB(TBB);
+    CondBr = BuildMI(&MBB, DL, get(PPC::BCn)).add(Cond[1]).addMBB(TBB);
   else
-    BuildMI(&MBB, DL, get(PPC::BCC))
-        .addImm(Cond[0].getImm())
-        .add(Cond[1])
-        .addMBB(TBB);
-  BuildMI(&MBB, DL, get(PPC::B)).addMBB(FBB);
+    CondBr = BuildMI(&MBB, DL, get(PPC::BCC))
+                 .addImm(Cond[0].getImm())
+                 .add(Cond[1])
+                 .addMBB(TBB);
+  MachineInstr *UncondBr = BuildMI(&MBB, DL, get(PPC::B)).addMBB(FBB);
+  if (Indexes) {
+    Indexes->insertMachineInstrInMaps(*CondBr);
+    Indexes->insertMachineInstrInMaps(*UncondBr);
+  }
   return 2;
 }
 
