@@ -164,6 +164,24 @@ private:
       });
       break;
     }
+    case RPC_FEOF: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = feof(reinterpret_cast<FILE *>(buffer->data[0]));
+      });
+      break;
+    }
+    case RPC_FERROR: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        buffer->data[0] = ferror(reinterpret_cast<FILE *>(buffer->data[0]));
+      });
+      break;
+    }
+    case RPC_CLEARERR: {
+      port->recv_and_send([](rpc::Buffer *buffer) {
+        clearerr(reinterpret_cast<FILE *>(buffer->data[0]));
+      });
+      break;
+    }
     case RPC_NOOP: {
       port->recv([](rpc::Buffer *) {});
       break;
