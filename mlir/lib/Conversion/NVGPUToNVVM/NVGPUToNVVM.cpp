@@ -1195,7 +1195,7 @@ struct NVGPUWarpgroupMmaOpLowering
     auto scaleIn = NVVM::WGMMAScaleInAttr::get(ctx, NVVM::WGMMAScaleIn::one);
     auto layoutA = NVVM::MMALayoutAttr::get(ctx, NVVM::MMALayout::row);
     auto layoutB = NVVM::MMALayoutAttr::get(ctx, NVVM::MMALayout::col);
-    // todo input type
+    // todo: handle other input and output types
     auto itype = NVVM::WGMMATypesAttr::get(ctx, NVVM::WGMMATypes::f16);
     auto overflow =
         NVVM::MMAIntOverflowAttr::get(ctx, NVVM::MMAIntOverflow::wrapped);
