@@ -1989,10 +1989,11 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
               (FragInfo && FragInfo->SizeInBits == 0))
             continue;
 
-          // FragInfo from calculateFragmentIntersect is is nullopt if the
+          // FragInfo from calculateFragmentIntersect is nullopt if the
           // resultant fragment matches DAI's fragment or entire variable - in
-          // that case just copy the fragment from DAI. Now nullopt means "no
-          // fragment info", as per usual.
+          // which case copy the fragment info from DAI. If FragInfo is still
+          // nullopt after the copy it means "no fragment info" instead, which
+          // is how it is usually interpreted.
           if (!FragInfo)
             FragInfo = DAI->getExpression()->getFragmentInfo();
 
