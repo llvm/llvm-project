@@ -63,6 +63,8 @@ private:
   // and not the token values.
   DenseMap<const InstructionT *, const InstructionT *> Tokens;
 
+  bool SeenFirstConvOp = false;
+
   static bool isInsideConvergentFunction(const InstructionT &I);
   static bool isConvergent(const InstructionT &I);
   const InstructionT *findAndCheckConvergenceTokenUsed(const InstructionT &I);
