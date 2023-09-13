@@ -48,11 +48,15 @@ enum EdgeKind_aarch32 : Edge::Kind {
   ///
   FirstArmRelocation,
 
-  /// Write immediate value for PC-relative branch with link (can bridge between
-  /// Arm and Thumb).
+  /// Write immediate value for unconditional PC-relative branch with link.
+  /// We patch the instruction opcode to account for an instruction-set state
+  /// switch: we use the bl instruction to stay in ARM and the blx instruction
+  /// to switch to Thumb.
   Arm_Call = FirstArmRelocation,
 
-  /// Write immediate value for (unconditional) PC-relative branch without link.
+  /// Write immediate value for conditional PC-relative branch without link.
+  /// If the branch target is not ARM, we are forced to generate an explicit
+  /// interworking stub.
   Arm_Jump24,
 
   LastArmRelocation = Arm_Jump24,
@@ -62,11 +66,15 @@ enum EdgeKind_aarch32 : Edge::Kind {
   ///
   FirstThumbRelocation,
 
-  /// Write immediate value for PC-relative branch with link (can bridge between
-  /// Arm and Thumb).
+  /// Write immediate value for unconditional PC-relative branch with link.
+  /// We patch the instruction opcode to account for an instruction-set state
+  /// switch: we use the bl instruction to stay in Thumb and the blx instruction
+  /// to switch to ARM.
   Thumb_Call = FirstThumbRelocation,
 
-  /// Write immediate value for (unconditional) PC-relative branch without link.
+  /// Write immediate value for PC-relative branch without link. The instruction
+  /// can be made conditional by an IT block. If the branch target is not ARM,
+  /// we are forced to generate an explicit interworking stub.
   Thumb_Jump24,
 
   /// Write immediate value to the lower halfword of the destination register
