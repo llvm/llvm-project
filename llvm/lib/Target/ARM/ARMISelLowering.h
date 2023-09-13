@@ -534,29 +534,29 @@ class VectorType;
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "Q")
-        return InlineAsm::Constraint_Q;
-      else if (ConstraintCode.size() == 2) {
+        return InlineAsm::ConstraintCode::Q;
+      if (ConstraintCode.size() == 2) {
         if (ConstraintCode[0] == 'U') {
           switch(ConstraintCode[1]) {
           default:
             break;
           case 'm':
-            return InlineAsm::Constraint_Um;
+            return InlineAsm::ConstraintCode::Um;
           case 'n':
-            return InlineAsm::Constraint_Un;
+            return InlineAsm::ConstraintCode::Un;
           case 'q':
-            return InlineAsm::Constraint_Uq;
+            return InlineAsm::ConstraintCode::Uq;
           case 's':
-            return InlineAsm::Constraint_Us;
+            return InlineAsm::ConstraintCode::Us;
           case 't':
-            return InlineAsm::Constraint_Ut;
+            return InlineAsm::ConstraintCode::Ut;
           case 'v':
-            return InlineAsm::Constraint_Uv;
+            return InlineAsm::ConstraintCode::Uv;
           case 'y':
-            return InlineAsm::Constraint_Uy;
+            return InlineAsm::ConstraintCode::Uy;
           }
         }
       }
