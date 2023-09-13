@@ -39,6 +39,13 @@ If you have any further questions about this issue, don't hesitate to ask via a 
 """
 
 
+def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+    for team in teams:
+        if team_name == team.name.lower():
+            return team
+    return None
+
+
 class IssueSubscriber:
     @property
     def team_name(self) -> str:
@@ -51,18 +58,23 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        for team in self.org.get_teams():
-            if self.team_name != team.name.lower():
-                continue
+        team = _get_curent_team(self.team_name, self.org.get_teams())
+        if not team:
+            print(f"couldn't find team named {self.team_name}")
+            return False
+        comment = ""
+        if team.slug == "issue-subscribers-good-first-issue":
+            comment = "{}\n".format(beginner_comment)
 
-            comment = ""
-            if team.slug == "issue-subscribers-good-first-issue":
-                comment = "{}\n".format(beginner_comment)
+        comment = (
+            f"@llvm/{team.slug}"
+            + "\n\n<details>\n"
+            + f"{self.issue.body}\n"
+            + "</details>"
+        )
 
-            comment += "@llvm/{}".format(team.slug)
-            self.issue.create_comment(comment)
-            return True
-        return False
+        self.issue.create_comment(comment)
+        return True
 
 
 def human_readable_size(size, decimal_places=2):
@@ -86,7 +98,7 @@ class PRSubscriber:
 
     def run(self) -> bool:
         patch = None
-        team = self._get_curent_team()
+        team = _get_curent_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
