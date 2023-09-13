@@ -217,6 +217,48 @@ public:
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
     Extra_IsConvergent = 32,
+
+    // Memory constraint codes.
+    // These could be tablegenerated but there's little need to do that since
+    // there's plenty of space in the encoding to support the union of all
+    // constraint codes for all targets.
+    // Addresses are included here as they need to be treated the same by the
+    // backend, the only difference is that they are not used to actaully
+    // access memory by the instruction.
+    // TODO: convert to enum?
+    Constraint_Unknown = 0,
+    Constraint_es,
+    Constraint_i,
+    Constraint_k,
+    Constraint_m,
+    Constraint_o,
+    Constraint_v,
+    Constraint_A,
+    Constraint_Q,
+    Constraint_R,
+    Constraint_S,
+    Constraint_T,
+    Constraint_Um,
+    Constraint_Un,
+    Constraint_Uq,
+    Constraint_Us,
+    Constraint_Ut,
+    Constraint_Uv,
+    Constraint_Uy,
+    Constraint_X,
+    Constraint_Z,
+    Constraint_ZB,
+    Constraint_ZC,
+    Constraint_Zy,
+
+    // Address constraints
+    Constraint_p,
+    Constraint_ZQ,
+    Constraint_ZR,
+    Constraint_ZS,
+    Constraint_ZT,
+
+    Constraints_Max = Constraint_ZT,
   };
 
   // Inline asm operands map to multiple SDNode / MachineInstr operands.
@@ -230,46 +272,6 @@ public:
     Imm = 5,                // Immediate.
     Mem = 6,                // Memory operand, "m", or an address, "p".
     Func = 7,               // Address operand of function call
-  };
-
-  // Memory constraint codes.
-  // Addresses are included here as they need to be treated the same by the
-  // backend, the only difference is that they are not used to actaully
-  // access memory by the instruction.
-  enum class ConstraintCode : uint32_t {
-    Unknown = 0,
-    es,
-    i,
-    k,
-    m,
-    o,
-    v,
-    A,
-    Q,
-    R,
-    S,
-    T,
-    Um,
-    Un,
-    Uq,
-    Us,
-    Ut,
-    Uv,
-    Uy,
-    X,
-    Z,
-    ZB,
-    ZC,
-    Zy,
-
-    // Address constraints
-    p,
-    ZQ,
-    ZR,
-    ZS,
-    ZT,
-
-    Max = ZT,
   };
 
   // These are helper methods for dealing with flags in the INLINEASM SDNode
@@ -373,14 +375,11 @@ public:
       return true;
     }
 
-    ConstraintCode getMemoryConstraintID() const {
+    // TODO: convert to enum?
+    unsigned getMemoryConstraintID() const {
       assert((isMemKind() || isFuncKind()) &&
              "Not expected mem or function flag!");
-      uint32_t D = getData();
-      assert(D < static_cast<uint32_t>(ConstraintCode::Max) &&
-             D >= static_cast<uint32_t>(ConstraintCode::Unknown) &&
-             "unexpected value for memory constraint");
-      return static_cast<ConstraintCode>(D);
+      return getData();
     }
 
     /// setMatchingOp - Augment an existing flag with information indicating
@@ -404,11 +403,12 @@ public:
 
     /// setMemConstraint - Augment an existing flag with the constraint code for
     /// a memory constraint.
-    void setMemConstraint(ConstraintCode C) {
+    void setMemConstraint(unsigned Constraint) {
       assert((isMemKind() || isFuncKind()) &&
              "Flag is not a memory or function constraint!");
+      assert(Constraint <= Constraints_Max && "Unknown constraint ID");
       assert(getData() == 0 && "Mem constraint already set");
-      setData(static_cast<uint32_t>(C));
+      setData(Constraint);
     }
     /// clearMemConstraint - Similar to setMemConstraint(0), but without the
     /// assertion checking that the constraint has not been set previously.
@@ -443,63 +443,63 @@ public:
     return Result;
   }
 
-  static StringRef getMemConstraintName(ConstraintCode C) {
-    switch (C) {
-    case ConstraintCode::es:
+  static StringRef getMemConstraintName(unsigned Constraint) {
+    switch (Constraint) {
+    case InlineAsm::Constraint_es:
       return "es";
-    case ConstraintCode::i:
+    case InlineAsm::Constraint_i:
       return "i";
-    case ConstraintCode::k:
+    case InlineAsm::Constraint_k:
       return "k";
-    case ConstraintCode::m:
+    case InlineAsm::Constraint_m:
       return "m";
-    case ConstraintCode::o:
+    case InlineAsm::Constraint_o:
       return "o";
-    case ConstraintCode::v:
+    case InlineAsm::Constraint_v:
       return "v";
-    case ConstraintCode::A:
+    case InlineAsm::Constraint_A:
       return "A";
-    case ConstraintCode::Q:
+    case InlineAsm::Constraint_Q:
       return "Q";
-    case ConstraintCode::R:
+    case InlineAsm::Constraint_R:
       return "R";
-    case ConstraintCode::S:
+    case InlineAsm::Constraint_S:
       return "S";
-    case ConstraintCode::T:
+    case InlineAsm::Constraint_T:
       return "T";
-    case ConstraintCode::Um:
+    case InlineAsm::Constraint_Um:
       return "Um";
-    case ConstraintCode::Un:
+    case InlineAsm::Constraint_Un:
       return "Un";
-    case ConstraintCode::Uq:
+    case InlineAsm::Constraint_Uq:
       return "Uq";
-    case ConstraintCode::Us:
+    case InlineAsm::Constraint_Us:
       return "Us";
-    case ConstraintCode::Ut:
+    case InlineAsm::Constraint_Ut:
       return "Ut";
-    case ConstraintCode::Uv:
+    case InlineAsm::Constraint_Uv:
       return "Uv";
-    case ConstraintCode::Uy:
+    case InlineAsm::Constraint_Uy:
       return "Uy";
-    case ConstraintCode::X:
+    case InlineAsm::Constraint_X:
       return "X";
-    case ConstraintCode::Z:
+    case InlineAsm::Constraint_Z:
       return "Z";
-    case ConstraintCode::ZB:
+    case InlineAsm::Constraint_ZB:
       return "ZB";
-    case ConstraintCode::ZC:
+    case InlineAsm::Constraint_ZC:
       return "ZC";
-    case ConstraintCode::Zy:
+    case InlineAsm::Constraint_Zy:
       return "Zy";
-    case ConstraintCode::p:
+    case InlineAsm::Constraint_p:
       return "p";
-    case ConstraintCode::ZQ:
+    case InlineAsm::Constraint_ZQ:
       return "ZQ";
-    case ConstraintCode::ZR:
+    case InlineAsm::Constraint_ZR:
       return "ZR";
-    case ConstraintCode::ZS:
+    case InlineAsm::Constraint_ZS:
       return "ZS";
-    case ConstraintCode::ZT:
+    case InlineAsm::Constraint_ZT:
       return "ZT";
     default:
       llvm_unreachable("Unknown memory constraint");

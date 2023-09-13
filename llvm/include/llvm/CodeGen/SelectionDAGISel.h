@@ -89,10 +89,9 @@ public:
   /// not match or is not implemented, return true.  The resultant operands
   /// (which will appear in the machine instruction) should be added to the
   /// OutOps vector.
-  virtual bool
-  SelectInlineAsmMemoryOperand(const SDValue &Op,
-                               InlineAsm::ConstraintCode ConstraintID,
-                               std::vector<SDValue> &OutOps) {
+  virtual bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                            unsigned ConstraintID,
+                                            std::vector<SDValue> &OutOps) {
     return true;
   }
 
