@@ -15,8 +15,7 @@ define i1 @src_is_mask_zext(i16 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = xor i16 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[M_IN:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = zext i8 [[M_IN]] to i16
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i16 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i16 %x_in, 123
@@ -94,8 +93,7 @@ define i1 @src_is_mask_and(i8 %x_in, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[MY:%.*]] = lshr i8 7, [[Y:%.*]]
 ; CHECK-NEXT:    [[MZ:%.*]] = lshr i8 -1, [[Z:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[MY]], [[MZ]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -133,8 +131,7 @@ define i1 @src_is_mask_or(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[MY:%.*]] = lshr i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = and i8 [[MY]], 7
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -151,8 +148,7 @@ define i1 @src_is_mask_xor(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[Y_M1:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[MASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -187,8 +183,7 @@ define i1 @src_is_mask_select(i8 %x_in, i8 %y, i1 %cond) {
 ; CHECK-NEXT:    [[Y_M1:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[COND:%.*]], i8 [[YMASK]], i8 15
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -267,8 +262,7 @@ define i1 @src_is_mask_lshr(i8 %x_in, i8 %y, i8 %z, i1 %cond) {
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[SMASK:%.*]] = select i1 [[COND:%.*]], i8 [[YMASK]], i8 15
 ; CHECK-NEXT:    [[MASK:%.*]] = lshr i8 [[SMASK]], [[Z:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -288,8 +282,7 @@ define i1 @src_is_mask_ashr(i8 %x_in, i8 %y, i8 %z, i1 %cond) {
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[SMASK:%.*]] = select i1 [[COND:%.*]], i8 [[YMASK]], i8 15
 ; CHECK-NEXT:    [[MASK:%.*]] = ashr i8 [[SMASK]], [[Z:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -307,8 +300,7 @@ define i1 @src_is_mask_p2_m1(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[P2ORZ:%.*]] = shl i8 2, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = add i8 [[P2ORZ]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -325,8 +317,7 @@ define i1 @src_is_mask_umax(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[Y_M1:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[MASK:%.*]] = call i8 @llvm.umax.i8(i8 [[YMASK]], i8 3)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -346,8 +337,7 @@ define i1 @src_is_mask_umin(i8 %x_in, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[ZMASK:%.*]] = lshr i8 15, [[Z:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = call i8 @llvm.umin.i8(i8 [[YMASK]], i8 [[ZMASK]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -387,8 +377,7 @@ define i1 @src_is_mask_smax(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[Y_M1:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[MASK:%.*]] = call i8 @llvm.smax.i8(i8 [[YMASK]], i8 -1)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -407,8 +396,7 @@ define i1 @src_is_mask_smin(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[Y_M1:%.*]] = add i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[YMASK:%.*]] = xor i8 [[Y_M1]], [[Y]]
 ; CHECK-NEXT:    [[MASK:%.*]] = call i8 @llvm.smin.i8(i8 [[YMASK]], i8 0)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[MASK]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -426,8 +414,7 @@ define i1 @src_is_mask_bitreverse_not_mask(i8 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
 ; CHECK-NEXT:    [[NMASK:%.*]] = shl nsw i8 -1, [[Y:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[NMASK]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -445,8 +432,7 @@ define i1 @src_is_notmask_sext(i16 %x_in, i8 %y) {
 ; CHECK-NEXT:    [[M_IN:%.*]] = shl i8 -8, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[M_IN]], -1
 ; CHECK-NEXT:    [[MASK:%.*]] = sext i8 [[TMP1]] to i16
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i16 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i16 %x_in, 123
@@ -544,8 +530,7 @@ define i1 @src_is_notmask_ashr(i16 %x_in, i8 %y, i16 %z) {
 ; CHECK-NEXT:    [[NMASK:%.*]] = sext i8 [[M_IN]] to i16
 ; CHECK-NEXT:    [[NMASK_SHR:%.*]] = ashr i16 [[NMASK]], [[Z:%.*]]
 ; CHECK-NEXT:    [[MASK:%.*]] = xor i16 [[NMASK_SHR]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[MASK]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[X]], [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i16 [[X]], [[MASK]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i16 %x_in, 123
