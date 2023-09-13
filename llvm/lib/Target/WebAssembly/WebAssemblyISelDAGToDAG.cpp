@@ -64,7 +64,8 @@ public:
 
   void Select(SDNode *Node) override;
 
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrOperands32(SDValue Op, SDValue &Offset, SDValue &Addr);
@@ -293,9 +294,10 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
 }
 
 bool WebAssemblyDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   switch (ConstraintID) {
-  case InlineAsm::Constraint_m:
+  case InlineAsm::ConstraintCode::m:
     // We just support simple memory operands that just have a single address
     // operand and need no special handling.
     OutOps.push_back(Op);

@@ -4296,12 +4296,12 @@ LoongArchTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-unsigned LoongArchTargetLowering::getInlineAsmMemConstraint(
+InlineAsm::ConstraintCode LoongArchTargetLowering::getInlineAsmMemConstraint(
     StringRef ConstraintCode) const {
-  return StringSwitch<unsigned>(ConstraintCode)
-      .Case("k", InlineAsm::Constraint_k)
-      .Case("ZB", InlineAsm::Constraint_ZB)
-      .Case("ZC", InlineAsm::Constraint_ZC)
+  return StringSwitch<InlineAsm::ConstraintCode>(ConstraintCode)
+      .Case("k", InlineAsm::ConstraintCode::k)
+      .Case("ZB", InlineAsm::ConstraintCode::ZB)
+      .Case("ZC", InlineAsm::ConstraintCode::ZC)
       .Default(TargetLowering::getInlineAsmMemConstraint(ConstraintCode));
 }
 
