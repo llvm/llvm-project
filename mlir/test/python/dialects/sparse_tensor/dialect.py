@@ -16,7 +16,7 @@ def testEncodingAttr1D():
     with Context() as ctx:
         parsed = Attribute.parse(
             "#sparse_tensor.encoding<{"
-            '  lvlTypes = [ "compressed" ],'
+            "  map = (d0) -> (d0 : compressed),"
             "  posWidth = 16,"
             "  crdWidth = 32"
             "}>"
@@ -94,7 +94,7 @@ def testEncodingAttrOnTensorType():
         encoding = st.EncodingAttr(
             Attribute.parse(
                 "#sparse_tensor.encoding<{"
-                '  lvlTypes = [ "compressed" ], '
+                "  map = (d0) -> (d0 : compressed), "
                 "  posWidth = 64,"
                 "  crdWidth = 32"
                 "}>"

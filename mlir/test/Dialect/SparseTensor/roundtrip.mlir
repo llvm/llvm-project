@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -split-input-file | mlir-opt -split-input-file | FileCheck %s
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_new(
 // CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
@@ -13,7 +13,7 @@ func.func @sparse_new(%arg0: !llvm.ptr<i8>) -> tensor<128xf64, #SparseVector> {
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed), posWidth=32, crdWidth=32}>
 
 // CHECK-LABEL: func @sparse_pack(
 // CHECK-SAME: %[[D:.*]]: tensor<6xf64>,
@@ -30,7 +30,7 @@ func.func @sparse_pack(%data: tensor<6xf64>, %pos: tensor<2xi32>, %index: tensor
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"], crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed), crdWidth=32}>
 // CHECK-LABEL: func @sparse_unpack(
 //  CHECK-SAME: %[[T:.*]]: tensor<100xf64, #
 //  CHECK-SAME: %[[OD:.*]]: tensor<6xf64>
@@ -51,7 +51,7 @@ func.func @sparse_unpack(%sp : tensor<100xf64, #SparseVector>,
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_dealloc(
 // CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>
@@ -64,7 +64,7 @@ func.func @sparse_dealloc(%arg0: tensor<128xf64, #SparseVector>) {
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_convert_1d_to_sparse(
 // CHECK-SAME: %[[A:.*]]: tensor<64xf32>)
@@ -90,7 +90,7 @@ func.func @sparse_convert_3d_from_sparse(%arg0: tensor<8x8x8xf64, #SparseTensor>
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_positions(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
@@ -116,7 +116,7 @@ func.func @sparse_indices_buffer(%arg0: tensor<?x?xf64, #COO>) -> memref<?xindex
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
@@ -129,7 +129,7 @@ func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xind
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_values(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
@@ -174,7 +174,7 @@ func.func @sparse_slice_stride(%arg0: tensor<2x8xf64, #CSR_SLICE>) -> index {
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_metadata_init(
 //       CHECK: %[[T:.*]] = sparse_tensor.storage_specifier.init : !sparse_tensor.storage_specifier<#{{.*}}>
@@ -186,7 +186,7 @@ func.func @sparse_metadata_init() -> !sparse_tensor.storage_specifier<#SparseVec
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 #SparseVector_Slice = #sparse_tensor.encoding<{
   lvlTypes = ["compressed"],
   dimSlices = [ (?, ?, ?) ]
@@ -205,7 +205,7 @@ func.func @sparse_metadata_init(%src : !sparse_tensor.storage_specifier<#SparseV
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_get_md(
 //  CHECK-SAME: %[[A:.*]]: !sparse_tensor.storage_specifier<#{{.*}}>
@@ -254,7 +254,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_set_md(
 //  CHECK-SAME: %[[A:.*]]: !sparse_tensor.storage_specifier<#{{.*}}>,
@@ -270,7 +270,7 @@ func.func @sparse_set_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>,
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_noe(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
@@ -309,7 +309,7 @@ func.func @sparse_load_ins(%arg0: tensor<16x32xf64, #DenseMatrix>) -> tensor<16x
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 // CHECK-LABEL: func @sparse_insert(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #sparse_tensor.encoding<{{.*}}>>,
