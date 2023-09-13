@@ -4471,6 +4471,14 @@ void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
 
 unsigned FieldDecl::getBitWidthValue(const ASTContext &Ctx) const {
   assert(isBitField() && "not a bitfield");
+
+  // Try to avoid evaluating the expression in the overwhelmingly
+  // common case that we have a ConstantExpr.
+  if (const auto *CE = dyn_cast<ConstantExpr>(getBitWidth())) {
+    assert(CE->hasAPValueResult());
+    return CE->getResultAsAPSInt().getZExtValue();
+  }
+
   return getBitWidth()->EvaluateKnownConstInt(Ctx).getZExtValue();
 }
 
