@@ -69,8 +69,8 @@ define void @ham() {
 ; CHECK-NEXT:    movq _global@GOTPCREL(%rip), %rdx
 ; CHECK-NEXT:    movq _global2@GOTPCREL(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    je LBB3_2
+; CHECK-NEXT:    cmpl $10, %eax
+; CHECK-NEXT:    jle LBB3_2
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB3_6: ## %bb2
 ; CHECK-NEXT:    ## =>This Loop Header: Depth=1
@@ -90,8 +90,8 @@ define void @ham() {
 ; CHECK-NEXT:  ## %bb.8: ## %bb9
 ; CHECK-NEXT:    ## in Loop: Header=BB3_6 Depth=1
 ; CHECK-NEXT:    addq $4, %rax
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne LBB3_6
+; CHECK-NEXT:    cmpl $10, %eax
+; CHECK-NEXT:    jg LBB3_6
 ; CHECK-NEXT:  LBB3_2: ## %bb3.preheader
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
