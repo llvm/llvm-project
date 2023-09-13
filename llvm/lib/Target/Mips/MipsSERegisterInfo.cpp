@@ -103,7 +103,7 @@ static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode,
   case Mips::INLINEASM: {
     const InlineAsm::Flag F(MO.getImm());
     switch (F.getMemoryConstraintID()) {
-    case InlineAsm::Constraint_ZC: {
+    case InlineAsm::ConstraintCode::ZC: {
       const MipsSubtarget &Subtarget = MO.getParent()
                                            ->getParent()
                                            ->getParent()
