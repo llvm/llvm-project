@@ -148,17 +148,25 @@ public:
   }
 }; // class stride_view
 
-template<class _View>
-struct __stride_view_iterator_concept { using type = input_iterator_tag; };
+template <class _View>
+struct __stride_view_iterator_concept {
+  using type = input_iterator_tag;
+};
 
-template<random_access_range _View>
-struct __stride_view_iterator_concept<_View> { using type = random_access_iterator_tag; };
+template <random_access_range _View>
+struct __stride_view_iterator_concept<_View> {
+  using type = random_access_iterator_tag;
+};
 
-template<bidirectional_range _View>
-struct __stride_view_iterator_concept<_View> { using type = bidirectional_iterator_tag; };
+template <bidirectional_range _View>
+struct __stride_view_iterator_concept<_View> {
+  using type = bidirectional_iterator_tag;
+};
 
-template<forward_range _View>
-struct __stride_view_iterator_concept<_View> { using type = forward_iterator_tag; };
+template <forward_range _View>
+struct __stride_view_iterator_concept<_View> {
+  using type = forward_iterator_tag;
+};
 
 template <class _View>
 struct __stride_iterator_category {};
@@ -180,8 +188,8 @@ class stride_view<_View>::__iterator : public __stride_iterator_category<_View> 
   using _Base   = __maybe_const<_Const, _View>;
 
 public:
-  using difference_type = range_difference_t<_Base>;
-  using value_type      = range_value_t<_Base>;
+  using difference_type  = range_difference_t<_Base>;
+  using value_type       = range_value_t<_Base>;
   using iterator_concept = typename __stride_view_iterator_concept<_View>::type;
 
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_     = iterator_t<_Base>();
