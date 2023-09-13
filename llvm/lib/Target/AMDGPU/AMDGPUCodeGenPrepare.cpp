@@ -2182,18 +2182,17 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
       isOneOrNegOne(FDiv->getOperand(0)))
     return false;
 
-  IRBuilder<> Builder(&Sqrt);
   Value *SrcVal = Sqrt.getOperand(0);
-
-  SmallVector<Value *, 4> SrcVals;
-  extractValues(Builder, SrcVals, SrcVal);
-
   bool CanTreatAsDAZ = canIgnoreDenormalInput(SrcVal, &Sqrt);
 
   // The raw instruction is 1 ulp, but the correction for denormal handling
   // brings it to 2.
   if (!CanTreatAsDAZ && ReqdAccuracy < 2.0f)
     return false;
+
+  IRBuilder<> Builder(&Sqrt);
+  SmallVector<Value *, 4> SrcVals;
+  extractValues(Builder, SrcVals, SrcVal);
 
   SmallVector<Value *, 4> ResultVals(SrcVals.size());
   for (int I = 0, E = SrcVals.size(); I != E; ++I) {
