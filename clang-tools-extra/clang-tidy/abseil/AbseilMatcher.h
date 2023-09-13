@@ -34,8 +34,8 @@ AST_POLYMORPHIC_MATCHER(
   SourceLocation Loc = SourceManager.getSpellingLoc(Node.getBeginLoc());
   if (Loc.isInvalid())
     return false;
-  const FileEntry *FileEntry =
-      SourceManager.getFileEntryForID(SourceManager.getFileID(Loc));
+  OptionalFileEntryRef FileEntry =
+      SourceManager.getFileEntryRefForID(SourceManager.getFileID(Loc));
   if (!FileEntry)
     return false;
   // Determine whether filepath contains "absl/[absl-library]" substring, where
