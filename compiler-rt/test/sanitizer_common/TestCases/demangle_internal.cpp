@@ -3,7 +3,7 @@
 // REQUIRES: internal_symbolizer
 
 // FIXME: link internal_symbolizer.
-// XFAIL: asan, hwasan, ubsan
+// XFAIL: hwasan
 
 #include <algorithm>
 #include <assert.h>
