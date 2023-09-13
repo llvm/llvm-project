@@ -2069,7 +2069,9 @@ static void createBodyOfOp(
   // If it is an unstructured region and is not the outer region of a combined
   // construct, create empty blocks for all evaluations.
   if (eval.lowerAsUnstructured() && !outerCombined)
-    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp, mlir::omp::YieldOp>(firOpBuilder, eval.getNestedEvaluations());
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
 
   // Insert the terminator.
   if constexpr (std::is_same_v<Op, mlir::omp::WsLoopOp> ||
