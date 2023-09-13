@@ -385,7 +385,7 @@ struct VectorOuterProductToArmSMELowering
                   ConversionPatternRewriter &rewriter) const override {
     auto isSupportedType = [](VectorType vectorType) {
       // TODO: the FP outer product instruction variants are predicated on
-      // different features:
+      // different features [1]:
       //
       // * FMOPA (non-widening)
       //   * half-precision   - +sme2p1,+sme-f16f16
@@ -395,6 +395,7 @@ struct VectorOuterProductToArmSMELowering
       //   * half-precision   - +sme2p1,+b16b16
       //
       // It should be possible to control lowering based on target features.
+      // [1] https://developer.arm.com/downloads/-/exploration-tools/feature-names-for-a-profile
       if ((vectorType.getRank() != 2) || !vectorType.allDimsScalable())
         return false;
 

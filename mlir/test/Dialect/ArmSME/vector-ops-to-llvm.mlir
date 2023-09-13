@@ -463,8 +463,8 @@ func.func @vector_outerproduct_no_accumulator(%lhs : vector<[2]xf64>, %rhs : vec
 
 // -----
 
-// CHECK-LABEL: @vector_outerproduct_scalar_rhs
-func.func @vector_outerproduct_scalar_rhs(%lhs : vector<[2]xf64>, %rhs : f64, %acc : vector<[2]xf64>) -> vector<[2]xf64> {
+// CHECK-LABEL: @vector_outerproduct_unsupported_axpy
+func.func @vector_outerproduct_unsupported_axpy(%lhs : vector<[2]xf64>, %rhs : f64, %acc : vector<[2]xf64>) -> vector<[2]xf64> {
   // CHECK-NOT: arm_sme
   %0 = vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<mul>} : vector<[2]xf64>, f64
   return %0 : vector<[2]xf64>

@@ -1,4 +1,4 @@
-// DEFINE: %{entry_point} = test_outerproduct_2x2xf64
+// DEFINE: %{entry_point} = test_outerproduct_with_accumulator_2x2xf64
 // DEFINE: %{compile} = mlir-opt %s \
 // DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
@@ -11,7 +11,27 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-func.func @test_outerproduct_2x2xf64() {
+llvm.func @printCString(!llvm.ptr<i8>)
+
+func.func @printTileBegin() {
+  %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
+  %1 = llvm.mlir.constant(0 : index) : i64
+  %2 = llvm.getelementptr %0[%1, %1]
+    : (!llvm.ptr<array<11 x i8>>, i64, i64) -> !llvm.ptr<i8>
+  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
+  return
+}
+
+func.func @printTileEnd() {
+  %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
+  %1 = llvm.mlir.constant(0 : index) : i64
+  %2 = llvm.getelementptr %0[%1, %1]
+    : (!llvm.ptr<array<9 x i8>>, i64, i64) -> !llvm.ptr<i8>
+  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
+  return
+}
+
+func.func @test_outerproduct_with_accumulator_2x2xf64() {
   %c0 = arith.constant 0 : index
   %f1 = arith.constant 1.0 : f64
   %f2 = arith.constant 2.0 : f64
@@ -39,12 +59,19 @@ func.func @test_outerproduct_2x2xf64() {
   // Reload and print. The smallest SVL is 128-bits so the tile will be at
   // least 2x2xf64.
   //
-  // CHECK:      ( 12, 12
+  // CHECK:      TILE BEGIN
   // CHECK-NEXT: ( 12, 12
+  // CHECK-NEXT: ( 12, 12
+  // CHECK:      TILE END
+  func.call @printTileBegin() : () -> ()
   scf.for %i = %c0 to %za_d_size step %svl_d {
     %tileslice = vector.load %mem[%i] : memref<?xf64>, vector<[2]xf64>
     vector.print %tileslice : vector<[2]xf64>
   }
+  func.call @printTileEnd() : () -> ()
 
   return
 }
+
+llvm.mlir.global internal constant @str_tile_begin("TILE BEGIN\0A")
+llvm.mlir.global internal constant @str_tile_end("TILE END\0A")
