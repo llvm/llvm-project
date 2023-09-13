@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 
 using namespace mlir;
 using namespace mlir::ml_program;

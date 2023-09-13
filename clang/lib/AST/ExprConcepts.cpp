@@ -31,26 +31,24 @@
 using namespace clang;
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(
-    const ASTContext &C, NestedNameSpecifierLoc NNS,
-    SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-    NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
+    const ASTContext &C, ConceptReference *Loc,
     ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
-      ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl,
-                       NamedConcept, ArgsAsWritten),
-      SpecDecl(SpecDecl),
+      ConceptRef(Loc), SpecDecl(SpecDecl),
       Satisfaction(Satisfaction
                        ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
                        : nullptr) {
   setDependence(computeDependence(this, /*ValueDependent=*/!Satisfaction));
 
   // Currently guaranteed by the fact concepts can only be at namespace-scope.
-  assert(!NestedNameSpec ||
-         (!NestedNameSpec.getNestedNameSpecifier()->isInstantiationDependent() &&
-          !NestedNameSpec.getNestedNameSpecifier()
-              ->containsUnexpandedParameterPack()));
+  assert(!Loc->getNestedNameSpecifierLoc() ||
+         (!Loc->getNestedNameSpecifierLoc()
+               .getNestedNameSpecifier()
+               ->isInstantiationDependent() &&
+          !Loc->getNestedNameSpecifierLoc()
+               .getNestedNameSpecifier()
+               ->containsUnexpandedParameterPack()));
   assert((!isValueDependent() || isInstantiationDependent()) &&
          "should not be value-dependent");
 }
@@ -58,29 +56,20 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
 ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty)
     : Expr(ConceptSpecializationExprClass, Empty) {}
 
-ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
-    const ASTContext &C, NestedNameSpecifierLoc NNS,
-    SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-    NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ImplicitConceptSpecializationDecl *SpecDecl,
-    const ConstraintSatisfaction *Satisfaction) {
-  return new (C) ConceptSpecializationExpr(
-      C, NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
-      ArgsAsWritten, SpecDecl, Satisfaction);
+ConceptSpecializationExpr *
+ConceptSpecializationExpr::Create(const ASTContext &C, ConceptReference *Loc,
+                                  ImplicitConceptSpecializationDecl *SpecDecl,
+                                  const ConstraintSatisfaction *Satisfaction) {
+  return new (C) ConceptSpecializationExpr(C, Loc, SpecDecl, Satisfaction);
 }
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(
-    const ASTContext &C, ConceptDecl *NamedConcept,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
+    const ASTContext &C, ConceptReference *Loc,
     ImplicitConceptSpecializationDecl *SpecDecl,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack)
     : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
-      ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
-                       DeclarationNameInfo(), NamedConcept, NamedConcept,
-                       ArgsAsWritten),
-      SpecDecl(SpecDecl),
+      ConceptRef(Loc), SpecDecl(SpecDecl),
       Satisfaction(Satisfaction
                        ? ASTConstraintSatisfaction::Create(C, *Satisfaction)
                        : nullptr) {
@@ -94,15 +83,15 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
   setDependence(D);
 }
 
-ConceptSpecializationExpr *ConceptSpecializationExpr::Create(
-    const ASTContext &C, ConceptDecl *NamedConcept,
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
-    ImplicitConceptSpecializationDecl *SpecDecl,
-    const ConstraintSatisfaction *Satisfaction, bool Dependent,
-    bool ContainsUnexpandedParameterPack) {
-  return new (C) ConceptSpecializationExpr(C, NamedConcept, ArgsAsWritten,
-                                           SpecDecl, Satisfaction, Dependent,
-                                           ContainsUnexpandedParameterPack);
+ConceptSpecializationExpr *
+ConceptSpecializationExpr::Create(const ASTContext &C, ConceptReference *Loc,
+                                  ImplicitConceptSpecializationDecl *SpecDecl,
+                                  const ConstraintSatisfaction *Satisfaction,
+                                  bool Dependent,
+                                  bool ContainsUnexpandedParameterPack) {
+  return new (C)
+      ConceptSpecializationExpr(C, Loc, SpecDecl, Satisfaction, Dependent,
+                                ContainsUnexpandedParameterPack);
 }
 
 const TypeConstraint *

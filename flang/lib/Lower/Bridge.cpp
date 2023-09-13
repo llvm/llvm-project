@@ -383,6 +383,19 @@ public:
       declareFunction(f);
   }
 
+  /// Get the scope that is defining or using \p sym. The returned scope is not
+  /// the ultimate scope, since this helper does not traverse use association.
+  /// This allows capturing module variables that are referenced in an internal
+  /// procedure but whose use statement is inside the host program.
+  const Fortran::semantics::Scope &
+  getSymbolHostScope(const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol *hostSymbol = &sym;
+    while (const auto *details =
+               hostSymbol->detailsIf<Fortran::semantics::HostAssocDetails>())
+      hostSymbol = &details->symbol();
+    return hostSymbol->owner();
+  }
+
   /// Collects the canonical list of all host associated symbols. These bindings
   /// must be aggregated into a tuple which can then be added to each of the
   /// internal procedure declarations and passed at each call site.
@@ -399,12 +412,12 @@ public:
       if (ultimate.has<Fortran::semantics::ObjectEntityDetails>() ||
           Fortran::semantics::IsProcedurePointer(ultimate) ||
           Fortran::semantics::IsDummy(sym) || namelistDetails) {
-        const Fortran::semantics::Scope &ultimateScope = ultimate.owner();
-        if (ultimateScope.kind() ==
+        const Fortran::semantics::Scope &symbolScope = getSymbolHostScope(sym);
+        if (symbolScope.kind() ==
                 Fortran::semantics::Scope::Kind::MainProgram ||
-            ultimateScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
-          if (ultimateScope != *internalScope &&
-              ultimateScope.Contains(*internalScope)) {
+            symbolScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
+          if (symbolScope != *internalScope &&
+              symbolScope.Contains(*internalScope)) {
             if (namelistDetails) {
               // So far, namelist symbols are processed on the fly in IO and
               // the related namelist data structure is not added to the symbol
@@ -581,7 +594,7 @@ public:
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
           loc,
-          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+          Fortran::semantics::IsAllocatableOrObjectPointer(&hsym.GetUltimate())
               ? hSymType
               : symType,
           mangleName(sym), toStringRef(sym.GetUltimate().name()),
@@ -823,7 +836,9 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(symbol, scopeBlockIdMap);
+    return Fortran::lower::mangle::mangleName(
+        symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
+        getLoweringOptions().getUnderscoring());
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -1019,10 +1034,13 @@ private:
       if (!shallowLookupSymbol(sym)) {
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
-        auto newVal = builder->createTemporary(loc, genType(sym),
-                                               toStringRef(sym.name()));
-        bindIfNewSymbol(sym, newVal);
-        return newVal;
+        mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
+        builder->setInsertionPointToStart(builder->getAllocaBlock());
+        mlir::Type tempTy = genType(sym);
+        mlir::Value temp =
+            builder->createTemporaryAlloc(loc, tempTy, toStringRef(sym.name()));
+        bindIfNewSymbol(sym, temp);
+        builder->restoreInsertionPoint(insPt);
       }
     }
     auto entry = lookupSymbol(sym);
@@ -1304,6 +1322,30 @@ private:
             return builder->create<fir::LoadOp>(loc, x.getBuffer());
           return fir::factory::CharacterExprHelper{*builder, loc}
               .createEmboxChar(x.getBuffer(), x.getLen());
+        },
+        [&](const fir::MutableBoxValue &x) -> mlir::Value {
+          mlir::Value resultRef = resultSymBox.getAddr();
+          mlir::Value load = builder->create<fir::LoadOp>(loc, resultRef);
+          unsigned rank = x.rank();
+          if (x.isAllocatable() && rank > 0) {
+            // ALLOCATABLE array result must have default lower bounds.
+            // At the call site the result box of a function reference
+            // might be considered having default lower bounds, but
+            // the runtime box should probably comply with this assumption
+            // as well. If the result box has proper lbounds in runtime,
+            // this may improve the debugging experience of Fortran apps.
+            // We may consider removing this, if the overhead of setting
+            // default lower bounds is too big.
+            mlir::Value one =
+                builder->createIntegerConstant(loc, builder->getIndexType(), 1);
+            llvm::SmallVector<mlir::Value> lbounds{rank, one};
+            auto shiftTy = fir::ShiftType::get(builder->getContext(), rank);
+            mlir::Value shiftOp =
+                builder->create<fir::ShiftOp>(loc, shiftTy, lbounds);
+            load = builder->create<fir::ReboxOp>(
+                loc, load.getType(), load, shiftOp, /*slice=*/mlir::Value{});
+          }
+          return load;
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
@@ -2245,16 +2287,17 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
+    localSymbols.pushScope();
     genOpenACCConstruct(*this, bridge.getSemanticsContext(), getEval(), acc);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
+    localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), getEval(), accDecl,
-                                   accRoutineInfos);
+                                   bridge.fctCtx(), accDecl, accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
@@ -3589,7 +3632,7 @@ private:
                     sym->Rank() == 0) {
                   // get the corresponding Cray pointer
 
-                  auto ptrSym = Fortran::lower::getPointer(*sym);
+                  auto ptrSym = Fortran::lower::getCrayPointer(*sym);
                   fir::ExtendedValue ptr =
                       getSymbolExtendedValue(ptrSym, nullptr);
                   mlir::Value ptrVal = fir::getBase(ptr);

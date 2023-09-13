@@ -137,7 +137,7 @@ private:
   bool parseAngle() {
     if (!CurrentToken || !CurrentToken->Previous)
       return false;
-    if (NonTemplateLess.count(CurrentToken->Previous))
+    if (NonTemplateLess.count(CurrentToken->Previous) > 0)
       return false;
 
     const FormatToken &Previous = *CurrentToken->Previous; // The '<'.
@@ -862,6 +862,11 @@ private:
     if (Style.isJavaScript() && OpeningBrace.Previous &&
         OpeningBrace.Previous->is(TT_JsTypeColon)) {
       Contexts.back().IsExpression = false;
+    }
+    if (Style.isVerilog() &&
+        (!OpeningBrace.getPreviousNonComment() ||
+         OpeningBrace.getPreviousNonComment()->isNot(Keywords.kw_apostrophe))) {
+      Contexts.back().VerilogMayBeConcatenation = true;
     }
 
     unsigned CommaCount = 0;
@@ -1737,6 +1742,9 @@ private:
     bool InCpp11AttributeSpecifier = false;
     bool InCSharpAttributeSpecifier = false;
     bool VerilogAssignmentFound = false;
+    // Whether the braces may mean concatenation instead of structure or array
+    // literal.
+    bool VerilogMayBeConcatenation = false;
     enum {
       Unknown,
       // Like the part after `:` in a constructor.
@@ -2069,6 +2077,14 @@ private:
         }
       } else {
         Current.setType(TT_LineComment);
+      }
+    } else if (Current.is(tok::string_literal)) {
+      if (Style.isVerilog() && Contexts.back().VerilogMayBeConcatenation &&
+          Current.getPreviousNonComment() &&
+          Current.getPreviousNonComment()->isOneOf(tok::comma, tok::l_brace) &&
+          Current.getNextNonComment() &&
+          Current.getNextNonComment()->isOneOf(tok::comma, tok::r_brace)) {
+        Current.setType(TT_StringInConcatenation);
       }
     } else if (Current.is(tok::l_paren)) {
       if (lParenStartsCppCast(Current))
@@ -2519,8 +2535,9 @@ private:
       return TT_BinaryOperator;
 
     if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept, tok::comma,
-                           tok::r_paren, TT_RequiresClause) ||
+        NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
+                           TT_RequiresClause) ||
+        (NextToken->is(tok::kw_noexcept) && !IsExpression) ||
         NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment())) {
       return TT_PointerOrReference;
@@ -2738,6 +2755,19 @@ public:
         if (LatestOperator)
           addFakeParenthesis(Start, prec::Level(Precedence));
         Start = Current;
+      }
+
+      if ((Style.isCSharp() || Style.isJavaScript() ||
+           Style.Language == FormatStyle::LK_Java) &&
+          Precedence == prec::Additive && Current) {
+        // A string can be broken without parentheses around it when it is
+        // already in a sequence of strings joined by `+` signs.
+        FormatToken *Prev = Current->getPreviousNonComment();
+        if (Prev && Prev->is(tok::string_literal) &&
+            (Prev == Start || Prev->endsSequence(tok::string_literal, tok::plus,
+                                                 TT_StringInConcatenation))) {
+          Prev->setType(TT_StringInConcatenation);
+        }
       }
 
       // At the end of the line or when an operator with lower precedence is
@@ -5622,6 +5652,17 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return !isItAnEmptyLambdaAllowed(Left, ShortLambdaOption);
     if (isAllmanLambdaBrace(Right))
       return !isItAnEmptyLambdaAllowed(Right, ShortLambdaOption);
+  }
+
+  if (Right.is(tok::kw_noexcept) && Right.is(TT_TrailingAnnotation)) {
+    switch (Style.AllowBreakBeforeNoexceptSpecifier) {
+    case FormatStyle::BBNSS_Never:
+      return false;
+    case FormatStyle::BBNSS_Always:
+      return true;
+    case FormatStyle::BBNSS_OnlyWithParen:
+      return Right.Next && Right.Next->is(tok::l_paren);
+    }
   }
 
   return Left.isOneOf(tok::comma, tok::coloncolon, tok::semi, tok::l_brace,

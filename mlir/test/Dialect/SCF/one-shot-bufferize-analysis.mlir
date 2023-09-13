@@ -798,3 +798,106 @@ func.func @nesting_op_repetitive_regions(
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @parallel_region()
+func.func @parallel_region() -> tensor<320xf32>
+{
+  %alloc0 = bufferization.alloc_tensor() : tensor<320xf32>
+  %alloc1 = bufferization.alloc_tensor() : tensor<1xf32>
+  %c320 = arith.constant 320 : index
+  // CHECK: scf.forall
+  %0 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %alloc0) -> (tensor<320xf32>) {
+    %val = "test.foo"() : () -> (f32)
+    // linalg.fill must bufferize out-of-place because every thread needs a
+    // private copy of %alloc1.
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+    %fill = linalg.fill ins(%val : f32) outs(%alloc1 : tensor<1xf32>) -> tensor<1xf32>
+    scf.forall.in_parallel {
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %fill into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  // CHECK: } {__inplace_operands_attr__ = ["none", "true"]}
+  return %0 : tensor<320xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @parallel_region_mixed_def(
+func.func @parallel_region_mixed_def(%c: i1) -> tensor<320xf32>
+{
+  %alloc0 = bufferization.alloc_tensor() : tensor<320xf32>
+  %alloc1 = bufferization.alloc_tensor() : tensor<1xf32>
+  %c320 = arith.constant 320 : index
+  // CHECK: scf.forall
+  %0 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %alloc0) -> (tensor<320xf32>) {
+    %alloc2 = bufferization.alloc_tensor() : tensor<1xf32>
+    %selected = scf.if %c -> tensor<1xf32> {
+      scf.yield %alloc1 : tensor<1xf32>
+    } else {
+      scf.yield %alloc2 : tensor<1xf32>
+    }
+    %val = "test.foo"() : () -> (f32)
+    // linalg.fill must bufferize out-of-place because every thread needs a
+    // private copy of %alloc1.
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+    %fill = linalg.fill ins(%val : f32) outs(%selected : tensor<1xf32>) -> tensor<1xf32>
+    scf.forall.in_parallel {
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %fill into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  // CHECK: } {__inplace_operands_attr__ = ["none", "true"]}
+  return %0 : tensor<320xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @parallel_region_two_writes(
+func.func @parallel_region_two_writes(%f: f32) -> tensor<320xf32>
+{
+  %alloc0 = bufferization.alloc_tensor() : tensor<320xf32>
+  %alloc1 = bufferization.alloc_tensor() : tensor<1xf32>
+  %c320 = arith.constant 320 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.forall
+  %0 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %alloc0) -> (tensor<320xf32>) {
+    %val = "test.foo"() : () -> (f32)
+    // linalg.fill must bufferize out-of-place because every thread needs a
+    // private copy of %alloc1.
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+    %fill = linalg.fill ins(%val : f32) outs(%alloc1 : tensor<1xf32>) -> tensor<1xf32>
+    // CHECK: tensor.insert
+    // CHECK-SAME: __inplace_operands_attr__ = ["none", "true", "none"]
+    %inserted = tensor.insert %f into %fill[%c0] : tensor<1xf32>
+
+    scf.forall.in_parallel {
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %inserted into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  // CHECK: } {__inplace_operands_attr__ = ["none", "true"]}
+  return %0 : tensor<320xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @parallel_region_no_read()
+func.func @parallel_region_no_read()
+{
+  %alloc0 = bufferization.alloc_tensor() : tensor<320xf32>
+  %alloc1 = bufferization.alloc_tensor() : tensor<1xf32>
+  %c320 = arith.constant 320 : index
+  // CHECK: scf.forall
+  scf.forall (%arg0) in (%c320) {
+    %val = "test.foo"() : () -> (f32)
+    // linalg.fill can bufferize in-place because no alias of %alloc1 is read.
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+    %fill = linalg.fill ins(%val : f32) outs(%alloc1 : tensor<1xf32>) -> tensor<1xf32>
+    scf.forall.in_parallel {
+    }
+  }
+  return
+}

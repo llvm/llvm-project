@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=obj %s | llvm-objdump -r - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -filetype=obj %s | llvm-objdump -r - | FileCheck %s
 #
 
 # make sure the fixups emitted match what is

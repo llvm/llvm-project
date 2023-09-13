@@ -648,3 +648,31 @@ func.func @index_switch(%i: index, %a: i32, %b: i32, %c: i32) -> i32 {
   // CHECK-NEXT: return %[[V]]
   return %0 : i32
 }
+
+// Note: scf.forall is lowered to scf.parallel, which is currently lowered to
+// scf.for and then to unstructured control flow. scf.parallel could lower more
+// efficiently to multi-threaded IR, at which point scf.forall would
+// automatically lower to multi-threaded IR.
+
+// CHECK-LABEL: func @forall(
+//  CHECK-SAME:     %[[num_threads:.*]]: index)
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   cf.br ^[[bb1:.*]](%[[c0]] : index)
+//       CHECK: ^[[bb1]](%[[arg0:.*]]: index):
+//       CHECK:   %[[cmpi:.*]] = arith.cmpi slt, %[[arg0]], %[[num_threads]]
+//       CHECK:   cf.cond_br %[[cmpi]], ^[[bb2:.*]], ^[[bb3:.*]]
+//       CHECK: ^[[bb2]]:
+//       CHECK:   "test.foo"(%[[arg0]])
+//       CHECK:   %[[addi:.*]] = arith.addi %[[arg0]], %[[c1]]
+//       CHECK:   cf.br ^[[bb1]](%[[addi]] : index)
+//       CHECK: ^[[bb3]]:
+//       CHECK:   return
+func.func @forall(%num_threads: index) {
+  scf.forall (%thread_idx) in (%num_threads) {
+    "test.foo"(%thread_idx) : (index) -> ()
+    scf.forall.in_parallel {
+    }
+  }
+  return
+}

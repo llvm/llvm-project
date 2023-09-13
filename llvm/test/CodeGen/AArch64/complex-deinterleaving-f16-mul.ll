@@ -7,16 +7,15 @@ target triple = "aarch64"
 define <2 x half> @complex_mul_v2f16(<2 x half> %a, <2 x half> %b) {
 ; CHECK-LABEL: complex_mul_v2f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h3, v0.h[1]
-; CHECK-NEXT:    mov h2, v1.h[1]
-; CHECK-NEXT:    fmul h4, h0, v1.h[1]
-; CHECK-NEXT:    fnmul h2, h3, h2
-; CHECK-NEXT:    fmla h4, h3, v1.h[0]
-; CHECK-NEXT:    fmla h2, h0, v1.h[0]
-; CHECK-NEXT:    mov v2.h[1], v4.h[0]
-; CHECK-NEXT:    fmov d0, d2
+; CHECK-NEXT:    mov h2, v0.h[1]
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    fmul h3, h0, v1.h[1]
+; CHECK-NEXT:    fmul h4, h2, v1.h[1]
+; CHECK-NEXT:    fmadd h2, h1, h2, h3
+; CHECK-NEXT:    fnmsub h0, h1, h0, h4
+; CHECK-NEXT:    mov v0.h[1], v2.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %a.real   = shufflevector <2 x half> %a, <2 x half> poison, <1 x i32> <i32 0>

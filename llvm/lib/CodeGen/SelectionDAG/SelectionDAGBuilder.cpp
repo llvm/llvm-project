@@ -989,15 +989,15 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
     Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
 }
 
-void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
+void RegsForValue::AddInlineAsmOperands(InlineAsm::Kind Code, bool HasMatching,
                                         unsigned MatchingIdx, const SDLoc &dl,
                                         SelectionDAG &DAG,
                                         std::vector<SDValue> &Ops) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
-  unsigned Flag = InlineAsm::getFlagWord(Code, Regs.size());
+  InlineAsm::Flag Flag(Code, Regs.size());
   if (HasMatching)
-    Flag = InlineAsm::getFlagWordForMatchingOp(Flag, MatchingIdx);
+    Flag.setMatchingOp(MatchingIdx);
   else if (!Regs.empty() && Register::isVirtualRegister(Regs.front())) {
     // Put the register class of the virtual registers in the flag word.  That
     // way, later passes can recompute register class constraints for inline
@@ -1006,13 +1006,13 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
     // from the def.
     const MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
     const TargetRegisterClass *RC = MRI.getRegClass(Regs.front());
-    Flag = InlineAsm::getFlagWordForRegClass(Flag, RC->getID());
+    Flag.setRegClass(RC->getID());
   }
 
   SDValue Res = DAG.getTargetConstant(Flag, dl, MVT::i32);
   Ops.push_back(Res);
 
-  if (Code == InlineAsm::Kind_Clobber) {
+  if (Code == InlineAsm::Kind::Clobber) {
     // Clobbers should always have a 1:1 mapping with registers, and may
     // reference registers that have illegal (e.g. vector) types. Hence, we
     // shouldn't try to apply any sort of splitting logic to them.
@@ -4873,8 +4873,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
     DAG.setRoot(S);
     return;
   }
-  SDValue OutChain = DAG.getAtomic(ISD::ATOMIC_STORE, dl, MemVT, InChain,
-                                   Ptr, Val, MMO);
+  SDValue OutChain =
+      DAG.getAtomic(ISD::ATOMIC_STORE, dl, MemVT, InChain, Val, Ptr, MMO);
 
   setValue(&I, OutChain);
   DAG.setRoot(OutChain);
@@ -6409,6 +6409,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::fabs:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
   case Intrinsic::trunc:
@@ -6424,6 +6425,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::fabs:      Opcode = ISD::FABS;       break;
     case Intrinsic::sin:       Opcode = ISD::FSIN;       break;
     case Intrinsic::cos:       Opcode = ISD::FCOS;       break;
+    case Intrinsic::exp10:     Opcode = ISD::FEXP10;     break;
     case Intrinsic::floor:     Opcode = ISD::FFLOOR;     break;
     case Intrinsic::ceil:      Opcode = ISD::FCEIL;      break;
     case Intrinsic::trunc:     Opcode = ISD::FTRUNC;     break;
@@ -8716,6 +8718,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FEXP2))
           return;
         break;
+      case LibFunc_exp10:
+      case LibFunc_exp10f:
+      case LibFunc_exp10l:
+        if (visitUnaryFloatCall(I, ISD::FEXP10))
+          return;
+        break;
       case LibFunc_ldexp:
       case LibFunc_ldexpf:
       case LibFunc_ldexpl:
@@ -9011,11 +9019,11 @@ findMatchingInlineAsmOperand(unsigned OperandNo,
     // Advance to the next operand.
     unsigned OpFlag =
         cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
-    assert((InlineAsm::isRegDefKind(OpFlag) ||
-            InlineAsm::isRegDefEarlyClobberKind(OpFlag) ||
-            InlineAsm::isMemKind(OpFlag)) &&
-           "Skipped past definitions?");
-    CurOp += InlineAsm::getNumOperandRegisters(OpFlag) + 1;
+    const InlineAsm::Flag F(OpFlag);
+    assert(
+        (F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isMemKind()) &&
+        "Skipped past definitions?");
+    CurOp += F.getNumOperandRegisters() + 1;
   }
   return CurOp;
 }
@@ -9273,14 +9281,14 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         // Add information to the INLINEASM node to know about this output.
-        unsigned OpFlags = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
-        OpFlags = InlineAsm::getFlagWordForMem(OpFlags, ConstraintID);
+        InlineAsm::Flag OpFlags(InlineAsm::Kind::Mem, 1);
+        OpFlags.setMemConstraint(ConstraintID);
         AsmNodeOperands.push_back(DAG.getTargetConstant(OpFlags, getCurSDLoc(),
                                                         MVT::i32));
         AsmNodeOperands.push_back(OpInfo.CallOperand);
@@ -9301,8 +9309,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         // Add information to the INLINEASM node to know that this register is
         // set.
         OpInfo.AssignedRegs.AddInlineAsmOperands(
-            OpInfo.isEarlyClobber ? InlineAsm::Kind_RegDefEarlyClobber
-                                  : InlineAsm::Kind_RegDef,
+            OpInfo.isEarlyClobber ? InlineAsm::Kind::RegDefEarlyClobber
+                                  : InlineAsm::Kind::RegDef,
             false, 0, getCurSDLoc(), DAG, AsmNodeOperands);
       }
       break;
@@ -9316,11 +9324,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         // just use its register.
         auto CurOp = findMatchingInlineAsmOperand(OpInfo.getMatchedOperand(),
                                                   AsmNodeOperands);
-        unsigned OpFlag =
-          cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue();
-        if (InlineAsm::isRegDefKind(OpFlag) ||
-            InlineAsm::isRegDefEarlyClobberKind(OpFlag)) {
-          // Add (OpFlag&0xffff)>>3 registers to MatchedRegs.
+        InlineAsm::Flag Flag(
+            cast<ConstantSDNode>(AsmNodeOperands[CurOp])->getZExtValue());
+        if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
             emitInlineAsmError(Call, "inline asm not supported yet: "
@@ -9340,8 +9346,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
               TiedReg.isVirtual()     ? MRI.getRegClass(TiedReg)
               : RegVT != MVT::Untyped ? TLI.getRegClassFor(RegVT)
                                       : TRI.getMinimalPhysRegClass(TiedReg);
-          unsigned NumRegs = InlineAsm::getNumOperandRegisters(OpFlag);
-          for (unsigned i = 0; i != NumRegs; ++i)
+          for (unsigned i = 0, e = Flag.getNumOperandRegisters(); i != e; ++i)
             Regs.push_back(MRI.createVirtualRegister(RC));
 
           RegsForValue MatchedRegs(Regs, RegVT, InOperandVal.getValueType());
@@ -9349,22 +9354,21 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
           SDLoc dl = getCurSDLoc();
           // Use the produced MatchedRegs object to
           MatchedRegs.getCopyToRegs(InOperandVal, DAG, dl, Chain, &Glue, &Call);
-          MatchedRegs.AddInlineAsmOperands(InlineAsm::Kind_RegUse,
-                                           true, OpInfo.getMatchedOperand(), dl,
-                                           DAG, AsmNodeOperands);
+          MatchedRegs.AddInlineAsmOperands(InlineAsm::Kind::RegUse, true,
+                                           OpInfo.getMatchedOperand(), dl, DAG,
+                                           AsmNodeOperands);
           break;
         }
 
-        assert(InlineAsm::isMemKind(OpFlag) && "Unknown matching constraint!");
-        assert(InlineAsm::getNumOperandRegisters(OpFlag) == 1 &&
+        assert(Flag.isMemKind() && "Unknown matching constraint!");
+        assert(Flag.getNumOperandRegisters() == 1 &&
                "Unexpected number of operands");
         // Add information to the INLINEASM node to know about this input.
         // See InlineAsm.h isUseOperandTiedToDef.
-        OpFlag = InlineAsm::convertMemFlagWordToMatchingFlagWord(OpFlag);
-        OpFlag = InlineAsm::getFlagWordForMatchingOp(OpFlag,
-                                                    OpInfo.getMatchedOperand());
+        Flag.clearMemConstraint();
+        Flag.setMatchingOp(OpInfo.getMatchedOperand());
         AsmNodeOperands.push_back(DAG.getTargetConstant(
-            OpFlag, getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
+            Flag, getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
         AsmNodeOperands.push_back(AsmNodeOperands[CurOp+1]);
         break;
       }
@@ -9394,8 +9398,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         }
 
         // Add information to the INLINEASM node to know about this input.
-        unsigned ResOpType =
-          InlineAsm::getFlagWord(InlineAsm::Kind_Imm, Ops.size());
+        InlineAsm::Flag ResOpType(InlineAsm::Kind::Imm, Ops.size());
         AsmNodeOperands.push_back(DAG.getTargetConstant(
             ResOpType, getCurSDLoc(), TLI.getPointerTy(DAG.getDataLayout())));
         llvm::append_range(AsmNodeOperands, Ops);
@@ -9410,14 +9413,14 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
                    TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
 
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
         // Add information to the INLINEASM node to know about this input.
-        unsigned ResOpType = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
-        ResOpType = InlineAsm::getFlagWordForMem(ResOpType, ConstraintID);
+        InlineAsm::Flag ResOpType(InlineAsm::Kind::Mem, 1);
+        ResOpType.setMemConstraint(ConstraintID);
         AsmNodeOperands.push_back(DAG.getTargetConstant(ResOpType,
                                                         getCurSDLoc(),
                                                         MVT::i32));
@@ -9426,24 +9429,24 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       }
 
       if (OpInfo.ConstraintType == TargetLowering::C_Address) {
-        unsigned ConstraintID =
+        const InlineAsm::ConstraintCode ConstraintID =
             TLI.getInlineAsmMemConstraint(OpInfo.ConstraintCode);
-        assert(ConstraintID != InlineAsm::Constraint_Unknown &&
+        assert(ConstraintID != InlineAsm::ConstraintCode::Unknown &&
                "Failed to convert memory constraint code to constraint id.");
 
-        unsigned ResOpType = InlineAsm::getFlagWord(InlineAsm::Kind_Mem, 1);
+        InlineAsm::Flag ResOpType(InlineAsm::Kind::Mem, 1);
 
         SDValue AsmOp = InOperandVal;
         if (isFunction(InOperandVal)) {
           auto *GA = cast<GlobalAddressSDNode>(InOperandVal);
-          ResOpType = InlineAsm::getFlagWord(InlineAsm::Kind_Func, 1);
+          ResOpType = InlineAsm::Flag(InlineAsm::Kind::Func, 1);
           AsmOp = DAG.getTargetGlobalAddress(GA->getGlobal(), getCurSDLoc(),
                                              InOperandVal.getValueType(),
                                              GA->getOffset());
         }
 
         // Add information to the INLINEASM node to know about this input.
-        ResOpType = InlineAsm::getFlagWordForMem(ResOpType, ConstraintID);
+        ResOpType.setMemConstraint(ConstraintID);
 
         AsmNodeOperands.push_back(
             DAG.getTargetConstant(ResOpType, getCurSDLoc(), MVT::i32));
@@ -9481,15 +9484,15 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       OpInfo.AssignedRegs.getCopyToRegs(InOperandVal, DAG, dl, Chain, &Glue,
                                         &Call);
 
-      OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind_RegUse, false, 0,
-                                               dl, DAG, AsmNodeOperands);
+      OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::RegUse, false,
+                                               0, dl, DAG, AsmNodeOperands);
       break;
     }
     case InlineAsm::isClobber:
       // Add the clobbered value to the operand list, so that the register
       // allocator is aware that the physreg got clobbered.
       if (!OpInfo.AssignedRegs.Regs.empty())
-        OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind_Clobber,
+        OpInfo.AssignedRegs.AddInlineAsmOperands(InlineAsm::Kind::Clobber,
                                                  false, 0, getCurSDLoc(), DAG,
                                                  AsmNodeOperands);
       break;

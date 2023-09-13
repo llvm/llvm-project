@@ -17,16 +17,14 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s, typename S::difference_type pos, typename S::difference_type n, S expected)
-{
-    typename S::const_iterator first = s.cbegin() + pos;
-    typename S::const_iterator last = s.cbegin() + pos + n;
-    typename S::iterator i = s.erase(first, last);
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s[s.size()] == typename S::value_type());
-    assert(s == expected);
-    assert(i - s.begin() == pos);
+TEST_CONSTEXPR_CXX20 void test(S s, typename S::difference_type pos, typename S::difference_type n, S expected) {
+  typename S::const_iterator first = s.cbegin() + pos;
+  typename S::const_iterator last  = s.cbegin() + pos + n;
+  typename S::iterator i           = s.erase(first, last);
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s[s.size()] == typename S::value_type());
+  assert(s == expected);
+  assert(i - s.begin() == pos);
 }
 
 template <class S>
@@ -96,8 +94,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

@@ -32,9 +32,8 @@ entry:
 define zeroext i8 @test_byval_mem1(ptr byval(%struct_S1) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
+; CHECK-NEXT:    stb 3, -8(1)
 ; CHECK-NEXT:    clrldi 3, 3, 56
-; CHECK-NEXT:    stb 4, -8(1)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -56,8 +55,8 @@ define void @call_test_byval_mem1_2() #0 {
 ; CHECK-NEXT:    li 7, 4
 ; CHECK-NEXT:    li 8, 5
 ; CHECK-NEXT:    li 9, 6
-; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
 ; CHECK-NEXT:    li 10, 7
+; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
 ; CHECK-NEXT:    lbz 3, 0(3)
 ; CHECK-NEXT:    stb 3, 96(1)
 ; CHECK-NEXT:    li 3, 0
@@ -130,16 +129,16 @@ define void @call_test_byval_mem1_4() #0 {
 ; CHECK-NEXT:    std 0, 128(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    li 4, 7
+; CHECK-NEXT:    li 3, 7
+; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    li 5, 2
 ; CHECK-NEXT:    li 7, 3
 ; CHECK-NEXT:    li 8, 4
 ; CHECK-NEXT:    li 9, 5
 ; CHECK-NEXT:    li 10, 6
+; CHECK-NEXT:    std 3, 96(1)
+; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
 ; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
-; CHECK-NEXT:    std 4, 96(1)
-; CHECK-NEXT:    li 4, 1
 ; CHECK-NEXT:    lbz 6, 0(3)
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    bl test_byval_mem1_4
@@ -273,10 +272,9 @@ define zeroext i8 @test_byval_mem3(ptr byval(%struct_S3) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sth 3, -8(1)
-; CHECK-NEXT:    rldicl 5, 3, 48, 16
-; CHECK-NEXT:    lbz 4, -8(1)
-; CHECK-NEXT:    stb 5, -6(1)
-; CHECK-NEXT:    mr 3, 4
+; CHECK-NEXT:    rldicl 3, 3, 48, 16
+; CHECK-NEXT:    stb 3, -6(1)
+; CHECK-NEXT:    lbz 3, -8(1)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -347,9 +345,8 @@ entry:
 define zeroext i8 @test_byval_mem8(ptr byval(%struct_S8) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 4, 3
+; CHECK-NEXT:    std 3, -8(1)
 ; CHECK-NEXT:    clrldi 3, 3, 56
-; CHECK-NEXT:    std 4, -8(1)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -387,12 +384,11 @@ entry:
 define zeroext i8 @test_byval_mem32(ptr byval(%struct_S32) align 1 %s) {
 ; CHECK-LABEL: test_byval_mem32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mr 7, 3
+; CHECK-NEXT:    std 3, -32(1)
 ; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    std 4, -24(1)
 ; CHECK-NEXT:    std 5, -16(1)
 ; CHECK-NEXT:    std 6, -8(1)
-; CHECK-NEXT:    std 7, -32(1)
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr %s, align 1
@@ -411,11 +407,11 @@ define void @call_test_byval_mem32_2() #0 {
 ; CHECK-NEXT:    vspltisw 2, 1
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    xvcvsxwdp 1, 34
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    ld 7, 24(3)
 ; CHECK-NEXT:    ld 6, 16(3)
 ; CHECK-NEXT:    ld 5, 8(3)
 ; CHECK-NEXT:    ld 4, 0(3)
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    bl test_byval_mem32_2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 32
@@ -457,11 +453,11 @@ define void @call_test_byval_mem32_3() #0 {
 ; CHECK-NEXT:    li 7, 2
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    xvcvsxwdp 1, 34
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; CHECK-NEXT:    xvcvsxwdp 2, 35
+; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    lxvd2x 0, 3, 4
 ; CHECK-NEXT:    li 4, 88
-; CHECK-NEXT:    xvcvsxwdp 2, 35
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
-; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    stxvd2x 0, 1, 4
 ; CHECK-NEXT:    li 4, 72
 ; CHECK-NEXT:    lxvd2x 0, 0, 3

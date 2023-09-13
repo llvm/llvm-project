@@ -20,8 +20,8 @@ using namespace llvm;
 namespace {
 
 // Basic hashing mechanism to detect structural change to the IR, used to verify
-// pass return status consistency with actual change. Loosely copied from
-// llvm/lib/Transforms/Utils/FunctionComparator.cpp
+// pass return status consistency with actual change. In addition to being used
+// by the MergeFunctions pass.
 
 class StructuralHashImpl {
   uint64_t Hash;

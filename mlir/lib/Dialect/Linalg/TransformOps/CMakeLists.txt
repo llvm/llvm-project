@@ -19,6 +19,8 @@ add_mlir_dialect_library(MLIRLinalgTransformOps
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRFuncDialect
+  MLIRFunctionInterfaces
+  MLIRIndexDialect
   MLIRIR
   MLIRLinalgDialect
   MLIRLinalgTransforms

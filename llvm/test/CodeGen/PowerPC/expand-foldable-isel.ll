@@ -33,9 +33,9 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ; CHECK-GEN-ISEL-TRUE-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-GEN-ISEL-TRUE-NEXT:    stdu r1, -64(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    mr r30, r3
+; CHECK-GEN-ISEL-TRUE-NEXT:    std r0, 80(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    # implicit-def: $x3
 ; CHECK-GEN-ISEL-TRUE-NEXT:    # implicit-def: $r29
-; CHECK-GEN-ISEL-TRUE-NEXT:    std r0, 80(r1)
 ; CHECK-GEN-ISEL-TRUE-NEXT:    b .LBB0_2
 ; CHECK-GEN-ISEL-TRUE-NEXT:    .p2align 4
 ; CHECK-GEN-ISEL-TRUE-NEXT:  .LBB0_1: # %cond.false21.i156
@@ -78,9 +78,9 @@ define void @_ZN3pov6ot_insEPPNS_14ot_node_structEPNS_15ot_block_structEPNS_12ot
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    mr r30, r3
+; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    # implicit-def: $x3
 ; CHECK-NEXT:    # implicit-def: $r29
-; CHECK-NEXT:    std r0, 80(r1)
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %cond.false21.i156

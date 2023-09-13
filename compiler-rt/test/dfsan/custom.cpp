@@ -2095,6 +2095,154 @@ void test_snprintf() {
   ASSERT_LABEL(r, 0);
 }
 
+template <class T>
+void test_sscanf_chunk(T expected, const char *format, char *input,
+                       int items_num) {
+  char padded_input[512];
+  strcpy(padded_input, "foo ");
+  strcat(padded_input, input);
+  strcat(padded_input, " bar");
+
+  char padded_format[512];
+  strcpy(padded_format, "foo ");
+  strcat(padded_format, format);
+  strcat(padded_format, " bar");
+
+  char *s = padded_input + 4;
+  T arg;
+  memset(&arg, 0, sizeof(arg));
+  dfsan_set_label(i_label, (void *)(s), strlen(input));
+  dfsan_set_label(j_label, (void *)(padded_format + 4), strlen(format));
+  dfsan_origin a_o = dfsan_get_origin((long)(*s));
+#ifndef ORIGIN_TRACKING
+  (void)a_o;
+#else
+  assert(a_o != 0);
+#endif
+  int rv = sscanf(padded_input, padded_format, &arg);
+  assert(rv == items_num);
+  assert(arg == expected);
+  ASSERT_READ_LABEL(&arg, sizeof(arg), i_label);
+  ASSERT_INIT_ORIGINS(&arg, 1, a_o);
+}
+
+void test_sscanf() {
+  char buf[2048];
+  char buf_out[2048];
+  memset(buf, 'a', sizeof(buf));
+  memset(buf_out, 'a', sizeof(buf_out));
+
+  // Test formatting
+  strcpy(buf, "Hello world!");
+  assert(sscanf(buf, "%s", buf_out) == 1);
+  assert(strcmp(buf, "Hello world!") == 0);
+  assert(strcmp(buf_out, "Hello") == 0);
+  ASSERT_READ_LABEL(buf, sizeof(buf), 0);
+  ASSERT_READ_LABEL(buf_out, sizeof(buf_out), 0);
+
+  // Test for extra arguments.
+  assert(sscanf(buf, "%s", buf_out, 42, "hello") == 1);
+  assert(strcmp(buf, "Hello world!") == 0);
+  assert(strcmp(buf_out, "Hello") == 0);
+  ASSERT_READ_LABEL(buf, sizeof(buf), 0);
+  ASSERT_READ_LABEL(buf_out, sizeof(buf_out), 0);
+
+  // Test formatting & label propagation (multiple conversion specifiers): %s,
+  // %d, %n, %f, and %%.
+  int n;
+  strcpy(buf, "hello world, 2014/8/27 12345.678123 % 1000");
+  char *s = buf + 6; //starts with world
+  int y = 0;
+  int m = 0;
+  int d = 0;
+  float fval;
+  int val = 0;
+  dfsan_set_label(k_label, (void *)(s + 1), 2); // buf[7]-b[9]
+  dfsan_origin s_o = dfsan_get_origin((long)(s[1]));
+  dfsan_set_label(i_label, (void *)(s + 12), 1);
+  dfsan_origin m_o = dfsan_get_origin((long)s[12]); // buf[18]
+  dfsan_set_label(j_label, (void *)(s + 14), 2);    // buf[20]
+  dfsan_origin d_o = dfsan_get_origin((long)s[14]);
+  dfsan_set_label(m_label, (void *)(s + 18), 4); //buf[24]
+  dfsan_origin f_o = dfsan_get_origin((long)s[18]);
+
+#ifndef ORIGIN_TRACKING
+  (void)s_o;
+  (void)m_o;
+  (void)d_o;
+  (void)f_o;
+#else
+  assert(s_o != 0);
+  assert(m_o != 0);
+  assert(d_o != 0);
+  assert(f_o != 0);
+#endif
+  int r = sscanf(buf, "hello %s %d/%d/%d %f %% %n%d", buf_out, &y, &m, &d,
+                 &fval, &n, &val);
+  assert(r == 6);
+  assert(strcmp(buf_out, "world,") == 0);
+  ASSERT_READ_LABEL(buf_out, 1, 0);
+  ASSERT_READ_LABEL(buf_out + 1, 2, k_label);
+  ASSERT_INIT_ORIGINS(buf_out + 1, 2, s_o);
+  ASSERT_READ_LABEL(buf + 9, 9, 0);
+  ASSERT_READ_LABEL(&m, 1, i_label);
+  ASSERT_INIT_ORIGINS(&m, 1, m_o);
+  ASSERT_READ_LABEL(&d, 4, j_label);
+  ASSERT_INIT_ORIGINS(&d, 2, d_o);
+  ASSERT_READ_LABEL(&fval, sizeof(fval), m_label);
+  ASSERT_INIT_ORIGINS(&fval, sizeof(fval), f_o);
+  ASSERT_READ_LABEL(&val, 4, 0);
+  ASSERT_LABEL(r, 0);
+  assert(n == 38);
+  assert(val == 1000);
+
+  // Test formatting & label propagation (single conversion specifier, with
+  // additional length and precision modifiers).
+  char input_buf[512];
+  char *input_ptr = input_buf;
+  strcpy(input_buf, "-559038737");
+  test_sscanf_chunk(-559038737, "%d", input_ptr, 1);
+  strcpy(input_buf, "3735928559");
+  test_sscanf_chunk(3735928559, "%u", input_ptr, 1);
+  strcpy(input_buf, "12345");
+  test_sscanf_chunk(12345, "%i", input_ptr, 1);
+  strcpy(input_buf, "0751");
+  test_sscanf_chunk(489, "%o", input_ptr, 1);
+  strcpy(input_buf, "0xbabe");
+  test_sscanf_chunk(47806, "%x", input_ptr, 1);
+  strcpy(input_buf, "0x0000BABE");
+  test_sscanf_chunk(47806, "%10X", input_ptr, 1);
+  strcpy(input_buf, "3735928559");
+  test_sscanf_chunk((char)-17, "%hhd", input_ptr, 1);
+  strcpy(input_buf, "3735928559");
+  test_sscanf_chunk((short)-16657, "%hd", input_ptr, 1);
+  strcpy(input_buf, "0xdeadbeefdeadbeef");
+  test_sscanf_chunk(0xdeadbeefdeadbeefL, "%lx", input_buf, 1);
+  test_sscanf_chunk((void *)0xdeadbeefdeadbeefL, "%p", input_buf, 1);
+
+  intmax_t _x = (intmax_t)-1;
+  char _buf[256];
+  memset(_buf, 0, sizeof(_buf));
+  sprintf(_buf, "%ju", _x);
+  test_sscanf_chunk((intmax_t)18446744073709551615, "%ju", _buf, 1);
+  memset(_buf, 0, sizeof(_buf));
+  size_t _y = (size_t)-1;
+  sprintf(_buf, "%zu", _y);
+  test_sscanf_chunk((size_t)18446744073709551615, "%zu", _buf, 1);
+  memset(_buf, 0, sizeof(_buf));
+  ptrdiff_t _z = (size_t)-1;
+  sprintf(_buf, "%tu", _z);
+  test_sscanf_chunk((ptrdiff_t)18446744073709551615, "%tu", _buf, 1);
+
+  strcpy(input_buf, "0.123456");
+  test_sscanf_chunk((float)0.123456, "%8f", input_ptr, 1);
+  test_sscanf_chunk((float)0.123456, "%g", input_ptr, 1);
+  test_sscanf_chunk((float)1.234560e-01, "%e", input_ptr, 1);
+  test_sscanf_chunk((char)'z', "%c", "z", 1);
+
+  // %n, %s, %d, %f, and %% already tested
+}
+
 // Tested by a seperate source file.  This empty function is here to appease the
 // check-wrappers script.
 void test_fork() {}
@@ -2154,6 +2302,7 @@ int main(void) {
   test_sigaltstack();
   test_sigemptyset();
   test_snprintf();
+  test_sscanf();
   test_socketpair();
   test_sprintf();
   test_stat();

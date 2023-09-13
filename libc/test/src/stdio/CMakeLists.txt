@@ -272,6 +272,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  fputc_test
+  HERMETIC_TEST_ONLY # writes to libc's stdout and stderr
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fputc_test.cpp
+  DEPENDS
+    libc.src.stdio.fputc
+    libc.src.stdio.putchar
+    libc.src.stdio.stdout
+    libc.src.stdio.stderr
+)
+
+add_libc_test(
   fopen_test
   SUITE
     libc_stdio_unittests
@@ -279,7 +293,7 @@ add_libc_test(
     fopen_test.cpp
   DEPENDS
     libc.src.stdio.fread
-    libc.src.stdio.fputs
+    libc.src.stdio.fwrite
     libc.src.stdio.fclose
     libc.src.stdio.fopen
 )

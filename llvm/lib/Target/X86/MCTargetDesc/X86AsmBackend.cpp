@@ -418,7 +418,7 @@ isRightAfterData(MCFragment *CurrentFragment,
   //     - If it's not the fragment where the previous instruction is,
   //       returns true.
   //     - If it's the fragment holding the previous instruction but its
-  //       size changed since the the previous instruction was emitted into
+  //       size changed since the previous instruction was emitted into
   //       it, returns true.
   //     - Otherwise returns false.
   //   - If the fragment is not a DataFragment, returns false.
@@ -569,7 +569,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst)
   if (!needAlign(Inst) || !PendingBA)
     return;
 
-  // Tie the aligned instructions into a a pending BoundaryAlign.
+  // Tie the aligned instructions into a pending BoundaryAlign.
   PendingBA->setLastFragment(CF);
   PendingBA = nullptr;
 

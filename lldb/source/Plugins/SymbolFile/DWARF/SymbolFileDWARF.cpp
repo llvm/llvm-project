@@ -114,8 +114,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(SymbolFileDWARF::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return SymbolFileDWARF::GetPluginNameStatic();
   }
 
   PluginProperties() {
@@ -1728,34 +1728,120 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
     return dwp_sp;
 
-  const char *comp_dir = nullptr;
   FileSpec dwo_file(dwo_name);
   FileSystem::Instance().Resolve(dwo_file);
-  if (dwo_file.IsRelative()) {
-    comp_dir = cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir,
-                                                nullptr);
-    if (!comp_dir) {
-      unit.SetDwoError(Status::createWithFormat(
-          "unable to locate relative .dwo debug file \"{0}\" for "
-          "skeleton DIE {1:x16} without valid DW_AT_comp_dir "
-          "attribute",
-          dwo_name, cu_die.GetOffset()));
-      return nullptr;
-    }
+  bool found = false;
 
-    dwo_file.SetFile(comp_dir, FileSpec::Style::native);
-    if (dwo_file.IsRelative()) {
-      // if DW_AT_comp_dir is relative, it should be relative to the location
-      // of the executable, not to the location from which the debugger was
-      // launched.
-      dwo_file.PrependPathComponent(
-          m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+  const FileSpecList &debug_file_search_paths =
+      Target::GetDefaultDebugFileSearchPaths();
+  size_t num_search_paths = debug_file_search_paths.GetSize();
+
+  // It's relative, e.g. "foo.dwo", but we just to happen to be right next to
+  // it. Or it's absolute.
+  found = FileSystem::Instance().Exists(dwo_file);
+
+  if (!found) {
+    // It could be a relative path that also uses DW_AT_COMP_DIR.
+    const char *comp_dir =
+        cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
+
+    if (comp_dir) {
+      dwo_file.SetFile(comp_dir, FileSpec::Style::native);
+      if (!dwo_file.IsRelative()) {
+        FileSystem::Instance().Resolve(dwo_file);
+        dwo_file.AppendPathComponent(dwo_name);
+        found = FileSystem::Instance().Exists(dwo_file);
+      } else {
+        FileSpecList dwo_paths;
+
+        // if DW_AT_comp_dir is relative, it should be relative to the location
+        // of the executable, not to the location from which the debugger was
+        // launched.
+        FileSpec relative_to_binary = dwo_file;
+        relative_to_binary.PrependPathComponent(
+            m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+        FileSystem::Instance().Resolve(relative_to_binary);
+        relative_to_binary.AppendPathComponent(dwo_name);
+        dwo_paths.Append(relative_to_binary);
+
+        // Or it's relative to one of the user specified debug directories.
+        for (size_t idx = 0; idx < num_search_paths; ++idx) {
+          FileSpec dirspec = debug_file_search_paths.GetFileSpecAtIndex(idx);
+          dirspec.AppendPathComponent(comp_dir);
+          FileSystem::Instance().Resolve(dirspec);
+          if (!FileSystem::Instance().IsDirectory(dirspec))
+            continue;
+
+          dirspec.AppendPathComponent(dwo_name);
+          dwo_paths.Append(dirspec);
+        }
+
+        size_t num_possible = dwo_paths.GetSize();
+        for (size_t idx = 0; idx < num_possible && !found; ++idx) {
+          FileSpec dwo_spec = dwo_paths.GetFileSpecAtIndex(idx);
+          if (FileSystem::Instance().Exists(dwo_spec)) {
+            dwo_file = dwo_spec;
+            found = true;
+          }
+        }
+      }
+    } else {
+      Log *log = GetLog(LLDBLog::Symbols);
+      LLDB_LOGF(log,
+                "unable to locate relative .dwo debug file \"%s\" for "
+                "skeleton DIE 0x%016" PRIx64 " without valid DW_AT_comp_dir "
+                "attribute",
+                dwo_name, cu_die.GetOffset());
     }
-    FileSystem::Instance().Resolve(dwo_file);
-    dwo_file.AppendPathComponent(dwo_name);
   }
 
-  if (!FileSystem::Instance().Exists(dwo_file)) {
+  if (!found) {
+    // Try adding the DW_AT_dwo_name ( e.g. "c/d/main-main.dwo"), and just the
+    // filename ("main-main.dwo") to binary dir and search paths.
+    FileSpecList dwo_paths;
+    FileSpec dwo_name_spec(dwo_name);
+    llvm::StringRef filename_only = dwo_name_spec.GetFilename();
+
+    FileSpec binary_directory(
+        m_objfile_sp->GetFileSpec().GetDirectory().GetStringRef());
+    FileSystem::Instance().Resolve(binary_directory);
+
+    if (dwo_name_spec.IsRelative()) {
+      FileSpec dwo_name_binary_directory(binary_directory);
+      dwo_name_binary_directory.AppendPathComponent(dwo_name);
+      dwo_paths.Append(dwo_name_binary_directory);
+    }
+
+    FileSpec filename_binary_directory(binary_directory);
+    filename_binary_directory.AppendPathComponent(filename_only);
+    dwo_paths.Append(filename_binary_directory);
+
+    for (size_t idx = 0; idx < num_search_paths; ++idx) {
+      FileSpec dirspec = debug_file_search_paths.GetFileSpecAtIndex(idx);
+      FileSystem::Instance().Resolve(dirspec);
+      if (!FileSystem::Instance().IsDirectory(dirspec))
+        continue;
+
+      FileSpec dwo_name_dirspec(dirspec);
+      dwo_name_dirspec.AppendPathComponent(dwo_name);
+      dwo_paths.Append(dwo_name_dirspec);
+
+      FileSpec filename_dirspec(dirspec);
+      filename_dirspec.AppendPathComponent(filename_only);
+      dwo_paths.Append(filename_dirspec);
+    }
+
+    size_t num_possible = dwo_paths.GetSize();
+    for (size_t idx = 0; idx < num_possible && !found; ++idx) {
+      FileSpec dwo_spec = dwo_paths.GetFileSpecAtIndex(idx);
+      if (FileSystem::Instance().Exists(dwo_spec)) {
+        dwo_file = dwo_spec;
+        found = true;
+      }
+    }
+  }
+
+  if (!found) {
     unit.SetDwoError(Status::createWithFormat(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
         "{1:x16}",

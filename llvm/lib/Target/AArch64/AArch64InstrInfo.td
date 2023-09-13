@@ -752,6 +752,7 @@ def AArch64sminv    : SDNode<"AArch64ISD::SMINV", SDT_AArch64UnaryVec>;
 def AArch64uminv    : SDNode<"AArch64ISD::UMINV", SDT_AArch64UnaryVec>;
 def AArch64smaxv    : SDNode<"AArch64ISD::SMAXV", SDT_AArch64UnaryVec>;
 def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
+def AArch64uaddlv   : SDNode<"AArch64ISD::UADDLV", SDT_AArch64uaddlp>;
 
 def AArch64uabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abdu node:$lhs, node:$rhs),
@@ -4446,6 +4447,16 @@ let Predicates = [HasFRInt3264] in {
   defm FRINT64X : FRIntNNT<0b11, "frint64x", int_aarch64_frint64x>;
 } // HasFRInt3264
 
+// Pattern to convert 1x64 vector intrinsics to equivalent scalar instructions
+def : Pat<(v1f64 (int_aarch64_neon_frint32z (v1f64 FPR64:$Rn))),
+          (FRINT32ZDr FPR64:$Rn)>;
+def : Pat<(v1f64 (int_aarch64_neon_frint64z (v1f64 FPR64:$Rn))),
+          (FRINT64ZDr FPR64:$Rn)>;
+def : Pat<(v1f64 (int_aarch64_neon_frint32x (v1f64 FPR64:$Rn))),
+          (FRINT32XDr FPR64:$Rn)>;
+def : Pat<(v1f64 (int_aarch64_neon_frint64x (v1f64 FPR64:$Rn))),
+          (FRINT64XDr FPR64:$Rn)>;
+
 // Emitting strict_lrint as two instructions is valid as any exceptions that
 // occur will happen in exactly one of the instructions (e.g. if the input is
 // not an integer the inexact exception will happen in the FRINTX but not then
@@ -6460,6 +6471,12 @@ def : Pat<(i32 (int_aarch64_neon_uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op)))
           (i32 (EXTRACT_SUBREG
             (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub)),
             ssub))>;
+
+def : Pat<(v4i32 (AArch64uaddlv (v8i8 V64:$Rn))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$Rn), hsub))>;
+
+def : Pat<(v4i32 (AArch64uaddlv (v16i8 V128:$Rn))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$Rn), hsub))>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.

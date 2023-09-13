@@ -23,7 +23,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <limits>
 #include <string_view>
 
@@ -49,7 +48,7 @@ class OutputBuffer {
         BufferCapacity = Need;
       Buffer = static_cast<char *>(std::realloc(Buffer, BufferCapacity));
       if (Buffer == nullptr)
-        std::terminate();
+        std::abort();
     }
   }
 

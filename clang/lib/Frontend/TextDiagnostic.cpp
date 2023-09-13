@@ -736,7 +736,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
   SmallString<4096> TmpFilename;
 #endif
   if (DiagOpts->AbsolutePath) {
-    auto File = SM.getFileManager().getFile(Filename);
+    auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
       //
@@ -753,7 +753,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
       // on Windows we can just use llvm::sys::path::remove_dots(), because,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
-      TmpFilename = (*File)->getName();
+      TmpFilename = File->getName();
       llvm::sys::fs::make_absolute(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
@@ -779,7 +779,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   if (PLoc.isInvalid()) {
     // At least print the file name if available:
     if (FileID FID = Loc.getFileID(); FID.isValid()) {
-      if (const FileEntry *FE = Loc.getFileEntry()) {
+      if (OptionalFileEntryRef FE = Loc.getFileEntryRef()) {
         emitFilename(FE->getName(), Loc.getManager());
         OS << ": ";
       }
@@ -1160,8 +1160,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Find the set of lines to include.
   const unsigned MaxLines = DiagOpts->SnippetLineLimit;
   std::pair<unsigned, unsigned> Lines = {CaretLineNo, CaretLineNo};
-  unsigned DisplayLineNo =
-      Ranges.empty() ? Loc.getPresumedLoc().getLine() : ~0u;
+  unsigned DisplayLineNo = Loc.getPresumedLoc().getLine();
   for (const auto &I : Ranges) {
     if (auto OptionalRange = findLinesForRange(I, FID, SM))
       Lines = maybeAddRange(Lines, *OptionalRange, MaxLines);

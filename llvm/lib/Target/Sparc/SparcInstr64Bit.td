@@ -239,7 +239,7 @@ def UDIVXri : F3_2<2, 0b001101,
 let Predicates = [Is64Bit] in {
 
 // 64-bit loads.
-defm LDX   : Load<"ldx", 0b001011, load, I64Regs, i64>;
+defm LDX   : LoadA<"ldx", 0b001011, 0b011011, load, I64Regs, i64>;
 
 let mayLoad = 1, isAsmParserOnly = 1 in {
   def TLS_LDXrr : F3_1<3, 0b001011,
@@ -282,10 +282,10 @@ def : Pat<(i64 (extloadi32 ADDRrr:$addr)),  (LDrr ADDRrr:$addr)>;
 def : Pat<(i64 (extloadi32 ADDRri:$addr)),  (LDri ADDRri:$addr)>;
 
 // Sign-extending load of i32 into i64 is a new SPARC v9 instruction.
-defm LDSW   : Load<"ldsw", 0b001000, sextloadi32, I64Regs, i64>;
+defm LDSW   : LoadA<"ldsw", 0b001000, 0b011000, sextloadi32, I64Regs, i64>;
 
 // 64-bit stores.
-defm STX    : Store<"stx", 0b001110, store,  I64Regs, i64>;
+defm STX    : StoreA<"stx", 0b001110, 0b011110, store, I64Regs, i64>;
 
 // Truncating stores from i64 are identical to the i32 stores.
 def : Pat<(truncstorei8  i64:$src, ADDRrr:$addr), (STBrr ADDRrr:$addr, $src)>;
@@ -475,14 +475,19 @@ def SETHIXi : F2_1<0b100,
 }
 
 // ATOMICS.
-let Predicates = [Is64Bit], Constraints = "$swap = $rd", asi = 0b10000000 in {
-  def CASXrr: F3_1_asi<3, 0b111110,
+let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
+  def CASXArr: F3_1_asi<3, 0b111110,
+                (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
+                                     I64Regs:$swap, ASITag:$asi),
+                 "casxa [$rs1] $asi, $rs2, $rd",
+                 []>;
+
+  let Uses = [ASR3] in
+    def CASXAri: F3_1_cas_asi<3, 0b111110,
                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2,
                                      I64Regs:$swap),
-                 "casx [$rs1], $rs2, $rd",
-                 [(set i64:$rd,
-                     (atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap))]>;
-
+                 "casxa [$rs1] %asi, $rs2, $rd",
+                 []>;
 } // Predicates = [Is64Bit], Constraints = ...
 
 let Predicates = [Is64Bit] in {
@@ -492,8 +497,11 @@ def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
 def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 
 // atomic_store_64 val, addr -> store val, addr
-def : Pat<(atomic_store_64 ADDRrr:$dst, i64:$val), (STXrr ADDRrr:$dst, $val)>;
-def : Pat<(atomic_store_64 ADDRri:$dst, i64:$val), (STXri ADDRri:$dst, $val)>;
+def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;
+def : Pat<(atomic_store_64 i64:$val, ADDRri:$dst), (STXri ADDRri:$dst, $val)>;
+
+def : Pat<(atomic_cmp_swap_64 i64:$rs1, i64:$rs2, i64:$swap),
+          (CASXArr $rs1, $rs2, $swap, 0x80)>;
 
 } // Predicates = [Is64Bit]
 

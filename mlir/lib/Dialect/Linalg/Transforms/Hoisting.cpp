@@ -55,8 +55,11 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(func::FuncOp func) {
 static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
                                 LoopLikeOpInterface loop) {
   Value source = transferRead.getSource();
+  // Skip subview and collapse_shape Ops
   while (auto subView = source.getDefiningOp<memref::SubViewOp>())
     source = subView.getSource();
+  while (auto collapsed = source.getDefiningOp<memref::CollapseShapeOp>())
+    source = collapsed->getOperand(0);
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -67,6 +70,10 @@ static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
       continue;
     if (auto subView = dyn_cast<memref::SubViewOp>(user)) {
       users.append(subView->getUsers().begin(), subView->getUsers().end());
+      continue;
+    }
+    if (auto collapsed = dyn_cast<memref::CollapseShapeOp>(user)) {
+      users.append(collapsed->getUsers().begin(), collapsed->getUsers().end());
       continue;
     }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))

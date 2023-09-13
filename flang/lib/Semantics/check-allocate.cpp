@@ -41,14 +41,9 @@ public:
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
       : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
                                  alloc.t)},
-        name_{parser::GetLastName(allocateObject_)},
-        symbol_{name_.symbol ? &name_.symbol->GetUltimate() : nullptr},
-        type_{symbol_ ? symbol_->GetType() : nullptr},
-        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, rank_{symbol_
-                                                              ? symbol_->Rank()
-                                                              : 0},
-        allocateCoarraySpecRank_{CoarraySpecRank(alloc)},
-        corank_{symbol_ ? symbol_->Corank() : 0} {}
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, allocateCoarraySpecRank_{
+                                                          CoarraySpecRank(
+                                                              alloc)} {}
 
   bool RunChecks(SemanticsContext &context);
 
@@ -90,13 +85,17 @@ private:
 
   AllocateCheckerInfo &allocateInfo_;
   const parser::AllocateObject &allocateObject_;
-  const parser::Name &name_;
-  const Symbol *symbol_{nullptr};
-  const DeclTypeSpec *type_{nullptr};
-  const int allocateShapeSpecRank_;
-  const int rank_{0};
-  const int allocateCoarraySpecRank_;
-  const int corank_{0};
+  const int allocateShapeSpecRank_{0};
+  const int allocateCoarraySpecRank_{0};
+  const parser::Name &name_{parser::GetLastName(allocateObject_)};
+  // no USE or host association
+  const Symbol *original_{
+      name_.symbol ? &name_.symbol->GetUltimate() : nullptr};
+  // no USE, host, or construct association
+  const Symbol *symbol_{original_ ? &ResolveAssociations(*original_) : nullptr};
+  const DeclTypeSpec *type_{symbol_ ? symbol_->GetType() : nullptr};
+  const int rank_{original_ ? original_->Rank() : 0};
+  const int corank_{symbol_ ? symbol_->Corank() : 0};
   bool hasDeferredTypeParameter_{false};
   bool isUnlimitedPolymorphic_{false};
   bool isAbstract_{false};
@@ -538,6 +537,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     }
   }
   // Shape related checks
+  if (symbol_ && evaluate::IsAssumedRank(*symbol_)) {
+    context.Say(name_.source,
+        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+    return false;
+  }
   if (rank_ > 0) {
     if (!hasAllocateShapeSpecList()) {
       // C939
@@ -558,17 +562,17 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
         }
       }
     } else {
-      // first part of C942
+      // explicit shape-spec-list
       if (allocateShapeSpecRank_ != rank_) {
         context
             .Say(name_.source,
                 "The number of shape specifications, when they appear, must match the rank of allocatable object"_err_en_US)
-            .Attach(symbol_->name(), "Declared here with rank %d"_en_US, rank_);
+            .Attach(
+                original_->name(), "Declared here with rank %d"_en_US, rank_);
         return false;
       }
     }
-  } else {
-    // C940
+  } else { // allocating a scalar object
     if (hasAllocateShapeSpecList()) {
       context.Say(name_.source,
           "Shape specifications must not appear when allocatable object is scalar"_err_en_US);

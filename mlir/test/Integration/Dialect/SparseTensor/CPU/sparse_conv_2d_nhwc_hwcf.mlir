@@ -38,6 +38,10 @@
   lvlTypes = [ "compressed", "dense", "compressed", "dense" ]
 }>
 
+#DCCD = #sparse_tensor.encoding<{
+  lvlTypes = [ "dense", "compressed", "compressed", "dense" ]
+}>
+
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f
 func.func @alloc_4d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %f : f32) -> tensor<?x?x?x?xf32> {
   %buf = bufferization.alloc_tensor(%s1, %s2, %s3, %s4) : tensor<?x?x?x?xf32>
@@ -77,6 +81,18 @@ func.func @conv_2d_nhwc_hwcf_CDCD(%arg0: tensor<?x?x?x?xf32, #CDCD>, %arg1: tens
   return %ret : tensor<?x?x?x?xf32, #CDCD>
 }
 
+func.func @conv_2d_nhwc_hwcf_DCCD(%arg0: tensor<?x?x?x?xf32, #DCCD>, %arg1: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32, #DCCD> {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %s = bufferization.alloc_tensor(%c3, %c6, %c6, %c1) : tensor<?x?x?x?xf32, #DCCD>
+  %ret = linalg.conv_2d_nhwc_hwcf {dilations = dense<1> : tensor<2xi64>,
+                                     strides = dense<1> : tensor<2xi64>}
+     ins (%arg0, %arg1: tensor<?x?x?x?xf32, #DCCD>, tensor<?x?x?x?xf32>)
+    outs (%s: tensor<?x?x?x?xf32, #DCCD>) -> tensor<?x?x?x?xf32, #DCCD>
+  return %ret : tensor<?x?x?x?xf32, #DCCD>
+}
+
 func.func @entry() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -96,10 +112,13 @@ func.func @entry() {
     : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CCCC>
   %in2D_nhwc_CDCD = sparse_tensor.convert %in2D_nhwc
     : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #CDCD>
+  %in2D_nhwc_DCCD = sparse_tensor.convert %in2D_nhwc
+    : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32, #DCCD>
 
   %dense_ret = call @conv_2d_nhwc_hwcf(%in2D_nhwc, %filter2D_nhwc, %out2D_nhwc) : (tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32>)
   %CCCC_ret = call @conv_2d_nhwc_hwcf_CCCC(%in2D_nhwc_CCCC, %filter2D_nhwc) : (tensor<?x?x?x?xf32, #CCCC>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32, #CCCC>)
   %CDCD_ret = call @conv_2d_nhwc_hwcf_CDCD(%in2D_nhwc_CDCD, %filter2D_nhwc) : (tensor<?x?x?x?xf32, #CDCD>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32, #CDCD>)
+  %DCCD_ret = call @conv_2d_nhwc_hwcf_DCCD(%in2D_nhwc_DCCD, %filter2D_nhwc) : (tensor<?x?x?x?xf32, #DCCD>, tensor<?x?x?x?xf32>) -> (tensor<?x?x?x?xf32, #DCCD>)
 
   // CHECK:     ( ( ( ( 108 ), ( 124 ), ( 124 ), ( 124 ), ( 108 ), ( 108 ) ),
   // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
@@ -171,6 +190,30 @@ func.func @entry() {
       : tensor<?x?x?x?xf32>, vector<3x6x6x1xf32>
   vector.print %v2 : vector<3x6x6x1xf32>
 
+  // CHECK:     ( ( ( ( 108 ), ( 124 ), ( 124 ), ( 124 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ) ),
+  // CHECK-SAME:  ( ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ) ),
+  // CHECK-SAME:  ( ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ),
+  // CHECK-SAME:    ( ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ), ( 108 ) ) ) )
+  %3 = sparse_tensor.convert %DCCD_ret
+    : tensor<?x?x?x?xf32, #DCCD> to tensor<?x?x?x?xf32>
+  %v3 = vector.transfer_read %3[%c0, %c0, %c0, %c0], %zero
+      : tensor<?x?x?x?xf32>, vector<3x6x6x1xf32>
+  vector.print %v3 : vector<3x6x6x1xf32>
+
   // Free the resources
   bufferization.dealloc_tensor %in2D_nhwc : tensor<?x?x?x?xf32>
   bufferization.dealloc_tensor %filter2D_nhwc : tensor<?x?x?x?xf32>
@@ -178,9 +221,11 @@ func.func @entry() {
 
   bufferization.dealloc_tensor %in2D_nhwc_CDCD : tensor<?x?x?x?xf32, #CDCD>
   bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<?x?x?x?xf32, #CCCC>
+  bufferization.dealloc_tensor %in2D_nhwc_DCCD : tensor<?x?x?x?xf32, #DCCD>
 
   bufferization.dealloc_tensor %CCCC_ret : tensor<?x?x?x?xf32, #CCCC>
   bufferization.dealloc_tensor %CDCD_ret : tensor<?x?x?x?xf32, #CDCD>
+  bufferization.dealloc_tensor %DCCD_ret : tensor<?x?x?x?xf32, #DCCD>
 
   return
 }

@@ -368,8 +368,11 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         case BuiltinType::SChar:
         case BuiltinType::UChar:
         case BuiltinType::Char_U:
+            return Match;
         case BuiltinType::Bool:
-          return Match;
+          if (!Ptr)
+            return Match;
+          break;
         }
         // "Partially matched" because of promotions?
         if (!Ptr) {
@@ -410,11 +413,14 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         switch (BT->getKind()) {
           default:
             break;
+          case BuiltinType::Bool:
+            if (Ptr && (T == C.UnsignedCharTy || T == C.SignedCharTy))
+              return NoMatch;
+            [[fallthrough]];
           case BuiltinType::Char_S:
           case BuiltinType::SChar:
           case BuiltinType::Char_U:
           case BuiltinType::UChar:
-          case BuiltinType::Bool:
             if (T == C.UnsignedShortTy || T == C.ShortTy)
               return NoMatchTypeConfusion;
             if (T == C.UnsignedCharTy || T == C.SignedCharTy)

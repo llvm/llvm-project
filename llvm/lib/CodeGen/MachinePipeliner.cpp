@@ -2635,7 +2635,7 @@ bool SMSchedule::isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi) {
 ///        v1 = phi(v2, v3)
 ///  (Def) v3 = op v1
 ///  (MO)   = v1
-/// If MO appears before Def, then then v1 and v3 may get assigned to the same
+/// If MO appears before Def, then v1 and v3 may get assigned to the same
 /// register.
 bool SMSchedule::isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD,
                                        MachineInstr *Def, MachineOperand &MO) {

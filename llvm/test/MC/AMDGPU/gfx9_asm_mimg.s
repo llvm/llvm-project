@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 image_load v5, v1, s[8:15] dmask:0x1
 // CHECK: [0x00,0x01,0x00,0xf0,0x01,0x05,0x02,0x00]

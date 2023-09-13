@@ -4,17 +4,17 @@
 ; REQUIRES: asserts
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 \
-; RUN:   --stats < %s 2>&1 | FileCheck %s --check-prefix=AIX
+; RUN:   --stats -ppc-min-jump-table-entries=4 < %s 2>&1 | FileCheck %s --check-prefix=AIX
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 \
-; RUN:   --stats < %s 2>&1 | FileCheck %s --check-prefix=AIX
+; RUN:   --stats -ppc-min-jump-table-entries=4 < %s 2>&1 | FileCheck %s --check-prefix=AIX
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-unknown-linux -mcpu=pwr8 \
-; RUN:   --stats < %s 2>&1 | FileCheck %s --check-prefix=LINUX
+; RUN:   --stats -ppc-min-jump-table-entries=4 < %s 2>&1 | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64le-unknown-linux -mcpu=pwr8 \
-; RUN:   --stats < %s 2>&1 | FileCheck %s --check-prefix=LINUX
+; RUN:   --stats -ppc-min-jump-table-entries=4 < %s 2>&1 | FileCheck %s --check-prefix=LINUX
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-unknown-linux -mcpu=pwr8 \
-; RUN:   -code-model=large --stats < %s 2>&1 | FileCheck %s --check-prefix=LINUXLARGE
+; RUN:   -code-model=large --stats -ppc-min-jump-table-entries=4 < %s 2>&1 | FileCheck %s --check-prefix=LINUXLARGE
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64le-unknown-linux -mcpu=pwr8 \
-; RUN:   -code-model=large --stats < %s 2>&1 | FileCheck %s --check-prefix=LINUXLARGE
+; RUN:   -code-model=large --stats -ppc-min-jump-table-entries=4 < %s 2>&1 | FileCheck %s --check-prefix=LINUXLARGE
 
 
 ; The purpose of this test is to check that the statistics about the TOC are

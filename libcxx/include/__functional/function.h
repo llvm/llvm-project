@@ -57,6 +57,9 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_function_call
     : public exception
 {
 public:
+    _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_function_call(const bad_function_call&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_function_call& operator=(const bad_function_call&) _NOEXCEPT = default;
 // Note that when a key function is not used, every translation unit that uses
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.
@@ -433,8 +436,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
         }
     }
 
-    template <class _Fp,
-        class = typename enable_if<!is_same<__decay_t<_Fp>, __value_func>::value>::type>
+    template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __value_func>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY explicit __value_func(_Fp&& __f)
         : __value_func(_VSTD::forward<_Fp>(__f), allocator<_Fp>()) {}
 
@@ -778,7 +780,7 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
         }
     }
 
-    template <class _Fp, class = typename enable_if<!is_same<__decay_t<_Fp>, __policy_func>::value>::type>
+    template <class _Fp, __enable_if_t<!is_same<__decay_t<_Fp>, __policy_func>::value, int> = 0>
     _LIBCPP_INLINE_VISIBILITY explicit __policy_func(_Fp&& __f)
         : __policy_(__policy::__create_empty()) {
       typedef __default_alloc_func<_Fp, _Rp(_ArgTypes...)> _Fun;
@@ -1002,7 +1004,7 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
         };
 
   template <class _Fp>
-  using _EnableIfLValueCallable = typename enable_if<__callable<_Fp&>::value>::type;
+  using _EnableIfLValueCallable = __enable_if_t<__callable<_Fp&>::value>;
 public:
     typedef _Rp result_type;
 

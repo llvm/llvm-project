@@ -46,21 +46,33 @@ quality.
 Stay Informed
 -------------
 
-Developers should stay informed by reading the `LLVM Discourse forums`_. 
-If you are doing anything more than just casual work on LLVM, it is suggested that you also
-subscribe to the "commits" mailing list for the subproject you're interested in,
+Developers should stay informed by reading the `LLVM Discourse forums`_ and subscribing
+to the categories of interest for notifications.
+
+Paying attention to changes being made by others is a good way to see what other people
+are interested in and watching the flow of the project as a whole.
+
+Contibutions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
+You can subscribe to notification for areas of the codebase by joining
+one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
+GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
+indicates which team is associated with a particular paths in the repository.
+
+You can also subscribe to the "commits" mailing list for a subproject you're interested in,
 such as `llvm-commits
 <http://lists.llvm.org/mailman/listinfo/llvm-commits>`_, `cfe-commits
 <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_, or `lldb-commits
-<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.  Reading the
-"commits" list and paying attention to changes being made by others is a good
-way to see what other people are interested in and watching the flow of the
-project as a whole.
+<http://lists.llvm.org/mailman/listinfo/lldb-commits>`_.
 
-We recommend that active developers monitor incoming issues to our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_ and preferably subscribe to the `llvm-bugs
+Missing features and bugs are tracked through our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_
+and assigned labels. We recommend that active developers monitor incoming issues.
+You can subscribe for notification for specific components by joining
+one of the `issue-subscribers-* <https://github.com/orgs/llvm/teams?query=issue-subscribers>`_
+teams.
+You may also subscribe to the `llvm-bugs
 <http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to keep track
-of bugs and enhancements occurring in LLVM.  We really appreciate people who are
-proactive at catching incoming bugs in their components and dealing with them
+of bugs and enhancements occurring in the entire project.  We really appreciate people
+who are proactive at catching incoming bugs in their components and dealing with them
 promptly.
 
 Please be aware that all public LLVM mailing lists and discourse forums are public and archived, and
@@ -84,11 +96,8 @@ to read it as possible.  As such, we recommend that you:
    patches may not apply correctly if the underlying code changes between the
    time the patch was created and the time it is applied.
 
-#. Patches should be unified diffs with "infinite context" (i.e. using something
-   like `git diff -U999999 main`).
-
 #. Once you have created your patch, create a
-   `Phabricator review <Phabricator.html#phabricator-request-review-web>`_ for
+   :ref:`GitHub Pull Request <github-reviews>` for
    it (or commit it directly if applicable).
 
 When submitting patches, please do not add confidentiality or non-disclosure
@@ -115,6 +124,12 @@ to be removed in the future, removing an already-deprecated feature, upgrading a
 diagnostic from a warning to an error, switching important default behavior, or
 any other potentially disruptive situation thought to be worth raising
 awareness of. For such changes, the following should be done:
+
+.. warning::
+
+  Phabricator is deprecated and will be switched to read-only mode in October
+  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable
   "vendors" group to the review for their awareness. The purpose of these

@@ -688,7 +688,7 @@ public:
   }
   bool isInvalid() const { return Size == (unsigned)-1; }
 
-  ArrayRef<BitWord> getData() const { return {&Bits[0], Bits.size()}; }
+  ArrayRef<BitWord> getData() const { return {Bits.data(), Bits.size()}; }
 
   //===--------------------------------------------------------------------===//
   // Portable bit mask operations.

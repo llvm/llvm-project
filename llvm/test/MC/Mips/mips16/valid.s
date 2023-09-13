@@ -1,3 +1,3 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32r2 -mattr=+mips16 -show-encoding -show-inst < %s
+# RUN: llvm-mc -triple=mips -mcpu=mips32r2 -mattr=+mips16 -show-encoding -show-inst < %s
 
   nop

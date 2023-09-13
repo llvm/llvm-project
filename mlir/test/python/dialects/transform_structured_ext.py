@@ -297,7 +297,7 @@ def testMatchOpNamesTyped():
 
 
 @run
-def testMultitileSizes():
+def testMultitileSizesCompact():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
@@ -308,20 +308,65 @@ def testMultitileSizes():
         transform.YieldOp()
     # CHECK-LABEL: TEST: testMultitileSizes
     # CHECK: transform.sequence
+    # CHECK-NOT: divisor
+    # CHECK: transform.structured.multitile_sizes
+    # CHECK-NOT: divisor
+    # CHECK-DAG: dimension = 1
+    # CHECK-NOT: divisor
+    # CHECK-DAG: target_size = 42
+    # CHECK-NOT: divisor
+
+
+@run
+def testMultitileSizesAllArgs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MultiTileSizesOp(
+            pdl.OperationType.get(),
+            sequence.bodyTarget,
+            dimension=1,
+            target_size=42,
+            divisor=2,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMultitileSizes
+    # CHECK: transform.sequence
     # CHECK: transform.structured.multitile_sizes
     # CHECK-DAG: dimension = 1
+    # CHECK-DAG: divisor = 2
     # CHECK-DAG: target_size = 42
 
 
 @run
-def testPad():
+def testPadOpNoArgs():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.PadOp(sequence.bodyTarget)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testPadOpNoArgs
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.pad
+    # CHECK-NOT: copy_back_op
+    # CHECK-NOT: pack_paddings
+    # CHECK-NOT: pad_to_multiple_of
+    # CHECK-NOT: padding_dimensions
+    # CHECK-NOT: padding_values
+    # CHECK-NOT: transpose_paddings
+
+
+@run
+def testPadOpArgs():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
     )
     with InsertionPoint(sequence.body):
         structured.PadOp(
             sequence.bodyTarget,
-            padding_values=[FloatAttr.get_f32(42.0)],
+            padding_values=[FloatAttr.get_f32(42.0), StringAttr.get("0")],
             padding_dimensions=Attribute.parse("[1]"),
             pad_to_multiple_of=[128],
             pack_paddings=[0],
@@ -329,14 +374,14 @@ def testPad():
             copy_back_op="linalg.copy",
         )
         transform.YieldOp()
-    # CHECK-LABEL: TEST: testPad
+    # CHECK-LABEL: TEST: testPadOpArgs
     # CHECK: transform.sequence
     # CHECK: transform.structured.pad
     # CHECK-DAG: copy_back_op = "linalg.copy"
     # CHECK-DAG: pack_paddings = [0]
     # CHECK-DAG: pad_to_multiple_of = [128]
     # CHECK-DAG: padding_dimensions = [1]
-    # CHECK-DAG: padding_values = [4.200000e+01 : f32]
+    # CHECK-DAG: padding_values = [4.200000e+01 : f32, "0"]
     # CHECK-DAG: transpose_paddings = {{\[}}[1, 0], [0, 1]]
 
 
@@ -465,6 +510,22 @@ def testTileExplicitLoopTypeAll():
     # CHECK: = transform.structured.tile
     # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
     # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.forall">
+
+
+@run
+def testTileScalable():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileOp(
+            sequence.bodyTarget,
+            sizes=[4, [2]],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileScalable
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.tile %{{.*}}[4, [2]]
 
 
 @run

@@ -11,15 +11,6 @@ STRING_EXTENSION_OUTSIDE(SBSymbolContextList)
         def __len__(self):
             return int(self.GetSize())
 
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __getitem__(self, key):
             count = len(self)
             if isinstance(key, int):

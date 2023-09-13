@@ -235,7 +235,7 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
         // rather one pass of the RefSCC creating one child RefSCC at a time.
 
         // Ensure we can proxy analysis updates from the CGSCC analysis manager
-        // into the the Function analysis manager by getting a proxy here.
+        // into the Function analysis manager by getting a proxy here.
         // This also needs to update the FunctionAnalysisManager, as this may be
         // the first time we see this SCC.
         CGAM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG).updateFAM(

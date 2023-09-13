@@ -48,6 +48,8 @@ def COMBINING_KIND_MAXF : I32BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
 def COMBINING_KIND_AND : I32BitEnumAttrCaseBit<"AND", 8, "and">;
 def COMBINING_KIND_OR  : I32BitEnumAttrCaseBit<"OR", 9, "or">;
 def COMBINING_KIND_XOR : I32BitEnumAttrCaseBit<"XOR", 10, "xor">;
+def COMBINING_KIND_MINIMUMF : I32BitEnumAttrCaseBit<"MINIMUMF", 11, "minimumf">;
+def COMBINING_KIND_MAXIMUMF : I32BitEnumAttrCaseBit<"MAXIMUMF", 12, "maximumf">;
 
 def CombiningKind : I32BitEnumAttr<
     "CombiningKind",
@@ -55,7 +57,8 @@ def CombiningKind : I32BitEnumAttr<
     [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MINUI,
      COMBINING_KIND_MINSI, COMBINING_KIND_MINF, COMBINING_KIND_MAXUI,
      COMBINING_KIND_MAXSI, COMBINING_KIND_MAXF, COMBINING_KIND_AND,
-     COMBINING_KIND_OR, COMBINING_KIND_XOR]> {
+     COMBINING_KIND_OR, COMBINING_KIND_XOR,
+     COMBINING_KIND_MAXIMUMF, COMBINING_KIND_MINIMUMF]> {
   let cppNamespace = "::mlir::vector";
   let genSpecializedAttr = 0;
 }
@@ -897,7 +900,7 @@ def Vector_OuterProductOp :
                 TCresVTEtIsSameAsOpBase<0, 1>>,
     DeclareOpInterfaceMethods<MaskableOpInterface>]>,
     Arguments<(ins AnyVector:$lhs, AnyType:$rhs,
-               Variadic<AnyVector>:$acc,
+               Optional<AnyVector>:$acc,
                DefaultValuedAttr<Vector_CombiningKindAttr, "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyVector)> {
   let summary = "vector outerproduct with optional fused add";
@@ -961,9 +964,9 @@ def Vector_OuterProductOp :
       return getRhs().getType();
     }
     VectorType getOperandVectorTypeACC() {
-      return getAcc().empty()
-        ? VectorType()
-        : ::llvm::cast<VectorType>((*getAcc().begin()).getType());
+      return getAcc()
+        ? ::llvm::cast<VectorType>(getAcc().getType())
+        : VectorType();
     }
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());

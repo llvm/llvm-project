@@ -1642,13 +1642,13 @@ defm : LdPat<atomic_load_16, LD_H>;
 defm : LdPat<atomic_load_32, LD_W>;
 
 class release_seqcst_store<PatFrag base>
-    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+    : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isReleaseOrStronger(Ordering);
 }]>;
 
 class unordered_monotonic_store<PatFrag base>
-    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+    : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return !isReleaseOrStronger(Ordering);
 }]>;
@@ -1660,23 +1660,13 @@ def atomic_store_unordered_monotonic_32
 def atomic_store_unordered_monotonic_64
     : unordered_monotonic_store<atomic_store_64>;
 
-/// AtomicStores
-
-multiclass AtomicStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
-                       ValueType vt> {
-  def : Pat<(StoreOp BaseAddr:$ptr, (vt StTy:$val)),
-            (Inst StTy:$val, BaseAddr:$ptr, 0)>;
-  def : Pat<(StoreOp (AddLike BaseAddr:$ptr, simm12:$imm12), (vt StTy:$val)),
-            (Inst StTy:$val, BaseAddr:$ptr, simm12:$imm12)>;
-}
-
-defm : AtomicStPat<atomic_store_8, ST_B, GPR, GRLenVT>;
-defm : AtomicStPat<atomic_store_16, ST_H, GPR, GRLenVT>;
-defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
+defm : StPat<atomic_store_8, ST_B, GPR, GRLenVT>;
+defm : StPat<atomic_store_16, ST_H, GPR, GRLenVT>;
+defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
                    Requires<[IsLA32]>;
 
 def PseudoAtomicStoreW
-  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rk, GPR:$rj)>,
            PseudoInstExpansion<(AMSWAP__DB_W R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
@@ -1684,15 +1674,15 @@ def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
 
 let Predicates = [IsLA64] in {
 def PseudoAtomicStoreD
-  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rk, GPR:$rj)>,
            PseudoInstExpansion<(AMSWAP__DB_D R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
 
 defm : LdPat<atomic_load_64, LD_D>;
-defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
-defm : AtomicStPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
+defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
+defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 /// Atomic Ops

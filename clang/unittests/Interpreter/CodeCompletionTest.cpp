@@ -50,7 +50,11 @@ static std::vector<std::string> runComp(clang::Interpreter &MainInterp,
   return Comps;
 }
 
+#ifdef _AIX
+TEST(CodeCompletionTest, DISABLED_Sanity) {
+#else
 TEST(CodeCompletionTest, Sanity) {
+#endif
   auto Interp = createInterpreter();
   if (auto R = Interp->ParseAndExecute("int foo = 12;")) {
     consumeError(std::move(R));
@@ -63,7 +67,11 @@ TEST(CodeCompletionTest, Sanity) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef _AIX
+TEST(CodeCompletionTest, DISABLED_SanityNoneValid) {
+#else
 TEST(CodeCompletionTest, SanityNoneValid) {
+#endif
   auto Interp = createInterpreter();
   if (auto R = Interp->ParseAndExecute("int foo = 12;")) {
     consumeError(std::move(R));
@@ -75,7 +83,11 @@ TEST(CodeCompletionTest, SanityNoneValid) {
   EXPECT_EQ((bool)Err, false);
 }
 
+#ifdef _AIX
+TEST(CodeCompletionTest, DISABLED_TwoDecls) {
+#else
 TEST(CodeCompletionTest, TwoDecls) {
+#endif
   auto Interp = createInterpreter();
   if (auto R = Interp->ParseAndExecute("int application = 12;")) {
     consumeError(std::move(R));

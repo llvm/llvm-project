@@ -17,7 +17,7 @@ include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMEnums.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/EnumAttr.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
@@ -139,6 +139,7 @@ def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
   // Set the $predicate index to -1 to indicate there is no matching operand
   // and decrement the following indices.
   list<int> llvmArgIndices = [-1, 0, 1];
+  let hasFolder = 1;
 }
 
 // Other floating-point operations.
@@ -325,9 +326,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 }
 
 def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
-    [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
-  dag args = (ins Arg<LLVM_PointerTo<LLVM_LoadableType>, "", [MemRead]>:$addr,
+  dag args = (ins LLVM_PointerTo<LLVM_LoadableType>:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -398,10 +400,11 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
 }
 
 def LLVM_StoreOp : LLVM_MemAccessOpBase<"store",
-    [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
   dag args = (ins LLVM_LoadableType:$value,
-              Arg<LLVM_PointerTo<LLVM_LoadableType>,"",[MemWrite]>:$addr,
+              LLVM_PointerTo<LLVM_LoadableType>:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
               UnitAttr:$nontemporal,
@@ -1339,8 +1342,7 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface,
-    CallableOpInterface
+    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 
@@ -1420,36 +1422,15 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getParams(); }
 
     /// Returns the result types of this function.
-    ArrayRef<Type> getResultTypes() { return getFunctionType().getReturnTypes(); }
-
-    //===------------------------------------------------------------------===//
-    // CallableOpInterface
-    //===------------------------------------------------------------------===//
-
-    /// Returns the callable region, which is the function body. If the function
-    /// is external, returns null.
-    Region *getCallableRegion();
-
-    /// Returns the callable result type, which is the single function return
-    /// type if it is not void, or an empty array if the function's return type
-    /// is void, as void is not assignable to a value.
-    ArrayRef<Type> getCallableResults() {
+    ArrayRef<Type> getResultTypes() {
       if (::llvm::isa<LLVM::LLVMVoidType>(getFunctionType().getReturnType()))
         return {};
       return getFunctionType().getReturnTypes();
     }
 
-    /// Returns the argument attributes for all callable region arguments or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-
-    /// Returns the result attributes for all callable region results or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
-    }
+    /// Returns the callable region, which is the function body. If the function
+    /// is external, returns null.
+    Region *getCallableRegion();
   }];
 
   let hasCustomAssemblyFormat = 1;
@@ -1527,6 +1508,30 @@ def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure]>,
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
+def LLVM_ZeroOp
+    : LLVM_Op<"mlir.zero", [Pure]>,
+      LLVM_Builder<"$res = llvm::Constant::getNullValue($_resultType);">
+{
+  let summary = "Creates a zero-initialized value of LLVM dialect type.";
+  let description = [{
+    Unlike LLVM IR, MLIR does not have first-class zero-initialized values.
+    Such values must be created as SSA values using `llvm.mlir.zero`. This
+    operation has no operands or attributes. It creates a zero-initialized
+    value of the specified LLVM IR dialect type.
+
+    Example:
+
+    ```mlir
+    // Create a zero-initialized value for a structure with a 32-bit integer
+    // followed by a float.
+    %0 = llvm.mlir.zero : !llvm.struct<(i32, f32)>
+    ```
+  }];
+  let results = (outs LLVM_Type:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
 def LLVM_ConstantOp
     : LLVM_Op<"mlir.constant", [Pure, ConstantLike]>,
       LLVM_Builder<[{$res = getLLVMConstant($_resultType, $value, $_location,
@@ -1582,6 +1587,17 @@ def LLVM_ConstantOp
       build($_builder, $_state, value.getType(), value);
     }]>
   ];
+
+  let extraClassDeclaration = [{
+    /// Whether the constant op can be constructed with a particular value and
+    /// type.
+    static bool isBuildableWith(Attribute value, Type type);
+
+    /// Build the constant op with `value` and `type` if possible, otherwise
+    /// returns null.
+    static ConstantOp materialize(OpBuilder &builder, Attribute value,
+                                  Type type, Location loc);
+  }];
 
   let hasFolder = 1;
   let hasVerifier = 1;

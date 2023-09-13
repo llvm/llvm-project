@@ -14,7 +14,7 @@ include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/IR/EnumAttr.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/PatternBase.td"
@@ -369,6 +369,20 @@ def DenseArrayNonNegativeOp : TEST_Op<"confined_non_negative_attr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Promised Interfaces Constraints
+//===----------------------------------------------------------------------===//
+
+def PromisedInterfacesOp : TEST_Op<"promised_interfaces"> {
+  let arguments = (ins
+      ConfinedAttr<AnyAttr,
+          [PromisedAttrInterface<TestExternalAttrInterface>]>:$promisedAttr,
+      ConfinedType<AnyType,
+          [HasPromiseOrImplementsTypeInterface<TestExternalTypeInterface>]
+        >:$promisedType
+  );
+}
+
+//===----------------------------------------------------------------------===//
 // Test Enum Attributes
 //===----------------------------------------------------------------------===//
 
@@ -525,8 +539,7 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
   }];
 }
 
-def ConversionFuncOp : TEST_Op<"conversion_func_op", [CallableOpInterface,
-                                                      FunctionOpInterface]> {
+def ConversionFuncOp : TEST_Op<"conversion_func_op", [FunctionOpInterface]> {
   let arguments = (ins SymbolNameAttr:$sym_name,
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -536,7 +549,7 @@ def ConversionFuncOp : TEST_Op<"conversion_func_op", [CallableOpInterface,
 
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
-    // CallableOpInterface
+    // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
 
     /// Returns the region on the current operation that is callable. This may
@@ -545,28 +558,6 @@ def ConversionFuncOp : TEST_Op<"conversion_func_op", [CallableOpInterface,
     ::mlir::Region *getCallableRegion() {
       return isExternal() ? nullptr : &getBody();
     }
-
-    /// Returns the results types that the callable region produces when
-    /// executed.
-    ::mlir::ArrayRef<::mlir::Type> getCallableResults() {
-      return getFunctionType().getResults();
-    }
-
-    /// Returns the argument attributes for all callable region arguments or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-
-    /// Returns the result attributes for all callable region results or
-    /// null if there are none.
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
-    }
-
-    //===------------------------------------------------------------------===//
-    // FunctionOpInterface Methods
-    //===------------------------------------------------------------------===//
 
     /// Returns the argument types of this async function.
     ::mlir::ArrayRef<::mlir::Type> getArgumentTypes() {
@@ -592,14 +583,11 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
 
   let extraClassDeclaration = [{
     ::mlir::Region *getCallableRegion() { return &getBody(); }
-    ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
+    ::llvm::ArrayRef<::mlir::Type> getResultTypes() {
       return ::llvm::cast<::mlir::FunctionType>(getType()).getResults();
     }
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return nullptr;
-    }
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return nullptr;
+    ::llvm::ArrayRef<::mlir::Type> getArgumentTypes() {
+      return ::llvm::cast<::mlir::FunctionType>(getType()).getInputs();
     }
   }];
 }
@@ -700,6 +688,12 @@ def OperandsHaveSameRank :
 def OperandZeroAndResultHaveSameRank :
     TEST_Op<"operand0_and_result_have_same_rank",
             [AllRanksMatch<["x", "res"]>]> {
+  let arguments = (ins AnyShaped:$x, AnyShaped:$y);
+  let results = (outs AnyShaped:$res);
+}
+
+def OperandsAndResultHaveSameRank :
+    TEST_Op<"operands_and_result_have_same_rank", [SameOperandsAndResultRank]> {
   let arguments = (ins AnyShaped:$x, AnyShaped:$y);
   let results = (outs AnyShaped:$res);
 }
@@ -2962,6 +2956,12 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
     [ReturnLike, Terminator, NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
+}
+
+def TestOpOptionallyImplementingInterface
+    : TEST_Op<"op_optionally_implementing_interface",
+        [TestOptionallyImplementedOpInterface]> {
+  let arguments = (ins BoolAttr:$implementsInterface);
 }
 
 #endif // TEST_OPS

@@ -92,9 +92,15 @@ namespace {
   struct MachineVerifier {
     MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
 
+    MachineVerifier(const char *b, LiveVariables *LiveVars,
+                    LiveIntervals *LiveInts, LiveStacks *LiveStks,
+                    SlotIndexes *Indexes)
+        : Banner(b), LiveVars(LiveVars), LiveInts(LiveInts), LiveStks(LiveStks),
+          Indexes(Indexes) {}
+
     unsigned verify(const MachineFunction &MF);
 
-    Pass *const PASS;
+    Pass *const PASS = nullptr;
     const char *Banner;
     const MachineFunction *MF = nullptr;
     const TargetMachine *TM = nullptr;
@@ -355,6 +361,16 @@ bool MachineFunction::verify(Pass *p, const char *Banner, bool AbortOnErrors)
   return FoundErrors == 0;
 }
 
+bool MachineFunction::verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
+                             const char *Banner, bool AbortOnErrors) const {
+  MachineFunction &MF = const_cast<MachineFunction &>(*this);
+  unsigned FoundErrors =
+      MachineVerifier(Banner, nullptr, LiveInts, nullptr, Indexes).verify(MF);
+  if (AbortOnErrors && FoundErrors)
+    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+  return FoundErrors == 0;
+}
+
 void MachineVerifier::verifySlotIndexes() const {
   if (Indexes == nullptr)
     return;
@@ -404,10 +420,6 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
   isFunctionTracksDebugUserValues = MF.getProperties().hasProperty(
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
-  LiveVars = nullptr;
-  LiveInts = nullptr;
-  LiveStks = nullptr;
-  Indexes = nullptr;
   if (PASS) {
     LiveInts = PASS->getAnalysisIfAvailable<LiveIntervals>();
     // We don't want to verify LiveVariables if LiveIntervals is available.
@@ -876,7 +888,8 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
     // There may be implicit ops after the fixed operands.
     if (!MO.isImm())
       break;
-    NumOps = 1 + InlineAsm::getNumOperandRegisters(MO.getImm());
+    const InlineAsm::Flag F(MO.getImm());
+    NumOps = 1 + F.getNumOperandRegisters();
   }
 
   if (OpNo > MI->getNumOperands())
@@ -3371,26 +3384,28 @@ void MachineVerifier::verifyLiveInterval(const LiveInterval &LI) {
   assert(Reg.isVirtual());
   verifyLiveRange(LI, Reg);
 
-  LaneBitmask Mask;
-  LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
-  for (const LiveInterval::SubRange &SR : LI.subranges()) {
-    if ((Mask & SR.LaneMask).any()) {
-      report("Lane masks of sub ranges overlap in live interval", MF);
-      report_context(LI);
-    }
-    if ((SR.LaneMask & ~MaxMask).any()) {
-      report("Subrange lanemask is invalid", MF);
-      report_context(LI);
-    }
-    if (SR.empty()) {
-      report("Subrange must not be empty", MF);
-      report_context(SR, LI.reg(), SR.LaneMask);
-    }
-    Mask |= SR.LaneMask;
-    verifyLiveRange(SR, LI.reg(), SR.LaneMask);
-    if (!LI.covers(SR)) {
-      report("A Subrange is not covered by the main range", MF);
-      report_context(LI);
+  if (LI.hasSubRanges()) {
+    LaneBitmask Mask;
+    LaneBitmask MaxMask = MRI->getMaxLaneMaskForVReg(Reg);
+    for (const LiveInterval::SubRange &SR : LI.subranges()) {
+      if ((Mask & SR.LaneMask).any()) {
+        report("Lane masks of sub ranges overlap in live interval", MF);
+        report_context(LI);
+      }
+      if ((SR.LaneMask & ~MaxMask).any()) {
+        report("Subrange lanemask is invalid", MF);
+        report_context(LI);
+      }
+      if (SR.empty()) {
+        report("Subrange must not be empty", MF);
+        report_context(SR, LI.reg(), SR.LaneMask);
+      }
+      Mask |= SR.LaneMask;
+      verifyLiveRange(SR, LI.reg(), SR.LaneMask);
+      if (!LI.covers(SR)) {
+        report("A Subrange is not covered by the main range", MF);
+        report_context(LI);
+      }
     }
   }
 

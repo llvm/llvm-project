@@ -3,14 +3,10 @@ STRING_EXTENSION_OUTSIDE(SBCompileUnit)
 %extend lldb::SBCompileUnit {
 #ifdef SWIGPYTHON
     %pythoncode %{
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
+        def __eq__(self, other):
+            return not self.__ne__(other)
 
         def __iter__(self):
             '''Iterate over all line entries in a lldb.SBCompileUnit object.'''

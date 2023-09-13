@@ -15,18 +15,11 @@
 // (2) Formidable Repository of Open Sparse Tensors and Tools (FROSTT): *.tns
 //     http://frostt.io/tensors/file-formats.html
 //
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
-//
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_FILE_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSOR_FILE_H
 
-#include "mlir/ExecutionEngine/SparseTensor/PermutationRef.h"
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
 #include <fstream>
@@ -83,13 +76,6 @@ inline V readValue(char **linePtr, bool isPattern) {
 } // namespace detail
 
 //===----------------------------------------------------------------------===//
-
-// TODO: benchmark whether to keep various methods inline vs moving them
-// off to the cpp file.
-
-// TODO: consider distinguishing separate classes for before vs
-// after reading the header; so as to statically avoid the need
-// to `assert(isValid())`.
 
 /// This class abstracts over the information stored in file headers,
 /// as well as providing the buffers and methods for parsing those headers.

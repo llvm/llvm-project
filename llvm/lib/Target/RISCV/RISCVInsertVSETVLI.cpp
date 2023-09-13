@@ -212,10 +212,14 @@ struct DemandedFields {
   bool VLZeroness = false;
   // What properties of SEW we need to preserve.
   enum : uint8_t {
-    SEWEqual = 2,              // The exact value of SEW needs to be preserved.
-    SEWGreaterThanOrEqual = 1, // SEW can be changed as long as it's greater
+    SEWEqual = 3,              // The exact value of SEW needs to be preserved.
+    SEWGreaterThanOrEqual = 2, // SEW can be changed as long as it's greater
                                // than or equal to the original value.
-    SEWNone = 0                // We don't need to preserve SEW at all.
+    SEWGreaterThanOrEqualAndLessThan64 =
+        1,      // SEW can be changed as long as it's greater
+                // than or equal to the original value, but must be less
+                // than 64.
+    SEWNone = 0 // We don't need to preserve SEW at all.
   } SEW = SEWNone;
   bool LMUL = false;
   bool SEWLMULRatio = false;
@@ -267,6 +271,9 @@ struct DemandedFields {
     case SEWGreaterThanOrEqual:
       OS << "SEWGreaterThanOrEqual";
       break;
+    case SEWGreaterThanOrEqualAndLessThan64:
+      OS << "SEWGreaterThanOrEqualAndLessThan64";
+      break;
     case SEWNone:
       OS << "SEWNone";
       break;
@@ -300,6 +307,11 @@ static bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
 
   if (Used.SEW == DemandedFields::SEWGreaterThanOrEqual &&
       RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType))
+    return false;
+
+  if (Used.SEW == DemandedFields::SEWGreaterThanOrEqualAndLessThan64 &&
+      (RISCVVType::getSEW(NewVType) < RISCVVType::getSEW(CurVType) ||
+       RISCVVType::getSEW(NewVType) >= 64))
     return false;
 
   if (Used.LMUL &&
@@ -391,7 +403,9 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
     if (hasUndefinedMergeOp(MI, *MRI)) {
-      if (!isFloatScalarMoveOrScalarSplatInstr(MI) || HasVInstructionsF64)
+      if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+        Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
+      else
         Res.SEW = DemandedFields::SEWGreaterThanOrEqual;
       Res.TailPolicy = false;
     }
@@ -691,10 +705,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const VSETVLIInfo &V) {
 #endif
 
 struct BlockData {
-  // The VSETVLIInfo that represents the net changes to the VL/VTYPE registers
-  // made by this block. Calculated in Phase 1.
-  VSETVLIInfo Change;
-
   // The VSETVLIInfo that represents the VL/VTYPE settings on exit from this
   // block. Calculated in Phase 2.
   VSETVLIInfo Exit;
@@ -742,9 +752,10 @@ private:
                      MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
 
-  void transferBefore(VSETVLIInfo &Info, const MachineInstr &MI);
-  void transferAfter(VSETVLIInfo &Info, const MachineInstr &MI);
-  bool computeVLVTYPEChanges(const MachineBasicBlock &MBB);
+  void transferBefore(VSETVLIInfo &Info, const MachineInstr &MI) const;
+  void transferAfter(VSETVLIInfo &Info, const MachineInstr &MI) const;
+  bool computeVLVTYPEChanges(const MachineBasicBlock &MBB,
+                             VSETVLIInfo &Info) const;
   void computeIncomingVLVTYPE(const MachineBasicBlock &MBB);
   void emitVSETVLIs(MachineBasicBlock &MBB);
   void doLocalPostpass(MachineBasicBlock &MBB);
@@ -977,7 +988,9 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
     Used.LMUL = false;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
-    if (!isFloatScalarMoveOrScalarSplatInstr(MI) || HasVInstructionsF64)
+    if (isFloatScalarMoveOrScalarSplatInstr(MI) && !HasVInstructionsF64)
+      Used.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
+    else
       Used.SEW = DemandedFields::SEWGreaterThanOrEqual;
     Used.TailPolicy = false;
   }
@@ -1006,7 +1019,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
 // Given an incoming state reaching MI, modifies that state so that it is minimally
 // compatible with MI.  The resulting state is guaranteed to be semantically legal
 // for MI, but may not be the state requested by MI.
-void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info, const MachineInstr &MI) {
+void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
+                                        const MachineInstr &MI) const {
   uint64_t TSFlags = MI.getDesc().TSFlags;
   if (!RISCVII::hasSEWOp(TSFlags))
     return;
@@ -1063,7 +1077,8 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info, const MachineInstr &M
 // Given a state with which we evaluated MI (see transferBefore above for why
 // this might be different that the state MI requested), modify the state to
 // reflect the changes MI might make.
-void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info, const MachineInstr &MI) {
+void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
+                                       const MachineInstr &MI) const {
   if (isVectorConfigInstr(MI)) {
     Info = getInfoForVSETVLI(MI);
     return;
@@ -1082,18 +1097,18 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info, const MachineInstr &MI
     Info = VSETVLIInfo::getUnknown();
 }
 
-bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
+bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB,
+                                               VSETVLIInfo &Info) const {
   bool HadVectorOp = false;
 
-  BlockData &BBInfo = BlockInfo[MBB.getNumber()];
-  BBInfo.Change = BBInfo.Pred;
+  Info = BlockInfo[MBB.getNumber()].Pred;
   for (const MachineInstr &MI : MBB) {
-    transferBefore(BBInfo.Change, MI);
+    transferBefore(Info, MI);
 
     if (isVectorConfigInstr(MI) || RISCVII::hasSEWOp(MI.getDesc().TSFlags))
       HadVectorOp = true;
 
-    transferAfter(BBInfo.Change, MI);
+    transferAfter(Info, MI);
   }
 
   return HadVectorOp;
@@ -1132,8 +1147,8 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
   // compatibility checks performed a blocks output state can change based on
   // the input state.  To cache, we'd have to add logic for finding
   // never-compatible state changes.
-  computeVLVTYPEChanges(MBB);
-  VSETVLIInfo TmpStatus = BBInfo.Change;
+  VSETVLIInfo TmpStatus;
+  computeVLVTYPEChanges(MBB, TmpStatus);
 
   // If the new exit value matches the old exit value, we don't need to revisit
   // any blocks.
@@ -1528,10 +1543,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
 
   // Phase 1 - determine how VL/VTYPE are affected by the each block.
   for (const MachineBasicBlock &MBB : MF) {
-    HaveVectorOp |= computeVLVTYPEChanges(MBB);
+    VSETVLIInfo TmpStatus;
+    HaveVectorOp |= computeVLVTYPEChanges(MBB, TmpStatus);
     // Initial exit state is whatever change we found in the block.
     BlockData &BBInfo = BlockInfo[MBB.getNumber()];
-    BBInfo.Exit = BBInfo.Change;
+    BBInfo.Exit = TmpStatus;
     LLVM_DEBUG(dbgs() << "Initial exit state of " << printMBBReference(MBB)
                       << " is " << BBInfo.Exit << "\n");
 

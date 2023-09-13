@@ -1724,9 +1724,18 @@ floating point semantic models: precise (the default), strict, and fast.
    and ``fast``.
    Details:
 
-   * ``precise`` Disables optimizations that are not value-safe on floating-point data, although FP contraction (FMA) is enabled (``-ffp-contract=on``).  This is the default behavior.
-   * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled. Enables ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option setting behaves as though ``#pragma STDC FENV_ACCESS ON`` appeared at the top of the source file.
-   * ``fast`` Behaves identically to specifying both ``-ffast-math`` and ``ffp-contract=fast``
+   * ``precise`` Disables optimizations that are not value-safe on
+     floating-point data, although FP contraction (FMA) is enabled
+     (``-ffp-contract=on``). This is the default behavior. This value resets
+     ``-fmath-errno`` to its target-dependent default.
+   * ``strict`` Enables ``-frounding-math`` and
+     ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All
+     of the ``-ffast-math`` enablements are disabled. Enables
+     ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option
+     setting behaves as though ``#pragma STDC FENV_ACCESS ON`` appeared at the
+     top of the source file.
+   * ``fast`` Behaves identically to specifying both ``-ffast-math`` and
+     ``ffp-contract=fast``
 
    Note: If your command line specifies multiple instances
    of the ``-ffp-model`` option, or if your command line option specifies
@@ -4287,8 +4296,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Yc<filename>           Generate a pch file for all code up to and including <filename>
       /Yu<filename>           Load a pch file and use it instead of all code up to and including <filename>
       /Z7                     Enable CodeView debug information in object files
-      /Zc:char8_t             Enable C++2a char8_t type
-      /Zc:char8_t-            Disable C++2a char8_t type
+      /Zc:char8_t             Enable C++20 char8_t type
+      /Zc:char8_t-            Disable C++20 char8_t type
       /Zc:dllexportInlines-   Don't dllexport/dllimport inline member functions of dllexport/import classes
       /Zc:dllexportInlines    dllexport/dllimport inline member functions of dllexport/import classes (default)
       /Zc:sizedDealloc-       Disable C++14 sized global deallocation functions

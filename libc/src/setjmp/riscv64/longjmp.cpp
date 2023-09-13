@@ -16,37 +16,48 @@
 #error "Invalid file include"
 #endif
 
+#define LOAD_IMPL(insns, reg, val)                                             \
+  LIBC_INLINE_ASM(#insns " " #reg ", %0\n\t" : : "m"(val) :)
+
+#ifdef LIBC_TARGET_ARCH_IS_RISCV32
+#define LOAD(reg, val) LOAD_IMPL(lw, reg, val)
+#define LOAD_FP(reg, val) LOAD_IMPL(flw, reg, val)
+#else
+#define LOAD(reg, val) LOAD_IMPL(ld, reg, val)
+#define LOAD_FP(reg, val) LOAD_IMPL(fld, reg, val)
+#endif
+
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
-  LIBC_INLINE_ASM("ld ra, %0\n\t" : : "m"(buf->__pc) :);
-  LIBC_INLINE_ASM("ld s0, %0\n\t" : : "m"(buf->__regs[0]) :);
-  LIBC_INLINE_ASM("ld s1, %0\n\t" : : "m"(buf->__regs[1]) :);
-  LIBC_INLINE_ASM("ld s2, %0\n\t" : : "m"(buf->__regs[2]) :);
-  LIBC_INLINE_ASM("ld s3, %0\n\t" : : "m"(buf->__regs[3]) :);
-  LIBC_INLINE_ASM("ld s4, %0\n\t" : : "m"(buf->__regs[4]) :);
-  LIBC_INLINE_ASM("ld s5, %0\n\t" : : "m"(buf->__regs[5]) :);
-  LIBC_INLINE_ASM("ld s6, %0\n\t" : : "m"(buf->__regs[6]) :);
-  LIBC_INLINE_ASM("ld s7, %0\n\t" : : "m"(buf->__regs[7]) :);
-  LIBC_INLINE_ASM("ld s8, %0\n\t" : : "m"(buf->__regs[8]) :);
-  LIBC_INLINE_ASM("ld s9, %0\n\t" : : "m"(buf->__regs[9]) :);
-  LIBC_INLINE_ASM("ld s10, %0\n\t" : : "m"(buf->__regs[10]) :);
-  LIBC_INLINE_ASM("ld s11, %0\n\t" : : "m"(buf->__regs[11]) :);
-  LIBC_INLINE_ASM("ld sp, %0\n\t" : : "m"(buf->__sp) :);
+  LOAD(ra, buf->__pc);
+  LOAD(s0, buf->__regs[0]);
+  LOAD(s1, buf->__regs[1]);
+  LOAD(s2, buf->__regs[2]);
+  LOAD(s3, buf->__regs[3]);
+  LOAD(s4, buf->__regs[4]);
+  LOAD(s5, buf->__regs[5]);
+  LOAD(s6, buf->__regs[6]);
+  LOAD(s7, buf->__regs[7]);
+  LOAD(s8, buf->__regs[8]);
+  LOAD(s9, buf->__regs[9]);
+  LOAD(s10, buf->__regs[10]);
+  LOAD(s11, buf->__regs[11]);
+  LOAD(sp, buf->__sp);
 
 #if __riscv_float_abi_double
-  LIBC_INLINE_ASM("fld fs0, %0\n\t" : : "m"(buf->__fpregs[0]) :);
-  LIBC_INLINE_ASM("fld fs1, %0\n\t" : : "m"(buf->__fpregs[1]) :);
-  LIBC_INLINE_ASM("fld fs2, %0\n\t" : : "m"(buf->__fpregs[2]) :);
-  LIBC_INLINE_ASM("fld fs3, %0\n\t" : : "m"(buf->__fpregs[3]) :);
-  LIBC_INLINE_ASM("fld fs4, %0\n\t" : : "m"(buf->__fpregs[4]) :);
-  LIBC_INLINE_ASM("fld fs5, %0\n\t" : : "m"(buf->__fpregs[5]) :);
-  LIBC_INLINE_ASM("fld fs6, %0\n\t" : : "m"(buf->__fpregs[6]) :);
-  LIBC_INLINE_ASM("fld fs7, %0\n\t" : : "m"(buf->__fpregs[7]) :);
-  LIBC_INLINE_ASM("fld fs8, %0\n\t" : : "m"(buf->__fpregs[8]) :);
-  LIBC_INLINE_ASM("fld fs9, %0\n\t" : : "m"(buf->__fpregs[9]) :);
-  LIBC_INLINE_ASM("fld fs10, %0\n\t" : : "m"(buf->__fpregs[10]) :);
-  LIBC_INLINE_ASM("fld fs11, %0\n\t" : : "m"(buf->__fpregs[11]) :);
+  LOAD_FP(fs0, buf->__fpregs[0]);
+  LOAD_FP(fs1, buf->__fpregs[1]);
+  LOAD_FP(fs2, buf->__fpregs[2]);
+  LOAD_FP(fs3, buf->__fpregs[3]);
+  LOAD_FP(fs4, buf->__fpregs[4]);
+  LOAD_FP(fs5, buf->__fpregs[5]);
+  LOAD_FP(fs6, buf->__fpregs[6]);
+  LOAD_FP(fs7, buf->__fpregs[7]);
+  LOAD_FP(fs8, buf->__fpregs[8]);
+  LOAD_FP(fs9, buf->__fpregs[9]);
+  LOAD_FP(fs10, buf->__fpregs[10]);
+  LOAD_FP(fs11, buf->__fpregs[11]);
 #elif defined(__riscv_float_abi_single)
 #error "longjmp implementation not available for the target architecture."
 #endif

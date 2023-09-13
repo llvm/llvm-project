@@ -125,7 +125,7 @@ def _get_value_list(
 
 def _get_int_array_attr(values: Optional[Union[ArrayAttr, IntOrAttrList]]) -> ArrayAttr:
     if values is None:
-        return ArrayAttr.get([])
+        return None
 
     # Turn into a Python list of Python ints.
     values = _get_value_list(values)
@@ -148,7 +148,7 @@ def _get_int_array_array_attr(
     If the input is None, an empty ArrayAttr is returned.
     """
     if values is None:
-        return ArrayAttr.get([])
+        return None
 
     # Make sure the outer level is a list.
     values = _get_value_list(values)
@@ -195,6 +195,8 @@ class BufferizeToAllocationOp:
             memcpy_op=memcpy_op,
             alloc_op=alloc_op,
             bufferize_destination_only=bufferize_destination_only,
+            loc=loc,
+            ip=ip,
         )
 
 
@@ -395,6 +397,8 @@ class MaskedVectorizeOp:
             static_vector_sizes=static_vector_sizes,
             scalable_sizes=scalable_sizes,
             vectorize_nd_extract=vectorize_nd_extract,
+            loc=loc,
+            ip=ip,
         )
 
 
@@ -458,7 +462,7 @@ class MatchOp:
 
 
 class MultiTileSizesOp:
-    """Specialization for MultitileSizesOp class."""
+    """Specialization for MultiTileSizesOp class."""
 
     def __init__(
         self,
@@ -471,8 +475,6 @@ class MultiTileSizesOp:
         loc=None,
         ip=None,
     ):
-        if divisor is None:
-            divisor = 1
         super().__init__(
             result_type,
             result_type,
@@ -493,9 +495,7 @@ class PadOp:
         self,
         target: Union[Operation, OpView, Value],
         *,
-        padding_values: Optional[
-            Union[ArrayAttr, Sequence[Union[bool, int, float, Attribute]]]
-        ] = None,
+        padding_values: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
         padding_dimensions: OptionalIntList = None,
         pad_to_multiple_of: OptionalIntList = None,
         pack_paddings: OptionalIntList = None,
@@ -506,20 +506,6 @@ class PadOp:
         loc=None,
         ip=None,
     ):
-        if padding_values is None:
-            padding_values = []
-        if padding_dimensions is None:
-            padding_dimensions = []
-        if pad_to_multiple_of is None:
-            pad_to_multiple_of = []
-        if pack_paddings is None:
-            pack_paddings = []
-        if transpose_paddings is None:
-            transpose_paddings = []
-
-        padding_dimensions = _get_int_array_attr(padding_dimensions)
-        pad_to_multiple_of = _get_int_array_attr(pad_to_multiple_of)
-        pack_paddings = _get_int_array_attr(pack_paddings)
         transpose_paddings = _get_int_array_array_attr(transpose_paddings)
 
         pdl_operation_type = pdl.OperationType.get()
@@ -583,106 +569,76 @@ class SplitOp:
 
 
 class TileOp:
-  """Specialization for TileOp class."""
+    """Specialization for TileOp class."""
 
-  @overload
-  def __init__(
+    @overload
+    def __init__(
         self,
         loop_types: Union[Type, List[Type]],
         target: Union[Operation, Value],
         *,
-        sizes: Optional[
-            Union[Sequence[Union[int, IntegerAttr, Operation, Value]], ArrayAttr]
-        ] = None,
+        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         interchange: OptionalIntList = None,
-        scalable_sizes: OptionalBoolList = None,
         loc=None,
         ip=None,
     ):
-    ...
+        ...
 
-  @overload
-  def __init__(
+    @overload
+    def __init__(
         self,
         target: Union[Operation, Value, OpView],
         *,
-        sizes: Optional[
-            Union[Sequence[Union[int, IntegerAttr, Operation, Value]], ArrayAttr]
-        ] = None,
+        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         interchange: OptionalIntList = None,
-        scalable_sizes: OptionalBoolList = None,
         loc=None,
         ip=None,
     ):
-    ...
+        ...
 
-  def __init__(
+    def __init__(
         self,
         loop_types_or_target: Union[Type, List[Type], Operation, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
-        sizes: Optional[
-            Union[Sequence[Union[int, IntegerAttr, Operation, Value]], ArrayAttr]
-        ] = None,
+        sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         interchange: OptionalIntList = None,
-        scalable_sizes: OptionalBoolList = None,
         loc=None,
         ip=None,
     ):
-    if interchange is None:
-      interchange = []
-    if sizes is None:
-      sizes = []
+        (
+            dynamic_sizes,
+            static_sizes,
+            scalable_sizes,
+        ) = _dispatch_dynamic_index_list(sizes)
 
-    static_sizes = []
-    dynamic_sizes = []
-    if isinstance(sizes, ArrayAttr):
-      sizes_attr = sizes
-    else:
-      for size in sizes:
-        if isinstance(size, int):
-          static_sizes.append(size)
+        num_loops = sum(v if v == 0 else 1 for v in static_sizes)
+
+        if isinstance(loop_types_or_target, (Operation, Value, OpView)):
+            loop_types = [transform.AnyOpType.get()] * num_loops
+            target = loop_types_or_target
+            assert target_or_none is None, "Cannot construct TileOp with two targets."
         else:
-          static_sizes.append(ShapedType.get_dynamic_size())
-          dynamic_sizes.append(_get_op_result_or_value(size))
-      sizes_attr = DenseI64ArrayAttr.get(static_sizes)
+            loop_types = (
+                ([loop_types_or_target] * num_loops)
+                if isinstance(loop_types_or_target, Type)
+                else loop_types_or_target
+            )
+            target = target_or_none
 
-    num_loops = sum(
-        v if v == 0 else 1 for v in self.__extract_values(sizes_attr)
-    )
-    if scalable_sizes is None:
-      scalable_sizes = [False] * len(self.__extract_values(sizes_attr))
+        target = _get_op_result_or_value(target)
 
-    if isinstance(loop_types_or_target, (Operation, Value, OpView)):
-      loop_types = [transform.AnyOpType.get()] * num_loops
-      target = loop_types_or_target
-      assert target_or_none is None, "Cannot construct TileOp with two targets."
-    else:
-      loop_types = (
-          ([loop_types_or_target] * num_loops)
-          if isinstance(loop_types_or_target, Type)
-          else loop_types_or_target
-      )
-      target = target_or_none
-
-    target = _get_op_result_or_value(target)
-
-    super().__init__(
+        super().__init__(
             target.type,
             loop_types,
             target,
             dynamic_sizes=dynamic_sizes,
-            static_sizes=sizes_attr,
+            static_sizes=static_sizes,
             interchange=interchange,
             scalable_sizes=scalable_sizes,
             loc=loc,
             ip=ip,
         )
-
-  def __extract_values(self, attr: Optional[DenseI64ArrayAttr]) -> List[int]:
-    if not attr:
-      return []
-    return [element for element in attr]
 
 
 class TileToForallOp:

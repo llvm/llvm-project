@@ -44,8 +44,8 @@ export namespace std {
   using std::strtoull;
 
   // [c.mb.wcs], multibyte / wide string and character conversion functions
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::mblen;
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::mbstowcs;
   using std::mbtowc;
   using std::wcstombs;

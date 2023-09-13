@@ -411,6 +411,10 @@ struct TraversalConfig {
   /// Specifies whether OpOperands with a different type that are not the result
   /// of a CastOpInterface op should be followed.
   bool followSameTypeOrCastsOnly = false;
+
+  /// Specifies whether already visited values should be visited again.
+  /// (Note: This can result in infinite looping.)
+  bool revisitAlreadyVisitedValues = false;
 };
 
 /// AnalysisState provides a variety of helper functions for dealing with
@@ -679,6 +683,14 @@ Operation *getOwnerOfValue(Value value);
 /// repetitive region.
 Region *getNextEnclosingRepetitiveRegion(Region *region,
                                          const BufferizationOptions &options);
+
+/// If `region` is a parallel region, return `region`. Otherwise, find the first
+/// enclosing parallel region of `region`. If there is no such region, return
+/// "nullptr".
+///
+/// Note: Whether a region is parallel or sequential is queried from the
+/// `BufferizableOpInterface`.
+Region *getParallelRegion(Region *region, const BufferizationOptions &options);
 
 namespace detail {
 /// This is the default implementation of

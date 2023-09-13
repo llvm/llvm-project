@@ -5,7 +5,8 @@
 // The dbgeng driver doesn't support \DexDeclareAddress yet.
 // UNSUPPORTED: system-windows
 //
-// RUN: not %dexter_regression_test -- %s | FileCheck %s
+// RUN: %dexter_regression_test_build %s -o %t
+// RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: missing_dex_address.cpp
 
 int main() {

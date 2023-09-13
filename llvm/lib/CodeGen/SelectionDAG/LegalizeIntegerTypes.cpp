@@ -1956,9 +1956,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ANY_EXTEND(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
-  SDValue Op2 = GetPromotedInteger(N->getOperand(2));
+  SDValue Op1 = GetPromotedInteger(N->getOperand(1));
   return DAG.getAtomic(N->getOpcode(), SDLoc(N), N->getMemoryVT(),
-                       N->getChain(), N->getBasePtr(), Op2, N->getMemOperand());
+                       N->getChain(), Op1, N->getBasePtr(), N->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
@@ -5505,11 +5505,10 @@ SDValue DAGTypeLegalizer::ExpandIntOp_TRUNCATE(SDNode *N) {
 
 SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
   SDLoc dl(N);
-  SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                               cast<AtomicSDNode>(N)->getMemoryVT(),
-                               N->getOperand(0),
-                               N->getOperand(1), N->getOperand(2),
-                               cast<AtomicSDNode>(N)->getMemOperand());
+  SDValue Swap =
+      DAG.getAtomic(ISD::ATOMIC_SWAP, dl, cast<AtomicSDNode>(N)->getMemoryVT(),
+                    N->getOperand(0), N->getOperand(2), N->getOperand(1),
+                    cast<AtomicSDNode>(N)->getMemOperand());
   return Swap.getValue(1);
 }
 

@@ -25,6 +25,8 @@ _warningFlags = [
     "-Wno-aligned-allocation-unavailable",
     "-Wno-atomic-alignment",
     "-Wno-reserved-module-identifier",
+    '-Wdeprecated-copy',
+    '-Wdeprecated-copy-dtor',
     # GCC warns about places where we might want to add sized allocation/deallocation
     # functions, but we know better what we're doing/testing in the test suite.
     "-Wno-sized-deallocation",
@@ -132,7 +134,7 @@ DEFAULT_PARAMETERS = [
         "`clang` for Clang modules",
         default=lambda cfg: next(s for s in _allModules if getModuleFlag(cfg, s)),
         actions=lambda enable_modules: [
-            AddFeature("modules-build"),
+            AddFeature("clang-modules-build"),
             AddCompileFlag("-fmodules"),
             AddCompileFlag("-fcxx-modules"), # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
             # Note: We use a custom modules cache path to make sure that we don't reuse
@@ -278,6 +280,7 @@ DEFAULT_PARAMETERS = [
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
             AddFeature("libcpp-has-no-experimental-stop_token"),
+            AddFeature("libcpp-has-no-incomplete-tzdb"),
         ],
     ),
     Parameter(
@@ -290,15 +293,16 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["unchecked", "hardened", "debug"],
+        choices=["unchecked", "hardened", "safe", "debug"],
         type=str,
         default="unchecked",
-        help="Whether to enable the hardened mode or the debug mode when compiling the test suite. This is only "
+        help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
         "meaningful when running the tests against libc++.",
         actions=lambda hardening_mode: filter(
             None,
             [
                 AddCompileFlag("-D_LIBCPP_ENABLE_HARDENED_MODE=1") if hardening_mode == "hardened" else None,
+                AddCompileFlag("-D_LIBCPP_ENABLE_SAFE_MODE=1")     if hardening_mode == "safe" else None,
                 AddCompileFlag("-D_LIBCPP_ENABLE_DEBUG_MODE=1")    if hardening_mode == "debug" else None,
                 AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],

@@ -10,6 +10,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Debug.h"
 
@@ -191,13 +192,23 @@ void ValueBoundsConstraintSet::processWorklist(StopConditionFn stopCondition) {
     // the worklist.
     auto valueBoundsOp =
         dyn_cast<ValueBoundsOpInterface>(getOwnerOfValue(value));
-    if (!valueBoundsOp)
+    if (valueBoundsOp) {
+      if (dim == kIndexValue) {
+        valueBoundsOp.populateBoundsForIndexValue(value, *this);
+      } else {
+        valueBoundsOp.populateBoundsForShapedValueDim(value, dim, *this);
+      }
       continue;
-    if (dim == kIndexValue) {
-      valueBoundsOp.populateBoundsForIndexValue(value, *this);
-    } else {
-      valueBoundsOp.populateBoundsForShapedValueDim(value, dim, *this);
     }
+
+    // If the op does not implement `ValueBoundsOpInterface`, check if it
+    // implements the `DestinationStyleOpInterface`. OpResults of such ops are
+    // tied to OpOperands. Tied values have the same shape.
+    auto dstOp = value.getDefiningOp<DestinationStyleOpInterface>();
+    if (!dstOp || dim == kIndexValue)
+      continue;
+    Value tiedOperand = dstOp.getTiedOpOperand(cast<OpResult>(value))->get();
+    bound(value)[dim] == getExpr(tiedOperand, dim);
   }
 }
 

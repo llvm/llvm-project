@@ -1043,7 +1043,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   }
   case ISD::ATOMIC_STORE:
     Action = TLI.getOperationAction(Node->getOpcode(),
-                                    Node->getOperand(2).getValueType());
+                                    Node->getOperand(1).getValueType());
     break;
   case ISD::SELECT_CC:
   case ISD::STRICT_FSETCC:
@@ -3080,11 +3080,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::ATOMIC_STORE: {
     // There is no libcall for atomic store; fake it with ATOMIC_SWAP.
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 cast<AtomicSDNode>(Node)->getMemoryVT(),
-                                 Node->getOperand(0),
-                                 Node->getOperand(1), Node->getOperand(2),
-                                 cast<AtomicSDNode>(Node)->getMemOperand());
+    SDValue Swap = DAG.getAtomic(
+        ISD::ATOMIC_SWAP, dl, cast<AtomicSDNode>(Node)->getMemoryVT(),
+        Node->getOperand(0), Node->getOperand(2), Node->getOperand(1),
+        cast<AtomicSDNode>(Node)->getMemOperand());
     Results.push_back(Swap.getValue(1));
     break;
   }
@@ -3334,7 +3333,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.expandVACopy(Node));
     break;
   case ISD::EXTRACT_VECTOR_ELT:
-    if (Node->getOperand(0).getValueType().getVectorNumElements() == 1)
+    if (Node->getOperand(0).getValueType().getVectorElementCount().isScalar())
       // This must be an access of the only element.  Return it.
       Tmp1 = DAG.getNode(ISD::BITCAST, dl, Node->getValueType(0),
                          Node->getOperand(0));
@@ -3905,6 +3904,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Chain = Node->getOperand(0);
     SDValue Table = Node->getOperand(1);
     SDValue Index = Node->getOperand(2);
+    int JTI = cast<JumpTableSDNode>(Table.getNode())->getIndex();
 
     const DataLayout &TD = DAG.getDataLayout();
     EVT PTy = TLI.getPointerTy(TD);
@@ -3939,7 +3939,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                           TLI.getPICJumpTableRelocBase(Table, DAG));
     }
 
-    Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, DAG);
+    Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, JTI, DAG);
     Results.push_back(Tmp1);
     break;
   }
@@ -4418,6 +4418,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::STRICT_FEXP2:
     ExpandFPLibCall(Node, RTLIB::EXP2_F32, RTLIB::EXP2_F64, RTLIB::EXP2_F80,
                     RTLIB::EXP2_F128, RTLIB::EXP2_PPCF128, Results);
+    break;
+  case ISD::FEXP10:
+    ExpandFPLibCall(Node, RTLIB::EXP10_F32, RTLIB::EXP10_F64, RTLIB::EXP10_F80,
+                    RTLIB::EXP10_F128, RTLIB::EXP10_PPCF128, Results);
     break;
   case ISD::FTRUNC:
   case ISD::STRICT_FTRUNC:
@@ -5302,6 +5306,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FABS:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(

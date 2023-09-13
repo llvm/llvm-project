@@ -1103,7 +1103,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 8; // Skipped.
   }
 
-  if (MFI.hasQueuePtr())
+  if (MFI.getUserSGPRInfo().hasQueuePtr())
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
 

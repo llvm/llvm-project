@@ -35,8 +35,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -58,9 +57,9 @@ class XtensaAsmParser : public MCTargetAsmParser {
                     bool SR = false);
   bool ParseInstructionWithSR(ParseInstructionInfo &Info, StringRef Name,
                               SMLoc NameLoc, OperandVector &Operands);
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override {
-    return MatchOperand_NoMatch;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override {
+    return ParseStatus::NoMatch;
   }
   ParseStatus parsePCRelTarget(OperandVector &Operands);
 
@@ -453,12 +452,12 @@ ParseStatus XtensaAsmParser::parsePCRelTarget(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-bool XtensaAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool XtensaAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                     SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = 0;
+  Reg = Xtensa::NoRegister;
   StringRef Name = getLexer().getTok().getIdentifier();
 
   if (!MatchRegisterName(Name) && !MatchRegisterAltName(Name)) {

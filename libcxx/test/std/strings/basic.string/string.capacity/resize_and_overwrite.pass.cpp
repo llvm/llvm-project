@@ -49,7 +49,7 @@ constexpr void test_truncating(std::size_t o, size_t N) {
     LIBCPP_ASSERT(s.begin().base() == p);
     assert(std::all_of(p, p + n, [](auto ch) { return ch == 'a'; }));
     p[n - 1] = 'b';
-    p[n] = 'c'; // will be overwritten
+    p[n]     = 'c'; // will be overwritten
     return n;
   });
   const S expected = S(N - 1, 'a') + S(1, 'b');

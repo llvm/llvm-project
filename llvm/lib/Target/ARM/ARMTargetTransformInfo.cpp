@@ -1670,12 +1670,73 @@ InstructionCost
 ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) {
-  if (TTI::requiresOrderedReduction(FMF))
-    return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
   EVT ValVT = TLI->getValueType(DL, ValTy);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD)
+  unsigned EltSize = ValVT.getScalarSizeInBits();
+
+  // In general floating point reductions are a series of elementwise
+  // operations, with free extracts on each step. These are either in-order or
+  // treewise depending on whether that is allowed by the fast math flags.
+  if ((ISD == ISD::FADD || ISD == ISD::FMUL) &&
+      ((EltSize == 32 && ST->hasVFP2Base()) ||
+       (EltSize == 64 && ST->hasFP64()) ||
+       (EltSize == 16 && ST->hasFullFP16()))) {
+    unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
+    unsigned VecLimit = ST->hasMVEFloatOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost = 0;
+    while (!TTI::requiresOrderedReduction(FMF) && isPowerOf2_32(NumElts) &&
+           NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(ValTy->getElementType(), NumElts / 2);
+      VecCost += getArithmeticInstrCost(Opcode, VecTy, CostKind);
+      NumElts /= 2;
+    }
+
+    // For fp16 we need to extract the upper lane elements. MVE can add a
+    // VREV+FMIN/MAX to perform another vector step instead.
+    InstructionCost ExtractCost = 0;
+    if (!TTI::requiresOrderedReduction(FMF) && ST->hasMVEFloatOps() &&
+        ValVT.getVectorElementType() == MVT::f16 && NumElts == 8) {
+      VecCost += ST->getMVEVectorCostFactor(CostKind) * 2;
+      NumElts /= 2;
+    } else if (ValVT.getVectorElementType() == MVT::f16)
+      ExtractCost = NumElts / 2;
+
+    return VecCost + ExtractCost +
+           NumElts *
+               getArithmeticInstrCost(Opcode, ValTy->getElementType(), CostKind);
+  }
+
+  if ((ISD == ISD::AND || ISD == ISD::OR || ISD == ISD::XOR) &&
+      (EltSize == 64 || EltSize == 32 || EltSize == 16 || EltSize == 8)) {
+    unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
+    unsigned VecLimit =
+        ST->hasMVEIntegerOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost = 0;
+    while (isPowerOf2_32(NumElts) && NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(ValTy->getElementType(), NumElts / 2);
+      VecCost += getArithmeticInstrCost(Opcode, VecTy, CostKind);
+      NumElts /= 2;
+    }
+    // For i16/i8, MVE will perform a VREV + VORR/VAND/VEOR for the 64bit vector
+    // step.
+    if (ST->hasMVEIntegerOps() && ValVT.getScalarSizeInBits() <= 16 &&
+        NumElts * EltSize == 64) {
+      Type *VecTy = FixedVectorType::get(ValTy->getElementType(), NumElts);
+      VecCost += ST->getMVEVectorCostFactor(CostKind) +
+                 getArithmeticInstrCost(Opcode, VecTy, CostKind);
+      NumElts /= 2;
+    }
+
+    // From here we extract the elements and perform the and/or/xor.
+    InstructionCost ExtractCost = NumElts;
+    return VecCost + ExtractCost +
+           (NumElts - 1) * getArithmeticInstrCost(
+                               Opcode, ValTy->getElementType(), CostKind);
+  }
+
+  if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD ||
+      TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
@@ -1750,6 +1811,66 @@ ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
   }
 
   return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, ValTy, CostKind);
+}
+
+InstructionCost
+ARMTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                   FastMathFlags FMF,
+                                   TTI::TargetCostKind CostKind) {
+  EVT ValVT = TLI->getValueType(DL, Ty);
+
+  // In general floating point reductions are a series of elementwise
+  // operations, with free extracts on each step. These are either in-order or
+  // treewise depending on whether that is allowed by the fast math flags.
+  if ((IID == Intrinsic::minnum || IID == Intrinsic::maxnum) &&
+      ((ValVT.getVectorElementType() == MVT::f32 && ST->hasVFP2Base()) ||
+       (ValVT.getVectorElementType() == MVT::f64 && ST->hasFP64()) ||
+       (ValVT.getVectorElementType() == MVT::f16 && ST->hasFullFP16()))) {
+    unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
+    unsigned EltSize = ValVT.getScalarSizeInBits();
+    unsigned VecLimit = ST->hasMVEFloatOps() ? 128 : (ST->hasNEON() ? 64 : -1);
+    InstructionCost VecCost;
+    while (isPowerOf2_32(NumElts) && NumElts * EltSize > VecLimit) {
+      Type *VecTy = FixedVectorType::get(Ty->getElementType(), NumElts/2);
+      IntrinsicCostAttributes ICA(IID, VecTy, {VecTy, VecTy}, FMF);
+      VecCost += getIntrinsicInstrCost(ICA, CostKind);
+      NumElts /= 2;
+    }
+
+    // For fp16 we need to extract the upper lane elements. MVE can add a
+    // VREV+FMIN/MAX to perform another vector step instead.
+    InstructionCost ExtractCost = 0;
+    if (ST->hasMVEFloatOps() && ValVT.getVectorElementType() == MVT::f16 &&
+        NumElts == 8) {
+      VecCost += ST->getMVEVectorCostFactor(CostKind) * 2;
+      NumElts /= 2;
+    } else if (ValVT.getVectorElementType() == MVT::f16)
+      ExtractCost = cast<FixedVectorType>(Ty)->getNumElements() / 2;
+
+    IntrinsicCostAttributes ICA(IID, Ty->getElementType(),
+                                {Ty->getElementType(), Ty->getElementType()},
+                                FMF);
+    return VecCost + ExtractCost +
+           (NumElts - 1) * getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  if (IID == Intrinsic::smin || IID == Intrinsic::smax ||
+      IID == Intrinsic::umin || IID == Intrinsic::umax) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+
+    // All costs are the same for u/s min/max.  These lower to vminv, which are
+    // given a slightly higher cost as they tend to take multiple cycles for
+    // smaller type sizes.
+    static const CostTblEntry CostTblAdd[]{
+        {ISD::SMIN, MVT::v16i8, 4},
+        {ISD::SMIN, MVT::v8i16, 3},
+        {ISD::SMIN, MVT::v4i32, 2},
+    };
+    if (const auto *Entry = CostTableLookup(CostTblAdd, ISD::SMIN, LT.second))
+      return Entry->Cost * ST->getMVEVectorCostFactor(CostKind) * LT.first;
+  }
+
+  return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 }
 
 InstructionCost

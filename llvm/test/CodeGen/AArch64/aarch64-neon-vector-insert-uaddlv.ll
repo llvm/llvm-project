@@ -95,8 +95,8 @@ define void @insert_vec_v2i32_uaddlv_from_v16i8(ptr %0) {
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    uaddlv.16b h0, v0
 ; CHECK-NEXT:    mov.s v1[0], v0[0]
-; CHECK-NEXT:    ucvtf.2s v1, v1
-; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    ucvtf.2s v0, v1
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
 
 entry:
@@ -300,7 +300,7 @@ define void @insert_vec_v8i8_uaddlv_from_v8i8(ptr %0) {
 ; CHECK-NEXT:    stp xzr, xzr, [x0, #16]
 ; CHECK-NEXT:    uaddlv.8b h1, v0
 ; CHECK-NEXT:    mov.h v0[0], v1[0]
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
+; CHECK-NEXT:    bic.4h v0, #7, lsl #8
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    ucvtf.4s v0, v0
 ; CHECK-NEXT:    str q0, [x0]

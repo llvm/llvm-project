@@ -195,12 +195,14 @@ def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
     This pass converts bufferization operations into memref operations.
 
     In the current state, this pass only transforms a `bufferization.clone`
-    operation into `memref.alloc` and `memref.copy` operations. This conversion
-    is needed, since some clone operations could remain after applying several
-    transformation processes. Currently, only `canonicalize` transforms clone
-    operations or even eliminates them. This can lead to errors if any clone op
-    survived after all conversion passes (starting from the bufferization
-    dialect) are performed.
+    operation into `memref.alloc` and `memref.copy` operations and
+    `bufferization.dealloc` operations (the same way as the
+    `-bufferization-lower-deallocations` pass). The conversion of `clone`
+    operations is needed, since some clone operations could remain after
+    applying several transformation processes. Currently, only `canonicalize`
+    transforms clone operations or even eliminates them. This can lead to errors
+    if any clone op survived after all conversion passes (starting from the
+    bufferization dialect) are performed.
 
     See:
     https://llvm.discourse.group/t/bufferization-error-related-to-memref-clone/4665
@@ -339,6 +341,21 @@ def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv"> {
 // FuncToLLVM
 //===----------------------------------------------------------------------===//
 
+def SetLLVMModuleDataLayoutPass : Pass<"set-llvm-module-datalayout", "ModuleOp"> {
+  let summary = "Attach a datalayout string as a module attribute";
+  let description = [{
+    Verify that the dataLayout string is a valid LLVM datalayout string and
+    attach it as an attribute `LLVMDialect::getDataLayoutAttrName()` to the
+    module, overriding the existing one.
+  }];
+  let options = [
+    Option<"dataLayout", "data-layout", "std::string",
+           /*default=*/"\"\"",
+           "String description (LLVM format) of the data layout that is "
+           "expected on the produced module">,
+  ];
+}
+
 def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
   let summary = "Convert from the Func dialect to the LLVM dialect";
   let description = [{
@@ -354,6 +371,11 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     If other operations are present and their results are required by the LLVM
     IR dialect operations, the pass will fail.  Any LLVM IR operations or types
     already present in the IR will be kept as is.
+
+    An LLVM datalayout string can be attached as an attribute to the module on
+    which the pass anchors. Such an attribute is attached by calling the 
+    set-module-datalayout pass. If present, an llvm::DataLayout object is 
+    created from this attribute and used in the conversion to LLVM.
 
     #### Output IR
 
@@ -372,10 +394,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"dataLayout", "data-layout", "std::string",
-           /*default=*/"\"\"",
-           "String description (LLVM format) of the data layout that is "
-           "expected on the produced module">,
     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
                        /*default=*/"true", "Generate LLVM IR using opaque pointers "
                        "instead of typed pointers">,
@@ -468,7 +486,6 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 
 def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
   let summary = "Generate NVVM operations for gpu operations";
-  let constructor = "mlir::createLowerGpuOpsToNVVMOpsPass()";
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "memref::MemRefDialect",

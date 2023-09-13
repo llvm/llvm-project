@@ -629,8 +629,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         const char *CubinF =
             Args.MakeArgString(getToolChain().getDriver().GetTemporaryPath(
                 llvm::sys::path::stem(InputFile), "cubin"));
-        if (std::error_code EC =
-                llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
+        if (llvm::sys::fs::copy_file(InputFile, C.addTempFile(CubinF)))
           continue;
 
         CmdArgs.push_back(CubinF);

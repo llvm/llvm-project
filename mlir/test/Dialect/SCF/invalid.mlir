@@ -478,11 +478,25 @@ func.func @while_empty_region() {
 // -----
 
 func.func @while_empty_block() {
-  // expected-error@+1 {{expects the 'before' region to terminate with 'scf.condition'}}
+  // expected-error @below {{expects a non-empty block}}
   scf.while : () -> () {
-   ^bb0:
+  ^bb0:
   } do {
-   ^bb0:
+  ^bb0:
+  }
+}
+
+// -----
+
+func.func @while_invalid_terminator() {
+  // expected-error @below {{expects the 'before' region to terminate with 'scf.condition'}}
+  scf.while : () -> () {
+  ^bb0:
+    // expected-note @below{{terminator here}}
+    "test.foo"() : () -> ()
+  } do {
+  ^bb0:
+    "test.bar"() : () -> ()
   }
 }
 

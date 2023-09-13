@@ -498,7 +498,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
     // A global pointer or allocatable variable has a descriptor for typical
     // accesses. Variables in multiple namelist groups may already have one.
     // Create descriptors for other cases.
-    if (!IsAllocatableOrPointer(s)) {
+    if (!IsAllocatableOrObjectPointer(&s)) {
       std::string mangleName =
           Fortran::lower::mangle::globalNamelistDescriptorName(s);
       if (builder.getNamedGlobal(mangleName))

@@ -1184,12 +1184,16 @@ const Symbol *GetMainEntry(const Symbol *);
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);
 bool IsFunction(const Scope &);
 bool IsProcedure(const Symbol &);
 bool IsProcedure(const Scope &);
+bool IsProcedurePointer(const Symbol *);
 bool IsProcedurePointer(const Symbol &);
+bool IsObjectPointer(const Symbol *);
+bool IsAllocatableOrObjectPointer(const Symbol *);
 bool IsAutomatic(const Symbol &);
 bool IsSaved(const Symbol &); // saved implicitly or explicitly
 bool IsDummy(const Symbol &);
@@ -1220,10 +1224,11 @@ bool IsEventTypeOrLockType(const DerivedTypeSpec *);
 // of the construct entity.
 // (E.g., for ASSOCIATE(x => y%z), ResolveAssociations(x) returns x,
 // while GetAssociationRoot(x) returns y.)
-// ResolveAssociationsExceptSelectRank() stops at a RANK case symbol.
+// In a SELECT RANK construct, ResolveAssociations() stops at a
+// RANK(n) or RANK(*) case symbol, but traverses the selector for
+// RANK DEFAULT.
 const Symbol &ResolveAssociations(const Symbol &);
 const Symbol &GetAssociationRoot(const Symbol &);
-const Symbol &ResolveAssociationsExceptSelectRank(const Symbol &);
 
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);

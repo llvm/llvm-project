@@ -137,15 +137,16 @@ struct BinaryComplexOpConversion : public OpConversionPattern<BinaryComplexOp> {
     auto type = cast<ComplexType>(adaptor.getLhs().getType());
     auto elementType = cast<FloatType>(type.getElementType());
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value realLhs = b.create<complex::ReOp>(elementType, adaptor.getLhs());
     Value realRhs = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value resultReal =
-        b.create<BinaryStandardOp>(elementType, realLhs, realRhs);
+    Value resultReal = b.create<BinaryStandardOp>(elementType, realLhs, realRhs,
+                                                  fmf.getValue());
     Value imagLhs = b.create<complex::ImOp>(elementType, adaptor.getLhs());
     Value imagRhs = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value resultImag =
-        b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs);
+    Value resultImag = b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs,
+                                                  fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();

@@ -689,25 +689,32 @@ static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
 }
 
 /// We want to turn:
-///   (select (icmp eq (and X, C1), 0), Y, (or Y, C2))
+///   (select (icmp eq (and X, C1), 0), Y, (BinOp Y, C2))
 /// into:
-///   (or (shl (and X, C1), C3), Y)
+///   IF C2 u>= C1
+///     (BinOp Y, (shl (and X, C1), C3))
+///   ELSE
+///     (BinOp Y, (lshr (and X, C1), C3))
 /// iff:
+///   0 on the RHS is the identity value (i.e add, xor, shl, etc...)
 ///   C1 and C2 are both powers of 2
 /// where:
-///   C3 = Log(C2) - Log(C1)
+///   IF C2 u>= C1
+///     C3 = Log(C2) - Log(C1)
+///   ELSE
+///     C3 = Log(C1) - Log(C2)
 ///
 /// This transform handles cases where:
 /// 1. The icmp predicate is inverted
 /// 2. The select operands are reversed
 /// 3. The magnitude of C2 and C1 are flipped
-static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
+static Value *foldSelectICmpAndBinOp(const ICmpInst *IC, Value *TrueVal,
                                   Value *FalseVal,
                                   InstCombiner::BuilderTy &Builder) {
   // Only handle integer compares. Also, if this is a vector select, we need a
   // vector compare.
   if (!TrueVal->getType()->isIntOrIntVectorTy() ||
-      TrueVal->getType()->isVectorTy() != IC->getType()->isVectorTy())
+     TrueVal->getType()->isVectorTy() != IC->getType()->isVectorTy())
     return nullptr;
 
   Value *CmpLHS = IC->getOperand(0);
@@ -735,20 +742,28 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
     NeedAnd = true;
   }
 
-  Value *Or, *Y, *V = CmpLHS;
+  Value *Y, *V = CmpLHS;
+  BinaryOperator *BinOp;
   const APInt *C2;
   bool NeedXor;
-  if (match(FalseVal, m_Or(m_Specific(TrueVal), m_Power2(C2)))) {
+  if (match(FalseVal, m_BinOp(m_Specific(TrueVal), m_Power2(C2)))) {
     Y = TrueVal;
-    Or = FalseVal;
+    BinOp = cast<BinaryOperator>(FalseVal);
     NeedXor = Pred == ICmpInst::ICMP_NE;
-  } else if (match(TrueVal, m_Or(m_Specific(FalseVal), m_Power2(C2)))) {
+  } else if (match(TrueVal, m_BinOp(m_Specific(FalseVal), m_Power2(C2)))) {
     Y = FalseVal;
-    Or = TrueVal;
+    BinOp = cast<BinaryOperator>(TrueVal);
     NeedXor = Pred == ICmpInst::ICMP_EQ;
   } else {
     return nullptr;
   }
+
+  // Check that 0 on RHS is identity value for this binop.
+  auto *IdentityC =
+      ConstantExpr::getBinOpIdentity(BinOp->getOpcode(), BinOp->getType(),
+                                     /*AllowRHSConstant*/ true);
+  if (IdentityC == nullptr || !IdentityC->isNullValue())
+    return nullptr;
 
   unsigned C2Log = C2->logBase2();
 
@@ -758,7 +773,7 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
 
   // Make sure we don't create more instructions than we save.
   if ((NeedShift + NeedXor + NeedZExtTrunc + NeedAnd) >
-      (IC->hasOneUse() + Or->hasOneUse()))
+      (IC->hasOneUse() + BinOp->hasOneUse()))
     return nullptr;
 
   if (NeedAnd) {
@@ -779,7 +794,7 @@ static Value *foldSelectICmpAndOr(const ICmpInst *IC, Value *TrueVal,
   if (NeedXor)
     V = Builder.CreateXor(V, *C2);
 
-  return Builder.CreateOr(V, Y);
+  return Builder.CreateBinOp(BinOp->getOpcode(), Y, V);
 }
 
 /// Canonicalize a set or clear of a masked set of constant bits to
@@ -861,7 +876,7 @@ static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
 
   auto *FalseValI = cast<Instruction>(FalseVal);
   auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
-                                     *FalseValI);
+                                     FalseValI->getIterator());
   IC.replaceOperand(*FalseValI, FalseValI->getOperand(0) == Y ? 0 : 1, FrY);
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
@@ -1788,7 +1803,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *V = foldSelectZeroOrOnes(ICI, TrueVal, FalseVal, Builder))
     return V;
 
-  if (Value *V = foldSelectICmpAndOr(ICI, TrueVal, FalseVal, Builder))
+  if (Value *V = foldSelectICmpAndBinOp(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectICmpLshrAshr(ICI, TrueVal, FalseVal, Builder))
@@ -2552,7 +2567,7 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
         return nullptr;
   }
 
-  Builder.SetInsertPoint(&*BB->begin());
+  Builder.SetInsertPoint(BB, BB->begin());
   auto *PN = Builder.CreatePHI(Sel.getType(), Inputs.size());
   for (auto *Pred : predecessors(BB))
     PN->addIncoming(Inputs[Pred], Pred);
@@ -3103,7 +3118,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     Value *Op1 = IsAnd ? TrueVal : FalseVal;
     if (isCheckForZeroAndMulWithOverflow(CondVal, Op1, IsAnd, Y)) {
       auto *FI = new FreezeInst(*Y, (*Y)->getName() + ".fr");
-      InsertNewInstBefore(FI, *cast<Instruction>(Y->getUser()));
+      InsertNewInstBefore(FI, cast<Instruction>(Y->getUser())->getIterator());
       replaceUse(*Y, FI);
       return replaceInstUsesWith(SI, Op1);
     }
@@ -3318,6 +3333,31 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
                                 Masked);
 }
 
+bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
+                                        const Instruction *CtxI) const {
+  KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
+
+  return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity() &&
+         (FMF.noSignedZeros() || Known.signBitIsZeroOrNaN());
+}
+
+static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
+                                          Value *Cmp1, Value *TrueVal,
+                                          Value *FalseVal, Instruction &CtxI,
+                                          bool SelectIsNSZ) {
+  Value *MulRHS;
+  if (match(Cmp1, m_PosZeroFP()) &&
+      match(TrueVal, m_c_FMul(m_Specific(Cmp0), m_Value(MulRHS)))) {
+    FastMathFlags FMF = cast<FPMathOperator>(TrueVal)->getFastMathFlags();
+    // nsz must be on the select, it must be ignored on the multiply. We
+    // need nnan and ninf on the multiply for the other value.
+    FMF.setNoSignedZeros(SelectIsNSZ);
+    return IC.fmulByZeroIsZero(MulRHS, FMF, &CtxI);
+  }
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3408,7 +3448,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
+
   if (auto *FCmp = dyn_cast<FCmpInst>(CondVal)) {
+    FCmpInst::Predicate Pred = FCmp->getPredicate();
     Value *Cmp0 = FCmp->getOperand(0), *Cmp1 = FCmp->getOperand(1);
     // Are we selecting a value based on a comparison of the two values?
     if ((Cmp0 == TrueVal && Cmp1 == FalseVal) ||
@@ -3418,7 +3461,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       //
       // e.g.
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
-      if (FCmp->hasOneUse() && FCmpInst::isUnordered(FCmp->getPredicate())) {
+      if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
         IRBuilder<>::FastMathFlagGuard FMFG(Builder);
         // FIXME: The FMF should propagate from the select, not the fcmp.
@@ -3429,14 +3472,47 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceInstUsesWith(SI, NewSel);
       }
     }
+
+    if (SIFPOp) {
+      // Fold out scale-if-equals-zero pattern.
+      //
+      // This pattern appears in code with denormal range checks after it's
+      // assumed denormals are treated as zero. This drops a canonicalization.
+
+      // TODO: Could relax the signed zero logic. We just need to know the sign
+      // of the result matches (fmul x, y has the same sign as x).
+      //
+      // TODO: Handle always-canonicalizing variant that selects some value or 1
+      // scaling factor in the fmul visitor.
+
+      // TODO: Handle ldexp too
+
+      Value *MatchCmp0 = nullptr;
+      Value *MatchCmp1 = nullptr;
+
+      // (select (fcmp [ou]eq x, 0.0), (fmul x, K), x => x
+      // (select (fcmp [ou]ne x, 0.0), x, (fmul x, K) => x
+      if (Pred == CmpInst::FCMP_OEQ || Pred == CmpInst::FCMP_UEQ) {
+        MatchCmp0 = FalseVal;
+        MatchCmp1 = TrueVal;
+      } else if (Pred == CmpInst::FCMP_ONE || Pred == CmpInst::FCMP_UNE) {
+        MatchCmp0 = TrueVal;
+        MatchCmp1 = FalseVal;
+      }
+
+      if (Cmp0 == MatchCmp0 &&
+          matchFMulByZeroIfResultEqZero(*this, Cmp0, Cmp1, MatchCmp1, MatchCmp0,
+                                        SI, SIFPOp->hasNoSignedZeros()))
+        return replaceInstUsesWith(SI, Cmp0);
+    }
   }
 
-  if (isa<FPMathOperator>(SI)) {
+  if (SIFPOp) {
     // TODO: Try to forward-propagate FMF from select arms to the select.
 
     // Canonicalize select of FP values where NaN and -0.0 are not valid as
     // minnum/maxnum intrinsics.
-    if (SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
+    if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
       Value *X, *Y;
       if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(

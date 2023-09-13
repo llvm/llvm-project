@@ -148,10 +148,6 @@ class RegisterCommandsTestCase(TestBase):
 
         self.runCmd("process continue", RUN_SUCCEEDED)
 
-        # If we start the checks too quickly, thread 3 may not have started.
-        while process.GetNumThreads() < 3:
-            pass
-
         for idx in range(1, process.GetNumThreads()):
             thread = process.GetThreadAtIndex(idx)
             if thread.GetStopReason() != lldb.eStopReasonBreakpoint:

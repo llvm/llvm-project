@@ -80,11 +80,11 @@ entry:
   ret <8 x half> %0
 }
 
-define dso_local half @t_vfmah_lane_f16(half %a, half %b, <4 x half> %c, i32 %lane) {
-; CHECK-LABEL: t_vfmah_lane_f16:
+define dso_local half @t_vfmah_lane_f16_0(half %a, half %b, <4 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmah_lane_f16_0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    fmla h0, h1, v2.h[0]
+; CHECK-NEXT:    fmadd h0, h1, h2, h0
 ; CHECK-NEXT:    ret
 entry:
   %extract = extractelement <4 x half> %c, i32 0
@@ -92,13 +92,59 @@ entry:
   ret half %0
 }
 
-define dso_local half @t_vfmah_laneq_f16(half %a, half %b, <8 x half> %c, i32 %lane) {
-; CHECK-LABEL: t_vfmah_laneq_f16:
+define dso_local half @t_vfmah_lane_f16_0_swap(half %a, half %b, <4 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmah_lane_f16_0_swap:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmla h0, h1, v2.h[0]
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    fmadd h0, h2, h1, h0
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <4 x half> %c, i32 0
+  %0 = tail call half @llvm.fma.f16(half %extract, half %b, half %a)
+  ret half %0
+}
+
+define dso_local half @t_vfmah_lane_f16_3(half %a, half %b, <4 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmah_lane_f16_3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    fmla h0, h1, v2.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <4 x half> %c, i32 3
+  %0 = tail call half @llvm.fma.f16(half %b, half %extract, half %a)
+  ret half %0
+}
+
+define dso_local half @t_vfmah_laneq_f16_0(half %a, half %b, <8 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmah_laneq_f16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmadd h0, h1, h2, h0
 ; CHECK-NEXT:    ret
 entry:
   %extract = extractelement <8 x half> %c, i32 0
+  %0 = tail call half @llvm.fma.f16(half %b, half %extract, half %a)
+  ret half %0
+}
+
+define dso_local half @t_vfmah_laneq_f16_0_swap(half %a, half %b, <8 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmah_laneq_f16_0_swap:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmadd h0, h2, h1, h0
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <8 x half> %c, i32 0
+  %0 = tail call half @llvm.fma.f16(half %extract, half %b, half %a)
+  ret half %0
+}
+
+define dso_local half @t_vfmah_laneq_f16_7(half %a, half %b, <8 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmah_laneq_f16_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmla h0, h1, v2.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %extract = extractelement <8 x half> %c, i32 7
   %0 = tail call half @llvm.fma.f16(half %b, half %extract, half %a)
   ret half %0
 }
@@ -181,11 +227,11 @@ entry:
   ret <8 x half> %0
 }
 
-define dso_local half @t_vfmsh_lane_f16(half %a, half %b, <4 x half> %c, i32 %lane) {
-; CHECK-LABEL: t_vfmsh_lane_f16:
+define dso_local half @t_vfmsh_lane_f16_0(half %a, half %b, <4 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmsh_lane_f16_0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    fmls h0, h1, v2.h[0]
+; CHECK-NEXT:    fmsub h0, h2, h1, h0
 ; CHECK-NEXT:    ret
 entry:
   %0 = fsub half 0xH8000, %b
@@ -194,14 +240,64 @@ entry:
   ret half %1
 }
 
-define dso_local half @t_vfmsh_laneq_f16(half %a, half %b, <8 x half> %c, i32 %lane) {
-; CHECK-LABEL: t_vfmsh_laneq_f16:
+define dso_local half @t_vfmsh_lane_f16_0_swap(half %a, half %b, <4 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmsh_lane_f16_0_swap:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmls h0, h1, v2.h[0]
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    fmsub h0, h2, h1, h0
+; CHECK-NEXT:    ret
+entry:
+  %0 = fsub half 0xH8000, %b
+  %extract = extractelement <4 x half> %c, i32 0
+  %1 = tail call half @llvm.fma.f16(half %extract, half %0, half %a)
+  ret half %1
+}
+
+define dso_local half @t_vfmsh_lane_f16_3(half %a, half %b, <4 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmsh_lane_f16_3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    fmls h0, h1, v2.h[3]
+; CHECK-NEXT:    ret
+entry:
+  %0 = fsub half 0xH8000, %b
+  %extract = extractelement <4 x half> %c, i32 3
+  %1 = tail call half @llvm.fma.f16(half %0, half %extract, half %a)
+  ret half %1
+}
+
+define dso_local half @t_vfmsh_laneq_f16_0(half %a, half %b, <8 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmsh_laneq_f16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmsub h0, h2, h1, h0
 ; CHECK-NEXT:    ret
 entry:
   %0 = fsub half 0xH8000, %b
   %extract = extractelement <8 x half> %c, i32 0
+  %1 = tail call half @llvm.fma.f16(half %0, half %extract, half %a)
+  ret half %1
+}
+
+define dso_local half @t_vfmsh_laneq_f16_0_swap(half %a, half %b, <8 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmsh_laneq_f16_0_swap:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmsub h0, h2, h1, h0
+; CHECK-NEXT:    ret
+entry:
+  %0 = fsub half 0xH8000, %b
+  %extract = extractelement <8 x half> %c, i32 0
+  %1 = tail call half @llvm.fma.f16(half %extract, half %0, half %a)
+  ret half %1
+}
+
+define dso_local half @t_vfmsh_laneq_f16_7(half %a, half %b, <8 x half> %c, i32 %lane) {
+; CHECK-LABEL: t_vfmsh_laneq_f16_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmls h0, h1, v2.h[7]
+; CHECK-NEXT:    ret
+entry:
+  %0 = fsub half 0xH8000, %b
+  %extract = extractelement <8 x half> %c, i32 7
   %1 = tail call half @llvm.fma.f16(half %0, half %extract, half %a)
   ret half %1
 }

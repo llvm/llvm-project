@@ -14,7 +14,7 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -385,13 +385,17 @@ def ApplyLoopInvariantCodeMotionOp : TransformDialectOp<"apply_licm",
 def ApplyRegisteredPassOp : TransformDialectOp<"apply_registered_pass",
     [TransformOpInterface, TransformEachOpTrait,
      FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Applies the specified registered pass";
+  let summary = "Applies the specified registered pass or pass pipeline";
   let description = [{
-    This transform applies the specified pass to the targeted ops. The name of
-    the pass is specified as a string attribute, as set during pass
-    registration. Optionally, pass options may be specified as a string
-    attribute. The pass options syntax is identical to the one used with
-    "mlir-opt".
+    This transform applies the specified pass or pass pipeline to the targeted
+    ops. The name of the pass/pipeline is specified as a string attribute, as
+    set during pass/pipeline registration. Optionally, pass options may be
+    specified as a string attribute. The pass options syntax is identical to the
+    one used with "mlir-opt".
+
+    This op first looks for a pass pipeline with the specified name. If no such
+    pipeline exists, it looks for a pass with the specified name. If no such
+    pass exists either, this op fails definitely.
 
     This transform consumes the target handle and produces a new handle that is
     mapped to the same op. Passes are not allowed to remove/modify the operation
@@ -799,8 +803,7 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
 }
 
 def NamedSequenceOp : TransformDialectOp<"named_sequence",
-    [CallableOpInterface,
-     FunctionOpInterface,
+    [FunctionOpInterface,
      IsolatedFromAbove,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
@@ -850,18 +853,8 @@ def NamedSequenceOp : TransformDialectOp<"named_sequence",
     ::llvm::ArrayRef<::mlir::Type> getResultTypes() {
       return getFunctionType().getResults();
     }
-
     ::mlir::Region *getCallableRegion() {
       return &getBody();
-    }
-    ::llvm::ArrayRef<::mlir::Type> getCallableResults() {
-      return getFunctionType().getResults();
-    }
-    ::mlir::ArrayAttr getCallableArgAttrs() {
-      return getArgAttrs().value_or(nullptr);
-    }
-    ::mlir::ArrayAttr getCallableResAttrs() {
-      return getResAttrs().value_or(nullptr);
     }
   }];
 }

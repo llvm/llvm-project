@@ -34,7 +34,7 @@ module attributes {
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @minf(%arg0 : f32, %arg1 : f32) -> f32 {
   // CHECK: %[[F:.+]] = spirv.GL.FMin %[[LHS]], %[[RHS]]
-  %0 = arith.minf %arg0, %arg1 : f32
+  %0 = arith.minimumf %arg0, %arg1 : f32
   // CHECK: return %[[F]]
   return %0: f32
 }
@@ -43,7 +43,7 @@ func.func @minf(%arg0 : f32, %arg1 : f32) -> f32 {
 // CHECK-SAME: %[[LHS:.+]]: vector<4xf32>, %[[RHS:.+]]: vector<4xf32>
 func.func @maxf(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -> vector<4xf32> {
   // CHECK: %[[F:.+]] = spirv.GL.FMax %[[LHS]], %[[RHS]]
-  %0 = arith.maxf %arg0, %arg1 : vector<4xf32>
+  %0 = arith.maximumf %arg0, %arg1 : vector<4xf32>
   // CHECK: return %[[F]]
   return %0: vector<4xf32>
 }

@@ -20,33 +20,32 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        std::string s("initial text");
-        std::getline(std::istringstream(" abc\n  def\n   ghij"), s);
-        assert(s == " abc");
-    }
+int main(int, char**) {
+  {
+    std::string s("initial text");
+    std::getline(std::istringstream(" abc\n  def\n   ghij"), s);
+    assert(s == " abc");
+  }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    {
-        std::wstring s(L"initial text");
-        std::getline(std::wistringstream(L" abc\n  def\n   ghij"), s);
-        assert(s == L" abc");
-    }
+  {
+    std::wstring s(L"initial text");
+    std::getline(std::wistringstream(L" abc\n  def\n   ghij"), s);
+    assert(s == L" abc");
+  }
 #endif
-    {
-        typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
-        S s("initial text");
-        std::getline(std::istringstream(" abc\n  def\n   ghij"), s);
-        assert(s == " abc");
-    }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char> > S;
+    S s("initial text");
+    std::getline(std::istringstream(" abc\n  def\n   ghij"), s);
+    assert(s == " abc");
+  }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    {
-        typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t> > S;
-        S s(L"initial text");
-        std::getline(std::wistringstream(L" abc\n  def\n   ghij"), s);
-        assert(s == L" abc");
-    }
+  {
+    typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t> > S;
+    S s(L"initial text");
+    std::getline(std::wistringstream(L" abc\n  def\n   ghij"), s);
+    assert(s == L" abc");
+  }
 #endif
 
   return 0;

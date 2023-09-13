@@ -161,9 +161,12 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
   assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
-  if (auto *Var = dyn_cast<VarDecl>(VD)) {
+  if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
     IsExtern = !Var->getAnyInitializer();
+  } else if (isa<UnnamedGlobalConstantDecl>(VD)) {
+    IsStatic = true;
+    IsExtern = false;
   } else {
     IsStatic = false;
     IsExtern = true;

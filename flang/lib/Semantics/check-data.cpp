@@ -102,16 +102,16 @@ public:
             lastSymbol.name().ToString());
         return false;
       }
-      RestrictPointer();
+      auto restorer{common::ScopedSet(isPointerAllowed_, false)};
+      return (*this)(component.base()) && (*this)(lastSymbol);
+    } else if (IsPointer(lastSymbol)) { // C877
+      context_.Say(source_,
+          "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
+          lastSymbol.name().ToString());
+      return false;
     } else {
-      if (IsPointer(lastSymbol)) { // C877
-        context_.Say(source_,
-            "Data object must not contain pointer '%s' as a non-rightmost part"_err_en_US,
-            lastSymbol.name().ToString());
-        return false;
-      }
+      return (*this)(component.base()) && (*this)(lastSymbol);
     }
-    return (*this)(component.base()) && (*this)(lastSymbol);
   }
   bool operator()(const evaluate::ArrayRef &arrayRef) {
     hasSubscript_ = true;
@@ -128,29 +128,32 @@ public:
     return false;
   }
   bool operator()(const evaluate::Subscript &subs) {
-    DataVarChecker subscriptChecker{context_, source_};
-    subscriptChecker.RestrictPointer();
+    auto restorer1{common::ScopedSet(isPointerAllowed_, false)};
+    auto restorer2{common::ScopedSet(isFunctionAllowed_, true)};
     return common::visit(
-               common::visitors{
-                   [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
-                     return CheckSubscriptExpr(expr);
-                   },
-                   [&](const evaluate::Triplet &triplet) {
-                     return CheckSubscriptExpr(triplet.lower()) &&
-                         CheckSubscriptExpr(triplet.upper()) &&
-                         CheckSubscriptExpr(triplet.stride());
-                   },
-               },
-               subs.u) &&
-        subscriptChecker(subs.u);
+        common::visitors{
+            [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
+              return CheckSubscriptExpr(expr);
+            },
+            [&](const evaluate::Triplet &triplet) {
+              return CheckSubscriptExpr(triplet.lower()) &&
+                  CheckSubscriptExpr(triplet.upper()) &&
+                  CheckSubscriptExpr(triplet.stride());
+            },
+        },
+        subs.u);
   }
   template <typename T>
   bool operator()(const evaluate::FunctionRef<T> &) const { // C875
-    context_.Say(source_,
-        "Data object variable must not be a function reference"_err_en_US);
-    return false;
+    if (isFunctionAllowed_) {
+      // Must have been validated as a constant expression
+      return true;
+    } else {
+      context_.Say(source_,
+          "Data object variable must not be a function reference"_err_en_US);
+      return false;
+    }
   }
-  void RestrictPointer() { isPointerAllowed_ = false; }
 
 private:
   bool CheckSubscriptExpr(
@@ -178,6 +181,7 @@ private:
   bool hasSubscript_{false};
   bool isPointerAllowed_{true};
   bool isFirstSymbol_{true};
+  bool isFunctionAllowed_{false};
 };
 
 static bool IsValidDataObject(const SomeExpr &expr) { // C878, C879

@@ -58,16 +58,14 @@ static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
 }
 
 static clang::CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
-  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr)) {
+  if (const auto *CastExpr = dyn_cast<CStyleCastExpr>(Expr))
     return CharSourceRange::getCharRange(
         CastExpr->getLParenLoc(),
         CastExpr->getSubExprAsWritten()->getBeginLoc());
-  }
-  if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr)) {
+  if (const auto *CastExpr = dyn_cast<CXXFunctionalCastExpr>(Expr))
     return CharSourceRange::getCharRange(CastExpr->getBeginLoc(),
                                          CastExpr->getLParenLoc());
-  } else
-    llvm_unreachable("Unsupported CastExpr");
+  llvm_unreachable("Unsupported CastExpr");
 }
 
 static StringRef getDestTypeString(const SourceManager &SM,

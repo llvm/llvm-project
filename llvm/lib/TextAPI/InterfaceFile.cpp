@@ -48,16 +48,16 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
 }
 
 void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
-  auto Iter = lower_bound(RPaths, InputTarget,
-                          [](const std::pair<Target, std::string> &LHS,
-                             Target RHS) { return LHS.first < RHS; });
+  using RPathEntryT = const std::pair<Target, std::string>;
+  RPathEntryT Entry(InputTarget, RPath);
+  auto Iter =
+      lower_bound(RPaths, Entry,
+                  [](RPathEntryT &LHS, RPathEntryT &RHS) { return LHS < RHS; });
 
-  if ((Iter != RPaths.end()) && !(InputTarget < Iter->first)) {
-    Iter->second = std::string(RPath);
+  if ((Iter != RPaths.end()) && (*Iter == Entry))
     return;
-  }
 
-  RPaths.emplace(Iter, InputTarget, std::string(RPath));
+  RPaths.emplace(Iter, Entry);
 }
 
 void InterfaceFile::addTarget(const Target &Target) {

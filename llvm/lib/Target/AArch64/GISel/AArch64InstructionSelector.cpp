@@ -2629,12 +2629,17 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       default:
         llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
       case 32:
-        // For s32, use a cp load if we have optsize/minsize.
-        if (!shouldOptForSize(&MF))
+      case 64: {
+        bool OptForSize = shouldOptForSize(&MF);
+        const auto &TLI = MF.getSubtarget().getTargetLowering();
+        // If TLI says that this fpimm is illegal, then we'll expand to a
+        // constant pool load.
+        if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
+                              EVT::getFloatingPointVT(DefSize), OptForSize))
           break;
         [[fallthrough]];
+      }
       case 16:
-      case 64:
       case 128: {
         auto *FPImm = I.getOperand(1).getFPImm();
         auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
@@ -2648,11 +2653,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       }
       }
 
+      assert((DefSize == 32 || DefSize == 64) && "Unexpected const def size");
       // Either emit a FMOV, or emit a copy to emit a normal mov.
-      assert(DefSize == 32 &&
-             "Expected constant pool loads for all sizes other than 32!");
-      const Register DefGPRReg =
-          MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+      const Register DefGPRReg = MRI.createVirtualRegister(
+          DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
       MachineOperand &RegOp = I.getOperand(0);
       RegOp.setReg(DefGPRReg);
       MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
@@ -3632,6 +3636,9 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
   auto JumpTableInst = MIB.buildInstr(AArch64::JumpTableDest32,
                                       {TargetReg, ScratchReg}, {JTAddr, Index})
                            .addJumpTableIndex(JTI);
+  // Save the jump table info.
+  MIB.buildInstr(TargetOpcode::JUMP_TABLE_DEBUG_INFO, {},
+                 {static_cast<int64_t>(JTI)});
   // Build the indirect branch.
   MIB.buildInstr(AArch64::BR, {}, {TargetReg});
   I.eraseFromParent();
@@ -6770,11 +6777,29 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
   MachineRegisterInfo &MRI =
       Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  MachineInstr *Extract = getDefIgnoringCopies(Root.getReg(), MRI);
-  if (Extract && Extract->getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
-      Root.getReg() == Extract->getOperand(1).getReg()) {
-    Register ExtReg = Extract->getOperand(2).getReg();
-    return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+  auto Extract = getDefSrcRegIgnoringCopies(Root.getReg(), MRI);
+  while (Extract && Extract->MI->getOpcode() == TargetOpcode::G_BITCAST &&
+         STI.isLittleEndian())
+    Extract =
+        getDefSrcRegIgnoringCopies(Extract->MI->getOperand(1).getReg(), MRI);
+  if (!Extract)
+    return std::nullopt;
+
+  if (Extract->MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES) {
+    if (Extract->Reg == Extract->MI->getOperand(1).getReg()) {
+      Register ExtReg = Extract->MI->getOperand(2).getReg();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+    }
+  }
+  if (Extract->MI->getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
+    LLT SrcTy = MRI.getType(Extract->MI->getOperand(1).getReg());
+    auto LaneIdx = getIConstantVRegValWithLookThrough(
+        Extract->MI->getOperand(2).getReg(), MRI);
+    if (LaneIdx && SrcTy == LLT::fixed_vector(2, 64) &&
+        LaneIdx->Value.getSExtValue() == 1) {
+      Register ExtReg = Extract->MI->getOperand(1).getReg();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+    }
   }
 
   return std::nullopt;

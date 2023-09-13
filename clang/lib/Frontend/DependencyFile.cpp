@@ -105,7 +105,7 @@ struct DepCollectorMMCallbacks : public ModuleMapCallbacks {
   DependencyCollector &DepCollector;
   DepCollectorMMCallbacks(DependencyCollector &DC) : DepCollector(DC) {}
 
-  void moduleMapFileRead(SourceLocation Loc, const FileEntry &Entry,
+  void moduleMapFileRead(SourceLocation Loc, FileEntryRef Entry,
                          bool IsSystem) override {
     StringRef Filename = Entry.getName();
     DepCollector.maybeAddDependency(Filename,
@@ -159,7 +159,7 @@ void DependencyCollector::maybeAddDependency(StringRef Filename,
                                              bool IsMissing) {
   if (sawDependency(Filename, FromModule, IsSystem, IsModuleFile, IsMissing)) {
     if (IsSystem && FileMgr && shouldCanonicalizeSystemDependencies()) {
-      if (auto F = FileMgr->getFile(Filename))
+      if (auto F = FileMgr->getOptionalFileRef(Filename))
         Filename = FileMgr->getCanonicalName(*F);
     }
     addDependency(Filename);

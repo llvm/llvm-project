@@ -45,6 +45,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -309,8 +310,29 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
+static bool isReachable(Block *from, Block *to, ArrayRef<Block *> except) {
+  DenseSet<Block *> visited;
+  SmallVector<Block *> worklist;
+  for (Block *succ : from->getSuccessors())
+    worklist.push_back(succ);
+  while (!worklist.empty()) {
+    Block *next = worklist.pop_back_val();
+    if (llvm::find(except, next) != except.end())
+      continue;
+    if (next == to)
+      return true;
+    if (visited.contains(next))
+      continue;
+    visited.insert(next);
+    for (Block *succ : next->getSuccessors())
+      worklist.push_back(succ);
+  }
+  return false;
+}
+
 /// Return `true` if op dominance can be used to rule out a read-after-write
-/// conflicts based on the ordering of ops.
+/// conflicts based on the ordering of ops. Returns `false` if op dominance
+/// cannot be used to due region-based loops.
 ///
 /// Generalized op dominance can often be used to rule out potential conflicts
 /// due to "read happens before write". E.g., the following IR is not a RaW
@@ -383,9 +405,9 @@ static bool happensBefore(Operation *a, Operation *b,
 ///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
 ///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
 ///
-static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
-                              const SetVector<Value> &definitions,
-                              AnalysisState &state) {
+static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
+                                          const SetVector<Value> &definitions,
+                                          AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
   for (Value def : definitions) {
     Region *rRead =
@@ -411,7 +433,51 @@ static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
     if (rRead->getParentOp()->isAncestor(uWrite->getOwner()))
       return false;
   }
+
   return true;
+}
+
+/// Return `true` if op dominance can be used to rule out a read-after-write
+/// conflicts based on the ordering of ops. Returns `false` if op dominance
+/// cannot be used to due block-based loops within a region.
+///
+/// Refer to the `canUseOpDominanceDueToRegions` documentation for details on
+/// how op domiance is used during RaW conflict detection.
+///
+/// On a high-level, there is a potential RaW in a program if there exists a
+/// possible program execution such that there is a sequence of DEF, followed
+/// by WRITE, followed by READ. Each additional DEF resets the sequence.
+///
+/// Op dominance cannot be used if there is a path from block(READ) to
+/// block(WRITE) and a path from block(WRITE) to block(READ). block(DEF) should
+/// not appear on that path.
+static bool canUseOpDominanceDueToBlocks(OpOperand *uRead, OpOperand *uWrite,
+                                         const SetVector<Value> &definitions,
+                                         AnalysisState &state) {
+  // Fast path: If READ and WRITE are in different regions, their block cannot
+  // be reachable just via unstructured control flow. (Loops due to regions are
+  // covered by `canUseOpDominanceDueToRegions`.)
+  if (uRead->getOwner()->getParentRegion() !=
+      uWrite->getOwner()->getParentRegion())
+    return true;
+
+  Block *readBlock = uRead->getOwner()->getBlock();
+  Block *writeBlock = uWrite->getOwner()->getBlock();
+  for (Value def : definitions) {
+    Block *defBlock = def.getParentBlock();
+    if (isReachable(readBlock, writeBlock, {defBlock}) &&
+        isReachable(writeBlock, readBlock, {defBlock}))
+      return false;
+  }
+
+  return true;
+}
+
+static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
+                              const SetVector<Value> &definitions,
+                              AnalysisState &state) {
+  return canUseOpDominanceDueToRegions(uRead, uWrite, definitions, state) &&
+         canUseOpDominanceDueToBlocks(uRead, uWrite, definitions, state);
 }
 
 /// Annotate IR with details about the detected RaW conflict.
@@ -466,6 +532,105 @@ static bool hasEquivalentValueInReverseUseDefChain(AnalysisState &state,
               .empty();
 }
 
+/// Return "true" if `value` is originating from a subset that is equivalent to
+/// the subset that `subsetOp` inserts into.
+static bool matchesInsertDestination(const AnalysisState &state, Value value,
+                                     SubsetInsertionOpInterface subsetOp) {
+  auto matchingSubset = [&](Value val) {
+    if (auto opResult = dyn_cast<OpResult>(val))
+      if (subsetOp.isEquivalentSubset(opResult, [&](Value v1, Value v2) {
+            return state.areEquivalentBufferizedValues(v1, v2);
+          }))
+        return true;
+    return false;
+  };
+  // There may be multiple leaves at which the reverse SSA use-def chain lookup
+  // terminates. All of them must be equivalent subsets.
+  SetVector<Value> backwardSlice =
+      state.findValueInReverseUseDefChain(value, matchingSubset);
+  return static_cast<bool>(llvm::all_of(backwardSlice, matchingSubset));
+}
+
+/// Return "true" if the given "read" and potentially conflicting "write" are
+/// not conflicting due to their subset relationship. The comments in this
+/// function are expressed in terms of tensor.extract_slice/tensor.insert_slice
+/// pairs, but apply to any subset ops that implement the
+/// `SubsetInsertionOpInterface`.
+static bool areNonConflictingSubsets(OpOperand *uRead,
+                                     OpOperand *uConflictingWrite,
+                                     const AnalysisState &state) {
+  Operation *readingOp = uRead->getOwner();
+  Operation *conflictingWritingOp = uConflictingWrite->getOwner();
+
+  // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
+  // uRead is an InsertSliceOp...
+  if (auto subsetOp = dyn_cast<SubsetInsertionOpInterface>(readingOp)) {
+    // As an example, consider the following IR.
+    //
+    // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
+    // %1 = linalg.fill %cst, %0 {inplace= [true] }
+    // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+    //     {inplace= [true] }
+
+    if (uRead == &subsetOp.getDestinationOperand() &&
+        matchesInsertDestination(state, uConflictingWrite->get(), subsetOp))
+      // Case 1: The main insight is that InsertSliceOp reads only part of
+      // the destination tensor. The overwritten area is not read. If
+      // uConflictingWrite writes into exactly the memory location that is
+      // being read by uRead, this is not a conflict.
+      //
+      // In the above example:
+      // uRead             = OpOperand 1 (%t) of tensor.insert_slice
+      // uConflictingWrite = OpOperand 1 (%0) of linalg.fill
+      //
+      // The read of %t does not conflict with the write of the FillOp
+      // (same aliases!) because the area that the FillOp operates on is
+      // exactly the one that is *not* read via %t.
+      return true;
+
+    if (uRead == &subsetOp.getSourceOperand() &&
+        uConflictingWrite == &subsetOp.getDestinationOperand() &&
+        matchesInsertDestination(state, uRead->get(), subsetOp))
+      // Case 2: The read of the source tensor and the write to the dest
+      // tensor via an InsertSliceOp is not a conflict if the read is
+      // reading exactly that part of an equivalent tensor that the
+      // InsertSliceOp is writing.
+      //
+      // In the above example:
+      // uRead             = OpOperand 0 (%1) of tensor.insert_slice
+      // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+      return true;
+  }
+
+  // If uConflictingWrite is an InsertSliceOp...
+  if (auto subsetOp =
+          dyn_cast<SubsetInsertionOpInterface>(conflictingWritingOp))
+    // As an example, consider the following IR.
+    //
+    // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
+    // %1 = linalg.fill %cst, %0 {inplace= [true] }
+    // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
+    //     {inplace= [true] }
+    // %3 = vector.transfer_read %1, %cst
+    //
+    // In the above example:
+    // uRead             = OpOperand 0 (%1) of vector.transfer_read
+    // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
+    // definition        = %1
+    //
+    // This is not a conflict because the InsertSliceOp overwrites the
+    // memory segment of %1 with the exact same data. (Effectively, there
+    // is no memory write here.)
+    if (uConflictingWrite == &subsetOp.getDestinationOperand() &&
+        state.areEquivalentBufferizedValues(
+            uRead->get(), subsetOp.getSourceOperand().get()) &&
+        matchesInsertDestination(state, subsetOp.getSourceOperand().get(),
+                                 subsetOp))
+      return true;
+
+  return false;
+}
+
 /// Given sets of uses and writes, return true if there is a RaW conflict under
 /// the assumption that all given reads/writes alias the same buffer and that
 /// all given writes bufferize inplace.
@@ -479,6 +644,43 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
                               const DominanceInfo &domInfo,
                               OneShotAnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
+
+  // Before going through the main RaW analysis, find cases where a buffer must
+  // be privatized due to parallelism. If the result of a write is never read,
+  // privatization is not necessary (and large parts of the IR are likely dead).
+  if (!usesRead.empty()) {
+    for (OpOperand *uConflictingWrite : usesWrite) {
+      // Find the allocation point or last write (definition) of the buffer.
+      // Note: In contrast to `findDefinitions`, this also returns results of
+      // ops that do not bufferize to memory write when no other definition
+      // could be found. E.g., "bufferization.alloc_tensor" would be included,
+      // even though that op just bufferizes to an allocation but does define
+      // the contents of the buffer.
+      SetVector<Value> definitionsOrLeaves =
+          state.findValueInReverseUseDefChain(
+              uConflictingWrite->get(),
+              [&](Value v) { return state.bufferizesToMemoryWrite(v); });
+      assert(!definitionsOrLeaves.empty() &&
+             "expected at least one definition or leaf");
+
+      // The writing op must bufferize out-of-place if the definition is in a
+      // different parallel region than this write.
+      for (Value def : definitionsOrLeaves) {
+        if (getParallelRegion(def.getParentRegion(), options) !=
+            getParallelRegion(uConflictingWrite->getOwner()->getParentRegion(),
+                              options)) {
+          LLVM_DEBUG(
+              llvm::dbgs()
+              << "\n- bufferizes out-of-place due to parallel region:\n");
+          LLVM_DEBUG(llvm::dbgs()
+                     << "  unConflictingWrite = operand "
+                     << uConflictingWrite->getOperandNumber() << " of "
+                     << *uConflictingWrite->getOwner() << "\n");
+          return true;
+        }
+      }
+    }
+  }
 
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
@@ -580,6 +782,12 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
             }
           }
         }
+      }
+
+      // No conflict if the operands are non-conflicting subsets.
+      if (areNonConflictingSubsets(uRead, uConflictingWrite, state)) {
+        LLVM_DEBUG(llvm::dbgs() << "  no conflict: non-conflicting subsets\n");
+        continue;
       }
 
       // No conflict if the op interface says so.

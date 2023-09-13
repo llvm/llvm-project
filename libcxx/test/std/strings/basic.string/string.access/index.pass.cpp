@@ -21,14 +21,13 @@ template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
   S s("0123456789");
   const S& cs = s;
-  ASSERT_SAME_TYPE(decltype( s[0]), typename S::reference);
+  ASSERT_SAME_TYPE(decltype(s[0]), typename S::reference);
   ASSERT_SAME_TYPE(decltype(cs[0]), typename S::const_reference);
-  LIBCPP_ASSERT_NOEXCEPT(    s[0]);
-  LIBCPP_ASSERT_NOEXCEPT(   cs[0]);
-  for (typename S::size_type i = 0; i < cs.size(); ++i)
-  {
-      assert(s[i] == static_cast<char>('0' + i));
-      assert(cs[i] == s[i]);
+  LIBCPP_ASSERT_NOEXCEPT(s[0]);
+  LIBCPP_ASSERT_NOEXCEPT(cs[0]);
+  for (typename S::size_type i = 0; i < cs.size(); ++i) {
+    assert(s[i] == static_cast<char>('0' + i));
+    assert(cs[i] == s[i]);
   }
   assert(cs[cs.size()] == '\0');
   const S s2 = S();
@@ -44,8 +43,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

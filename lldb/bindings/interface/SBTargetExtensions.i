@@ -32,23 +32,10 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
 %extend lldb::SBTarget {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        # operator== is a free function, which swig does not handle, so we inject
+        # our own equality operator here
         def __eq__(self, other):
             return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
-        def __len__(self):
-            pass
-
-        def __iter__(self):
-            pass
 
         class modules_access(object):
             '''A helper object that will lazily hand out lldb.SBModule objects for a target when supplied an index, or by full or partial path.'''

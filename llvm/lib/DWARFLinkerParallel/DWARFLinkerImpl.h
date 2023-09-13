@@ -223,6 +223,12 @@ protected:
       if (File.Dwarf) {
         if (!File.Dwarf->compile_units().empty())
           CompileUnits.reserve(File.Dwarf->getNumCompileUnits());
+
+        // Set context format&endianness based on the input file.
+        Format.Version = File.Dwarf->getMaxVersion();
+        Format.AddrSize = File.Dwarf->getCUAddrSize();
+        Endianness = File.Dwarf->isLittleEndian() ? support::endianness::little
+                                                  : support::endianness::big;
       }
     }
 

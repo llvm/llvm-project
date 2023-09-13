@@ -333,7 +333,7 @@ TypedAttr Builder::getZeroAttr(Type type) {
     return getFloatAttr(type, 0.0);
   if (llvm::isa<IndexType>(type))
     return getIndexAttr(0);
-  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
+  if (llvm::dyn_cast<IntegerType>(type))
     return getIntegerAttr(type,
                           APInt(llvm::cast<IntegerType>(type).getWidth(), 0));
   if (llvm::isa<RankedTensorType, VectorType>(type)) {

@@ -1230,12 +1230,10 @@ defm V_SMFMAC_F32_32X32X32_BF8_FP8 : VOP3P_Real_SMFMAC <0x7d, "v_smfmac_f32_32x3
 defm V_SMFMAC_F32_32X32X32_FP8_BF8 : VOP3P_Real_SMFMAC <0x7e, "v_smfmac_f32_32x32x32fp8bf8">;
 defm V_SMFMAC_F32_32X32X32_FP8_FP8 : VOP3P_Real_SMFMAC <0x7f, "v_smfmac_f32_32x32x32fp8fp8">;
 
-let SubtargetPredicate = HasPackedFP32Ops in {
-  defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;
-  defm V_PK_MUL_F32 : VOP3P_Real_vi <0x31>;
-  defm V_PK_ADD_F32 : VOP3P_Real_vi <0x32>;
-  defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
-} // End SubtargetPredicate = HasPackedFP32Ops
+defm V_PK_FMA_F32 : VOP3P_Real_vi <0x30>;
+defm V_PK_MUL_F32 : VOP3P_Real_vi <0x31>;
+defm V_PK_ADD_F32 : VOP3P_Real_vi <0x32>;
+defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

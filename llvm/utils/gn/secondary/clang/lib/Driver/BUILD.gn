@@ -63,7 +63,6 @@ static_library("Driver") {
     "ToolChains/BareMetal.cpp",
     "ToolChains/CSKYToolChain.cpp",
     "ToolChains/Clang.cpp",
-    "ToolChains/CloudABI.cpp",
     "ToolChains/CommonArgs.cpp",
     "ToolChains/CrossWindows.cpp",
     "ToolChains/Cuda.cpp",

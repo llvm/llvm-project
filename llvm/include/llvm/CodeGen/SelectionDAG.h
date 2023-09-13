@@ -731,6 +731,7 @@ public:
   SDValue getTargetJumpTable(int JTI, EVT VT, unsigned TargetFlags = 0) {
     return getJumpTable(JTI, VT, true, TargetFlags);
   }
+  SDValue getJumpTableDebugInfo(int JTI, SDValue Chain, const SDLoc &DL);
   SDValue getConstantPool(const Constant *C, EVT VT,
                           MaybeAlign Align = std::nullopt, int Offs = 0,
                           bool isT = false, unsigned TargetFlags = 0);
@@ -1342,18 +1343,6 @@ public:
                   MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
                   const AAMDNodes &AAInfo = AAMDNodes(),
                   const MDNode *Ranges = nullptr);
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
-                  "")
-  inline SDValue
-  getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
-          MachinePointerInfo PtrInfo, unsigned Alignment,
-          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-          const AAMDNodes &AAInfo = AAMDNodes(),
-          const MDNode *Ranges = nullptr) {
-    return getLoad(VT, dl, Chain, Ptr, PtrInfo, MaybeAlign(Alignment), MMOFlags,
-                   AAInfo, Ranges);
-  }
   SDValue getLoad(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
                   MachineMemOperand *MMO);
   SDValue
@@ -1384,19 +1373,6 @@ public:
                    Alignment.value_or(getEVTAlign(MemVT)), MMOFlags, AAInfo,
                    Ranges);
   }
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the getLoad function that takes a MaybeAlign instead",
-                  "")
-  inline SDValue
-  getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
-          const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
-          MachinePointerInfo PtrInfo, EVT MemVT, unsigned Alignment,
-          MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-          const AAMDNodes &AAInfo = AAMDNodes(),
-          const MDNode *Ranges = nullptr) {
-    return getLoad(AM, ExtType, VT, dl, Chain, Ptr, Offset, PtrInfo, MemVT,
-                   MaybeAlign(Alignment), MMOFlags, AAInfo, Ranges);
-  }
   SDValue getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
                   const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
                   EVT MemVT, MachineMemOperand *MMO);
@@ -1420,16 +1396,6 @@ public:
                     Alignment.value_or(getEVTAlign(Val.getValueType())),
                     MMOFlags, AAInfo);
   }
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
-  inline SDValue
-  getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
-           MachinePointerInfo PtrInfo, unsigned Alignment,
-           MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-           const AAMDNodes &AAInfo = AAMDNodes()) {
-    return getStore(Chain, dl, Val, Ptr, PtrInfo, MaybeAlign(Alignment),
-                    MMOFlags, AAInfo);
-  }
   SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                    MachineMemOperand *MMO);
   SDValue
@@ -1446,16 +1412,6 @@ public:
     return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
                          Alignment.value_or(getEVTAlign(SVT)), MMOFlags,
                          AAInfo);
-  }
-  /// FIXME: Remove once transition to Align is over.
-  LLVM_DEPRECATED("Use the version that takes a MaybeAlign instead", "")
-  inline SDValue
-  getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
-                MachinePointerInfo PtrInfo, EVT SVT, unsigned Alignment,
-                MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
-                const AAMDNodes &AAInfo = AAMDNodes()) {
-    return getTruncStore(Chain, dl, Val, Ptr, PtrInfo, SVT,
-                         MaybeAlign(Alignment), MMOFlags, AAInfo);
   }
   SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
@@ -2064,6 +2020,24 @@ public:
     return computeOverflowForSub(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Determine if the result of the signed mul of 2 nodes can overflow.
+  OverflowKind computeOverflowForSignedMul(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the unsigned mul of 2 nodes can overflow.
+  OverflowKind computeOverflowForUnsignedMul(SDValue N0, SDValue N1) const;
+
+  /// Determine if the result of the mul of 2 nodes can overflow.
+  OverflowKind computeOverflowForMul(bool IsSigned, SDValue N0,
+                                     SDValue N1) const {
+    return IsSigned ? computeOverflowForSignedMul(N0, N1)
+                    : computeOverflowForUnsignedMul(N0, N1);
+  }
+
+  /// Determine if the result of the mul of 2 nodes can never overflow.
+  bool willNotOverflowMul(bool IsSigned, SDValue N0, SDValue N1) const {
+    return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
+  }
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set.
@@ -2152,6 +2126,12 @@ public:
   bool canCreateUndefOrPoison(SDValue Op, bool PoisonOnly = false,
                               bool ConsiderFlags = true,
                               unsigned Depth = 0) const;
+
+  /// Return true if the specified operand is an ISD::OR or ISD::XOR node
+  /// that can be treated as an ISD::ADD node.
+  /// or(x,y) == add(x,y) iff haveNoCommonBitsSet(x,y)
+  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y)
+  bool isADDLike(SDValue Op) const;
 
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that

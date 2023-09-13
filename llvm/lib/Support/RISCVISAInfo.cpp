@@ -210,6 +210,29 @@ static void verifyTables() {
 #endif
 }
 
+void llvm::riscvExtensionsHelp() {
+  outs() << "All available -march extensions for RISC-V\n\n";
+  outs() << '\t' << left_justify("Name", 20) << "Version\n";
+
+  RISCVISAInfo::OrderedExtensionMap ExtMap;
+  for (const auto &E : SupportedExtensions)
+    ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+  for (const auto &E : ExtMap)
+    outs() << format("\t%-20s%d.%d\n", E.first.c_str(), E.second.MajorVersion,
+                     E.second.MinorVersion);
+
+  outs() << "\nExperimental extensions\n";
+  ExtMap.clear();
+  for (const auto &E : SupportedExperimentalExtensions)
+    ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+  for (const auto &E : ExtMap)
+    outs() << format("\t%-20s%d.%d\n", E.first.c_str(), E.second.MajorVersion,
+                     E.second.MinorVersion);
+
+  outs() << "\nUse -march to specify the target's extension.\n"
+            "For example, clang -march=rv32i_v1p0\n";
+}
+
 static bool stripExperimentalPrefix(StringRef &Ext) {
   return Ext.consume_front("experimental-");
 }
@@ -503,7 +526,7 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
     return createStringError(errc::invalid_argument, Error);
   }
 
-  // If experimental extension, require use of current version number number
+  // If experimental extension, require use of current version number
   if (auto ExperimentalExtension = isExperimentalExtension(Ext)) {
     if (!EnableExperimentalExtension) {
       std::string Error = "requires '-menable-experimental-extensions' for "

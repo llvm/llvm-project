@@ -353,8 +353,8 @@ protected:
   /// any effect on the lattice that isn't already expressed by the interface
   /// itself.
   virtual void visitRegionBranchControlFlowTransfer(
-      RegionBranchOpInterface branch, std::optional<unsigned> regionFrom,
-      std::optional<unsigned> regionTo, const AbstractDenseLattice &after,
+      RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
+      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) {
     meet(before, after);
   }
@@ -382,7 +382,7 @@ private:
   /// of the branch operation itself.
   void visitRegionBranchOperation(ProgramPoint point,
                                   RegionBranchOpInterface branch,
-                                  std::optional<unsigned> regionNo,
+                                  RegionBranchPoint branchPoint,
                                   AbstractDenseLattice *before);
 
   /// Visit an operation for which the data flow is described by the
@@ -472,9 +472,8 @@ public:
   /// nullptr`. The behavior can be further refined for specific pairs of "from"
   /// and "to" regions.
   virtual void visitRegionBranchControlFlowTransfer(
-      RegionBranchOpInterface branch, std::optional<unsigned> regionFrom,
-      std::optional<unsigned> regionTo, const LatticeT &after,
-      LatticeT *before) {
+      RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
+      RegionBranchPoint regionTo, const LatticeT &after, LatticeT *before) {
     AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
         branch, regionFrom, regionTo, after, before);
   }
@@ -508,8 +507,8 @@ protected:
                                  static_cast<LatticeT *>(before));
   }
   void visitRegionBranchControlFlowTransfer(
-      RegionBranchOpInterface branch, std::optional<unsigned> regionForm,
-      std::optional<unsigned> regionTo, const AbstractDenseLattice &after,
+      RegionBranchOpInterface branch, RegionBranchPoint regionForm,
+      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) final {
     visitRegionBranchControlFlowTransfer(branch, regionForm, regionTo,
                                          static_cast<const LatticeT &>(after),

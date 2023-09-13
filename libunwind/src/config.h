@@ -46,6 +46,12 @@
 #elif defined(_AIX)
 // The traceback table at the end of each function is used for unwinding.
 #define _LIBUNWIND_SUPPORT_TBTAB_UNWIND 1
+#elif defined(__HAIKU__)
+  #if defined(_LIBUNWIND_USE_HAIKU_BSD_LIB)
+    #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
+  #endif
+  #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
+  #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
 #else
   // Assume an ELF system with a dl_iterate_phdr function.
   #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
@@ -121,7 +127,7 @@
 #if defined(_LIBUNWIND_REMEMBER_STACK_ALLOC) || defined(__APPLE__) ||          \
     defined(__linux__) || defined(__ANDROID__) || defined(__MINGW32__) ||      \
     defined(_LIBUNWIND_IS_BAREMETAL)
-#define _LIBUNWIND_REMEMBER_ALLOC(_size) alloca(_size)
+#define _LIBUNWIND_REMEMBER_ALLOC(_size) __builtin_alloca(_size)
 #define _LIBUNWIND_REMEMBER_FREE(_ptr)                                         \
   do {                                                                         \
   } while (0)

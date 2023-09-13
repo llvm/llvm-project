@@ -1,7 +1,7 @@
 // This test checks that .eh_frame_hdr address is in bounds of the last LOAD
 // end address i.e. the section address is smaller then the LOAD end address.
 
-// REQUIRES: system-linux,bolt-runtime
+// REQUIRES: system-linux,bolt-runtime,target=x86_64{{.*}}
 
 // RUN: %clangxx %cxxflags -static -Wl,-q %s -o %t.exe -Wl,--entry=_start
 // RUN: llvm-bolt %t.exe -o %t.instr -instrument \

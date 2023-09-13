@@ -40,7 +40,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
 using namespace clang;
@@ -2002,10 +2001,55 @@ static void getTrivialDefaultFunctionAttributes(
   }
 }
 
-/// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
-/// though we had emitted it ourselves. We remove any attributes on F that
-/// conflict with the attributes we add here.
-static void mergeDefaultFunctionDefinitionAttributes(
+static void
+overrideFunctionFeaturesWithTargetFeatures(llvm::AttrBuilder &FuncAttr,
+                                           const llvm::Function &F,
+                                           const TargetOptions &TargetOpts) {
+  auto FFeatures = F.getFnAttribute("target-features");
+
+  llvm::StringSet<> IncompatibleFeatureNames;
+  SmallVector<StringRef> MergedFeatures;
+  MergedFeatures.reserve(TargetOpts.Features.size());
+
+  if (FFeatures.isValid()) {
+    const auto &TFeatures = TargetOpts.FeatureMap;
+    for (StringRef Feature : llvm::split(FFeatures.getValueAsString(), ',')) {
+      if (Feature.empty())
+        continue;
+
+      bool EnabledForFunc = Feature.starts_with("+");
+      assert(EnabledForFunc || Feature.starts_with("-"));
+
+      StringRef Name = Feature.drop_front(1);
+      auto TEntry = TFeatures.find(Name);
+
+      // Preserves features that are incompatible (either set to something
+      // different or missing) from the target features
+      bool MissingFromTarget = TEntry == TFeatures.end();
+      bool EnabledForTarget = !MissingFromTarget && TEntry->second;
+      bool Incompatible = EnabledForTarget != EnabledForFunc;
+      if (MissingFromTarget || Incompatible) {
+        MergedFeatures.push_back(Feature);
+        if (Incompatible)
+          IncompatibleFeatureNames.insert(Name);
+      }
+    }
+  }
+
+  for (StringRef Feature : TargetOpts.Features) {
+    if (Feature.empty())
+      continue;
+    StringRef Name = Feature.drop_front(1);
+    if (IncompatibleFeatureNames.contains(Name))
+      continue;
+    MergedFeatures.push_back(Feature);
+  }
+
+  if (!MergedFeatures.empty())
+    FuncAttr.addAttribute("target-features", llvm::join(MergedFeatures, ","));
+}
+
+void CodeGen::mergeDefaultFunctionDefinitionAttributes(
     llvm::Function &F, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, const TargetOptions &TargetOpts,
     bool WillInternalize) {
@@ -2062,16 +2106,10 @@ static void mergeDefaultFunctionDefinitionAttributes(
 
   F.removeFnAttrs(AttrsToRemove);
   addDenormalModeAttrs(Merged, MergedF32, FuncAttrs);
+
+  overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, TargetOpts);
+
   F.addFnAttrs(FuncAttrs);
-}
-
-void clang::CodeGen::mergeDefaultFunctionDefinitionAttributes(
-    llvm::Function &F, const CodeGenOptions CodeGenOpts,
-    const LangOptions &LangOpts, const TargetOptions &TargetOpts,
-    bool WillInternalize) {
-
-  ::mergeDefaultFunctionDefinitionAttributes(F, CodeGenOpts, LangOpts,
-                                             TargetOpts, WillInternalize);
 }
 
 void CodeGenModule::getTrivialDefaultFunctionAttributes(
@@ -2092,23 +2130,6 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
   // attributes.
   if (!AttrOnCallSite)
     addMergableDefaultFunctionAttributes(CodeGenOpts, FuncAttrs);
-}
-
-void CodeGenModule::addDefaultFunctionDefinitionAttributes(llvm::Function &F) {
-  llvm::AttrBuilder FuncAttrs(F.getContext());
-  getDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
-                               /* AttrOnCallSite = */ false, FuncAttrs);
-  // TODO: call GetCPUAndFeaturesAttributes?
-  F.addFnAttrs(FuncAttrs);
-}
-
-/// Apply default attributes to \p F, accounting for merge semantics of
-/// attributes that should not overwrite existing attributes.
-void CodeGenModule::mergeDefaultFunctionDefinitionAttributes(
-    llvm::Function &F, bool WillInternalize) {
-  ::mergeDefaultFunctionDefinitionAttributes(F, getCodeGenOpts(), getLangOpts(),
-                                             getTarget().getTargetOpts(),
-                                             WillInternalize);
 }
 
 void CodeGenModule::addDefaultFunctionDefinitionAttributes(
@@ -2256,6 +2277,17 @@ static llvm::FPClassTest getNoFPClassTestMask(const LangOptions &LangOpts) {
   if (LangOpts.NoHonorNaNs)
     Mask |= llvm::fcNan;
   return Mask;
+}
+
+void CodeGenModule::AdjustMemoryAttribute(StringRef Name,
+                                          CGCalleeInfo CalleeInfo,
+                                          llvm::AttributeList &Attrs) {
+  if (Attrs.getMemoryEffects().getModRef() == llvm::ModRefInfo::NoModRef) {
+    Attrs = Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Memory);
+    llvm::Attribute MemoryAttr = llvm::Attribute::getWithMemoryEffects(
+        getLLVMContext(), llvm::MemoryEffects::writeOnly());
+    Attrs = Attrs.addFnAttribute(getLLVMContext(), MemoryAttr);
+  }
 }
 
 /// Construct the IR attribute list of a function or call.
@@ -2615,7 +2647,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     llvm::AttrBuilder Attrs(getLLVMContext());
 
     QualType ThisTy =
-        FI.arg_begin()->type.castAs<PointerType>()->getPointeeType();
+        FI.arg_begin()->type.getTypePtr()->getPointeeType();
 
     if (!CodeGenOpts.NullPointerIsValid &&
         getTypes().getTargetAddressSpace(FI.arg_begin()->type) == 0) {
@@ -4645,24 +4677,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  AggValueSlot ArgSlot = AggValueSlot::ignored();
-  if (hasAggregateEvaluationKind(E->getType())) {
-    Address ArgSlotAlloca = Address::invalid();
-    ArgSlot = CreateAggTemp(E->getType(), "agg.tmp", &ArgSlotAlloca);
-
-    // Emit a lifetime start/end for this temporary. If the type has a
-    // destructor, then we need to keep it alive. FIXME: We should still be able
-    // to end the lifetime after the destructor returns.
-    if (!E->getType().isDestructedType()) {
-      llvm::TypeSize size =
-          CGM.getDataLayout().getTypeAllocSize(ConvertTypeForMem(E->getType()));
-      if (llvm::Value *lifetimeSize =
-              EmitLifetimeStart(size, ArgSlotAlloca.getPointer()))
-        args.addLifetimeCleanup({ArgSlotAlloca.getPointer(), lifetimeSize});
-    }
-  }
-
-  args.add(EmitAnyExpr(E, ArgSlot), type);
+  args.add(EmitAnyExprToTemp(E), type);
 }
 
 QualType CodeGenFunction::getVarArgType(const Expr *Arg) {
@@ -5497,11 +5512,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
 
+    // If -ffast-math is enabled and the function is guarded by an
+    // '__attribute__((optnone)) adjust the memory attribute so the BE emits the
+    // library call instead of the intrinsic.
+    if (FD->hasAttr<OptimizeNoneAttr>() && getLangOpts().FastMath)
+      CGM.AdjustMemoryAttribute(CalleePtr->getName(), Callee.getAbstractInfo(),
+                                Attrs);
+  }
   // Add call-site nomerge attribute if exists.
   if (InNoMergeAttributedStmt)
     Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::NoMerge);
@@ -5850,9 +5872,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // we can't use the full cleanup mechanism.
   for (CallLifetimeEnd &LifetimeEnd : CallLifetimeEndAfterCall)
     LifetimeEnd.Emit(*this, /*Flags=*/{});
-
-  for (const CallArgList::EndLifetimeInfo &LT : CallArgs.getLifetimeCleanups())
-    EmitLifetimeEnd(LT.Size, LT.Addr);
 
   if (!ReturnValue.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct)

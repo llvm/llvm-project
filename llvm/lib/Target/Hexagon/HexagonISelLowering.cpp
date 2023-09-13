@@ -669,31 +669,32 @@ HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
     --NumOps;  // Ignore the flag operand.
 
   for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
-    unsigned Flags = cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue();
-    unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+    const InlineAsm::Flag Flags(
+        cast<ConstantSDNode>(Op.getOperand(i))->getZExtValue());
+    unsigned NumVals = Flags.getNumOperandRegisters();
     ++i;  // Skip the ID value.
 
-    switch (InlineAsm::getKind(Flags)) {
-      default:
-        llvm_unreachable("Bad flags!");
-      case InlineAsm::Kind_RegUse:
-      case InlineAsm::Kind_Imm:
-      case InlineAsm::Kind_Mem:
-        i += NumVals;
-        break;
-      case InlineAsm::Kind_Clobber:
-      case InlineAsm::Kind_RegDef:
-      case InlineAsm::Kind_RegDefEarlyClobber: {
-        for (; NumVals; --NumVals, ++i) {
-          Register Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
-          if (Reg != LR)
-            continue;
-          HMFI.setHasClobberLR(true);
-          return Op;
-        }
-        break;
+    switch (Flags.getKind()) {
+    default:
+      llvm_unreachable("Bad flags!");
+    case InlineAsm::Kind::RegUse:
+    case InlineAsm::Kind::Imm:
+    case InlineAsm::Kind::Mem:
+      i += NumVals;
+      break;
+    case InlineAsm::Kind::Clobber:
+    case InlineAsm::Kind::RegDef:
+    case InlineAsm::Kind::RegDefEarlyClobber: {
+      for (; NumVals; --NumVals, ++i) {
+        Register Reg = cast<RegisterSDNode>(Op.getOperand(i))->getReg();
+        if (Reg != LR)
+          continue;
+        HMFI.setHasClobberLR(true);
+        return Op;
       }
-    }
+      break;
+      }
+      }
   }
 
   return Op;
@@ -2717,12 +2718,11 @@ HexagonTargetLowering::extractVectorPred(SDValue VecV, SDValue IdxV,
   assert(VecWidth == 8 || VecWidth == 4 || VecWidth == 2);
 
   // Check if this is an extract of the lowest bit.
-  if (auto *IdxN = dyn_cast<ConstantSDNode>(IdxV)) {
+  if (isNullConstant(IdxV) && ValTy.getSizeInBits() == 1) {
     // Extracting the lowest bit is a no-op, but it changes the type,
     // so it must be kept as an operation to avoid errors related to
     // type mismatches.
-    if (IdxN->isZero() && ValTy.getSizeInBits() == 1)
-      return DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, VecV);
+    return DAG.getNode(HexagonISD::TYPECAST, dl, MVT::i1, VecV);
   }
 
   // If the value extracted is a single bit, use tstbit.

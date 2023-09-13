@@ -21,63 +21,55 @@
 #include "min_allocator.h"
 
 template <class charT>
-TEST_CONSTEXPR_CXX20 void
-test(unsigned n, charT c)
-{
-    typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
-    typedef typename S::allocator_type A;
-    S s2(n, c);
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == n);
-    for (unsigned i = 0; i < n; ++i)
-        assert(s2[i] == c);
-    assert(s2.get_allocator() == A());
-    assert(s2.capacity() >= s2.size());
+TEST_CONSTEXPR_CXX20 void test(unsigned n, charT c) {
+  typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
+  typedef typename S::allocator_type A;
+  S s2(n, c);
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2.size() == n);
+  for (unsigned i = 0; i < n; ++i)
+    assert(s2[i] == c);
+  assert(s2.get_allocator() == A());
+  assert(s2.capacity() >= s2.size());
 }
 
 template <class charT, class A>
-TEST_CONSTEXPR_CXX20 void
-test(unsigned n, charT c, const A& a)
-{
-    typedef std::basic_string<charT, std::char_traits<charT>, A> S;
-    S s2(n, c, a);
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == n);
-    for (unsigned i = 0; i < n; ++i)
-        assert(s2[i] == c);
-    assert(s2.get_allocator() == a);
-    assert(s2.capacity() >= s2.size());
+TEST_CONSTEXPR_CXX20 void test(unsigned n, charT c, const A& a) {
+  typedef std::basic_string<charT, std::char_traits<charT>, A> S;
+  S s2(n, c, a);
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2.size() == n);
+  for (unsigned i = 0; i < n; ++i)
+    assert(s2[i] == c);
+  assert(s2.get_allocator() == a);
+  assert(s2.capacity() >= s2.size());
 }
 
 template <class Tp>
-TEST_CONSTEXPR_CXX20 void
-test(Tp n, Tp c)
-{
-    typedef char charT;
-    typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
-    typedef typename S::allocator_type A;
-    S s2(n, c);
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == static_cast<std::size_t>(n));
-    for (int i = 0; i < n; ++i)
-        assert(s2[i] == c);
-    assert(s2.get_allocator() == A());
-    assert(s2.capacity() >= s2.size());
+TEST_CONSTEXPR_CXX20 void test(Tp n, Tp c) {
+  typedef char charT;
+  typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
+  typedef typename S::allocator_type A;
+  S s2(n, c);
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2.size() == static_cast<std::size_t>(n));
+  for (int i = 0; i < n; ++i)
+    assert(s2[i] == c);
+  assert(s2.get_allocator() == A());
+  assert(s2.capacity() >= s2.size());
 }
 
 template <class Tp, class A>
-TEST_CONSTEXPR_CXX20 void
-test(Tp n, Tp c, const A& a)
-{
-    typedef char charT;
-    typedef std::basic_string<charT, std::char_traits<charT>, A> S;
-    S s2(n, c, a);
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2.size() == static_cast<std::size_t>(n));
-    for (int i = 0; i < n; ++i)
-        assert(s2[i] == c);
-    assert(s2.get_allocator() == a);
-    assert(s2.capacity() >= s2.size());
+TEST_CONSTEXPR_CXX20 void test(Tp n, Tp c, const A& a) {
+  typedef char charT;
+  typedef std::basic_string<charT, std::char_traits<charT>, A> S;
+  S s2(n, c, a);
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2.size() == static_cast<std::size_t>(n));
+  for (int i = 0; i < n; ++i)
+    assert(s2[i] == c);
+  assert(s2.get_allocator() == a);
+  assert(s2.capacity() >= s2.size());
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -123,8 +115,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

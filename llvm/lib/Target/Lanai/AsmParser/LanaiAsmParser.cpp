@@ -65,10 +65,9 @@ class LanaiAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool parseRegister(MCRegister &RegNum, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -724,17 +723,16 @@ bool LanaiAsmParser::parseRegister(MCRegister &RegNum, SMLoc &StartLoc,
   return (Op == nullptr);
 }
 
-OperandMatchResultTy LanaiAsmParser::tryParseRegister(MCRegister &RegNum,
-                                                      SMLoc &StartLoc,
-                                                      SMLoc &EndLoc) {
+ParseStatus LanaiAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                             SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   std::unique_ptr<LanaiOperand> Op = parseRegister(/*RestoreOnFailure=*/true);
   if (Op == nullptr)
-    return MatchOperand_NoMatch;
-  RegNum = Op->getReg();
-  return MatchOperand_Success;
+    return ParseStatus::NoMatch;
+  Reg = Op->getReg();
+  return ParseStatus::Success;
 }
 
 std::unique_ptr<LanaiOperand> LanaiAsmParser::parseIdentifier() {

@@ -156,6 +156,16 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
     With the `cmp` operation the comparison operators ==, !=, <, <=, >, >=, <=> 
     can be applied.
 
+    Its first argument is an attribute that defines the comparison operator:
+
+    - equal to (mnemonic: `"eq"`; integer value: `0`)
+    - not equal to (mnemonic: `"ne"`; integer value: `1`)
+    - less than (mnemonic: `"lt"`; integer value: `2`)
+    - less than or equal to (mnemonic: `"le"`; integer value: `3`)
+    - greater than (mnemonic: `"gt"`; integer value: `4`)
+    - greater than or equal to (mnemonic: `"ge"`; integer value: `5`)
+    - three-way-comparison (mnemonic: `"three_way"`; integer value: `6`)
+
     Example:
     ```mlir
     // Custom form of the cmp operation.

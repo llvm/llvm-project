@@ -58,13 +58,6 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
-  // Essentially like a normal COPY that works on GPRs, but cannot be
-  // rematerialised by passes like the simple register coalescer. It's
-  // required for SME when lowering calls because we cannot allow frame
-  // index calculations using addvl to slip in between the smstart/smstop
-  // and the bl instruction. The scalable vector length may change across
-  // the smstart/smstop boundary.
-  OBSCURE_COPY,
   SMSTART,
   SMSTOP,
   RESTORE_ZA,
@@ -248,6 +241,9 @@ enum NodeType : unsigned {
   // Only the lower result lane is defined.
   SADDV,
   UADDV,
+
+  // Unsigned sum Long across Vector
+  UADDLV,
 
   // Add Pairwise of two vectors
   ADDP,
@@ -1173,9 +1169,10 @@ private:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
     if (ConstraintCode == "Q")
-      return InlineAsm::Constraint_Q;
+      return InlineAsm::ConstraintCode::Q;
     // FIXME: clang has code for 'Ump', 'Utf', 'Usa', and 'Ush' but these are
     //        followed by llvm_unreachable so we'll leave them unimplemented in
     //        the backend for now.

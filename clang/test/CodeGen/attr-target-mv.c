@@ -32,6 +32,13 @@ int bar(void) {
   return foo();
 }
 
+static int __attribute__((target("arch=meteorlake"))) foo_internal(void) {return 15;}
+static int __attribute__((target("default"))) foo_internal(void) { return 2; }
+
+int bar1(void) {
+  return foo_internal();
+}
+
 inline int __attribute__((target("sse4.2"))) foo_inline(void) { return 0; }
 inline int __attribute__((target("arch=sandybridge"))) foo_inline(void);
 inline int __attribute__((target("arch=ivybridge"))) foo_inline(void) {return 1;}
@@ -128,6 +135,7 @@ void calls_pr50025c(void) { pr50025c(); }
 
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
+// LINUX: @foo_internal.ifunc = internal ifunc i32 (), ptr @foo_internal.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
 // LINUX: @foo_decls.ifunc = weak_odr ifunc void (), ptr @foo_decls.resolver
 // LINUX: @foo_multi.ifunc = weak_odr ifunc void (i32, double), ptr @foo_multi.resolver
@@ -253,6 +261,11 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo.arch_ivybridge
 // WINDOWS: call i32 @foo.sse4.2
 // WINDOWS: call i32 @foo
+
+/// Internal linkage resolvers do not use comdat.
+// LINUX: define internal ptr @foo_internal.resolver() {
+
+// WINDOWS: define internal i32 @foo_internal.resolver() {
 
 // LINUX: define{{.*}} i32 @bar2()
 // LINUX: call i32 @foo_inline.ifunc()

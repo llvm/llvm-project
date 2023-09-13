@@ -357,7 +357,7 @@ private:
   void emitSwitchCase(SwitchCG::CaseBlock &CB, MachineBasicBlock *SwitchBB,
                       MachineIRBuilder &MIB);
 
-  /// Generate for for the BitTest header block, which precedes each sequence of
+  /// Generate for the BitTest header block, which precedes each sequence of
   /// BitTestCases.
   void emitBitTestHeader(SwitchCG::BitTestBlock &BTB,
                          MachineBasicBlock *SwitchMBB);

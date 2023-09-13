@@ -1557,7 +1557,7 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
     llvm::sys::fs::UniqueID ID;
-    if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
+    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
     }
 
@@ -8278,7 +8278,7 @@ public:
       // of tofrom.
       // Emit this[:1]
       CombinedInfo.Pointers.push_back(PartialStruct.Base.getPointer());
-      QualType Ty = MD->getThisType()->getPointeeType();
+      QualType Ty = MD->getThisObjectType();
       llvm::Value *Size =
           CGF.Builder.CreateIntCast(CGF.getTypeSize(Ty), CGF.Int64Ty,
                                     /*isSigned=*/true);

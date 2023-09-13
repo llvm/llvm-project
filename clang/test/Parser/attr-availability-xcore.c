@@ -6,6 +6,6 @@
 #  error 'availability' attribute is not available
 #endif
 
-void f7() __attribute__((availability(macosx,message=L"wide"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f7() __attribute__((availability(macosx,message=L"wide"))); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}}
 
-void f8() __attribute__((availability(macosx,message="a" L"b"))); // expected-error {{expected string literal for optional message in 'availability' attribute}}
+void f8() __attribute__((availability(macosx,message="a" L"b"))); // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect}}

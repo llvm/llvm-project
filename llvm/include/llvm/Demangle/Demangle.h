@@ -102,7 +102,7 @@ struct ItaniumPartialDemangler {
   char *getFunctionParameters(char *Buf, size_t *N) const;
   char *getFunctionReturnType(char *Buf, size_t *N) const;
 
-  /// If this function has any any cv or reference qualifiers. These imply that
+  /// If this function has any cv or reference qualifiers. These imply that
   /// the function is a non-static member function.
   bool hasFunctionQualifiers() const;
 

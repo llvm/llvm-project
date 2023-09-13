@@ -781,9 +781,9 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_0_c10(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_imm_c10(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: insertelt_nxv2i64_imm_c10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 10
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 3
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 2 x i64> %v, i64 10, i32 3
@@ -793,9 +793,8 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_imm_c10(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_idx_c10(<vscale x 2 x i64> %v, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2i64_idx_c10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 10
 ; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0
@@ -818,9 +817,9 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_0_cn1(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_imm_cn1(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: insertelt_nxv2i64_imm_cn1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, -1
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, tu, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vslideup.vi v8, v10, 3
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 2 x i64> %v, i64 -1, i32 3
@@ -830,9 +829,8 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_imm_cn1(<vscale x 2 x i64> %v) {
 define <vscale x 2 x i64> @insertelt_nxv2i64_idx_cn1(<vscale x 2 x i64> %v, i32 %idx) {
 ; CHECK-LABEL: insertelt_nxv2i64_idx_cn1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, -1
 ; CHECK-NEXT:    addi a1, a0, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v10, a0

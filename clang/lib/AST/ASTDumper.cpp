@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTDumper.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/JSONNodeDumper.h"
@@ -332,4 +333,18 @@ LLVM_DUMP_METHOD void APValue::dump(raw_ostream &OS,
   ASTDumper Dumper(llvm::errs(), Context,
                    Context.getDiagnostics().getShowColors());
   Dumper.Visit(*this, /*Ty=*/Context.getPointerType(Context.CharTy));
+}
+
+//===----------------------------------------------------------------------===//
+// ConceptReference method implementations
+//===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void ConceptReference::dump() const {
+  dump(llvm::errs());
+}
+
+LLVM_DUMP_METHOD void ConceptReference::dump(raw_ostream &OS) const {
+  auto &Ctx = getNamedConcept()->getASTContext();
+  ASTDumper P(OS, Ctx, Ctx.getDiagnostics().getShowColors());
+  P.Visit(this);
 }

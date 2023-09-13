@@ -415,6 +415,13 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           the input IR and returns `failure` in that case. If this op is
           expected to survive bufferization, `success` should be returned
           (together with `allow-unknown-ops` enabled).
+
+          Note: If this op supports unstructured control flow in its regions,
+          then this function should also bufferize all block signatures that
+          belong to this op. Branch ops (that branch to a block) are typically
+          bufferized together with the block signature (this is just a
+          suggestion to make sure IR is valid at every point in time and could
+          be done differently).
         }],
         /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"bufferize",
@@ -547,6 +554,25 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*defaultImplementation=*/[{
           return ::mlir::bufferization::detail::defaultIsRepetitiveRegion(
               ::llvm::cast<BufferizableOpInterface>($_op.getOperation()), index);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return `true` if the given region of this op is parallel, i.e.,
+          multiple instances of the region may be executing at the same time.
+          If a region is parallel, it must also be marked as "repetitive".
+
+          The RaW conflict detection of One-Shot Analysis is more strict inside
+          parallel regions: Buffer may have to be privatized.
+
+          By default, regions are assumed to be sequential.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"isParallelRegion",
+        /*args=*/(ins "unsigned":$index),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
         }]
       >,
       StaticInterfaceMethod<

@@ -46,6 +46,9 @@ void unused_local_static() {
   static int x = 0;
   static int y = 0; // expected-warning{{unused variable 'y'}}
 #pragma unused(x)
+  static __attribute__((used)) int z;
+  static __attribute__((unused)) int w;
+  [[maybe_unused]] static int v;
 }
 
 // PR10168

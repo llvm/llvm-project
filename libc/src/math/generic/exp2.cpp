@@ -104,7 +104,7 @@ Float128 poly_approx_f128(const Float128 &dx) {
   return p;
 }
 
-// Compute exp(x) using 128-bit precision.
+// Compute 2^(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
 Float128 exp2_f128(double x, int hi, int idx1, int idx2) {
@@ -192,7 +192,7 @@ double exp2_denorm(double x) {
 // Check for exceptional cases when:
 //  * log2(1 - 2^-54) < x < log2(1 + 2^-53)
 //  * x >= 1024
-//  * x <= -1075
+//  * x <= -1022
 //  * x is inf or nan
 double set_exceptional(double x) {
   using FPBits = typename fputil::FPBits<double>;
@@ -208,9 +208,9 @@ double set_exceptional(double x) {
     return fputil::multiply_add(x, 0.5, 1.0);
   }
 
-  // x <= 2^-1075 || x >= 1024 or inf/nan.
+  // x <= -1022 || x >= 1024 or inf/nan.
   if (x_u > 0xc08ff00000000000) {
-    // x <= 2^-1075 or -inf/nan
+    // x <= -1075 or -inf/nan
     if (x_u >= 0xc090cc0000000000) {
       // exp(-Inf) = 0
       if (xbits.is_inf())

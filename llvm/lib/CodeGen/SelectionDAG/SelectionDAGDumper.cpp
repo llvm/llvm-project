@@ -125,6 +125,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::GlobalTLSAddress:           return "GlobalTLSAddress";
   case ISD::FrameIndex:                 return "FrameIndex";
   case ISD::JumpTable:                  return "JumpTable";
+  case ISD::JUMP_TABLE_DEBUG_INFO:
+    return "JUMP_TABLE_DEBUG_INFO";
   case ISD::GLOBAL_OFFSET_TABLE:        return "GLOBAL_OFFSET_TABLE";
   case ISD::RETURNADDR:                 return "RETURNADDR";
   case ISD::ADDROFRETURNADDR:           return "ADDROFRETURNADDR";
@@ -222,6 +224,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::STRICT_FEXP:                return "strict_fexp";
   case ISD::FEXP2:                      return "fexp2";
   case ISD::STRICT_FEXP2:               return "strict_fexp2";
+  case ISD::FEXP10:                     return "fexp10";
   case ISD::FLOG:                       return "flog";
   case ISD::STRICT_FLOG:                return "strict_flog";
   case ISD::FLOG2:                      return "flog2";

@@ -1,0 +1,14 @@
+add_entrypoint_object(
+  __assert_fail
+  SRCS
+    __assert_fail.cpp
+  HDRS
+    ../__assert_fail.h
+    ../assert.h
+  DEPENDS
+    libc.include.assert
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.GPU.utils
+    libc.src.__support.CPP.atomic
+    libc.src.stdlib.abort
+)

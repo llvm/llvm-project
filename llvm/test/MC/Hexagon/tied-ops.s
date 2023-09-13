@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=asm %s 2> %t; FileCheck %s < %t
+# RUN: llvm-mc -triple=hexagon -filetype=asm %s 2> %t; FileCheck %s < %t
 
 # Check that tied operands are caught
 

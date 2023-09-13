@@ -1484,16 +1484,6 @@ struct on_first {
 template <int N> struct rank : rank<N - 1> {};
 template <> struct rank<0> {};
 
-/// traits class for checking whether type T is one of any of the given
-/// types in the variadic list.
-template <typename T, typename... Ts>
-using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
-
-/// traits class for checking whether type T is a base class for all
-///  the given types in the variadic list.
-template <typename T, typename... Ts>
-using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
-
 namespace detail {
 template <typename... Ts> struct Visitor;
 
@@ -2485,6 +2475,16 @@ bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
 /// not been implemented.
 template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
 template <class T> constexpr T *to_address(T *P) { return P; }
+
+// Detect incomplete types, relying on the fact that their size is unknown.
+namespace detail {
+template <typename T> using has_sizeof = decltype(sizeof(T));
+} // namespace detail
+
+/// Detects when type `T` is incomplete. This is true for forward declarations
+/// and false for types with a full definition.
+template <typename T>
+constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
 
 } // end namespace llvm
 

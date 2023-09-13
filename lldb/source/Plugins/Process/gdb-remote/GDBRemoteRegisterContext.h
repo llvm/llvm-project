@@ -38,7 +38,7 @@ public:
 
   ~GDBRemoteDynamicRegisterInfo() override = default;
 
-  bool UpdateARM64SVERegistersInfos(uint64_t vg);
+  void UpdateARM64SVERegistersInfos(uint64_t vg);
 };
 
 class GDBRemoteRegisterContext : public RegisterContext {

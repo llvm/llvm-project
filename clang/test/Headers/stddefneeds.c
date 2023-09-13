@@ -38,7 +38,7 @@ wint_t wi1; // c99-error{{unknown type}} c23-error{{unknown type}}
 ptrdiff_t p2;
 size_t s2;
 rsize_t r2; // c99-error{{unknown type}} c23-error{{unknown type}}
-            // c99-note@stddef.h:*{{'size_t' declared here}} c23-note@stddef.h:*{{'size_t' declared here}}
+            // c99-note@__stddef_size_t.h:*{{'size_t' declared here}} c23-note@__stddef_size_t.h:*{{'size_t' declared here}}
 wchar_t wc2; // c99-error{{unknown type}} c23-error{{unknown type}}
 void *v2 = NULL; // c99-error{{undeclared identifier}} c23-error{{undeclared identifier}}
 nullptr_t n2; // c99-error{{unknown type}} c23-error{{unknown type}}
@@ -96,7 +96,7 @@ wint_t wi5; // c99-error{{unknown type}} c23-error{{unknown type}}
 // __need_nullptr_t generates an error in <C23 because its definition
 // depends on nullptr.
 #define __need_nullptr_t
-#include <stddef.h> // c99-error@stddef.h:*{{expected function body}}
+#include <stddef.h> // c99-error@__stddef_nullptr_t.h:*{{expected function body}}
 
 ptrdiff_t p6;
 size_t s6;

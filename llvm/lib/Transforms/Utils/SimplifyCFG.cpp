@@ -1607,13 +1607,14 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI, bool EqTermsOnly) {
         // The debug location is an integral part of a debug info intrinsic
         // and can't be separated from it or replaced.  Instead of attempting
         // to merge locations, simply hoist both copies of the intrinsic.
-        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
-        BIParent->splice(BI->getIterator(), BB2, I2->getIterator());
+        I1->moveBeforePreserving(BI);
+        I2->moveBeforePreserving(BI);
+        Changed = true;
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
         // we remove the now redundant second instruction.
-        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
+        I1->moveBeforePreserving(BI);
         if (!I2->use_empty())
           I2->replaceAllUsesWith(I1);
         I1->andIRFlags(I2);
@@ -1961,8 +1962,9 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     // Create a new PHI in the successor block and populate it.
     auto *Op = I0->getOperand(O);
     assert(!Op->getType()->isTokenTy() && "Can't PHI tokens!");
-    auto *PN = PHINode::Create(Op->getType(), Insts.size(),
-                               Op->getName() + ".sink", &BBEnd->front());
+    auto *PN =
+        PHINode::Create(Op->getType(), Insts.size(), Op->getName() + ".sink");
+    PN->insertBefore(BBEnd->begin());
     for (auto *I : Insts)
       PN->addIncoming(I->getOperand(O), I->getParent());
     NewOperands.push_back(PN);
@@ -1972,7 +1974,8 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   // and move it to the start of the successor block.
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O)
     I0->getOperandUse(O).set(NewOperands[O]);
-  I0->moveBefore(&*BBEnd->getFirstInsertionPt());
+
+  I0->moveBefore(*BBEnd, BBEnd->getFirstInsertionPt());
 
   // Update metadata and IR flags, and merge debug locations.
   for (auto *I : Insts)
@@ -3018,7 +3021,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
     for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (any_of(DAI->location_ops(), [&](Value *V) { return V == OrigV; }))
+      if (llvm::is_contained(DAI->location_ops(), OrigV))
         DAI->replaceVariableLocationOp(OrigV, S);
     }
   }
@@ -3876,7 +3879,8 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
       (!isa<Instruction>(V) || cast<Instruction>(V)->getParent() != BB))
     return V;
 
-  PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge", &Succ->front());
+  PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge");
+  PHI->insertBefore(Succ->begin());
   PHI->addIncoming(V, BB);
   for (BasicBlock *PredBB : predecessors(Succ))
     if (PredBB != BB)
@@ -4000,7 +4004,9 @@ static bool mergeConditionalStoreToAddress(
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  IRBuilder<> QB(&*PostBB->getFirstInsertionPt());
+  BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
+  IRBuilder<> QB(PostBB, PostBBFirst);
+  QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
 
   Value *PPred = PStore->getParent() == PTB ? PCond : QB.CreateNot(PCond);
   Value *QPred = QStore->getParent() == QTB ? QCond : QB.CreateNot(QCond);
@@ -4011,9 +4017,11 @@ static bool mergeConditionalStoreToAddress(
     QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
-  auto *T = SplitBlockAndInsertIfThen(CombinedPred, &*QB.GetInsertPoint(),
+  BasicBlock::iterator InsertPt = QB.GetInsertPoint();
+  auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
+
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
   SI->setAAMetadata(PStore->getAAMetadata().merge(QStore->getAAMetadata()));

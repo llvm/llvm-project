@@ -6,7 +6,7 @@ hicpp-explicit-conversions
 ==========================
 
 This check is an alias for :doc:`google-explicit-constructor <../google/explicit-constructor>`.
-Used to enforce parts of `rule 5.4.1 <http://www.codingstandard.com/rule/5-4-1-only-use-casting-forms-static_cast-excl-void-dynamic_cast-or-explicit-constructor-call/>`_.
+Used to enforce parts of `rule 5.4.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard-expressions>`_.
 This check will enforce that constructors and conversion operators are marked `explicit`.
 Other forms of casting checks are implemented in other places.
 The following checks can be used to check for more forms of casting:

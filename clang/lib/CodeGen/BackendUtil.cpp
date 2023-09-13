@@ -91,6 +91,7 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> DebugInfoCorrelate;
+extern cl::opt<bool> PrintPipelinePasses;
 
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
@@ -927,8 +928,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     // configure the pipeline.
     OptimizationLevel Level = mapToLevel(CodeGenOpts);
 
-    bool IsThinLTO = CodeGenOpts.PrepareForThinLTO;
-    bool IsLTO = CodeGenOpts.PrepareForLTO;
+    const bool PrepareForThinLTO = CodeGenOpts.PrepareForThinLTO;
+    const bool PrepareForLTO = CodeGenOpts.PrepareForLTO;
 
     if (LangOpts.ObjCAutoRefCount) {
       PB.registerPipelineStartEPCallback(
@@ -1017,14 +1018,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           });
     }
 
-    bool IsThinOrUnifiedLTO = IsThinLTO || (IsLTO && CodeGenOpts.UnifiedLTO);
     if (CodeGenOpts.FatLTO) {
-      MPM = PB.buildFatLTODefaultPipeline(Level, IsThinOrUnifiedLTO,
-                                          IsThinOrUnifiedLTO ||
+      MPM = PB.buildFatLTODefaultPipeline(Level, PrepareForThinLTO,
+                                          PrepareForThinLTO ||
                                               shouldEmitRegularLTOSummary());
-    } else if (IsThinOrUnifiedLTO) {
+    } else if (PrepareForThinLTO) {
       MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);
-    } else if (IsLTO) {
+    } else if (PrepareForLTO) {
       MPM = PB.buildLTOPreLinkDefaultPipeline(Level);
     } else {
       MPM = PB.buildPerModuleDefaultPipeline(Level);
@@ -1081,17 +1081,25 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.FatLTO) {
     // Set module flags, like EnableSplitLTOUnit and UnifiedLTO, since FatLTO
     // uses a different action than Backend_EmitBC or Backend_EmitLL.
-    bool IsThinOrUnifiedLTO =
-        CodeGenOpts.PrepareForThinLTO ||
-        (CodeGenOpts.PrepareForLTO && CodeGenOpts.UnifiedLTO);
     if (!TheModule->getModuleFlag("ThinLTO"))
       TheModule->addModuleFlag(Module::Error, "ThinLTO",
-                               uint32_t(IsThinOrUnifiedLTO));
+                               uint32_t(CodeGenOpts.PrepareForThinLTO));
     if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
       TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
                                uint32_t(CodeGenOpts.EnableSplitLTOUnit));
     if (CodeGenOpts.UnifiedLTO && !TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
+  }
+
+  // Print a textual, '-passes=' compatible, representation of pipeline if
+  // requested.
+  if (PrintPipelinePasses) {
+    MPM.printPipeline(outs(), [&PIC](StringRef ClassName) {
+      auto PassName = PIC.getPassNameForClassName(ClassName);
+      return PassName.empty() ? ClassName : PassName;
+    });
+    outs() << "\n";
+    return;
   }
 
   // Now that we have all of the passes ready, run them.
@@ -1128,6 +1136,13 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
     break;
   default:
+    return;
+  }
+
+  // If -print-pipeline-passes is requested, don't run the legacy pass manager.
+  // FIXME: when codegen is switched to use the new pass manager, it should also
+  // emit pass names here.
+  if (PrintPipelinePasses) {
     return;
   }
 
@@ -1353,7 +1368,7 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
   for (StringRef OffloadObject : CGOpts.OffloadObjects) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(OffloadObject);
-    if (std::error_code EC = ObjectOrErr.getError()) {
+    if (ObjectOrErr.getError()) {
       auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                           "could not open '%0' for embedding");
       Diags.Report(DiagID) << OffloadObject;

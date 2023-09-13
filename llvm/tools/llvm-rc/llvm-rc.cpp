@@ -461,7 +461,14 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
     // done this double escaping) probably is confined to cases like these
     // quoted string defines, and those happen to work the same across unix
     // and windows.
-    std::string Unescaped = unescape(Arg->getValue());
+    //
+    // If GNU windres is executed with --use-temp-file, it doesn't use
+    // popen() to invoke the preprocessor, but uses another function which
+    // actually preserves tricky characters better. To mimic this behaviour,
+    // don't unescape arguments here.
+    std::string Value = Arg->getValue();
+    if (!InputArgs.hasArg(WINDRES_use_temp_file))
+      Value = unescape(Value);
     switch (Arg->getOption().getID()) {
     case WINDRES_include_dir:
       // Technically, these are handled the same way as e.g. defines, but
@@ -475,17 +482,19 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
       break;
     case WINDRES_define:
       Opts.PreprocessArgs.push_back("-D");
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     case WINDRES_undef:
       Opts.PreprocessArgs.push_back("-U");
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     case WINDRES_preprocessor_arg:
-      Opts.PreprocessArgs.push_back(Unescaped);
+      Opts.PreprocessArgs.push_back(Value);
       break;
     }
   }
+  // TODO: If --use-temp-file is set, we shouldn't be unescaping
+  // the --preprocessor argument either, only splitting it.
   if (InputArgs.hasArg(WINDRES_preprocessor))
     Opts.PreprocessCmd =
         unescapeSplit(InputArgs.getLastArgValue(WINDRES_preprocessor));

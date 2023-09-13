@@ -912,9 +912,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (std::optional<StringRef> section = func.getSection())
     llvmFunc->setSection(*section);
 
-  if (auto armStreaming = func.getArmStreaming())
+  if (func.getArmStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_enabled");
-  else if (auto armLocallyStreaming = func.getArmLocallyStreaming())
+  else if (func.getArmLocallyStreaming())
     llvmFunc->addFnAttr("aarch64_pstate_sm_body");
 
   // First, create all blocks so we can jump to them.
@@ -1100,57 +1100,46 @@ void ModuleTranslation::setAccessGroupsMetadata(AccessGroupOpInterface op,
     inst->setMetadata(llvm::LLVMContext::MD_access_group, node);
 }
 
-LogicalResult ModuleTranslation::createAliasScopeMetadata() {
-  DenseMap<Attribute, llvm::MDNode *> aliasScopeDomainMetadataMapping;
-
-  AttrTypeWalker walker;
-  walker.addWalk([&](LLVM::AliasScopeDomainAttr op) {
-    llvm::LLVMContext &ctx = llvmModule->getContext();
-    llvm::SmallVector<llvm::Metadata *, 2> operands;
-    operands.push_back({}); // Placeholder for self-reference
-    if (StringAttr description = op.getDescription())
-      operands.push_back(llvm::MDString::get(ctx, description));
-    llvm::MDNode *domain = llvm::MDNode::get(ctx, operands);
-    domain->replaceOperandWith(0, domain); // Self-reference for uniqueness
-    aliasScopeDomainMetadataMapping.insert({op, domain});
-  });
-
-  walker.addWalk([&](LLVM::AliasScopeAttr op) {
-    llvm::LLVMContext &ctx = llvmModule->getContext();
-    llvm::MDNode *domain =
-        aliasScopeDomainMetadataMapping.lookup(op.getDomain());
-    assert(domain && "Scope's domain should already be valid");
-    llvm::SmallVector<llvm::Metadata *, 3> operands;
-    operands.push_back({}); // Placeholder for self-reference
-    operands.push_back(domain);
-    if (StringAttr description = op.getDescription())
-      operands.push_back(llvm::MDString::get(ctx, description));
-    llvm::MDNode *scope = llvm::MDNode::get(ctx, operands);
-    scope->replaceOperandWith(0, scope); // Self-reference for uniqueness
-    aliasScopeMetadataMapping.insert({op, scope});
-  });
-
-  mlirModule->walk([&](AliasAnalysisOpInterface op) {
-    if (auto aliasScopes = op.getAliasScopesOrNull())
-      walker.walk(aliasScopes);
-    if (auto noAliasScopes = op.getNoAliasScopesOrNull())
-      walker.walk(noAliasScopes);
-  });
-
-  return success();
-}
-
 llvm::MDNode *
-ModuleTranslation::getAliasScope(AliasScopeAttr aliasScopeAttr) const {
-  return aliasScopeMetadataMapping.lookup(aliasScopeAttr);
+ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
+  auto [scopeIt, scopeInserted] =
+      aliasScopeMetadataMapping.try_emplace(aliasScopeAttr, nullptr);
+  if (!scopeInserted)
+    return scopeIt->second;
+  llvm::LLVMContext &ctx = llvmModule->getContext();
+  // Convert the domain metadata node if necessary.
+  auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
+      aliasScopeAttr.getDomain(), nullptr);
+  if (insertedDomain) {
+    llvm::SmallVector<llvm::Metadata *, 2> operands;
+    // Placeholder for self-reference.
+    operands.push_back({});
+    if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
+      operands.push_back(llvm::MDString::get(ctx, description));
+    domainIt->second = llvm::MDNode::get(ctx, operands);
+    // Self-reference for uniqueness.
+    domainIt->second->replaceOperandWith(0, domainIt->second);
+  }
+  // Convert the scope metadata node.
+  assert(domainIt->second && "Scope's domain should already be valid");
+  llvm::SmallVector<llvm::Metadata *, 3> operands;
+  // Placeholder for self-reference.
+  operands.push_back({});
+  operands.push_back(domainIt->second);
+  if (StringAttr description = aliasScopeAttr.getDescription())
+    operands.push_back(llvm::MDString::get(ctx, description));
+  scopeIt->second = llvm::MDNode::get(ctx, operands);
+  // Self-reference for uniqueness.
+  scopeIt->second->replaceOperandWith(0, scopeIt->second);
+  return scopeIt->second;
 }
 
-llvm::MDNode *ModuleTranslation::getAliasScopes(
-    ArrayRef<AliasScopeAttr> aliasScopeAttrs) const {
+llvm::MDNode *ModuleTranslation::getOrCreateAliasScopes(
+    ArrayRef<AliasScopeAttr> aliasScopeAttrs) {
   SmallVector<llvm::Metadata *> nodes;
   nodes.reserve(aliasScopeAttrs.size());
   for (AliasScopeAttr aliasScopeAttr : aliasScopeAttrs)
-    nodes.push_back(getAliasScope(aliasScopeAttr));
+    nodes.push_back(getOrCreateAliasScope(aliasScopeAttr));
   return llvm::MDNode::get(getLLVMContext(), nodes);
 }
 
@@ -1159,7 +1148,7 @@ void ModuleTranslation::setAliasScopeMetadata(AliasAnalysisOpInterface op,
   auto populateScopeMetadata = [&](ArrayAttr aliasScopeAttrs, unsigned kind) {
     if (!aliasScopeAttrs || aliasScopeAttrs.empty())
       return;
-    llvm::MDNode *node = getAliasScopes(
+    llvm::MDNode *node = getOrCreateAliasScopes(
         llvm::to_vector(aliasScopeAttrs.getAsRange<AliasScopeAttr>()));
     inst->setMetadata(kind, node);
   };
@@ -1338,7 +1327,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
   if (auto dataLayoutAttr =
-          m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
+          m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
   } else {
     FailureOr<llvm::DataLayout> llvmDataLayout(llvm::DataLayout(""));
@@ -1358,7 +1347,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
     llvmModule->setDataLayout(*llvmDataLayout);
   }
   if (auto targetTripleAttr =
-          m->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
+          m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(cast<StringAttr>(targetTripleAttr).getValue());
 
   // Inject declarations for `malloc` and `free` functions that can be used in
@@ -1388,19 +1377,25 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   LLVM::ensureDistinctSuccessors(module);
 
   ModuleTranslation translator(module, std::move(llvmModule));
+  llvm::IRBuilder<> llvmBuilder(llvmContext);
+
+  // Convert module before functions and operations inside, so dialect
+  // attributes can be used to change dialect-specific global configurations via
+  // `amendOperation()`. These configurations can then influence the translation
+  // of operations afterwards.
+  if (failed(translator.convertOperation(*module, llvmBuilder)))
+    return nullptr;
+
   if (failed(translator.convertComdats()))
     return nullptr;
   if (failed(translator.convertFunctionSignatures()))
     return nullptr;
   if (failed(translator.convertGlobals()))
     return nullptr;
-  if (failed(translator.createAliasScopeMetadata()))
-    return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
 
   // Convert other top-level operations if possible.
-  llvm::IRBuilder<> llvmBuilder(llvmContext);
   for (Operation &o : getModuleBody(module).getOperations()) {
     if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::GlobalCtorsOp,
              LLVM::GlobalDtorsOp, LLVM::ComdatOp>(&o) &&
@@ -1414,10 +1409,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // after the top-level operations they refer to are declared, so we do it
   // last.
   if (failed(translator.convertFunctions()))
-    return nullptr;
-
-  // Convert module itself.
-  if (failed(translator.convertOperation(*module, llvmBuilder)))
     return nullptr;
 
   if (llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

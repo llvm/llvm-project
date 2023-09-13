@@ -285,6 +285,12 @@ QualType Descriptor::getType() const {
   llvm_unreachable("Invalid descriptor type");
 }
 
+QualType Descriptor::getElemQualType() const {
+  assert(isArray());
+  const auto *AT = cast<ArrayType>(getType());
+  return AT->getElementType();
+}
+
 SourceLocation Descriptor::getLocation() const {
   if (auto *D = Source.dyn_cast<const Decl *>())
     return D->getLocation();

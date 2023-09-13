@@ -122,7 +122,18 @@ set(LIBCXX_MODULE_STD_SOURCES
 # When that is removed the configured file can use the substitution
 # LIBCXX_GENERATED_INCLUDE_TARGET_DIR avoiding this set.
 # Also clean up the parts needed to generate the install version.
-set(LIBCXX_CONFIGURED_INCLUDE_DIR ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
+# - LIBCXX_GENERATED_INCLUDE_DIR contains the libc++ headers
+# - LIBCXX_GENERATED_INCLUDE_TARGET_DIR contains the libc++ site config
+if ("${LIBCXX_GENERATED_INCLUDE_DIR}" STREQUAL "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}")
+  # This typically happens when the target is not installed.
+  set(LIBCXX_CONFIGURED_INCLUDE_DIRS "${LIBCXX_GENERATED_INCLUDE_DIR}")
+else()
+  # It's important that the arch directory be included first so that its header files
+  # which interpose on the default include dir be included instead of the default ones.
+  set(LIBCXX_CONFIGURED_INCLUDE_DIRS
+    "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR};${LIBCXX_GENERATED_INCLUDE_DIR}"
+  )
+endif()
 configure_file(
   "CMakeLists.txt.in"
   "${LIBCXX_GENERATED_MODULE_DIR}/CMakeLists.txt"

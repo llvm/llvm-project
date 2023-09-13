@@ -375,6 +375,10 @@ DiffEngine::findDifferences(const InterfaceFile *IFLHS,
                                        IFRHS->reexportedLibraries(),
                                        "Reexported Libraries"));
 
+  if (IFLHS->rpaths() != IFRHS->rpaths())
+    Output.push_back(recordDifferences(IFLHS->rpaths(), IFRHS->rpaths(),
+                                       "Run Path Search Paths"));
+
   if (IFLHS->allowableClients() != IFRHS->allowableClients())
     Output.push_back(recordDifferences(IFLHS->allowableClients(),
                                        IFRHS->allowableClients(),

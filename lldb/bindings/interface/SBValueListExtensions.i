@@ -34,18 +34,6 @@
         def __len__(self):
             return int(self.GetSize())
 
-        def __eq__(self, other):
-            return not self.__ne__(other)
-
-        def __int__(self):
-            pass
-
-        def __hex__(self):
-            pass
-
-        def __oct__(self):
-            pass
-
         def __getitem__(self, key):
             count = len(self)
             #------------------------------------------------------------

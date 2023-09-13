@@ -20,6 +20,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
+#include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 using namespace clang;
@@ -912,6 +913,17 @@ CXXMethodDecl *Sema::CreateLambdaCallOperator(SourceRange IntroducerRange,
   return Method;
 }
 
+void Sema::AddTemplateParametersToLambdaCallOperator(
+    CXXMethodDecl *CallOperator, CXXRecordDecl *Class,
+    TemplateParameterList *TemplateParams) {
+  assert(TemplateParams && "no template parameters");
+  FunctionTemplateDecl *TemplateMethod = FunctionTemplateDecl::Create(
+      Context, Class, CallOperator->getLocation(), CallOperator->getDeclName(),
+      TemplateParams, CallOperator);
+  TemplateMethod->setAccess(AS_public);
+  CallOperator->setDescribedFunctionTemplate(TemplateMethod);
+}
+
 void Sema::CompleteLambdaCallOperator(
     CXXMethodDecl *Method, SourceLocation LambdaLoc,
     SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
@@ -930,11 +942,11 @@ void Sema::CompleteLambdaCallOperator(
   DeclContext *DC = Method->getLexicalDeclContext();
   Method->setLexicalDeclContext(LSI->Lambda);
   if (TemplateParams) {
-    FunctionTemplateDecl *TemplateMethod = FunctionTemplateDecl::Create(
-        Context, LSI->Lambda, Method->getLocation(), Method->getDeclName(),
-        TemplateParams, Method);
-    TemplateMethod->setAccess(AS_public);
-    Method->setDescribedFunctionTemplate(TemplateMethod);
+    FunctionTemplateDecl *TemplateMethod =
+        Method->getDescribedFunctionTemplate();
+    assert(TemplateMethod &&
+           "AddTemplateParametersToLambdaCallOperator should have been called");
+
     LSI->Lambda->addDecl(TemplateMethod);
     TemplateMethod->setLexicalDeclContext(DC);
   } else {
@@ -1262,6 +1274,17 @@ void Sema::ActOnLambdaClosureParameters(
       PushOnScopeChains(Param, LambdaScope, false);
   }
 
+  // After the parameter list, we may parse a noexcept/requires/trailing return
+  // type which need to know whether the call operator constiture a dependent
+  // context, so we need to setup the FunctionTemplateDecl of generic lambdas
+  // now.
+  TemplateParameterList *TemplateParams =
+      getGenericLambdaTemplateParameterList(LSI, *this);
+  if (TemplateParams) {
+    AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
+                                              TemplateParams);
+    LSI->Lambda->setLambdaIsGeneric(true);
+  }
   LSI->AfterParameterList = true;
 }
 
@@ -2231,4 +2254,35 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   Cleanup.setExprNeedsCleanups(true);
 
   return BuildBlock;
+}
+
+Sema::LambdaScopeForCallOperatorInstantiationRAII::
+    LambdaScopeForCallOperatorInstantiationRAII(
+        Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
+        LocalInstantiationScope &Scope)
+    : FunctionScopeRAII(SemasRef) {
+  if (!isLambdaCallOperator(FD)) {
+    FunctionScopeRAII::disable();
+    return;
+  }
+
+  if (FD->isTemplateInstantiation() && FD->getPrimaryTemplate()) {
+    FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
+    if (const auto *FromMemTempl =
+            PrimaryTemplate->getInstantiatedFromMemberTemplate()) {
+      SemasRef.addInstantiatedCapturesToScope(
+          FD, FromMemTempl->getTemplatedDecl(), Scope, MLTAL);
+    }
+  }
+
+  else if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization ||
+           FD->getTemplatedKind() == FunctionDecl::TK_DependentNonTemplate) {
+    FunctionDecl *InstantiatedFrom =
+        FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization
+            ? FD->getInstantiatedFromMemberFunction()
+            : FD->getInstantiatedFromDecl();
+    SemasRef.addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL);
+  }
+
+  SemasRef.RebuildLambdaScopeInfo(cast<CXXMethodDecl>(FD));
 }

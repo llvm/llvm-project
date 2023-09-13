@@ -26,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
+#include "clang/Basic/ProfileList.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -1259,26 +1260,11 @@ public:
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
                               bool AttrOnCallSite, bool IsThunk);
 
-  /// Adds attributes to F according to our CodeGenOptions and LangOptions, as
-  /// though we had emitted it ourselves.  We remove any attributes on F that
-  /// conflict with the attributes we add here.
-  ///
-  /// This is useful for adding attrs to bitcode modules that you want to link
-  /// with but don't control, such as CUDA's libdevice.  When linking with such
-  /// a bitcode library, you might want to set e.g. its functions'
-  /// "unsafe-fp-math" attribute to match the attr of the functions you're
-  /// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
-  /// unsafe-fp-math attrs as tantamount to unsafe-fp-math=false, and then LLVM
-  /// will propagate unsafe-fp-math=false up to every transitive caller of a
-  /// function in the bitcode library!
-  ///
-  /// With the exception of fast-math attrs, this will only make the attributes
-  /// on the function more conservative.  But it's unsafe to call this on a
-  /// function which relies on particular fast-math attributes for correctness.
-  /// It's up to you to ensure that this is safe.
-  void addDefaultFunctionDefinitionAttributes(llvm::Function &F);
-  void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
-                                                bool WillInternalize);
+  /// Adjust Memory attribute to ensure that the BE gets the right attribute
+  // in order to generate the library call or the intrinsic for the function
+  // name 'Name'.
+  void AdjustMemoryAttribute(StringRef Name, CGCalleeInfo CalleeInfo,
+                             llvm::AttributeList &Attrs);
 
   /// Like the overload taking a `Function &`, but intended specifically
   /// for frontends that want to build on Clang's target-configuration logic.

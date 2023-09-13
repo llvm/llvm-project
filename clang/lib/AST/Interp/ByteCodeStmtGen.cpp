@@ -341,7 +341,7 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
     return IS->getElse() ? visitStmt(IS->getElse()) : true;
 
   if (auto *CondInit = IS->getInit())
-    if (!visitStmt(IS->getInit()))
+    if (!visitStmt(CondInit))
       return false;
 
   if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())

@@ -26,12 +26,31 @@ namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
+class MCInstrDesc;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
 class Target;
+
+namespace PPC {
+/// stripRegisterPrefix - This method strips the character prefix from a
+/// register name so that only the number is left.  Used by for linux asm.
+const char *stripRegisterPrefix(const char *RegName);
+
+/// getRegNumForOperand - some operands use different numbering schemes
+/// for the same registers. For example, a VSX instruction may have any of
+/// vs0-vs63 allocated whereas an Altivec instruction could only have
+/// vs32-vs63 allocated (numbered as v0-v31). This function returns the actual
+/// register number needed for the opcode/operand number combination.
+/// The operand number argument will be useful when we need to extend this
+/// to instructions that use both Altivec and VSX numbering (for different
+/// operands).
+unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
+                             unsigned OpNo);
+
+} // namespace PPC
 
 MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                       MCContext &Ctx);
@@ -102,11 +121,61 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
   return false;
 }
 
-} // end namespace llvm
+/// PPCII - This namespace holds all of the PowerPC target-specific
+/// per-instruction flags.  These must match the corresponding definitions in
+/// PPC.td and PPCInstrFormats.td.
+namespace PPCII {
+enum {
+  // PPC970 Instruction Flags.  These flags describe the characteristics of the
+  // PowerPC 970 (aka G5) dispatch groups and how they are formed out of
+  // raw machine instructions.
 
-// Generated files will use "namespace PPC". To avoid symbol clash,
-// undefine PPC here. PPC may be predefined on some hosts.
-#undef PPC
+  /// PPC970_First - This instruction starts a new dispatch group, so it will
+  /// always be the first one in the group.
+  PPC970_First = 0x1,
+
+  /// PPC970_Single - This instruction starts a new dispatch group and
+  /// terminates it, so it will be the sole instruction in the group.
+  PPC970_Single = 0x2,
+
+  /// PPC970_Cracked - This instruction is cracked into two pieces, requiring
+  /// two dispatch pipes to be available to issue.
+  PPC970_Cracked = 0x4,
+
+  /// PPC970_Mask/Shift - This is a bitmask that selects the pipeline type that
+  /// an instruction is issued to.
+  PPC970_Shift = 3,
+  PPC970_Mask = 0x07 << PPC970_Shift
+};
+enum PPC970_Unit {
+  /// These are the various PPC970 execution unit pipelines.  Each instruction
+  /// is one of these.
+  PPC970_Pseudo = 0 << PPC970_Shift,   // Pseudo instruction
+  PPC970_FXU    = 1 << PPC970_Shift,   // Fixed Point (aka Integer/ALU) Unit
+  PPC970_LSU    = 2 << PPC970_Shift,   // Load Store Unit
+  PPC970_FPU    = 3 << PPC970_Shift,   // Floating Point Unit
+  PPC970_CRU    = 4 << PPC970_Shift,   // Control Register Unit
+  PPC970_VALU   = 5 << PPC970_Shift,   // Vector ALU
+  PPC970_VPERM  = 6 << PPC970_Shift,   // Vector Permute Unit
+  PPC970_BRU    = 7 << PPC970_Shift    // Branch Unit
+};
+
+enum {
+  /// Shift count to bypass PPC970 flags
+  NewDef_Shift = 6,
+
+  /// This instruction is an X-Form memory operation.
+  XFormMemOp = 0x1 << NewDef_Shift,
+  /// This instruction is prefixed.
+  Prefixed = 0x1 << (NewDef_Shift + 1),
+  /// This instruction produced a sign extended result.
+  SExt32To64 = 0x1 << (NewDef_Shift + 2),
+  /// This instruction produced a zero extended result.
+  ZExt32To64 = 0x1 << (NewDef_Shift + 3)
+};
+} // end namespace PPCII
+
+} // end namespace llvm
 
 // Defines symbolic names for PowerPC registers.  This defines a mapping from
 // register name to register number.
@@ -213,5 +282,17 @@ using llvm::MCPhysReg;
   static const MCPhysReg DMRROWRegs[64] = PPC_REGS0_63(PPC::DMRROW);           \
   static const MCPhysReg DMRRegs[8] = PPC_REGS0_7(PPC::DMR);                   \
   static const MCPhysReg DMRpRegs[4] = PPC_REGS0_3(PPC::DMRp);
+
+namespace llvm {
+namespace PPC {
+static inline bool isVFRegister(unsigned Reg) {
+  return Reg >= PPC::VF0 && Reg <= PPC::VF31;
+}
+
+static inline bool isVRRegister(unsigned Reg) {
+  return Reg >= PPC::V0 && Reg <= PPC::V31;
+}
+} // namespace PPC
+} // namespace llvm
 
 #endif // LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCTARGETDESC_H

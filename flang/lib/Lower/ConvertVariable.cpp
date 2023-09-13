@@ -88,7 +88,7 @@ static bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym) {
 
 // Does this variable have a finalization?
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
-  if (sym.has<Fortran::semantics::ObjectEntityDetails>() && sym.size())
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
     if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
       if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
               declTypeSpec->AsDerived())
@@ -431,12 +431,13 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
-  // Fortran arrays of integer, real, or logical. The tensor type does
-  // not support nested structures which are needed for complex numbers.
+  // Fortran arrays of integer, real, complex, or logical. The tensor
+  // type does not support nested structures.
   if (symTy.isa<fir::SequenceType>() &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = symTy.cast<fir::SequenceType>().getEleTy();
-    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>()) {
+    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+                  fir::LogicalType>()) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       if (details->init()) {
@@ -1274,12 +1275,14 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 
 /// Helper to decide if a dummy argument must be tracked in an BoxValue.
 static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
-                            mlir::Value dummyArg) {
+                            mlir::Value dummyArg,
+                            Fortran::lower::AbstractConverter &converter) {
   // Only dummy arguments coming as fir.box can be tracked in an BoxValue.
   if (!dummyArg || !dummyArg.getType().isa<fir::BaseBoxType>())
     return false;
   // Non contiguous arrays must be tracked in an BoxValue.
-  if (sym.Rank() > 0 && !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS))
+  if (sym.Rank() > 0 && !Fortran::evaluate::IsSimplyContiguous(
+                            sym, converter.getFoldingContext()))
     return true;
   // Assumed rank and optional fir.box cannot yet be read while lowering the
   // specifications.
@@ -1476,6 +1479,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       !Fortran::semantics::IsProcedure(sym) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+    bool isCrayPointee =
+        sym.test(Fortran::semantics::Symbol::Flag::CrayPointee);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     mlir::Value shapeOrShift;
@@ -1491,6 +1496,51 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
     auto name = converter.mangleName(sym);
     fir::FortranVariableFlagsAttr attributes =
         Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+
+    if (isCrayPointee) {
+      mlir::Type baseType =
+          hlfir::getFortranElementOrSequenceType(base.getType());
+      if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
+        // The pointer box's sequence type must be with unknown shape.
+        llvm::SmallVector<int64_t> shape(seqType.getDimension(),
+                                         fir::SequenceType::getUnknownExtent());
+        baseType = fir::SequenceType::get(shape, seqType.getEleTy());
+      }
+      fir::BoxType ptrBoxType =
+          fir::BoxType::get(fir::PointerType::get(baseType));
+      mlir::Value boxAlloc = builder.createTemporary(loc, ptrBoxType);
+
+      // Declare a local pointer variable.
+      attributes = fir::FortranVariableFlagsAttr::get(
+          builder.getContext(), fir::FortranVariableFlagsEnum::pointer);
+      auto newBase = builder.create<hlfir::DeclareOp>(
+          loc, boxAlloc, name, /*shape=*/nullptr, lenParams, attributes);
+      mlir::Value nullAddr =
+          builder.createNullConstant(loc, ptrBoxType.getEleTy());
+
+      // If the element type is known-length character, then
+      // EmboxOp does not need the length parameters.
+      if (auto charType = mlir::dyn_cast<fir::CharacterType>(
+              fir::unwrapSequenceType(baseType)))
+        if (!charType.hasDynamicLen())
+          lenParams.clear();
+
+      // Inherit the shape (and maybe length parameters) from the pointee
+      // declaration.
+      mlir::Value initVal =
+          builder.create<fir::EmboxOp>(loc, ptrBoxType, nullAddr, shapeOrShift,
+                                       /*slice=*/nullptr, lenParams);
+      builder.create<fir::StoreOp>(loc, initVal, newBase.getBase());
+
+      // Any reference to the pointee is going to be using the pointer
+      // box from now on. The base_addr of the descriptor must be updated
+      // to hold the value of the Cray pointer at the point of the pointee
+      // access.
+      // Note that the same Cray pointer may be associated with
+      // multiple pointees and each of them has its own descriptor.
+      symMap.addVariableDefinition(sym, newBase, force);
+      return;
+    }
     auto newBase = builder.create<hlfir::DeclareOp>(
         loc, base, name, shapeOrShift, lenParams, attributes);
     symMap.addVariableDefinition(sym, newBase, force);
@@ -1665,16 +1715,60 @@ void Fortran::lower::mapSymbolAttributes(
 
   if (isDummy) {
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
-    if (lowerToBoxValue(sym, dummyArg)) {
+    if (lowerToBoxValue(sym, dummyArg, converter)) {
       llvm::SmallVector<mlir::Value> lbounds;
       llvm::SmallVector<mlir::Value> explicitExtents;
       llvm::SmallVector<mlir::Value> explicitParams;
       // Lower lower bounds, explicit type parameters and explicit
       // extents if any.
-      if (ba.isChar())
+      if (ba.isChar()) {
         if (mlir::Value len =
                 lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
           explicitParams.push_back(len);
+        if (sym.Rank() == 0) {
+          // Do not keep scalar characters as fir.box (even when optional).
+          // Lowering and FIR is not meant to deal with scalar characters as
+          // fir.box outside of calls.
+          auto boxTy = dummyArg.getType().dyn_cast<fir::BaseBoxType>();
+          mlir::Type refTy = builder.getRefType(boxTy.getEleTy());
+          mlir::Type lenType = builder.getCharacterLengthType();
+          mlir::Value addr, len;
+          if (Fortran::semantics::IsOptional(sym)) {
+            auto isPresent = builder.create<fir::IsPresentOp>(
+                loc, builder.getI1Type(), dummyArg);
+            auto addrAndLen =
+                builder
+                    .genIfOp(loc, {refTy, lenType}, isPresent,
+                             /*withElseRegion=*/true)
+                    .genThen([&]() {
+                      mlir::Value readAddr =
+                          builder.create<fir::BoxAddrOp>(loc, refTy, dummyArg);
+                      mlir::Value readLength =
+                          charHelp.readLengthFromBox(dummyArg);
+                      builder.create<fir::ResultOp>(
+                          loc, mlir::ValueRange{readAddr, readLength});
+                    })
+                    .genElse([&] {
+                      mlir::Value readAddr = builder.genAbsentOp(loc, refTy);
+                      mlir::Value readLength =
+                          fir::factory::createZeroValue(builder, loc, lenType);
+                      builder.create<fir::ResultOp>(
+                          loc, mlir::ValueRange{readAddr, readLength});
+                    })
+                    .getResults();
+            addr = addrAndLen[0];
+            len = addrAndLen[1];
+          } else {
+            addr = builder.create<fir::BoxAddrOp>(loc, refTy, dummyArg);
+            len = charHelp.readLengthFromBox(dummyArg);
+          }
+          if (!explicitParams.empty())
+            len = explicitParams[0];
+          ::genDeclareSymbol(converter, symMap, sym, addr, len, /*extents=*/{},
+                             /*lbounds=*/{}, replace);
+          return;
+        }
+      }
       // TODO: derived type length parameters.
       lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
       lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents, symMap,
@@ -2054,4 +2148,18 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
   mlir::StringAttr linkage = getLinkageAttribute(builder, var);
   defineGlobal(converter, var, globalName, linkage);
+}
+
+Fortran::semantics::SymbolRef
+Fortran::lower::getCrayPointer(Fortran::semantics::SymbolRef sym) {
+  assert(!sym->GetUltimate().owner().crayPointers().empty() &&
+         "empty Cray pointer/pointee map");
+  for (const auto &[pointee, pointer] :
+       sym->GetUltimate().owner().crayPointers()) {
+    if (pointee == sym->name()) {
+      Fortran::semantics::SymbolRef v{pointer.get()};
+      return v;
+    }
+  }
+  llvm_unreachable("corresponding Cray pointer cannot be found");
 }

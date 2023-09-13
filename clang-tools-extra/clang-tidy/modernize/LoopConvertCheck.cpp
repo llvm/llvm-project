@@ -375,8 +375,8 @@ static std::optional<ContainerCall> getContainerExpr(const Expr *Call) {
     return ContainerCall{TheCall->getArg(0),
                          TheCall->getDirectCallee()->getName(), false,
                          CallKind};
-
-  } else if (const auto *TheCall = dyn_cast_or_null<CallExpr>(Dug)) {
+  }
+  if (const auto *TheCall = dyn_cast_or_null<CallExpr>(Dug)) {
     if (TheCall->getNumArgs() != 1)
       return std::nullopt;
 

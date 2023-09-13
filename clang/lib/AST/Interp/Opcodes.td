@@ -53,6 +53,7 @@ def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
+def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -198,6 +199,12 @@ def CallPtr : Opcode {
   let Types = [];
 }
 
+def OffsetOf : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgOffsetOfExpr];
+  let HasGroup = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Frame management
 //===----------------------------------------------------------------------===//
@@ -290,6 +297,10 @@ def GetPtrBase : Opcode {
 // [Pointer] -> [Pointer]
 def GetPtrBasePop : Opcode {
   // Offset of field, which is a base.
+  let Args = [ArgUint32];
+}
+
+def GetPtrDerivedPop : Opcode {
   let Args = [ArgUint32];
 }
 

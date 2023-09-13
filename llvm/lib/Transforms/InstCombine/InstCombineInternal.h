@@ -198,6 +198,27 @@ public:
   LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
                                  const Twine &Suffix = "");
 
+  KnownFPClass computeKnownFPClass(Value *Val, FastMathFlags FMF,
+                                   FPClassTest Interested = fcAllFlags,
+                                   const Instruction *CtxI = nullptr,
+                                   unsigned Depth = 0) const {
+    return llvm::computeKnownFPClass(Val, FMF, DL, Interested, Depth, &TLI, &AC,
+                                     CtxI, &DT);
+  }
+
+  KnownFPClass computeKnownFPClass(Value *Val,
+                                   FPClassTest Interested = fcAllFlags,
+                                   const Instruction *CtxI = nullptr,
+                                   unsigned Depth = 0) const {
+    return llvm::computeKnownFPClass(Val, DL, Interested, Depth, &TLI, &AC,
+                                     CtxI, &DT);
+  }
+
+  /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
+  /// ignorable).
+  bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
+                        const Instruction *CtxI) const;
+
 private:
   bool annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI);
   bool isDesirableIntType(unsigned BitWidth) const;
@@ -402,7 +423,7 @@ public:
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
                              PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
-    InsertNewInstBefore(SI, *InsertAt);
+    InsertNewInstBefore(SI, InsertAt->getIterator());
   }
 
   /// Combiner aware instruction erasure.
@@ -542,7 +563,8 @@ public:
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
 
-  Instruction *foldSquareSumInts(BinaryOperator &I);
+  Instruction *foldSquareSumInt(BinaryOperator &I);
+  Instruction *foldSquareSumFP(BinaryOperator &I);
 
   /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.
@@ -589,6 +611,9 @@ public:
   Instruction *foldICmpInstWithConstantAllowUndef(ICmpInst &Cmp,
                                                   const APInt &C);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
+  Instruction *foldICmpWithMinMaxImpl(Instruction &I, MinMaxIntrinsic *MinMax,
+                                      Value *Z, ICmpInst::Predicate Pred);
+  Instruction *foldICmpWithMinMax(ICmpInst &Cmp);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);

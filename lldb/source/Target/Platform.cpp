@@ -72,8 +72,8 @@ enum {
 
 } // namespace
 
-ConstString PlatformProperties::GetSettingName() {
-  static ConstString g_setting_name("platform");
+llvm::StringRef PlatformProperties::GetSettingName() {
+  static constexpr llvm::StringLiteral g_setting_name("platform");
   return g_setting_name;
 }
 

@@ -282,10 +282,14 @@ static bool findAffine(Merger &merger, TensorId tid, Level lvl, AffineExpr a,
 ///
 /// TODO: constant should be easy to handle.
 static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
-                          AffineExpr a, DimLevelType dlt,
-                          bool isSubExp = false) {
+                          AffineExpr a, DimLevelType dlt, bool isSubExp = false,
+                          int64_t coefficient = 1) {
   switch (a.getKind()) {
   case AffineExprKind::DimId: {
+    // Only allow positive coefficients on AffineDimExpr.
+    if (coefficient <= 0)
+      return false;
+
     const LoopId ldx = merger.makeLoopId(a.cast<AffineDimExpr>().getPosition());
     if (!isUndefDLT(merger.getLvlType(tensor, ldx)))
       return false; // used more than once, e.g., A[i][i]
@@ -293,8 +297,10 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
     // TODO: Generalizes the following two cases. A[i] (with trivial index
     // expression) can be treated as a special affine index expression. We do
     // not necessarily need to differentiate them.
-    if (!isSubExp)
+    if (!isSubExp) {
+      assert(coefficient == 1);
       merger.setLevelAndType(tensor, ldx, lvl, dlt);
+    }
 
     if (isSubExp) {
       // The current loops appears in more than one affine expressions on the
@@ -312,14 +318,26 @@ static bool findDepIdxSet(Merger &merger, TensorId tensor, Level lvl,
         // else increase min(d0_1, d0_2).
         return false;
       }
-      merger.setLoopDependentTensorLevel(ldx, tensor, lvl, dlt);
+      merger.setLoopDependentTensorLevel(ldx, tensor, lvl, dlt, coefficient);
     }
     return true;
   }
   case AffineExprKind::Constant:
-  case AffineExprKind::Mul:
-    // TODO: Support Mul and Constant AffineExp for slice-based codegen
-    return false;
+    // TODO: Support Constant AffineExp for slice-based codegen
+  case AffineExprKind::Mul: {
+    // TODO: Support index expression like `2 * d0`, we now only support more
+    // complicated cases like `2 * d0 + d1`.
+    if (!isSubExp)
+      return false;
+    auto binOp = a.cast<AffineBinaryOpExpr>();
+    auto lhs = binOp.getLHS(), rhs = binOp.getRHS();
+    if (rhs.isa<AffineConstantExpr>())
+      std::swap(lhs, rhs);
+    // Must be in form of `constant * d`.
+    assert(lhs.isa<AffineConstantExpr>() && rhs.isa<AffineDimExpr>());
+    int64_t coefficient = lhs.cast<AffineConstantExpr>().getValue();
+    return findDepIdxSet(merger, tensor, lvl, rhs, dlt, isSubExp, coefficient);
+  }
   case AffineExprKind::Add: {
     auto binOp = a.cast<AffineBinaryOpExpr>();
     return findDepIdxSet(merger, tensor, lvl, binOp.getLHS(), dlt, true) &&

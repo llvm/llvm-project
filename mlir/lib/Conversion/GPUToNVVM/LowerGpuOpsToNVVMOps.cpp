@@ -210,11 +210,7 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 /// code.
 struct LowerGpuOpsToNVVMOpsPass
     : public impl::ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
-  LowerGpuOpsToNVVMOpsPass() = default;
-  LowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth, bool hasRedux = false) {
-    this->indexBitwidth = indexBitwidth;
-    this->hasRedux = hasRedux;
-  }
+  using Base::Base;
 
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
@@ -293,8 +289,9 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
-                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
-                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp, LLVM::LogOp,
+                      LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp,
+                      LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -357,6 +354,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                     "__nv_expm1");
   populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
                                     "__nv_floor");
+  populateOpPatterns<arith::RemFOp>(converter, patterns, "__nv_fmodf",
+                                    "__nv_fmod");
   populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log");
   populateOpPatterns<math::Log1pOp>(converter, patterns, "__nv_log1pf",
                                     "__nv_log1p");
@@ -374,9 +373,4 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
   populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
                                    "__nv_tanh");
   populateOpPatterns<math::TanOp>(converter, patterns, "__nv_tanf", "__nv_tan");
-}
-
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth, bool hasRedux) {
-  return std::make_unique<LowerGpuOpsToNVVMOpsPass>(indexBitwidth, hasRedux);
 }

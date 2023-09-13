@@ -250,7 +250,8 @@ define i1 @olt_0_or_fabs_ueq_inf(half %x) {
 ; Negative test
 define i1 @oeq_0_or_fabs_ult_inf(half %x) {
 ; CHECK-LABEL: @oeq_0_or_fabs_ult_inf(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp une half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -623,7 +624,8 @@ define i1 @fneg_fabs_olt_neg_smallest_normal_or_inf(half %x) {
 
 define i1 @issubnormal_or_finite_olt(half %x) {
 ; CHECK-LABEL: @issubnormal_or_finite_olt(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 504)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -724,7 +726,8 @@ define i1 @is_finite_or_ord(half %x) {
 
 define i1 @is_finite_or_uno(half %x) {
 ; CHECK-LABEL: @is_finite_or_uno(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ueq half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -736,7 +739,8 @@ define i1 @is_finite_or_uno(half %x) {
 
 define i1 @oeq_isinf_or_uno(half %x) {
 ; CHECK-LABEL: @oeq_isinf_or_uno(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp ueq half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[CLASS]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -771,7 +775,8 @@ define i1 @oeq_isinf_and_uno(half %x) {
 
 define i1 @oeq_isinf_and_ord(half %x) {
 ; CHECK-LABEL: @oeq_isinf_and_ord(
-; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -902,7 +907,8 @@ define i1 @isnormalinf_or_posinf(half %x) #0 {
 ; -> pinf|ninf
 define i1 @isnormalinf_and_inf(half %x) #0 {
 ; CHECK-LABEL: @isnormalinf_and_inf(
-; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -970,7 +976,8 @@ define i1 @not_isnormalinf_and_ord(half %x) #0 {
 ; -> ~ninf
 define i1 @not_isnormalinf_or_inf(half %x) #0 {
 ; CHECK-LABEL: @not_isnormalinf_or_inf(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp une half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1287,7 +1294,8 @@ define i1 @olt_smallest_normal_and_une_inf_or_one_smallest_normal(half %x) #0 {
 
 define i1 @oge_fabs_eq_inf_and_ord(half %x) #0 {
 ; CHECK-LABEL: @oge_fabs_eq_inf_and_ord(
-; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 516)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1310,7 +1318,8 @@ define i1 @oge_eq_inf_and_ord(half %x) #0 {
 
 define i1 @oge_fabs_eq_inf_or_uno(half %x) #0 {
 ; CHECK-LABEL: @oge_fabs_eq_inf_or_uno(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 519)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ueq half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)
@@ -1357,7 +1366,8 @@ define i1 @ult_eq_inf_and_ord(half %x) #0 {
 
 define i1 @ult_fabs_eq_inf_or_uno(half %x) #0 {
 ; CHECK-LABEL: @ult_fabs_eq_inf_or_uno(
-; CHECK-NEXT:    [[OR:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 507)
+; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[OR:%.*]] = fcmp une half [[TMP1]], 0xH7C00
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %fabs = call half @llvm.fabs.f16(half %x)

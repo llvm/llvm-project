@@ -44,7 +44,7 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
   let description = [{
     The `poison` operation materializes a compile-time poisoned constant value
     to indicate deferred undefined behavior.
-    `value` attirbute is needed to indicate an optional additional poison
+    `value` attribute is needed to indicate an optional additional poison
     semantics (e.g. partially poisoned vectors), default value indicates results
     is fully poisoned.
 

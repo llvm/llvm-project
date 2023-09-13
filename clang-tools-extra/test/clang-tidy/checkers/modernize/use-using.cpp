@@ -314,3 +314,10 @@ typedef struct { struct { int a; struct { struct { int b; } c; int d; } e; } f; 
 typedef struct { struct { int a; } b; union { int c; float d; struct { int e; }; }; struct { double f; } g; } PR50990_siblings;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using PR50990_siblings = struct { struct { int a; } b; union { int c; float d; struct { int e; }; }; struct { double f; } g; };
+
+typedef void (*ISSUE_65055_1)(int);
+typedef bool (*ISSUE_65055_2)(int);
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: {{^}}using ISSUE_65055_1 = void (*)(int);{{$}}
+// CHECK-FIXES: {{^}}using ISSUE_65055_2 = bool (*)(int);{{$}}

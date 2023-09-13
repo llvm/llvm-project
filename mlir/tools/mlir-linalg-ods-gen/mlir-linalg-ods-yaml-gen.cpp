@@ -565,7 +565,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
 
       std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
         int64_t getNumOperands = this->getNumOperands();
-        return {{getNumOperands - 1, getNumOperands};
+        return {{getNumOperands - getOutputs().size(), getNumOperands};
       }
 
       // Generic methods.

@@ -108,6 +108,29 @@ def BufferDeallocationSimplification :
   ];
 }
 
+def LowerDeallocations : Pass<"bufferization-lower-deallocations"> {
+  let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
+                "operations";
+  let description = [{
+    This pass lowers `bufferization.dealloc` operations to the `memref` dialect.
+    It can be applied to a `builtin.module` or operations implementing the
+    `FunctionOpInterface`. For the latter, only simple `dealloc` operations can
+    be lowered because the library function necessary for the fully generic
+    lowering cannot be inserted. In this case, an error will be emitted.
+    Next to `memref.dealloc` operations, it may also emit operations from the
+    `arith`, `scf`, and `func` dialects to build conditional deallocations and
+    library functions to avoid code-size blow-up.
+  }];
+
+  let constructor =
+    "mlir::bufferization::createLowerDeallocationsPass()";
+
+  let dependentDialects = [
+    "arith::ArithDialect", "memref::MemRefDialect", "scf::SCFDialect",
+    "func::FuncDialect"
+  ];
+}
+
 def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";

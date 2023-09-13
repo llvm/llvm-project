@@ -249,6 +249,8 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_mapped");
   *((void **)&RTL.data_notify_unmapped) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
+  *((void **)&RTL.set_device_offset) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_set_device_offset");
 
   // Record Replay RTL
   *((void **)&RTL.activate_record_replay) =
@@ -423,6 +425,10 @@ void RTLsTy::initRTLonce(RTLInfoTy &R) {
            "RTL index should equal the number of devices used so far.");
     R.IsUsed = true;
     UsedRTLs.push_back(&R);
+
+    // If possible, set the device identifier offset
+    if (R.set_device_offset)
+      R.set_device_offset(Start);
 
     DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler.get()), R.Idx);
   }

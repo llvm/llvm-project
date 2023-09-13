@@ -38,16 +38,16 @@ define i32 @f1(...) nounwind {
 ; LE-LABEL: f1:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    std r3, 32(r1)
+; LE-NEXT:    addi r3, r1, 32
 ; LE-NEXT:    std r4, 40(r1)
-; LE-NEXT:    addi r4, r1, 32
-; LE-NEXT:    li r3, 0
 ; LE-NEXT:    std r5, 48(r1)
 ; LE-NEXT:    std r6, 56(r1)
 ; LE-NEXT:    std r7, 64(r1)
 ; LE-NEXT:    std r8, 72(r1)
 ; LE-NEXT:    std r9, 80(r1)
+; LE-NEXT:    std r3, -8(r1)
+; LE-NEXT:    li r3, 0
 ; LE-NEXT:    std r10, 88(r1)
-; LE-NEXT:    std r4, -8(r1)
 ; LE-NEXT:    blr
 entry:
   %va = alloca ptr, align 8

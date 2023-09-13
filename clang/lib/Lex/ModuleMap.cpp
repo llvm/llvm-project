@@ -622,7 +622,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(FileEntryRef File) {
       UmbrellaModule = UmbrellaModule->Parent;
 
     if (UmbrellaModule->InferSubmodules) {
-      OptionalFileEntryRefDegradesToFileEntryPtr UmbrellaModuleMap =
+      OptionalFileEntryRef UmbrellaModuleMap =
           getModuleMapFileForUniquing(UmbrellaModule);
 
       // Infer submodules for each of the directories we found between
@@ -993,7 +993,7 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
 
   // If the framework has a parent path from which we're allowed to infer
   // a framework module, do so.
-  const FileEntry *ModuleMapFile = nullptr;
+  OptionalFileEntryRef ModuleMapFile;
   if (!Parent) {
     // Determine whether we're allowed to infer a module map.
     bool canInfer = false;
@@ -1294,13 +1294,13 @@ OptionalFileEntryRef
 ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
   if (M->IsInferred) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");
-    // FIXME: Update InferredModuleAllowedBy to use FileEntryRef.
-    return InferredModuleAllowedBy.find(M)->second->getLastRef();
+    return InferredModuleAllowedBy.find(M)->second;
   }
   return getContainingModuleMapFile(M);
 }
 
-void ModuleMap::setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap) {
+void ModuleMap::setInferredModuleAllowedBy(Module *M,
+                                           OptionalFileEntryRef ModMap) {
   assert(M->IsInferred && "module not inferred");
   InferredModuleAllowedBy[M] = ModMap;
 }
@@ -1339,7 +1339,7 @@ ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
 }
 
 void ModuleMap::addAdditionalModuleMapFile(const Module *M,
-                                           const FileEntry *ModuleMap) {
+                                           FileEntryRef ModuleMap) {
   AdditionalModMaps[M].insert(ModuleMap);
 }
 
@@ -1490,7 +1490,7 @@ namespace clang {
     ModuleMap &Map;
 
     /// The current module map file.
-    const FileEntry *ModuleMapFile;
+    FileEntryRef ModuleMapFile;
 
     /// Source location of most recent parsed module declaration
     SourceLocation CurrModuleDeclLoc;
@@ -1562,7 +1562,7 @@ namespace clang {
   public:
     explicit ModuleMapParser(Lexer &L, SourceManager &SourceMgr,
                              const TargetInfo *Target, DiagnosticsEngine &Diags,
-                             ModuleMap &Map, const FileEntry *ModuleMapFile,
+                             ModuleMap &Map, FileEntryRef ModuleMapFile,
                              DirectoryEntryRef Directory, bool IsSystem)
         : L(L), SourceMgr(SourceMgr), Target(Target), Diags(Diags), Map(Map),
           ModuleMapFile(ModuleMapFile), Directory(Directory),
@@ -2095,7 +2095,7 @@ void ModuleMapParser::parseModuleDecl() {
     ActiveModule->NoUndeclaredIncludes = true;
   ActiveModule->Directory = Directory;
 
-  StringRef MapFileName(ModuleMapFile->getName());
+  StringRef MapFileName(ModuleMapFile.getName());
   if (MapFileName.endswith("module.private.modulemap") ||
       MapFileName.endswith("module_private.map")) {
     ActiveModule->ModuleMapIsPrivate = true;
@@ -3077,7 +3077,7 @@ bool ModuleMapParser::parseModuleMapFile() {
   } while (true);
 }
 
-bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
+bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
                                    DirectoryEntryRef Dir, FileID ID,
                                    unsigned *Offset,
                                    SourceLocation ExternModuleLoc) {
@@ -3120,7 +3120,7 @@ bool ModuleMap::parseModuleMapFile(const FileEntry *File, bool IsSystem,
 
   // Notify callbacks that we parsed it.
   for (const auto &Cb : Callbacks)
-    Cb->moduleMapFileRead(Start, *File, IsSystem);
+    Cb->moduleMapFileRead(Start, File, IsSystem);
 
   return Result;
 }

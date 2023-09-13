@@ -49,6 +49,7 @@ target_link_libraries(toyc-ch7
     MLIRCallInterfaces
     MLIRCastInterfaces
     MLIRExecutionEngine
+    MLIRFunctionInterfaces
     MLIRIR
     MLIRLLVMCommonConversion
     MLIRLLVMToLLVMIRTranslation

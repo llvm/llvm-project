@@ -1176,7 +1176,7 @@ static void test() {
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0ms);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0ms);
 
-  // Make sure the the required values work, based on their minimum number of required bits per [time.syn].
+  // Make sure the required values work, based on their minimum number of required bits per [time.syn].
   check(SV("23:47:16.854775807"),
         SV("{:%T}"),
         std::chrono::nanoseconds{0x7fff'ffff'ffff'ffffll}); // 64 bit signed value max

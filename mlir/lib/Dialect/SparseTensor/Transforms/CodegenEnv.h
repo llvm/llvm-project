@@ -96,6 +96,9 @@ public:
            loopEmitter.getSynTensorId() == latticeMerger.getSynTensorID());
     return loopEmitter.makeTensorLevel(t, l);
   }
+  TensorLevel makeTensorLevel(std::pair<TensorId, Level> tlPair) const {
+    return makeTensorLevel(tlPair.first, tlPair.second);
+  }
   std::pair<TensorId, Level> unpackTensorLevel(TensorLevel tl) const {
     return loopEmitter.unpackTensorLevel(tl);
   }

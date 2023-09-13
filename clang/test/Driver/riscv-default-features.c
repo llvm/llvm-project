@@ -3,10 +3,8 @@
 
 // RV32: "target-features"="+32bit,+a,+c,+m,+relax,
 // RV32-SAME: -save-restore
-// RV32-SAME: -unaligned-scalar-mem
 // RV64: "target-features"="+64bit,+a,+c,+m,+relax,
 // RV64-SAME: -save-restore
-// RV64-SAME: -unaligned-scalar-mem
 
 // Dummy function
 int foo(void){

@@ -60,6 +60,10 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
                                  int dstBits, OpFoldResult offset,
                                  ArrayRef<OpFoldResult> sizes);
 
+// Track temporary allocations that are never read from. If this is the case
+// it means both the allocations and associated stores can be removed.
+void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp);
+
 } // namespace memref
 } // namespace mlir
 

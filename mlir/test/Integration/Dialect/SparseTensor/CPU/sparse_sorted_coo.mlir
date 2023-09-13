@@ -19,18 +19,18 @@
 
 // REDEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
 // REDEFINE: TENSOR1="%mlir_src_dir/test/Integration/data/mttkrp_b.tns"
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with vectorization.
 // REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=4 enable-buffer-initialization=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// RUN: %{compile} | env %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with  VLA vectorization.
-// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{env} %{run_sve} | FileCheck %s %}
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | env %{env} %{run_sve} | FileCheck %s %}
 
 !Filename = !llvm.ptr<i8>
 

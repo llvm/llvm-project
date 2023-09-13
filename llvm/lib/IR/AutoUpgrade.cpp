@@ -926,6 +926,14 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         NewFn = nullptr;
         return true;
       }
+
+      if (Name.startswith("ldexp.")) {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(
+          F->getParent(), Intrinsic::ldexp,
+          {F->getReturnType(), F->getArg(1)->getType()});
+        return true;
+      }
     }
 
     break;

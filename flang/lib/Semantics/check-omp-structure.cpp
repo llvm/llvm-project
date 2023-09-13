@@ -203,8 +203,8 @@ void OmpStructureChecker::CheckMultListItems() {
                 "ALIGNED clause"_err_en_US,
                 name->ToString());
           } else if (!(IsBuiltinCPtr(*(name->symbol)) ||
-                         IsAllocatableOrPointer(
-                             (name->symbol->GetUltimate())))) {
+                         IsAllocatableOrObjectPointer(
+                             &name->symbol->GetUltimate()))) {
             context_.Say(itr->second->source,
                 "'%s' in ALIGNED clause must be of type C_PTR, POINTER or "
                 "ALLOCATABLE"_err_en_US,

@@ -191,19 +191,19 @@ define void @lshr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: lshr_16bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 0(3)
-; LE-64BIT-NEXT:    ld 3, 8(3)
+; LE-64BIT-NEXT:    ld 6, 8(3)
+; LE-64BIT-NEXT:    ld 3, 0(3)
 ; LE-64BIT-NEXT:    slwi 4, 4, 3
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
-; LE-64BIT-NEXT:    srd 6, 6, 4
-; LE-64BIT-NEXT:    addi 8, 4, -64
-; LE-64BIT-NEXT:    sld 7, 3, 7
-; LE-64BIT-NEXT:    or 6, 6, 7
-; LE-64BIT-NEXT:    srd 7, 3, 8
-; LE-64BIT-NEXT:    or 6, 6, 7
 ; LE-64BIT-NEXT:    srd 3, 3, 4
-; LE-64BIT-NEXT:    std 3, 8(5)
-; LE-64BIT-NEXT:    std 6, 0(5)
+; LE-64BIT-NEXT:    sld 7, 6, 7
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    addi 7, 4, -64
+; LE-64BIT-NEXT:    srd 4, 6, 4
+; LE-64BIT-NEXT:    srd 7, 6, 7
+; LE-64BIT-NEXT:    std 4, 8(5)
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    std 3, 0(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: lshr_16bytes:
@@ -265,19 +265,19 @@ define void @shl_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: shl_16bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 8(3)
-; LE-64BIT-NEXT:    ld 3, 0(3)
+; LE-64BIT-NEXT:    ld 6, 0(3)
+; LE-64BIT-NEXT:    ld 3, 8(3)
 ; LE-64BIT-NEXT:    slwi 4, 4, 3
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
-; LE-64BIT-NEXT:    sld 6, 6, 4
-; LE-64BIT-NEXT:    addi 8, 4, -64
-; LE-64BIT-NEXT:    srd 7, 3, 7
-; LE-64BIT-NEXT:    or 6, 6, 7
-; LE-64BIT-NEXT:    sld 7, 3, 8
-; LE-64BIT-NEXT:    or 6, 6, 7
 ; LE-64BIT-NEXT:    sld 3, 3, 4
-; LE-64BIT-NEXT:    std 3, 0(5)
-; LE-64BIT-NEXT:    std 6, 8(5)
+; LE-64BIT-NEXT:    srd 7, 6, 7
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    addi 7, 4, -64
+; LE-64BIT-NEXT:    sld 4, 6, 4
+; LE-64BIT-NEXT:    sld 7, 6, 7
+; LE-64BIT-NEXT:    std 4, 0(5)
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    std 3, 8(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: shl_16bytes:
@@ -338,20 +338,20 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: ashr_16bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    ld 6, 0(3)
-; LE-64BIT-NEXT:    ld 3, 8(3)
+; LE-64BIT-NEXT:    ld 6, 8(3)
+; LE-64BIT-NEXT:    ld 3, 0(3)
 ; LE-64BIT-NEXT:    slwi 4, 4, 3
 ; LE-64BIT-NEXT:    subfic 7, 4, 64
-; LE-64BIT-NEXT:    srd 6, 6, 4
-; LE-64BIT-NEXT:    addi 8, 4, -64
-; LE-64BIT-NEXT:    sld 7, 3, 7
-; LE-64BIT-NEXT:    cmpwi 8, 1
-; LE-64BIT-NEXT:    or 6, 6, 7
-; LE-64BIT-NEXT:    srad 7, 3, 8
-; LE-64BIT-NEXT:    isellt 6, 6, 7
-; LE-64BIT-NEXT:    srad 3, 3, 4
-; LE-64BIT-NEXT:    std 3, 8(5)
-; LE-64BIT-NEXT:    std 6, 0(5)
+; LE-64BIT-NEXT:    srd 3, 3, 4
+; LE-64BIT-NEXT:    sld 7, 6, 7
+; LE-64BIT-NEXT:    or 3, 3, 7
+; LE-64BIT-NEXT:    addi 7, 4, -64
+; LE-64BIT-NEXT:    srad 4, 6, 4
+; LE-64BIT-NEXT:    cmpwi 7, 1
+; LE-64BIT-NEXT:    srad 8, 6, 7
+; LE-64BIT-NEXT:    std 4, 8(5)
+; LE-64BIT-NEXT:    isellt 3, 3, 8
+; LE-64BIT-NEXT:    std 3, 0(5)
 ; LE-64BIT-NEXT:    blr
 ;
 ; BE-LABEL: ashr_16bytes:
@@ -422,18 +422,18 @@ define void @lshr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-NEXT:    lxvd2x 1, 0, 3
 ; LE-64BIT-NEXT:    xxlxor 2, 2, 2
 ; LE-64BIT-NEXT:    addi 7, 1, -64
-; LE-64BIT-NEXT:    li 8, 32
 ; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
 ; LE-64BIT-NEXT:    lwz 3, 0(4)
 ; LE-64BIT-NEXT:    li 4, 48
 ; LE-64BIT-NEXT:    stxvd2x 2, 7, 4
-; LE-64BIT-NEXT:    stxvd2x 2, 7, 8
+; LE-64BIT-NEXT:    li 4, 32
 ; LE-64BIT-NEXT:    clrldi 3, 3, 59
+; LE-64BIT-NEXT:    stxvd2x 2, 7, 4
 ; LE-64BIT-NEXT:    stxvd2x 0, 7, 6
 ; LE-64BIT-NEXT:    stxvd2x 1, 0, 7
-; LE-64BIT-NEXT:    add 4, 7, 3
 ; LE-64BIT-NEXT:    lxvd2x 0, 7, 3
-; LE-64BIT-NEXT:    lxvd2x 1, 4, 6
+; LE-64BIT-NEXT:    add 3, 7, 3
+; LE-64BIT-NEXT:    lxvd2x 1, 3, 6
 ; LE-64BIT-NEXT:    stxvd2x 1, 5, 6
 ; LE-64BIT-NEXT:    stxvd2x 0, 0, 5
 ; LE-64BIT-NEXT:    blr
@@ -530,23 +530,23 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: shl_32bytes:
 ; LE-64BIT:       # %bb.0:
 ; LE-64BIT-NEXT:    li 6, 16
-; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    xxlxor 1, 1, 1
-; LE-64BIT-NEXT:    lxvd2x 2, 0, 3
+; LE-64BIT-NEXT:    lxvd2x 1, 0, 3
+; LE-64BIT-NEXT:    xxlxor 2, 2, 2
 ; LE-64BIT-NEXT:    li 7, 48
-; LE-64BIT-NEXT:    addi 8, 1, -32
 ; LE-64BIT-NEXT:    lxvd2x 0, 3, 6
-; LE-64BIT-NEXT:    addi 3, 1, -64
-; LE-64BIT-NEXT:    clrlwi 4, 4, 27
-; LE-64BIT-NEXT:    stxvd2x 1, 3, 6
-; LE-64BIT-NEXT:    neg 4, 4
-; LE-64BIT-NEXT:    stxvd2x 0, 3, 7
+; LE-64BIT-NEXT:    lwz 3, 0(4)
+; LE-64BIT-NEXT:    addi 4, 1, -64
+; LE-64BIT-NEXT:    stxvd2x 2, 4, 6
+; LE-64BIT-NEXT:    clrlwi 3, 3, 27
+; LE-64BIT-NEXT:    stxvd2x 0, 4, 7
 ; LE-64BIT-NEXT:    li 7, 32
-; LE-64BIT-NEXT:    extsw 4, 4
-; LE-64BIT-NEXT:    stxvd2x 2, 3, 7
-; LE-64BIT-NEXT:    stxvd2x 1, 0, 3
-; LE-64BIT-NEXT:    add 3, 8, 4
-; LE-64BIT-NEXT:    lxvd2x 0, 8, 4
+; LE-64BIT-NEXT:    neg 3, 3
+; LE-64BIT-NEXT:    stxvd2x 1, 4, 7
+; LE-64BIT-NEXT:    stxvd2x 2, 0, 4
+; LE-64BIT-NEXT:    extsw 3, 3
+; LE-64BIT-NEXT:    addi 4, 1, -32
+; LE-64BIT-NEXT:    lxvd2x 0, 4, 3
+; LE-64BIT-NEXT:    add 3, 4, 3
 ; LE-64BIT-NEXT:    lxvd2x 1, 3, 6
 ; LE-64BIT-NEXT:    stxvd2x 1, 5, 6
 ; LE-64BIT-NEXT:    stxvd2x 0, 0, 5
@@ -639,25 +639,25 @@ define void @shl_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 define void @ashr_32bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-64BIT-LABEL: ashr_32bytes:
 ; LE-64BIT:       # %bb.0:
-; LE-64BIT-NEXT:    ld 7, 16(3)
-; LE-64BIT-NEXT:    ld 8, 24(3)
 ; LE-64BIT-NEXT:    lxvd2x 0, 0, 3
+; LE-64BIT-NEXT:    ld 6, 16(3)
+; LE-64BIT-NEXT:    ld 3, 24(3)
+; LE-64BIT-NEXT:    addi 7, 1, -64
 ; LE-64BIT-NEXT:    lwz 4, 0(4)
-; LE-64BIT-NEXT:    addi 6, 1, -64
-; LE-64BIT-NEXT:    sradi 3, 8, 63
-; LE-64BIT-NEXT:    clrldi 4, 4, 59
-; LE-64BIT-NEXT:    std 8, 24(6)
-; LE-64BIT-NEXT:    std 7, 16(6)
-; LE-64BIT-NEXT:    std 3, 56(6)
-; LE-64BIT-NEXT:    std 3, 48(6)
-; LE-64BIT-NEXT:    li 7, 16
-; LE-64BIT-NEXT:    std 3, 40(6)
-; LE-64BIT-NEXT:    std 3, 32(6)
-; LE-64BIT-NEXT:    add 3, 6, 4
-; LE-64BIT-NEXT:    stxvd2x 0, 0, 6
-; LE-64BIT-NEXT:    lxvd2x 0, 6, 4
-; LE-64BIT-NEXT:    lxvd2x 1, 3, 7
-; LE-64BIT-NEXT:    stxvd2x 1, 5, 7
+; LE-64BIT-NEXT:    li 8, 16
+; LE-64BIT-NEXT:    std 3, 24(7)
+; LE-64BIT-NEXT:    sradi 3, 3, 63
+; LE-64BIT-NEXT:    std 6, 16(7)
+; LE-64BIT-NEXT:    std 3, 56(7)
+; LE-64BIT-NEXT:    std 3, 48(7)
+; LE-64BIT-NEXT:    std 3, 40(7)
+; LE-64BIT-NEXT:    std 3, 32(7)
+; LE-64BIT-NEXT:    clrldi 3, 4, 59
+; LE-64BIT-NEXT:    stxvd2x 0, 0, 7
+; LE-64BIT-NEXT:    lxvd2x 0, 7, 3
+; LE-64BIT-NEXT:    add 3, 7, 3
+; LE-64BIT-NEXT:    lxvd2x 1, 3, 8
+; LE-64BIT-NEXT:    stxvd2x 1, 5, 8
 ; LE-64BIT-NEXT:    stxvd2x 0, 0, 5
 ; LE-64BIT-NEXT:    blr
 ;

@@ -517,7 +517,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     std::string argName = capture[i];
 
     // Handle nested DAG construct first
-    if (DagNode argTree = tree.getArgAsNestedDag(i)) {
+    if (tree.getArgAsNestedDag(i)) {
       PrintFatalError(
           loc, formatv("Matching nested tree in NativeCodecall not support for "
                        "{0} as arg {1}",
@@ -878,7 +878,8 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we
     // should just capture a mlir::Attribute() to signal the missing state.
-    // That is precisely what getAttr() returns on missing attributes.
+    // That is precisely what getDiscardableAttr() returns on missing
+    // attributes.
   } else {
     emitMatchCheck(opName, tgfmt("tblgen_attr", &fmtCtx),
                    formatv("\"expected op '{0}' to have attribute '{1}' "

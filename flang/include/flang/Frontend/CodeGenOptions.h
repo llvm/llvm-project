@@ -73,11 +73,12 @@ public:
   // has
   // TODO: Share with clang instead of re-implementing here
   enum class RemarkKind {
-    RK_Missing,  // Remark argument not present on the command line.
-    RK_Enabled,  // Remark enabled via '-Rgroup', i.e. -Rpass, -Rpass-missed,
-                 // -Rpass-analysis
-    RK_Disabled, // Remark disabled via '-Rno-group', i.e. -Rno-pass,
-                 // -Rno-pass-missed, -Rno-pass-analysis.
+    RK_Missing,     // Remark argument not present on the command line.
+    RK_Enabled,     // Remark enabled via '-Rgroup', i.e. -Rpass, -Rpass-missed,
+                    // -Rpass-analysis
+    RK_Disabled,    // Remark disabled via '-Rno-group', i.e. -Rno-pass,
+                    // -Rno-pass-missed, -Rno-pass-analysis.
+    RK_WithPattern, // Remark pattern specified via '-Rgroup=regexp'.
   };
 
   /// Optimization remark with an optional regular expression pattern.

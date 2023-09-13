@@ -731,9 +731,14 @@ interface section goes as follows:
     -   `void setCalleeFromCallable(CallInterfaceCallable)`
 *   `CallableOpInterface` - Used to represent the target callee of call.
     -   `Region * getCallableRegion()`
-    -   `ArrayRef<Type> getCallableResults()`
-    -   `ArrayAttr getCallableArgAttrs()`
-    -   `ArrayAttr getCallableResAttrs()`
+    -   `ArrayRef<Type> getArgumentTypes()`
+    -   `ArrayRef<Type> getResultsTypes()`
+    -   `ArrayAttr getArgAttrsAttr()`
+    -   `ArrayAttr getResAttrsAttr()`
+    -   `void setArgAttrsAttr(ArrayAttr)`
+    -   `void setResAttrsAttr(ArrayAttr)`
+    -   `Attribute removeArgAttrsAttr()`
+    -   `Attribute removeResAttrsAttr()`
 
 ##### RegionKindInterfaces
 

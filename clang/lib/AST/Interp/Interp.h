@@ -67,6 +67,10 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK);
 
+/// Checks if Ptr is a one-past-the-end pointer.
+bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                    CheckSubobjectKind CSK);
+
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -166,9 +170,10 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-/// Checks if the result is a floating-point operation is valid
+/// Checks if the result of a floating-point operation is valid
 /// in the current context.
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status);
 
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
@@ -176,6 +181,10 @@ bool Interpret(InterpState &S, APValue &Result);
 /// Interpret a builtin function.
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call);
+
+/// Interpret an offsetof operation.
+bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
+                       llvm::ArrayRef<int64_t> ArrayIndices, int64_t &Result);
 
 enum class ArithOp { Add, Sub };
 
@@ -296,7 +305,7 @@ inline bool Addf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::add(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -314,7 +323,7 @@ inline bool Subf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::sub(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -332,7 +341,7 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::mul(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
@@ -435,7 +444,7 @@ inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::div(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 //===----------------------------------------------------------------------===//
@@ -614,7 +623,7 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   Ptr.deref<Floating>() = Result;
 
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
@@ -1117,6 +1126,9 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+    return false;
+
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1157,9 +1169,21 @@ inline bool GetPtrActiveThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
+inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckNull(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
+  return true;
+}
+
 inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
@@ -1168,6 +1192,8 @@ inline bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
 inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Base))
     return false;
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
@@ -1500,7 +1526,7 @@ bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
   auto Status = Floating::fromIntegral(FromAP, *Sem, RM, Result);
   S.Stk.push<Floating>(Result);
 
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1525,7 +1551,7 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     }
 
     S.Stk.push<T>(T(Result));
-    return CheckFloatResult(S, OpPC, Status);
+    return CheckFloatResult(S, OpPC, F, Status);
   }
 }
 
@@ -1744,7 +1770,15 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
       DynamicDecl, StaticDecl, InitialFunction);
 
   if (Overrider != InitialFunction) {
-    Func = S.P.getFunction(Overrider);
+    // DR1872: An instantiated virtual constexpr function can't be called in a
+    // constant expression (prior to C++20). We can still constant-fold such a
+    // call.
+    if (!S.getLangOpts().CPlusPlus20 && Overrider->isVirtual()) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_virtual_call) << E->getSourceRange();
+    }
+
+    Func = S.getContext().getOrCreateFunction(Overrider);
 
     const CXXRecordDecl *ThisFieldDecl =
         ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
@@ -1808,6 +1842,21 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
       << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
   return false;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool OffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E) {
+  llvm::SmallVector<int64_t> ArrayIndices;
+  for (size_t I = 0; I != E->getNumExpressions(); ++I)
+    ArrayIndices.emplace_back(S.Stk.pop<int64_t>());
+
+  int64_t Result;
+  if (!InterpretOffsetOf(S, OpPC, E, ArrayIndices, Result))
+    return false;
+
+  S.Stk.push<T>(T::from(Result));
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

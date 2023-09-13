@@ -469,21 +469,24 @@ void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
 }
 
+void ASTRecordWriter::AddConceptReference(const ConceptReference *CR) {
+  assert(CR);
+  AddNestedNameSpecifierLoc(CR->getNestedNameSpecifierLoc());
+  AddSourceLocation(CR->getTemplateKWLoc());
+  AddDeclarationNameInfo(CR->getConceptNameInfo());
+  AddDeclRef(CR->getFoundDecl());
+  AddDeclRef(CR->getNamedConcept());
+  push_back(CR->getTemplateArgsAsWritten() != nullptr);
+  if (CR->getTemplateArgsAsWritten())
+    AddASTTemplateArgumentListInfo(CR->getTemplateArgsAsWritten());
+}
+
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
-  Record.push_back(TL.isConstrained());
-  if (TL.isConstrained()) {
-    Record.AddNestedNameSpecifierLoc(TL.getNestedNameSpecifierLoc());
-    addSourceLocation(TL.getTemplateKWLoc());
-    addSourceLocation(TL.getConceptNameLoc());
-    Record.AddDeclRef(TL.getFoundDecl());
-    addSourceLocation(TL.getLAngleLoc());
-    addSourceLocation(TL.getRAngleLoc());
-    for (unsigned I = 0; I < TL.getNumArgs(); ++I)
-      Record.AddTemplateArgumentLocInfo(
-          TL.getTypePtr()->getTypeConstraintArguments()[I].getKind(),
-          TL.getArgLocInfo(I));
-  }
+  auto *CR = TL.getConceptReference();
+  Record.push_back(TL.isConstrained() && CR);
+  if (TL.isConstrained() && CR)
+    Record.AddConceptReference(CR);
   Record.push_back(TL.isDecltypeAuto());
   if (TL.isDecltypeAuto())
     addSourceLocation(TL.getRParenLoc());
@@ -1547,7 +1550,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
   // Original file name and file ID
   SourceManager &SM = Context.getSourceManager();
-  if (const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
+  if (auto MainFile = SM.getFileEntryRefForID(SM.getMainFileID())) {
     auto FileAbbrev = std::make_shared<BitCodeAbbrev>();
     FileAbbrev->Add(BitCodeAbbrevOp(ORIGINAL_FILE));
     FileAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File ID
@@ -6078,7 +6081,7 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
     APValue *Evaluated = VD->getEvaluatedValue();
-    // If the evaluted result is constant, emit it.
+    // If the evaluated result is constant, emit it.
     if (Evaluated && (Evaluated->isInt() || Evaluated->isFloat()))
       Val |= 8;
   }

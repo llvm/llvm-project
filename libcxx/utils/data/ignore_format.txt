@@ -1,5 +1,4 @@
 libcxx/include/__algorithm/binary_search.h
-libcxx/include/__algorithm/clamp.h
 libcxx/include/__algorithm/comp_ref_type.h
 libcxx/include/__algorithm/copy_backward.h
 libcxx/include/__algorithm/copy_if.h
@@ -167,7 +166,6 @@ libcxx/include/experimental/memory_resource
 libcxx/include/experimental/propagate_const
 libcxx/include/experimental/regex
 libcxx/include/experimental/set
-libcxx/include/experimental/simd
 libcxx/include/experimental/string
 libcxx/include/experimental/type_traits
 libcxx/include/experimental/unordered_map
@@ -538,7 +536,6 @@ libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
 libcxx/src/std_stream.h
 libcxx/src/string.cpp
-libcxx/src/strstream.cpp
 libcxx/src/support/ibm/mbsnrtowcs.cpp
 libcxx/src/support/ibm/wcsnrtombs.cpp
 libcxx/src/support/ibm/xlocale_zos.cpp

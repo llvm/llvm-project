@@ -157,6 +157,142 @@ containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
   return mlir::AliasResult::NoAlias;
 }
 
+// Returns true if the given array references represent identical
+// or completely disjoint array slices. The callers may use this
+// method when the alias analysis reports an alias of some kind,
+// so that we can run Fortran specific analysis on the array slices
+// to see if they are identical or disjoint. Note that the alias
+// analysis are not able to give such an answer about the references.
+static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
+  if (ref1 == ref2)
+    return true;
+
+  auto des1 = ref1.getDefiningOp<hlfir::DesignateOp>();
+  auto des2 = ref2.getDefiningOp<hlfir::DesignateOp>();
+  // We only support a pair of designators right now.
+  if (!des1 || !des2)
+    return false;
+
+  if (des1.getMemref() != des2.getMemref()) {
+    // If the bases are different, then there is unknown overlap.
+    LLVM_DEBUG(llvm::dbgs() << "No identical base for:\n"
+                            << des1 << "and:\n"
+                            << des2 << "\n");
+    return false;
+  }
+
+  // Require all components of the designators to be the same.
+  // It might be too strict, e.g. we may probably allow for
+  // different type parameters.
+  if (des1.getComponent() != des2.getComponent() ||
+      des1.getComponentShape() != des2.getComponentShape() ||
+      des1.getSubstring() != des2.getSubstring() ||
+      des1.getComplexPart() != des2.getComplexPart() ||
+      des1.getTypeparams() != des2.getTypeparams()) {
+    LLVM_DEBUG(llvm::dbgs() << "Different designator specs for:\n"
+                            << des1 << "and:\n"
+                            << des2 << "\n");
+    return false;
+  }
+
+  if (des1.getIsTriplet() != des2.getIsTriplet()) {
+    LLVM_DEBUG(llvm::dbgs() << "Different sections for:\n"
+                            << des1 << "and:\n"
+                            << des2 << "\n");
+    return false;
+  }
+
+  // Analyze the subscripts.
+  // For example:
+  //   hlfir.designate %6#0 (%c2:%c7999:%c1, %c1:%c120:%c1, %0)  shape %9
+  //   hlfir.designate %6#0 (%c2:%c7999:%c1, %c1:%c120:%c1, %1)  shape %9
+  //
+  // If all the triplets (section speficiers) are the same, then
+  // we do not care if %0 is equal to %1 - the slices are either
+  // identical or completely disjoint.
+  auto des1It = des1.getIndices().begin();
+  auto des2It = des2.getIndices().begin();
+  bool identicalTriplets = true;
+  for (bool isTriplet : des1.getIsTriplet()) {
+    if (isTriplet) {
+      for (int i = 0; i < 3; ++i)
+        if (*des1It++ != *des2It++) {
+          LLVM_DEBUG(llvm::dbgs() << "Triplet mismatch for:\n"
+                                  << des1 << "and:\n"
+                                  << des2 << "\n");
+          identicalTriplets = false;
+          break;
+        }
+    } else {
+      ++des1It;
+      ++des2It;
+    }
+  }
+  if (identicalTriplets)
+    return true;
+
+  // See if we can prove that any of the triplets do not overlap.
+  // This is mostly a Polyhedron/nf performance hack that looks for
+  // particular relations between the lower and upper bounds
+  // of the array sections, e.g. for any positive constant C:
+  //   X:Y does not overlap with (Y+C):Z
+  //   X:Y does not overlap with Z:(X-C)
+  auto displacedByConstant = [](mlir::Value v1, mlir::Value v2) {
+    auto removeConvert = [](mlir::Value v) -> mlir::Operation * {
+      auto *op = v.getDefiningOp();
+      while (auto conv = mlir::dyn_cast_or_null<fir::ConvertOp>(op))
+        op = conv.getValue().getDefiningOp();
+      return op;
+    };
+
+    auto isPositiveConstant = [](mlir::Value v) -> bool {
+      if (auto conOp =
+              mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
+        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
+          return iattr.getInt() > 0;
+      return false;
+    };
+
+    auto *op1 = removeConvert(v1);
+    auto *op2 = removeConvert(v2);
+    if (!op1 || !op2)
+      return false;
+    if (auto addi = mlir::dyn_cast<mlir::arith::AddIOp>(op2))
+      if ((addi.getLhs().getDefiningOp() == op1 &&
+           isPositiveConstant(addi.getRhs())) ||
+          (addi.getRhs().getDefiningOp() == op1 &&
+           isPositiveConstant(addi.getLhs())))
+        return true;
+    if (auto subi = mlir::dyn_cast<mlir::arith::SubIOp>(op1))
+      if (subi.getLhs().getDefiningOp() == op2 &&
+          isPositiveConstant(subi.getRhs()))
+        return true;
+    return false;
+  };
+
+  des1It = des1.getIndices().begin();
+  des2It = des2.getIndices().begin();
+  for (bool isTriplet : des1.getIsTriplet()) {
+    if (isTriplet) {
+      mlir::Value des1Lb = *des1It++;
+      mlir::Value des1Ub = *des1It++;
+      mlir::Value des2Lb = *des2It++;
+      mlir::Value des2Ub = *des2It++;
+      // Ignore strides.
+      ++des1It;
+      ++des2It;
+      if (displacedByConstant(des1Ub, des2Lb) ||
+          displacedByConstant(des2Ub, des1Lb))
+        return true;
+    } else {
+      ++des1It;
+      ++des2It;
+    }
+  }
+
+  return false;
+}
+
 std::optional<ElementalAssignBufferization::MatchInfo>
 ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -274,7 +410,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     if (!res.isPartial()) {
       if (auto designate =
               effect.getValue().getDefiningOp<hlfir::DesignateOp>()) {
-        if (designate.getMemref() != match.array) {
+        if (!areIdenticalOrDisjointSlices(match.array, designate.getMemref())) {
           LLVM_DEBUG(llvm::dbgs() << "possible read conflict: " << designate
                                   << " at " << elemental.getLoc() << "\n");
           return std::nullopt;
@@ -291,7 +427,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
           continue;
       }
     }
-    LLVM_DEBUG(llvm::dbgs() << "diasllowed side-effect: " << effect.getValue()
+    LLVM_DEBUG(llvm::dbgs() << "disallowed side-effect: " << effect.getValue()
                             << " for " << elemental.getLoc() << "\n");
     return std::nullopt;
   }
@@ -358,6 +494,164 @@ mlir::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   return mlir::success();
 }
 
+/// Expand hlfir.assign of a scalar RHS to array LHS into a loop nest
+/// of element-by-element assignments:
+///   hlfir.assign %cst to %0 : f32, !fir.ref<!fir.array<6x6xf32>>
+/// into:
+///   fir.do_loop %arg0 = %c1 to %c6 step %c1 unordered {
+///     fir.do_loop %arg1 = %c1 to %c6 step %c1 unordered {
+///       %1 = hlfir.designate %0 (%arg1, %arg0)  :
+///       (!fir.ref<!fir.array<6x6xf32>>, index, index) -> !fir.ref<f32>
+///       hlfir.assign %cst to %1 : f32, !fir.ref<f32>
+///     }
+///   }
+class BroadcastAssignBufferization
+    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+private:
+public:
+  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::AssignOp assign,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+
+mlir::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
+    hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
+  // Since RHS is a scalar and LHS is an array, LHS must be allocated
+  // in a conforming Fortran program, and LHS cannot be reallocated
+  // as a result of the assignment. So we can ignore isAllocatableAssignment
+  // and do the transformation always.
+  mlir::Value rhs = assign.getRhs();
+  if (!fir::isa_trivial(rhs.getType()))
+    return rewriter.notifyMatchFailure(
+        assign, "AssignOp's RHS is not a trivial scalar");
+
+  hlfir::Entity lhs{assign.getLhs()};
+  if (!lhs.isArray())
+    return rewriter.notifyMatchFailure(assign,
+                                       "AssignOp's LHS is not an array");
+
+  mlir::Type eleTy = lhs.getFortranElementType();
+  if (!fir::isa_trivial(eleTy))
+    return rewriter.notifyMatchFailure(
+        assign, "AssignOp's LHS data type is not trivial");
+
+  mlir::Location loc = assign->getLoc();
+  fir::FirOpBuilder builder(rewriter, assign.getOperation());
+  builder.setInsertionPoint(assign);
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value shape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> extents =
+      hlfir::getIndexExtents(loc, builder, shape);
+  hlfir::LoopNest loopNest =
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
+  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+  auto arrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+  builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+  rewriter.eraseOp(assign);
+  return mlir::success();
+}
+
+/// Expand hlfir.assign of array RHS to array LHS into a loop nest
+/// of element-by-element assignments:
+///   hlfir.assign %4 to %5 : !fir.ref<!fir.array<3x3xf32>>,
+///                           !fir.ref<!fir.array<3x3xf32>>
+/// into:
+///   fir.do_loop %arg1 = %c1 to %c3 step %c1 unordered {
+///     fir.do_loop %arg2 = %c1 to %c3 step %c1 unordered {
+///       %6 = hlfir.designate %4 (%arg2, %arg1)  :
+///           (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
+///       %7 = fir.load %6 : !fir.ref<f32>
+///       %8 = hlfir.designate %5 (%arg2, %arg1)  :
+///           (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
+///       hlfir.assign %7 to %8 : f32, !fir.ref<f32>
+///     }
+///   }
+///
+/// The transformation is correct only when LHS and RHS do not alias.
+/// This transformation does not support runtime checking for
+/// non-conforming LHS/RHS arrays' shapes currently.
+class VariableAssignBufferization
+    : public mlir::OpRewritePattern<hlfir::AssignOp> {
+private:
+public:
+  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::AssignOp assign,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+
+mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
+    hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
+  if (assign.isAllocatableAssignment())
+    return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
+
+  hlfir::Entity rhs{assign.getRhs()};
+  // TODO: ExprType check is here to avoid conflicts with
+  // ElementalAssignBufferization pattern. We need to combine
+  // these matchers into a single one that applies to AssignOp.
+  if (rhs.getType().isa<hlfir::ExprType>())
+    return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
+
+  if (!rhs.isArray())
+    return rewriter.notifyMatchFailure(assign,
+                                       "AssignOp's RHS is not an array");
+
+  mlir::Type rhsEleTy = rhs.getFortranElementType();
+  if (!fir::isa_trivial(rhsEleTy))
+    return rewriter.notifyMatchFailure(
+        assign, "AssignOp's RHS data type is not trivial");
+
+  hlfir::Entity lhs{assign.getLhs()};
+  if (!lhs.isArray())
+    return rewriter.notifyMatchFailure(assign,
+                                       "AssignOp's LHS is not an array");
+
+  mlir::Type lhsEleTy = lhs.getFortranElementType();
+  if (!fir::isa_trivial(lhsEleTy))
+    return rewriter.notifyMatchFailure(
+        assign, "AssignOp's LHS data type is not trivial");
+
+  if (lhsEleTy != rhsEleTy)
+    return rewriter.notifyMatchFailure(assign,
+                                       "RHS/LHS element types mismatch");
+
+  fir::AliasAnalysis aliasAnalysis;
+  mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
+  // TODO: use areIdenticalOrDisjointSlices() to check if
+  // we can still do the expansion.
+  if (!aliasRes.isNo()) {
+    LLVM_DEBUG(llvm::dbgs() << "VariableAssignBufferization:\n"
+                            << "\tLHS: " << lhs << "\n"
+                            << "\tRHS: " << rhs << "\n"
+                            << "\tALIAS: " << aliasRes << "\n");
+    return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+  }
+
+  mlir::Location loc = assign->getLoc();
+  fir::FirOpBuilder builder(rewriter, assign.getOperation());
+  builder.setInsertionPoint(assign);
+  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value shape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> extents =
+      hlfir::getIndexExtents(loc, builder, shape);
+  hlfir::LoopNest loopNest =
+      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
+  builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
+  auto rhsArrayElement =
+      hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
+  rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
+  auto lhsArrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+  builder.create<hlfir::AssignOp>(loc, rhsArrayElement, lhsArrayElement);
+  rewriter.eraseOp(assign);
+  return mlir::success();
+}
+
 class OptimizedBufferizationPass
     : public hlfir::impl::OptimizedBufferizationBase<
           OptimizedBufferizationPass> {
@@ -371,7 +665,15 @@ public:
     config.enableRegionSimplification = false;
 
     mlir::RewritePatternSet patterns(context);
+    // TODO: right now the patterns are non-conflicting,
+    // but it might be better to run this pass on hlfir.assign
+    // operations and decide which transformation to apply
+    // at one place (e.g. we may use some heuristics and
+    // choose different optimization strategies).
+    // This requires small code reordering in ElementalAssignBufferization.
     patterns.insert<ElementalAssignBufferization>(context);
+    patterns.insert<BroadcastAssignBufferization>(context);
+    patterns.insert<VariableAssignBufferization>(context);
 
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
             func, std::move(patterns), config))) {

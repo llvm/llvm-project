@@ -702,15 +702,14 @@ std::optional<Expr<SomeType>> ConvertToType(
 bool IsAssumedRank(const Symbol &original) {
   if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
     if (assoc->rank()) {
-      return false; // in SELECT RANK case
+      return false; // in RANK(n) or RANK(*)
+    } else if (assoc->IsAssumedRank()) {
+      return true; // RANK DEFAULT
     }
   }
   const Symbol &symbol{semantics::ResolveAssociations(original)};
-  if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    return details->IsAssumedRank();
-  } else {
-    return false;
-  }
+  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedRank();
 }
 
 bool IsAssumedRank(const ActualArgument &arg) {
@@ -1158,7 +1157,8 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
 bool IsAllocatableOrPointerObject(
     const Expr<SomeType> &expr, FoldingContext &context) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
-  return (sym && semantics::IsAllocatableOrPointer(sym->GetUltimate())) ||
+  return (sym &&
+             semantics::IsAllocatableOrObjectPointer(&sym->GetUltimate())) ||
       evaluate::IsObjectPointer(expr, context);
 }
 
@@ -1208,17 +1208,7 @@ namespace Fortran::semantics {
 const Symbol &ResolveAssociations(const Symbol &original) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
-      return ResolveAssociations(*nested);
-    }
-  }
-  return symbol;
-}
-
-const Symbol &ResolveAssociationsExceptSelectRank(const Symbol &original) {
-  const Symbol &symbol{original.GetUltimate()};
-  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (!details->rank()) {
+    if (!details->rank()) { // Not RANK(n) or RANK(*)
       if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
         return ResolveAssociations(*nested);
       }
@@ -1323,23 +1313,26 @@ bool IsPureProcedure(const Scope &scope) {
   return symbol && IsPureProcedure(*symbol);
 }
 
+bool IsExplicitlyImpureProcedure(const Symbol &original) {
+  // An ENTRY is IMPURE if its containing subprogram is so
+  return DEREF(GetMainEntry(&original.GetUltimate()))
+      .attrs()
+      .test(Attr::IMPURE);
+}
+
 bool IsElementalProcedure(const Symbol &original) {
   // An ENTRY is elemental if its containing subprogram is
   const Symbol &symbol{DEREF(GetMainEntry(&original.GetUltimate()))};
-  if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (const Symbol * procInterface{procDetails->procInterface()}) {
-      // procedure with an elemental interface, ignoring the elemental
-      // aspect of intrinsic functions
-      return !procInterface->attrs().test(Attr::INTRINSIC) &&
-          IsElementalProcedure(*procInterface);
-    }
-  } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
-    return !details->symbol().attrs().test(Attr::INTRINSIC) &&
-        IsElementalProcedure(details->symbol());
-  } else if (!IsProcedure(symbol)) {
+  if (IsProcedure(symbol)) {
+    auto &foldingContext{symbol.owner().context().foldingContext()};
+    auto restorer{foldingContext.messages().DiscardMessages()};
+    auto proc{evaluate::characteristics::Procedure::Characterize(
+        symbol, foldingContext)};
+    return proc &&
+        proc->attrs.test(evaluate::characteristics::Procedure::Attr::Elemental);
+  } else {
     return false;
   }
-  return symbol.attrs().test(Attr::ELEMENTAL);
 }
 
 bool IsFunction(const Symbol &symbol) {
@@ -1388,15 +1381,37 @@ bool IsProcedure(const Scope &scope) {
   return symbol && IsProcedure(*symbol);
 }
 
+bool IsProcedurePointer(const Symbol &original) {
+  const Symbol &symbol{GetAssociationRoot(original)};
+  return IsPointer(symbol) && IsProcedure(symbol);
+}
+
+bool IsProcedurePointer(const Symbol *symbol) {
+  return symbol && IsProcedurePointer(*symbol);
+}
+
+bool IsObjectPointer(const Symbol *original) {
+  if (original) {
+    const Symbol &symbol{GetAssociationRoot(*original)};
+    return IsPointer(symbol) && !IsProcedure(symbol);
+  } else {
+    return false;
+  }
+}
+
+bool IsAllocatableOrObjectPointer(const Symbol *original) {
+  if (original) {
+    const Symbol &symbol{GetAssociationRoot(*original)};
+    return IsAllocatable(symbol) || (IsPointer(symbol) && !IsProcedure(symbol));
+  } else {
+    return false;
+  }
+}
+
 const Symbol *FindCommonBlockContaining(const Symbol &original) {
   const Symbol &root{GetAssociationRoot(original)};
   const auto *details{root.detailsIf<ObjectEntityDetails>()};
   return details ? details->commonBlock() : nullptr;
-}
-
-bool IsProcedurePointer(const Symbol &original) {
-  const Symbol &symbol{GetAssociationRoot(original)};
-  return IsPointer(symbol) && IsProcedure(symbol);
 }
 
 // 3.11 automatic data object
@@ -1516,14 +1531,14 @@ bool IsAssumedShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
   return object && object->CanBeAssumedShape() &&
-      !semantics::IsAllocatableOrPointer(ultimate);
+      !semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
 bool IsDeferredShape(const Symbol &symbol) {
   const Symbol &ultimate{ResolveAssociations(symbol)};
   const auto *object{ultimate.detailsIf<ObjectEntityDetails>()};
   return object && object->CanBeDeferredShape() &&
-      semantics::IsAllocatableOrPointer(ultimate);
+      semantics::IsAllocatableOrObjectPointer(&ultimate);
 }
 
 bool IsFunctionResult(const Symbol &original) {

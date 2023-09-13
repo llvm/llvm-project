@@ -52,7 +52,7 @@ static const char *const builderOpState = "odsState";
 static const char *const propertyStorage = "propStorage";
 static const char *const propertyValue = "propValue";
 static const char *const propertyAttr = "propAttr";
-static const char *const propertyDiag = "propDiag";
+static const char *const propertyDiag = "getDiag";
 
 /// The names of the implicit attributes that contain variadic operand and
 /// result segment sizes.
@@ -1212,7 +1212,9 @@ void OpEmitter::genPropertiesSupport() {
               "::mlir::LogicalResult", "setPropertiesFromAttr",
               MethodParameter("Properties &", "prop"),
               MethodParameter("::mlir::Attribute", "attr"),
-              MethodParameter("::mlir::InFlightDiagnostic *", "diag"))
+              MethodParameter(
+                  "::llvm::function_ref<::mlir::InFlightDiagnostic &()>",
+                  "getDiag"))
           ->body();
   auto &getPropMethod =
       opClass
@@ -1264,8 +1266,7 @@ void OpEmitter::genPropertiesSupport() {
   setPropMethod << R"decl(
   ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
   if (!dict) {
-    if (diag)
-      *diag << "expected DictionaryAttr to set properties";
+    getDiag() << "expected DictionaryAttr to set properties";
     return ::mlir::failure();
   }
     )decl";
@@ -1273,17 +1274,16 @@ void OpEmitter::genPropertiesSupport() {
   const char *propFromAttrFmt = R"decl(;
     {{
       auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-                             ::mlir::InFlightDiagnostic *propDiag) {{
+               ::llvm::function_ref<::mlir::InFlightDiagnostic &()> getDiag) {{
         {0};
       };
       {2};
       if (!attr) {{
-        if (diag)
-          *diag << "expected key entry for {1} in DictionaryAttr to set "
+        getDiag() << "expected key entry for {1} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
-      if (::mlir::failed(setFromAttr(prop.{1}, attr, diag)))
+      if (::mlir::failed(setFromAttr(prop.{1}, attr, getDiag)))
         return ::mlir::failure();
     }
 )decl";
@@ -1338,8 +1338,7 @@ void OpEmitter::genPropertiesSupport() {
     {2}
     if (attr || /*isRequired=*/{1}) {{
       if (!attr) {{
-        if (diag)
-          *diag << "expected key entry for {0} in DictionaryAttr to set "
+        getDiag() << "expected key entry for {0} in DictionaryAttr to set "
                    "Properties.";
         return ::mlir::failure();
       }
@@ -1347,8 +1346,7 @@ void OpEmitter::genPropertiesSupport() {
       if (convertedAttr) {{
         propStorage = convertedAttr;
       } else {{
-        if (diag)
-          *diag << "Invalid attribute `{0}` in property conversion: " << attr;
+        getDiag() << "Invalid attribute `{0}` in property conversion: " << attr;
         return ::mlir::failure();
       }
     }
@@ -2865,7 +2863,8 @@ void OpEmitter::buildParamList(SmallVectorImpl<MethodParameter> &paramList,
                              operand->isOptional());
       continue;
     }
-    if (const auto *operand = llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
+    if ([[maybe_unused]] const auto *operand =
+            llvm::dyn_cast_if_present<NamedProperty *>(arg)) {
       // TODO
       continue;
     }
@@ -3083,7 +3082,7 @@ void OpEmitter::genCanonicalizerDecls() {
   auto *method = opClass.addMethod("void", "getCanonicalizationPatterns", kind,
                                    std::move(paramList));
 
-  // If synthesizing the method, fill it it.
+  // If synthesizing the method, fill it.
   if (hasBody) {
     ERROR_IF_PRUNED(method, "getCanonicalizationPatterns", op);
     method->body() << "  results.add(canonicalize);\n";

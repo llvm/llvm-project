@@ -8,6 +8,6 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
-def MipsPostLegalizerCombiner: GICombinerHelper<
+def MipsPostLegalizerCombiner: GICombiner<
   "MipsPostLegalizerCombinerImpl", []> {
 }

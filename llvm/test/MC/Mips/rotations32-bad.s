@@ -1,12 +1,12 @@
-# RUN: not llvm-mc  %s -arch=mips -mcpu=mips32 -show-encoding 2> %t1
+# RUN: not llvm-mc  %s -triple=mips -mcpu=mips32 -show-encoding 2> %t1
 # RUN: FileCheck %s < %t1
-# RUN: not llvm-mc  %s -arch=mips -mcpu=mips32r2 -show-encoding 2> %t1
+# RUN: not llvm-mc  %s -triple=mips -mcpu=mips32r2 -show-encoding 2> %t1
 # RUN: FileCheck %s < %t1
-# RUN: not llvm-mc  %s -arch=mips -mcpu=mips32r3 -show-encoding 2> %t1
+# RUN: not llvm-mc  %s -triple=mips -mcpu=mips32r3 -show-encoding 2> %t1
 # RUN: FileCheck %s < %t1
-# RUN: not llvm-mc  %s -arch=mips -mcpu=mips32r5 -show-encoding 2> %t1
+# RUN: not llvm-mc  %s -triple=mips -mcpu=mips32r5 -show-encoding 2> %t1
 # RUN: FileCheck %s < %t1
-# RUN: not llvm-mc  %s -arch=mips -mcpu=mips32r6 -show-encoding 2> %t1
+# RUN: not llvm-mc  %s -triple=mips -mcpu=mips32r6 -show-encoding 2> %t1
 # RUN: FileCheck %s < %t1
 
   .text

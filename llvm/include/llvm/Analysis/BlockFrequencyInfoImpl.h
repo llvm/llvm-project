@@ -1382,7 +1382,7 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
   if (ReachableBlocks.empty())
     return;
 
-  // The map is used to to index successors/predecessors of reachable blocks in
+  // The map is used to index successors/predecessors of reachable blocks in
   // the ReachableBlocks vector
   DenseMap<const BlockT *, size_t> BlockIndex;
   // Extract initial frequencies for the reachable blocks

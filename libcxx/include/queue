@@ -565,9 +565,9 @@ operator<=>(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y
 
 #endif
 
-template <class _Tp, class _Container>
+template <class _Tp, class _Container, __enable_if_t<__is_swappable<_Container>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-__enable_if_t<__is_swappable<_Container>::value, void>
+void
 swap(queue<_Tp, _Container>& __x, queue<_Tp, _Container>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))
 {
@@ -1108,12 +1108,10 @@ priority_queue<_Tp, _Container, _Compare>::swap(priority_queue& __q)
     swap(comp, __q.comp);
 }
 
-template <class _Tp, class _Container, class _Compare>
+template <class _Tp, class _Container, class _Compare,
+          __enable_if_t<__is_swappable<_Container>::value && __is_swappable<_Compare>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY
-__enable_if_t<
-    __is_swappable<_Container>::value && __is_swappable<_Compare>::value,
-    void
->
+void
 swap(priority_queue<_Tp, _Container, _Compare>& __x,
      priority_queue<_Tp, _Container, _Compare>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y)))

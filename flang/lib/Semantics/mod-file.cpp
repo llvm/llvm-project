@@ -759,6 +759,15 @@ void ModFileWriter::PutObjectEntity(
     PutLower(os << "attributes(", common::EnumToString(*attr))
         << ") " << symbol.name() << '\n';
   }
+  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
+    if (!symbol.owner().crayPointers().empty()) {
+      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+        if (pointer == symbol) {
+          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+        }
+      }
+    }
+  }
 }
 
 void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {

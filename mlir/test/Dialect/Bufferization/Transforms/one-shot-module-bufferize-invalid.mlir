@@ -321,3 +321,12 @@ func.func @regression_scf_while() {
   }
   return
 }
+
+// -----
+
+// expected-error @below{{cannot bufferize a FuncOp with tensors and without a unique ReturnOp}}
+func.func @func_multiple_yields(%t: tensor<5xf32>) -> tensor<5xf32> {
+  func.return %t : tensor<5xf32>
+^bb1(%arg1 : tensor<5xf32>):
+  func.return %arg1 : tensor<5xf32>
+}

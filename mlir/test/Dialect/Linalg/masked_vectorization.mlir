@@ -22,9 +22,9 @@ transform.sequence  failures(propagate) {
 ^bb0(%module: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %module 
     : (!transform.any_op) -> !transform.any_op
-  %tiled_linalg_op, %loops:3 = transform.structured.tile_to_scf_for %0[64, 128, 256] 
+  %tiled_linalg_op, %loops:3 = transform.structured.tile %0[64, 128, 256] 
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-  %tiled_linalg_op_0, %loops_1:3 = transform.structured.tile_to_scf_for %tiled_linalg_op[8, 8, 8] 
+  %tiled_linalg_op_0, %loops_1:3 = transform.structured.tile %tiled_linalg_op[8, 8, 8] 
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
   transform.structured.masked_vectorize %tiled_linalg_op_0 vector_sizes [8, 8, 8] 
     : !transform.any_op

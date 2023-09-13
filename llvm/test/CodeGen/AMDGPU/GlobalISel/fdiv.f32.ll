@@ -1971,8 +1971,6 @@ define <2 x float> @v_rcp_v2f32_arcp_afn(<2 x float> %x) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_rcp_f32_e32 v0, v0
 ; GCN-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_rcp_v2f32_arcp_afn:
@@ -1980,8 +1978,6 @@ define <2 x float> @v_rcp_v2f32_arcp_afn(<2 x float> %x) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX10-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX10-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX10-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_rcp_v2f32_arcp_afn:
@@ -1989,8 +1985,6 @@ define <2 x float> @v_rcp_v2f32_arcp_afn(<2 x float> %x) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
-; GFX11-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp afn <2 x float> <float 1.0, float 1.0>, %x
   ret <2 x float> %fdiv

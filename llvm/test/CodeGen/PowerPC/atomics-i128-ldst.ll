@@ -361,9 +361,9 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; P8-NEXT:    lq r4, 0(r3)
 ; P8-NEXT:    cmpd cr7, r5, r5
 ; P8-NEXT:    mr r3, r4
-; P8-NEXT:    mr r4, r5
 ; P8-NEXT:    bne- cr7, .+4
 ; P8-NEXT:    isync
+; P8-NEXT:    mr r4, r5
 ; P8-NEXT:    blr
 ;
 ; PWR7-LABEL: lq_seqcst:
@@ -397,9 +397,9 @@ define dso_local i128 @lq_seqcst(ptr %src) {
 ; AIX64-PWR8-NEXT:    lq r4, 0(r3)
 ; AIX64-PWR8-NEXT:    cmpd cr7, r5, r5
 ; AIX64-PWR8-NEXT:    mr r3, r4
-; AIX64-PWR8-NEXT:    mr r4, r5
 ; AIX64-PWR8-NEXT:    bne- cr7, $+4
 ; AIX64-PWR8-NEXT:    isync
+; AIX64-PWR8-NEXT:    mr r4, r5
 ; AIX64-PWR8-NEXT:    blr
 ;
 ; PPC-PWR8-LABEL: lq_seqcst:
@@ -552,10 +552,10 @@ define dso_local void @stqx_unordered(i128 %val, ptr %dst, i64 %idx) {
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)
 ; PPC-PWR8-NEXT:    stw r5, 24(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 16
-; PPC-PWR8-NEXT:    add r6, r7, r8
 ; PPC-PWR8-NEXT:    stw r4, 20(r1)
 ; PPC-PWR8-NEXT:    stw r3, 16(r1)
 ; PPC-PWR8-NEXT:    li r3, 16
+; PPC-PWR8-NEXT:    add r6, r7, r8
 ; PPC-PWR8-NEXT:    mr r4, r6
 ; PPC-PWR8-NEXT:    li r6, 0
 ; PPC-PWR8-NEXT:    bl __atomic_store
@@ -572,11 +572,11 @@ entry:
 define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ; P8-LABEL: stq_big_offset_unordered:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    lis r6, 32
-; P8-NEXT:    mr r9, r4
-; P8-NEXT:    mr r8, r3
-; P8-NEXT:    add r3, r5, r6
-; P8-NEXT:    stq r8, 0(r3)
+; P8-NEXT:    mr r7, r4
+; P8-NEXT:    mr r6, r3
+; P8-NEXT:    lis r3, 32
+; P8-NEXT:    add r3, r5, r3
+; P8-NEXT:    stq r6, 0(r3)
 ; P8-NEXT:    blr
 ;
 ; PWR7-LABEL: stq_big_offset_unordered:
@@ -600,20 +600,20 @@ define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ;
 ; LE-PWR8-LABEL: stq_big_offset_unordered:
 ; LE-PWR8:       # %bb.0: # %entry
-; LE-PWR8-NEXT:    lis r6, 32
-; LE-PWR8-NEXT:    mr r9, r3
-; LE-PWR8-NEXT:    mr r8, r4
-; LE-PWR8-NEXT:    add r3, r5, r6
-; LE-PWR8-NEXT:    stq r8, 0(r3)
+; LE-PWR8-NEXT:    mr r7, r3
+; LE-PWR8-NEXT:    mr r6, r4
+; LE-PWR8-NEXT:    lis r3, 32
+; LE-PWR8-NEXT:    add r3, r5, r3
+; LE-PWR8-NEXT:    stq r6, 0(r3)
 ; LE-PWR8-NEXT:    blr
 ;
 ; AIX64-PWR8-LABEL: stq_big_offset_unordered:
 ; AIX64-PWR8:       # %bb.0: # %entry
-; AIX64-PWR8-NEXT:    lis r6, 32
-; AIX64-PWR8-NEXT:    mr r9, r4
-; AIX64-PWR8-NEXT:    mr r8, r3
-; AIX64-PWR8-NEXT:    add r3, r5, r6
-; AIX64-PWR8-NEXT:    stq r8, 0(r3)
+; AIX64-PWR8-NEXT:    mr r7, r4
+; AIX64-PWR8-NEXT:    mr r6, r3
+; AIX64-PWR8-NEXT:    lis r3, 32
+; AIX64-PWR8-NEXT:    add r3, r5, r3
+; AIX64-PWR8-NEXT:    stq r6, 0(r3)
 ; AIX64-PWR8-NEXT:    blr
 ;
 ; PPC-PWR8-LABEL: stq_big_offset_unordered:

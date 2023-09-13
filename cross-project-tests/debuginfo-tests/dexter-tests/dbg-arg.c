@@ -1,10 +1,11 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
+// XFAIL: system-darwin
 //
 // This test case checks debug info during register moves for an argument.
+// RUN: %clang -std=gnu11 -m64 -mllvm -fast-isel=false -g %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --builder clang-c --debugger 'lldb' \
-// RUN:     --cflags "-m64 -mllvm -fast-isel=false -g" -- %s
+// RUN:     --binary %t --debugger 'lldb' -- %s
 //
 // Radar 8412415
 

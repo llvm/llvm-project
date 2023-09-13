@@ -198,10 +198,13 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
   // See if we can create this constant as (ADD (SLLI X, 32), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
   // constant pool.
+  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
+  // low and high 32 bits are the same and bit 31 and 63 are set.
   if (Seq.size() > 3) {
     int64_t LoVal = SignExtend64<32>(Imm);
     int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
-    if (LoVal == HiVal) {
+    if (LoVal == HiVal ||
+        (Subtarget.hasStdExtZba() && Lo_32(Imm) == Hi_32(Imm))) {
       RISCVMatInt::InstSeq SeqLo =
           RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
       if ((SeqLo.size() + 2) < Seq.size()) {
@@ -211,8 +214,9 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
             CurDAG->getMachineNode(RISCV::SLLI, DL, VT, Lo,
                                    CurDAG->getTargetConstant(32, DL, VT)),
             0);
-        return SDValue(CurDAG->getMachineNode(RISCV::ADD, DL, VT, Lo, SLLI),
-                       0);
+        // Prefer ADD when possible.
+        unsigned AddOpc = (LoVal == HiVal) ? RISCV::ADD : RISCV::ADD_UW;
+        return SDValue(CurDAG->getMachineNode(AddOpc, DL, VT, Lo, SLLI), 0);
       }
     }
   }
@@ -2159,12 +2163,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 }
 
 bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   // Always produce a register and immediate operand, as expected by
   // RISCVAsmPrinter::PrintAsmMemoryOperand.
   switch (ConstraintID) {
-  case InlineAsm::Constraint_o:
-  case InlineAsm::Constraint_m: {
+  case InlineAsm::ConstraintCode::o:
+  case InlineAsm::ConstraintCode::m: {
     SDValue Op0, Op1;
     bool Found = SelectAddrRegImm(Op, Op0, Op1);
     assert(Found && "SelectAddrRegImm should always succeed");
@@ -2173,7 +2178,7 @@ bool RISCVDAGToDAGISel::SelectInlineAsmMemoryOperand(
     OutOps.push_back(Op1);
     return false;
   }
-  case InlineAsm::Constraint_A:
+  case InlineAsm::ConstraintCode::A:
     OutOps.push_back(Op);
     OutOps.push_back(
         CurDAG->getTargetConstant(0, SDLoc(Op), Subtarget->getXLenVT()));
@@ -2957,7 +2962,8 @@ bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
 
 static SDValue findVSplat(SDValue N) {
   SDValue Splat = N;
-  if (Splat.getOpcode() != RISCVISD::VMV_V_X_VL ||
+  if ((Splat.getOpcode() != RISCVISD::VMV_V_X_VL &&
+       Splat.getOpcode() != RISCVISD::VMV_S_X_VL) ||
       !Splat.getOperand(0).isUndef())
     return SDValue();
   assert(Splat.getNumOperands() == 3 && "Unexpected number of operands");

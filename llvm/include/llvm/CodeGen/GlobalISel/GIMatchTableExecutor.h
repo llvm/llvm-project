@@ -258,6 +258,13 @@ enum {
   GIM_CheckIsSameOperand,
   GIM_CheckIsSameOperandIgnoreCopies,
 
+  /// Check we can replace all uses of a register with another.
+  /// - OldInsnID
+  /// - OldOpIdx
+  /// - NewInsnID
+  /// - NewOpIdx
+  GIM_CheckCanReplaceReg,
+
   /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
   /// named operands that will be recorded in RecordedOperands. Names of these
   /// operands are referenced in predicate argument list. Emitter determines
@@ -431,6 +438,20 @@ enum {
   /// - Expected type
   GIR_MakeTempReg,
 
+  /// Replaces all references to a register from an instruction
+  /// with another register from another instruction.
+  /// - OldInsnID
+  /// - OldOpIdx
+  /// - NewInsnID
+  /// - NewOpIdx
+  GIR_ReplaceReg,
+
+  /// Replaces all references to a register with a temporary register.
+  /// - OldInsnID
+  /// - OldOpIdx
+  /// - TempRegIdx
+  GIR_ReplaceRegWithTempReg,
+
   /// A successful emission
   GIR_Done,
 
@@ -463,9 +484,7 @@ public:
   // For some predicates, we need to track the current MBB.
   MachineBasicBlock *CurMBB = nullptr;
 
-  virtual void setupGeneratedPerFunctionState(MachineFunction &MF) {
-    llvm_unreachable("TableGen should have emitted implementation");
-  }
+  virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
   virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,

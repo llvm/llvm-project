@@ -16,7 +16,7 @@ int f() { return b_64605<void>(); }
 // CHECK:      ImplicitCastExpr {{.*}} 'float' <IntegralToFloating> RoundingMath=1 AllowFEnvAccess=1
 // CHECK-NEXT: IntegerLiteral {{.*}} 4294967295
 
-// CHECK:      FunctionDecl {{.*}} b_64605 'int ()' implicit_instantiation
+// CHECK:      FunctionDecl {{.*}} b_64605 'int ()'
 // CHECK-NEXT: TemplateArgument type 'void'
 
 // CHECK:      ImplicitCastExpr {{.*}} 'float' <IntegralToFloating> RoundingMath=1 AllowFEnvAccess=1

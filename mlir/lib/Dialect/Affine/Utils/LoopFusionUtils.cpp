@@ -605,7 +605,7 @@ bool mlir::affine::getFusionComputeCost(AffineForOp srcForOp,
     // 'insertPointParent'.
     for (Value memref : storeMemrefs) {
       for (auto *user : memref.getUsers()) {
-        if (auto loadOp = dyn_cast<AffineReadOpInterface>(user)) {
+        if (dyn_cast<AffineReadOpInterface>(user)) {
           SmallVector<AffineForOp, 4> loops;
           // Check if any loop in loop nest surrounding 'user' is
           // 'insertPointParent'.

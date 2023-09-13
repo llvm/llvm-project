@@ -118,7 +118,6 @@ class PseudoToVInst<string PseudoInst> {
                         ["FPR64", "F"],
                         ["FPR32", "F"],
                         ["FPR16", "F"],
-                        ["_TU", ""],
                         ["_TIED", ""],
                         ["_MASK", ""],
                         ["_B64", ""],
@@ -3143,7 +3142,7 @@ multiclass VPseudoTernaryWithTailPolicy<VReg RetClass,
                                           int sew,
                                           string Constraint = "",
                                           bit Commutable = 0> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
@@ -3158,7 +3157,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
                                           int sew,
                                           string Constraint = "",
                                           bit Commutable = 0> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew
@@ -3515,6 +3514,18 @@ multiclass VPseudoVFWRED_VS_RM {
           : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFWRedV_From", "ReadVFWRedV", mx, e>;
+    }
+  }
+}
+
+multiclass VPseudoVFWREDO_VS_RM {
+  foreach m = MxListFWRed in {
+    defvar mx = m.MX;
+    foreach e = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
+      defm _VS
+          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
+                                                     V_M1.vrclass, m, e>,
+            SchedReduction<"WriteVFWRedOV_From", "ReadVFWRedV", mx, e>;
     }
   }
 }
@@ -6602,7 +6613,7 @@ let IsRVVWideningReduction = 1,
     hasSideEffects = 0,
     mayRaiseFPException = true in {
 defm PseudoVFWREDUSUM  : VPseudoVFWRED_VS_RM;
-defm PseudoVFWREDOSUM  : VPseudoVFWRED_VS_RM;
+defm PseudoVFWREDOSUM  : VPseudoVFWREDO_VS_RM;
 }
 
 } // Predicates = [HasVInstructionsAnyF]

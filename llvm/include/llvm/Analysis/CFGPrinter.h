@@ -153,6 +153,8 @@ std::string CompleteNodeLabelString(
   if (OutStr[0] == '%') {
     OutStr.erase(OutStr.begin());
   }
+  // Place | after BB name to separate it into header
+  OutStr.insert(OutStr.find_first_of('\n') + 1, "\\|");
 
   unsigned ColNum = 0;
   unsigned LastSpace = 0;
@@ -178,8 +180,6 @@ std::string CompleteNodeLabelString(
     if (OutStr[i] == ' ')
       LastSpace = i;
   }
-  // Replace \l after BB name with | to separate it into header
-  OutStr.replace(OutStr.find_first_of('\\') + 1, 1, "|");
   return OutStr;
 }
 

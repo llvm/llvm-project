@@ -207,7 +207,7 @@ end
 
 
 !CHECK: func.func @_QPcommon_1() {
-!CHECK: %[[val_0:.*]] = fir.address_of(@_QCc) : !fir.ref<!fir.array<4xi8>>
+!CHECK: %[[val_0:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<4xi8>>
 !CHECK: %[[val_1:.*]] = omp.threadprivate %[[val_0]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
 !CHECK: %[[val_2:.*]] = fir.convert %[[val_1]] : (!fir.ref<!fir.array<4xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c0:.*]] = arith.constant 0 : index
@@ -258,7 +258,7 @@ end subroutine
 
 !CHECK: func.func @_QPcommon_2() {
 !CHECK: %[[val_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFcommon_2Ei"}
-!CHECK: %[[val_1:.*]] = fir.address_of(@_QCd) : !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_1:.*]] = fir.address_of(@d_) : !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[val_2:.*]] = omp.threadprivate %[[val_1]] : !fir.ref<!fir.array<8xi8>> -> !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[val_3:.*]] = fir.convert %[[val_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c0:.*]] = arith.constant 0 : index

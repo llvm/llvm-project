@@ -326,7 +326,7 @@ defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, AMDGPUlog>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
-defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
+defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 let TRANS = 1, SchedRW = [WriteTrans64] in {
@@ -1173,7 +1173,7 @@ defm V_CVT_NORM_U16_F16  : VOP1_Real_vi<0x4e>;
 
 defm V_ACCVGPR_MOV_B32   : VOP1Only_Real_vi<0x52>;
 
-let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0] in {
+let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0], Size = V_MOV_B32_e32.Size in {
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,
@@ -1214,6 +1214,8 @@ class UpdateDPPPat<ValueType vt> : GCNPat <
 
 def : UpdateDPPPat<i32>;
 def : UpdateDPPPat<f32>;
+def : UpdateDPPPat<v2i16>;
+def : UpdateDPPPat<v2f16>;
 
 } // End OtherPredicates = [isGFX8Plus]
 

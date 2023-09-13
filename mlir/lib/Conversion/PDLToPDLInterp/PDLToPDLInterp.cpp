@@ -141,7 +141,7 @@ private:
   /// positional value.
   DenseMap<Value, Position *> valueToPosition;
 
-  /// The set of operation values whose whose location will be used for newly
+  /// The set of operation values whose location will be used for newly
   /// generated operations.
   SetVector<Value> locOps;
 

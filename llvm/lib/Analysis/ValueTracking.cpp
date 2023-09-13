@@ -1480,7 +1480,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
                 Pred = CmpInst::getInversePredicate(Pred);
               // Get the knownbits implied by the incoming phi condition.
               auto CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
-              Known2 = Known2.unionWith(CR.toKnownBits());
+              KnownBits KnownUnion = Known2.unionWith(CR.toKnownBits());
+              // We can have conflicts here if we are analyzing deadcode (its
+              // impossible for us reach this BB based the icmp).
+              if (KnownUnion.hasConflict()) {
+                // No reason to continue analyzing in a known dead region, so
+                // just resetAll and break. This will cause us to also exit the
+                // outer loop.
+                Known.resetAll();
+                break;
+              }
+              Known2 = KnownUnion;
             }
           }
         }
@@ -3997,9 +4007,15 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
                                                       Value *LHS, Value *RHS,
                                                       bool LookThroughSrc) {
   const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloat(ConstRHS)))
+  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
     return {nullptr, fcNone};
 
+  return fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
+}
+
+std::pair<Value *, FPClassTest>
+llvm::fcmpToClassTest(FCmpInst::Predicate Pred, const Function &F, Value *LHS,
+                      const APFloat *ConstRHS, bool LookThroughSrc) {
   // fcmp ord x, zero|normal|subnormal|inf -> ~fcNan
   if (Pred == FCmpInst::FCMP_ORD && !ConstRHS->isNaN())
     return {LHS, ~fcNan};
@@ -4670,7 +4686,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::exp:
-    case Intrinsic::exp2: {
+    case Intrinsic::exp2:
+    case Intrinsic::exp10: {
       Known.knownNot(fcNegative);
       if ((InterestedClasses & fcNan) == fcNone)
         break;
@@ -5298,7 +5315,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
     return UndefInt8;
 
   // Return Undef for zero-sized type.
-  if (!DL.getTypeStoreSize(V->getType()).isNonZero())
+  if (DL.getTypeStoreSize(V->getType()).isZero())
     return UndefInt8;
 
   Constant *C = dyn_cast<Constant>(V);
@@ -6589,6 +6606,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
       case Intrinsic::log2:
       case Intrinsic::exp:
       case Intrinsic::exp2:
+      case Intrinsic::exp10:
       case Intrinsic::fabs:
       case Intrinsic::copysign:
       case Intrinsic::floor:

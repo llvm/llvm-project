@@ -1846,6 +1846,13 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
   return SDValue(N, 0);
 }
 
+SDValue SelectionDAG::getJumpTableDebugInfo(int JTI, SDValue Chain,
+                                            const SDLoc &DL) {
+  EVT PTy = getTargetLoweringInfo().getPointerTy(getDataLayout());
+  return getNode(ISD::JUMP_TABLE_DEBUG_INFO, DL, MVT::Glue, Chain,
+                 getTargetConstant(static_cast<uint64_t>(JTI), DL, PTy, true));
+}
+
 SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
                                       MaybeAlign Alignment, int Offset,
                                       bool isTarget, unsigned TargetFlags) {
@@ -2512,7 +2519,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 
     // icmp X, X -> true/false
     // icmp X, undef -> true/false because undef could be X.
-    if (N1 == N2)
+    if (N1.isUndef() || N2.isUndef() || N1 == N2)
       return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
   }
 
@@ -4092,6 +4099,49 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   return OFK_Sometime;
 }
 
+SelectionDAG::OverflowKind
+SelectionDAG::computeOverflowForUnsignedMul(SDValue N0, SDValue N1) const {
+  // X * 0 and X * 1 never overflow.
+  if (isNullConstant(N1) || isOneConstant(N1))
+    return OFK_Never;
+
+  KnownBits N0Known = computeKnownBits(N0);
+  KnownBits N1Known = computeKnownBits(N1);
+  ConstantRange N0Range = ConstantRange::fromKnownBits(N0Known, false);
+  ConstantRange N1Range = ConstantRange::fromKnownBits(N1Known, false);
+  return mapOverflowResult(N0Range.unsignedMulMayOverflow(N1Range));
+}
+
+SelectionDAG::OverflowKind
+SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
+  // X * 0 and X * 1 never overflow.
+  if (isNullConstant(N1) || isOneConstant(N1))
+    return OFK_Never;
+
+  // Get the size of the result.
+  unsigned BitWidth = N0.getScalarValueSizeInBits();
+
+  // Sum of the sign bits.
+  unsigned SignBits = ComputeNumSignBits(N0) + ComputeNumSignBits(N1);
+
+  // If we have enough sign bits, then there's no overflow.
+  if (SignBits > BitWidth + 1)
+    return OFK_Never;
+
+  if (SignBits == BitWidth + 1) {
+    // The overflow occurs when the true multiplication of the
+    // the operands is the minimum negative number.
+    KnownBits N0Known = computeKnownBits(N0);
+    KnownBits N1Known = computeKnownBits(N1);
+    // If one of the operands is non-negative, then there's no
+    // overflow.
+    if (N0Known.isNonNegative() || N1Known.isNonNegative())
+      return OFK_Never;
+  }
+
+  return OFK_Sometime;
+}
+
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
@@ -5000,6 +5050,15 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   return true;
 }
 
+bool SelectionDAG::isADDLike(SDValue Op) const {
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode == ISD::OR)
+    return haveNoCommonBitsSet(Op.getOperand(0), Op.getOperand(1));
+  if (Opcode == ISD::XOR)
+    return isMinSignedConstant(Op.getOperand(1));
+  return false;
+}
+
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   if ((Op.getOpcode() != ISD::ADD && Op.getOpcode() != ISD::OR) ||
       !isa<ConstantSDNode>(Op.getOperand(1)))
@@ -5045,6 +5104,7 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FCANONICALIZE:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
   case ISD::FTRUNC:
   case ISD::FFLOOR:
   case ISD::FCEIL:
@@ -5504,161 +5564,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                               SDValue N1, const SDNodeFlags Flags) {
   assert(N1.getOpcode() != ISD::DELETED_NODE && "Operand is DELETED_NODE!");
-  // Constant fold unary operations with an integer constant operand. Even
-  // opaque constant will be folded, because the folding of unary operations
-  // doesn't create new constants with different values. Nevertheless, the
-  // opaque flag is preserved during folding to prevent future folding with
-  // other constants.
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
-    const APInt &Val = C->getAPIntValue();
-    switch (Opcode) {
-    default: break;
-    case ISD::SIGN_EXTEND:
-      return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
-                         C->isTargetOpcode(), C->isOpaque());
-    case ISD::TRUNCATE:
-      if (C->isOpaque())
-        break;
-      [[fallthrough]];
-    case ISD::ZERO_EXTEND:
-      return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
-                         C->isTargetOpcode(), C->isOpaque());
-    case ISD::ANY_EXTEND:
-      // Some targets like RISCV prefer to sign extend some types.
-      if (TLI->isSExtCheaperThanZExt(N1.getValueType(), VT))
-        return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
-                           C->isTargetOpcode(), C->isOpaque());
-      return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
-                         C->isTargetOpcode(), C->isOpaque());
-    case ISD::UINT_TO_FP:
-    case ISD::SINT_TO_FP: {
-      APFloat apf(EVTToAPFloatSemantics(VT),
-                  APInt::getZero(VT.getSizeInBits()));
-      (void)apf.convertFromAPInt(Val,
-                                 Opcode==ISD::SINT_TO_FP,
-                                 APFloat::rmNearestTiesToEven);
-      return getConstantFP(apf, DL, VT);
-    }
-    case ISD::BITCAST:
-      if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
-        return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
-      if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
-        return getConstantFP(APFloat(APFloat::IEEEsingle(), Val), DL, VT);
-      if (VT == MVT::f64 && C->getValueType(0) == MVT::i64)
-        return getConstantFP(APFloat(APFloat::IEEEdouble(), Val), DL, VT);
-      if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
-        return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
-      break;
-    case ISD::ABS:
-      return getConstant(Val.abs(), DL, VT, C->isTargetOpcode(),
-                         C->isOpaque());
-    case ISD::BITREVERSE:
-      return getConstant(Val.reverseBits(), DL, VT, C->isTargetOpcode(),
-                         C->isOpaque());
-    case ISD::BSWAP:
-      return getConstant(Val.byteSwap(), DL, VT, C->isTargetOpcode(),
-                         C->isOpaque());
-    case ISD::CTPOP:
-      return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
-                         C->isOpaque());
-    case ISD::CTLZ:
-    case ISD::CTLZ_ZERO_UNDEF:
-      return getConstant(Val.countl_zero(), DL, VT, C->isTargetOpcode(),
-                         C->isOpaque());
-    case ISD::CTTZ:
-    case ISD::CTTZ_ZERO_UNDEF:
-      return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
-                         C->isOpaque());
-    case ISD::FP16_TO_FP:
-    case ISD::BF16_TO_FP: {
-      bool Ignored;
-      APFloat FPV(Opcode == ISD::FP16_TO_FP ? APFloat::IEEEhalf()
-                                            : APFloat::BFloat(),
-                  (Val.getBitWidth() == 16) ? Val : Val.trunc(16));
-
-      // This can return overflow, underflow, or inexact; we don't care.
-      // FIXME need to be more flexible about rounding mode.
-      (void)FPV.convert(EVTToAPFloatSemantics(VT),
-                        APFloat::rmNearestTiesToEven, &Ignored);
-      return getConstantFP(FPV, DL, VT);
-    }
-    case ISD::STEP_VECTOR: {
-      if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
-        return V;
-      break;
-    }
-    }
-  }
-
-  // Constant fold unary operations with a floating point constant operand.
-  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N1)) {
-    APFloat V = C->getValueAPF();    // make copy
-    switch (Opcode) {
-    case ISD::FNEG:
-      V.changeSign();
-      return getConstantFP(V, DL, VT);
-    case ISD::FABS:
-      V.clearSign();
-      return getConstantFP(V, DL, VT);
-    case ISD::FCEIL: {
-      APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardPositive);
-      if (fs == APFloat::opOK || fs == APFloat::opInexact)
-        return getConstantFP(V, DL, VT);
-      break;
-    }
-    case ISD::FTRUNC: {
-      APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardZero);
-      if (fs == APFloat::opOK || fs == APFloat::opInexact)
-        return getConstantFP(V, DL, VT);
-      break;
-    }
-    case ISD::FFLOOR: {
-      APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardNegative);
-      if (fs == APFloat::opOK || fs == APFloat::opInexact)
-        return getConstantFP(V, DL, VT);
-      break;
-    }
-    case ISD::FP_EXTEND: {
-      bool ignored;
-      // This can return overflow, underflow, or inexact; we don't care.
-      // FIXME need to be more flexible about rounding mode.
-      (void)V.convert(EVTToAPFloatSemantics(VT),
-                      APFloat::rmNearestTiesToEven, &ignored);
-      return getConstantFP(V, DL, VT);
-    }
-    case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT: {
-      bool ignored;
-      APSInt IntVal(VT.getSizeInBits(), Opcode == ISD::FP_TO_UINT);
-      // FIXME need to be more flexible about rounding mode.
-      APFloat::opStatus s =
-          V.convertToInteger(IntVal, APFloat::rmTowardZero, &ignored);
-      if (s == APFloat::opInvalidOp) // inexact is OK, in fact usual
-        break;
-      return getConstant(IntVal, DL, VT);
-    }
-    case ISD::BITCAST:
-      if (VT == MVT::i16 && C->getValueType(0) == MVT::f16)
-        return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      if (VT == MVT::i16 && C->getValueType(0) == MVT::bf16)
-        return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
-        return getConstant((uint32_t)V.bitcastToAPInt().getZExtValue(), DL, VT);
-      if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
-        return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
-      break;
-    case ISD::FP_TO_FP16:
-    case ISD::FP_TO_BF16: {
-      bool Ignored;
-      // This can return overflow, underflow, or inexact; we don't care.
-      // FIXME need to be more flexible about rounding mode.
-      (void)V.convert(Opcode == ISD::FP_TO_FP16 ? APFloat::IEEEhalf()
-                                                : APFloat::BFloat(),
-                      APFloat::rmNearestTiesToEven, &Ignored);
-      return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
-    }
-    }
-  }
 
   // Constant fold unary operations with a vector integer or float operand.
   switch (Opcode) {
@@ -5674,12 +5579,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::FP_EXTEND:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+  case ISD::FP_TO_FP16:
+  case ISD::FP_TO_BF16:
   case ISD::TRUNCATE:
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::UINT_TO_FP:
   case ISD::SINT_TO_FP:
+  case ISD::FP16_TO_FP:
+  case ISD::BF16_TO_FP:
+  case ISD::BITCAST:
   case ISD::ABS:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
@@ -5687,7 +5597,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTLZ_ZERO_UNDEF:
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::CTPOP: {
+  case ISD::CTPOP:
+  case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
       return Fold;
@@ -6134,6 +6045,171 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
   if (isUndef(Opcode, Ops))
     return getUNDEF(VT);
+
+  // Handle unary special cases.
+  if (NumOps == 1) {
+    SDValue N1 = Ops[0];
+
+    // Constant fold unary operations with an integer constant operand. Even
+    // opaque constant will be folded, because the folding of unary operations
+    // doesn't create new constants with different values. Nevertheless, the
+    // opaque flag is preserved during folding to prevent future folding with
+    // other constants.
+    if (auto *C = dyn_cast<ConstantSDNode>(N1)) {
+      const APInt &Val = C->getAPIntValue();
+      switch (Opcode) {
+      case ISD::SIGN_EXTEND:
+        return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
+                           C->isTargetOpcode(), C->isOpaque());
+      case ISD::TRUNCATE:
+        if (C->isOpaque())
+          break;
+        [[fallthrough]];
+      case ISD::ZERO_EXTEND:
+        return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
+                           C->isTargetOpcode(), C->isOpaque());
+      case ISD::ANY_EXTEND:
+        // Some targets like RISCV prefer to sign extend some types.
+        if (TLI->isSExtCheaperThanZExt(N1.getValueType(), VT))
+          return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
+                             C->isTargetOpcode(), C->isOpaque());
+        return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
+                           C->isTargetOpcode(), C->isOpaque());
+      case ISD::ABS:
+        return getConstant(Val.abs(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::BITREVERSE:
+        return getConstant(Val.reverseBits(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::BSWAP:
+        return getConstant(Val.byteSwap(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::CTPOP:
+        return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::CTLZ:
+      case ISD::CTLZ_ZERO_UNDEF:
+        return getConstant(Val.countl_zero(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::CTTZ:
+      case ISD::CTTZ_ZERO_UNDEF:
+        return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
+      case ISD::UINT_TO_FP:
+      case ISD::SINT_TO_FP: {
+        APFloat apf(EVTToAPFloatSemantics(VT),
+                    APInt::getZero(VT.getSizeInBits()));
+        (void)apf.convertFromAPInt(Val, Opcode == ISD::SINT_TO_FP,
+                                   APFloat::rmNearestTiesToEven);
+        return getConstantFP(apf, DL, VT);
+      }
+      case ISD::FP16_TO_FP:
+      case ISD::BF16_TO_FP: {
+        bool Ignored;
+        APFloat FPV(Opcode == ISD::FP16_TO_FP ? APFloat::IEEEhalf()
+                                              : APFloat::BFloat(),
+                    (Val.getBitWidth() == 16) ? Val : Val.trunc(16));
+
+        // This can return overflow, underflow, or inexact; we don't care.
+        // FIXME need to be more flexible about rounding mode.
+        (void)FPV.convert(EVTToAPFloatSemantics(VT),
+                          APFloat::rmNearestTiesToEven, &Ignored);
+        return getConstantFP(FPV, DL, VT);
+      }
+      case ISD::STEP_VECTOR:
+        if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
+          return V;
+        break;
+      case ISD::BITCAST:
+        if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
+          return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
+        if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
+          return getConstantFP(APFloat(APFloat::IEEEsingle(), Val), DL, VT);
+        if (VT == MVT::f64 && C->getValueType(0) == MVT::i64)
+          return getConstantFP(APFloat(APFloat::IEEEdouble(), Val), DL, VT);
+        if (VT == MVT::f128 && C->getValueType(0) == MVT::i128)
+          return getConstantFP(APFloat(APFloat::IEEEquad(), Val), DL, VT);
+        break;
+      }
+    }
+
+    // Constant fold unary operations with a floating point constant operand.
+    if (auto *C = dyn_cast<ConstantFPSDNode>(N1)) {
+      APFloat V = C->getValueAPF(); // make copy
+      switch (Opcode) {
+      case ISD::FNEG:
+        V.changeSign();
+        return getConstantFP(V, DL, VT);
+      case ISD::FABS:
+        V.clearSign();
+        return getConstantFP(V, DL, VT);
+      case ISD::FCEIL: {
+        APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardPositive);
+        if (fs == APFloat::opOK || fs == APFloat::opInexact)
+          return getConstantFP(V, DL, VT);
+        return SDValue();
+      }
+      case ISD::FTRUNC: {
+        APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardZero);
+        if (fs == APFloat::opOK || fs == APFloat::opInexact)
+          return getConstantFP(V, DL, VT);
+        return SDValue();
+      }
+      case ISD::FFLOOR: {
+        APFloat::opStatus fs = V.roundToIntegral(APFloat::rmTowardNegative);
+        if (fs == APFloat::opOK || fs == APFloat::opInexact)
+          return getConstantFP(V, DL, VT);
+        return SDValue();
+      }
+      case ISD::FP_EXTEND: {
+        bool ignored;
+        // This can return overflow, underflow, or inexact; we don't care.
+        // FIXME need to be more flexible about rounding mode.
+        (void)V.convert(EVTToAPFloatSemantics(VT), APFloat::rmNearestTiesToEven,
+                        &ignored);
+        return getConstantFP(V, DL, VT);
+      }
+      case ISD::FP_TO_SINT:
+      case ISD::FP_TO_UINT: {
+        bool ignored;
+        APSInt IntVal(VT.getSizeInBits(), Opcode == ISD::FP_TO_UINT);
+        // FIXME need to be more flexible about rounding mode.
+        APFloat::opStatus s =
+            V.convertToInteger(IntVal, APFloat::rmTowardZero, &ignored);
+        if (s == APFloat::opInvalidOp) // inexact is OK, in fact usual
+          break;
+        return getConstant(IntVal, DL, VT);
+      }
+      case ISD::FP_TO_FP16:
+      case ISD::FP_TO_BF16: {
+        bool Ignored;
+        // This can return overflow, underflow, or inexact; we don't care.
+        // FIXME need to be more flexible about rounding mode.
+        (void)V.convert(Opcode == ISD::FP_TO_FP16 ? APFloat::IEEEhalf()
+                                                  : APFloat::BFloat(),
+                        APFloat::rmNearestTiesToEven, &Ignored);
+        return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
+      }
+      case ISD::BITCAST:
+        if (VT == MVT::i16 && C->getValueType(0) == MVT::f16)
+          return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL,
+                             VT);
+        if (VT == MVT::i16 && C->getValueType(0) == MVT::bf16)
+          return getConstant((uint16_t)V.bitcastToAPInt().getZExtValue(), DL,
+                             VT);
+        if (VT == MVT::i32 && C->getValueType(0) == MVT::f32)
+          return getConstant((uint32_t)V.bitcastToAPInt().getZExtValue(), DL,
+                             VT);
+        if (VT == MVT::i64 && C->getValueType(0) == MVT::f64)
+          return getConstant(V.bitcastToAPInt().getZExtValue(), DL, VT);
+        break;
+      }
+    }
+
+    // Early-out if we failed to constant fold a bitcast.
+    if (Opcode == ISD::BITCAST)
+      return SDValue();
+  }
 
   // Handle binops special cases.
   if (NumOps == 2) {
@@ -7733,13 +7809,28 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
     }
 
     // If this store is smaller than the largest store see whether we can get
-    // the smaller value for free with a truncate.
+    // the smaller value for free with a truncate or extract vector element and
+    // then store.
     SDValue Value = MemSetValue;
     if (VT.bitsLT(LargestVT)) {
+      unsigned Index;
+      unsigned NElts = LargestVT.getSizeInBits() / VT.getSizeInBits();
+      EVT SVT = EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), NElts);
       if (!LargestVT.isVector() && !VT.isVector() &&
           TLI.isTruncateFree(LargestVT, VT))
         Value = DAG.getNode(ISD::TRUNCATE, dl, VT, MemSetValue);
-      else
+      else if (LargestVT.isVector() && !VT.isVector() &&
+               TLI.shallExtractConstSplatVectorElementToStore(
+                   LargestVT.getTypeForEVT(*DAG.getContext()),
+                   VT.getSizeInBits(), Index) &&
+               TLI.isTypeLegal(SVT) &&
+               LargestVT.getSizeInBits() == SVT.getSizeInBits()) {
+        // Target which can combine store(extractelement VectorTy, Idx) can get
+        // the smaller value for free.
+        SDValue TailValue = DAG.getNode(ISD::BITCAST, dl, SVT, MemSetValue);
+        Value = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, TailValue,
+                            DAG.getVectorIdxConstant(Index, dl));
+      } else
         Value = getMemsetValue(Src, VT, DAG, dl);
     }
     assert(Value.getValueType() == VT && "Value with wrong type.");

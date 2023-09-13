@@ -616,6 +616,19 @@ gpu.module @test_module_30 {
   }
 }
 
+gpu.module @test_module_31 {
+  // CHECK: llvm.func @__nv_fmodf(f32, f32) -> f32
+  // CHECK: llvm.func @__nv_fmod(f64, f64) -> f64
+  // CHECK-LABEL: func @gpu_fmod
+  func.func @gpu_fmod(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = arith.remf %arg_f32, %arg_f32 : f32
+    // CHECK: llvm.call @__nv_fmodf(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+    %result64 = arith.remf %arg_f64, %arg_f64 : f64
+    // CHECK: llvm.call @__nv_fmod(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
+    func.return %result32, %result64 : f32, f64
+  }
+}
+
 transform.sequence failures(propagate) {
 ^bb1(%toplevel_module: !transform.any_op):
   %gpu_module = transform.structured.match ops{["gpu.module"]} in %toplevel_module

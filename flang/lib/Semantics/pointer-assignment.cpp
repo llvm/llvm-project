@@ -360,7 +360,8 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
-  if (const Symbol * symbol{d.GetSymbol()}) {
+  const Symbol *symbol{d.GetSymbol()};
+  if (symbol) {
     if (const auto *subp{
             symbol->GetUltimate().detailsIf<SubprogramDetails>()}) {
       if (subp->stmtFunction()) {
@@ -377,6 +378,10 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
     }
   }
   if (auto chars{Procedure::Characterize(d, foldingContext_)}) {
+    // Disregard the elemental attribute of RHS intrinsics.
+    if (symbol && symbol->GetUltimate().attrs().test(Attr::INTRINSIC)) {
+      chars->attrs.reset(Procedure::Attr::Elemental);
+    }
     return Check(d.GetName(), false, &*chars, d.GetSpecificIntrinsic());
   } else {
     return Check(d.GetName(), false);
@@ -517,8 +522,8 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
       .Check(rhs);
 }
 
-bool CheckInitialTarget(SemanticsContext &context, const SomeExpr &pointer,
-    const SomeExpr &init, const Scope &scope) {
+bool CheckInitialDataPointerTarget(SemanticsContext &context,
+    const SomeExpr &pointer, const SomeExpr &init, const Scope &scope) {
   return evaluate::IsInitialDataTarget(
              init, &context.foldingContext().messages()) &&
       CheckPointerAssignment(context, pointer, init, scope);

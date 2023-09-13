@@ -26,7 +26,7 @@ public:
   /// Constructs the data layouts.
   explicit DataLayoutAnalysis(Operation *root);
 
-  /// Returns the data layout active active at the given operation, that is the
+  /// Returns the data layout active at the given operation, that is the
   /// data layout specified by the closest ancestor that can specify one, or the
   /// default layout if there is no such ancestor.
   const DataLayout &getAbove(Operation *operation) const;

@@ -140,23 +140,76 @@ def testAttributes():
 def attrBuilder():
     with Context() as ctx, Location.unknown():
         ctx.allow_unregistered_dialects = True
+        # CHECK: python_test.attributes_op
         op = test.AttributesOp(
-            x_bool=True,
-            x_i16=1,
-            x_i32=2,
-            x_i64=3,
-            x_si16=-1,
-            x_si32=-2,
-            x_f32=1.5,
-            x_f64=2.5,
-            x_str="x_str",
-            x_i32_array=[1, 2, 3],
-            x_i64_array=[4, 5, 6],
-            x_f32_array=[1.5, -2.5, 3.5],
-            x_f64_array=[4.5, 5.5, -6.5],
-            x_i64_dense=[1, 2, 3, 4, 5, 6],
+            # CHECK-DAG: x_affinemap = affine_map<() -> (2)>
+            x_affinemap=AffineMap.get_constant(2),
+            # CHECK-DAG: x_affinemaparr = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+            x_affinemaparr=[AffineMap.get_identity(3)],
+            # CHECK-DAG: x_arr = [true, "x"]
+            x_arr=[BoolAttr.get(True), StringAttr.get("x")],
+            x_boolarr=[False, True],  # CHECK-DAG: x_boolarr = [false, true]
+            x_bool=True,  # CHECK-DAG: x_bool = true
+            x_dboolarr=[True, False],  # CHECK-DAG: x_dboolarr = array<i1: true, false>
+            x_df16arr=[21, 22],  # CHECK-DAG: x_df16arr = array<i16: 21, 22>
+            # CHECK-DAG: x_df32arr = array<f32: 2.300000e+01, 2.400000e+01>
+            x_df32arr=[23, 24],
+            # CHECK-DAG: x_df64arr = array<f64: 2.500000e+01, 2.600000e+01>
+            x_df64arr=[25, 26],
+            x_di32arr=[0, 1],  # CHECK-DAG: x_di32arr = array<i32: 0, 1>
+            # CHECK-DAG: x_di64arr = array<i64: 1, 2>
+            x_di64arr=[1, 2],
+            x_di8arr=[2, 3],  # CHECK-DAG: x_di8arr = array<i8: 2, 3>
+            # CHECK-DAG: x_dictarr = [{a = false}]
+            x_dictarr=[{"a": BoolAttr.get(False)}],
+            x_dict={"b": BoolAttr.get(True)},  # CHECK-DAG: x_dict = {b = true}
+            x_f32=-2.25,  # CHECK-DAG: x_f32 = -2.250000e+00 : f32
+            # CHECK-DAG: x_f32arr = [2.000000e+00 : f32, 3.000000e+00 : f32]
+            x_f32arr=[2.0, 3.0],
+            x_f64=4.25,  # CHECK-DAG: x_f64 = 4.250000e+00 : f64
+            x_f64arr=[4.0, 8.0],  # CHECK-DAG: x_f64arr = [4.000000e+00, 8.000000e+00]
+            # CHECK-DAG: x_f64elems = dense<[3.952530e-323, 7.905050e-323]> : tensor<2xf64>
+            x_f64elems=[8.0, 16.0],
+            # CHECK-DAG: x_flatsymrefarr = [@symbol1, @symbol2]
+            x_flatsymrefarr=["symbol1", "symbol2"],
+            x_flatsymref="symbol3",  # CHECK-DAG: x_flatsymref = @symbol3
+            x_i1=0,  # CHECK-DAG: x_i1 = false
+            x_i16=42,  # CHECK-DAG: x_i16 = 42 : i16
+            x_i32=6,  # CHECK-DAG: x_i32 = 6 : i32
+            x_i32arr=[4, 5],  # CHECK-DAG: x_i32arr = [4 : i32, 5 : i32]
+            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xsi32>
+            x_i64=9,  # CHECK-DAG: x_i64 = 9 : i64
+            x_i64arr=[7, 8],  # CHECK-DAG: x_i64arr = [7, 8]
+            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xsi64>
+            x_i64svecarr=[10, 11],  # CHECK-DAG: x_i64svecarr = [10, 11]
+            x_i8=11,  # CHECK-DAG: x_i8 = 11 : i8
+            x_idx=10,  # CHECK-DAG: x_idx = 10 : index
+            # CHECK-DAG: x_idxelems = dense<[11, 12]> : tensor<2xindex>
+            x_idxelems=[11, 12],
+            # CHECK-DAG: x_idxlistarr = [{{\[}}13], [14, 15]]
+            x_idxlistarr=[[13], [14, 15]],
+            x_si1=-1,  # CHECK-DAG: x_si1 = -1 : si1
+            x_si16=-2,  # CHECK-DAG: x_si16 = -2 : si16
+            x_si32=-3,  # CHECK-DAG: x_si32 = -3 : si32
+            x_si64=-123,  # CHECK-DAG: x_si64 = -123 : si64
+            x_si8=-4,  # CHECK-DAG: x_si8 = -4 : si8
+            x_strarr=["hello", "world"],  # CHECK-DAG: x_strarr = ["hello", "world"]
+            x_str="hello world!",  # CHECK-DAG: x_str = "hello world!"
+            # CHECK-DAG: x_symrefarr = [@flatsym, @deep::@sym]
+            x_symrefarr=["flatsym", ["deep", "sym"]],
+            x_symref=["deep", "sym2"],  # CHECK-DAG: x_symref = @deep::@sym2
+            x_sym="symbol",  # CHECK-DAG: x_sym = "symbol"
+            x_typearr=[F32Type.get()],  # CHECK-DAG: x_typearr = [f32]
+            x_type=F64Type.get(),  # CHECK-DAG: x_type = f64
+            x_ui1=1,  # CHECK-DAG: x_ui1 = 1 : ui1
+            x_ui16=2,  # CHECK-DAG: x_ui16 = 2 : ui16
+            x_ui32=3,  # CHECK-DAG: x_ui32 = 3 : ui32
+            x_ui64=4,  # CHECK-DAG: x_ui64 = 4 : ui64
+            x_ui8=5,  # CHECK-DAG: x_ui8 = 5 : ui8
+            x_unit=True,  # CHECK-DAG: x_unit
         )
-        print(op)
+        op.verify()
+        op.print(use_local_scope=True)
 
 
 # CHECK-LABEL: TEST: inferReturnTypes
@@ -247,7 +300,6 @@ def testOptionalOperandOp():
 
         module = Module.create()
         with InsertionPoint(module.body):
-
             op1 = test.OptionalOperandOp()
             # CHECK: op1.input is None: True
             print(f"op1.input is None: {op1.input is None}")

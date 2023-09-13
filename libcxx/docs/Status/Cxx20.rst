@@ -49,6 +49,15 @@ Paper Status
    .. [#note-P0883.2] P0883: ``ATOMIC_FLAG_INIT`` was marked deprecated in version 14.0, but was undeprecated with the implementation of LWG3659 in version 15.0.
    .. [#note-P2231] P2231: Optional is complete. The changes to variant haven't been implemented yet.
    .. [#note-P0660] P0660: Section 32.3 Stop Tokens is complete. ``jthread`` hasn't been implemented yet.
+   .. [#note-P0355] P0355: The implementation status is:
+
+      * ``Calendars`` mostly done in Clang 7
+      * ``Input parsers`` not done
+      * ``Stream output`` Obsolete due to `P1361R2 <https://wg21.link/P1361R2>`_ "Integration of chrono with text formatting"
+      * ``Time zone and leap seconds`` In Progress
+      * ``TAI clock`` not done
+      * ``GPS clock`` not done
+      * ``UTC clock`` not done
 
 .. _issues-status-cxx20:
 

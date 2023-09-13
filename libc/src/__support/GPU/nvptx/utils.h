@@ -111,14 +111,12 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 }
 
 /// Copies the value from the first active thread in the warp to the rest.
-[[clang::convergent]] LIBC_INLINE uint32_t broadcast_value(uint32_t x) {
-  // NOTE: This is not sufficient in all cases on Volta hardware or later. The
-  // lane mask returned here is not always the true lane mask used by the
-  // intrinsics in cases of incedental or enforced divergence by the user.
-  uint32_t lane_mask = static_cast<uint32_t>(get_lane_mask());
-  uint32_t id = __builtin_ffs(lane_mask) - 1;
+[[clang::convergent]] LIBC_INLINE uint32_t broadcast_value(uint64_t lane_mask,
+                                                           uint32_t x) {
+  uint32_t mask = static_cast<uint32_t>(lane_mask);
+  uint32_t id = __builtin_ffs(mask) - 1;
 #if __CUDA_ARCH__ >= 600
-  return __nvvm_shfl_sync_idx_i32(lane_mask, x, id, get_lane_size() - 1);
+  return __nvvm_shfl_sync_idx_i32(mask, x, id, get_lane_size() - 1);
 #else
   return __nvvm_shfl_idx_i32(x, id, get_lane_size() - 1);
 #endif
@@ -126,10 +124,11 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
 
 /// Returns a bitmask of threads in the current lane for which \p x is true.
 [[clang::convergent]] LIBC_INLINE uint64_t ballot(uint64_t lane_mask, bool x) {
+  uint32_t mask = static_cast<uint32_t>(lane_mask);
 #if __CUDA_ARCH__ >= 600
-  return __nvvm_vote_ballot_sync(static_cast<uint32_t>(lane_mask), x);
+  return __nvvm_vote_ballot_sync(mask, x);
 #else
-  return static_cast<uint32_t>(lane_mask) & __nvvm_vote_ballot(x);
+  return mask & __nvvm_vote_ballot(x);
 #endif
 }
 /// Waits for all the threads in the block to converge and issues a fence.
@@ -152,6 +151,12 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
   uint64_t nsecs;
   LIBC_INLINE_ASM("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
   return nsecs;
+}
+
+/// Terminates execution of the calling thread.
+[[noreturn]] LIBC_INLINE void end_program() {
+  LIBC_INLINE_ASM("exit;" ::: "memory");
+  __builtin_unreachable();
 }
 
 } // namespace gpu

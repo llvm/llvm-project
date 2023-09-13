@@ -491,7 +491,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   llvm::SaveAndRestore SARSkipping(SkippingExcludedConditionalBlock, true);
 
   ++NumSkipped;
-  assert(!CurTokenLexer && CurPPLexer && "Lexing a macro, not a file?");
+  assert(!CurTokenLexer && "Conditional PP block cannot appear in a macro!");
+  assert(CurPPLexer && "Conditional PP block must be in a file!");
+  assert(CurLexer && "Conditional PP block but no current lexer set!");
 
   if (PreambleConditionalStack.reachedEOFWhileSkipping())
     PreambleConditionalStack.clearSkipInfo();
@@ -872,7 +874,7 @@ Module *Preprocessor::getModuleForLocation(SourceLocation Loc,
              : HeaderInfo.lookupModule(getLangOpts().CurrentModule, Loc);
 }
 
-const FileEntry *
+OptionalFileEntryRef
 Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
                                                SourceLocation Loc) {
   Module *IncM = getModuleForLocation(
@@ -918,7 +920,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
       // make a particular module visible. Let the caller know they should
       // suggest an import instead.
       if (getLangOpts().ObjC || getLangOpts().CPlusPlusModules)
-        return nullptr;
+        return std::nullopt;
 
       // If this is an accessible, non-textual header of M's top-level module
       // that transitively includes the given location and makes the
@@ -929,7 +931,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
     // FIXME: If we're bailing out due to a private header, we shouldn't suggest
     // an import either.
     if (InPrivateHeader)
-      return nullptr;
+      return std::nullopt;
 
     // If the header is includable and has an include guard, assume the
     // intended way to expose its contents is by #include, not by importing a
@@ -940,7 +942,7 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
     Loc = SM.getIncludeLoc(ID);
   }
 
-  return nullptr;
+  return std::nullopt;
 }
 
 OptionalFileEntryRef Preprocessor::LookupFile(
@@ -1039,14 +1041,14 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     return FE;
   }
 
-  const FileEntry *CurFileEnt;
+  OptionalFileEntryRef CurFileEnt;
   // Otherwise, see if this is a subframework header.  If so, this is relative
   // to one of the headers on the #include stack.  Walk the list of the current
   // headers on the #include stack and pass them to HeaderInfo.
   if (IsFileLexer()) {
     if ((CurFileEnt = CurPPLexer->getFileEntry())) {
       if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
-              Filename, CurFileEnt, SearchPath, RelativePath, RequestingModule,
+              Filename, *CurFileEnt, SearchPath, RelativePath, RequestingModule,
               SuggestedModule)) {
         if (SuggestedModule && !LangOpts.AsmPreprocessor)
           HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
@@ -1061,7 +1063,7 @@ OptionalFileEntryRef Preprocessor::LookupFile(
     if (IsFileLexer(ISEntry)) {
       if ((CurFileEnt = ISEntry.ThePPLexer->getFileEntry())) {
         if (OptionalFileEntryRef FE = HeaderInfo.LookupSubframeworkHeader(
-                Filename, CurFileEnt, SearchPath, RelativePath,
+                Filename, *CurFileEnt, SearchPath, RelativePath,
                 RequestingModule, SuggestedModule)) {
           if (SuggestedModule && !LangOpts.AsmPreprocessor)
             HeaderInfo.getModuleMap().diagnoseHeaderInclusion(

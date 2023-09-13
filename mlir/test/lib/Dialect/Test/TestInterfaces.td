@@ -134,4 +134,43 @@ class TestEffects<list<TestEffect> effects = []>
 
 def TestConcreteEffect : TestEffect<"TestEffects::Concrete">;
 
+def TestOptionallyImplementedOpInterface
+    : OpInterface<"TestOptionallyImplementedOpInterface"> {
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
+  ];
+
+  let extraClassOf = [{
+    return $_op.getImplementsInterface();
+  }];
+}
+
+def TestOptionallyImplementedAttrInterface
+    : AttrInterface<"TestOptionallyImplementedAttrInterface"> {
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
+  ];
+
+  let extraClassOf = [{
+    return $_attr.getImplementsInterface();
+  }];
+}
+
+def TestOptionallyImplementedTypeInterface
+    : TypeInterface<"TestOptionallyImplementedTypeInterface"> {
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<"", "bool", "getImplementsInterface", (ins)>,
+  ];
+
+  let extraClassOf = [{
+    return $_type.getImplementsInterface();
+  }];
+}
+
 #endif // MLIR_TEST_DIALECT_TEST_INTERFACES

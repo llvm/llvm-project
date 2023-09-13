@@ -2810,7 +2810,7 @@ static int __kmp_affinity_cmp_ProcCpuInfo_phys_id(const void *a,
 // Set the array sizes for the hierarchy layers
 static void __kmp_dispatch_set_hierarchy_values() {
   // Set the maximum number of L1's to number of cores
-  // Set the maximum number of L2's to to either number of cores / 2 for
+  // Set the maximum number of L2's to either number of cores / 2 for
   // Intel(R) Xeon Phi(TM) coprocessor formally codenamed Knights Landing
   // Or the number of cores for Intel(R) Xeon(R) processors
   // Set the maximum number of NUMA nodes and L3's to number of packages
@@ -3316,7 +3316,7 @@ restart_radix_check:
         return false;
       }
 
-      // If the thread ids were not specified and we see entries entries that
+      // If the thread ids were not specified and we see entries that
       // are duplicates, start the loop over and assign the thread ids manually.
       assign_thread_ids = true;
       goto restart_radix_check;

@@ -228,9 +228,9 @@ void StructuredData::Array::GetDescription(lldb_private::Stream &s) const {
 
 void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
   size_t indentation_level = s.GetIndentLevel();
-  for (const auto &pair : m_dict) {
+  for (auto iter = m_dict.begin(); iter != m_dict.end(); iter++) {
     // Sanitize.
-    if (pair.first.IsNull() || pair.first.IsEmpty() || !pair.second)
+    if (iter->first.IsNull() || iter->first.IsEmpty() || !iter->second)
       continue;
 
     // Reset original indentation level.
@@ -238,11 +238,11 @@ void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
     s.Indent();
 
     // Print key.
-    s.Printf("%s:", pair.first.AsCString());
+    s.Printf("%s:", iter->first.AsCString());
 
     // Return to new line and increase indentation if value is record type.
     // Otherwise add spacing.
-    bool should_indent = IsRecordType(pair.second);
+    bool should_indent = IsRecordType(iter->second);
     if (should_indent) {
       s.EOL();
       s.IndentMore();
@@ -251,8 +251,8 @@ void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
     }
 
     // Print value and new line if now last pair.
-    pair.second->GetDescription(s);
-    if (pair != *(--m_dict.end()))
+    iter->second->GetDescription(s);
+    if (std::next(iter) != m_dict.end())
       s.EOL();
 
     // Reset indentation level if it was incremented previously.

@@ -32,10 +32,6 @@
 // RUN: %clang -target armv7-unknown-rtems-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,MCOUNT
 // RUN: %clang -target aarch64-unknown-rtems-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,MCOUNT
 // RUN: %clang -target aarch64-unknown-rtems-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s -check-prefixes=CHECK,MCOUNT
-// RUN: %clang -target armv7-unknown-cloudabi-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,MCOUNT
-// RUN: %clang -target armv7-unknown-cloudabi-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,MCOUNT
-// RUN: %clang -target aarch64-unknown-cloudabi-gnueabihf -pg -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,MCOUNT
-// RUN: %clang -target aarch64-unknown-cloudabi-gnueabihf -meabi gnu -pg -S -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,MCOUNT
 
 int f() {
   return 0;

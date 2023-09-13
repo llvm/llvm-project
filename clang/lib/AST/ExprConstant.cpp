@@ -3463,8 +3463,7 @@ static APSInt extractStringLiteralCharacter(EvalInfo &Info, const Expr *Lit,
   assert(CAT && "string literal isn't an array");
   QualType CharType = CAT->getElementType();
   assert(CharType->isIntegerType() && "unexpected character type");
-
-  APSInt Value(S->getCharByteWidth() * Info.Ctx.getCharWidth(),
+  APSInt Value(Info.Ctx.getTypeSize(CharType),
                CharType->isUnsignedIntegerType());
   if (Index < S->getLength())
     Value = S->getCodeUnit(Index);
@@ -3487,7 +3486,7 @@ static void expandStringLiteral(EvalInfo &Info, const StringLiteral *S,
   unsigned Elts = CAT->getSize().getZExtValue();
   Result = APValue(APValue::UninitArray(),
                    std::min(S->getLength(), Elts), Elts);
-  APSInt Value(S->getCharByteWidth() * Info.Ctx.getCharWidth(),
+  APSInt Value(Info.Ctx.getTypeSize(CharType),
                CharType->isUnsignedIntegerType());
   if (Result.hasArrayFiller())
     Result.getArrayFiller() = APValue(Value);
@@ -3712,7 +3711,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
          !isValidIndeterminateAccess(handler.AccessKind))) {
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind << O->isIndeterminate();
+            << handler.AccessKind << O->isIndeterminate()
+            << E->getSourceRange();
       return handler.failed();
     }
 
@@ -4444,7 +4444,8 @@ struct CompoundAssignSubobjectHandler {
       return foundVector(Subobj, SubobjType);
     case APValue::Indeterminate:
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
-          << /*read of=*/0 << /*uninitialized object=*/1;
+          << /*read of=*/0 << /*uninitialized object=*/1
+          << E->getLHS()->getSourceRange();
       return false;
     default:
       // FIXME: can this happen?
@@ -7528,6 +7529,9 @@ public:
     return Error(E);
   }
 
+  bool VisitPredefinedExpr(const PredefinedExpr *E) {
+    return StmtVisitorTy::Visit(E->getFunctionName());
+  }
   bool VisitConstantExpr(const ConstantExpr *E) {
     if (E->hasAPValueResult())
       return DerivedSuccess(E->getAPValueResult(), E);

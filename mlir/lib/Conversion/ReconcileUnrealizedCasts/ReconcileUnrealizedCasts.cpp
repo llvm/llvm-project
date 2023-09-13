@@ -27,7 +27,7 @@ namespace {
 /// For example, the DAGs `A -> B -> C -> B -> A` and `A -> B -> C -> A`
 /// represent a noop within the IR, and thus the initial input values can be
 /// propagated.
-/// The same does not hold for 'open' chains chains of casts, such as
+/// The same does not hold for 'open' chains of casts, such as
 /// `A -> B -> C`. In this last case there is no cycle among the types and thus
 /// the conversion is incomplete. The same hold for 'closed' chains like
 /// `A -> B -> A`, but with the result of type `B` being used by some non-cast

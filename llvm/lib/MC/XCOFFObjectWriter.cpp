@@ -697,7 +697,8 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
   const uint32_t Index = getIndex(SymA, SymASec);
   if (Type == XCOFF::RelocationType::R_POS ||
       Type == XCOFF::RelocationType::R_TLS ||
-      Type == XCOFF::RelocationType::R_TLS_LE)
+      Type == XCOFF::RelocationType::R_TLS_LE ||
+      Type == XCOFF::RelocationType::R_TLS_IE)
     // The FixedValue should be symbol's virtual address in this object file
     // plus any constant value that we might get.
     FixedValue = getVirtualAddress(SymA, SymASec) + Target.getConstant();
@@ -1562,7 +1563,7 @@ void XCOFFObjectWriter::writeSectionForControlSectionEntry(
   }
 
   // The size of the tail padding in a section is the end virtual address of
-  // the current section minus the the end virtual address of the last csect
+  // the current section minus the end virtual address of the last csect
   // in that section.
   if (uint64_t PaddingSize =
           CsectEntry.Address + CsectEntry.Size - CurrentAddressLocation) {
