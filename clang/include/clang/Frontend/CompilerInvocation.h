@@ -400,6 +400,9 @@ public:
     deep_copy_assign(X);
   }
 
+  CowCompilerInvocation(CompilerInvocation &&X)
+      : CompilerInvocationBase(std::move(X)) {}
+
   // Const getters are inherited from the base class.
 
   /// Mutable getters.
