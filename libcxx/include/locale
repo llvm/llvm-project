@@ -1085,7 +1085,7 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     int __base = 16;
     // Stage 2
     char_type __atoms[26];
-    char_type __thousands_sep = 0;
+    char_type __thousands_sep = char_type();
     string __grouping;
     std::use_facet<ctype<_CharT> >(__iob.getloc()).widen(__num_get_base::__src,
                                                          __num_get_base::__src + 26, __atoms);
