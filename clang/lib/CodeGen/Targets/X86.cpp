@@ -820,8 +820,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     // alignment from the record layout, since that may be less than the
     // regular type alignment, and types with required alignment of less than 4
     // bytes are not passed indirectly.
-    if (IsWin32StructABI && (!State.Required.allowsOptionalArgs() ||
-                             ArgIndex < State.Required.getNumRequiredArgs())) {
+    if (IsWin32StructABI && State.Required.isRequiredArg(ArgIndex)) {
       unsigned AlignInBits = 0;
       if (RT) {
         const ASTRecordLayout &Layout =
