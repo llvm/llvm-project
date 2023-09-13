@@ -11650,10 +11650,7 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
   if (SDValue SplatVal = DAG.getSplatValue(Index);
       SplatVal && !isNullConstant(SplatVal) &&
       SplatVal.getValueType() == VT) {
-    if (isNullConstant(BasePtr))
-      BasePtr = SplatVal;
-    else
-      BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
+    BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
     Index = DAG.getSplat(Index.getValueType(), DL, DAG.getConstant(0, DL, VT));
     return true;
   }
@@ -11663,19 +11660,13 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
 
   if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(0));
       SplatVal && SplatVal.getValueType() == VT) {
-    if (isNullConstant(BasePtr))
-      BasePtr = SplatVal;
-    else
-      BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
+    BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
     Index = Index.getOperand(1);
     return true;
   }
   if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(1));
       SplatVal && SplatVal.getValueType() == VT) {
-    if (isNullConstant(BasePtr))
-      BasePtr = SplatVal;
-    else
-      BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
+    BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
     Index = Index.getOperand(0);
     return true;
   }
