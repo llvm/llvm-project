@@ -31,62 +31,53 @@ static const char *const ErrorMsg =
     "A pointer to member virtual function shall only be tested for equality "
     "with null-pointer-constant.";
 
-static const Expr *removeImplicitCast(const Expr *E) {
-  while (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-    E = ICE->getSubExpr();
-  return E;
-}
-
 } // namespace
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
 
-  auto DirectMemberPointer = unaryOperator(
+  auto DirectMemberVirtualFunctionPointer = unaryOperator(
       allOf(hasOperatorName("&"),
             hasUnaryOperand(declRefExpr(to(cxxMethodDecl(isVirtual()))))));
-  auto IndirectMemberPointer = ignoringImpCasts(declRefExpr());
-
-  auto BinaryOperatorMatcher = [](auto &&Matcher) {
-    return binaryOperator(allOf(hasAnyOperatorName("==", "!="),
-                                hasEitherOperand(hasType(memberPointerType(
-                                    pointee(functionType())))),
-                                hasEitherOperand(Matcher)),
-                          unless(hasEitherOperand(
-                              castExpr(hasCastKind(CK_NullToMemberPointer)))));
-  };
+  auto IndirectMemberPointer =
+      ignoringImpCasts(declRefExpr().bind("indirect_member_pointer"));
 
   Finder->addMatcher(
-      BinaryOperatorMatcher(DirectMemberPointer).bind("direct_member_pointer"),
+      binaryOperator(
+          allOf(hasAnyOperatorName("==", "!="),
+                hasEitherOperand(
+                    hasType(memberPointerType(pointee(functionType())))),
+                anyOf(hasEitherOperand(DirectMemberVirtualFunctionPointer),
+                      hasEitherOperand(IndirectMemberPointer)),
+                unless(hasEitherOperand(
+                    castExpr(hasCastKind(CK_NullToMemberPointer))))))
+          .bind("binary_operator"),
       this);
-
-  Finder->addMatcher(BinaryOperatorMatcher(IndirectMemberPointer)
-                         .bind("indirect_member_pointer"),
-                     this);
 }
 
 void ComparePointerToMemberVirtualFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
-  if (const auto *DirectCompare =
-          Result.Nodes.getNodeAs<BinaryOperator>("direct_member_pointer")) {
-    diag(DirectCompare->getOperatorLoc(), ErrorMsg);
-  } else if (const auto *IndirectCompare =
-                 Result.Nodes.getNodeAs<BinaryOperator>(
-                     "indirect_member_pointer")) {
-    const Expr *E = removeImplicitCast(IndirectCompare->getLHS());
-    if (!isa<DeclRefExpr>(E))
-      E = removeImplicitCast(IndirectCompare->getRHS());
-    const auto *MPT = cast<MemberPointerType>(E->getType().getCanonicalType());
-    llvm::SmallVector<SourceLocation, 4U> SameSignatureVirtualMethods{};
-    for (const auto *D : MPT->getClass()->getAsCXXRecordDecl()->decls())
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-        if (MD->isVirtual() && MD->getType() == MPT->getPointeeType())
-          SameSignatureVirtualMethods.push_back(MD->getBeginLoc());
-    if (!SameSignatureVirtualMethods.empty()) {
-      diag(IndirectCompare->getOperatorLoc(), ErrorMsg);
-      for (const auto Loc : SameSignatureVirtualMethods)
-        diag(Loc, "potential member virtual function.", DiagnosticIDs::Note);
-    }
+  const BinaryOperator *BO =
+      Result.Nodes.getNodeAs<BinaryOperator>("binary_operator");
+  const DeclRefExpr *DRE =
+      Result.Nodes.getNodeAs<DeclRefExpr>("indirect_member_pointer");
+
+  if (DRE == nullptr) {
+    // compare with pointer to member virtual function.
+    diag(BO->getOperatorLoc(), ErrorMsg);
+    return;
+  }
+  // compare with variable which type is pointer to member function.
+  const auto *MPT = cast<MemberPointerType>(DRE->getType().getCanonicalType());
+  llvm::SmallVector<SourceLocation, 12U> SameSignatureVirtualMethods{};
+  for (const auto *D : MPT->getClass()->getAsCXXRecordDecl()->decls())
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+      if (MD->isVirtual() && MD->getType() == MPT->getPointeeType())
+        SameSignatureVirtualMethods.push_back(MD->getBeginLoc());
+  if (!SameSignatureVirtualMethods.empty()) {
+    diag(BO->getOperatorLoc(), ErrorMsg);
+    for (const auto Loc : SameSignatureVirtualMethods)
+      diag(Loc, "potential member virtual function.", DiagnosticIDs::Note);
   }
 }
 
