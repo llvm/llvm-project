@@ -23,10 +23,8 @@
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_vnum_za8(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_hor_vnum_za8(0, slice, pg, ptr, vnum);
-  slice = slice_base + 15;
-  svld1_hor_vnum_za8(0, slice, pg, ptr, vnum);
+  svld1_hor_vnum_za8(0, slice_base, pg, ptr, vnum);
+  svld1_hor_vnum_za8(0, slice_base + 15, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_vnum_za16(
@@ -42,10 +40,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_vnum_za8(uint32_t slice_base, svbool_t pg
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_vnum_za16(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_hor_vnum_za16(0, slice, pg, ptr, vnum);
-  slice = slice_base + 7;
-  svld1_hor_vnum_za16(1, slice, pg, ptr, vnum);
+  svld1_hor_vnum_za16(0, slice_base, pg, ptr, vnum);
+  svld1_hor_vnum_za16(1, slice_base + 7, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_vnum_za32(
@@ -61,10 +57,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_vnum_za16(uint32_t slice_base, svbool_t p
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_vnum_za32(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_hor_vnum_za32(0, slice, pg, ptr, vnum);
-  slice = slice_base + 3;
-  svld1_hor_vnum_za32(3, slice, pg, ptr, vnum);
+  svld1_hor_vnum_za32(0, slice_base, pg, ptr, vnum);
+  svld1_hor_vnum_za32(3, slice_base + 3, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_vnum_za64(
@@ -80,10 +74,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_vnum_za32(uint32_t slice_base, svbool_t p
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_vnum_za64(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_hor_vnum_za64(0, slice, pg, ptr, vnum);
-  slice = slice_base + 1;
-  svld1_hor_vnum_za64(7, slice, pg, ptr, vnum);
+  svld1_hor_vnum_za64(0, slice_base, pg, ptr, vnum);
+  svld1_hor_vnum_za64(7, slice_base + 1, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_vnum_za128(
@@ -98,9 +90,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_vnum_za64(uint32_t slice_base, svbool_t p
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_vnum_za128(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_hor_vnum_za128(0, slice, pg, ptr, vnum);
-  svld1_hor_vnum_za128(15, slice, pg, ptr, vnum);
+  svld1_hor_vnum_za128(0, slice_base, pg, ptr, vnum);
+  svld1_hor_vnum_za128(15, slice_base + 15, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_hor_za8(
@@ -115,10 +106,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_vnum_za128(uint32_t slice_base, svbool_t 
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_hor_za8(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_ver_vnum_za8(0, slice, pg, ptr, vnum);
-  slice = slice_base + 15;
-  svld1_ver_vnum_za8(0, slice, pg, ptr, vnum);
+  svld1_ver_vnum_za8(0, slice_base, pg, ptr, vnum);
+  svld1_ver_vnum_za8(0, slice_base + 15, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_vnum_za16(
@@ -134,10 +123,8 @@ ARM_STREAMING_ATTR void test_svld1_ver_hor_za8(uint32_t slice_base, svbool_t pg,
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_vnum_za16(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_ver_vnum_za16(0, slice, pg, ptr, vnum);
-  slice = slice_base + 7;
-  svld1_ver_vnum_za16(1, slice, pg, ptr, vnum);
+  svld1_ver_vnum_za16(0, slice_base, pg, ptr, vnum);
+  svld1_ver_vnum_za16(1, slice_base + 7, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_vnum_za32(
@@ -153,10 +140,8 @@ ARM_STREAMING_ATTR void test_svld1_ver_vnum_za16(uint32_t slice_base, svbool_t p
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_vnum_za32(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_ver_vnum_za32(0, slice, pg, ptr, vnum);
-  slice = slice_base + 3;
-  svld1_ver_vnum_za32(3, slice, pg, ptr, vnum);
+  svld1_ver_vnum_za32(0, slice_base, pg, ptr, vnum);
+  svld1_ver_vnum_za32(3, slice_base + 3, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_vnum_za64(
@@ -172,10 +157,8 @@ ARM_STREAMING_ATTR void test_svld1_ver_vnum_za32(uint32_t slice_base, svbool_t p
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_vnum_za64(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_ver_vnum_za64(0, slice, pg, ptr, vnum);
-  slice = slice_base + 1;
-  svld1_ver_vnum_za64(7, slice, pg, ptr, vnum);
+  svld1_ver_vnum_za64(0, slice_base, pg, ptr, vnum);
+  svld1_ver_vnum_za64(7, slice_base + 1, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_vnum_za128(
@@ -190,7 +173,6 @@ ARM_STREAMING_ATTR void test_svld1_ver_vnum_za64(uint32_t slice_base, svbool_t p
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_vnum_za128(uint32_t slice_base, svbool_t pg, const void *ptr, int64_t vnum) {
-  uint32_t slice = slice_base;
-  svld1_ver_vnum_za128(0, slice, pg, ptr, vnum);
-  svld1_ver_vnum_za128(15, slice, pg, ptr, vnum);
+  svld1_ver_vnum_za128(0, slice_base, pg, ptr, vnum);
+  svld1_ver_vnum_za128(15, slice_base, pg, ptr, vnum);
 }

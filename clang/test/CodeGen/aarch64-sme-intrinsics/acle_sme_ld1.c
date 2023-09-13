@@ -20,10 +20,8 @@
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_za8(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_hor_za8(0, slice, pg, ptr);
-  slice = slice_base + 15;
-  svld1_hor_za8(0, slice, pg, ptr);
+  svld1_hor_za8(0, slice_base, pg, ptr);
+  svld1_hor_za8(0, slice_base + 15, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_za16(
@@ -36,10 +34,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_za8(uint32_t slice_base, svbool_t pg, con
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_za16(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_hor_za16(0, slice, pg, ptr);
-  slice = slice_base + 7;
-  svld1_hor_za16(1, slice, pg, ptr);
+  svld1_hor_za16(0, slice_base, pg, ptr);
+  svld1_hor_za16(1, slice_base + 7, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_za32(
@@ -52,10 +48,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_za16(uint32_t slice_base, svbool_t pg, co
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_za32(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_hor_za32(0, slice, pg, ptr);
-  slice = slice_base + 3;
-  svld1_hor_za32(3, slice, pg, ptr);
+  svld1_hor_za32(0, slice_base, pg, ptr);
+  svld1_hor_za32(3, slice_base + 3, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_za64(
@@ -68,10 +62,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_za32(uint32_t slice_base, svbool_t pg, co
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_za64(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_hor_za64(0, slice, pg, ptr);
-  slice = slice_base + 1;
-  svld1_hor_za64(7, slice, pg, ptr);
+  svld1_hor_za64(0, slice_base, pg, ptr);
+  svld1_hor_za64(7, slice_base + 1, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_hor_za128(
@@ -84,8 +76,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_za64(uint32_t slice_base, svbool_t pg, co
 //
 ARM_STREAMING_ATTR void test_svld1_hor_za128(uint32_t slice_base, svbool_t pg, const void *ptr) {
   uint32_t slice = slice_base;
-  svld1_hor_za128(0, slice, pg, ptr);
-  svld1_hor_za128(15, slice, pg, ptr);
+  svld1_hor_za128(0, slice_base, pg, ptr);
+  svld1_hor_za128(15, slice_base, pg, ptr);
 }
 
 // CHECK-C-LABEL: @test_svld1_ver_za8(
@@ -97,10 +89,8 @@ ARM_STREAMING_ATTR void test_svld1_hor_za128(uint32_t slice_base, svbool_t pg, c
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_za8(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_ver_za8(0, slice, pg, ptr);
-  slice = slice_base + 15;
-  svld1_ver_za8(0, slice, pg, ptr);
+  svld1_ver_za8(0, slice_base, pg, ptr);
+  svld1_ver_za8(0, slice_base + 15, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_za16(
@@ -113,10 +103,8 @@ ARM_STREAMING_ATTR void test_svld1_ver_za8(uint32_t slice_base, svbool_t pg, con
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_za16(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_ver_za16(0, slice, pg, ptr);
-  slice = slice_base + 7;
-  svld1_ver_za16(1, slice, pg, ptr);
+  svld1_ver_za16(0, slice_base, pg, ptr);
+  svld1_ver_za16(1, slice_base + 7, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_za32(
@@ -129,10 +117,8 @@ ARM_STREAMING_ATTR void test_svld1_ver_za16(uint32_t slice_base, svbool_t pg, co
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_za32(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_ver_za32(0, slice, pg, ptr);
-  slice = slice_base + 3;
-  svld1_ver_za32(3, slice, pg, ptr);
+  svld1_ver_za32(0, slice_base, pg, ptr);
+  svld1_ver_za32(3, slice_base + 3, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_za64(
@@ -145,10 +131,8 @@ ARM_STREAMING_ATTR void test_svld1_ver_za32(uint32_t slice_base, svbool_t pg, co
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_za64(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
-  svld1_ver_za64(0, slice, pg, ptr);
-  slice = slice_base + 1;
-  svld1_ver_za64(7, slice, pg, ptr);
+  svld1_ver_za64(0, slice_base, pg, ptr);
+  svld1_ver_za64(7, slice_base + 1, pg, ptr);
 }
 
 // CHECK-C-LABEL:   @test_svld1_ver_za128(
@@ -161,6 +145,6 @@ ARM_STREAMING_ATTR void test_svld1_ver_za64(uint32_t slice_base, svbool_t pg, co
 //
 ARM_STREAMING_ATTR void test_svld1_ver_za128(uint32_t slice_base, svbool_t pg, const void *ptr) {
   uint32_t slice = slice_base;
-  svld1_ver_za128(0, slice, pg, ptr);
-  svld1_ver_za128(15, slice, pg, ptr);
+  svld1_ver_za128(0, slice_base, pg, ptr);
+  svld1_ver_za128(15, slice_base, pg, ptr);
 }
