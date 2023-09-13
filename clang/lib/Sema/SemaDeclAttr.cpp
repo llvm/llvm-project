@@ -8373,11 +8373,9 @@ static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleNoUniqueAddressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   NoUniqueAddressAttr TmpAttr(S.Context, AL);
-  if (S.getLangOpts().MSVCCompat) {
-    if (TmpAttr.isStandard()) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-      return;
-    }
+  if (S.getLangOpts().MSVCCompat && TmpAttr.isStandard()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return;
   } else if (TmpAttr.isMSVC()) {
     S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
     return;

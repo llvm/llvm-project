@@ -2871,10 +2871,8 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   for (const CXXBaseSpecifier &Base : RD->bases()) {
     if (Base.isVirtual())
       continue;
-
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     const ASTRecordLayout &BaseLayout = Context.getASTRecordLayout(BaseDecl);
-
     // Only lay out bases without extendable VFPtrs on the second pass.
     if (BaseLayout.hasExtendableVFPtr()) {
       VBPtrOffset = Bases[BaseDecl] + BaseLayout.getNonVirtualSize();
@@ -2946,7 +2944,6 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
       BaseOffset = Size = Size.alignTo(Info.Alignment);
     }
   }
-
   Bases.insert(std::make_pair(BaseDecl, BaseOffset));
   Size += BaseLayout.getNonVirtualSize();
   DataSize = Size;
@@ -2964,7 +2961,6 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
     layoutBitField(FD);
     return;
   }
-
   LastFieldIsNonZeroWidthBitfield = false;
   ElementInfo Info = getAdjustedElementInfo(FD);
   Alignment = std::max(Alignment, Info.Alignment);

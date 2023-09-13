@@ -743,7 +743,6 @@ void CGRecordLowering::calculateZeroInit() {
 void CGRecordLowering::clipTailPadding() {
   std::vector<MemberInfo>::iterator Prior = Members.begin();
   CharUnits Tail = getSize(Prior->Data);
-
   for (std::vector<MemberInfo>::iterator Member = Prior + 1,
                                          MemberEnd = Members.end();
        Member != MemberEnd; ++Member) {
