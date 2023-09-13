@@ -13010,9 +13010,8 @@ define <4 x i32> @mgather_broadcast_load_masked(ptr %base, <4 x i1> %m) {
 define <4 x i32> @mgather_unit_stride_load(ptr %base) {
 ; RV32-LABEL: mgather_unit_stride_load:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a1, 4
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vlse32.v v8, (a0), a1
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_unit_stride_load:
@@ -13082,9 +13081,8 @@ define <4 x i32> @mgather_unit_stride_load_with_offset(ptr %base) {
 ; RV32-LABEL: mgather_unit_stride_load_with_offset:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a0, a0, 16
-; RV32-NEXT:    li a1, 4
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vlse32.v v8, (a0), a1
+; RV32-NEXT:    vle32.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_unit_stride_load_with_offset:
