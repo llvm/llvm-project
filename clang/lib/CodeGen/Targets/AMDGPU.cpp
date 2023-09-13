@@ -446,7 +446,6 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     return DefaultGlobalAS;
 
   LangAS AddrSpace = D->getType().getAddressSpace();
-  assert(AddrSpace == LangAS::Default || isTargetAddressSpace(AddrSpace));
   if (AddrSpace != LangAS::Default)
     return AddrSpace;
 
