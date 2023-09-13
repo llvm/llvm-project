@@ -216,6 +216,7 @@ else()
     RTSanitizerCommonLibc
     RTSanitizerCommonCoverage
     RTSanitizerCommonSymbolizer
+    RTSanitizerCommonSymbolizerInternal
     RTLSanCommon
     RTUbsan)
 
