@@ -984,7 +984,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
     if (IsPixelShader) {
       // Need a final PHI to reconverge to above the helper lane branch mask.
-      B.SetInsertPoint(PixelExitBB->getFirstNonPHI());
+      B.SetInsertPoint(PixelExitBB, PixelExitBB->getFirstNonPHIIt());
 
       PHINode *const PHI = B.CreatePHI(Ty, 2);
       PHI->addIncoming(PoisonValue::get(Ty), PixelEntryBB);
