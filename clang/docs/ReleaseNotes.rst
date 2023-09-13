@@ -41,6 +41,9 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The default extension name for PCH generation (``-c -xc-header`` and ``-c
+  -xc++-header``) is now ``.pch`` instead of ``.gch``.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
