@@ -15,7 +15,7 @@ entry:
   %arrayidx = getelementptr inbounds [4 x i16], ptr %c, i64 0, i64 2
   call void @llvm.dbg.assign(metadata i1 undef, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 128, 32), metadata !24, metadata ptr %arrayidx, metadata !DIExpression()), !dbg !26
 
-;; Set variable value (use a call to prevent eliminating redundant DBG_VALUEs).
+;; Set variable value to create a non-stack DBG_VALUE.
 ; CHECK: DBG_VALUE 0, $noreg, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 128, 32)
   call void @llvm.dbg.assign(metadata i64 0, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 128, 32), metadata !29, metadata ptr %c, metadata !DIExpression()), !dbg !26
 
