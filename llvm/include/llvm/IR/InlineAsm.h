@@ -377,7 +377,7 @@ public:
       assert((isMemKind() || isFuncKind()) &&
              "Not expected mem or function flag!");
       uint32_t D = getData();
-      assert(D < static_cast<uint32_t>(ConstraintCode::Max) &&
+      assert(D <= static_cast<uint32_t>(ConstraintCode::Max) &&
              D >= static_cast<uint32_t>(ConstraintCode::Unknown) &&
              "unexpected value for memory constraint");
       return static_cast<ConstraintCode>(D);
