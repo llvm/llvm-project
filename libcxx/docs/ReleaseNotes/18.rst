@@ -85,14 +85,6 @@ Deprecations and Removals
   warning). ``_LIBCPP_ENABLE_ASSERTIONS`` will be removed entirely in the next release and setting it will become an
   error. See :ref:`the hardening documentation <using-hardening-modes>` for more details.
 
-- The base template for ``std::char_traits`` has been removed. If you are using
-  ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``,
-  ``char16_t``, ``char32_t`` or a custom character type for which you
-  specialized ``std::char_traits``, your code will no longer work. The Standard
-  does not mandate that a base template is provided, and such a base template is
-  bound to be incorrect for some types, which could previously cause unexpected
-  behavior while going undetected.
-
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -108,6 +100,17 @@ LLVM 18
   ``<experimental/string>``, ``<experimental/unordered_map>``, ``<experimental/unordered_set>``,
   and ``<experimental/vector>`` will be removed in LLVM 18, as all their contents will have been implemented in
   namespace ``std`` for at least two releases.
+
+LLVM 19
+~~~~~~~
+
+- The base template for ``std::char_traits`` has been marked as deprecated and will be removed in LLVM 19. If you
+  are using ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``, ``char16_t``, ``char32_t``
+  or a custom character type for which you specialized ``std::char_traits``, your code will stop working when we
+  remove the base template. The Standard does not mandate that a base template is provided, and such a base template
+  is bound to be incorrect for some types, which could currently cause unexpected behavior while going undetected.
+  Note that the ``_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION`` macro can be defined in LLVM 18 to eagerly remove
+  the specialization and prepare code bases for the unconditional removal in LLVM 19.
 
 ABI Affecting Changes
 ---------------------
