@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_INVOKE_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_INVOKE_H
 
+#include "src/__support/CPP/type_traits/always_false.h"
 #include "src/__support/CPP/type_traits/decay.h"
 #include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/is_base_of.h"
+#include "src/__support/CPP/type_traits/is_pointer.h"
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/utility/forward.h"
 
@@ -39,9 +41,11 @@ struct invoke_dispatcher<FunctionReturnType Class::*> {
     if constexpr (cpp::is_base_of_v<Class, DecayT>) {
       // T is a (possibly cv ref) type.
       return (cpp::forward<T>(t1).*fun)(cpp::forward<Args>(args)...);
-    } else {
-      // T is assumed to be a pointer type.
+    } else if constexpr (cpp::is_pointer_v<T>) {
+      // T is a pointer type.
       return (*cpp::forward<T>(t1).*fun)(cpp::forward<Args>(args)...);
+    } else {
+      static_assert(cpp::always_false<T>);
     }
   }
 };
