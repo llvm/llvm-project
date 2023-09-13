@@ -243,15 +243,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     example, `tensor.generate` is not in destination-passing style and always
     results in a new buffer allocation.
 
-    One-Shot Bufferize deallocates all buffers that it allocates. Yielding newly
-    allocated buffers from a block can lead to bad performance because
-    additional buffer copies are often needed to make sure that every buffer
-    allocation is also deallocated again. By default, such IR is rejected by
-    One-Shot Bufferize. Such IR can be allowed with `allow-return-allocs`. In
-    that case, the `-buffer-deallocation` pass should be run after One-Shot
-    Bufferize. Note that new buffer allocations that are returned from a
-    function can currently not be deallocated by `-buffer-deallocation` and
-    leak.
+    One-Shot Bufferize does not deallocate any buffers that it allocates. The
+    `-buffer-deallocation` pass should be run after One-Shot Bufferize to insert
+    the deallocation operations necessary to eliminate memory leaks.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
@@ -318,9 +312,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     `test-analysis-only`.
   }];
   let options = [
-    Option<"allowReturnAllocs", "allow-return-allocs", "bool",
-            /*default=*/"false",
-           "Allows returning/yielding new allocations from a block.">,
+    Option<"allowReturnAllocsFromLoops", "allow-return-allocs-from-loops",
+           "bool", /*default=*/"false",
+           "Allows returning/yielding new allocations from a loop.">,
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
@@ -335,9 +329,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            "Bufferize function boundaries (experimental).">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
-    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
-           "Specify if buffers should be deallocated. For compatibility with "
-           "core bufferization passes.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",
                "Restrict bufferization to ops from these dialects.">,
     Option<"dumpAliasSets", "dump-alias-sets", "bool", /*default=*/"false",
@@ -369,8 +360,6 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let statistics = [
     Statistic<"numBufferAlloc", "num-buffer-alloc",
               "Number of buffer allocations">,
-    Statistic<"numBufferDealloc", "num-buffer-dealloc",
-              "Number of buffer deallocations">,
     Statistic<"numTensorInPlace", "num-tensor-in-place",
               "Number of in-place tensor OpOperands">,
     Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
