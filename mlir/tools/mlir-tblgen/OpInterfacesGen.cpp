@@ -494,6 +494,16 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
   os << "  };\n";
 }
 
+static void emitInterfaceNameGetter(const Interface &interface,
+                                    raw_ostream &os) {
+  if (!isa<OpInterface>(interface))
+    return;
+  os << "  /// Returns the name of this interface.\n"
+     << "  static ::llvm::StringLiteral getOperationName() { return "
+        "::llvm::StringLiteral( \""
+     << interface.getName() << "\"); }\n";
+}
+
 static void emitInterfaceDeclMethods(const Interface &interface,
                                      raw_ostream &os, StringRef valueType,
                                      bool isOpInterface,
@@ -553,6 +563,9 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
                       "  struct Trait : public detail::{0}Trait<{1}> {{};\n",
                       interfaceName, valueTemplate);
 
+  // Emit the name of the interface.
+  emitInterfaceNameGetter(interface, os);
+
   // Insert the method declarations.
   bool isOpInterface = isa<OpInterface>(interface);
   emitInterfaceDeclMethods(interface, os, valueType, isOpInterface,
@@ -588,7 +601,8 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
        << "    auto* interface = getInterfaceFor(base);\n"
        << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
+          "    "
+       << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }

@@ -167,6 +167,10 @@ def DeclareMethodsOp : Op<TestDialect, "declare_methods_op",
 def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
       [DeclareOpInterfaceMethods<TestOpInterface, ["default_foo"]>]>;
 
+
+// DECL: /// Returns the name of this interface.
+// DECL: static ::llvm::StringLiteral getOperationName() { return ::llvm::StringLiteral( "TestOpInterface"); }
+
 // DECL-LABEL: TestOpInterfaceInterfaceTraits
 // DECL: class TestOpInterface : public ::mlir::OpInterface<TestOpInterface, detail::TestOpInterfaceInterfaceTraits>
 
