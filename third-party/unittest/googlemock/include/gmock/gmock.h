@@ -31,10 +31,8 @@
 //
 // This is the main header file a user should include.
 
-// GOOGLETEST_CM0002 DO NOT DELETE
-
-#ifndef GMOCK_INCLUDE_GMOCK_GMOCK_H_
-#define GMOCK_INCLUDE_GMOCK_GMOCK_H_
+#ifndef GOOGLEMOCK_INCLUDE_GMOCK_GMOCK_H_
+#define GOOGLEMOCK_INCLUDE_GMOCK_GMOCK_H_
 
 // This file implements the following syntax:
 //
@@ -58,9 +56,6 @@
 #include "gmock/gmock-actions.h"
 #include "gmock/gmock-cardinalities.h"
 #include "gmock/gmock-function-mocker.h"
-#include "gmock/gmock-generated-actions.h"
-#include "gmock/gmock-generated-function-mockers.h"
-#include "gmock/gmock-generated-matchers.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock-more-actions.h"
 #include "gmock/gmock-more-matchers.h"
@@ -68,19 +63,12 @@
 #include "gmock/internal/gmock-internal-utils.h"
 #include "gmock/internal/gmock-port.h"
 
-#ifdef __clang__
-#if __has_warning("-Wdeprecated-copy")
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-copy"
-#endif
-#endif
-
-namespace testing {
-
 // Declares Google Mock flags that we want a user to use programmatically.
 GMOCK_DECLARE_bool_(catch_leaked_mocks);
 GMOCK_DECLARE_string_(verbose);
 GMOCK_DECLARE_int32_(default_mock_behavior);
+
+namespace testing {
 
 // Initializes Google Mock.  This must be called before running the
 // tests.  In particular, it parses the command line for the flags
@@ -105,10 +93,4 @@ GTEST_API_ void InitGoogleMock();
 
 }  // namespace testing
 
-#ifdef __clang__
-#if __has_warning("-Wdeprecated-copy")
-#pragma clang diagnostic pop
-#endif
-#endif
-
-#endif  // GMOCK_INCLUDE_GMOCK_GMOCK_H_
+#endif  // GOOGLEMOCK_INCLUDE_GMOCK_GMOCK_H_
