@@ -14,7 +14,7 @@
 ; OPT-NEXT: amdhsa.target:   amdgcn-amd-amdhsa--gfx900
 ; OPT-NEXT: amdhsa.version:
 ; OPT-NEXT: - 1
-; OPT-NEXT: - 2
+; OPT-NEXT: - 1
 ; OPT-NEXT: ...
 define internal i32 @func() {
   ret i32 0
