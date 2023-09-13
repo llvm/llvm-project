@@ -134,8 +134,8 @@ void DeallocationState::getLiveMemrefsIn(Block *block,
 
 std::pair<Value, Value>
 DeallocationState::getMemrefWithUniqueOwnership(OpBuilder &builder,
-                                                Value memref, Block *block) {
-  auto iter = ownershipMap.find({memref, block});
+                                                Value memref) {
+  auto iter = ownershipMap.find({memref, memref.getParentBlock()});
   assert(iter != ownershipMap.end() &&
          "Value must already have been registered in the ownership map");
 

@@ -95,15 +95,15 @@ func.func @function_call_requries_merged_ownership_mid_block(%arg0: i1) {
 //  CHECK-NEXT:   return
 
 // CHECK-DYNAMIC-LABEL: func @function_call_requries_merged_ownership_mid_block
-//  CHECK-DYNAMIC-SAME: ([[ARG0:%.+]]: i1)
 //       CHECK-DYNAMIC:   [[ALLOC0:%.+]] = memref.alloc(
 //  CHECK-DYNAMIC-NEXT:   [[ALLOC1:%.+]] = memref.alloca(
-//  CHECK-DYNAMIC-NEXT:   [[SELECT:%.+]] = arith.select [[ARG0]], [[ALLOC0]], [[ALLOC1]]
-//  CHECK-DYNAMIC-NEXT:   [[RET:%.+]]:2 = call @f([[SELECT]], [[ARG0]])
+//  CHECK-DYNAMIC-NEXT:   [[SELECT:%.+]] = arith.select{{.*}}[[ALLOC0]], [[ALLOC1]]
+//  CHECK-DYNAMIC-NEXT:   [[CLONE:%.+]] = bufferization.clone [[SELECT]]
+//  CHECK-DYNAMIC-NEXT:   [[RET:%.+]]:2 = call @f([[CLONE]], %true{{[0-9_]*}})
 //  CHECK-DYNAMIC-NEXT:   test.copy
 //  CHECK-DYNAMIC-NEXT:   [[BASE:%[a-zA-Z0-9_]+]]{{.*}} = memref.extract_strided_metadata [[RET]]#0
-//  CHECK-DYNAMIC-NEXT:   bufferization.dealloc ([[ALLOC0]], [[BASE]] :
-//  CHECK-DYNAMIC-SAME:     if (%true{{[0-9_]*}}, [[RET]]#1)
+//  CHECK-DYNAMIC-NEXT:   bufferization.dealloc ([[ALLOC0]], [[CLONE]], [[BASE]] :
+//  CHECK-DYNAMIC-SAME:     if (%true{{[0-9_]*}}, %true{{[0-9_]*}}, [[RET]]#1)
 //   CHECK-DYNAMIC-NOT:     retain
 //  CHECK-DYNAMIC-NEXT:   return
 
