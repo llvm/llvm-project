@@ -1010,6 +1010,29 @@ TEST(TargetParserTest, getARMCPUForArch) {
   }
 }
 
+TEST(TargetParserTest, ARMPrintSupportedExtensions) {
+  std::string expected = "All available -march extensions for ARM\n\n"
+                         "\tcrc\n\tcrypto\n\tsha2";
+
+  outs().flush();
+  testing::internal::CaptureStdout();
+  ARM::PrintSupportedExtensions();
+  outs().flush();
+  std::string captured = testing::internal::GetCapturedStdout();
+
+  // Check that the start of the output is as expected.
+  EXPECT_EQ(0ULL, captured.find(expected));
+
+  // Should not include "none" or "invalid".
+  EXPECT_EQ(std::string::npos, captured.find("none"));
+  EXPECT_EQ(std::string::npos, captured.find("invalid"));
+  // Should not include anything that lacks a feature name. Checking a few here
+  // but not all as if one is hidden correctly the rest should be.
+  EXPECT_EQ(std::string::npos, captured.find("simd"));
+  EXPECT_EQ(std::string::npos, captured.find("maverick"));
+  EXPECT_EQ(std::string::npos, captured.find("xscale"));
+}
+
 class AArch64CPUTestFixture
     : public ::testing::TestWithParam<
           ARMCPUTestParams<AArch64::ExtensionBitset>> {};
