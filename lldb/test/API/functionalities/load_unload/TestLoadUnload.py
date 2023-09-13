@@ -307,6 +307,15 @@ class LoadUnloadTestCase(TestBase):
             patterns=["Unloading .* with index %s.*ok" % index],
         )
 
+        # Confirm that we unloaded properly.
+        self.expect(
+            "image lookup -n a_function",
+            "a_function should not exist after unload",
+            error=True,
+            matching=False,
+            patterns=["1 match found"],
+        )
+
         self.runCmd("process continue")
 
     @expectedFailureAll(oslist=["windows"])  # breakpoint not hit
