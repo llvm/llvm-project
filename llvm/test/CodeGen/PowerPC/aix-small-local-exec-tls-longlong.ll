@@ -100,19 +100,19 @@ entry:
 define i64 @loadITLInit2() {
 ; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: loadITLInit2:
 ; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # @VarInit
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, IThreadLocalVarInit[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, 0(r3)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    add r3, r3, r4
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, L..C0(r2) # @VarInit
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, IThreadLocalVarInit[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, 0(r4)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    add r3, r4, r3
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
 ;
 ; SMALL-LOCAL-EXEC-LARGECM64-LABEL: loadITLInit2:
 ; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, IThreadLocalVarInit[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, 0(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    add r3, r3, r4
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addis r4, L..C0@u(r2)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, IThreadLocalVarInit[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, L..C0@l(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, 0(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    add r3, r4, r3
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @IThreadLocalVarInit)
@@ -141,19 +141,19 @@ entry:
 define i64 @loadTLInit2() {
 ; SMALL-LOCAL-EXEC-SMALLCM64-LABEL: loadTLInit2:
 ; SMALL-LOCAL-EXEC-SMALLCM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, L..C0(r2) # @VarInit
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, ThreadLocalVarInit[TL]@le(r13)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, 0(r3)
-; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    add r3, r3, r4
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, L..C0(r2) # @VarInit
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r3, ThreadLocalVarInit[TL]@le(r13)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    ld r4, 0(r4)
+; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    add r3, r4, r3
 ; SMALL-LOCAL-EXEC-SMALLCM64-NEXT:    blr
 ;
 ; SMALL-LOCAL-EXEC-LARGECM64-LABEL: loadTLInit2:
 ; SMALL-LOCAL-EXEC-LARGECM64:       # %bb.0: # %entry
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addis r3, L..C0@u(r2)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, ThreadLocalVarInit[TL]@le(r13)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, L..C0@l(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, 0(r3)
-; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    add r3, r3, r4
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    addis r4, L..C0@u(r2)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r3, ThreadLocalVarInit[TL]@le(r13)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, L..C0@l(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    ld r4, 0(r4)
+; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    add r3, r4, r3
 ; SMALL-LOCAL-EXEC-LARGECM64-NEXT:    blr
 entry:
   %0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @ThreadLocalVarInit)
