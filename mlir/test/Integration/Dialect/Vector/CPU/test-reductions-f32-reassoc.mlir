@@ -33,6 +33,12 @@ func.func @entry() {
   %3 = vector.reduction <maximumf>, %v2 : vector<64xf32> into f32
   vector.print %3 : f32
   // CHECK: 3
+  %4 = vector.reduction <minf>, %v2 : vector<64xf32> into f32
+  vector.print %4 : f32
+  // CHECK: 1
+  %5 = vector.reduction <maxf>, %v2 : vector<64xf32> into f32
+  vector.print %5 : f32
+  // CHECK: 3
 
   return
 }
