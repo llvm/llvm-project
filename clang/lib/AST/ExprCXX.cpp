@@ -111,7 +111,7 @@ CXXRewrittenBinaryOperator::getDecomposedForm() const {
     return Result;
 
   // Otherwise, we expect a <=> to now be on the LHS.
-  E = Result.LHS->IgnoreImplicitAsWritten();
+  E = Result.LHS->IgnoreUnlessSpelledInSource();
   if (auto *BO = dyn_cast<BinaryOperator>(E)) {
     assert(BO->getOpcode() == BO_Cmp);
     Result.LHS = BO->getLHS();
