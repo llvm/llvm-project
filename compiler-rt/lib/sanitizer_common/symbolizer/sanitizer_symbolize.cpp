@@ -17,6 +17,7 @@
 
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Demangle/Demangle.h"
 
 static llvm::symbolize::LLVMSymbolizer *Symbolizer = nullptr;
 static bool Demangle = true;
@@ -117,8 +118,9 @@ void __sanitizer_symbolize_flush() {
 
 bool __sanitizer_symbolize_demangle(const char *Name, char *Buffer,
                                    int MaxLength) {
-  std::string Result =
-      llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr);
+  std::string Result;
+  if (!llvm::nonMicrosoftDemangle(Name, Result))
+    return false;
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
                                         Result.c_str()) < MaxLength;
 }
