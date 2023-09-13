@@ -139,8 +139,8 @@ your pull request. In order to do that:
 
 ::
 
-  git fetch origin
-  git rebase origin/main
+  git fetch upstream
+  git rebase upstream/main
 
 Then fix the source files causing merge conflicts and make sure to rebuild and
 retest the result. Then:
