@@ -470,6 +470,13 @@ public:
       Instruction::BinaryOps BinaryOp, bool IsSigned,
       Value *LHS, Value *RHS, Instruction *CxtI) const;
 
+  // Return true if known negative, false if known positive, and nullopt if
+  // unknown.
+  std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI) const;
+  // Return true if known negative or zero, false if known non-zero positive,
+  // and nullopt if unknown.
+  std::optional<bool> getKnownSignOrZero(Value *Op, Instruction *CxtI) const;
+
   /// Performs a few simplifications for operators which are associative
   /// or commutative.
   bool SimplifyAssociativeOrCommutative(BinaryOperator &I);
