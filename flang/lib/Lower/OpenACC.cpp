@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/OpenACC.h"
+#include "DirectivesCommon.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
@@ -1356,8 +1357,8 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value gangNum;
   mlir::Value gangDim;
   mlir::Value gangStatic;
-  llvm::SmallVector<mlir::Value, 2> tileOperands, privateOperands,
-      reductionOperands;
+  llvm::SmallVector<mlir::Value> tileOperands, privateOperands,
+      reductionOperands, cacheOperands;
   llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
   bool hasGang = false, hasVector = false, hasWorker = false;
 
@@ -1451,6 +1452,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, tileOperands);
   addOperands(operands, operandSegments, privateOperands);
   addOperands(operands, operandSegments, reductionOperands);
+  addOperands(operands, operandSegments, cacheOperands);
 
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       builder, currentLocation, operands, operandSegments);
@@ -1502,7 +1504,6 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
 
 static void genACC(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semanticsContext,
-                   Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenACCLoopConstruct &loopConstruct) {
 
   const auto &beginLoopDirective =
@@ -2028,7 +2029,6 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
-       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenACCBlockConstruct &blockConstruct) {
   const auto &beginBlockDirective =
       std::get<Fortran::parser::AccBeginBlockDirective>(blockConstruct.t);
@@ -2061,7 +2061,6 @@ genACC(Fortran::lower::AbstractConverter &converter,
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
-       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenACCCombinedConstruct &combinedConstruct) {
   const auto &beginCombinedDirective =
       std::get<Fortran::parser::AccBeginCombinedDirective>(combinedConstruct.t);
@@ -2457,7 +2456,6 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
-       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenACCStandaloneConstruct &standaloneConstruct) {
   const auto &standaloneDirective =
       std::get<Fortran::parser::AccStandaloneDirective>(standaloneConstruct.t);
@@ -2489,7 +2487,6 @@ genACC(Fortran::lower::AbstractConverter &converter,
 }
 
 static void genACC(Fortran::lower::AbstractConverter &converter,
-                   Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
 
   const auto &waitArgument =
@@ -2958,7 +2955,6 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
 static void genACC(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semanticsContext,
                    Fortran::lower::StatementContext &fctCtx,
-                   Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                        &declareConstruct) {
 
@@ -3004,7 +3000,6 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::semantics::SemanticsContext &semanticsContext,
-       Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
        Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -3102,6 +3097,69 @@ void Fortran::lower::finalizeOpenACCRoutineAttachment(
   accRoutineInfos.clear();
 }
 
+static void
+genACC(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
+  std::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::parser::AccAtomicRead &atomicRead) {
+            Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
+                                                void>(converter, atomicRead);
+          },
+          [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
+            Fortran::lower::genOmpAccAtomicWrite<
+                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite);
+          },
+          [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
+            Fortran::lower::genOmpAccAtomicUpdate<
+                Fortran::parser::AccAtomicUpdate, void>(converter,
+                                                        atomicUpdate);
+          },
+          [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
+            Fortran::lower::genOmpAccAtomicCapture<
+                Fortran::parser::AccAtomicCapture, void>(converter,
+                                                         atomicCapture);
+          },
+      },
+      atomicConstruct.u);
+}
+
+static void
+genACC(Fortran::lower::AbstractConverter &converter,
+       Fortran::semantics::SemanticsContext &semanticsContext,
+       const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
+  auto crtPos = builder.saveInsertionPoint();
+  if (loopOp) {
+    builder.setInsertionPoint(loopOp);
+    Fortran::lower::StatementContext stmtCtx;
+    llvm::SmallVector<mlir::Value> cacheOperands;
+    const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+        std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
+    const auto &accObjectList =
+        std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+    const auto &modifier =
+        std::get<std::optional<Fortran::parser::AccDataModifier>>(
+            listWithModifier.t);
+
+    mlir::acc::DataClause dataClause = mlir::acc::DataClause::acc_cache;
+    if (modifier &&
+        (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly)
+      dataClause = mlir::acc::DataClause::acc_cache_readonly;
+    genDataOperandOperations<mlir::acc::CacheOp>(
+        accObjectList, converter, semanticsContext, stmtCtx, cacheOperands,
+        dataClause,
+        /*structured=*/true, /*implicit=*/false, /*setDeclareAttr*/ false);
+    loopOp.getCacheOperandsMutable().append(cacheOperands);
+  } else {
+    llvm::report_fatal_error(
+        "could not find loop to attach OpenACC cache information.");
+  }
+  builder.restoreInsertionPoint(crtPos);
+}
+
 void Fortran::lower::genOpenACCConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
@@ -3111,29 +3169,27 @@ void Fortran::lower::genOpenACCConstruct(
   std::visit(
       common::visitors{
           [&](const Fortran::parser::OpenACCBlockConstruct &blockConstruct) {
-            genACC(converter, semanticsContext, eval, blockConstruct);
+            genACC(converter, semanticsContext, blockConstruct);
           },
           [&](const Fortran::parser::OpenACCCombinedConstruct
                   &combinedConstruct) {
-            genACC(converter, semanticsContext, eval, combinedConstruct);
+            genACC(converter, semanticsContext, combinedConstruct);
           },
           [&](const Fortran::parser::OpenACCLoopConstruct &loopConstruct) {
-            genACC(converter, semanticsContext, eval, loopConstruct);
+            genACC(converter, semanticsContext, loopConstruct);
           },
           [&](const Fortran::parser::OpenACCStandaloneConstruct
                   &standaloneConstruct) {
-            genACC(converter, semanticsContext, eval, standaloneConstruct);
+            genACC(converter, semanticsContext, standaloneConstruct);
           },
           [&](const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-            TODO(converter.genLocation(cacheConstruct.source),
-                 "OpenACC Cache construct not lowered yet!");
+            genACC(converter, semanticsContext, cacheConstruct);
           },
           [&](const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
-            genACC(converter, eval, waitConstruct);
+            genACC(converter, waitConstruct);
           },
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
-            TODO(converter.genLocation(atomicConstruct.source),
-                 "OpenACC Atomic construct not lowered yet!");
+            genACC(converter, eval, atomicConstruct);
           },
       },
       accConstruct.u);
@@ -3143,7 +3199,6 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &fctCtx,
-    Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct,
     Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
 
@@ -3151,12 +3206,12 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
       common::visitors{
           [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                   &standaloneDeclarativeConstruct) {
-            genACC(converter, semanticsContext, fctCtx, eval,
+            genACC(converter, semanticsContext, fctCtx,
                    standaloneDeclarativeConstruct);
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            genACC(converter, semanticsContext, eval, routineConstruct,
+            genACC(converter, semanticsContext, routineConstruct,
                    accRoutineInfos);
           },
       },

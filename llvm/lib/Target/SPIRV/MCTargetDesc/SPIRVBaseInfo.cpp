@@ -129,6 +129,24 @@ getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
   return Capabilities;
 }
 
+CapabilityList
+getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension) {
+  const SPIRV::ExtensionEntry *Entry =
+      SPIRV::lookupSymbolicOperandsEnabledByExtension(
+          Extension, SPIRV::OperandCategory::CapabilityOperand);
+
+  CapabilityList Capabilities;
+  while (Entry &&
+         Entry->Category == SPIRV::OperandCategory::CapabilityOperand &&
+         Entry->ReqExtension == Extension) {
+    Capabilities.push_back(
+        static_cast<SPIRV::Capability::Capability>(Entry->Value));
+    ++Entry;
+  }
+
+  return Capabilities;
+}
+
 ExtensionList
 getSymbolicOperandExtensions(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value) {

@@ -15,8 +15,8 @@ jobs:
     steps:
       - name: Setup Automation Script
         run: |
-          curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/llvm/utils/git/github-automation.py
-          curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/$GITHUB_SHA/llvm/utils/git/requirements.txt
+          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/"$GITHUB_SHA"/llvm/utils/git/github-automation.py
+          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/"$GITHUB_SHA"/llvm/utils/git/requirements.txt
           chmod a+x github-automation.py
           pip install -r requirements.txt
 

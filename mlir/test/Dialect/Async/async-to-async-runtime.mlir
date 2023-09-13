@@ -25,15 +25,20 @@ func.func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK: %[[SAVED:.*]] = async.coro.save %[[HDL]]
 // CHECK: async.runtime.resume %[[HDL]]
 // CHECK: async.coro.suspend %[[SAVED]]
-// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
+// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[DESTROY:.*]]
 
 // Resume coroutine after suspension.
 // CHECK: ^[[RESUME]]:
 // CHECK:   memref.store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
+// CHECK:   cf.br ^[[CLEANUP:.*]]
 
 // Delete coroutine.
 // CHECK: ^[[CLEANUP]]:
+// CHECK:   async.coro.free %[[ID]], %[[HDL]]
+
+// Delete coroutine.
+// CHECK: ^[[DESTROY]]:
 // CHECK:   async.coro.free %[[ID]], %[[HDL]]
 
 // Suspend coroutine, and also a return statement for ramp function.
@@ -79,11 +84,15 @@ func.func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 
 // CHECK: async.runtime.resume %[[HDL]]
 // CHECK: async.coro.suspend
-// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
+// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[DESTROY:.*]]
 
 // CHECK: ^[[RESUME]]:
 // CHECK:   memref.store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
+// CHECK:   cf.br ^[[CLEANUP:.*]]
+
+// CHECK: ^[[CLEANUP]]:
+// CHECK: ^[[DESTROY]]:
 
 // Function outlined from the outer async.execute operation.
 // CHECK-LABEL: func private @async_execute_fn_0
@@ -96,7 +105,7 @@ func.func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // Suspend coroutine in the beginning.
 // CHECK: async.runtime.resume %[[HDL]]
 // CHECK: async.coro.suspend
-// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME_0:.*]], ^[[CLEANUP:.*]]
+// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME_0:.*]], ^[[DESTROY_0:.*]]
 
 // Suspend coroutine second time waiting for the completion of inner execute op.
 // CHECK: ^[[RESUME_0]]:
@@ -104,7 +113,7 @@ func.func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK:   %[[SAVED:.*]] = async.coro.save %[[HDL]]
 // CHECK:   async.runtime.await_and_resume %[[INNER_TOKEN]], %[[HDL]]
 // CHECK:   async.coro.suspend %[[SAVED]]
-// CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[CLEANUP]]
+// CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[DESTROY_0]]
 
 // Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
@@ -115,9 +124,11 @@ func.func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   memref.store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
+// CHECK:   cf.br ^[[CLEANUP_0:.*]]
 
 // CHECK: ^[[SET_ERROR]]:
-// CHECK: ^[[CLEANUP]]:
+// CHECK: ^[[CLEANUP_0]]:
+// CHECK: ^[[DESTROY_0]]:
 // CHECK: ^[[SUSPEND]]:
 
 // -----
@@ -354,7 +365,7 @@ func.func @execute_assertion(%arg0: i1) {
 
 // Initial coroutine suspension.
 // CHECK:      async.coro.suspend
-// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
+// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[DESTROY:.*]]
 
 // Resume coroutine after suspension.
 // CHECK: ^[[RESUME]]:
@@ -363,7 +374,7 @@ func.func @execute_assertion(%arg0: i1) {
 // Set coroutine completion token to available state.
 // CHECK: ^[[SET_AVAILABLE]]:
 // CHECK:   async.runtime.set_available %[[TOKEN]]
-// CHECK:   cf.br ^[[CLEANUP]]
+// CHECK:   cf.br ^[[CLEANUP:.*]]
 
 // Set coroutine completion token to error state.
 // CHECK: ^[[SET_ERROR]]:
@@ -372,6 +383,10 @@ func.func @execute_assertion(%arg0: i1) {
 
 // Delete coroutine.
 // CHECK: ^[[CLEANUP]]:
+// CHECK:   async.coro.free %[[ID]], %[[HDL]]
+
+// Delete coroutine.
+// CHECK: ^[[DESTROY]]:
 // CHECK:   async.coro.free %[[ID]], %[[HDL]]
 
 // Suspend coroutine, and also a return statement for ramp function.

@@ -683,5 +683,8 @@ std::optional<R> GetConstExpr(
 // Returns "m" for a module, "m:sm" for a submodule.
 std::string GetModuleOrSubmoduleName(const Symbol &);
 
+// Return the assembly name emitted for a common block.
+std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

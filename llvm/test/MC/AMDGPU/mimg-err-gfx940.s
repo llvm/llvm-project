@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck %s --check-prefix=NOGFX940 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck %s --check-prefix=NOGFX940 --implicit-check-not=error:
 
 image_load v[4:6], v[238:241], s[28:35] dmask:0x7 unorm
 // NOGFX940: :[[@LINE-1]]:{{[0-9]+}}: error:

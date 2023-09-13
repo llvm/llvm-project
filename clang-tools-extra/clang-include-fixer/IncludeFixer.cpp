@@ -307,7 +307,8 @@ std::string IncludeFixerSemaSource::minimizeInclude(
 
   // Get the FileEntry for the include.
   StringRef StrippedInclude = Include.trim("\"<>");
-  auto Entry = SourceManager.getFileManager().getFile(StrippedInclude);
+  auto Entry =
+      SourceManager.getFileManager().getOptionalFileRef(StrippedInclude);
 
   // If the file doesn't exist return the path from the database.
   // FIXME: This should never happen.

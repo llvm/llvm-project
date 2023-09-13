@@ -431,6 +431,10 @@ private:
   /// Global annotations.
   std::vector<llvm::Constant*> Annotations;
 
+  // Store deferred function annotations so they can be emitted at the end with
+  // most up to date ValueDecl that will have all the inherited annotations.
+  llvm::DenseMap<StringRef, const ValueDecl *> DeferredAnnotations;
+
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
 
@@ -1259,6 +1263,12 @@ public:
                               CGCalleeInfo CalleeInfo,
                               llvm::AttributeList &Attrs, unsigned &CallingConv,
                               bool AttrOnCallSite, bool IsThunk);
+
+  /// Adjust Memory attribute to ensure that the BE gets the right attribute
+  // in order to generate the library call or the intrinsic for the function
+  // name 'Name'.
+  void AdjustMemoryAttribute(StringRef Name, CGCalleeInfo CalleeInfo,
+                             llvm::AttributeList &Attrs);
 
   /// Like the overload taking a `Function &`, but intended specifically
   /// for frontends that want to build on Clang's target-configuration logic.

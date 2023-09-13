@@ -5,21 +5,21 @@ use omp_lib
 ! 2.11.3 declarative allocate
 ! 2.11.3 executable allocate
 
-real, dimension (:,:), allocatable :: darray
-integer :: a, b, x, y, m, n, t, z
+integer :: x, y
+integer, allocatable :: a, b, m, n, t, z
 !$omp allocate(x, y)
 !$omp allocate(x, y) allocator(omp_default_mem_alloc)
 
 !$omp allocate(a, b)
-    allocate ( darray(a, b) )
+    allocate ( a, b )
 
 !$omp allocate(a, b) allocator(omp_default_mem_alloc)
-    allocate ( darray(a, b) )
+    allocate ( a, b )
 
 !$omp allocate(t) allocator(omp_const_mem_alloc)
 !$omp allocate(z) allocator(omp_default_mem_alloc)
 !$omp allocate(m) allocator(omp_default_mem_alloc)
 !$omp allocate(n)
-    allocate ( darray(z, t) )
+    allocate ( t, z, m, n )
 
 end

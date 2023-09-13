@@ -1,8 +1,8 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GFX89 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX89 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding %s | FileCheck -check-prefix=SI %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GFX89 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX89 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 exp mrt0 off, off, off, off
 // SI: exp mrt0 off, off, off, off ; encoding: [0x00,0x00,0x00,0xf8,0x00,0x00,0x00,0x00]

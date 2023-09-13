@@ -392,7 +392,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
-  initializeAMDGPURewriteUndefForPHIPass(*PR);
+  initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowPass(*PR);
   initializeAMDGPUInsertDelayAluPass(*PR);
@@ -663,6 +663,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         }
         if (PassName == "amdgpu-lower-kernel-arguments") {
           PM.addPass(AMDGPULowerKernelArgumentsPass(*this));
+          return true;
+        }
+        if (PassName == "amdgpu-rewrite-undef-for-phi") {
+          PM.addPass(AMDGPURewriteUndefForPHIPass());
           return true;
         }
         return false;
@@ -1154,7 +1158,7 @@ bool GCNPassConfig::addPreISel() {
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making
     // control flow modifications.
-    addPass(createAMDGPURewriteUndefForPHIPass());
+    addPass(createAMDGPURewriteUndefForPHILegacyPass());
   }
   addPass(createLCSSAPass());
 

@@ -766,9 +766,9 @@ define <2 x i64> @test26(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test26:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -32
-; CHECK-NEXT:    addi r4, r1, -48
 ; CHECK-NEXT:    stxvd2x v3, 0, r3
-; CHECK-NEXT:    stxvd2x v2, 0, r4
+; CHECK-NEXT:    addi r3, r1, -48
+; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    ld r3, -24(r1)
 ; CHECK-NEXT:    ld r4, -40(r1)
 ; CHECK-NEXT:    add r3, r4, r3
@@ -784,9 +784,9 @@ define <2 x i64> @test26(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-LABEL: test26:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -32
-; CHECK-REG-NEXT:    addi r4, r1, -48
 ; CHECK-REG-NEXT:    stxvd2x v3, 0, r3
-; CHECK-REG-NEXT:    stxvd2x v2, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -48
+; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    ld r3, -24(r1)
 ; CHECK-REG-NEXT:    ld r4, -40(r1)
 ; CHECK-REG-NEXT:    add r3, r4, r3
@@ -1307,7 +1307,6 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-LABEL: test44:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -16
-; CHECK-NEXT:    addi r4, r1, -64
 ; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    ld r3, -8(r1)
 ; CHECK-NEXT:    std r3, -24(r1)
@@ -1321,14 +1320,14 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-NEXT:    fcfidus f0, f0
 ; CHECK-NEXT:    stfs f0, -64(r1)
 ; CHECK-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-NEXT:    lxvw4x vs1, 0, r4
+; CHECK-NEXT:    addi r3, r1, -64
+; CHECK-NEXT:    lxvw4x vs1, 0, r3
 ; CHECK-NEXT:    xxmrghw v2, vs1, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test44:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -16
-; CHECK-REG-NEXT:    addi r4, r1, -64
 ; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    ld r3, -8(r1)
 ; CHECK-REG-NEXT:    std r3, -24(r1)
@@ -1342,7 +1341,8 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-REG-NEXT:    fcfidus f0, f0
 ; CHECK-REG-NEXT:    stfs f0, -64(r1)
 ; CHECK-REG-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-REG-NEXT:    lxvw4x vs1, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -64
+; CHECK-REG-NEXT:    lxvw4x vs1, 0, r3
 ; CHECK-REG-NEXT:    xxmrghw v2, vs1, vs0
 ; CHECK-REG-NEXT:    blr
 ;
@@ -1386,7 +1386,6 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-LABEL: test45:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -16
-; CHECK-NEXT:    addi r4, r1, -64
 ; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    ld r3, -8(r1)
 ; CHECK-NEXT:    std r3, -24(r1)
@@ -1400,14 +1399,14 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-NEXT:    fcfids f0, f0
 ; CHECK-NEXT:    stfs f0, -64(r1)
 ; CHECK-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-NEXT:    lxvw4x vs1, 0, r4
+; CHECK-NEXT:    addi r3, r1, -64
+; CHECK-NEXT:    lxvw4x vs1, 0, r3
 ; CHECK-NEXT:    xxmrghw v2, vs1, vs0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-REG-LABEL: test45:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -16
-; CHECK-REG-NEXT:    addi r4, r1, -64
 ; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    ld r3, -8(r1)
 ; CHECK-REG-NEXT:    std r3, -24(r1)
@@ -1421,7 +1420,8 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-REG-NEXT:    fcfids f0, f0
 ; CHECK-REG-NEXT:    stfs f0, -64(r1)
 ; CHECK-REG-NEXT:    lxvw4x vs0, 0, r3
-; CHECK-REG-NEXT:    lxvw4x vs1, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -64
+; CHECK-REG-NEXT:    lxvw4x vs1, 0, r3
 ; CHECK-REG-NEXT:    xxmrghw v2, vs1, vs0
 ; CHECK-REG-NEXT:    blr
 ;
@@ -1783,9 +1783,9 @@ define <2 x i64> @test60(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test60:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -32
-; CHECK-NEXT:    addi r4, r1, -48
 ; CHECK-NEXT:    stxvd2x v3, 0, r3
-; CHECK-NEXT:    stxvd2x v2, 0, r4
+; CHECK-NEXT:    addi r3, r1, -48
+; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    lwz r3, -20(r1)
 ; CHECK-NEXT:    ld r4, -40(r1)
 ; CHECK-NEXT:    sld r3, r4, r3
@@ -1801,9 +1801,9 @@ define <2 x i64> @test60(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-LABEL: test60:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -32
-; CHECK-REG-NEXT:    addi r4, r1, -48
 ; CHECK-REG-NEXT:    stxvd2x v3, 0, r3
-; CHECK-REG-NEXT:    stxvd2x v2, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -48
+; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    lwz r3, -20(r1)
 ; CHECK-REG-NEXT:    ld r4, -40(r1)
 ; CHECK-REG-NEXT:    sld r3, r4, r3
@@ -1848,9 +1848,9 @@ define <2 x i64> @test61(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test61:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -32
-; CHECK-NEXT:    addi r4, r1, -48
 ; CHECK-NEXT:    stxvd2x v3, 0, r3
-; CHECK-NEXT:    stxvd2x v2, 0, r4
+; CHECK-NEXT:    addi r3, r1, -48
+; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    lwz r3, -20(r1)
 ; CHECK-NEXT:    ld r4, -40(r1)
 ; CHECK-NEXT:    srd r3, r4, r3
@@ -1866,9 +1866,9 @@ define <2 x i64> @test61(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-LABEL: test61:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -32
-; CHECK-REG-NEXT:    addi r4, r1, -48
 ; CHECK-REG-NEXT:    stxvd2x v3, 0, r3
-; CHECK-REG-NEXT:    stxvd2x v2, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -48
+; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    lwz r3, -20(r1)
 ; CHECK-REG-NEXT:    ld r4, -40(r1)
 ; CHECK-REG-NEXT:    srd r3, r4, r3
@@ -1913,9 +1913,9 @@ define <2 x i64> @test62(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test62:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -32
-; CHECK-NEXT:    addi r4, r1, -48
 ; CHECK-NEXT:    stxvd2x v3, 0, r3
-; CHECK-NEXT:    stxvd2x v2, 0, r4
+; CHECK-NEXT:    addi r3, r1, -48
+; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    lwz r3, -20(r1)
 ; CHECK-NEXT:    ld r4, -40(r1)
 ; CHECK-NEXT:    srad r3, r4, r3
@@ -1931,9 +1931,9 @@ define <2 x i64> @test62(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-LABEL: test62:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -32
-; CHECK-REG-NEXT:    addi r4, r1, -48
 ; CHECK-REG-NEXT:    stxvd2x v3, 0, r3
-; CHECK-REG-NEXT:    stxvd2x v2, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -48
+; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    lwz r3, -20(r1)
 ; CHECK-REG-NEXT:    ld r4, -40(r1)
 ; CHECK-REG-NEXT:    srad r3, r4, r3
@@ -2035,8 +2035,8 @@ define double @test64(<2 x double> %a) {
 define <2 x i1> @test65(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test65:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-NEXT:    addis r3, r2, .LCPI59_0@toc@ha
+; CHECK-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-NEXT:    addi r3, r3, .LCPI59_0@toc@l
 ; CHECK-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-NEXT:    vperm v3, v2, v2, v3
@@ -2045,8 +2045,8 @@ define <2 x i1> @test65(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; CHECK-REG-LABEL: test65:
 ; CHECK-REG:       # %bb.0:
-; CHECK-REG-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-REG-NEXT:    addis r3, r2, .LCPI59_0@toc@ha
+; CHECK-REG-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-REG-NEXT:    addi r3, r3, .LCPI59_0@toc@l
 ; CHECK-REG-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-REG-NEXT:    vperm v3, v2, v2, v3
@@ -2077,8 +2077,8 @@ define <2 x i1> @test65(<2 x i64> %a, <2 x i64> %b) {
 define <2 x i1> @test66(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test66:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-NEXT:    addis r3, r2, .LCPI60_0@toc@ha
+; CHECK-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-NEXT:    addi r3, r3, .LCPI60_0@toc@l
 ; CHECK-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-NEXT:    xxlnor v2, v2, v2
@@ -2088,8 +2088,8 @@ define <2 x i1> @test66(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; CHECK-REG-LABEL: test66:
 ; CHECK-REG:       # %bb.0:
-; CHECK-REG-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-REG-NEXT:    addis r3, r2, .LCPI60_0@toc@ha
+; CHECK-REG-NEXT:    vcmpequw v2, v2, v3
 ; CHECK-REG-NEXT:    addi r3, r3, .LCPI60_0@toc@l
 ; CHECK-REG-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-REG-NEXT:    xxlnor v2, v2, v2
@@ -2124,9 +2124,9 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test67:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi r3, r1, -32
-; CHECK-NEXT:    addi r4, r1, -48
 ; CHECK-NEXT:    stxvd2x v3, 0, r3
-; CHECK-NEXT:    stxvd2x v2, 0, r4
+; CHECK-NEXT:    addi r3, r1, -48
+; CHECK-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-NEXT:    ld r3, -24(r1)
 ; CHECK-NEXT:    ld r4, -40(r1)
 ; CHECK-NEXT:    ld r6, -48(r1)
@@ -2146,9 +2146,9 @@ define <2 x i1> @test67(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-REG-LABEL: test67:
 ; CHECK-REG:       # %bb.0:
 ; CHECK-REG-NEXT:    addi r3, r1, -32
-; CHECK-REG-NEXT:    addi r4, r1, -48
 ; CHECK-REG-NEXT:    stxvd2x v3, 0, r3
-; CHECK-REG-NEXT:    stxvd2x v2, 0, r4
+; CHECK-REG-NEXT:    addi r3, r1, -48
+; CHECK-REG-NEXT:    stxvd2x v2, 0, r3
 ; CHECK-REG-NEXT:    ld r3, -24(r1)
 ; CHECK-REG-NEXT:    ld r4, -40(r1)
 ; CHECK-REG-NEXT:    ld r6, -48(r1)
@@ -2386,10 +2386,10 @@ define <2 x double> @test70(<2 x i8> %a) {
 define <2 x i32> @test80(i32 %v) {
 ; CHECK-LABEL: test80:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi r4, r1, -16
 ; CHECK-NEXT:    stw r3, -16(r1)
+; CHECK-NEXT:    addi r3, r1, -16
+; CHECK-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
-; CHECK-NEXT:    lxvw4x vs0, 0, r4
 ; CHECK-NEXT:    addi r3, r3, .LCPI65_0@toc@l
 ; CHECK-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-NEXT:    xxspltw v2, vs0, 0
@@ -2398,10 +2398,10 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-REG-LABEL: test80:
 ; CHECK-REG:       # %bb.0:
-; CHECK-REG-NEXT:    addi r4, r1, -16
 ; CHECK-REG-NEXT:    stw r3, -16(r1)
+; CHECK-REG-NEXT:    addi r3, r1, -16
+; CHECK-REG-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-REG-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
-; CHECK-REG-NEXT:    lxvw4x vs0, 0, r4
 ; CHECK-REG-NEXT:    addi r3, r3, .LCPI65_0@toc@l
 ; CHECK-REG-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-REG-NEXT:    xxspltw v2, vs0, 0
@@ -2423,11 +2423,11 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-LE-LABEL: test80:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    addis r4, r2, .LCPI65_0@toc@ha
-; CHECK-LE-NEXT:    mtfprwz f1, r3
-; CHECK-LE-NEXT:    addi r4, r4, .LCPI65_0@toc@l
-; CHECK-LE-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-NEXT:    xxspltw v2, vs1, 1
+; CHECK-LE-NEXT:    mtfprwz f0, r3
+; CHECK-LE-NEXT:    addis r3, r2, .LCPI65_0@toc@ha
+; CHECK-LE-NEXT:    addi r3, r3, .LCPI65_0@toc@l
+; CHECK-LE-NEXT:    xxspltw v2, vs0, 1
+; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v3, vs0
 ; CHECK-LE-NEXT:    vadduwm v2, v2, v3
 ; CHECK-LE-NEXT:    blr

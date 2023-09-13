@@ -44,17 +44,6 @@ define %v4f16 @test_v4f16.cos(%v4f16 %a) {
   ret %v4f16 %1
 }
 
-; FALLBACK-NOT: remark{{.*}}test_v4f16.pow
-define %v4f16 @test_v4f16.pow(%v4f16 %a, %v4f16 %b) {
-  ; This operation is expanded, whether with or without +fullfp16.
-  ; CHECK-LABEL:   test_v4f16.pow:
-  ; GISEL-LABEL:   test_v4f16.pow:
-  ; CHECK-COUNT-4: bl pow
-  ; GISEL-COUNT-4: bl pow
-  %1 = call %v4f16 @llvm.pow.v4f16(%v4f16 %a, %v4f16 %b)
-  ret %v4f16 %1
-}
-
 ; FALLBACK-NOT: remark{{.*}}test_v4f16.exp
 define %v4f16 @test_v4f16.exp(%v4f16 %a) {
   ; This operation is expanded, whether with or without +fullfp16.
@@ -123,7 +112,6 @@ define %v4f16 @test_v4f16.fma(%v4f16 %a, %v4f16 %b, %v4f16 %c) {
 declare %v4f16 @llvm.powi.v4f16.i32(%v4f16, i32) #0
 declare %v4f16 @llvm.sin.v4f16(%v4f16) #0
 declare %v4f16 @llvm.cos.v4f16(%v4f16) #0
-declare %v4f16 @llvm.pow.v4f16(%v4f16, %v4f16) #0
 declare %v4f16 @llvm.exp.v4f16(%v4f16) #0
 declare %v4f16 @llvm.exp2.v4f16(%v4f16) #0
 declare %v4f16 @llvm.log.v4f16(%v4f16) #0
@@ -164,17 +152,6 @@ define %v8f16 @test_v8f16.cos(%v8f16 %a) {
   ; GISEL-LABEL:   test_v8f16.cos:
   ; GISEL-COUNT-8: bl cosf
   %1 = call %v8f16 @llvm.cos.v8f16(%v8f16 %a)
-  ret %v8f16 %1
-}
-
-; FALLBACK-NOT: remark{{.*}}test_v8f16.pow
-define %v8f16 @test_v8f16.pow(%v8f16 %a, %v8f16 %b) {
-  ; This operation is expanded, whether with or without +fullfp16.
-  ; CHECK-LABEL:   test_v8f16.pow:
-  ; CHECK-COUNT-8: bl pow
-  ; GISEL-LABEL:   test_v8f16.pow:
-  ; GISEL-COUNT-8: bl pow
-  %1 = call %v8f16 @llvm.pow.v8f16(%v8f16 %a, %v8f16 %b)
   ret %v8f16 %1
 }
 
@@ -246,7 +223,6 @@ define %v8f16 @test_v8f16.fma(%v8f16 %a, %v8f16 %b, %v8f16 %c) {
 declare %v8f16 @llvm.powi.v8f16.i32(%v8f16, i32) #0
 declare %v8f16 @llvm.sin.v8f16(%v8f16) #0
 declare %v8f16 @llvm.cos.v8f16(%v8f16) #0
-declare %v8f16 @llvm.pow.v8f16(%v8f16, %v8f16) #0
 declare %v8f16 @llvm.exp.v8f16(%v8f16) #0
 declare %v8f16 @llvm.exp2.v8f16(%v8f16) #0
 declare %v8f16 @llvm.log.v8f16(%v8f16) #0
@@ -280,16 +256,6 @@ define %v2f32 @test_v2f32.cos(%v2f32 %a) {
   ; CHECK: cos
   ; GISEL: cos
   %1 = call %v2f32 @llvm.cos.v2f32(%v2f32 %a)
-  ret %v2f32 %1
-}
-
-; FALLBACK-NOT: remark{{.*}}test_v2f32.pow
-; CHECK: test_v2f32.pow:
-; GISEL-LABEL: test_v2f32.pow:
-define %v2f32 @test_v2f32.pow(%v2f32 %a, %v2f32 %b) {
-  ; CHECK: pow
-  ; GISEL: pow
-  %1 = call %v2f32 @llvm.pow.v2f32(%v2f32 %a, %v2f32 %b)
   ret %v2f32 %1
 }
 
@@ -351,7 +317,6 @@ define %v2f32 @test_v2f32.fma(%v2f32 %a, %v2f32 %b, %v2f32 %c) {
 declare %v2f32 @llvm.powi.v2f32.i32(%v2f32, i32) #0
 declare %v2f32 @llvm.sin.v2f32(%v2f32) #0
 declare %v2f32 @llvm.cos.v2f32(%v2f32) #0
-declare %v2f32 @llvm.pow.v2f32(%v2f32, %v2f32) #0
 declare %v2f32 @llvm.exp.v2f32(%v2f32) #0
 declare %v2f32 @llvm.exp2.v2f32(%v2f32) #0
 declare %v2f32 @llvm.log.v2f32(%v2f32) #0
@@ -385,16 +350,6 @@ define %v4f32 @test_v4f32.cos(%v4f32 %a) {
   ; CHECK: cos
   ; GISEL: cos
   %1 = call %v4f32 @llvm.cos.v4f32(%v4f32 %a)
-  ret %v4f32 %1
-}
-
-; FALLBACK-NOT: remark{{.*}}test_v4f32.pow
-; CHECK: test_v4f32.pow:
-; GISEL-LABEL: test_v4f32.pow:
-define %v4f32 @test_v4f32.pow(%v4f32 %a, %v4f32 %b) {
-  ; CHECK: pow
-  ; GISEL: pow
-  %1 = call %v4f32 @llvm.pow.v4f32(%v4f32 %a, %v4f32 %b)
   ret %v4f32 %1
 }
 
@@ -455,7 +410,6 @@ define %v4f32 @test_v4f32.fma(%v4f32 %a, %v4f32 %b, %v4f32 %c) {
 declare %v4f32 @llvm.powi.v4f32.i32(%v4f32, i32) #0
 declare %v4f32 @llvm.sin.v4f32(%v4f32) #0
 declare %v4f32 @llvm.cos.v4f32(%v4f32) #0
-declare %v4f32 @llvm.pow.v4f32(%v4f32, %v4f32) #0
 declare %v4f32 @llvm.exp.v4f32(%v4f32) #0
 declare %v4f32 @llvm.exp2.v4f32(%v4f32) #0
 declare %v4f32 @llvm.log.v4f32(%v4f32) #0
@@ -489,16 +443,6 @@ define %v2f64 @test_v2f64.cos(%v2f64 %a) {
   ; CHECK: cos
   ; GISEL: cos
   %1 = call %v2f64 @llvm.cos.v2f64(%v2f64 %a)
-  ret %v2f64 %1
-}
-
-; FALLBACK-NOT: remark{{.*}}test_v2f64.pow
-; CHECK: test_v2f64.pow:
-; GISEL-LABEL: test_v2f64.pow:
-define %v2f64 @test_v2f64.pow(%v2f64 %a, %v2f64 %b) {
-  ; CHECK: pow
-  ; GISEL: pow
-  %1 = call %v2f64 @llvm.pow.v2f64(%v2f64 %a, %v2f64 %b)
   ret %v2f64 %1
 }
 
@@ -560,7 +504,6 @@ define %v2f64 @test_v2f64.fma(%v2f64 %a, %v2f64 %b, %v2f64 %c) {
 declare %v2f64 @llvm.powi.v2f64.i32(%v2f64, i32) #0
 declare %v2f64 @llvm.sin.v2f64(%v2f64) #0
 declare %v2f64 @llvm.cos.v2f64(%v2f64) #0
-declare %v2f64 @llvm.pow.v2f64(%v2f64, %v2f64) #0
 declare %v2f64 @llvm.exp.v2f64(%v2f64) #0
 declare %v2f64 @llvm.exp2.v2f64(%v2f64) #0
 declare %v2f64 @llvm.log.v2f64(%v2f64) #0

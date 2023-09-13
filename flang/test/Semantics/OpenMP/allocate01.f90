@@ -6,19 +6,20 @@
 
 subroutine allocate()
 use omp_lib
-  integer :: x
+  integer, allocatable :: x(:)
+  integer :: y
   contains
     subroutine sema()
     integer :: a, b
     real, dimension (:,:), allocatable :: darray
 
     !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
-    !$omp allocate(x)
+    !$omp allocate(y)
         print *, a
 
     !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
     !$omp allocate(x) allocator(omp_default_mem_alloc)
-      allocate ( darray(a, b) )
+      allocate ( x(a), darray(a, b) )
     end subroutine sema
 
 end subroutine allocate

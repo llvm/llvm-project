@@ -949,7 +949,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-  if (image_addr == LLDB_INVALID_ADDRESS)
+  if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
     return Status("Invalid image token");
 
   StreamString expr;

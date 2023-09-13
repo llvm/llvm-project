@@ -65,4 +65,4 @@ inline int bar(int x) {
   return FORTYTWO;
 }
 #endif
-// CHECK-IMP: remark: importing module './hu-01.h' from 'hu-01.pcm'
+// CHECK-IMP: remark: importing module '.{{/|\\\\?}}hu-01.h' from 'hu-01.pcm'

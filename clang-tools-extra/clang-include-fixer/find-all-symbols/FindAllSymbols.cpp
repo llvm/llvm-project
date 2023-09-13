@@ -254,7 +254,7 @@ void FindAllSymbols::run(const MatchFinder::MatchResult &Result) {
   const SourceManager *SM = Result.SourceManager;
   if (auto Symbol = CreateSymbolInfo(ND, *SM, Collector)) {
     Filename =
-        std::string(SM->getFileEntryForID(SM->getMainFileID())->getName());
+        std::string(SM->getFileEntryRefForID(SM->getMainFileID())->getName());
     FileSymbols[*Symbol] += Signals;
   }
 }

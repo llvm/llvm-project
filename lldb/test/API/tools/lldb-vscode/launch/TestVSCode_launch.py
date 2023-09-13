@@ -422,10 +422,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(
-        archs=["arm", "aarch64"],
-        oslist=["linux"]
-    )
+    @skipIf(archs=["arm", "aarch64"], oslist=["linux"])
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during

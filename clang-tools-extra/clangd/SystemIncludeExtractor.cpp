@@ -87,12 +87,13 @@ struct DriverArgs {
   std::string Lang;
   std::string Sysroot;
   std::string ISysroot;
+  std::string Target;
 
   bool operator==(const DriverArgs &RHS) const {
     return std::tie(Driver, StandardIncludes, StandardCXXIncludes, Lang,
-                    Sysroot, ISysroot) ==
+                    Sysroot, ISysroot, Target) ==
            std::tie(RHS.Driver, RHS.StandardIncludes, RHS.StandardCXXIncludes,
-                    RHS.Lang, RHS.Sysroot, ISysroot);
+                    RHS.Lang, RHS.Sysroot, RHS.ISysroot, RHS.Target);
   }
 
   DriverArgs(const tooling::CompileCommand &Cmd, llvm::StringRef File) {
@@ -130,6 +131,11 @@ struct DriverArgs {
           ISysroot = Cmd.CommandLine[I + 1];
         else
           ISysroot = Arg.str();
+      } else if (Arg.consume_front("--target=")) {
+        Target = Arg.str();
+      } else if (Arg.consume_front("-target")) {
+        if (Arg.empty() && I + 1 < E)
+          Target = Cmd.CommandLine[I + 1];
       }
     }
 
@@ -167,6 +173,8 @@ struct DriverArgs {
       Args.append({"--sysroot", Sysroot});
     if (!ISysroot.empty())
       Args.append({"-isysroot", ISysroot});
+    if (!Target.empty())
+      Args.append({"-target", Target});
     return Args;
   }
 
