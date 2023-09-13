@@ -68,12 +68,19 @@ void ComparePointerToMemberVirtualFunctionCheck::check(
     return;
   }
   // compare with variable which type is pointer to member function.
-  const auto *MPT = cast<MemberPointerType>(DRE->getType().getCanonicalType());
   llvm::SmallVector<SourceLocation, 12U> SameSignatureVirtualMethods{};
-  for (const auto *D : MPT->getClass()->getAsCXXRecordDecl()->decls())
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-      if (MD->isVirtual() && MD->getType() == MPT->getPointeeType())
-        SameSignatureVirtualMethods.push_back(MD->getBeginLoc());
+  const auto *MPT = cast<MemberPointerType>(DRE->getType().getCanonicalType());
+  const Type *T = MPT->getClass();
+  if (T == nullptr)
+    return;
+  const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
+  if (RD == nullptr)
+    return;
+  for (const auto *D : RD->decls()) {
+    const auto *MD = dyn_cast<CXXMethodDecl>(D);
+    if (MD && MD->isVirtual() && MD->getType() == MPT->getPointeeType())
+      SameSignatureVirtualMethods.push_back(MD->getBeginLoc());
+  }
   if (!SameSignatureVirtualMethods.empty()) {
     diag(BO->getOperatorLoc(), ErrorMsg);
     for (const auto Loc : SameSignatureVirtualMethods)
