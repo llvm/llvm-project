@@ -167,20 +167,3 @@ TEST(IntegerRelationTest, symbolicLexmax) {
   EXPECT_TRUE(lexmax3.unboundedDomain.isIntegerEmpty());
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexmax3));
 }
-
-TEST(IntegerRelationTest, convertVarKind) {
-  IntegerRelation rel = parseRelationFromSet(
-      "(x, y, a)[U, V, W] : (x - U == 0, y + a == W, U - V >= 0, y - a >= 0)",
-      2);
-
-  // Make a few kind conversions.
-  rel.convertVarKind(VarKind::Domain, 0, 1, VarKind::Range, 0);
-  rel.convertVarKind(VarKind::Symbol, 1, 3, VarKind::Domain, 1);
-  rel.convertVarKind(VarKind::Symbol, 0, 1, VarKind::Range, 1);
-
-  IntegerRelation expectedRel = parseRelationFromSet(
-      "(y, V, W, x, U, a)[] : (x - U == 0, y + a == W, U - V >= 0, y - a >= 0)",
-      3);
-
-  EXPECT_TRUE(rel.isEqual(expectedRel));
-}

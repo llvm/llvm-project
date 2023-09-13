@@ -9,6 +9,7 @@
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
+#include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -41,6 +42,8 @@ void PresburgerRelation::insertVarInPlace(VarKind kind, unsigned pos,
 void PresburgerRelation::convertVarKind(VarKind srcKind, unsigned srcPos,
                                         unsigned num, VarKind dstKind,
                                         unsigned dstPos) {
+  assert(srcKind != VarKind::Local && dstKind != VarKind::Local &&
+      "srcKind/dstKind" "cannot be local");
   assert(srcKind != dstKind && "cannot convert variables to the same kind");
   assert(srcPos + num <= space.getNumVarKind(srcKind) &&
          "invalid range for source variables");
