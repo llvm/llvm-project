@@ -14,6 +14,7 @@
 #include "src/__support/error_or.h"
 #include "src/errno/libc_errno.h"
 
+#include <stdint.h>      // For int64_t.
 #include <sys/syscall.h> // For syscall numbers.
 #include <time.h>
 
@@ -27,12 +28,12 @@ LIBC_INLINE ErrorOr<int> clock_gettimeimpl(clockid_t clockid,
                                            static_cast<long>(clockid),
                                            reinterpret_cast<long>(ts));
 #elif defined(SYS_clock_gettime64)
-  struct timespec64 ts64;
+  static_assert(
+      sizeof(time_t) == sizeof(int64_t),
+      "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
   int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
                                            static_cast<long>(clockid),
-                                           reinterpret_cast<long>(&ts64));
-  ts->tv_sec = static_cast<time_t>(ts64.tv_sec);
-  ts->tv_nsec = static_cast<long>(ts64.tv_nsec);
+                                           reinterpret_cast<long>(ts));
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
 #endif
