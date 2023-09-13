@@ -39,8 +39,8 @@ define dso_local i64 @test_mfmsr() {
 ;
 ; CHECK-32BIT-LABEL: test_mfmsr:
 ; CHECK-32BIT:       # %bb.0: # %entry
-; CHECK-32BIT-NEXT:    mfmsr 4
 ; CHECK-32BIT-NEXT:    li 3, 0
+; CHECK-32BIT-NEXT:    mfmsr 4
 ; CHECK-32BIT-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.mfmsr()

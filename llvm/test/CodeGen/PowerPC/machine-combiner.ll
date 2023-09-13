@@ -278,8 +278,8 @@ define dso_local float @reassociate_mamama_8(float %0, float %1, float %2, float
 ; CHECK-DAG:    fmadds [[REG4:[0-9]+]], 13, 12, [[REG3]]
 ; CHECK-DAG:    fmadds [[REG5:[0-9]+]], 11, 10, [[REG2]]
 ;
-; CHECK-DAG:    fmadds [[REG6:[0-9]+]], 3, 2, [[REG4]]
-; CHECK-DAG:    fmadds [[REG7:[0-9]+]], 5, 4, [[REG5]]
+; CHECK-DAG:    fmadds [[REG6:[0-9]+]], 31, 0, [[REG4]]
+; CHECK-DAG:    fmadds [[REG7:[0-9]+]], 29, 30, [[REG5]]
 ; CHECK:        fadds 1, [[REG7]], [[REG6]]
 ; CHECK-NEXT:   blr
   %18 = fmul contract reassoc nsz float %2, %1
