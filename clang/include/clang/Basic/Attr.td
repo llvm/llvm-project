@@ -1799,11 +1799,22 @@ def ArmMveStrictPolymorphism : TypeAttr, TargetSpecificAttr<TargetARM> {
 }
 
 def NoUniqueAddress : InheritableAttr {
-  let Spellings = [CXX11<"", "no_unique_address", 201803>,
-                   CXX11<"msvc", "no_unique_address", 201803>];
-  let Accessors = [Accessor<"isStandard", [CXX11<"", "no_unique_address", 201803>]>,
-                   Accessor<"isMSVC", [CXX11<"msvc", "no_unique_address", 201803>]>];
   let Subjects = SubjectList<[NonBitField], ErrorDiag>;
+  // No spellings because instances of this attribute are created by
+  // MSNoUniqueAddress and ItaniumNoUniqueAddress
+  let Spellings = [];
+  let Documentation = [NoUniqueAddressDocs];
+}
+
+def MSNoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+  let Subjects = SubjectList<[NonBitField], ErrorDiag>;
+  let Spellings = [CXX11<"msvc", "no_unique_address", 201803>];
+  let Documentation = [NoUniqueAddressDocs];
+}
+
+def ItaniumNoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetItaniumCXXABI> {
+  let Subjects = SubjectList<[NonBitField], ErrorDiag>;
+  let Spellings = [CXX11<"", "no_unique_address", 201803>];
   let Documentation = [NoUniqueAddressDocs];
 }
 

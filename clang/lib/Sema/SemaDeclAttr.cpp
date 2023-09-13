@@ -8372,14 +8372,6 @@ static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleNoUniqueAddressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  NoUniqueAddressAttr TmpAttr(S.Context, AL);
-  if (S.getLangOpts().MSVCCompat && TmpAttr.isStandard()) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-    return;
-  } else if (TmpAttr.isMSVC()) {
-    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
-    return;
-  }
   D->addAttr(NoUniqueAddressAttr::Create(S.Context, AL));
 }
 
@@ -9288,7 +9280,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_NoMerge:
     handleNoMergeAttr(S, D, AL);
     break;
-  case ParsedAttr::AT_NoUniqueAddress:
+  case ParsedAttr::AT_MSNoUniqueAddress:
+    handleNoUniqueAddressAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ItaniumNoUniqueAddress:
     handleNoUniqueAddressAttr(S, D, AL);
     break;
 
