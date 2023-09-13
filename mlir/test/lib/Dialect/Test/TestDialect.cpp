@@ -37,6 +37,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/Casting.h"
 
 #include <cstdint>
 #include <numeric>
@@ -528,9 +529,9 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 OpFoldResult TestOpInPlaceFold::fold(FoldAdaptor adaptor) {
-  if (adaptor.getOp() && !(*this)->getAttr("attr")) {
+  if (adaptor.getOp() && !getProperties().attr) {
     // The folder adds "attr" if not present.
-    (*this)->setAttr("attr", adaptor.getOp());
+    getProperties().attr = dyn_cast_or_null<IntegerAttr>(adaptor.getOp());
     return getResult();
   }
   return {};
