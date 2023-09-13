@@ -4155,6 +4155,7 @@ static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
 /// a check for a lossy truncation.
 /// Folds:
 ///   icmp SrcPred (x & Mask), x    to    icmp DstPred x, Mask
+///   icmp eq/ne (x & ~Mask), 0     to    icmp DstPred x, Mask
 /// Where Mask is some pattern that produces all-ones in low bits:
 ///    (-1 >> y)
 ///    ((-1 << y) >> y)     <- non-canonical, has extra uses
@@ -4186,6 +4187,16 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I, const SimplifyQuery &Q,
       if (OpNo)
         SrcPred = ICmpInst::getSwappedPredicate(Pred);
       return CheckMask(M, /*Not*/ false);
+    }
+    if (OpNo == 1 && match(I.getOperand(1), m_Zero()) &&
+        ICmpInst::isEquality(Pred) &&
+        match(I.getOperand(0), m_OneUse(m_And(m_Value(X), m_Value(M))))) {
+      NeedsNot = true;
+      if (IC.isFreeToInvert(X, X->hasOneUse()) && CheckMask(X, /*Not*/ true)) {
+        std::swap(X, M);
+        return true;
+      }
+      return IC.isFreeToInvert(M, M->hasOneUse()) && CheckMask(M, /*Not*/ true);
     }
     return false;
   };
