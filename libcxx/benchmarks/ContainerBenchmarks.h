@@ -79,6 +79,19 @@ void BM_ConstructFromRange(benchmark::State& st, Container, GenInputs gen) {
   }
 }
 
+template <class Container>
+void BM_Pushback(benchmark::State& state, Container c) {
+  int count = state.range(0);
+  c.reserve(count);
+  while (state.KeepRunningBatch(count)) {
+    c.clear();
+    for (int i = 0; i != count; ++i) {
+      c.push_back(i);
+    }
+    benchmark::DoNotOptimize(c.data());
+  }
+}
+
 template <class Container, class GenInputs>
 void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
   auto in        = gen(st.range(0));
