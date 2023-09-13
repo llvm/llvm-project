@@ -906,6 +906,8 @@ set(files
   experimental/__simd/abi_tag.h
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
+  experimental/__simd/internal_declaration.h
+  experimental/__simd/reference.h
   experimental/__simd/scalar.h
   experimental/__simd/simd.h
   experimental/__simd/simd_mask.h
