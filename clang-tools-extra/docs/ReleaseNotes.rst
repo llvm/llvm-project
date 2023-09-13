@@ -249,7 +249,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-use-emplace
   <clang-tidy/checks/modernize/use-emplace>` to not replace aggregates that
-  ``emplace_back`` cannot construct with aggregate initialization.
+  ``emplace`` cannot construct with aggregate initialization.
 
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check to ignore
