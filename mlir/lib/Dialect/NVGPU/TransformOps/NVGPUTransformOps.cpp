@@ -60,6 +60,16 @@ void transform::ApplyNVGPUToNVVMConversionPatternsOp::populatePatterns(
     return llvmTypeConverter.convertType(
         IntegerType::get(type.getContext(), 64));
   });
+  llvmTypeConverter.addConversion(
+      [&](nvgpu::WarpgroupAccumulatorType type) -> Type {
+        VectorType vtype = type.getFragmented();
+        SmallVector<Type> structBody;
+        for (unsigned i = 0; i < vtype.getDimSize(0); i++)
+          structBody.push_back(vtype.getElementType());
+        auto convertedType =
+            LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
+        return llvmTypeConverter.convertType(convertedType);
+      });
   llvmTypeConverter.addConversion([&](nvgpu::MBarrierType type) -> Type {
     return llvmTypeConverter.convertType(
         getMBarrierMemrefType(type.getContext(), type));

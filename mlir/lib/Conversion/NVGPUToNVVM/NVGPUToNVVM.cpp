@@ -17,10 +17,12 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "nvgpu-to-nvvm"
@@ -423,6 +425,15 @@ struct ConvertNVGPUToNVVMPass
     converter.addConversion([&](nvgpu::DeviceAsyncTokenType type) -> Type {
       return converter.convertType(IntegerType::get(type.getContext(), 32));
     });
+    converter.addConversion([&](nvgpu::WarpgroupAccumulatorType type) -> Type {
+      VectorType vtype = type.getFragmented();
+      SmallVector<Type> structBody;
+      for (unsigned i = 0; i < vtype.getDimSize(0); i++)
+        structBody.push_back(vtype.getElementType());
+      auto convertedType =
+          LLVM::LLVMStructType::getLiteral(type.getContext(), structBody);
+      return converter.convertType(convertedType);
+    });
     converter.addConversion([&](nvgpu::MBarrierTokenType type) -> Type {
       return converter.convertType(IntegerType::get(type.getContext(), 64));
     });
@@ -442,6 +453,8 @@ struct ConvertNVGPUToNVVMPass
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
     target.addLegalDialect<::mlir::memref::MemRefDialect>();
     target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
+    mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
+        converter, patterns, target);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -1163,7 +1176,7 @@ struct NVGPUWarpgroupMmaOpLowering
     } else if (inputElemType.isInteger(1)) {
       wgmmaShapeK = 256;
     } else {
-      return failure();
+      llvm_unreachable("msg: not supported K shape");
     }
     LLVM_DEBUG(DBGS() << "Generating wgmma.mma.async shape[m = " << wgmmaShapeM
                       << ", n = " << wgmmaShapeN << ", k = " << wgmmaShapeK
@@ -1192,26 +1205,11 @@ struct NVGPUWarpgroupMmaOpLowering
     return res;
   }
 
-  static Type buildOutputStructType(MLIRContext *ctx, Type outElemType,
-                                    int sizeN) {
-    int outputElements = 0;
-    if (outElemType.isF32() || outElemType.isInteger(32))
-      outputElements = sizeN / 2;
-    if (outElemType.isF16())
-      outputElements = sizeN / 4;
-    SmallVector<Type> structBody;
-    for (int i = 0; i < outputElements; i++)
-      structBody.push_back(outElemType);
-    return LLVM::LLVMStructType::getLiteral(ctx, structBody);
-  }
-
   LogicalResult
   matchAndRewrite(nvgpu::WarpgroupMmaOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<Value> wgmmaResults;
-
-    int64_t sizeM = op.getMatrixC().getType().getDimSize(0);
-    int64_t sizeN = op.getMatrixC().getType().getDimSize(1);
+    int64_t sizeM = op.getDescriptorA().getType().getTensor().getDimSize(0);
+    int64_t sizeN = op.getDescriptorB().getType().getTensor().getDimSize(1);
     int64_t sizeK = op.getDescriptorA().getType().getTensor().getDimSize(1);
 
     LLVM_DEBUG(DBGS() << "===--- GEMM D[" << sizeM << "][" << sizeN << "] += A["
@@ -1230,8 +1228,6 @@ struct NVGPUWarpgroupMmaOpLowering
     //  Generate wgmma group
 
     auto loc = op->getLoc();
-    Type outElemType = op.getMatrixC().getType().getElementType();
-    Type stype = buildOutputStructType(op->getContext(), outElemType, sizeN);
     MemRefType typeTensorA = op.getDescriptorA().getType().getTensor();
     MemRefType typeTensorB = op.getDescriptorB().getType().getTensor();
 
@@ -1250,9 +1246,9 @@ struct NVGPUWarpgroupMmaOpLowering
       LLVM_DEBUG(DBGS() << "\t\t[m: " << iterM << " n: " << iterN << " k: "
                         << iterK << "] [wgmma descriptors] Descriptor A + "
                         << incrementVal << " | \t ");
-      return incrementVal
-                 ? makeAdd(desc, makeI64Const(rewriter, op, incrementVal))
-                 : desc;
+      if (!incrementVal)
+        return desc;
+      return makeAdd(desc, makeI64Const(rewriter, op, incrementVal));
     };
 
     auto iterateDescB = [&](Value desc, int iterM, int iterN,
@@ -1262,15 +1258,18 @@ struct NVGPUWarpgroupMmaOpLowering
       int incrementVal = typeTensorB.getDimSize(0) * wgmmaShapeK * iterK * byte;
       incrementVal = incrementVal >> exclude4LSB;
       LLVM_DEBUG(DBGSE() << "Descriptor B + " << incrementVal << "\n");
-      return incrementVal
-                 ? makeAdd(desc, makeI64Const(rewriter, op, incrementVal))
-                 : desc;
+      if (!incrementVal)
+        return desc;
+      return makeAdd(desc, makeI64Const(rewriter, op, incrementVal));
     };
 
     rewriter.create<NVVM::WgmmaFenceAlignedOp>(loc);
+
+    SmallVector<Value> wgmmaResults;
     for (int iterM = 0; iterM < (sizeM / wgmmaShapeM); iterM++) {
-      Value undefOp = rewriter.create<LLVM::UndefOp>(loc, stype);
-      Value inout = undefOp;
+      Value matrixC = adaptor.getMatrixC()[iterM];
+      Value matrixD = op.getMatrixD()[iterM];
+      Type structType = getTypeConverter()->convertType(matrixD.getType());
       LLVM_DEBUG(DBGS() << " D[" << (iterM * wgmmaShapeM) << ":"
                         << (iterM * wgmmaShapeM) + wgmmaShapeM << "][" << 0
                         << ":" << wgmmaShapeN << "] += \n");
@@ -1286,13 +1285,12 @@ struct NVGPUWarpgroupMmaOpLowering
                           << " B[" << (iterK * wgmmaShapeK) << ":"
                           << (iterK * wgmmaShapeK + wgmmaShapeK) << "][" << 0
                           << ":" << wgmmaShapeN << "])\n");
-        inout = generateNVVMWgmmaOp(op->getContext(), rewriter, loc,
-                                    wgmmaShapeM, wgmmaShapeN, wgmmaShapeK,
-                                    stype, inout, descA, descB);
+        matrixC = generateNVVMWgmmaOp(op->getContext(), rewriter, loc,
+                                      wgmmaShapeM, wgmmaShapeN, wgmmaShapeK,
+                                      structType, matrixC, descA, descB);
       }
-      wgmmaResults.push_back(inout);
+      wgmmaResults.push_back(matrixC);
     }
-
     rewriter.create<NVVM::WgmmaGroupSyncAlignedOp>(loc);
     rewriter.create<NVVM::WgmmaWaitGroupSyncOp>(loc, op.getWaitGroup());
 
@@ -1317,7 +1315,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUGenerateGmmaDescriptorLowering,   // nvgpu.wgmma.generate.descriptor
-      NVGPUWarpgroupMmaOpLowering,           // nvgpu.wargroup.mma
+      NVGPUWarpgroupMmaOpLowering,           // nvgpu.warpgroup.mma
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);

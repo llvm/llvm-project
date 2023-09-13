@@ -22,6 +22,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -456,19 +457,45 @@ LogicalResult WarpgroupMmaOp::verify() {
   if (getTransposeA() && !getTransposeB())
     return emitOpError() << "supports non-transpose A (Row Major) "
                             "and transpose B (Column Major) for the time being";
-  auto matrixA = getDescriptorA().getType().getTensor();
-  auto matrixB = getDescriptorB().getType().getTensor();
-  auto matrixC = getMatrixC().getType();
-  if (matrixA.getRank() != 2 || matrixB.getRank() != 2 ||
-      matrixC.getRank() != 2)
+  MemRefType matrixA = getDescriptorA().getType().getTensor();
+  MemRefType matrixB = getDescriptorB().getType().getTensor();
+  VectorType matrixC = getMatrixC()
+                           .front()
+                           .getType()
+                           .cast<WarpgroupAccumulatorType>()
+                           .getFragmented();
+  VectorType matrixD = getMatrixD()
+                           .front()
+                           .getType()
+                           .cast<WarpgroupAccumulatorType>()
+                           .getFragmented();
+  unsigned sizeAcc = getMatrixC().size();
+
+  if (getMatrixC().size() != getMatrixD().size())
+    return emitOpError() << "number of matrix C and matrix D must be the same";
+
+  if (llvm::all_of(getMatrixC(),
+                   [&](Value rhs) { return rhs.getType() == matrixC; })) {
     return emitOpError()
-           << "has input matrices A, B and D, they must be 2 dimensional";
+           << "types of all operands in matrix C must be the same";
+  }
+  if (llvm::all_of(getMatrixD(),
+                   [&](Value rhs) { return rhs.getType() == matrixC; })) {
+    return emitOpError()
+           << "types of all operands in matrix D must be the same as matrix C";
+  }
+
+  if (matrixA.getRank() != 2 || matrixB.getRank() != 2 ||
+      matrixC.getRank() != 2 || matrixD.getRank() != 2) {
+    return emitOpError()
+           << "has matrices A, B, C and D, they must be 2 dimensional";
+  }
 
   if (matrixA.getShape()[1] != matrixB.getShape()[0])
     return emitOpError() << "2nd dim matrix-A (" << matrixA.getShape()[1]
                          << ")!= 1st dim matrix-B (" << matrixB.getShape()[0]
                          << " )";
-  if (matrixA.getShape()[0] != matrixC.getShape()[0])
+  if (matrixA.getShape()[0] != (matrixC.getShape()[0] * sizeAcc))
     return emitOpError() << "1st dim matrix-A ( " << matrixA.getShape()[0]
                          << " )!= 1st dim matrix-C ( " << matrixC.getShape()[0]
                          << " )";
