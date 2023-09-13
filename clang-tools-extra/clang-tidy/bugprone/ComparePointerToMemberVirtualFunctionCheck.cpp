@@ -23,7 +23,21 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
 AST_MATCHER(CXXMethodDecl, isVirtual) { return Node.isVirtual(); }
+
+static const char *const ErrorMsg =
+    "A pointer to member virtual function shall only be tested for equality "
+    "with null-pointer-constant.";
+
+static const Expr *removeImplicitCast(const Expr *E) {
+  while (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    E = ICE->getSubExpr();
+  return E;
+}
+
+} // namespace
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -49,16 +63,6 @@ void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
   Finder->addMatcher(BinaryOperatorMatcher(IndirectMemberPointer)
                          .bind("indirect_member_pointer"),
                      this);
-}
-
-static const char *const ErrorMsg =
-    "A pointer to member virtual function shall only be tested for equality "
-    "with null-pointer-constant.";
-
-static const Expr *removeImplicitCast(const Expr *E) {
-  while (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-    E = ICE->getSubExpr();
-  return E;
 }
 
 void ComparePointerToMemberVirtualFunctionCheck::check(
