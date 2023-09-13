@@ -46,6 +46,24 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- The name mangling rules for function templates has been changed to take into
+  account the possibility that functions could be overloaded on their template
+  parameter lists or requires-clauses. This causes mangled names to change for
+  function templates in the following cases:
+    - When the function has any constraints, whether from constrained template
+      parameters or requires-clauses.
+    - When the template parameter list includes a deduced type -- either
+      ``auto``, ``decltype(auto)``, or a deduced class template specialization
+      type.
+    - When a template template parameter is given a template template argument
+      that has a different template parameter list.
+  This fixes a number of issues where valid programs would be rejected due to
+  mangling collisions, or would in some cases be silently miscompiled. Clang
+  will use the old manglings if ``-fclang-abi-compat=17`` or lower is
+  specified.
+  (`#48216 <https://github.com/llvm/llvm-project/issues/48216>`_),
+  (`#49884 <https://github.com/llvm/llvm-project/issues/49884>`_), and
+  (`#61273 <https://github.com/llvm/llvm-project/issues/61273>`_)
 
 ABI Changes in This Version
 ---------------------------
