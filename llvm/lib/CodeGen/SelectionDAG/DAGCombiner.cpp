@@ -11637,8 +11637,6 @@ static SDValue ConvertSelectToConcatVector(SDNode *N, SelectionDAG &DAG) {
 
 bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
                        SelectionDAG &DAG, const SDLoc &DL) {
-  if (Index.getOpcode() != ISD::ADD)
-    return false;
 
   // Only perform the transformation when existing operands can be reused.
   if (IndexIsScaled)
@@ -11648,6 +11646,21 @@ bool refineUniformBase(SDValue &BasePtr, SDValue &Index, bool IndexIsScaled,
     return false;
 
   EVT VT = BasePtr.getValueType();
+
+  if (SDValue SplatVal = DAG.getSplatValue(Index);
+      SplatVal && !isNullConstant(SplatVal) &&
+      SplatVal.getValueType() == VT) {
+    if (isNullConstant(BasePtr))
+      BasePtr = SplatVal;
+    else
+      BasePtr = DAG.getNode(ISD::ADD, DL, VT, BasePtr, SplatVal);
+    Index = DAG.getSplat(Index.getValueType(), DL, DAG.getConstant(0, DL, VT));
+    return true;
+  }
+
+  if (Index.getOpcode() != ISD::ADD)
+    return false;
+
   if (SDValue SplatVal = DAG.getSplatValue(Index.getOperand(0));
       SplatVal && SplatVal.getValueType() == VT) {
     if (isNullConstant(BasePtr))
