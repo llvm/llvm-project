@@ -370,16 +370,21 @@ static LogicalResult inferOperationTypes(OperationState &state) {
   if (!properties && info->getOpPropertyByteSize() > 0 && !attributes.empty()) {
     auto prop = std::make_unique<char[]>(info->getOpPropertyByteSize());
     properties = OpaqueProperties(prop.get());
-    InFlightDiagnostic diag = emitError(state.location)
-                              << " failed properties conversion while building "
-                              << state.name.getStringRef() << " with `"
-                              << attributes << "`: ";
-    if (failed(info->setOpPropertiesFromAttribute(state.name, properties,
-                                                  attributes, &diag))) {
-      return failure();
+    if (properties) {
+      std::unique_ptr<InFlightDiagnostic> diagnostic;
+      auto getDiag = [&]() -> InFlightDiagnostic & {
+        if (!diagnostic) {
+          diagnostic = std::make_unique<InFlightDiagnostic>(
+              emitError(state.location)
+              << " failed properties conversion while building "
+              << state.name.getStringRef() << " with `" << attributes << "`: ");
+        }
+        return *diagnostic;
+      };
+      if (failed(info->setOpPropertiesFromAttribute(state.name, properties,
+                                                    attributes, getDiag)))
+        return failure();
     }
-    diag.abandon();
-
     if (succeeded(inferInterface->inferReturnTypes(
             context, state.location, state.operands, attributes, properties,
             state.regions, state.types))) {

@@ -198,12 +198,11 @@ OperationState::~OperationState() {
     propertiesDeleter(properties);
 }
 
-LogicalResult
-OperationState::setProperties(Operation *op,
-                              InFlightDiagnostic *diagnostic) const {
+LogicalResult OperationState::setProperties(
+    Operation *op, function_ref<InFlightDiagnostic &()> getDiag) const {
   if (LLVM_UNLIKELY(propertiesAttr)) {
     assert(!properties);
-    return op->setPropertiesFromAttribute(propertiesAttr, diagnostic);
+    return op->setPropertiesFromAttribute(propertiesAttr, getDiag);
   }
   if (properties)
     propertiesSetter(op->getPropertiesStorage(), properties);
