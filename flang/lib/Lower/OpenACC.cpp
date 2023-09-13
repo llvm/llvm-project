@@ -3299,3 +3299,12 @@ void Fortran::lower::attachDeclarePostDeallocAction(
                  /*preAlloc=*/{}, /*postAlloc=*/{}, /*preDealloc=*/{},
                  /*postDealloc=*/builder.getSymbolRefAttr(fctName.str())));
 }
+
+void Fortran::lower::genOpenACCTerminator(fir::FirOpBuilder &builder,
+                                          mlir::Operation *op,
+                                          mlir::Location loc) {
+  if (mlir::isa<mlir::acc::ParallelOp, mlir::acc::LoopOp>(op))
+    builder.create<mlir::acc::YieldOp>(loc);
+  else
+    builder.create<mlir::acc::TerminatorOp>(loc);
+}
