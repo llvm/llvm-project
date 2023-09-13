@@ -12,7 +12,6 @@ import argparse
 from git import Repo  # type: ignore
 import html
 import github
-import html
 import os
 import re
 import requests
@@ -123,8 +122,8 @@ class PRSubscriber:
             print(f"couldn't find team named {self.team_name}")
             return False
 
-         # GitHub limits comments to 65,536 characters, let's limit the diff
-         # and the file list to 20kB each.
+        # GitHub limits comments to 65,536 characters, let's limit the diff
+        # and the file list to 20kB each.
         STAT_LIMIT = 20 * 1024
         DIFF_LIMIT = 20 * 1024
 
@@ -138,9 +137,9 @@ class PRSubscriber:
                 diff_stats += f"-{file.deletions}"
             diff_stats += ") "
             if file.status == "renamed":
-                print(f"(from {file.previous_filename})"
+                print(f"(from {file.previous_filename})")
             diff_stats += "\n"
-            if len(diff_stats) > STAT_LIMIT)
+            if len(diff_stats) > STAT_LIMIT:
                 break
 
         # Get the diff
