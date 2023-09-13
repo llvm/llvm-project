@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv67t -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv67t -mhvx -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv67t -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv67t -mhvx -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 r1=memw(r0)
 { r0=r0
