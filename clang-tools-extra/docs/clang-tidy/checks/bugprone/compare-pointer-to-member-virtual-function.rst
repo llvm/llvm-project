@@ -55,7 +55,7 @@ method, you can mitigate potential issues related to unspecified behavior,
 especially when dealing with pointers to member virtual functions or pure
 virtual functions, thereby improving the overall stability and maintainability
 of your code. In scenarios involving pointers to member virtual functions, it's
-only advisable to employ nullptr for comparisons.
+only advisable to employ ``nullptr`` for comparisons.
 
 
 Limitations
