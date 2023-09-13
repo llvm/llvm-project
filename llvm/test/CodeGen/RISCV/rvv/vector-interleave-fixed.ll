@@ -76,8 +76,10 @@ define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; RV64-NEXT:    lui a0, 12304
 ; RV64-NEXT:    addiw a0, a0, 512
 ; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsext.vf8 v12, v10
-; RV64-NEXT:    vrgather.vv v10, v8, v12
+; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64-NEXT:    vsext.vf2 v12, v10
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
 	   %res = call <4 x i64> @llvm.experimental.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
@@ -180,8 +182,10 @@ define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double>
 ; RV64-NEXT:    lui a0, 12304
 ; RV64-NEXT:    addiw a0, a0, 512
 ; RV64-NEXT:    vmv.s.x v10, a0
-; RV64-NEXT:    vsext.vf8 v12, v10
-; RV64-NEXT:    vrgather.vv v10, v8, v12
+; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64-NEXT:    vsext.vf2 v12, v10
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV64-NEXT:    vmv.v.v v8, v10
 ; RV64-NEXT:    ret
 	   %res = call <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double> %a, <2 x double> %b)

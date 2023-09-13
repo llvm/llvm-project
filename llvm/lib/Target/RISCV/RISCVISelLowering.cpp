@@ -4663,6 +4663,15 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     IndexVT = IndexVT.changeVectorElementType(MVT::i16);
   }
 
+  // If the mask allows, we can do all the index computation in 16 bits.  This
+  // requires less work and less register pressure at high LMUL, and creates
+  // smaller constants which may be cheaper to materialize.
+  if (IndexVT.getScalarType().bitsGT(MVT::i16) && isUInt<16>(NumElts - 1) &&
+      (IndexVT.getSizeInBits() / Subtarget.getRealMinVLen()) > 1) {
+    GatherVVOpc = RISCVISD::VRGATHEREI16_VV_VL;
+    IndexVT = IndexVT.changeVectorElementType(MVT::i16);
+  }
+
   MVT IndexContainerVT =
       ContainerVT.changeVectorElementType(IndexVT.getScalarType());
 
