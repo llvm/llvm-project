@@ -7,7 +7,7 @@ declare void @llvm.assume(i1)
 define i1 @icmp_ult_x_y(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_ult_x_y(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ult i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[AND]], [[X]]
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %and = and i8 %x, %y
@@ -19,7 +19,7 @@ define i1 @icmp_ult_x_y_2(i8 %xx, i8 %y) {
 ; CHECK-LABEL: @icmp_ult_x_y_2(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], [[XX]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[AND]], [[X]]
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %x = mul i8 %xx, %xx
@@ -31,7 +31,7 @@ define i1 @icmp_ult_x_y_2(i8 %xx, i8 %y) {
 define <2 x i1> @icmp_uge_x_y(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @icmp_uge_x_y(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp uge <2 x i8> [[AND]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq <2 x i8> [[AND]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[Z]]
 ;
   %and = and <2 x i8> %x, %y
@@ -43,7 +43,7 @@ define i1 @icmp_uge_x_y_2(i8 %xx, i8 %y) {
 ; CHECK-LABEL: @icmp_uge_x_y_2(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[XX:%.*]], [[XX]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = icmp ule i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i8 [[AND]], [[X]]
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %x = mul i8 %xx, %xx
