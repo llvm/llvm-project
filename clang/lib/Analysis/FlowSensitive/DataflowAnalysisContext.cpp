@@ -104,7 +104,7 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
   return *Res.first->second;
 }
 
-void DataflowAnalysisContext::addGlobalConstraint(const Formula &Constraint) {
+void DataflowAnalysisContext::addCommonConstraint(const Formula &Constraint) {
   if (GlobalConstraints == nullptr)
     GlobalConstraints = &Constraint;
   else
@@ -156,7 +156,6 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   Constraints.insert(&arena().makeNot(Val));
-  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints);
   return isUnsatisfiable(std::move(Constraints));
 }
@@ -166,7 +165,6 @@ bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
   // ever be false.
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
-  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints);
   return isUnsatisfiable(std::move(Constraints));
 }
@@ -203,10 +201,9 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     }
 
     if (auto DepsIt = FlowConditionDeps.find(Token);
-        DepsIt != FlowConditionDeps.end()) {
+        DepsIt != FlowConditionDeps.end())
       for (Atom A : DepsIt->second)
         Remaining.push_back(A);
-    }
   }
 }
 

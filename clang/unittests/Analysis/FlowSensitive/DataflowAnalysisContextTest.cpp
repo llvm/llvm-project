@@ -46,18 +46,18 @@ TEST_F(DataflowAnalysisContextTest, AddFlowConditionConstraint) {
   EXPECT_TRUE(Context.flowConditionImplies(FC, C));
 }
 
-TEST_F(DataflowAnalysisContextTest, AddGlobalConstraint) {
+TEST_F(DataflowAnalysisContextTest, AddCommonConstraint) {
   Atom FC = A.makeFlowConditionToken();
   auto &C = A.makeAtomRef(A.makeAtom());
-  Context.addGlobalConstraint(C);
+  Context.addCommonConstraint(C);
   EXPECT_TRUE(Context.flowConditionImplies(FC, C));
 }
 
-TEST_F(DataflowAnalysisContextTest, GlobalAndFCConstraintInteract) {
+TEST_F(DataflowAnalysisContextTest, CommonAndFCConstraintInteract) {
   Atom FC = A.makeFlowConditionToken();
   auto &C = A.makeAtomRef(A.makeAtom());
   auto &D = A.makeAtomRef(A.makeAtom());
-  Context.addGlobalConstraint(A.makeImplies(C, D));
+  Context.addCommonConstraint(A.makeImplies(C, D));
   Context.addFlowConditionConstraint(FC, C);
   EXPECT_TRUE(Context.flowConditionImplies(FC, D));
 }
