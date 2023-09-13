@@ -2475,12 +2475,17 @@ LogicalResult GetMemberOp::verify() {
   if (!recordTy)
     return emitError() << "expected pointer to a record type";
 
+  // FIXME: currently we bypass typechecking of incomplete types due to errors
+  // in the codegen process. This should be removed once the codegen is fixed.
+  if (!recordTy.getBody())
+    return mlir::success();
+
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  // FIXME(cir): Member type check is disabled for classes and incomplete types
-  // as the codegen for these still need to be patched.
-  if (!recordTy.isClass() && !recordTy.getBody() &&
+  // FIXME(cir): member type check is disabled for classes as the codegen for
+  // these still need to be patched.
+  if (!recordTy.isClass() &&
       recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
     return emitError() << "member type mismatch";
 
