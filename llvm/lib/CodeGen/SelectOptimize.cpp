@@ -505,7 +505,8 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     for (auto It = ASI.rbegin(); It != ASI.rend(); ++It) {
       SelectInst *SI = *It;
       // The select itself is replaced with a PHI Node.
-      PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());
+      PHINode *PN = PHINode::Create(SI->getType(), 2, "");
+      PN->insertBefore(EndBlock->begin());
       PN->takeName(SI);
       PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
       PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);
