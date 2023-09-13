@@ -166,6 +166,13 @@ Improvements to Clang's diagnostics
   Existing warnings that similarly warn about the overflow in ``sprintf``
   now falls under its own warning group ```-Wformat-overflow`` so that it can
   be disabled separately from ``Wfortify-source``.
+  These two new warning groups have subgroups ``-Wformat-truncation-non-kprintf``
+  and ``-Wformat-overflow-non-kprintf``, respectively. These subgroups are used when
+  the format string contains ``%p`` format specifier.
+  Because Linux kernel's codebase has format extensions for ``%p``, kernel developers
+  are encouraged to disable these two subgroups by setting ``-Wno-format-truncation-non-kprintf``
+  and ``-Wno-format-truncation-non-kprintf`` in order to avoid false positives on
+  the kernel codebase.
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.

@@ -19,6 +19,10 @@ CHECK-NEXT:      -Wformat-security
 CHECK-NEXT:      -Wformat-y2k
 CHECK-NEXT:      -Wformat-invalid-specifier
 CHECK-NEXT:      -Wformat-insufficient-args
+CHECK-NEXT:      -Wformat-overflow
+CHECK-NEXT:      -Wformat-overflow-non-kprintf
+CHECK-NEXT:      -Wformat-truncation
+CHECK-NEXT:      -Wformat-truncation-non-kprintf
 CHECK-NEXT:    -Wfor-loop-analysis
 CHECK-NEXT:    -Wframe-address
 CHECK-NEXT:    -Wimplicit
