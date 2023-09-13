@@ -1,5 +1,3 @@
-// REQUIRES: host-supports-nvptx
-
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -test-lower-to-nvvm \
 // RUN: | mlir-cpu-runner \
