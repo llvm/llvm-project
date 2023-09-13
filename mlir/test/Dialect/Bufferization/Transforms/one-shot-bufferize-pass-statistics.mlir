@@ -3,6 +3,7 @@
 
 // CHECK: OneShotBufferize
 // CHECK:  (S) 1 num-buffer-alloc
+// CHECK:  (S) 1 num-buffer-dealloc
 // CHECK:  (S) 1 num-tensor-in-place
 // CHECK:  (S) 2 num-tensor-out-of-place
 func.func @read_after_write_conflict(%cst : f32, %idx : index, %idx2 : index)

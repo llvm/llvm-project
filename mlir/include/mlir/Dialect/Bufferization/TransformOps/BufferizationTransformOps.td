@@ -82,8 +82,10 @@ def OneShotBufferizeOp
   let arguments = (
       ins TransformHandleTypeInterface:$target,
       OptionalAttr<LayoutMapOption>:$function_boundary_type_conversion,
+      DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs,
       DefaultValuedAttr<BoolAttr, "false">:$allow_unknown_ops,
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
+      DefaultValuedAttr<BoolAttr, "true">:$create_deallocs,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
       DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
       DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);
