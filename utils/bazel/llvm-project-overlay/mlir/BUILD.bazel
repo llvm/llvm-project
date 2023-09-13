@@ -6638,12 +6638,7 @@ cc_library(
             "lib/Dialect/Tensor/Transforms/*.h",
         ],
     ),
-    hdrs = [
-        "include/mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h",
-        "include/mlir/Dialect/Tensor/Transforms/Passes.h",
-        "include/mlir/Dialect/Tensor/Transforms/TransformUtils.h",
-        "include/mlir/Dialect/Tensor/Transforms/Transforms.h",
-    ],
+    hdrs = glob(["include/mlir/Dialect/Tensor/Transforms/*.h"]),
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -9786,6 +9781,17 @@ td_library(
     ],
 )
 
+td_library(
+    name = "SubsetInsertionOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "BufferDeallocationOpInterfaceIncGen",
     tbl_outs = [
@@ -9802,6 +9808,25 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
     deps = [
         ":BufferDeallocationOpInterfaceTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SubsetInsertionOpInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td",
+    deps = [
+        ":SubsetInsertionOpInterfaceTdFiles",
     ],
 )
 
@@ -12076,6 +12101,7 @@ cc_library(
         "lib/Dialect/Bufferization/IR/BufferizableOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationDialect.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationOps.cpp",
+        "lib/Dialect/Bufferization/IR/SubsetInsertionOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/UnstructuredControlFlow.cpp",
     ],
     hdrs = [
@@ -12083,6 +12109,7 @@ cc_library(
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
+        "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/UnstructuredControlFlow.h",
     ],
     includes = ["include"],
@@ -12105,6 +12132,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":MemRefDialect",
         ":SparseTensorDialect",
+        ":SubsetInsertionOpInterfaceIncGen",
         ":Support",
         ":TensorDialect",
         "//llvm:Support",
