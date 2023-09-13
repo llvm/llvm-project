@@ -376,23 +376,12 @@ private:
   /// Given an SSA value of MemRef type, returns the same of a new SSA value
   /// which has 'Unique' ownership where the ownership indicator is guaranteed
   /// to be always 'true'.
-  Value materializeMemrefWithGuaranteedOwnership(OpBuilder &builder,
-                                                 Value memref, Block *block);
+  Value getMemrefWithGuaranteedOwnership(OpBuilder &builder, Value memref);
 
   /// Returns whether the given operation implements FunctionOpInterface, has
   /// private visibility, and the private-function-dynamic-ownership pass option
   /// is enabled.
   bool isFunctionWithoutDynamicOwnership(Operation *op);
-
-  /// Given an SSA value of MemRef type, this function queries the
-  /// BufferDeallocationOpInterface of the defining operation of 'memref' for a
-  /// materialized ownership indicator for 'memref'.  If the op does not
-  /// implement the interface or if the block for which the materialized value
-  /// is requested does not match the block in which 'memref' is defined, the
-  /// default implementation in
-  /// `DeallocationState::getMemrefWithUniqueOwnership` is queried instead.
-  std::pair<Value, Value>
-  materializeUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
 
   /// Checks all the preconditions for operations implementing the
   /// FunctionOpInterface that have to hold for the deallocation to be
@@ -438,28 +427,6 @@ private:
 //===----------------------------------------------------------------------===//
 // BufferDeallocation Implementation
 //===----------------------------------------------------------------------===//
-
-std::pair<Value, Value>
-BufferDeallocation::materializeUniqueOwnership(OpBuilder &builder, Value memref,
-                                               Block *block) {
-  // The interface can only materialize ownership indicators in the same block
-  // as the defining op.
-  if (memref.getParentBlock() != block)
-    return state.getMemrefWithUniqueOwnership(builder, memref, block);
-
-  Operation *owner = memref.getDefiningOp();
-  if (!owner)
-    owner = memref.getParentBlock()->getParentOp();
-
-  // If the op implements the interface, query it for a materialized ownership
-  // value.
-  if (auto deallocOpInterface = dyn_cast<BufferDeallocationOpInterface>(owner))
-    return deallocOpInterface.materializeUniqueOwnershipForMemref(
-        state, options, builder, memref);
-
-  // Otherwise use the default implementation.
-  return state.getMemrefWithUniqueOwnership(builder, memref, block);
-}
 
 static bool regionOperatesOnMemrefValues(Region &region) {
   WalkResult result = region.walk([](Block *block) {
@@ -710,11 +677,11 @@ BufferDeallocation::handleInterface(RegionBranchOpInterface op) {
   return newOp.getOperation();
 }
 
-Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
-    OpBuilder &builder, Value memref, Block *block) {
+Value BufferDeallocation::getMemrefWithGuaranteedOwnership(OpBuilder &builder,
+                                                           Value memref) {
   // First, make sure we at least have 'Unique' ownership already.
   std::pair<Value, Value> newMemrefAndOnwership =
-      materializeUniqueOwnership(builder, memref, block);
+      state.getMemrefWithUniqueOwnership(builder, memref);
   Value newMemref = newMemrefAndOnwership.first;
   Value condition = newMemrefAndOnwership.second;
 
@@ -818,7 +785,7 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
         continue;
       }
       auto [memref, condition] =
-          materializeUniqueOwnership(builder, operand, op->getBlock());
+          state.getMemrefWithUniqueOwnership(builder, operand);
       newOperands.push_back(memref);
       ownershipIndicatorsToAdd.push_back(condition);
     }
@@ -901,8 +868,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
       if (!isMemref(val.get()))
         continue;
 
-      val.set(materializeMemrefWithGuaranteedOwnership(builder, val.get(),
-                                                       op->getBlock()));
+      val.set(getMemrefWithGuaranteedOwnership(builder, val.get()));
     }
   }
 

@@ -39,34 +39,7 @@ def BufferDeallocationOpInterface :
         /*retType=*/"FailureOr<Operation *>",
         /*methodName=*/"process",
         /*args=*/(ins "DeallocationState &":$state,
-                      "const DeallocationOptions &":$options)>,
-      InterfaceMethod<
-        /*desc=*/[{
-          This method allows the implementing operation to specify custom logic
-          to materialize an ownership indicator value for the given MemRef typed
-          value it defines (including block arguments of nested regions). Since
-          the operation itself has more information about its semantics the
-          materialized IR can be more efficient compared to the default
-          implementation and avoid cloning MemRefs and/or doing alias checking
-          at runtime.
-          Note that the same logic could also be implemented in the 'process'
-          method above, however, the IR is always materialized then. If
-          it's desirable to only materialize the IR to compute an updated
-          ownership indicator when needed, it should be implemented using this
-          method (which is especially important if operations are created that
-          cannot be easily canonicalized away anymore).
-        }],
-        /*retType=*/"std::pair<Value, Value>",
-        /*methodName=*/"materializeUniqueOwnershipForMemref",
-        /*args=*/(ins "DeallocationState &":$state,
-                      "const DeallocationOptions &":$options,
-                      "OpBuilder &":$builder,
-                      "Value":$memref),
-        /*methodBody=*/[{}],
-        /*defaultImplementation=*/[{
-          return state.getMemrefWithUniqueOwnership(
-            builder, memref, memref.getParentBlock());
-        }]>,
+                      "const DeallocationOptions &":$options)>
   ];
 }
 
