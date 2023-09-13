@@ -275,6 +275,10 @@ Bug Fixes to C++ Support
   (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_ and
   `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_)
 
+- Clang now properly handles out of line template specializations when there is
+  a non-template inner-class between the function and the class template.
+  (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
