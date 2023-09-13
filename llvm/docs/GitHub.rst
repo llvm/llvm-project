@@ -169,7 +169,7 @@ this result correctly with a note that a force push did occur.
 Checking out another PR locally
 -------------------------------
 Sometimes you want to review another person's PR on your local machine to run
-tests or inspect code in your prefered editor. This is easily done with the
+tests or inspect code in your preferred editor. This is easily done with the
 CLI:
 
 ::
