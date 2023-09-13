@@ -331,10 +331,31 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
+void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
+  const parser::AssignmentStmt &assignment{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assignment.t)};
+  const auto &expr{std::get<parser::Expr>(assignment.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  const auto *lhs{GetExpr(context_, var)};
+  if (lhs && rhs) {
+    if (lhs->Rank() != 0)
+      context_.Say(expr.source,
+          "LHS of atomic update statement must be scalar"_err_en_US);
+    if (rhs->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "RHS of atomic update statement must be scalar"_err_en_US);
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
+  if (loopNestLevel == 0) {
+    context_.Say(verbatim.source,
+          "The CACHE directive must be inside a loop"_err_en_US);
+  }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
   dirContext_.pop_back();
@@ -653,6 +674,14 @@ void AccStructureChecker::Enter(const parser::SubroutineSubprogram &) {
 
 void AccStructureChecker::Enter(const parser::SeparateModuleSubprogram &) {
   declareSymbols.clear();
+}
+
+void AccStructureChecker::Enter(const parser::DoConstruct &) {
+  ++loopNestLevel;
+}
+
+void AccStructureChecker::Leave(const parser::DoConstruct &) {
+  --loopNestLevel;
 }
 
 llvm::StringRef AccStructureChecker::getDirectiveName(

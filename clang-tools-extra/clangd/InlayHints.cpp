@@ -586,11 +586,13 @@ public:
     if (!Cfg.InlayHints.Parameters)
       return true;
 
-    // Do not show parameter hints for operator calls written using operator
-    // syntax or user-defined literals. (Among other reasons, the resulting
+    bool IsFunctor = isFunctionObjectCallExpr(E);
+    // Do not show parameter hints for user-defined literals or
+    // operator calls except for operator(). (Among other reasons, the resulting
     // hints can look awkward, e.g. the expression can itself be a function
     // argument and then we'd get two hints side by side).
-    if (isa<CXXOperatorCallExpr>(E) || isa<UserDefinedLiteral>(E))
+    if ((isa<CXXOperatorCallExpr>(E) && !IsFunctor) ||
+        isa<UserDefinedLiteral>(E))
       return true;
 
     auto CalleeDecls = Resolver->resolveCalleeOfCallExpr(E);
@@ -607,7 +609,22 @@ public:
     else
       return true;
 
-    processCall(Callee, {E->getArgs(), E->getNumArgs()});
+    // N4868 [over.call.object]p3 says,
+    // The argument list submitted to overload resolution consists of the
+    // argument expressions present in the function call syntax preceded by the
+    // implied object argument (E).
+    //
+    // However, we don't have the implied object argument for static
+    // operator() per clang::Sema::BuildCallToObjectOfClassType.
+    llvm::ArrayRef<const Expr *> Args = {E->getArgs(), E->getNumArgs()};
+    if (IsFunctor)
+      // We don't have the implied object argument through
+      // a function pointer either.
+      if (const CXXMethodDecl *Method =
+              dyn_cast_or_null<CXXMethodDecl>(Callee.Decl);
+          Method && Method->isInstance())
+        Args = Args.drop_front(1);
+    processCall(Callee, Args);
     return true;
   }
 
@@ -1201,6 +1218,12 @@ private:
     Position HintEnd = sourceLocToPosition(
         SM, RBraceLoc.getLocWithOffset(HintRangeText.size()));
     return Range{HintStart, HintEnd};
+  }
+
+  static bool isFunctionObjectCallExpr(CallExpr *E) noexcept {
+    if (auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(E))
+      return CallExpr->getOperator() == OverloadedOperatorKind::OO_Call;
+    return false;
   }
 
   std::vector<InlayHint> &Results;

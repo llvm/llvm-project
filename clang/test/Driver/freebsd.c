@@ -128,6 +128,7 @@
 // RUN: %clang --target=x86_64-pc-freebsd -shared %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SHARED %s
+// CHECK-SHARED: ld{{.*}}" "--eh-frame-hdr" "-shared"
 // CHECK-SHARED: crti.o
 // CHECK-SHARED: crtbeginS.o
 

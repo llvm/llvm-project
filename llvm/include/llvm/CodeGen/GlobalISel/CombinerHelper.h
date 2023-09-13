@@ -657,6 +657,9 @@ public:
   /// Do constant FP folding when opportunities are exposed after MIR building.
   bool matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP* &MatchInfo);
 
+  /// Constant fold G_FMA/G_FMAD.
+  bool matchConstantFoldFMA(MachineInstr &MI, ConstantFP *&MatchInfo);
+
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
   bool matchNarrowBinopFeedingAnd(MachineInstr &MI, BuildFnTy &MatchInfo);

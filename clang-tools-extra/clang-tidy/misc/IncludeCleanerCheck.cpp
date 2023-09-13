@@ -101,7 +101,7 @@ bool IncludeCleanerCheck::shouldIgnore(const include_cleaner::Header &H) {
     case include_cleaner::Header::Verbatim:
       return R.match(H.verbatim());
     case include_cleaner::Header::Physical:
-      return R.match(H.physical()->tryGetRealPathName());
+      return R.match(H.physical().getFileEntry().tryGetRealPathName());
     }
     llvm_unreachable("Unknown Header kind.");
   });
@@ -145,7 +145,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
              for (const include_cleaner::Header &H : Providers) {
                if (H.kind() == include_cleaner::Header::Physical &&
                    (H.physical() == MainFile ||
-                    H.physical()->getDir() == ResourceDir)) {
+                    H.physical().getDir() == ResourceDir)) {
                  Satisfied = true;
                  continue;
                }

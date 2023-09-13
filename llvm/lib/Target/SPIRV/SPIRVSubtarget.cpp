@@ -27,25 +27,34 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SPIRVGenSubtargetInfo.inc"
 
+cl::list<SPIRV::Extension::Extension> Extensions(
+    "spirv-extensions", cl::desc("SPIR-V extensions"), cl::ZeroOrMore,
+    cl::Hidden,
+    cl::values(
+        clEnumValN(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers,
+                   "SPV_INTEL_arbitrary_precision_integers",
+                   "Allows generating arbitrary width integer types"),
+        clEnumValN(SPIRV::Extension::SPV_INTEL_optnone, "SPV_INTEL_optnone",
+                   "Adds OptNoneINTEL value for Function Control mask that "
+                   "indicates a request to not optimize the function"),
+        clEnumValN(SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration,
+                   "SPV_KHR_no_integer_wrap_decoration",
+                   "Adds decorations to indicate that a given instruction does "
+                   "not cause integer wrapping")));
+
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(uint32_t Target, uint32_t VerToCompareTo) {
   return Target == 0 || Target >= VerToCompareTo;
-}
-
-static unsigned computePointerSize(const Triple &TT) {
-  const auto Arch = TT.getArch();
-  // TODO: unify this with pointers legalization.
-  assert(TT.isSPIRV());
-  return Arch == Triple::spirv32 ? 32 : 64;
 }
 
 SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(computePointerSize(TT)), SPIRVVersion(0), OpenCLVersion(0),
-      InstrInfo(), FrameLowering(initSubtargetDependencies(CPU, FS)),
-      TLInfo(TM, *this) {
+      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)), SPIRVVersion(0),
+      OpenCLVersion(0), InstrInfo(),
+      FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
+      TargetTriple(TT) {
   // The order of initialization is important.
   initAvailableExtensions();
   initAvailableExtInstSets();
@@ -82,6 +91,8 @@ bool SPIRVSubtarget::isAtLeastSPIRVVer(uint32_t VerToCompareTo) const {
 }
 
 bool SPIRVSubtarget::isAtLeastOpenCLVer(uint32_t VerToCompareTo) const {
+  if (!isOpenCLEnv())
+    return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
 
@@ -90,17 +101,13 @@ bool SPIRVSubtarget::canDirectlyComparePointers() const {
   return isAtLeastVer(SPIRVVersion, 14);
 }
 
-// TODO: use command line args for this rather than defaults.
 void SPIRVSubtarget::initAvailableExtensions() {
   AvailableExtensions.clear();
   if (!isOpenCLEnv())
     return;
-  // A default extension for testing.
-  // FIXME: This should be changed when we can select extensions through a
-  // command line flag.
-  AvailableExtensions.insert(
-      SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration);
-  AvailableExtensions.insert(SPIRV::Extension::SPV_INTEL_optnone);
+
+  for (auto Extension : Extensions)
+    AvailableExtensions.insert(Extension);
 }
 
 // TODO: use command line args for this rather than just defaults.

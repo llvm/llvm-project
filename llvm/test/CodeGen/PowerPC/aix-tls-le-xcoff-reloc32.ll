@@ -62,14 +62,14 @@ entry:
 ; RELOC-NEXT:       Length: 16
 ; RELOC-NEXT:       Type: R_TOC (0x3)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x44
+; RELOC:       Virtual Address: 0x40
 ; RELOC-NEXT:       Symbol: .__get_tpointer (1)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
 ; RELOC-NEXT:       Length: 26
 ; RELOC-NEXT:       Type: R_RBA (0x18)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x7E
+; RELOC:       Virtual Address: 0x8E
 ; RELOC-NEXT:       Symbol: IThreadLocalVarUninit2 (29)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
@@ -258,13 +258,13 @@ entry:
 ; DIS-NEXT:                                      stwu 1, -32(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 4(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 25) ThreadLocalVarInit[TC]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 5, 8(2)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 27) VarInit[TC]
 ; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__get_tpointer[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwzx 3, 3, 4
-; DIS-NEXT:                                      lwz 4, 0(5)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 8(2)
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 27) VarInit[TC]
+; DIS-NEXT:                                      lwz 4, 0(4)
 ; DIS-NEXT:                                      add 3, 4, 3
 ; DIS-NEXT:                                      addi 1, 1, 32
 ; DIS-NEXT:                                      lwz 0, 8(1)
@@ -275,14 +275,14 @@ entry:
 ; DIS-NEXT:                                      stwu 1, -32(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 0(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 23) IThreadLocalVarUninit[TC]
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 5, 12(2)
-; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 29) IThreadLocalVarUninit2[TC]
+; DIS-NEXT:                                      li 5, 1
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__get_tpointer[PR]
-; DIS-NEXT:                                      li 6, 1
 ; DIS-NEXT:                                      stw 0, 40(1)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               stwx 6, 3, 4
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwzx 3, 3, 5
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               stwx 5, 3, 4
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 4, 12(2)
+; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 29) IThreadLocalVarUninit2[TC]
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwzx 3, 3, 4
 ; DIS-NEXT:                                      addi 3, 3, 1
 ; DIS-NEXT:                                      addi 1, 1, 32
 ; DIS-NEXT:                                      lwz 0, 8(1)

@@ -62,6 +62,50 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fwrite
+  SRCS
+    fwrite.cpp
+  HDRS
+    ../fwrite.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  fputc
+  SRCS
+    fputc.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  putc
+  SRCS
+    putc.cpp
+  HDRS
+    ../putc.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  putchar
+  SRCS
+    putchar.cpp
+  HDRS
+    ../putchar.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
   stdin
   SRCS
     stdin.cpp

@@ -42,10 +42,10 @@ entry:
 ; CHECK: extsw r3,
 ; CHECK: bl call
 ; CHECK: sub r3,
-; CHECK: rldicl r3, r3, 1, 63
 ; CHECK: std r3, [[OFF:[0-9]+]](r1)
 ; CHECK: #APP
 ; CHECK: ld r3, [[OFF]](r1)
+; CHECK: rldicl r3, r3, 1, 63
 ; CHECK: xori r3, r3, 1
 ; CHECK: blr
 

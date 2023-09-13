@@ -23,24 +23,24 @@ define dso_local i32 @vec_caller() {
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    mflr 0
 ; 32BIT-NEXT:    stwu 1, -64(1)
-; 32BIT-NEXT:    lwz 3, L..C0(2)
-; 32BIT-NEXT:    lwz 4, L..C1(2)
-; 32BIT-NEXT:    xxlxor 34, 34, 34
+; 32BIT-NEXT:    lwz 3, L..C0(2) # %const.0
 ; 32BIT-NEXT:    stw 0, 72(1)
+; 32BIT-NEXT:    xxlxor 34, 34, 34
 ; 32BIT-NEXT:    xxlxor 35, 35, 35
-; 32BIT-NEXT:    xxlxor 36, 36, 36
 ; 32BIT-NEXT:    lxvw4x 0, 0, 3
-; 32BIT-NEXT:    lxvw4x 1, 0, 4
+; 32BIT-NEXT:    lwz 3, L..C1(2) # %const.1
+; 32BIT-NEXT:    xxlxor 36, 36, 36
 ; 32BIT-NEXT:    xxlxor 37, 37, 37
+; 32BIT-NEXT:    lxvw4x 1, 0, 3
 ; 32BIT-NEXT:    li 3, 48
 ; 32BIT-NEXT:    xxlxor 38, 38, 38
-; 32BIT-NEXT:    li 4, 32
 ; 32BIT-NEXT:    xxlxor 39, 39, 39
 ; 32BIT-NEXT:    xxlxor 40, 40, 40
 ; 32BIT-NEXT:    stxvw4x 0, 1, 3
+; 32BIT-NEXT:    li 3, 32
 ; 32BIT-NEXT:    xxlxor 41, 41, 41
-; 32BIT-NEXT:    stxvw4x 1, 1, 4
 ; 32BIT-NEXT:    xxlxor 42, 42, 42
+; 32BIT-NEXT:    stxvw4x 1, 1, 3
 ; 32BIT-NEXT:    xxlxor 43, 43, 43
 ; 32BIT-NEXT:    xxlxor 44, 44, 44
 ; 32BIT-NEXT:    xxlxor 45, 45, 45
@@ -50,30 +50,29 @@ define dso_local i32 @vec_caller() {
 ; 32BIT-NEXT:    lwz 0, 8(1)
 ; 32BIT-NEXT:    mtlr 0
 ; 32BIT-NEXT:    blr
-
-
+;
 ; 64BIT-LABEL: vec_caller:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    mflr 0
 ; 64BIT-NEXT:    stdu 1, -112(1)
-; 64BIT-NEXT:    ld 3, L..C0(2)
-; 64BIT-NEXT:    ld 4, L..C1(2)
-; 64BIT-NEXT:    xxlxor 34, 34, 34
+; 64BIT-NEXT:    ld 3, L..C0(2) # %const.0
 ; 64BIT-NEXT:    std 0, 128(1)
+; 64BIT-NEXT:    xxlxor 34, 34, 34
 ; 64BIT-NEXT:    xxlxor 35, 35, 35
-; 64BIT-NEXT:    xxlxor 36, 36, 36
 ; 64BIT-NEXT:    lxvw4x 0, 0, 3
-; 64BIT-NEXT:    lxvw4x 1, 0, 4
+; 64BIT-NEXT:    ld 3, L..C1(2) # %const.1
+; 64BIT-NEXT:    xxlxor 36, 36, 36
 ; 64BIT-NEXT:    xxlxor 37, 37, 37
+; 64BIT-NEXT:    lxvw4x 1, 0, 3
 ; 64BIT-NEXT:    li 3, 64
 ; 64BIT-NEXT:    xxlxor 38, 38, 38
-; 64BIT-NEXT:    li 4, 48
 ; 64BIT-NEXT:    xxlxor 39, 39, 39
 ; 64BIT-NEXT:    xxlxor 40, 40, 40
 ; 64BIT-NEXT:    stxvw4x 0, 1, 3
+; 64BIT-NEXT:    li 3, 48
 ; 64BIT-NEXT:    xxlxor 41, 41, 41
-; 64BIT-NEXT:    stxvw4x 1, 1, 4
 ; 64BIT-NEXT:    xxlxor 42, 42, 42
+; 64BIT-NEXT:    stxvw4x 1, 1, 3
 ; 64BIT-NEXT:    xxlxor 43, 43, 43
 ; 64BIT-NEXT:    xxlxor 44, 44, 44
 ; 64BIT-NEXT:    xxlxor 45, 45, 45

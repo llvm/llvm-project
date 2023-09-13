@@ -17,6 +17,7 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUTargetMachine.h"
+#include "GCNSubtarget.h"
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -692,7 +693,7 @@ GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseReservedNumSGPRs(MFI.hasFlatScratchInit());
+  return getBaseReservedNumSGPRs(MFI.getUserSGPRInfo().hasFlatScratchInit());
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
@@ -771,24 +772,26 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
 }
 
 static unsigned getMaxNumPreloadedSGPRs() {
+  using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
-  unsigned MaxUserSGPRs = 4 + // private segment buffer
-                          2 + // Dispatch ptr
-                          2 + // queue ptr
-                          2 + // kernel segment ptr
-                          2 + // dispatch ID
-                          2 + // flat scratch init
-                          2;  // Implicit buffer ptr
+  const unsigned MaxUserSGPRs =
+      USI::getNumUserSGPRForField(USI::PrivateSegmentBufferID) +
+      USI::getNumUserSGPRForField(USI::DispatchPtrID) +
+      USI::getNumUserSGPRForField(USI::QueuePtrID) +
+      USI::getNumUserSGPRForField(USI::KernargSegmentPtrID) +
+      USI::getNumUserSGPRForField(USI::DispatchIdID) +
+      USI::getNumUserSGPRForField(USI::FlatScratchInitID) +
+      USI::getNumUserSGPRForField(USI::ImplicitBufferPtrID);
 
   // Max number of system SGPRs
-  unsigned MaxSystemSGPRs = 1 + // WorkGroupIDX
-                            1 + // WorkGroupIDY
-                            1 + // WorkGroupIDZ
-                            1 + // WorkGroupInfo
-                            1;  // private segment wave byte offset
+  const unsigned MaxSystemSGPRs = 1 + // WorkGroupIDX
+                                  1 + // WorkGroupIDY
+                                  1 + // WorkGroupIDZ
+                                  1 + // WorkGroupInfo
+                                  1;  // private segment wave byte offset
 
   // Max number of synthetic SGPRs
-  unsigned SyntheticSGPRs = 1; // LDSKernelId
+  const unsigned SyntheticSGPRs = 1; // LDSKernelId
 
   return MaxUserSGPRs + MaxSystemSGPRs + SyntheticSGPRs;
 }
@@ -1017,4 +1020,74 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   else
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<R600Subtarget>(F));
+}
+
+GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
+                                           const GCNSubtarget &ST) {
+  const CallingConv::ID CC = F.getCallingConv();
+  const bool IsKernel =
+      CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
+  // FIXME: Should have analysis or something rather than attribute to detect
+  // calls.
+  const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
+  // FIXME: This attribute is a hack, we just need an analysis on the function
+  // to look for allocas.
+  const bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
+
+  if (IsKernel && (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0))
+    KernargSegmentPtr = true;
+
+  bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
+  if (IsAmdHsaOrMesa && !ST.enableFlatScratch())
+    PrivateSegmentBuffer = true;
+  else if (ST.isMesaGfxShader(F))
+    ImplicitBufferPtr = true;
+
+  if (!AMDGPU::isGraphics(CC)) {
+    if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))
+      DispatchPtr = true;
+
+    // FIXME: Can this always be disabled with < COv5?
+    if (!F.hasFnAttribute("amdgpu-no-queue-ptr"))
+      QueuePtr = true;
+
+    if (!F.hasFnAttribute("amdgpu-no-dispatch-id"))
+      DispatchID = true;
+  }
+
+  // TODO: This could be refined a lot. The attribute is a poor way of
+  // detecting calls or stack objects that may require it before argument
+  // lowering.
+  if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
+      (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
+      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
+      !ST.flatScratchIsArchitected()) {
+    FlatScratchInit = true;
+  }
+}
+
+unsigned GCNUserSGPRUsageInfo::getNumUsedUserSGPRs() const {
+  unsigned NumUserSGPRs = 0;
+  if (hasImplicitBufferPtr())
+    NumUserSGPRs += getNumUserSGPRForField(ImplicitBufferPtrID);
+
+  if (hasPrivateSegmentBuffer())
+    NumUserSGPRs += getNumUserSGPRForField(PrivateSegmentBufferID);
+
+  if (hasDispatchPtr())
+    NumUserSGPRs += getNumUserSGPRForField(DispatchPtrID);
+
+  if (hasQueuePtr())
+    NumUserSGPRs += getNumUserSGPRForField(QueuePtrID);
+
+  if (hasKernargSegmentPtr())
+    NumUserSGPRs += getNumUserSGPRForField(KernargSegmentPtrID);
+
+  if (hasDispatchID())
+    NumUserSGPRs += getNumUserSGPRForField(DispatchIdID);
+
+  if (hasFlatScratchInit())
+    NumUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+
+  return NumUserSGPRs;
 }

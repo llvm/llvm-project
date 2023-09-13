@@ -87,10 +87,10 @@ static Value genOperator(Location loc, Value x, Value y,
     combinedResult = rewriter.create<arith::XOrIOp>(loc, x, y);
     break;
   case CombiningKind::MINF:
-    combinedResult = rewriter.create<arith::MinFOp>(loc, x, y);
+    combinedResult = rewriter.create<arith::MinimumFOp>(loc, x, y);
     break;
   case CombiningKind::MAXF:
-    combinedResult = rewriter.create<arith::MaxFOp>(loc, x, y);
+    combinedResult = rewriter.create<arith::MaximumFOp>(loc, x, y);
     break;
   }
   return combinedResult;

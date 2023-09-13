@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj -mhvx %s | llvm-objdump --no-print-imm-hex --arch=hexagon --mcpu=hexagonv62 --mattr=+hvx -d - | FileCheck %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv62 -filetype=obj -mhvx %s | llvm-objdump --no-print-imm-hex --triple=hexagon --mcpu=hexagonv62 --mattr=+hvx -d - | FileCheck %s
 
 //   V6_lvsplatb
 //   Vd32.b=vsplat(Rt32)

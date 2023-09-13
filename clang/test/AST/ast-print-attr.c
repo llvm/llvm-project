@@ -32,3 +32,9 @@ int *fun_returns() __attribute__((ownership_returns(fun_returns)));
 
 // CHECK: void fun_holds(int *a) __attribute__((ownership_holds(fun_holds, 1)));
 void fun_holds(int *a) __attribute__((ownership_holds(fun_holds, 1)));
+
+// CHECK: int fun_var_unused() {
+// CHECK-NEXT: int x __attribute__((unused)) = 0;
+// CHECK-NEXT: return x;
+// CHECK-NEXT: }
+int fun_var_unused() { int x __attribute__((unused)) = 0; return x; }

@@ -230,71 +230,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fwrite_unlocked
-  SRCS
-    fwrite_unlocked.cpp
-  HDRS
-    fwrite_unlocked.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fwrite
-  SRCS
-    fwrite.cpp
-  HDRS
-    fwrite.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fputc
-  SRCS
-    fputc.cpp
-  HDRS
-    fputc.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  putc
-  SRCS
-    putc.cpp
-  HDRS
-    putc.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  putchar
-  SRCS
-    putchar.cpp
-  HDRS
-    putchar.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   fseek
   SRCS
     fseek.cpp
@@ -538,6 +473,11 @@ add_stdio_entrypoint_object(fread_unlocked)
 add_stdio_entrypoint_object(fread)
 add_stdio_entrypoint_object(puts)
 add_stdio_entrypoint_object(fputs)
+add_stdio_entrypoint_object(fwrite_unlocked)
+add_stdio_entrypoint_object(fwrite)
+add_stdio_entrypoint_object(fputc)
+add_stdio_entrypoint_object(putc)
+add_stdio_entrypoint_object(putchar)
 add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)

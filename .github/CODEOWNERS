@@ -105,6 +105,7 @@
 
 # mlir-emitc
 /mlir/**/EmitC/ @llvm/pr-subscribers-mlir-emitc
+/mlir/lib/Target/Cpp @llvm/pr-subscribers-mlir-emitc
 
 # mlir-func
 /mlir/**/Func/ @llvm/pr-subscribers-mlir-func
@@ -119,7 +120,7 @@
 /mlir/**/Index/ @llvm/pr-subscribers-mlir-index
 
 # mlir-llvm
-/mlir/**/LLVM/ @llvm/pr-subscribers-mlir-llvm
+/mlir/**/LLVM* @llvm/pr-subscribers-mlir-llvm
 
 # mlir-linalg
 /mlir/**/*Linalg @llvm/pr-subscribers-mlir-linalg
@@ -245,6 +246,36 @@
 /llvm/test/Other/FileCheck-space.txt @llvm/pr-subscribers-testing-tools
 /llvm/utils/update*_test_checks.py @llvm/pr-subscribers-testing-tools
 /llvm/utils/UpdateTestChecks/ @llvm/pr-subscribers-testing-tools
+
+# llvm-binary-utilities
+/llvm/docs/CommandGuide/llvm-* @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/include/llvm/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/BinaryFormat/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/DebugInfo/Symbolize/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/ObjCopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/lib/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/Object/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/test/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-ar/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-cxxfilt/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-nm/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objcopy/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-objdump/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-readobj/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-size/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-strings/ @llvm/pr-subscribers-llvm-binary-utilities
+/llvm/tools/llvm-symbolizer/ @llvm/pr-subscribers-llvm-binary-utilities
 
 # debug-info
 /llvm/include/llvm/DebugInfo/ @llvm/pr-subscribers-debug-info
@@ -460,14 +491,19 @@ utils/bazel/llvm-project-overlay/libc/** @llvm/pr-subscribers-libc
 /llvm/lib/IR/ @llvm/pr-subscribers-llvm-ir
 /llvm/include/llvm/IR/ @llvm/pr-subscribers-llvm-ir
 /llvm/docs/LangRef.rst @llvm/pr-subscribers-llvm-ir
+/llvm/unittests/IR/ @llvm/pr-subscribers-llvm-ir
 
 # llvm-analysis
 /llvm/lib/Analysis/ @llvm/pr-subscribers-llvm-analysis
 /llvm/include/llvm/Analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/test/Analysis/ @llvm/pr-subscribers-llvm-analysis
+/llvm/unittests/Analysis/ @llvm/pr-subscribers-llvm-analysis
 
 # llvm-transforms
 /llvm/lib/Transforms/ @llvm/pr-subscribers-llvm-transforms
 /llvm/include/llvm/Transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/test/Transforms/ @llvm/pr-subscribers-llvm-transforms
+/llvm/unittests/Transforms/ @llvm/pr-subscribers-llvm-transforms
 
 # clangd
 /clang-tools-extra/clangd/ @llvm/pr-subscribers-clangd

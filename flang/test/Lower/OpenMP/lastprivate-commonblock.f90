@@ -3,7 +3,7 @@
 !CHECK: func.func @_QPlastprivate_common() {
 !CHECK: %[[val_0:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK: %[[val_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_commonEi"}
-!CHECK: %[[val_2:.*]] = fir.address_of(@_QCc) : !fir.ref<!fir.array<8xi8>>
+!CHECK: %[[val_2:.*]] = fir.address_of(@c_) : !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[val_3:.*]] = fir.convert %[[val_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK: %[[val_c0:.*]] = arith.constant 0 : index
 !CHECK: %[[val_4:.*]] = fir.coordinate_of %[[val_3]], %[[val_c0]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

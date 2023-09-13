@@ -1,7 +1,7 @@
-; RUN: llc -march=bpfel -filetype=obj -o %t.el < %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o %t.el < %s
 ; RUN: llvm-objdump -r %t.el | FileCheck --check-prefix=RELOC %s
 ; RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.el | FileCheck --check-prefix=DUMP %s
-; RUN: llc -march=bpfeb -filetype=obj -o %t.eb < %s
+; RUN: llc -mtriple=bpfeb -filetype=obj -o %t.eb < %s
 ; RUN: llvm-objdump -r %t.eb | FileCheck --check-prefix=RELOC %s
 ; RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.eb | FileCheck --check-prefix=DUMP %s
 

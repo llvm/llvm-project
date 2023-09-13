@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -mhvx -filetype=asm %s 2>%t; FileCheck --implicit-check-not="error:" %s <%t
+# RUN: not llvm-mc -triple=hexagon -mhvx -filetype=asm %s 2>%t; FileCheck --implicit-check-not="error:" %s <%t
 {
     v0.tmp = vmem(r0+#0)
     v0 += vrmpyub(v1, r1)

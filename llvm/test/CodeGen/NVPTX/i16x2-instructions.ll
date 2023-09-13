@@ -20,7 +20,7 @@
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; COMMON-LABEL: test_ret_const(
-; COMMON:     mov.u32         [[R:%r[0-9+]]], 131073;
+; COMMON:     mov.b32         [[R:%r[0-9+]]], 131073;
 ; COMMON:     st.param.b32    [func_retval0+0], [[R]];
 ; COMMON-NEXT: ret;
 define <2 x i16> @test_ret_const() #0 {
@@ -86,7 +86,7 @@ define <2 x i16> @test_add(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_add_imm_0(
 ; COMMON-DAG:  ld.param.u32    [[A:%r[0-9]+]], [test_add_imm_0_param_0];
 ;
-; I16x2:        mov.u32        [[I:%r[0-9+]]], 131073;
+; I16x2:        mov.b32        [[I:%r[0-9+]]], 131073;
 ; I16x2:        add.s16x2      [[R:%r[0-9]+]], [[A]], [[I]];
 ;
 ;	NO-I16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
@@ -104,7 +104,7 @@ define <2 x i16> @test_add_imm_0(<2 x i16> %a) #0 {
 ; COMMON-LABEL: test_add_imm_1(
 ; COMMON-DAG:  ld.param.u32    [[B:%r[0-9]+]], [test_add_imm_1_param_0];
 ;
-; I16x2:        mov.u32        [[I:%r[0-9+]]], 131073;
+; I16x2:        mov.b32        [[I:%r[0-9+]]], 131073;
 ; I16x2:        add.s16x2      [[R:%r[0-9]+]], [[A]], [[I]];
 ;
 ;	NO-I16x2-DAG: mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[A]];
@@ -497,6 +497,20 @@ define i32 @test_bitcast_2xi16_to_i32(<2 x i16> %a) #0 {
   ret i32 %r
 }
 
+; COMMON-LABEL: test_bitcast_2xi16_to_2xhalf(
+; COMMON: ld.param.u16 	[[RS1:%rs[0-9]+]], [test_bitcast_2xi16_to_2xhalf_param_0];
+; COMMON:	mov.u16 	[[RS2:%rs[0-9]+]], 5;
+; COMMON:	mov.b32 	[[R:%r[0-9]+]], {[[RS1]], [[RS2]]};
+; COMMON: st.param.b32 	[func_retval0+0], [[R]];
+; COMMON: ret;
+define <2 x half> @test_bitcast_2xi16_to_2xhalf(i16 %a) #0 {
+  %ins.0 = insertelement <2 x i16> undef, i16 %a, i32 0
+  %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
+  %r = bitcast <2 x i16> %ins.1 to <2 x half>
+  ret <2 x half> %r
+}
+
+
 ; COMMON-LABEL: test_shufflevector(
 ; COMMON:	ld.param.u32 	[[R:%r[0-9]+]], [test_shufflevector_param_0];
 ; COMMON:	mov.b32 	{[[RS0:%rs[0-9]+]], [[RS1:%rs[0-9]+]]}, [[R]];
@@ -518,6 +532,24 @@ define <2 x i16> @test_shufflevector(<2 x i16> %a) #0 {
 define <2 x i16> @test_insertelement(<2 x i16> %a, i16 %x) #0 {
   %i = insertelement <2 x i16> %a, i16 %x, i64 1
   ret <2 x i16> %i
+}
+
+; COMMON-LABEL: test_fptosi_2xhalf_to_2xi16(
+; COMMON:      cvt.rzi.s16.f16
+; COMMON:      cvt.rzi.s16.f16
+; COMMON:      ret;
+define <2 x i16> @test_fptosi_2xhalf_to_2xi16(<2 x half> %a) #0 {
+  %r = fptosi <2 x half> %a to <2 x i16>
+  ret <2 x i16> %r
+}
+
+; COMMON-LABEL: test_fptoui_2xhalf_to_2xi16(
+; COMMON:      cvt.rzi.u16.f16
+; COMMON:      cvt.rzi.u16.f16
+; COMMON:      ret;
+define <2 x i16> @test_fptoui_2xhalf_to_2xi16(<2 x half> %a) #0 {
+  %r = fptoui <2 x half> %a to <2 x i16>
+  ret <2 x i16> %r
 }
 
 attributes #0 = { nounwind }

@@ -106,11 +106,18 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.Mem =
         static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
-    MAI.Mem = SPIRV::MemoryModel::OpenCL;
-    unsigned PtrSize = ST->getPointerSize();
-    MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
-               : PtrSize == 64 ? SPIRV::AddressingModel::Physical64
-                               : SPIRV::AddressingModel::Logical;
+    // TODO: Add support for VulkanMemoryModel.
+    MAI.Mem = ST->isOpenCLEnv() ? SPIRV::MemoryModel::OpenCL
+                                : SPIRV::MemoryModel::GLSL450;
+    if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
+      unsigned PtrSize = ST->getPointerSize();
+      MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
+                 : PtrSize == 64 ? SPIRV::AddressingModel::Physical64
+                                 : SPIRV::AddressingModel::Logical;
+    } else {
+      // TODO: Add support for PhysicalStorageBufferAddress.
+      MAI.Addr = SPIRV::AddressingModel::Logical;
+    }
   }
   // Get the OpenCL version number from metadata.
   // TODO: support other source languages.
@@ -148,9 +155,12 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::AddressingModelOperand,
                                  MAI.Addr, *ST);
 
-  // TODO: check if it's required by default.
-  MAI.ExtInstSetMap[static_cast<unsigned>(SPIRV::InstructionSet::OpenCL_std)] =
-      Register::index2VirtReg(MAI.getNextID());
+  if (ST->isOpenCLEnv()) {
+    // TODO: check if it's required by default.
+    MAI.ExtInstSetMap[static_cast<unsigned>(
+        SPIRV::InstructionSet::OpenCL_std)] =
+        Register::index2VirtReg(MAI.getNextID());
+  }
 }
 
 // Collect MI which defines the register in the given machine function.
@@ -516,9 +526,21 @@ void SPIRV::RequirementHandler::addAvailableCaps(const CapabilityList &ToAdd) {
 namespace llvm {
 namespace SPIRV {
 void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
-  // TODO: Implemented for other targets other then OpenCL.
-  if (!ST.isOpenCLEnv())
+  if (ST.isOpenCLEnv()) {
+    initAvailableCapabilitiesForOpenCL(ST);
     return;
+  }
+
+  if (ST.isVulkanEnv()) {
+    initAvailableCapabilitiesForVulkan(ST);
+    return;
+  }
+
+  report_fatal_error("Unimplemented environment for SPIR-V generation.");
+}
+
+void RequirementHandler::initAvailableCapabilitiesForOpenCL(
+    const SPIRVSubtarget &ST) {
   // Add the min requirements for different OpenCL and SPIR-V versions.
   addAvailableCaps({Capability::Addresses, Capability::Float16Buffer,
                     Capability::Int16, Capability::Int8, Capability::Kernel,
@@ -552,12 +574,21 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
 
-  // Add cap for SPV_INTEL_optnone.
-  // FIXME: this should be added only if the target has the extension.
-  addAvailableCaps({Capability::OptNoneINTEL});
+  // Add capabilities enabled by extensions.
+  for (auto Extension : ST.getAllAvailableExtensions()) {
+    CapabilityList EnabledCapabilities =
+        getCapabilitiesEnabledByExtension(Extension);
+    addAvailableCaps(EnabledCapabilities);
+  }
 
   // TODO: add OpenCL extensions.
 }
+
+void RequirementHandler::initAvailableCapabilitiesForVulkan(
+    const SPIRVSubtarget &ST) {
+  addAvailableCaps({Capability::Shader, Capability::Linkage});
+}
+
 } // namespace SPIRV
 } // namespace llvm
 
@@ -890,6 +921,11 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::LocalSize, ST);
+    if (F.getFnAttribute("hlsl.numthreads").isValid()) {
+      MAI.Reqs.getAndAddRequirements(
+          SPIRV::OperandCategory::ExecutionModeOperand,
+          SPIRV::ExecutionMode::LocalSize, ST);
+    }
     if (F.getMetadata("work_group_size_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
