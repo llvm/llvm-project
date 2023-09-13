@@ -41,7 +41,7 @@ func.func @sparse_tensor_convert() -> tensor<20x40xf32> {
   return %2 : tensor<20x40xf32>
 }
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait = {
   indexing_maps = [

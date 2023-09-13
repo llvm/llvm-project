@@ -2535,6 +2535,15 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }
+    if (tileSizes.size() > tilingInterface.getLoopIteratorTypes().size()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "too many tiles provided, expected at most "
+          << tilingInterface.getLoopIteratorTypes().size() << " found "
+          << tileSizes.size();
+      diag.attachNote(op->getLoc()) << "target op";
+      return diag;
+    }
 
     scf::SCFTilingOptions tilingOptions;
     if (!tileSizes.empty()) {

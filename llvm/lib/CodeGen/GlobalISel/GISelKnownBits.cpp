@@ -74,7 +74,7 @@ KnownBits GISelKnownBits::getKnownBits(Register R, const APInt &DemandedElts,
   assert(ComputeKnownBitsCache.empty() && "Cache should have been cleared");
 
   KnownBits Known;
-  computeKnownBitsImpl(R, Known, DemandedElts);
+  computeKnownBitsImpl(R, Known, DemandedElts, Depth);
   ComputeKnownBitsCache.clear();
   return Known;
 }
