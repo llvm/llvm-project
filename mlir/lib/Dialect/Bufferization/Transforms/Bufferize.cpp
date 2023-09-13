@@ -21,6 +21,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include <optional>
 
@@ -203,11 +204,12 @@ struct OneShotBufferizePass
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
-      opt.allowReturnAllocsFromLoops = allowReturnAllocsFromLoops;
+      opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
       opt.copyBeforeWrite = copyBeforeWrite;
+      opt.createDeallocs = createDeallocs;
       opt.dumpAliasSets = dumpAliasSets;
       opt.setFunctionBoundaryTypeConversion(
           parseLayoutMapOption(functionBoundaryTypeConversion));
@@ -301,6 +303,7 @@ struct OneShotBufferizePass
 
     // Set pass statistics.
     this->numBufferAlloc = statistics.numBufferAlloc;
+    this->numBufferDealloc = statistics.numBufferDealloc;
     this->numTensorInPlace = statistics.numTensorInPlace;
     this->numTensorOutOfPlace = statistics.numTensorOutOfPlace;
   }
@@ -405,11 +408,14 @@ protected:
   void notifyOperationInserted(Operation *op) override {
     erasedOps.erase(op);
 
-    // Gather statistics about allocs.
+    // Gather statistics about allocs and deallocs.
     if (statistics) {
-      if (auto sideEffectingOp = dyn_cast<MemoryEffectOpInterface>(op))
+      if (auto sideEffectingOp = dyn_cast<MemoryEffectOpInterface>(op)) {
         statistics->numBufferAlloc += static_cast<int64_t>(
             sideEffectingOp.hasEffect<MemoryEffects::Allocate>());
+        statistics->numBufferDealloc += static_cast<int64_t>(
+            sideEffectingOp.hasEffect<MemoryEffects::Free>());
+      }
     }
 
     // Keep track of to_memref ops.
@@ -666,6 +672,7 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
 BufferizationOptions bufferization::getPartialBufferizationOptions() {
   BufferizationOptions options;
   options.allowUnknownOps = true;
+  options.createDeallocs = false;
   options.enforceAliasingInvariants = false;
   options.unknownTypeConverterFn = [](Value value, Attribute memorySpace,
                                       const BufferizationOptions &options) {

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -one-shot-bufferize="test-analysis-only dump-alias-sets bufferize-function-boundaries" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -one-shot-bufferize="allow-return-allocs test-analysis-only dump-alias-sets bufferize-function-boundaries" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @single_branch(
 //  CHECK-SAME:     {__bbarg_alias_set_attr__ = [{{\[}}[{{\[}}"%[[arg1:.*]]", "%[[t:.*]]"]], [{{\[}}"%[[arg1]]", "%[[t]]"]]]]}

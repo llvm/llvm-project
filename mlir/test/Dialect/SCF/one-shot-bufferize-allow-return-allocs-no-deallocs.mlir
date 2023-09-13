@@ -1,4 +1,7 @@
-// RUN: mlir-opt %s -one-shot-bufferize=allow-return-allocs-from-loops -split-input-file | FileCheck %s --dump-input=always
+// RUN: mlir-opt %s \
+// RUN:     -one-shot-bufferize="allow-return-allocs create-deallocs=0" \
+// RUN:     -split-input-file | \
+// RUN: FileCheck %s --dump-input=always
 
 // A regression test to check that different before and after argument types are
 // bufferized successfully.

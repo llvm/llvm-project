@@ -124,11 +124,32 @@ LogicalResult
 mlir::bufferization::insertTensorCopies(Operation *op,
                                         const AnalysisState &state) {
   IRRewriter rewriter(op->getContext());
+  StringRef escapeAttrName = BufferizationDialect::kEscapeAttrName;
 
   WalkResult result = op->walk([&](Operation *op) {
     auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op);
     if (!bufferizableOp)
       return WalkResult::skip();
+
+    // Find allocations without an `escape` attribute and add the attribute
+    // based on analysis results.
+    if (!op->hasAttr(escapeAttrName)) {
+      SmallVector<bool> escapeAttrValue;
+      bool foundTensorResult = false;
+      for (OpResult opResult : op->getOpResults()) {
+        if (!isa<TensorType>(opResult.getType()) ||
+            !bufferizableOp.bufferizesToAllocation(opResult)) {
+          escapeAttrValue.push_back(false);
+          continue;
+        }
+        foundTensorResult = true;
+        bool escape = !state.getOptions().createDeallocs ||
+                      state.isTensorYielded(opResult);
+        escapeAttrValue.push_back(escape);
+      }
+      if (foundTensorResult)
+        op->setAttr(escapeAttrName, rewriter.getBoolArrayAttr(escapeAttrValue));
+    }
 
     // Find inplacability conflicts and resolve them. (Typically with explicit
     // tensor copies in the form of AllocTensorOps.)
