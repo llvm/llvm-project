@@ -344,6 +344,7 @@ public:
       case Kind::Func:
         return "mem";
       }
+      llvm_unreachable("impossible kind");
     }
 
     /// getNumOperandRegisters - Extract the number of registers field from the
