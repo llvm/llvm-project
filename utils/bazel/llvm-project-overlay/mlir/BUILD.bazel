@@ -12137,7 +12137,6 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationEnumsIncGen",
         ":BufferizationPassIncGen",
-        ":ControlFlowDialect",
         ":ControlFlowInterfaces",
         ":FuncDialect",
         ":IR",
