@@ -32,7 +32,9 @@
 #include "test_macros.h"
 
 template <typename... Ts>
-struct VoidifyImpl { using type = void; };
+struct VoidifyImpl {
+  using type = void;
+};
 
 template <typename... Ts>
 using Voidify = typename VoidifyImpl<Ts...>::type;
@@ -41,60 +43,79 @@ template <class T, class = void>
 struct HasElementType : std::false_type {};
 
 template <class T>
-struct HasElementType<T, Voidify<typename std::pointer_traits<T>::element_type>> : std::true_type {};
+struct HasElementType<T, Voidify<typename std::pointer_traits<T>::element_type> > : std::true_type {};
 
 template <class T, class = void>
 struct HasPointerType : std::false_type {};
 
 template <class T>
-struct HasPointerType<T, Voidify<typename std::pointer_traits<T>::pointer>> : std::true_type {};
+struct HasPointerType<T, Voidify<typename std::pointer_traits<T>::pointer> > : std::true_type {};
 
 template <class T, class = void>
 struct HasDifferenceType : std::false_type {};
 
 template <class T>
-struct HasDifferenceType<T, Voidify<typename std::pointer_traits<T>::difference_type>> : std::true_type {};
+struct HasDifferenceType<T, Voidify<typename std::pointer_traits<T>::difference_type> > : std::true_type {};
 
 template <class T, class U, class = void>
 struct HasRebind : std::false_type {};
 
 template <class T, class U>
-struct HasRebind<T, U, Voidify<typename std::pointer_traits<T>::template rebind<U>>> : std::true_type {};
+struct HasRebind<T, U, Voidify<typename std::pointer_traits<T>::template rebind<U> > > : std::true_type {};
 
 template <class T, class = void>
 struct HasPointerTo : std::false_type {};
 
 template <class T>
-struct HasPointerTo<T,
-                    Voidify<decltype(std::pointer_traits<T>::pointer_to(
-                        std::declval<typename std::add_lvalue_reference<typename std::pointer_traits<T>::element_type>::type>()))>>
+struct HasPointerTo<
+    T,
+    Voidify<decltype(std::pointer_traits<T>::pointer_to(
+        std::declval<typename std::add_lvalue_reference<typename std::pointer_traits<T>::element_type>::type>()))> >
     : std::true_type {};
 
 struct Irrelevant;
 
 struct NotAPtr {};
 
-struct LongPtr;
+struct LongPtr {};
 
 int global_int;
 
 template <class T, class Arg>
 struct TemplatedPtr;
 
+#if TEST_STD_VER >= 11
+#  define CONSTEXPR_IF_SUPPORTED constexpr
+#else
+#  define CONSTEXPR_IF_SUPPORTED
+#endif
+
 struct PtrWithElementType {
   using element_type = int;
-  template <typename U>
+  template <class U>
+#if TEST_STD_VER >= 11
   using rebind = TemplatedPtr<U, Irrelevant>;
-  static constexpr PtrWithElementType pointer_to(element_type&) { return PtrWithElementType{&global_int}; }
+#else
+  struct rebind {
+    using other = TemplatedPtr<U, Irrelevant>;
+  };
+#endif
+  static CONSTEXPR_IF_SUPPORTED PtrWithElementType pointer_to(element_type&) { return {&global_int}; }
 
   int* ptr;
 };
 
 template <class T, class Arg>
 struct TemplatedPtr {
-  template <typename U, typename = typename std::enable_if<std::is_same<long, U>::value>::type>
+  template <class U, class = typename std::enable_if<std::is_same<long, U>::value>::type>
+#if TEST_STD_VER >= 11
   using rebind = LongPtr;
-  static constexpr TemplatedPtr pointer_to(T&) { return TemplatedPtr{&global_int}; }
+#else
+  struct rebind {
+    using other = LongPtr;
+  };
+#endif
+  static CONSTEXPR_IF_SUPPORTED TemplatedPtr pointer_to(T&) { return {&global_int}; }
 
   T* ptr;
 };
@@ -102,9 +123,16 @@ struct TemplatedPtr {
 template <class T, class Arg>
 struct TemplatedPtrWithElementType {
   using element_type = int;
-  template <typename U, typename = typename std::enable_if<std::is_same<long, U>::value>::type>
+#if TEST_STD_VER >= 11
+  template <class U, class = typename std::enable_if<std::is_same<long, U>::value>::type>
   using rebind = LongPtr;
-  static constexpr TemplatedPtrWithElementType pointer_to(element_type&) { return TemplatedPtrWithElementType{&global_int}; }
+#else
+  template <class U, class = typename std::enable_if<std::is_same<long, U>::value>::type>
+  struct rebind {
+    using other = LongPtr;
+  };
+#endif
+  static CONSTEXPR_IF_SUPPORTED TemplatedPtrWithElementType pointer_to(element_type&) { return {&global_int}; }
 
   element_type* ptr;
 };
@@ -112,7 +140,8 @@ struct TemplatedPtrWithElementType {
 #if TEST_STD_VER >= 14
 constexpr
 #endif
-bool test() {
+    bool
+    test() {
   {
     using Ptr = NotAPtr;
     assert(!HasElementType<Ptr>::value);
@@ -135,7 +164,11 @@ bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
     assert((HasRebind<Ptr, long>::value));
+#if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
+#else
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, long*);
+#endif
 
     assert(HasPointerTo<Ptr>::value);
     int variable = 0;
@@ -160,7 +193,11 @@ bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
     assert((HasRebind<Ptr, long>::value));
+#if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
+#else
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, long*);
+#endif
 
     assert(HasPointerTo<Ptr>::value);
     const int const_variable = 0;
@@ -194,7 +231,11 @@ bool test() {
     // TODO: Maybe support SFINAE testing of std::pointer_traits<Ptr>::rebind
     // and std::pointer_traits<Ptr>::pointer_to.
     assert((HasRebind<Ptr, long>::value));
+#if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, TemplatedPtr<long, Irrelevant>);
+#else
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, TemplatedPtr<long, Irrelevant>);
+#endif
 
     assert(HasPointerTo<Ptr>::value);
     int ignored = 0;
@@ -219,9 +260,14 @@ bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
     assert((HasRebind<Ptr, long>::value));
-    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, LongPtr);
     assert((HasRebind<Ptr, long long>::value));
+#if TEST_STD_VER >= 11
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, LongPtr);
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long long>, TemplatedPtr<long long, Irrelevant>);
+#else
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, LongPtr);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long long>::other, TemplatedPtr<long long, Irrelevant>);
+#endif
 
     assert(HasPointerTo<Ptr>::value);
     int ignored = 0;
@@ -246,10 +292,16 @@ bool test() {
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
     assert((HasRebind<Ptr, long>::value));
-    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, LongPtr);
     assert((HasRebind<Ptr, long long>::value));
+#if TEST_STD_VER >= 11
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, LongPtr);
     ASSERT_SAME_TYPE(
         typename std::pointer_traits<Ptr>::rebind<long long>, TemplatedPtrWithElementType<long long, Irrelevant>);
+#else
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, LongPtr);
+    ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long long>::other,
+                     TemplatedPtrWithElementType<long long, Irrelevant>);
+#endif
 
     assert(HasPointerTo<Ptr>::value);
     int ignored = 0;
