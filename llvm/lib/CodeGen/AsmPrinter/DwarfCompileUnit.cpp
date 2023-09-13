@@ -772,10 +772,10 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
 
   // Add variable address.
 
-  unsigned Index = DV.getDebugLocListIndex();
-  if (Index != ~0U) {
-    addLocationList(*VariableDie, dwarf::DW_AT_location, Index);
-    auto TagOffset = DV.getDebugLocListTagOffset();
+  if (auto *Multi = std::get_if<Loc::Multi>(&DV)) {
+    addLocationList(*VariableDie, dwarf::DW_AT_location,
+                    Multi->getDebugLocListIndex());
+    auto TagOffset = Multi->getDebugLocListTagOffset();
     if (TagOffset)
       addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
               *TagOffset);
@@ -783,13 +783,14 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   }
 
   // Check if variable has a single location description.
-  if (auto *DVal = DV.getValueLoc()) {
+  if (const auto *Single = std::get_if<Loc::Single>(&DV)) {
+    const DbgValueLoc *DVal = &Single->getValueLoc();
     if (!DVal->isVariadic()) {
       const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
       if (Entry->isLocation()) {
         addVariableAddress(DV, *VariableDie, Entry->getLoc());
       } else if (Entry->isInt()) {
-        auto *Expr = DV.getSingleExpression();
+        auto *Expr = Single->getExpr();
         if (Expr && Expr->getNumElements()) {
           DIELoc *Loc = new (DIEValueAllocator) DIELoc;
           DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
@@ -823,7 +824,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
           return Entry.isLocation() && !Entry.getLoc().getReg();
         }))
       return VariableDie;
-    const DIExpression *Expr = DV.getSingleExpression();
+    const DIExpression *Expr = Single->getExpr();
     assert(Expr && "Variadic Debug Value must have an Expression.");
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
@@ -882,11 +883,11 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
     return VariableDie;
   }
 
-  if (const std::set<EntryValueInfo> *EntryValues = DV.getEntryValues()) {
+  if (auto *EntryValue = std::get_if<Loc::EntryValue>(&DV)) {
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
     // Emit each expression as: EntryValue(Register) <other ops> <Fragment>.
-    for (auto [Register, Expr] : *EntryValues) {
+    for (auto [Register, Expr] : EntryValue->EntryValues) {
       DwarfExpr.addFragmentOffset(&Expr);
       DIExpressionCursor Cursor(Expr.getElements());
       DwarfExpr.beginEntryValueExpression(Cursor);
@@ -899,13 +900,13 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   }
 
   // .. else use frame index.
-  if (!DV.hasFrameIndexExprs())
+  if (!DV.holds<Loc::MMI>())
     return VariableDie;
 
   std::optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  for (const auto &Fragment : DV.getFrameIndexExprs()) {
+  for (const auto &Fragment : DV.get<Loc::MMI>().getFrameIndexExprs()) {
     Register FrameReg;
     const DIExpression *Expr = Fragment.Expr;
     const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
@@ -1530,8 +1531,9 @@ void DwarfCompileUnit::addGlobalTypeUnitType(const DIType *Ty,
 
 void DwarfCompileUnit::addVariableAddress(const DbgVariable &DV, DIE &Die,
                                           MachineLocation Location) {
-  if (DV.hasComplexAddress())
-    addComplexAddress(DV, Die, dwarf::DW_AT_location, Location);
+  auto *Single = std::get_if<Loc::Single>(&DV);
+  if (Single && Single->getExpr())
+    addComplexAddress(Single->getExpr(), Die, dwarf::DW_AT_location, Location);
   else
     addAddress(Die, dwarf::DW_AT_location, Location);
 }
@@ -1562,12 +1564,11 @@ void DwarfCompileUnit::addAddress(DIE &Die, dwarf::Attribute Attribute,
 /// DWARF information necessary to find the actual variable given the extra
 /// address information encoded in the DbgVariable, starting from the starting
 /// location.  Add the DWARF information to the die.
-void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
+void DwarfCompileUnit::addComplexAddress(const DIExpression *DIExpr, DIE &Die,
                                          dwarf::Attribute Attribute,
                                          const MachineLocation &Location) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  const DIExpression *DIExpr = DV.getSingleExpression();
   DwarfExpr.addFragmentOffset(DIExpr);
   DwarfExpr.setLocation(Location, DIExpr);
 
