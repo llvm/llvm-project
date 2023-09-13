@@ -106,9 +106,10 @@ amd_comgr_status_t Symbolizer::symbolize(uint64_t Address, bool IsCode,
   auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(OS, symbolize_error_handler(OS), Config);
 
   if (IsCode) {
-    auto ResOrErr = SymbolizerImpl.symbolizeInlinedCode(
-        *CodeObject, {Address, llvm::object::SectionedAddress::UndefSection});
-    Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
+    auto ResOrErr = SymbolizerImpl.symbolizeCode(
+        *CodeObject, {Address, llvm::object::SectionedAddress::UndefSection},
+        true /*nearest non-zero line*/);
+    Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DILineInfo());
   } else { // data
     auto ResOrErr = SymbolizerImpl.symbolizeData(
         *CodeObject, {Address, llvm::object::SectionedAddress::UndefSection});
