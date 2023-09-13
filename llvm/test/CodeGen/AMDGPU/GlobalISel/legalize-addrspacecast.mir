@@ -137,21 +137,19 @@ body: |
     liveins: $vgpr0
 
     ; SIVI-LABEL: name: test_addrspacecast_p5_to_p0
-    ; SIVI: liveins: $vgpr0, $sgpr4_sgpr5
+    ; SIVI: liveins: $vgpr0
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
-    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
-    ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p5)
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+    ; SIVI-NEXT: [[C:%[0-9]+]]:_(p4) = G_CONSTANT i64 228
+    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[C]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p5)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: [[C1:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
     ; SIVI-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; SIVI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p5), [[C1]]
+    ; SIVI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p5), [[C1]]
     ; SIVI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
+    ;
     ; GFX9-LABEL: name: test_addrspacecast_p5_to_p0
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -205,21 +203,19 @@ body: |
     liveins: $vgpr0
 
     ; SIVI-LABEL: name: test_addrspacecast_p3_to_p0
-    ; SIVI: liveins: $vgpr0, $sgpr4_sgpr5
+    ; SIVI: liveins: $vgpr0
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
-    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
-    ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p3)
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+    ; SIVI-NEXT: [[C:%[0-9]+]]:_(p4) = G_CONSTANT i64 232
+    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[C]](p4) :: (dereferenceable invariant load (s32), align 8, addrspace 4)
+    ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
     ; SIVI-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
-    ; SIVI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p3), [[C1]]
+    ; SIVI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p3), [[C1]]
     ; SIVI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
+    ;
     ; GFX9-LABEL: name: test_addrspacecast_p3_to_p0
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
@@ -347,30 +343,27 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SIVI-LABEL: name: test_addrspacecast_v2p3_to_v2p0
-    ; SIVI: liveins: $vgpr0_vgpr1, $sgpr4_sgpr5
+    ; SIVI: liveins: $vgpr0_vgpr1
     ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
-    ; SIVI-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY1]](<2 x p3>)
-    ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
-    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
+    ; SIVI-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY]](<2 x p3>)
+    ; SIVI-NEXT: [[C:%[0-9]+]]:_(p4) = G_CONSTANT i64 232
+    ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p4) = COPY [[C]](p4)
+    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY1]](p4) :: (dereferenceable invariant load (s32), align 8, addrspace 4)
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV]](p3)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
     ; SIVI-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; SIVI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C1]]
     ; SIVI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
-    ; SIVI-NEXT: [[COPY3:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; SIVI-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY3]], [[C]](s64)
-    ; SIVI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
+    ; SIVI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[C]](p4) :: (dereferenceable invariant load (s32), align 8, addrspace 4)
     ; SIVI-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV1]](p3)
     ; SIVI-NEXT: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT1]](s32), [[LOAD1]](s32)
     ; SIVI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C1]]
     ; SIVI-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](s1), [[MV1]], [[C2]]
     ; SIVI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0)
     ; SIVI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
+    ;
     ; GFX9-LABEL: name: test_addrspacecast_v2p3_to_v2p0
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -499,18 +492,14 @@ stack:
 body: |
   bb.0:
     ; SIVI-LABEL: name: test_addrspacecast_p5_fi_to_p0
-    ; SIVI: liveins: $sgpr4_sgpr5
-    ; SIVI-NEXT: {{  $}}
-    ; SIVI-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    ; SIVI-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
-    ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
-    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    ; SIVI: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+    ; SIVI-NEXT: [[C:%[0-9]+]]:_(p4) = G_CONSTANT i64 228
+    ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[C]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p5)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
-    ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[MV]](p0)
-    ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[COPY2]](p0)
+    ; SIVI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[MV]](p0)
+    ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[COPY]](p0)
+    ;
     ; GFX9-LABEL: name: test_addrspacecast_p5_fi_to_p0
     ; GFX9: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
     ; GFX9-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64(s64) = S_MOV_B64 $src_private_base
