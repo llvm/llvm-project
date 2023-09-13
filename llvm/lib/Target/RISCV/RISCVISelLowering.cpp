@@ -13527,6 +13527,40 @@ static bool legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
   return true;
 }
 
+/// Match the index vector of a scatter or gather node as the shuffle mask
+/// which performs the rearrangement if possible.  Will only match if
+/// all lanes are touched, and thus replacing the scatter or gather with
+/// a unit strided access and shuffle is legal.
+static bool matchIndexAsShuffle(EVT VT, SDValue Index, SDValue Mask,
+                                SmallVector<int> &ShuffleMask) {
+  if (!ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+    return false;
+  if (!ISD::isBuildVectorOfConstantSDNodes(Index.getNode()))
+    return false;
+
+  const unsigned ElementSize = VT.getScalarStoreSize();
+  const unsigned NumElems = VT.getVectorNumElements();
+
+  // Create the shuffle mask and check all bits active
+  assert(ShuffleMask.empty());
+  BitVector ActiveLanes(NumElems);
+  for (unsigned i = 0; i < Index->getNumOperands(); i++) {
+    // TODO: We've found an active bit of UB, and could be
+    // more aggressive here if desired.
+    if (Index->getOperand(i)->isUndef())
+      return false;
+    uint64_t C = Index->getConstantOperandVal(i);
+    if (C % ElementSize != 0)
+      return false;
+    C = C / ElementSize;
+    if (C >= NumElems)
+      return false;
+    ShuffleMask.push_back(C);
+    ActiveLanes.set(C);
+  }
+  return ActiveLanes.all();
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -13874,6 +13908,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::MGATHER: {
     const auto *MGN = dyn_cast<MaskedGatherSDNode>(N);
+    const EVT VT = N->getValueType(0);
     SDValue Index = MGN->getIndex();
     SDValue ScaleOp = MGN->getScale();
     ISD::MemIndexType IndexType = MGN->getIndexType();
@@ -13894,6 +13929,19 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           {MGN->getChain(), MGN->getPassThru(), MGN->getMask(),
            MGN->getBasePtr(), Index, ScaleOp},
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
+
+    SmallVector<int> ShuffleMask;
+    if (MGN->getExtensionType() == ISD::NON_EXTLOAD &&
+        matchIndexAsShuffle(VT, Index, MGN->getMask(), ShuffleMask)) {
+      SDValue Load = DAG.getMaskedLoad(VT, DL, MGN->getChain(),
+                                       MGN->getBasePtr(), DAG.getUNDEF(XLenVT),
+                                       MGN->getMask(), DAG.getUNDEF(VT),
+                                       MGN->getMemoryVT(), MGN->getMemOperand(),
+                                       ISD::UNINDEXED, ISD::NON_EXTLOAD);
+      SDValue Shuffle =
+        DAG.getVectorShuffle(VT, DL, Load, DAG.getUNDEF(VT), ShuffleMask);
+      return DAG.getMergeValues({Shuffle, Load.getValue(1)}, DL);
+    }
     break;
   }
   case ISD::MSCATTER:{
@@ -13918,6 +13966,18 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           {MSN->getChain(), MSN->getValue(), MSN->getMask(), MSN->getBasePtr(),
            Index, ScaleOp},
           MSN->getMemOperand(), IndexType, MSN->isTruncatingStore());
+
+    EVT VT = MSN->getValue()->getValueType(0);
+    SmallVector<int> ShuffleMask;
+    if (!MSN->isTruncatingStore() &&
+        matchIndexAsShuffle(VT, Index, MSN->getMask(), ShuffleMask)) {
+      SDValue Shuffle = DAG.getVectorShuffle(VT, DL, MSN->getValue(),
+                                             DAG.getUNDEF(VT), ShuffleMask);
+      return DAG.getMaskedStore(MSN->getChain(), DL, Shuffle, MSN->getBasePtr(),
+                                DAG.getUNDEF(XLenVT), MSN->getMask(),
+                                MSN->getMemoryVT(), MSN->getMemOperand(),
+                                ISD::UNINDEXED, false);
+    }
     break;
   }
   case ISD::VP_GATHER: {
