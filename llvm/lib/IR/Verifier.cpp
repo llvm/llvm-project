@@ -3576,8 +3576,6 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (Call.isInlineAsm())
     verifyInlineAsmCall(Call);
 
-  CV.visit(Call);
-
   visitInstruction(Call);
 }
 
@@ -4804,6 +4802,8 @@ void Verifier::visitAccessGroupMetadata(const MDNode *MD) {
 void Verifier::visitInstruction(Instruction &I) {
   BasicBlock *BB = I.getParent();
   Check(BB, "Instruction not embedded in basic block!", &I);
+
+  CV.visit(I);
 
   if (!isa<PHINode>(I)) {   // Check that non-phi nodes are not self referential
     for (User *U : I.users()) {
