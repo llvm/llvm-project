@@ -119,11 +119,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampScalar(0, s32, s64);
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
-      .customIf([=](const LegalityQuery &Query) {
-        return Query.Opcode == G_MUL &&
-               (Query.Types[0] == v4s32 || Query.Types[0] == v8s16 ||
-                Query.Types[0] == v2s64);
-      })
       .legalFor({s32, s64, v2s32, v2s64, v4s32, v4s16, v8s16, v16s8, v8s8})
       .widenScalarToNextPow2(0)
       .clampScalar(0, s32, s64)
@@ -1021,71 +1016,9 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFCopySign(MI, Helper);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, Helper);
-  case TargetOpcode::G_MUL:
-    return legalizeMULL(MI, MRI, MIRBuilder, Helper);
   }
 
   llvm_unreachable("expected switch to return");
-}
-
-bool AArch64LegalizerInfo::legalizeMULL(MachineInstr &MI,
-                                        MachineRegisterInfo &MRI,
-                                        MachineIRBuilder &MIRBuilder,
-                                        LegalizerHelper &Helper) const {
-  // Get the instruction that defined the source operand
-  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  MachineInstr *I1 = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
-  MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
-
-  // If the source operands were EXTENDED before, then UMULL can be used
-  unsigned I1Opcode = I1->getOpcode();
-  unsigned I2Opcode = I2->getOpcode();
-  if (((I1Opcode == TargetOpcode::G_ZEXT && I2Opcode == TargetOpcode::G_ZEXT) ||
-       (I1Opcode == TargetOpcode::G_SEXT &&
-        I2Opcode == TargetOpcode::G_SEXT)) &&
-      (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
-       MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
-      (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
-       MRI.getType(I2->getOperand(1).getReg()).getScalarSizeInBits() * 2)) {
-    // {S/U}MULL{2} of the source of the extend
-    MIRBuilder.buildInstr(
-        I1Opcode == TargetOpcode::G_ZEXT ? AArch64::G_UMULL : AArch64::G_SMULL,
-        {MI.getOperand(0).getReg()},
-        {I1->getOperand(1).getReg(), I2->getOperand(1).getReg()});
-    I1->eraseFromParent();
-    I2->eraseFromParent();
-    MI.eraseFromParent();
-  }
-  // When the destination type is v2s64, scalarize the instruction
-  // Used to be handled in getActionDefinitionsBuilder
-  else if (DstTy.getNumElements() == 2 && DstTy.getScalarSizeInBits() == 64) {
-
-    // If previous instruction is G_{S/Z}EXT followed by G_UNMERGE_VALUES}, DO
-    // NOT SCALARIZE. The Extend instruction should be unmerged then merged,
-    // folding the current unmerge
-    if ((I1Opcode == TargetOpcode::G_UNMERGE_VALUES &&
-         I2Opcode == TargetOpcode::G_UNMERGE_VALUES)) {
-
-      unsigned I1SrcIdx = I1->getNumOperands() - 1;
-      unsigned I2SrcIdx = I2->getNumOperands() - 1;
-
-      I1 = getDefIgnoringCopies(I1->getOperand(I1SrcIdx).getReg(), MRI);
-      I2 = getDefIgnoringCopies(I2->getOperand(I2SrcIdx).getReg(), MRI);
-      I1Opcode = I1->getOpcode();
-      I2Opcode = I2->getOpcode();
-      if ((I1Opcode == TargetOpcode::G_ZEXT &&
-           I2Opcode == TargetOpcode::G_ZEXT) ||
-          (I1Opcode == TargetOpcode::G_SEXT &&
-           I2Opcode == TargetOpcode::G_SEXT)) {
-        return true;
-      }
-    }
-    Helper.fewerElementsVector(
-        MI, 0,
-        DstTy.changeElementCount(
-            DstTy.getElementCount().divideCoefficientBy(2)));
-  }
-  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
