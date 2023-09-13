@@ -769,7 +769,6 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
       if (!TT.isArch32Bit() && !TT.isArch64Bit())
         llvm_unreachable("CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
-      assert(MMI && "MMI can not be nullptr!");
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
       OutStreamer->switchSection(Nt);
