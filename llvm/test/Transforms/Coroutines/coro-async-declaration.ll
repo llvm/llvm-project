@@ -58,7 +58,7 @@ declare swifttailcc void @"$s3foo1fyyYaF"(ptr swiftasync)
 declare swiftcc ptr @swift_task_alloc(i64)
 
 ; Function Attrs: nomerge nounwind
-declare ptr @llvm.coro.async.resume() #3
+declare ptr @llvm.coro.async.resume() #1
 
 define linkonce_odr hidden ptr @__swift_async_resume_project_context(ptr %0) !dbg !12 {
 entry:
