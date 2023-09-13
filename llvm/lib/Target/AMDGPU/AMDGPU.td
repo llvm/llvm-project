@@ -1165,7 +1165,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
 
 def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   "gfx12",
-  [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
+  [FeatureFP64, FeatureMIMG_R128,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
@@ -1542,6 +1542,7 @@ def FeatureISAVersion11_5_1 : FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   FeatureLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot5Insts,
@@ -1577,6 +1578,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_10 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX12_10Insts,
+   FeatureLocalMemorySize393216,
    FeatureCuMode,
    Feature512AddressableVGPRs,
    Feature64BitLiterals,
