@@ -15,13 +15,17 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/Casting.h"
 #include <optional>
 
@@ -603,6 +607,51 @@ createFPReductionComparisonOpLowering(ConversionPatternRewriter &rewriter,
   return result;
 }
 
+/// Reduction neutral classes for overloading
+class MaskNeutralFMaximum {};
+class MaskNeutralFMinimum {};
+
+/// Get the mask neutral floating point maximum value
+static llvm::APFloat
+getMaskNeutralValue(MaskNeutralFMaximum,
+                    const llvm::fltSemantics &floatSemantics) {
+  return llvm::APFloat::getSmallest(floatSemantics, /*Negative=*/true);
+}
+/// Get the mask neutral floating point minimum value
+static llvm::APFloat
+getMaskNeutralValue(MaskNeutralFMinimum,
+                    const llvm::fltSemantics &floatSemantics) {
+  return llvm::APFloat::getLargest(floatSemantics, /*Negative=*/false);
+}
+
+/// Create the mask neutral floating point MLIR vector constant
+template <typename MaskNeutral>
+static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
+                                    Location loc, Type llvmType,
+                                    Type vectorType) {
+  const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
+  auto value = getMaskNeutralValue(MaskNeutral{}, floatSemantics);
+  auto denseValue =
+      DenseElementsAttr::get(vectorType.cast<ShapedType>(), value);
+  return rewriter.create<LLVM::ConstantOp>(loc, vectorType, denseValue);
+}
+
+/// Lowers masked `fmaximum` and `fminimum` reductions using the non-masked
+/// intrinsics. It is a workaround to overcome the lack of masked intrinsics for
+/// `fmaximum`/`fminimum`.
+/// More information: https://github.com/llvm/llvm-project/issues/64940
+template <class LLVMRedIntrinOp, class MaskNeutral>
+static Value lowerMaskedReductionWithRegular(
+    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
+    Value vectorOperand, Value accumulator, Value mask) {
+  const Value vectorMaskNeutral = createMaskNeutralValue<MaskNeutral>(
+      rewriter, loc, llvmType, vectorOperand.getType());
+  const Value selectedVectorByMask = rewriter.create<LLVM::SelectOp>(
+      loc, mask, vectorOperand, vectorMaskNeutral);
+  return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
+      rewriter, loc, llvmType, selectedVectorByMask, accumulator);
+}
+
 /// Overloaded methods to lower a reduction to an llvm instrinsic that requires
 /// a start value. This start value format spans across fp reductions without
 /// mask and all the masked reduction intrinsics.
@@ -903,10 +952,16 @@ public:
                                             ReductionNeutralFPMin>(
           rewriter, loc, llvmType, operand, acc, maskOp.getMask());
       break;
-    default:
-      return rewriter.notifyMatchFailure(
-          maskOp,
-          "lowering to LLVM is not implemented for this masked operation");
+    case CombiningKind::MAXIMUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximum,
+                                               MaskNeutralFMaximum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      break;
+    case CombiningKind::MINIMUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimum,
+                                               MaskNeutralFMinimum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      break;
     }
 
     // Replace `vector.mask` operation altogether.
