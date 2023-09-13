@@ -11680,10 +11680,9 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
+    if (TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
       IndexType = ISD::UNSIGNED_SCALED;
-      Index = Op;
+      Index = Index.getOperand(0);
       return true;
     }
     if (ISD::isIndexTypeSigned(IndexType)) {
@@ -11694,12 +11693,10 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's only safe to look through sign extends when Index is signed.
   if (Index.getOpcode() == ISD::SIGN_EXTEND &&
-      ISD::isIndexTypeSigned(IndexType)) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
-      Index = Op;
-      return true;
-    }
+      ISD::isIndexTypeSigned(IndexType) &&
+      TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
+    Index = Index.getOperand(0);
+    return true;
   }
 
   return false;
