@@ -131,6 +131,33 @@ You can also merge via the CLI by switching to your branch locally and run:
 
   gh pr merge --squash --delete-branch
 
+If you observe an error message from the above informing you that your pull
+request is not mergeable, then that is likely because upstream has been
+modified since your pull request was authored in a way that now results in a
+merge conflict. You must first resolve this merge conflict in order to merge
+your pull request. In order to do that:
+
+::
+
+  git fetch origin
+  git rebase origin/main
+
+Then fix the source files causing merge conflicts.
+
+::
+
+  git add <files with resolved merge conflicts>
+  <rebuild + retest>
+  git rebase --continue
+
+Finally, you'll need to force push to your branch one more time before you can
+merge:
+
+::
+
+  git push -f
+  gh pr merge --squash --delete branch
+
 
 Checking out another PR locally
 -------------------------------
