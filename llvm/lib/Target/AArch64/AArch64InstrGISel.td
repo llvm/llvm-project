@@ -215,8 +215,9 @@ def G_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
-// Generic bitwise insert if true.
-def G_BIT : AArch64GenericInstruction {
+// Generic instruction for the BSP pseudo. It is expanded into BSP, which
+// expands into BSL/BIT/BIF after register allocation.
+def G_BSP : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
   let hasSideEffects = 0;
@@ -252,7 +253,7 @@ def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
 def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
 def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
 
-def : GINodeEquiv<G_BIT, AArch64bit>;
+def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
