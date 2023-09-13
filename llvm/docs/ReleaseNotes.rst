@@ -78,7 +78,7 @@ Changes to the AArch64 Backend
 Changes to the AMDGPU Backend
 -----------------------------
 
-* `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
+* `llvm.sqrt.f32` is now lowered correctly. Use `llvm.amdgcn.sqrt.f32`
   for raw instruction access.
 
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.

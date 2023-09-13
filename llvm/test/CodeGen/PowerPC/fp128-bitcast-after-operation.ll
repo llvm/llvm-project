@@ -61,12 +61,12 @@ define i128 @test_neg(ppc_fp128 %x) nounwind  {
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    stfd 2, -8(1)
 ; PPC64-NEXT:    stfd 1, -16(1)
-; PPC64-NEXT:    li 3, 1
+; PPC64-NEXT:    li 5, 1
 ; PPC64-NEXT:    ld 4, -8(1)
-; PPC64-NEXT:    ld 5, -16(1)
-; PPC64-NEXT:    rldic 6, 3, 63, 0
-; PPC64-NEXT:    xor 3, 5, 6
-; PPC64-NEXT:    xor 4, 4, 6
+; PPC64-NEXT:    ld 3, -16(1)
+; PPC64-NEXT:    rldic 5, 5, 63, 0
+; PPC64-NEXT:    xor 3, 3, 5
+; PPC64-NEXT:    xor 4, 4, 5
 ; PPC64-NEXT:    blr
 ;
 ; PPC32-LABEL: test_neg:
@@ -211,14 +211,14 @@ define i128 @test_copysign_const(ppc_fp128 %x) nounwind  {
 ; PPC64-LABEL: test_copysign_const:
 ; PPC64:       # %bb.0: # %entry
 ; PPC64-NEXT:    stfd 1, -8(1)
-; PPC64-NEXT:    li 4, 16399
 ; PPC64-NEXT:    li 5, 3019
 ; PPC64-NEXT:    ld 3, -8(1)
-; PPC64-NEXT:    rldicr 6, 3, 0, 0
-; PPC64-NEXT:    rldic 3, 4, 48, 1
-; PPC64-NEXT:    rldic 4, 5, 52, 0
-; PPC64-NEXT:    or 3, 6, 3
-; PPC64-NEXT:    xor 4, 6, 4
+; PPC64-NEXT:    rldic 5, 5, 52, 0
+; PPC64-NEXT:    rldicr 4, 3, 0, 0
+; PPC64-NEXT:    li 3, 16399
+; PPC64-NEXT:    rldic 3, 3, 48, 1
+; PPC64-NEXT:    or 3, 4, 3
+; PPC64-NEXT:    xor 4, 4, 5
 ; PPC64-NEXT:    blr
 ;
 ; PPC32-LABEL: test_copysign_const:

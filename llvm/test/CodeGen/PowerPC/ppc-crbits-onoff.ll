@@ -19,10 +19,9 @@ entry:
 ; CHECK-DAG: cntlzw [[REG3:[0-9]+]],
 ; CHECK: iseleq [[REG4:[0-9]+]], 0, [[REG2]]
 ; CHECK-NO-ISEL: bc 12, 2, [[TRUE:.LBB[0-9]+]]
-; CHECK-NO-ISEL: ori 4, 5, 0
 ; CHECK-NO-ISEL-NEXT: b [[SUCCESSOR:.LBB[0-9]+]]
 ; CHECK-NO-ISEL: [[TRUE]]
-; CHECK-NO-ISEL-NEXT: li 4, 0
+; CHECK-NO-ISEL-NEXT: li 3, 0
 ; CHECK: and 3, [[REG4]], [[REG3]]
 ; CHECK: blr
 }
