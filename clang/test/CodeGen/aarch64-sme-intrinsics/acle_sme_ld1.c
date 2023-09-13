@@ -75,7 +75,6 @@ ARM_STREAMING_ATTR void test_svld1_hor_za64(uint32_t slice_base, svbool_t pg, co
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_hor_za128(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
   svld1_hor_za128(0, slice_base, pg, ptr);
   svld1_hor_za128(15, slice_base, pg, ptr);
 }
@@ -144,7 +143,6 @@ ARM_STREAMING_ATTR void test_svld1_ver_za64(uint32_t slice_base, svbool_t pg, co
 // CHECK-NEXT:        ret void
 //
 ARM_STREAMING_ATTR void test_svld1_ver_za128(uint32_t slice_base, svbool_t pg, const void *ptr) {
-  uint32_t slice = slice_base;
   svld1_ver_za128(0, slice_base, pg, ptr);
   svld1_ver_za128(15, slice_base, pg, ptr);
 }

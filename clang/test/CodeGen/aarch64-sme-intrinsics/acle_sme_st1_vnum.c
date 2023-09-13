@@ -91,7 +91,7 @@ ARM_STREAMING_ATTR void test_svst1_hor_vnum_za64(uint32_t slice_base, svbool_t p
 //
 ARM_STREAMING_ATTR void test_svst1_hor_vnum_za128(uint32_t slice_base, svbool_t pg, void *ptr, int64_t vnum) {
   svst1_hor_vnum_za128(0, slice_base, pg, ptr, vnum);
-  svst1_hor_vnum_za128(15, slice_base + 15, pg, ptr, vnum);
+  svst1_hor_vnum_za128(15, slice_base, pg, ptr, vnum);
 }
 
 // CHECK-C-LABEL:   @test_svst1_ver_vnum_za8(
