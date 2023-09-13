@@ -944,7 +944,8 @@ public:
 template <typename TerminatorOpType>
 struct SingleBlockImplicitTerminator {
   template <typename ConcreteType>
-  class Impl {
+  class Impl : public TraitBase<ConcreteType, SingleBlockImplicitTerminator<
+                                                  TerminatorOpType>::Impl> {
   private:
     /// Builds a terminator operation without relying on OpBuilder APIs to avoid
     /// cyclic header inclusion.
