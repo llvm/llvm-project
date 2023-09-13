@@ -10,15 +10,15 @@ define dso_local zeroext i32 @testI8(i8 zeroext %val) local_unnamed_addr #0 {
 ; PWR7-LABEL: testI8:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    addis 4, 2, value8@toc@ha
-; PWR7-NEXT:    li 6, 255
 ; PWR7-NEXT:    sync
 ; PWR7-NEXT:    addi 5, 4, value8@toc@l
 ; PWR7-NEXT:    rlwinm 4, 5, 3, 27, 28
 ; PWR7-NEXT:    rldicr 5, 5, 0, 61
 ; PWR7-NEXT:    xori 4, 4, 24
-; PWR7-NEXT:    slw 7, 3, 4
-; PWR7-NEXT:    slw 3, 6, 4
-; PWR7-NEXT:    and 6, 7, 3
+; PWR7-NEXT:    slw 6, 3, 4
+; PWR7-NEXT:    li 3, 255
+; PWR7-NEXT:    slw 3, 3, 4
+; PWR7-NEXT:    and 6, 6, 3
 ; PWR7-NEXT:  .LBB0_1: # %entry
 ; PWR7-NEXT:    #
 ; PWR7-NEXT:    lwarx 7, 0, 5
@@ -28,11 +28,11 @@ define dso_local zeroext i32 @testI8(i8 zeroext %val) local_unnamed_addr #0 {
 ; PWR7-NEXT:    bne 0, .LBB0_1
 ; PWR7-NEXT:  # %bb.2: # %entry
 ; PWR7-NEXT:    srw 3, 7, 4
-; PWR7-NEXT:    addis 5, 2, global_int@toc@ha
+; PWR7-NEXT:    addis 4, 2, global_int@toc@ha
 ; PWR7-NEXT:    lwsync
-; PWR7-NEXT:    clrlwi 4, 3, 24
+; PWR7-NEXT:    clrlwi 3, 3, 24
+; PWR7-NEXT:    stw 3, global_int@toc@l(4)
 ; PWR7-NEXT:    li 3, 55
-; PWR7-NEXT:    stw 4, global_int@toc@l(5)
 ; PWR7-NEXT:    blr
 ;
 ; PWR9-LABEL: testI8:
@@ -62,16 +62,16 @@ define dso_local zeroext i32 @testI16(i16 zeroext %val) local_unnamed_addr #0 {
 ; PWR7-LABEL: testI16:
 ; PWR7:       # %bb.0: # %entry
 ; PWR7-NEXT:    addis 4, 2, value16@toc@ha
-; PWR7-NEXT:    li 6, 0
 ; PWR7-NEXT:    sync
 ; PWR7-NEXT:    addi 5, 4, value16@toc@l
-; PWR7-NEXT:    ori 6, 6, 65535
 ; PWR7-NEXT:    rlwinm 4, 5, 3, 27, 27
 ; PWR7-NEXT:    rldicr 5, 5, 0, 61
 ; PWR7-NEXT:    xori 4, 4, 16
-; PWR7-NEXT:    slw 7, 3, 4
-; PWR7-NEXT:    slw 3, 6, 4
-; PWR7-NEXT:    and 6, 7, 3
+; PWR7-NEXT:    slw 6, 3, 4
+; PWR7-NEXT:    li 3, 0
+; PWR7-NEXT:    ori 3, 3, 65535
+; PWR7-NEXT:    slw 3, 3, 4
+; PWR7-NEXT:    and 6, 6, 3
 ; PWR7-NEXT:  .LBB1_1: # %entry
 ; PWR7-NEXT:    #
 ; PWR7-NEXT:    lwarx 7, 0, 5
@@ -81,11 +81,11 @@ define dso_local zeroext i32 @testI16(i16 zeroext %val) local_unnamed_addr #0 {
 ; PWR7-NEXT:    bne 0, .LBB1_1
 ; PWR7-NEXT:  # %bb.2: # %entry
 ; PWR7-NEXT:    srw 3, 7, 4
-; PWR7-NEXT:    addis 5, 2, global_int@toc@ha
+; PWR7-NEXT:    addis 4, 2, global_int@toc@ha
 ; PWR7-NEXT:    lwsync
-; PWR7-NEXT:    clrlwi 4, 3, 16
+; PWR7-NEXT:    clrlwi 3, 3, 16
+; PWR7-NEXT:    stw 3, global_int@toc@l(4)
 ; PWR7-NEXT:    li 3, 55
-; PWR7-NEXT:    stw 4, global_int@toc@l(5)
 ; PWR7-NEXT:    blr
 ;
 ; PWR9-LABEL: testI16:
