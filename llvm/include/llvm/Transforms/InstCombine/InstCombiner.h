@@ -239,43 +239,65 @@ public:
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
-  static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
+  static bool isFreeToInvertImpl(Value *V, bool WillInvertAllUses,
+                                 bool &DoesConsume, unsigned Depth) {
+    using namespace llvm::PatternMatch;
     // ~(~(X)) -> X.
-    if (match(V, m_Not(PatternMatch::m_Value())))
+    if (match(V, m_Not(m_Value()))) {
+      DoesConsume = true;
       return true;
+    }
 
     // Constants can be considered to be not'ed values.
-    if (match(V, PatternMatch::m_AnyIntegralConstant()))
+    if (match(V, m_AnyIntegralConstant()))
       return true;
+
+    if (Depth++ >= MaxAnalysisRecursionDepth)
+      return false;
+
+    // The rest of the cases require that we invert all uses so don't bother
+    // doing the analysis if we know we can't use the result.
+    if (!WillInvertAllUses)
+      return false;
 
     // Compares can be inverted if all of their uses are being modified to use
     // the ~V.
     if (isa<CmpInst>(V))
-      return WillInvertAllUses;
+      return true;
 
-    // If `V` is of the form `A + Constant` then `-1 - V` can be folded into
-    // `(-1 - Constant) - A` if we are willing to invert all of the uses.
-    if (match(V, m_Add(PatternMatch::m_Value(), PatternMatch::m_ImmConstant())))
-      return WillInvertAllUses;
+    Value *A, *B;
+    // If `V` is of the form `A + B` then `-1 - V` can be folded into
+    // `~B - A` or `~A - B` if we are willing to invert all of the uses.
+    if (match(V, m_Add(m_Value(A), m_Value(B))))
+      return isFreeToInvertImpl(A, A->hasOneUse(), DoesConsume, Depth) ||
+             isFreeToInvertImpl(B, B->hasOneUse(), DoesConsume, Depth);
 
-    // If `V` is of the form `Constant - A` then `-1 - V` can be folded into
-    // `A + (-1 - Constant)` if we are willing to invert all of the uses.
-    if (match(V, m_Sub(PatternMatch::m_ImmConstant(), PatternMatch::m_Value())))
-      return WillInvertAllUses;
+    // If `V` is of the form `A - B` then `-1 - V` can be folded into
+    // `~A + B` if we are willing to invert all of the uses.
+    if (match(V, m_Sub(m_Value(A), m_Value())))
+      return isFreeToInvertImpl(A, A->hasOneUse(), DoesConsume, Depth);
 
-    // Selects with invertible operands are freely invertible
-    if (match(V,
-              m_Select(PatternMatch::m_Value(), m_Not(PatternMatch::m_Value()),
-                       m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
-
-    // Min/max may be in the form of intrinsics, so handle those identically
-    // to select patterns.
-    if (match(V, m_MaxOrMin(m_Not(PatternMatch::m_Value()),
-                            m_Not(PatternMatch::m_Value()))))
-      return WillInvertAllUses;
+    // LogicOps are special in that we canonicalize them at the cost of an
+    // instruction.
+    bool IsSelect = match(V, m_Select(m_Value(), m_Value(A), m_Value(B))) &&
+                    !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
+    // Selects/min/max with invertible operands are freely invertible
+    if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B))))
+      return isFreeToInvertImpl(A, A->hasOneUse(), DoesConsume, Depth) &&
+             isFreeToInvertImpl(B, B->hasOneUse(), DoesConsume, Depth);
 
     return false;
+  }
+
+  static bool isFreeToInvert(Value *V, bool WillInvertAllUses,
+                             bool &DoesConsume) {
+    DoesConsume = false;
+    return isFreeToInvertImpl(V, WillInvertAllUses, DoesConsume, /*Depth*/ 0);
+  }
+
+  static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
+    bool Unused;
+    return isFreeToInvert(V, WillInvertAllUses, Unused);
   }
 
   /// Given i1 V, can every user of V be freely adapted if V is changed to !V ?
