@@ -10219,6 +10219,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                               "cls");
   }
 
+  if (BuiltinID == clang::AArch64::BI__builtin_arm_rintn ||
+      BuiltinID == clang::AArch64::BI__builtin_arm_rintnf) {
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::roundeven, Arg->getType()), Arg, "rintn");
+  }
+
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rint32zf ||
       BuiltinID == clang::AArch64::BI__builtin_arm_rint32z) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
