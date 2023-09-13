@@ -2218,7 +2218,6 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      // zahira
       //if (Argument.getKind() == TemplateArgument::Type)
       //  OS << "class ";
 
