@@ -2040,6 +2040,25 @@ TEST_F(TokenAnnotatorTest, UnderstandDesignatedInitializers) {
   EXPECT_TOKEN(Tokens[13], tok::period, TT_DesignatedInitializerPeriod);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsJavaScript) {
+  auto Annotate = [this](llvm::StringRef Code) {
+    return annotate(Code, getLLVMStyle(FormatStyle::LK_JavaScript));
+  };
+
+  // Dictionary.
+  auto Tokens = Annotate("var x = {'x' : 1, 'y' : 2};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_DictLiteral);
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_SelectorName);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_DictLiteral);
+  EXPECT_TOKEN(Tokens[8], tok::string_literal, TT_SelectorName);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_DictLiteral);
+  // Change when we need to annotate these.
+  EXPECT_BRACE_KIND(Tokens[3], BK_Unknown);
+  EXPECT_BRACE_KIND(Tokens[11], BK_Unknown);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_Unknown);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
