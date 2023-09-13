@@ -17418,13 +17418,13 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return Res;
 }
 
-InlineAsm::ConstraintCode
+unsigned
 RISCVTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
   // Currently only support length 1 constraints.
   if (ConstraintCode.size() == 1) {
     switch (ConstraintCode[0]) {
     case 'A':
-      return InlineAsm::ConstraintCode::A;
+      return InlineAsm::Constraint_A;
     default:
       break;
     }
