@@ -17,7 +17,8 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v3
-; CHECK-NEXT:    s_branch .LBB0_3
+; CHECK-NEXT:    s_cmp_lt_i32 s4, 3
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %LeafBlock
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.2: ; %bb7

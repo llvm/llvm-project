@@ -2519,7 +2519,7 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
 
     // icmp X, X -> true/false
     // icmp X, undef -> true/false because undef could be X.
-    if (N1.isUndef() || N2.isUndef() || N1 == N2)
+    if (N1 == N2)
       return getBoolConstant(ISD::isTrueWhenEqual(Cond), dl, VT, OpVT);
   }
 
