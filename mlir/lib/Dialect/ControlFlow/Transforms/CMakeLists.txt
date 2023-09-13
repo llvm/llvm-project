@@ -1,5 +1,4 @@
 add_mlir_dialect_library(MLIRControlFlowTransforms
-  BufferDeallocationOpInterfaceImpl.cpp
   BufferizableOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -11,4 +10,4 @@ add_mlir_dialect_library(MLIRControlFlowTransforms
   MLIRControlFlowDialect
   MLIRMemRefDialect
   MLIRIR
-)
+  )
