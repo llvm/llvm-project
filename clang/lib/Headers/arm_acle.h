@@ -598,12 +598,12 @@ __smusdx(int16x2_t __a, int16x2_t __b) {
   (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)
 static __inline__ double __attribute__((__always_inline__, __nodebug__))
 __rintn(double __a) {
-  return __builtin_arm_rintn(__a);
+  return __builtin_roundeven(__a);
 }
 
 static __inline__ float __attribute__((__always_inline__, __nodebug__))
 __rintnf(float __a) {
-  return __builtin_arm_rintnf(__a);
+  return __builtin_roundevenf(__a);
 }
 #endif
 

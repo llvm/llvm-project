@@ -110,10 +110,6 @@ BUILTIN(__builtin_arm_tcommit, "v", "n")
 BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
-// Floating point round to integral intrinsics
-BUILTIN(__builtin_arm_rintn, "dd", "g")
-BUILTIN(__builtin_arm_rintnf, "ff", "g")
-
 // Armv8.5-A FP rounding intrinsics
 TARGET_BUILTIN(__builtin_arm_rint32zf, "ff", "", "v8.5a")
 TARGET_BUILTIN(__builtin_arm_rint32z, "dd", "", "v8.5a")
