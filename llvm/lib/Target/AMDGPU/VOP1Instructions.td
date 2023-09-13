@@ -1513,5 +1513,4 @@ def : GCNPat <
 >;
 } // End OtherPredicates = [isGFX12Only]
 
-let AssemblerPredicate = isGFX12_10Plus in
-defm V_MOV_B64 : VOP1_Real_FULL <GFX12Gen, 0x1d>;
+defm V_MOV_B64 : VOP1_Real_FULL <GFX12_10Gen, 0x1d>;

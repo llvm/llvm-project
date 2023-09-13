@@ -1142,20 +1142,16 @@ defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36a>;
 defm V_CVT_SR_FP8_F32  : VOP3Only_Realtriple_gfx12<0x36b>;
 defm V_CVT_SR_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36c>;
 
-let SubtargetPredicate = HasBitOp3Insts in {
-defm V_BITOP3_B16         : VOP3_Real_BITOP3_t16_gfx12<0x233>;
-defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx12<0x234>;
-}
+defm V_BITOP3_B16         : VOP3_Real_BITOP3_t16_gfx1210<0x233>;
+defm V_BITOP3_B32         : VOP3_Real_BITOP3_gfx1210<0x234>;
 
-let SubtargetPredicate = isGFX12_10Plus in {
-defm V_MAD_U32 : VOP3Only_Realtriple_gfx12<0x235>;
-defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx12<0x2fa>;
-defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx12<0x2fb>;
-defm V_MIN_U64 : VOP3Only_Realtriple_gfx12<0x318>;
-defm V_MAX_U64 : VOP3Only_Realtriple_gfx12<0x319>;
-defm V_MIN_I64 : VOP3Only_Realtriple_gfx12<0x31a>;
-defm V_MAX_I64 : VOP3Only_Realtriple_gfx12<0x31b>;
-}
+defm V_MAD_U32 : VOP3Only_Realtriple_gfx1210<0x235>;
+defm V_MAD_NC_U64_U32 : VOP3Only_Realtriple_gfx1210<0x2fa>;
+defm V_MAD_NC_I64_I32 : VOP3Only_Realtriple_gfx1210<0x2fb>;
+defm V_MIN_U64 : VOP3Only_Realtriple_gfx1210<0x318>;
+defm V_MAX_U64 : VOP3Only_Realtriple_gfx1210<0x319>;
+defm V_MIN_I64 : VOP3Only_Realtriple_gfx1210<0x31a>;
+defm V_MAX_I64 : VOP3Only_Realtriple_gfx1210<0x31b>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12
@@ -1308,9 +1304,7 @@ defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
 
-let SubtargetPredicate = isGFX12_10Plus in {
-defm V_LSHL_ADD_U64        : VOP3Only_Realtriple_gfx12<0x252>;
-}
+defm V_LSHL_ADD_U64        : VOP3Only_Realtriple_gfx1210<0x252>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

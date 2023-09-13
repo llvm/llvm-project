@@ -1609,11 +1609,9 @@ let SubtargetPredicate = isGFX12Plus in {
 let SubtargetPredicate = HasFmacF64Inst in
 defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
 
-let SubtargetPredicate = isGFX12_10Plus in {
-defm V_ADD_U64 : VOP2_Real_FULL<GFX12Gen, 0x28>;
-defm V_SUB_U64 : VOP2_Real_FULL<GFX12Gen, 0x29>;
-defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX12Gen, 0x2a>;
-}
+defm V_ADD_U64 : VOP2_Real_FULL<GFX12_10Gen, 0x28>;
+defm V_SUB_U64 : VOP2_Real_FULL<GFX12_10Gen, 0x29>;
+defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX12_10Gen, 0x2a>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.
