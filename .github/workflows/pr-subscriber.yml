@@ -31,37 +31,37 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            var artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
                owner: context.repo.owner,
                repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id,
+               run_id: context.payload.workflow_run.id
             });
-            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
-              return artifact.name == "pr"
-            })[0];
-            var download = await github.rest.actions.downloadArtifact({
+            const matchArtifact = artifacts.data.artifacts.find((artifact) =>
+              artifact.name === 'pr'
+            );
+            const download = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
                repo: context.repo.repo,
                artifact_id: matchArtifact.id,
-               archive_format: 'zip',
+               archive_format: 'zip'
             });
-            var fs = require('fs');
-            fs.writeFileSync('${{github.workspace}}/pr.zip', Buffer.from(download.data));
+            const { writeFileSync } = require('node:fs');
+            writeFileSync('${{ github.workspace }}/pr.zip', Buffer.from(download.data));
 
       - run: unzip pr.zip
 
       - name: Setup Automation Script
         run: |
-          curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/llvm/utils/git/github-automation.py
-          curl -O -L https://raw.githubusercontent.com/$GITHUB_REPOSITORY/main/llvm/utils/git/requirements.txt
+          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/github-automation.py
+          curl -O -L https://raw.githubusercontent.com/"$GITHUB_REPOSITORY"/main/llvm/utils/git/requirements.txt
           chmod a+x github-automation.py
           pip install -r requirements.txt
 
       - name: Update watchers
         # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
         run: |
-          PR_NUMBER=`cat NR`
-          LABEL_NAME=`cat LABEL`
+          PR_NUMBER=$(cat NR)
+          LABEL_NAME=$(cat LABEL)
           ./github-automation.py \
             --token '${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}' \
             pr-subscriber \
