@@ -1,5 +1,44 @@
 // RUN: mlir-opt %s -test-transform-dialect-interpreter -verify-diagnostics -allow-unregistered-dialect -split-input-file | FileCheck %s
 
+// CHECK-DAG: memref.global "private" @[[ALLOC0:alloc.*]] : memref<2x32xf32>
+// CHECK-DAG: memref.global "private" @[[ALLOC1:alloc.*]] : memref<2x32xf32>
+
+// CHECK: func.func @func(
+func.func @func(%arg0: f32) {
+  %c3 = arith.constant 3 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: scf.forall
+  scf.forall (%arg1, %arg2) in (%c3, %c1) {
+    // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2x32xf32>
+    // CHECK-DAG: %[[MR1:.*]] = memref.get_global @[[ALLOC1]] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[MR0]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    // CHECK-DAG: memref.store %{{.*}}, %[[MR1]][%{{.*}}, %{{.*}}] : memref<2x32xf32>
+    %alloca = memref.alloca() : memref<2x32xf32>
+    %alloca_0 = memref.alloca() : memref<2x32xf32>
+    memref.store %arg0, %alloca[%arg1, %arg2] : memref<2x32xf32>
+    memref.store %arg0, %alloca_0[%arg1, %arg2] : memref<2x32xf32>
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %alloca = transform.structured.match ops{["memref.alloca"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+  %module = transform.structured.match ops{["builtin.module"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+  %alloca_typed = transform.cast %alloca
+      : !transform.any_op to !transform.op<"memref.alloca">
+  %module_typed = transform.cast %module
+      : !transform.any_op to !transform.op<"builtin.module">
+  %get_global, %global =
+      transform.memref.alloca_to_global %alloca_typed in %module_typed
+        : (!transform.op<"builtin.module">, !transform.op<"memref.alloca">)
+          -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 

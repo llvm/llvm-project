@@ -11,6 +11,64 @@ except ImportError as e:
 from typing import Optional, overload, Union
 
 
+class MemRefAllocaToGlobalOp:
+    """Specialization for MemRefAllocaToGlobalOp class."""
+
+    @overload
+    def __init__(
+        self,
+        get_global_type: Type,
+        global_type: Type,
+        module: Union[Operation, OpView, Value],
+        alloca: Union[Operation, OpView, Value],
+        *,
+        loc=None,
+        ip=None
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        module: Union[Operation, OpView, Value],
+        alloca: Union[Operation, OpView, Value],
+        *,
+        loc=None,
+        ip=None
+    ):
+        ...
+
+    def __init__(
+        self,
+        get_global_type_or_module: Union[Operation, OpView, Type, Value],
+        global_type_or_alloca: Union[Operation, OpView, Type, Value],
+        module_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        alloca_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        *,
+        loc=None,
+        ip=None
+    ):
+        if isinstance(get_global_type_or_module, Type):
+            get_global_type = get_global_type_or_module
+            global_type = global_type_or_alloca
+            module = module_or_none
+            alloca = alloca_or_none
+        else:
+            get_global_type = transform.AnyOpType.get()
+            global_type = transform.AnyOpType.get()
+            module = get_global_type_or_module
+            alloca = global_type_or_alloca
+
+        super().__init__(
+            get_global_type,
+            global_type,
+            module,
+            alloca,
+            loc=loc,
+            ip=ip,
+        )
+
+
 class MemRefMultiBufferOp:
     """Specialization for MemRefMultiBufferOp class."""
 

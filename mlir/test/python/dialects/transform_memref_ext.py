@@ -17,6 +17,54 @@ def run(f):
 
 
 @run
+def testMemRefAllocaToAllocOpCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("memref.alloc"),
+    )
+    with InsertionPoint(sequence.body):
+        module = transform.CastOp(
+            transform.OperationType.get("builtin.module"), sequence.bodyTarget
+        )
+        alloca = transform.CastOp(
+            transform.OperationType.get("memref.alloca"), sequence.bodyTarget
+        )
+        memref.MemRefAllocaToGlobalOp(module, alloca)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMemRefAllocaToAllocOpCompact
+    # CHECK: = transform.memref.alloca_to_global
+    # CHECK-SAME: (!transform.op<"builtin.module">, !transform.op<"memref.alloca">)
+    # CHECK-SAME: -> (!transform.any_op, !transform.any_op)
+
+
+@run
+def testMemRefAllocaToAllocOpTyped():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("memref.alloc"),
+    )
+    with InsertionPoint(sequence.body):
+        module = transform.CastOp(
+            transform.OperationType.get("builtin.module"), sequence.bodyTarget
+        )
+        alloca = transform.CastOp(
+            transform.OperationType.get("memref.alloca"), sequence.bodyTarget
+        )
+        memref.MemRefAllocaToGlobalOp(
+            transform.OperationType.get("memref.get_global"),
+            transform.OperationType.get("memref.global"),
+            module,
+            alloca,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMemRefAllocaToAllocOpTyped
+    # CHECK: = transform.memref.alloca_to_global
+    # CHECK-SAME: -> (!transform.op<"memref.get_global">, !transform.op<"memref.global">)
+
+
+@run
 def testMemRefMultiBufferOpCompact():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
