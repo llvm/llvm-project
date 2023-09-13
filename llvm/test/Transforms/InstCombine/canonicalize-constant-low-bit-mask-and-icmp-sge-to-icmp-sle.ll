@@ -50,8 +50,7 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 
 define <2 x i1> @p2_vec_nonsplat_edgecase(<2 x i8> %x) {
 ; CHECK-LABEL: @p2_vec_nonsplat_edgecase(
-; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 0>
-; CHECK-NEXT:    [[RET:%.*]] = icmp sge <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 0>
