@@ -55,7 +55,7 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened debug)
+set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened safe debug)
 set(LIBCXX_HARDENING_MODE "unchecked" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
    compiled library and will be the default when compiling user code. Note that
@@ -778,18 +778,25 @@ config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_D
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 if (LIBCXX_HARDENING_MODE STREQUAL "hardened")
   config_define(1 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "safe")
+  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(1 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(1 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
   config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_SAFE_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 endif()
 # TODO(LLVM 19): Remove this after branching for LLVM 18, this is a simple
 # courtesy for vendors to be notified about this change.
 if (LIBCXX_ENABLE_ASSERTIONS)
-  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been replaced by LIBCXX_HARDENING_MODE=hardened")
+  message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been replaced by LIBCXX_HARDENING_MODE=safe")
 endif()
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")

@@ -223,10 +223,13 @@ safety annotations.
   disabled and must be manually enabled by the user.
 
 **_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
+
+**_LIBCPP_ENABLE_SAFE_MODE**:
+  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
 
 **_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
