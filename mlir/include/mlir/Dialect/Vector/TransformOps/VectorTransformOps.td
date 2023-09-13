@@ -122,6 +122,17 @@ def ApplyLowerContractionPatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyLowerCreateMaskPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_create_mask",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector create_mask-like operations should be lowered to
+    finer-grained vector primitives.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerMasksPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masks",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
