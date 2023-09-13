@@ -61,6 +61,6 @@ only advisable to employ ``nullptr`` for comparisons.
 Limitations
 -----------
 
-Not analyze values stored in a variable. For variable, only analyze all virtual
+Does not analyze values stored in a variable. For variable, only analyze all virtual
 methods in the same ``class`` or ``struct`` and diagnose when assigning a pointer
 to member virtual function to this variable is possible.
