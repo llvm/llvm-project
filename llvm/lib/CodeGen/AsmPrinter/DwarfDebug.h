@@ -101,6 +101,8 @@ public:
   }
 };
 
+class DbgVariable;
+
 /// Proxy for one MMI entry.
 struct FrameIndexExpr {
   int FI;
@@ -124,34 +126,53 @@ private:
   }
 };
 
-// Namespace for private alternatives of a DbgVariable.
-namespace {
+// Namespace for alternatives of a DbgVariable.
+namespace Loc {
 /// Single value location description.
-struct SingleLoc {
+class Single {
   std::unique_ptr<DbgValueLoc> ValueLoc;
   const DIExpression *Expr;
-  SingleLoc(DbgValueLoc ValueLoc)
-      : ValueLoc(std::make_unique<DbgValueLoc>(ValueLoc)),
-        Expr(ValueLoc.getExpression()) {
-    if (!Expr->getNumElements())
-      Expr = nullptr;
-  }
+
+public:
+  explicit Single(DbgValueLoc ValueLoc);
+  explicit Single(const MachineInstr *DbgValue);
+  const DbgValueLoc &getValueLoc() const { return *ValueLoc; }
+  const DIExpression *getExpr() const { return Expr; }
 };
 /// Multi-value location description.
-struct MultiLoc {
+class Multi {
   /// Index of the entry list in DebugLocs.
-  unsigned DebugLocListIndex = ~0u;
+  unsigned DebugLocListIndex;
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
   std::optional<uint8_t> DebugLocListTagOffset;
+
+public:
+  explicit Multi(unsigned DebugLocListIndex,
+                 std::optional<uint8_t> DebugLocListTagOffset)
+      : DebugLocListIndex(DebugLocListIndex),
+        DebugLocListTagOffset(DebugLocListTagOffset) {}
+  unsigned getDebugLocListIndex() const { return DebugLocListIndex; }
+  std::optional<uint8_t> getDebugLocListTagOffset() const {
+    return DebugLocListTagOffset;
+  }
 };
 /// Single location defined by (potentially multiple) MMI entries.
-struct MMILoc {
+struct MMI {
   mutable SmallVector<FrameIndexExpr, 1> FrameIndexExprs;
+
+public:
+  explicit MMI(const DIExpression *E, int FI) : FrameIndexExprs({{FI, E}}) {
+    assert((!E || E->isValid()) && "Expected valid expression");
+    assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
+  }
+  void addFrameIndexExpr(const DIExpression *Expr, int FI);
+  /// Get the FI entries, sorted by fragment offset.
+  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
 };
 /// Single location defined by (potentially multiple) EntryValueInfo.
-struct EntryValueLoc {
+struct EntryValue {
   std::set<EntryValueInfo> EntryValues;
-  EntryValueLoc(MCRegister Reg, const DIExpression &Expr) {
+  explicit EntryValue(MCRegister Reg, const DIExpression &Expr) {
     addExpr(Reg, Expr);
   };
   // Add the pair Reg, Expr to the list of entry values describing the variable.
@@ -165,7 +186,7 @@ struct EntryValueLoc {
     EntryValues.insert({Reg, **NonVariadicExpr});
   }
 };
-} // namespace
+} // namespace Loc
 
 //===----------------------------------------------------------------------===//
 /// This class is used to track local variable information.
@@ -175,8 +196,8 @@ struct EntryValueLoc {
 /// which has not be initialized yet.
 ///
 /// Variables can be created from allocas, in which case they're generated from
-/// the MMI table. Such variables hold the \c MMILoc alternative which can have
-/// multiple expressions and frame indices.
+/// the MMI table. Such variables hold the \c Loc::MMI alternative which can
+/// have multiple expressions and frame indices.
 ///
 /// Variables can be created from the entry value of registers, in which case
 /// they're generated from the MMI table. Such variables hold the \c
@@ -184,14 +205,15 @@ struct EntryValueLoc {
 /// multiple *fragment* expressions.
 ///
 /// Variables can be created from \c DBG_VALUE instructions. Those whose
-/// location changes over time hold a \c MultiLoc alternative which uses \c
+/// location changes over time hold a \c Loc::Multi alternative which uses \c
 /// DebugLocListIndex and (optionally) \c DebugLocListTagOffset, while those
-/// with a single location hold a \c SingleLoc alternative which use \c ValueLoc
-/// and (optionally) a single \c Expr.
+/// with a single location hold a \c Loc::Single alternative which use \c
+/// ValueLoc and (optionally) a single \c Expr.
 class DbgVariable : public DbgEntity,
-                    private std::variant<std::monostate, SingleLoc, MultiLoc,
-                                         MMILoc, EntryValueLoc> {
+                    public std::variant<std::monostate, Loc::Single, Loc::Multi,
+                                        Loc::MMI, Loc::EntryValue> {
 
+public:
   /// Member shorthand for std::holds_alternative
   template <typename T> bool holds() const {
     return std::holds_alternative<T>(*this);
@@ -207,78 +229,18 @@ class DbgVariable : public DbgEntity,
     return *std::get_if<T>(this);
   }
 
-public:
   /// Construct a DbgVariable.
   ///
-  /// Creates a variable without any DW_AT_location.  Call \a initializeMMI()
-  /// for MMI entries, or \a initializeDbgValue() for DBG_VALUE instructions.
+  /// Creates a variable without any DW_AT_location.
   DbgVariable(const DILocalVariable *V, const DILocation *IA)
       : DbgEntity(V, IA, DbgVariableKind) {}
-
-  /// Initialize from the MMI table.
-  void initializeMMI(const DIExpression *E, int FI);
-
-  // Initialize variable's location.
-  void initializeDbgValue(DbgValueLoc Value);
-
-  void initializeEntryValue(MCRegister Reg, const DIExpression &Expr);
-
-  const std::set<EntryValueInfo> *getEntryValues() const {
-    if (const auto *EV = std::get_if<EntryValueLoc>(this))
-      return &EV->EntryValues;
-    return nullptr;
-  }
-  std::set<EntryValueInfo> *getEntryValues() {
-    if (auto *EV = std::get_if<EntryValueLoc>(this))
-      return &EV->EntryValues;
-    return nullptr;
-  }
-  void addEntryValueExpr(MCRegister Reg, const DIExpression &Expr) {
-    get<EntryValueLoc>().addExpr(Reg, Expr);
-  }
-
-  /// Initialize from a DBG_VALUE instruction.
-  void initializeDbgValue(const MachineInstr *DbgValue);
 
   // Accessors.
   const DILocalVariable *getVariable() const {
     return cast<DILocalVariable>(getEntity());
   }
 
-  const DIExpression *getSingleExpression() const {
-    return get<SingleLoc>().Expr;
-  }
-
-  void setDebugLocListIndex(uint8_t O) {
-    if (auto *M = std::get_if<MultiLoc>(this))
-      M->DebugLocListIndex = O;
-    else
-      emplace<MultiLoc>().DebugLocListIndex = O;
-  }
-  unsigned getDebugLocListIndex() const {
-    if (auto *M = std::get_if<MultiLoc>(this))
-      return M->DebugLocListIndex;
-    return ~0U;
-  }
-  void setDebugLocListTagOffset(uint8_t O) {
-    if (auto *M = std::get_if<MultiLoc>(this))
-      M->DebugLocListTagOffset = O;
-    else
-      emplace<MultiLoc>().DebugLocListTagOffset = O;
-  }
-  std::optional<uint8_t> getDebugLocListTagOffset() const {
-    return get<MultiLoc>().DebugLocListTagOffset;
-  }
   StringRef getName() const { return getVariable()->getName(); }
-  const DbgValueLoc *getValueLoc() const {
-    if (auto *M = std::get_if<SingleLoc>(this))
-      return M->ValueLoc.get();
-    return nullptr;
-  }
-  /// Get the FI entries, sorted by fragment offset.
-  ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
-  bool hasFrameIndexExprs() const { return holds<MMILoc>(); }
-  void addMMIEntry(const DIExpression *Expr, int FI);
 
   // Translate tag to proper Dwarf tag.
   dwarf::Tag getTag() const {
@@ -305,8 +267,6 @@ public:
       return true;
     return false;
   }
-
-  bool hasComplexAddress() const { return get<SingleLoc>().Expr; }
 
   const DIType *getType() const;
 
