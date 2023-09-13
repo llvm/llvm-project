@@ -55,9 +55,35 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
+  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
+  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
+  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
+  :ref:`the hardening documentation <using-hardening-modes>` for more details.
+
+- The safe mode is now a part of hardening modes. Vendors can configure whether the safe mode is enabled by default
+  with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the safe mode
+  is enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_SAFE_MODE=1`` macro. The
+  ``_LIBCPP_ENABLE_ASSERTIONS`` macro that was previously used to enable the safe mode is now deprecated. See
+  :ref:`the hardening documentation <using-hardening-modes>` for more details.
+
+- The library now provides a debug mode which is a superset of the safe mode, additionally enabling more expensive
+  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
+  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
+  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
+  Users can control whether the debug mode is enabled on a per translation unit basis using the
+  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See :ref:`the hardening documentation <using-hardening-modes>` for more
+  details.
 
 Deprecations and Removals
 -------------------------
+
+- The "safe" mode is now controlled via the new generalized support for hardening. The ``LIBCXX_ENABLE_ASSERTIONS``
+  CMake variable that was used to enable the safe mode is now deprecated and setting it will trigger an error; use the
+  ``LIBCXX_HARDENING_MODE`` variable with the value ``safe`` instead. Similarly, the ``_LIBCPP_ENABLE_ASSERTIONS`` macro
+  is deprecated (setting it to ``1`` still enables the safe mode in this release while also issuing a deprecation
+  warning). ``_LIBCPP_ENABLE_ASSERTIONS`` will be removed entirely in the next release and setting it will become an
+  error. See :ref:`the hardening documentation <using-hardening-modes>` for more details.
 
 - The base template for ``std::char_traits`` has been removed. If you are using
   ``std::char_traits`` with types other than ``char``, ``wchar_t``, ``char8_t``,

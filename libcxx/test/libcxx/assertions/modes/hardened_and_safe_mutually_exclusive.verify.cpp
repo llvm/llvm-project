@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test verifies that setting the debug mode to a value other than `0` or `1` triggers a compile-time error.
+// This test verifies that `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_SAFE_MODE` are mutually exclusive.
 
-// Other hardening modes would additionally trigger the error that they are mutually exclusive.
 // REQUIRES: libcpp-hardening-mode=unchecked
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: clang-modules-build
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_DEBUG_MODE=2
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=1 -D_LIBCPP_ENABLE_SAFE_MODE=1
 
 #include <cassert>
 
-// expected-error@*:*  {{_LIBCPP_ENABLE_DEBUG_MODE must be set to 0 or 1.}}
+// expected-error@*:*  {{Only one of _LIBCPP_ENABLE_HARDENED_MODE, _LIBCPP_ENABLE_SAFE_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled.}}
