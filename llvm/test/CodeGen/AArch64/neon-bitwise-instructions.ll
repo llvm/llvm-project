@@ -67,9 +67,13 @@ define <8 x i8> @bsl8xi8_const(<8 x i8> %a, <8 x i8> %b)  {
 ;
 ; CHECK-GI-LABEL: bsl8xi8_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI6_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI6_0]
-; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    adrp x8, .LCPI6_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI6_0
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI6_1]
+; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI6_0]
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 -1, i8 -1, i8 0, i8 0, i8 -1, i8 -1, i8 0, i8 0 >
 	%tmp2 = and <8 x i8> %b, < i8 0, i8 0, i8 -1, i8 -1, i8 0, i8 0, i8 -1, i8 -1 >
@@ -86,9 +90,13 @@ define <16 x i8> @bsl16xi8_const(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: bsl16xi8_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI7_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI7_0]
-; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    adrp x8, .LCPI7_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI7_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI7_1]
+; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI7_0]
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0 >
 	%tmp2 = and <16 x i8> %b, < i8 0, i8 0, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 0, i8 0, i8 0, i8 -1, i8 -1, i8 -1, i8 -1 >
@@ -918,9 +926,13 @@ define <2 x i32> @bsl2xi32_const(<2 x i32> %a, <2 x i32> %b)  {
 ;
 ; CHECK-GI-LABEL: bsl2xi32_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI70_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI70_0]
-; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    adrp x8, .LCPI70_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI70_0
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI70_1]
+; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI70_0]
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 -1, i32 0 >
 	%tmp2 = and <2 x i32> %b, < i32 0, i32 -1 >
@@ -938,9 +950,13 @@ define <4 x i16> @bsl4xi16_const(<4 x i16> %a, <4 x i16> %b)  {
 ;
 ; CHECK-GI-LABEL: bsl4xi16_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI71_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI71_0]
-; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    adrp x8, .LCPI71_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI71_0
+; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI71_1]
+; CHECK-GI-NEXT:    ldr d3, [x9, :lo12:.LCPI71_0]
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 -1, i16 0, i16 -1,i16 0 >
 	%tmp2 = and <4 x i16> %b, < i16 0, i16 -1,i16 0, i16 -1 >
@@ -979,9 +995,13 @@ define <4 x i32> @bsl4xi32_const(<4 x i32> %a, <4 x i32> %b)  {
 ;
 ; CHECK-GI-LABEL: bsl4xi32_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI73_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI73_0]
-; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    adrp x8, .LCPI73_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI73_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI73_1]
+; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI73_0]
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 -1, i32 0, i32 -1, i32 0 >
 	%tmp2 = and <4 x i32> %b, < i32 0, i32 -1, i32 0, i32 -1 >
@@ -998,9 +1018,13 @@ define <8 x i16> @bsl8xi16_const(<8 x i16> %a, <8 x i16> %b)  {
 ;
 ; CHECK-GI-LABEL: bsl8xi16_const:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI74_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI74_0]
-; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    adrp x8, .LCPI74_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI74_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI74_1]
+; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI74_0]
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 -1, i16 -1, i16 0,i16 0, i16 -1, i16 -1, i16 0,i16 0 >
 	%tmp2 = and <8 x i16> %b, < i16 0, i16 0, i16 -1, i16 -1, i16 0, i16 0, i16 -1, i16 -1 >
@@ -1009,12 +1033,23 @@ define <8 x i16> @bsl8xi16_const(<8 x i16> %a, <8 x i16> %b)  {
 }
 
 define <2 x i64> @bsl2xi64_const(<2 x i64> %a, <2 x i64> %b)  {
-; CHECK-LABEL: bsl2xi64_const:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI75_0
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI75_0]
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: bsl2xi64_const:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI75_0
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI75_0]
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: bsl2xi64_const:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI75_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI75_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI75_1]
+; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI75_0]
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -1, i64 0 >
 	%tmp2 = and <2 x i64> %b, < i64 0, i64 -1 >
 	%tmp3 = or <2 x i64> %tmp1, %tmp2

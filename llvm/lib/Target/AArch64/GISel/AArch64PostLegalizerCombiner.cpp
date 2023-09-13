@@ -338,47 +338,6 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   Store.eraseFromParent();
 }
 
-bool matchOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
-                  std::tuple<Register, Register, Register> &MatchInfo) {
-  const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  if (!DstTy.isVector())
-    return false;
-
-  Register AO1, AO2, BVO1, BVO2;
-  if (!mi_match(
-          MI, MRI,
-          m_GOr(m_GAnd(m_Reg(AO1), m_Reg(BVO1)), m_GAnd(m_Reg(AO2), m_Reg(BVO2)))))
-    return false;
-
-  auto *BV1 = getOpcodeDef<GBuildVector>(BVO1, MRI);
-  auto *BV2 = getOpcodeDef<GBuildVector>(BVO2, MRI);
-  if (!BV1 || !BV2)
-    return false;
-
-  for (int I = 0, E = DstTy.getNumElements(); I < E; I++) {
-    auto ValAndVReg1 =
-        getIConstantVRegValWithLookThrough(BV1->getSourceReg(I), MRI);
-    auto ValAndVReg2 =
-        getIConstantVRegValWithLookThrough(BV2->getSourceReg(I), MRI);
-    if (!ValAndVReg1 || !ValAndVReg2 ||
-        ValAndVReg1->Value != ~ValAndVReg2->Value)
-      return false;
-  }
-
-  MatchInfo = {AO1, AO2, BVO2};
-  return true;
-}
-
-void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
-                  MachineIRBuilder &B,
-                  std::tuple<Register, Register, Register> &MatchInfo) {
-  B.setInstrAndDebugLoc(MI);
-  B.buildInstr(
-      AArch64::G_BSP, {MI.getOperand(0).getReg()},
-      {std::get<2>(MatchInfo), std::get<0>(MatchInfo), std::get<1>(MatchInfo)});
-  MI.eraseFromParent();
-}
-
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   // TODO: Make CombinerHelper methods const.

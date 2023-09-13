@@ -215,14 +215,6 @@ def unmerge_ext_to_unmerge : GICombineRule<
   (apply [{ applyUnmergeExtToUnmerge(*${d}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
-def regtriple_matchdata : GIDefMatchData<"std::tuple<Register, Register, Register>">;
-def or_to_bsp: GICombineRule <
-  (defs root:$root, regtriple_matchdata:$matchinfo),
-  (match (wip_match_opcode G_OR):$root,
-         [{ return matchOrToBSP(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyOrToBSP(*${root}, MRI, B, ${matchinfo}); }])
->;
-
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -250,5 +242,5 @@ def AArch64PostLegalizerCombiner
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
-                        select_to_minmax, or_to_bsp]> {
+                        select_to_minmax]> {
 }
