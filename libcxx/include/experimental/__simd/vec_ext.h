@@ -31,11 +31,11 @@ struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
   _Tp __data __attribute__((__vector_size__(std::__bit_ceil((sizeof(_Tp) * _Np)))));
 
   _Tp __get(size_t __idx) const noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__idx > 0 && __idx <= _Np, "Index is out of bounds");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     return __data[__idx];
   }
   void __set(size_t __idx, _Tp __v) noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__idx > 0 && __idx <= _Np, "Index is out of bounds");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__idx >= 0 && __idx < _Np, "Index is out of bounds");
     __data[__idx] = __v;
   }
 };
