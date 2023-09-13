@@ -1182,7 +1182,7 @@ func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):
-    %max = arith.maxf %in0, %out0 : f32
+    %max = arith.maximumf %in0, %out0 : f32
     linalg.yield %max : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -1213,7 +1213,7 @@ func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):
-    %min = arith.minf %out0, %in0 : f32
+    %min = arith.minimumf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
