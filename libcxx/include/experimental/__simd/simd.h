@@ -12,7 +12,10 @@
 
 #include <experimental/__simd/abi_tag.h>
 #include <experimental/__simd/declaration.h>
+#include <experimental/__simd/reference.h>
+#include <experimental/__simd/scalar.h>
 #include <experimental/__simd/traits.h>
+#include <experimental/__simd/vec_ext.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -23,8 +26,14 @@ inline namespace parallelism_v2 {
 // TODO: implement simd class
 template <class _Tp, class _Abi>
 class simd {
+  using _Impl    = __simd_operations<_Tp, _Abi>;
+  using _Storage = typename _Impl::_SimdStorage;
+
+  _Storage __s_;
+
 public:
   using value_type = _Tp;
+  using reference  = __simd_reference<_Tp, _Storage, value_type>;
   using mask_type  = simd_mask<_Tp, _Abi>;
   using abi_type   = _Abi;
 
