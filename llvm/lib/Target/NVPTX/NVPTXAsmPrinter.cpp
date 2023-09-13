@@ -2200,9 +2200,9 @@ bool NVPTXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
+void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
                                    raw_ostream &O) {
-  const MachineOperand &MO = MI->getOperand(opNum);
+  const MachineOperand &MO = MI->getOperand(OpNum);
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     if (MO.getReg().isPhysical()) {
@@ -2236,19 +2236,19 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   }
 }
 
-void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
+void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
                                       raw_ostream &O, const char *Modifier) {
-  printOperand(MI, opNum, O);
+  printOperand(MI, OpNum, O);
 
   if (Modifier && strcmp(Modifier, "add") == 0) {
     O << ", ";
-    printOperand(MI, opNum + 1, O);
+    printOperand(MI, OpNum + 1, O);
   } else {
-    if (MI->getOperand(opNum + 1).isImm() &&
-        MI->getOperand(opNum + 1).getImm() == 0)
+    if (MI->getOperand(OpNum + 1).isImm() &&
+        MI->getOperand(OpNum + 1).getImm() == 0)
       return; // don't print ',0' or '+0'
     O << "+";
-    printOperand(MI, opNum + 1, O);
+    printOperand(MI, OpNum + 1, O);
   }
 }
 

@@ -1,12 +1,12 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries" -canonicalize -buffer-loop-hoisting -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries" -canonicalize -buffer-loop-hoisting -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=59 bufferize-function-boundaries" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=91 bufferize-function-boundaries" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -one-shot-bufferize="unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map bufferize-function-boundaries" -drop-equivalent-buffer-results -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // TODO: Some test cases from this file should be moved to other dialects.
 
@@ -77,6 +77,7 @@ func.func @not_inplace(
                      outs(%A: tensor<?x?xf32>)
     -> tensor<?x?xf32>
 
+  //     CHECK: memref.dealloc %[[ALLOC]]
   //     CHECK: return
   // CHECK-NOT: tensor
   return %r: tensor<?x?xf32>
@@ -211,6 +212,7 @@ func.func @matmul(
     scf.yield %2 : tensor<128x192xf32>
   }
 
+  // CHECK: memref.dealloc %[[ALLOC]]
   return %0 : tensor<128x192xf32>
 }
 
