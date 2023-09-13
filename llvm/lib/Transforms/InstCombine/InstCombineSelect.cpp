@@ -3112,6 +3112,26 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     return SelectInst::Create(FalseVal, One, AndV);
   }
 
+  // select (~b & a), a, b -> or a, b
+  // only for scalar types
+  if (match(CondVal, m_c_And(m_Not(m_Specific(FalseVal)), m_Specific(TrueVal))) &&
+      TrueVal->getType()->isIntegerTy(1) &&
+      FalseVal->getType()->isIntegerTy(1) &&
+      CondVal->getType()->isIntegerTy(1) &&
+      CondVal->hasOneUse()) {
+    return BinaryOperator::CreateOr(TrueVal, FalseVal);
+  }
+
+  // select (~b | a), a, b -> or a, b
+  // only for scalar types
+  if (match(CondVal, m_c_Or(m_Not(m_Specific(FalseVal)), m_Specific(TrueVal))) &&
+      TrueVal->getType()->isIntegerTy(1) &&
+      FalseVal->getType()->isIntegerTy(1) &&
+      CondVal->getType()->isIntegerTy(1) &&
+      CondVal->hasOneUse()) {
+    return BinaryOperator::CreateOr(TrueVal, FalseVal);
+  }
+
   if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {
     Use *Y = nullptr;
     bool IsAnd = match(FalseVal, m_Zero()) ? true : false;
