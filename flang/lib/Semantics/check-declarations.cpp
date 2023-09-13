@@ -419,11 +419,16 @@ void CheckHelper::Check(const Symbol &symbol) {
     }
     CheckBindCFunctionResult(symbol);
   }
-  if (symbol.owner().IsModule() && IsAutomatic(symbol)) {
-    messages_.Say(
-        "Automatic data object '%s' may not appear in the specification part"
-        " of a module"_err_en_US,
-        symbol.name());
+  if (IsAutomatic(symbol)) {
+    if (const Symbol * common{FindCommonBlockContaining(symbol)}) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in COMMON block /%s/"_err_en_US,
+          symbol.name(), common->name());
+    } else if (symbol.owner().IsModule()) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in a module"_err_en_US,
+          symbol.name());
+    }
   }
   if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
     if (IsAllocatable(symbol)) {
