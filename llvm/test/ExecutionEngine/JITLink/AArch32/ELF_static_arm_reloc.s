@@ -30,6 +30,26 @@ call_target:
 	bx	lr
 	.size	call_target,	.-call_target
 
+# CHECK-TYPE: {{[0-9a-f]+}} R_ARM_JUMP24 jump24_target
+# CHECK-INSTR: 	00000008 <jump24_site>:
+# CHECK-INSTR: 	       8: eafffffe     b      0x8 <jump24_site>
+# CHECK-INSTR: 	0000000c <jump24_target>:
+# CHECK-INSTR: 	       c: e12fff1e     bx      lr
+# jitlink-check: decode_operand(jump24_site, 0) = jump24_target - (jump24_site + 8)
+	.globl	jump24_site
+	.type	jump24_site,%function
+	.p2align	2
+jump24_site:
+	b.w	jump24_target
+	.size	jump24_site,	.-jump24_site
+
+	.globl	jump24_target
+	.type	jump24_target,%function
+	.p2align	2
+jump24_target:
+	bx	lr
+	.size	jump24_target,	.-jump24_target
+
 # Empty main function for jitlink to be happy
 	.globl	main
 	.type	main,%function
