@@ -10656,8 +10656,8 @@ TEST_F(FormatTest, UnderstandsTemplateParameters) {
   verifyFormat("f(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "      .template operator()<A>());",
                getLLVMStyleWithColumns(35));
-  verifyFormat("bool_constant<a && noexcept(f())>");
-  verifyFormat("bool_constant<a || noexcept(f())>");
+  verifyFormat("bool_constant<a && noexcept(f())>;");
+  verifyFormat("bool_constant<a || noexcept(f())>;");
 
   verifyFormat("if (std::tuple_size_v<T> > 0)");
 
