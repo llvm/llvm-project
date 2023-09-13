@@ -1,5 +1,6 @@
 add_flang_library(FIRTransforms
   AbstractResult.cpp
+  AddAliasTags.cpp
   AffinePromotion.cpp
   AffineDemotion.cpp
   AnnotateConstant.cpp
