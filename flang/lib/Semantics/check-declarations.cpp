@@ -1067,7 +1067,8 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
           SomeExpr lhs{evaluate::ProcedureDesignator{symbol}};
           SomeExpr rhs{evaluate::ProcedureDesignator{**proc->init()}};
           CheckPointerAssignment(context_, lhs, rhs,
-              GetProgramUnitOrBlockConstructContaining(symbol));
+              GetProgramUnitOrBlockConstructContaining(symbol),
+              /*isBoundsRemapping=*/false, /*isAssumedRank=*/false);
         }
       }
     }
