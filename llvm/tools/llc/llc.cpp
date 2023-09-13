@@ -468,7 +468,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   bool SkipModule =
       CPUStr == "help" || (!MAttrs.empty() && MAttrs.front() == "help");
 
-  CodeGenOpt::Level OLvl;
+  CodeGenOptLevel OLvl;
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
     OLvl = *Level;
   } else {

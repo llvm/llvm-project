@@ -130,8 +130,8 @@ bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::Level::None &&
-                   !skipFunction(F);
+  bool EnableOpt =
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const MipsSubtarget &ST = MF.getSubtarget<MipsSubtarget>();
   const MipsLegalizerInfo *LI =

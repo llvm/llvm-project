@@ -54,7 +54,7 @@ struct Config {
   std::function<void(legacy::PassManager &)> PreCodeGenPassesHook;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;
-  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Level::Default;
+  CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Default;
   CodeGenFileType CGFileType = CodeGenFileType::ObjectFile;
   unsigned OptLevel = 2;
   bool VerifyEach = false;

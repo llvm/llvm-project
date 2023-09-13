@@ -478,8 +478,8 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const auto *LI = ST.getLegalizerInfo();
 
   const Function &F = MF.getFunction();
-  bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOpt::Level::None &&
-                   !skipFunction(F);
+  bool EnableOpt =
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,

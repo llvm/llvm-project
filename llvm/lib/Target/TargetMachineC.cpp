@@ -127,19 +127,19 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
   bool JIT;
   std::optional<CodeModel::Model> CM = unwrap(CodeModel, JIT);
 
-  CodeGenOpt::Level OL;
+  CodeGenOptLevel OL;
   switch (Level) {
     case LLVMCodeGenLevelNone:
-      OL = CodeGenOpt::Level::None;
+      OL = CodeGenOptLevel::None;
       break;
     case LLVMCodeGenLevelLess:
-      OL = CodeGenOpt::Level::Less;
+      OL = CodeGenOptLevel::Less;
       break;
     case LLVMCodeGenLevelAggressive:
-      OL = CodeGenOpt::Level::Aggressive;
+      OL = CodeGenOptLevel::Aggressive;
       break;
     default:
-      OL = CodeGenOpt::Level::Default;
+      OL = CodeGenOptLevel::Default;
       break;
   }
 

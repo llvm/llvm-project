@@ -528,7 +528,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   Conf.MAttrs = Features;
-  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::parseLevel(OptLevel[1]);
   assert(CGOptLevelOrNone && "Invalid optimization level");
   Conf.CGOptLevel = *CGOptLevelOrNone;

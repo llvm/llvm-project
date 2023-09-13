@@ -777,10 +777,10 @@ bool CodeGenAction::setUpTargetMachine() {
 
   // Create `TargetMachine`
   const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
-  std::optional<llvm::CodeGenOpt::Level> OptLevelOrNone =
+  std::optional<llvm::CodeGenOptLevel> OptLevelOrNone =
       llvm::CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
   assert(OptLevelOrNone && "Invalid optimization level!");
-  llvm::CodeGenOpt::Level OptLevel = *OptLevelOrNone;
+  llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
   std::string featuresStr = getTargetFeatures(ci);
   tm.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/targetOpts.cpu,

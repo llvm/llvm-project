@@ -38,17 +38,17 @@ namespace {
       (void) llvm::createDefaultPBQPRegisterAllocator();
 
       (void)llvm::createBURRListDAGScheduler(nullptr,
-                                             llvm::CodeGenOpt::Level::Default);
-      (void)llvm::createSourceListDAGScheduler(
-          nullptr, llvm::CodeGenOpt::Level::Default);
-      (void)llvm::createHybridListDAGScheduler(
-          nullptr, llvm::CodeGenOpt::Level::Default);
+                                             llvm::CodeGenOptLevel::Default);
+      (void)llvm::createSourceListDAGScheduler(nullptr,
+                                               llvm::CodeGenOptLevel::Default);
+      (void)llvm::createHybridListDAGScheduler(nullptr,
+                                               llvm::CodeGenOptLevel::Default);
       (void)llvm::createFastDAGScheduler(nullptr,
-                                         llvm::CodeGenOpt::Level::Default);
+                                         llvm::CodeGenOptLevel::Default);
       (void)llvm::createDefaultScheduler(nullptr,
-                                         llvm::CodeGenOpt::Level::Default);
+                                         llvm::CodeGenOptLevel::Default);
       (void)llvm::createVLIWDAGScheduler(nullptr,
-                                         llvm::CodeGenOpt::Level::Default);
+                                         llvm::CodeGenOptLevel::Default);
     }
   } ForceCodegenLinking; // Force link by creating a global definition.
 }

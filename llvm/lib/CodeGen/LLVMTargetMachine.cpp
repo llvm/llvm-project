@@ -87,7 +87,7 @@ LLVMTargetMachine::LLVMTargetMachine(const Target &T,
                                      const Triple &TT, StringRef CPU,
                                      StringRef FS, const TargetOptions &Options,
                                      Reloc::Model RM, CodeModel::Model CM,
-                                     CodeGenOpt::Level OL)
+                                     CodeGenOptLevel OL)
     : TargetMachine(T, DataLayoutString, TT, CPU, FS, Options) {
   this->RM = RM;
   this->CMModel = CM;

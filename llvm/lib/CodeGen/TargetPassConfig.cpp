@@ -631,7 +631,7 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
   setStartStopPasses();
 }
 
-CodeGenOpt::Level TargetPassConfig::getOptLevel() const {
+CodeGenOptLevel TargetPassConfig::getOptLevel() const {
   return TM->getOptLevel();
 }
 
@@ -846,7 +846,7 @@ void TargetPassConfig::addIRPasses() {
   if (!DisableVerify)
     addPass(createVerifierPass());
 
-  if (getOptLevel() != CodeGenOpt::Level::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // Basic AliasAnalysis support.
     // Add TypeBasedAliasAnalysis before BasicAliasAnalysis so that
     // BasicAliasAnalysis wins if they disagree. This is intended to help
@@ -889,14 +889,13 @@ void TargetPassConfig::addIRPasses() {
   addPass(createUnreachableBlockEliminationPass());
 
   // Prepare expensive constants for SelectionDAG.
-  if (getOptLevel() != CodeGenOpt::Level::None && !DisableConstantHoisting)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());
 
-  if (getOptLevel() != CodeGenOpt::Level::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createReplaceWithVeclibLegacyPass());
 
-  if (getOptLevel() != CodeGenOpt::Level::None &&
-      !DisablePartialLibcallInlining)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
 
   // Expand vector predication intrinsics into standard IR instructions.
@@ -914,11 +913,11 @@ void TargetPassConfig::addIRPasses() {
   if (!DisableExpandReductions)
     addPass(createExpandReductionsPass());
 
-  if (getOptLevel() != CodeGenOpt::Level::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createTLSVariableHoistPass());
 
   // Convert conditional moves to conditional jumps when profitable.
-  if (getOptLevel() != CodeGenOpt::Level::None && !DisableSelectOptimize)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableSelectOptimize)
     addPass(createSelectOptimizePass());
 }
 
@@ -969,7 +968,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
 /// Add pass to prepare the LLVM IR for code generation. This should be done
 /// before exception handling preparation passes.
 void TargetPassConfig::addCodeGenPrepare() {
-  if (getOptLevel() != CodeGenOpt::Level::None && !DisableCGP)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableCGP)
     addPass(createCodeGenPreparePass());
 }
 
@@ -1013,7 +1012,7 @@ bool TargetPassConfig::addCoreISelPasses() {
            (TM->Options.EnableGlobalISel &&
             EnableGlobalISelOption != cl::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
-  else if (TM->getOptLevel() == CodeGenOpt::Level::None &&
+  else if (TM->getOptLevel() == CodeGenOptLevel::None &&
            TM->getO0WantsFastISel())
     Selector = SelectorType::FastISel;
   else
@@ -1131,7 +1130,7 @@ void TargetPassConfig::addMachinePasses() {
   AddingMachinePasses = true;
 
   // Add passes that optimize machine instructions in SSA form.
-  if (getOptLevel() != CodeGenOpt::Level::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineSSAOptimization();
   } else {
     // If the target requests it, assign local variables to stack slots relative
@@ -1177,7 +1176,7 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&FixupStatepointCallerSavedID);
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
-  if (getOptLevel() != CodeGenOpt::Level::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&PostRAMachineSinkingID);
     addPass(&ShrinkWrapID);
   }
@@ -1188,7 +1187,7 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createPrologEpilogInserterPass());
 
   /// Add passes that optimize machine instructions after register allocation.
-  if (getOptLevel() != CodeGenOpt::Level::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
       addMachineLateOptimization();
 
   // Expand pseudo instructions before second scheduling pass.
@@ -1203,7 +1202,7 @@ void TargetPassConfig::addMachinePasses() {
   // Second pass scheduler.
   // Let Target optionally insert this pass by itself at some other
   // point.
-  if (getOptLevel() != CodeGenOpt::Level::None &&
+  if (getOptLevel() != CodeGenOptLevel::None &&
       !TM->targetSchedulesPostRAScheduling()) {
     if (MISchedPostRA)
       addPass(&PostMachineSchedulerID);
@@ -1218,7 +1217,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   // Basic block placement.
-  if (getOptLevel() != CodeGenOpt::Level::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addBlockPlacement();
 
   // Insert before XRay Instrumentation.
@@ -1243,7 +1242,7 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&MachineSanitizerBinaryMetadataID);
 
   if (TM->Options.EnableMachineOutliner &&
-      getOptLevel() != CodeGenOpt::Level::None &&
+      getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
     bool RunOnAllFunctions =
         (EnableMachineOutliner == RunOutliner::AlwaysOutline);
@@ -1348,7 +1347,7 @@ void TargetPassConfig::addMachineSSAOptimization() {
 bool TargetPassConfig::getOptimizeRegAlloc() const {
   switch (OptimizeRegAlloc) {
   case cl::BOU_UNSET:
-    return getOptLevel() != CodeGenOpt::Level::None;
+    return getOptLevel() != CodeGenOptLevel::None;
   case cl::BOU_TRUE:  return true;
   case cl::BOU_FALSE: return false;
   }

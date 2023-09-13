@@ -849,7 +849,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
   EnableOptimizeEndCf = RemoveRedundantEndcf &&
-                        MF.getTarget().getOptLevel() > CodeGenOpt::Level::None;
+                        MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();

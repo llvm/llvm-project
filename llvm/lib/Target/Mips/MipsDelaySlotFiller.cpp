@@ -611,7 +611,7 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
 
     // Delay slot filling is disabled at -O0, or in microMIPS32R6.
     if (!DisableDelaySlotFiller &&
-        (TM->getOptLevel() != CodeGenOpt::Level::None) &&
+        (TM->getOptLevel() != CodeGenOptLevel::None) &&
         !(InMicroMipsMode && STI.hasMips32r6())) {
 
       bool Filled = false;

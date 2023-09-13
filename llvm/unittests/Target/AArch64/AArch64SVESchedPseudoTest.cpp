@@ -27,8 +27,7 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine(const std::string &CPU) {
 
   return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
       TheTarget->createTargetMachine(TT, CPU, "", TargetOptions(), std::nullopt,
-                                     std::nullopt,
-                                     CodeGenOpt::Level::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default)));
 }
 
 std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {

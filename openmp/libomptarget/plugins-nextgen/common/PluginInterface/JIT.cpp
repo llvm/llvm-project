@@ -112,10 +112,10 @@ OptimizationLevel getOptLevel(unsigned OptLevel) {
 Expected<std::unique_ptr<TargetMachine>>
 createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
   Triple TT(M.getTargetTriple());
-  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(OptLevel);
   assert(CGOptLevelOrNone && "Invalid optimization level");
-  CodeGenOpt::Level CGOptLevel = *CGOptLevelOrNone;
+  CodeGenOptLevel CGOptLevel = *CGOptLevelOrNone;
 
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);

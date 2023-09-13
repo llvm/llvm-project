@@ -167,7 +167,7 @@ public:
   using TargetMachineCtorTy = TargetMachine
       *(*)(const Target &T, const Triple &TT, StringRef CPU, StringRef Features,
            const TargetOptions &Options, std::optional<Reloc::Model> RM,
-           std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT);
+           std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT);
   // If it weren't for layering issues (this header is in llvm/Support, but
   // depends on MC?) this should take the Streamer by value rather than rvalue
   // reference.
@@ -478,13 +478,11 @@ public:
   /// feature set; it should always be provided. Generally this should be
   /// either the target triple from the module, or the target triple of the
   /// host if that does not exist.
-  TargetMachine *
-  createTargetMachine(StringRef TT, StringRef CPU, StringRef Features,
-                      const TargetOptions &Options,
-                      std::optional<Reloc::Model> RM,
-                      std::optional<CodeModel::Model> CM = std::nullopt,
-                      CodeGenOpt::Level OL = CodeGenOpt::Level::Default,
-                      bool JIT = false) const {
+  TargetMachine *createTargetMachine(
+      StringRef TT, StringRef CPU, StringRef Features,
+      const TargetOptions &Options, std::optional<Reloc::Model> RM,
+      std::optional<CodeModel::Model> CM = std::nullopt,
+      CodeGenOptLevel OL = CodeGenOptLevel::Default, bool JIT = false) const {
     if (!TargetMachineCtorFn)
       return nullptr;
     return TargetMachineCtorFn(*this, Triple(TT), CPU, Features, Options, RM,
@@ -1359,12 +1357,10 @@ template <class TargetMachineImpl> struct RegisterTargetMachine {
   }
 
 private:
-  static TargetMachine *Allocator(const Target &T, const Triple &TT,
-                                  StringRef CPU, StringRef FS,
-                                  const TargetOptions &Options,
-                                  std::optional<Reloc::Model> RM,
-                                  std::optional<CodeModel::Model> CM,
-                                  CodeGenOpt::Level OL, bool JIT) {
+  static TargetMachine *
+  Allocator(const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
+            const TargetOptions &Options, std::optional<Reloc::Model> RM,
+            std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT) {
     return new TargetMachineImpl(T, TT, CPU, FS, Options, RM, CM, OL, JIT);
   }
 };

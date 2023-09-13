@@ -143,7 +143,7 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
     return getOperation().emitError()
            << "Invalid optimization level: " << optLevel << ".";
 
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
 
   auto transformer =
       makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);

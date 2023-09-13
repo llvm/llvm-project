@@ -200,7 +200,7 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
   Config.OptLevel = Level;
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
-  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
       CodeGenOpt::getLevel(Config.OptLevel);
   assert(CGOptLevelOrNone && "Unknown optimization level!");
   Config.CGOptLevel = *CGOptLevelOrNone;

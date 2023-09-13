@@ -110,7 +110,7 @@ gpu::SerializeToBlobPass::optimizeLlvm(llvm::Module &llvmModule,
     return getOperation().emitError()
            << "invalid optimization level " << optLevel;
 
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
 
   auto transformer =
       makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
