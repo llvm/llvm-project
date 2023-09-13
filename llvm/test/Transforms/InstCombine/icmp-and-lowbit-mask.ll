@@ -578,9 +578,7 @@ define i1 @src_is_notmask_neg_p2_fail_not_invertable(i8 %x_in, i8 %y) {
 
 define i1 @src_is_mask_const_slt(i8 %x_in) {
 ; CHECK-LABEL: @src_is_mask_const_slt(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 7
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X]], [[AND]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[X_IN:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123
@@ -603,9 +601,7 @@ define i1 @src_is_mask_const_sgt(i8 %x_in) {
 
 define i1 @src_is_mask_const_sle(i8 %x_in) {
 ; CHECK-LABEL: @src_is_mask_const_sle(
-; CHECK-NEXT:    [[X:%.*]] = xor i8 [[X_IN:%.*]], 123
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X]], 31
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[X_IN:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = xor i8 %x_in, 123

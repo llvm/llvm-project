@@ -4634,7 +4634,7 @@ static Instruction *foldICmpXNegX(ICmpInst &I,
   return nullptr;
 }
 
-static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
+static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &,
                                   InstCombinerImpl &IC) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
   // Normalize and operand as operand 0.
@@ -4669,6 +4669,49 @@ static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
       return new ICmpInst(Pred,
                           IC.Builder.CreateAnd(Op1, IC.Builder.CreateNot(A)),
                           Constant::getNullValue(Op1->getType()));
+  }
+
+  if (ICmpInst::isEquality(Pred) || ICmpInst::getSignedPredicate(Pred) != Pred)
+    return nullptr;
+
+  auto IsTrue = [](std::optional<bool> OptBool) {
+    return OptBool.has_value() && OptBool.value();
+  };
+
+  auto IsFalse = [](std::optional<bool> OptBool) {
+    return OptBool.has_value() && !OptBool.value();
+  };
+
+  auto KnownSignY = IC.getKnownSign(A, &I);
+
+  // (X & NegY) spred X --> (icmp (X & NegY) upred X
+  if (IsTrue(KnownSignY))
+    return new ICmpInst(ICmpInst::getUnsignedPredicate(Pred), Op0, Op1);
+
+  if (Pred != ICmpInst::ICMP_SLE && Pred != ICmpInst::ICMP_SGT)
+    return nullptr;
+
+  if (IsFalse(KnownSignY)) {
+    // (X & PosY) s<= X --> X s>= 0
+    if (Pred == ICmpInst::ICMP_SLE)
+      return new ICmpInst(ICmpInst::ICMP_SGE, Op1,
+                          Constant::getNullValue(Op1->getType()));
+    // (X & PosY) s> X --> X s< 0
+    if (Pred == ICmpInst::ICMP_SGT)
+      return new ICmpInst(ICmpInst::ICMP_SLT, Op1,
+                          Constant::getNullValue(Op1->getType()));
+  }
+
+  if (IsTrue(IC.getKnownSign(Op1, &I))) {
+    // (NegX & Y) s> NegX --> Y s>= 0
+    if (Pred == ICmpInst::ICMP_SGT)
+      return new ICmpInst(ICmpInst::ICMP_SGE, A,
+                          Constant::getNullValue(A->getType()));
+
+    // (NegX & Y) s<= NegX --> Y s< 0
+    if (Pred == ICmpInst::ICMP_SLE)
+      return new ICmpInst(ICmpInst::ICMP_SLT, A,
+                          Constant::getNullValue(A->getType()));
   }
 
   return nullptr;
