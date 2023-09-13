@@ -9,4 +9,10 @@ module {
     // CHECK: "llvm.intr.memcpy"(%{{.+}}, %{{.+}}, %{{.+}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
     cir.return
   }
+
+  cir.func @shouldLowerLibcFAbsBuiltin(%arg0: f64) -> f64 {
+    %0 = cir.fabs %arg0 : f64
+    // CHECK: %0 = llvm.intr.fabs(%arg0) : (f64) -> f64
+    cir.return %0 : f64
+  }
 }

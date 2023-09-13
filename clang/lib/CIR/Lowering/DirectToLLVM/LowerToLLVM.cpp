@@ -1835,6 +1835,19 @@ public:
   }
 };
 
+class CIRFAbsOpLowering : public mlir::OpConversionPattern<mlir::cir::FAbsOp> {
+public:
+  using OpConversionPattern<mlir::cir::FAbsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::FAbsOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FAbsOp>(
+        op, adaptor.getOperands().front());
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -1847,7 +1860,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering,
                CIRVAArgLowering, CIRBrOpLowering, CIRTernaryOpLowering,
                CIRGetMemberOpLowering, CIRSwitchOpLowering,
-               CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering>(
+               CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
+               CIRFAbsOpLowering>(
       converter, patterns.getContext());
 }
 
