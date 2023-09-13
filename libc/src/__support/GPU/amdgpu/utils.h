@@ -176,6 +176,9 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
     return 0;
 }
 
+/// Terminates execution of the associated wavefront.
+[[noreturn]] LIBC_INLINE void end_program() { __builtin_amdgcn_endpgm(); }
+
 } // namespace gpu
 } // namespace __llvm_libc
 

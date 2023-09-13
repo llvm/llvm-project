@@ -191,8 +191,8 @@ cleanup:
   ret i32 %retval.0
 
 ; CHECK-LABEL: @testComplexISEL
-; CHECK: cmplwi r3, 0
 ; CHECK: li r3, 1
+; CHECK: cmplwi r4, 0
 ; CHECK: bnelr cr0
 ; CHECK: xor [[XOR:r[0-9]+]]
 ; CHECK: cntlzd [[CZ:r[0-9]+]], [[XOR]]

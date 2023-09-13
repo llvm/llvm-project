@@ -28,9 +28,9 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
 
   OneShotBufferizationOptions() = default;
 
-  /// Specifies whether returning newly allocated memrefs should be allowed.
-  /// Otherwise, a pass failure is triggered.
-  bool allowReturnAllocs = false;
+  /// Specifies whether returning newly allocated memrefs from loops should be
+  /// allowed.  Otherwise, a pass failure is triggered.
+  bool allowReturnAllocsFromLoops = false;
 
   /// Specifies whether the tensor IR should be annotated with alias sets.
   bool dumpAliasSets = false;

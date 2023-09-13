@@ -16,6 +16,17 @@ New entries should be added directly below the "Version" header.
 Version 18.0
 ------------
 
+* [libc++] Simplify the implementation of locale::id
+
+  This patch removes a symbol defined in the library for std::locale::id::__init().
+  The symbol '__init' was defined as a private static function as part of the locale::id
+  class and was never visible from outside the dylib. The addition of this symbol to the
+  ABI was most likely accidental. The deletion of the symbol should not be a breaking change.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__16locale2id6__initEv
+
 * [libc++] Remove symbol for std::system_error from the dylib
 
   This patch removes a symbol defined in the library for std::system_error.
@@ -27,7 +38,7 @@ Version 18.0
   this was never used outside of the dylib.
   The deletion of the symbol should not be a breaking change.
 
-All platforms
+  All platforms
   -------------
   Symbol removed: _ZNSt3__112system_error6__initERKNS_10error_codeENS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE
 
