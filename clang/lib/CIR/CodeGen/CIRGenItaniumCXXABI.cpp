@@ -197,6 +197,7 @@ public:
       const CXXRecordDecl *NearestVBase) override;
   void emitVTableDefinitions(CIRGenVTables &CGVT,
                              const CXXRecordDecl *RD) override;
+  void emitVirtualInheritanceTables(const CXXRecordDecl *RD) override;
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType Ty) override;
   bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
@@ -817,10 +818,10 @@ class CIRGenItaniumRTTIBuilder {
   /// to the Itanium C++ ABI, 2.9.5p6b.
   void BuildSIClassTypeInfo(mlir::Location loc, const CXXRecordDecl *RD);
 
-  // /// Build an abi::__vmi_class_type_info, used for
-  // /// classes with bases that do not satisfy the abi::__si_class_type_info
-  // /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
-  // void BuildVMIClassTypeInfo(const CXXRecordDecl *RD);
+  /// Build an abi::__vmi_class_type_info, used for
+  /// classes with bases that do not satisfy the abi::__si_class_type_info
+  /// constraints, according ti the Itanium C++ ABI, 2.9.5p5c.
+  void BuildVMIClassTypeInfo(const CXXRecordDecl *RD);
 
   // /// Build an abi::__pointer_type_info struct, used
   // /// for pointer types.
@@ -1432,6 +1433,10 @@ void CIRGenItaniumRTTIBuilder::BuildSIClassTypeInfo(mlir::Location loc,
   Fields.push_back(BaseTypeInfo);
 }
 
+void CIRGenItaniumRTTIBuilder::BuildVMIClassTypeInfo(const CXXRecordDecl *RD) {
+  // TODO: Implement this function.
+}
+
 mlir::Attribute
 CIRGenItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(mlir::Location loc,
                                                           QualType Ty) {
@@ -1556,8 +1561,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
     if (CanUseSingleInheritance(RD)) {
       BuildSIClassTypeInfo(loc, RD);
     } else {
-      llvm_unreachable("NYI");
-      // BuildVMIClassTypeInfo(RD);
+      BuildVMIClassTypeInfo(RD);
     }
 
     break;
@@ -1724,6 +1728,13 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &CGVT,
 
   if (VTContext.isRelativeLayout())
     llvm_unreachable("NYI");
+}
+
+void CIRGenItaniumCXXABI::emitVirtualInheritanceTables(
+    const CXXRecordDecl *RD) {
+  CIRGenVTables &VTables = CGM.getVTables();
+  auto VTT = VTables.getAddrOfVTT(RD);
+  VTables.buildVTTDefinition(VTT, CGM.getVTableLinkage(RD), RD);
 }
 
 /// What sort of uniqueness rules should we use for the RTTI for the

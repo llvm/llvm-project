@@ -410,7 +410,13 @@ void CIRRecordLowering::accumulateVBases() {
       const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
       if (BaseDecl->isEmpty())
         continue;
-      llvm_unreachable("NYI");
+      // If the vbase is a primary virtual base of some base, then it doesn't
+      // get its own storage location but instead lives inside of that base.
+      if (astContext.isNearlyEmpty(BaseDecl) &&
+          !hasOwnStorage(cxxRecordDecl, BaseDecl))
+        continue;
+      ScissorOffset = std::min(ScissorOffset,
+                               astRecordLayout.getVBaseClassOffset(BaseDecl));
     }
   members.push_back(MemberInfo(ScissorOffset, MemberInfo::InfoKind::Scissor,
                                mlir::Type{}, cxxRecordDecl));
@@ -418,7 +424,23 @@ void CIRRecordLowering::accumulateVBases() {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     if (BaseDecl->isEmpty())
       continue;
-    llvm_unreachable("NYI");
+    CharUnits Offset = astRecordLayout.getVBaseClassOffset(BaseDecl);
+    // If the vbase is a primary virtual base of some base, then it doesn't
+    // get its own storage location but instead lives inside of that base.
+    if (isOverlappingVBaseABI() && astContext.isNearlyEmpty(BaseDecl) &&
+        !hasOwnStorage(cxxRecordDecl, BaseDecl)) {
+      members.push_back(
+          MemberInfo(Offset, MemberInfo::InfoKind::VBase, nullptr, BaseDecl));
+      continue;
+    }
+    // If we've got a vtordisp, add it as a storage type.
+    if (astRecordLayout.getVBaseOffsetsMap()
+            .find(BaseDecl)
+            ->second.hasVtorDisp())
+      members.push_back(
+          StorageInfo(Offset - CharUnits::fromQuantity(4), getUIntNType(32)));
+    members.push_back(MemberInfo(Offset, MemberInfo::InfoKind::VBase,
+                                 getStorageType(BaseDecl), BaseDecl));
   }
 }
 
@@ -449,8 +471,7 @@ void CIRRecordLowering::fillOutputFields() {
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     } else if (member.kind == MemberInfo::InfoKind::VBase) {
-      llvm_unreachable("NYI");
-      // virtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
+      virtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     }
   }
 }

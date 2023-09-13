@@ -138,13 +138,13 @@ public:
   //                              llvm::GlobalVariable::LinkageTypes Linkage,
   //                              VTableAddressPointsMapTy &AddressPoints);
 
-  //   /// GetAddrOfVTT - Get the address of the VTT for the given record decl.
-  //   llvm::GlobalVariable *GetAddrOfVTT(const CXXRecordDecl *RD);
+  /// Get the address of the VTT for the given record decl.
+  mlir::cir::GlobalOp getAddrOfVTT(const CXXRecordDecl *RD);
 
-  //   /// EmitVTTDefinition - Emit the definition of the given vtable.
-  //   void EmitVTTDefinition(llvm::GlobalVariable *VTT,
-  //                          llvm::GlobalVariable::LinkageTypes Linkage,
-  //                          const CXXRecordDecl *RD);
+  /// Emit the definition of the given vtable.
+  void buildVTTDefinition(mlir::cir::GlobalOp VTT,
+                          mlir::cir::GlobalLinkageKind Linkage,
+                          const CXXRecordDecl *RD);
 
   /// Emit the associated thunks for the given global decl.
   void buildThunks(GlobalDecl GD);
