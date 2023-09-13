@@ -55,3 +55,27 @@ class EditlineTest(PExpectTest):
         # Prompt: 🐛 _
         # Column: 1..4
         self.child.expect(re.escape("🐛 \x1b[0m\x1b[4G"))
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_prompt_color(self):
+        """Test that we can change the prompt color with prompt-ansi-prefix."""
+        self.launch(use_colors=True)
+        self.child.send('settings set prompt-ansi-prefix "${ansi.fg.red}"\n')
+        # Make sure this change is reflected immediately. Check that the color
+        # is set (31) and the cursor position (8) is correct.
+        # Prompt: (lldb) _
+        # Column: 1....6.8
+        self.child.expect(re.escape("\x1b[31m(lldb) \x1b[0m\x1b[8G"))
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_prompt_no_color(self):
+        """Test that prompt-ansi-prefix doesn't color the prompt when colors are off."""
+        self.launch(use_colors=False)
+        self.child.send('settings set prompt-ansi-prefix "${ansi.fg.red}"\n')
+        # Send foo so we can match the newline before the prompt and the foo
+        # after the prompt.
+        self.child.send("foo")
+        # Check that there are no escape codes.
+        self.child.expect(re.escape("\n(lldb) foo"))
