@@ -120,6 +120,14 @@ For consistency and to limit churn, code should be automatically formatted with 
 rules based on major version. In order to avoid unnecessary churn in the formatting rules
 we currently use black version 23.x in LLVM.
 
+To format only the lines changed in a patch you can use
+`darker <https://pypi.org/project/darker/>`_. To format the changes in the most recent
+commit:
+
+::
+
+  darker --revision HEAD~1 $(git diff-tree --no-commit-id --name-only HEAD -r)
+
 Mechanical Source Issues
 ========================
 
