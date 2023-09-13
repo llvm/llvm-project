@@ -2256,9 +2256,10 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
   // index: sext(add_nsw(x,c)) -> index: sext(x), disp + sext(c)
   // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
-  if (Opc == ISD::SIGN_EXTEND && !VT.isVector()) {
+  if (Opc == ISD::SIGN_EXTEND && !VT.isVector() && N.hasOneUse()) {
     SDValue Src = N.getOperand(0);
-    if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap()) {
+    if (Src.getOpcode() == ISD::ADD && Src->getFlags().hasNoSignedWrap() &&
+        Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
         auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
