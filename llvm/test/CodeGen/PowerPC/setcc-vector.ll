@@ -20,12 +20,12 @@ define <1 x i64> @setcc_v1i128(<1 x i128> %a) {
 ;
 ; CHECK-PWR8-LABEL: setcc_v1i128:
 ; CHECK-PWR8:       # %bb.0: # %entry
-; CHECK-PWR8-NEXT:    xxswapd vs0, vs34
 ; CHECK-PWR8-NEXT:    mfvsrd r3, vs34
+; CHECK-PWR8-NEXT:    xxswapd vs0, vs34
 ; CHECK-PWR8-NEXT:    cmpdi r3, 0
+; CHECK-PWR8-NEXT:    mffprd r3, f0
+; CHECK-PWR8-NEXT:    cmpldi cr1, r3, 35708
 ; CHECK-PWR8-NEXT:    li r3, 1
-; CHECK-PWR8-NEXT:    mffprd r4, f0
-; CHECK-PWR8-NEXT:    cmpldi cr1, r4, 35708
 ; CHECK-PWR8-NEXT:    crnand 4*cr5+lt, eq, 4*cr1+lt
 ; CHECK-PWR8-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; CHECK-PWR8-NEXT:    blr

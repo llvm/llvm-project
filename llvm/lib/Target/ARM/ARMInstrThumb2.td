@@ -3448,7 +3448,7 @@ class T2I_crc32<bit C, bits<2> sz, string suffix, SDPatternOperator builtin>
   : T2ThreeRegNoP<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm), NoItinerary,
                !strconcat("crc32", suffix, "\t$Rd, $Rn, $Rm"),
                [(set rGPR:$Rd, (builtin rGPR:$Rn, rGPR:$Rm))]>,
-               Requires<[IsThumb2, HasV8, HasCRC]> {
+               Requires<[IsThumb2, HasCRC]> {
   let Inst{31-27} = 0b11111;
   let Inst{26-21} = 0b010110;
   let Inst{20}    = C;

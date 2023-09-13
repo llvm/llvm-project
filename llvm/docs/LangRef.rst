@@ -10955,15 +10955,17 @@ If the ``inbounds`` keyword is present, the result value of a
 :ref:`poison value <poisonvalues>` if one of the following rules is violated:
 
 *  The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end.
+   means that it points into an allocated object, or to its end. Note that the
+   object does not have to be live anymore; being in-bounds of a deallocated
+   object is sufficient.
 *  If the type of an index is larger than the pointer index type, the
    truncation to the pointer index type preserves the signed value.
 *  The multiplication of an index by the type size does not wrap the pointer
    index type in a signed sense (``nsw``).
-*  The successive addition of offsets (without adding the base address) does
+*  The successive addition of each offset (without adding the base address) does
    not wrap the pointer index type in a signed sense (``nsw``).
 *  The successive addition of the current address, interpreted as an unsigned
-   number, and an offset, interpreted as a signed number, does not wrap the
+   number, and each offset, interpreted as a signed number, does not wrap the
    unsigned address space and remains *in bounds* of the allocated object.
    As a corollary, if the added offset is non-negative, the addition does not
    wrap in an unsigned sense (``nuw``).

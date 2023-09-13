@@ -2,6 +2,7 @@
 /// paths setting. If it doesn't find it by adding the whole relative path to
 /// of DWO it should try adding just the filename (e.g. main.dwo) to each debug
 /// search path.
+// UNSUPPORTED: system-darwin
 // RUN: rm -rf %t.compdir/
 // RUN: mkdir -p %t.compdir/a/b/
 // RUN: cp %s %t.compdir/a/b/main.c

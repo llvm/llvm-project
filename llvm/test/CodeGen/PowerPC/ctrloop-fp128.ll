@@ -38,23 +38,23 @@ define void @fmul_ctrloop_fp128() nounwind {
 ; PWR8-NEXT:    stdu 1, -112(1)
 ; PWR8-NEXT:    li 3, 48
 ; PWR8-NEXT:    std 0, 128(1)
-; PWR8-NEXT:    addis 4, 2, x@toc@ha
 ; PWR8-NEXT:    std 28, 80(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    std 29, 88(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    std 30, 96(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    li 30, 4
-; PWR8-NEXT:    addi 4, 4, x@toc@l
 ; PWR8-NEXT:    li 29, 16
+; PWR8-NEXT:    std 26, 64(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    stxvd2x 63, 1, 3 # 16-byte Folded Spill
 ; PWR8-NEXT:    addis 3, 2, a@toc@ha
-; PWR8-NEXT:    std 26, 64(1) # 8-byte Folded Spill
-; PWR8-NEXT:    std 27, 72(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    addi 3, 3, a@toc@l
+; PWR8-NEXT:    std 27, 72(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    lxvd2x 0, 0, 3
 ; PWR8-NEXT:    addis 3, 2, y@toc@ha
 ; PWR8-NEXT:    addi 3, 3, y@toc@l
 ; PWR8-NEXT:    addi 28, 3, -16
-; PWR8-NEXT:    addi 3, 4, -16
+; PWR8-NEXT:    addis 3, 2, x@toc@ha
+; PWR8-NEXT:    addi 3, 3, x@toc@l
+; PWR8-NEXT:    addi 3, 3, -16
 ; PWR8-NEXT:    xxswapd 63, 0
 ; PWR8-NEXT:    .p2align 4
 ; PWR8-NEXT:  .LBB0_1: # %for.body
@@ -66,8 +66,8 @@ define void @fmul_ctrloop_fp128() nounwind {
 ; PWR8-NEXT:    xxswapd 35, 0
 ; PWR8-NEXT:    bl __mulkf3
 ; PWR8-NEXT:    nop
-; PWR8-NEXT:    xxswapd 0, 34
 ; PWR8-NEXT:    addi 30, 30, -1
+; PWR8-NEXT:    xxswapd 0, 34
 ; PWR8-NEXT:    mr 3, 26
 ; PWR8-NEXT:    cmpldi 30, 0
 ; PWR8-NEXT:    stxvd2x 0, 28, 29
@@ -77,9 +77,9 @@ define void @fmul_ctrloop_fp128() nounwind {
 ; PWR8-NEXT:    li 3, 48
 ; PWR8-NEXT:    ld 30, 96(1) # 8-byte Folded Reload
 ; PWR8-NEXT:    ld 29, 88(1) # 8-byte Folded Reload
+; PWR8-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PWR8-NEXT:    ld 28, 80(1) # 8-byte Folded Reload
 ; PWR8-NEXT:    ld 27, 72(1) # 8-byte Folded Reload
-; PWR8-NEXT:    lxvd2x 63, 1, 3 # 16-byte Folded Reload
 ; PWR8-NEXT:    ld 26, 64(1) # 8-byte Folded Reload
 ; PWR8-NEXT:    addi 1, 1, 112
 ; PWR8-NEXT:    ld 0, 16(1)
@@ -132,12 +132,12 @@ define void @fpext_ctrloop_fp128(ptr %a) nounwind {
 ; PWR8-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    stdu 1, -64(1)
-; PWR8-NEXT:    addis 4, 2, y@toc@ha
 ; PWR8-NEXT:    addi 30, 3, -8
+; PWR8-NEXT:    addis 3, 2, y@toc@ha
 ; PWR8-NEXT:    li 29, 4
 ; PWR8-NEXT:    std 0, 80(1)
-; PWR8-NEXT:    addi 4, 4, y@toc@l
-; PWR8-NEXT:    addi 28, 4, -16
+; PWR8-NEXT:    addi 3, 3, y@toc@l
+; PWR8-NEXT:    addi 28, 3, -16
 ; PWR8-NEXT:    .p2align 4
 ; PWR8-NEXT:  .LBB1_1: # %for.body
 ; PWR8-NEXT:    #
@@ -145,8 +145,8 @@ define void @fpext_ctrloop_fp128(ptr %a) nounwind {
 ; PWR8-NEXT:    addi 28, 28, 16
 ; PWR8-NEXT:    bl __extenddfkf2
 ; PWR8-NEXT:    nop
-; PWR8-NEXT:    xxswapd 0, 34
 ; PWR8-NEXT:    addi 29, 29, -1
+; PWR8-NEXT:    xxswapd 0, 34
 ; PWR8-NEXT:    cmpldi 29, 0
 ; PWR8-NEXT:    stxvd2x 0, 0, 28
 ; PWR8-NEXT:    bc 12, 1, .LBB1_1
@@ -204,12 +204,12 @@ define void @fptrunc_ctrloop_fp128(ptr %a) nounwind {
 ; PWR8-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; PWR8-NEXT:    stdu 1, -64(1)
-; PWR8-NEXT:    addis 4, 2, x@toc@ha
 ; PWR8-NEXT:    addi 30, 3, -8
+; PWR8-NEXT:    addis 3, 2, x@toc@ha
 ; PWR8-NEXT:    li 29, 4
 ; PWR8-NEXT:    std 0, 80(1)
-; PWR8-NEXT:    addi 4, 4, x@toc@l
-; PWR8-NEXT:    addi 28, 4, -16
+; PWR8-NEXT:    addi 3, 3, x@toc@l
+; PWR8-NEXT:    addi 28, 3, -16
 ; PWR8-NEXT:    .p2align 4
 ; PWR8-NEXT:  .LBB2_1: # %for.body
 ; PWR8-NEXT:    #
