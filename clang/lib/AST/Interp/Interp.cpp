@@ -261,9 +261,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_access_uninit)
-        << AK << /*uninitialized=*/true;
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
+        << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
   }
   return false;
 }
