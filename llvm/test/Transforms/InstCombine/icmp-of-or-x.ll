@@ -377,3 +377,30 @@ define i1 @pr64610(ptr %b) {
   %r = icmp ugt i32 %or, %s
   ret i1 %r
 }
+
+define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y, i8 %z) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
+; CHECK-NEXT:    [[ZZ:%.*]] = xor i8 [[Z:%.*]], -1
+; CHECK-NEXT:    [[YY:%.*]] = select i1 [[Y:%.*]], i8 7, i8 [[ZZ]]
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[YY]], [[OR]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %zz = xor i8 %z, -1
+  %yy = select i1 %y, i8 7, i8 %zz
+  %or = or i8 %x, %yy
+  %r = icmp eq i8 %yy, %or
+  ret i1 %r
+}
+
+define i1 @icmp_eq_x_invertable_y2(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y2(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %yy = xor i8 %y, -1
+  %or = or i8 %x, %yy
+  %r = icmp eq i8 %yy, %or
+  ret i1 %r
+}
