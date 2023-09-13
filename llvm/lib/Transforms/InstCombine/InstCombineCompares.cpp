@@ -4069,6 +4069,95 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
   return nullptr;
 }
 
+// Returns whether V is a Mask ((X + 1) & X == 0) or ~Mask (-Pow2OrZero)
+static bool isMaskOrZero(const Value *V, bool Not, const SimplifyQuery &Q,
+                         unsigned Depth = 0) {
+  if (Not ? match(V, m_NegatedPower2OrZero()) : match(V, m_LowBitMaskOrZero()))
+    return true;
+  if (V->getType()->getScalarSizeInBits() == 1)
+    return true;
+  if (Depth++ >= MaxAnalysisRecursionDepth)
+    return false;
+  Value *X;
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+  switch (I->getOpcode()) {
+  case Instruction::ZExt:
+    // ZExt(Mask) is a Mask.
+    return !Not && isMaskOrZero(I->getOperand(0), Not, Q, Depth);
+  case Instruction::SExt:
+    // SExt(Mask) is a Mask.
+    // SExt(~Mask) is a ~Mask.
+    return isMaskOrZero(I->getOperand(0), Not, Q, Depth);
+  case Instruction::And:
+  case Instruction::Or:
+    // Mask0 | Mask1 is a Mask.
+    // Mask0 & Mask1 is a Mask.
+    // ~Mask0 | ~Mask1 is a ~Mask.
+    // ~Mask0 & ~Mask1 is a ~Mask.
+    return isMaskOrZero(I->getOperand(1), Not, Q, Depth) &&
+           isMaskOrZero(I->getOperand(0), Not, Q, Depth);
+  case Instruction::Xor:
+    if (match(V, m_Not(m_Value(X))))
+      return isMaskOrZero(X, !Not, Q, Depth);
+
+    // (X ^ (X - 1)) is a Mask
+    return !Not &&
+           match(V, m_c_Xor(m_Value(X), m_Add(m_Deferred(X), m_AllOnes())));
+  case Instruction::Select:
+    // c ? Mask0 : Mask1 is a Mask.
+    return isMaskOrZero(I->getOperand(1), Not, Q, Depth) &&
+           isMaskOrZero(I->getOperand(2), Not, Q, Depth);
+  case Instruction::Shl:
+    // (~Mask) << X is a ~Mask.
+    return Not && isMaskOrZero(I->getOperand(0), Not, Q, Depth);
+  case Instruction::LShr:
+    // Mask >> X is a Mask.
+    return !Not && isMaskOrZero(I->getOperand(0), Not, Q, Depth);
+  case Instruction::AShr:
+    // Mask s>> X is a Mask.
+    // ~Mask s>> X is a ~Mask.
+    return isMaskOrZero(I->getOperand(0), Not, Q, Depth);
+  case Instruction::Add:
+    // Pow2 - 1 is a Mask.
+    if (!Not && match(I->getOperand(1), m_AllOnes()))
+      return isKnownToBeAPowerOfTwo(I->getOperand(0), Q.DL, /*OrZero*/ true,
+                                    Depth, Q.AC, Q.CxtI, Q.DT);
+    break;
+  case Instruction::Sub:
+    // -Pow2 is a ~Mask.
+    if (Not && match(I->getOperand(0), m_Zero()))
+      return isKnownToBeAPowerOfTwo(I->getOperand(1), Q.DL, /*OrZero*/ true,
+                                    Depth, Q.AC, Q.CxtI, Q.DT);
+    break;
+  case Instruction::Call: {
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+        // min/max(Mask0, Mask1) is a Mask.
+        // min/max(~Mask0, ~Mask1) is a ~Mask.
+      case Intrinsic::umax:
+      case Intrinsic::smax:
+      case Intrinsic::umin:
+      case Intrinsic::smin:
+        return isMaskOrZero(II->getArgOperand(1), Not, Q, Depth) &&
+               isMaskOrZero(II->getArgOperand(0), Not, Q, Depth);
+
+        // In the context of masks, bitreverse(Mask) == ~Mask
+      case Intrinsic::bitreverse:
+        return isMaskOrZero(II->getArgOperand(0), !Not, Q, Depth);
+      default:
+        break;
+      }
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  return false;
+}
+
 /// Some comparisons can be simplified.
 /// In this case, we are looking for comparisons that look like
 /// a check for a lossy truncation.
@@ -4083,17 +4172,21 @@ Instruction *InstCombinerImpl::foldSelectICmp(ICmpInst::Predicate Pred,
 /// For some predicates, the operands are commutative.
 /// For others, x can only be on a specific side.
 static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
-                                          Value *Op1,
-                                          InstCombiner::BuilderTy &Builder) {
-  Value *M, *Y;
-  auto m_VariableMask = m_CombineOr(
-      m_CombineOr(m_Not(m_Shl(m_AllOnes(), m_Value())),
-                  m_Add(m_Shl(m_One(), m_Value()), m_AllOnes())),
-      m_CombineOr(m_LShr(m_AllOnes(), m_Value()),
-                  m_LShr(m_Shl(m_AllOnes(), m_Value(Y)), m_Deferred(Y))));
-  auto m_Mask = m_CombineOr(m_VariableMask, m_LowBitMask());
+                                          Value *Op1, const SimplifyQuery &Q,
+                                          InstCombiner &IC) {
+  Value *M;
+  bool NeedsNot = false;
 
-  if (!match(Op0, m_c_And(m_CombineAnd(m_Mask, m_Value(M)), m_Specific(Op1))))
+  auto CheckMask = [&](Value *V, bool Not) {
+    if (ICmpInst::isSigned(Pred) && !match(V, m_ImmConstant()))
+      return false;
+    return isMaskOrZero(V, Not, Q);
+  };
+
+  if (!match(Op0, m_c_And(m_Specific(Op1), m_Value(M))))
+    return nullptr;
+
+  if (!CheckMask(M, /*Not*/ false))
     return nullptr;
 
   ICmpInst::Predicate DstPred;
@@ -4163,7 +4256,9 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst::Predicate Pred, Value *Op0,
     M = Constant::replaceUndefsWith(VecC, SafeReplacementConstant);
   }
 
-  return Builder.CreateICmp(DstPred, Op1, M);
+  if (NeedsNot)
+    M = IC.Builder.CreateNot(M);
+  return IC.Builder.CreateICmp(DstPred, Op1, M);
 }
 
 /// Some comparisons can be simplified.
@@ -6980,7 +7075,8 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
     }
   }
 
-  if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Builder))
+  const SimplifyQuery Q = SQ.getWithInstruction(&CxtI);
+  if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
     return replaceInstUsesWith(CxtI, V);
 
   return nullptr;
