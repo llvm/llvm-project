@@ -121,6 +121,14 @@ protected:
   Liveness liveness;
 };
 
+/// Compare two SSA values in a deterministic manner. Two block arguments are
+/// ordered by argument number, block arguments are always less than operation
+/// results, and operation results are ordered by the `isBeforeInBlock` order of
+/// their defining operation.
+struct ValueComparator {
+  bool operator()(const Value &lhs, const Value &rhs) const;
+};
+
 // Create a global op for the given tensor-valued constant in the program.
 // Globals are created lazily at the top of the enclosing ModuleOp with pretty
 // names. Duplicates are avoided.

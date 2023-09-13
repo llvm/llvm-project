@@ -18,14 +18,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/ADT/SetOperations.h"
 
 namespace mlir {
 namespace bufferization {
@@ -135,13 +137,103 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// This class is used to track the ownership of values. The ownership can
+/// either be not initialized yet ('Uninitialized' state), set to a unique SSA
+/// value which indicates the ownership at runtime (or statically if it is a
+/// constant value) ('Unique' state), or it cannot be represented in a single
+/// SSA value ('Unknown' state). An artificial example of a case where ownership
+/// cannot be represented in a single i1 SSA value could be the following:
+/// `%0 = test.non_deterministic_select %arg0, %arg1 : i32`
+/// Since the operation does not provide us a separate boolean indicator on
+/// which of the two operands was selected, we would need to either insert an
+/// alias check at runtime to determine if `%0` aliases with `%arg0` or `%arg1`,
+/// or insert a `bufferization.clone` operation to get a fresh buffer which we
+/// could assign ownership to.
+///
+/// The three states this class can represent form a lattice on a partial order:
+/// forall X in SSA values. uninitialized < unique(X) < unknown
+/// forall X, Y in SSA values.
+///   unique(X) == unique(Y) iff X and Y always evaluate to the same value
+///   unique(X) != unique(Y) otherwise
+class Ownership {
+public:
+  /// Constructor that creates an 'Uninitialized' ownership. This is needed for
+  /// default-construction when used in DenseMap.
+  Ownership() = default;
+
+  /// Constructor that creates an 'Unique' ownership. This is a non-explicit
+  /// constructor to allow implicit conversion from 'Value'.
+  Ownership(Value indicator) : indicator(indicator), state(State::Unique) {}
+
+  /// Get an ownership value in 'Unknown' state.
+  static Ownership getUnknown() {
+    Ownership unknown;
+    unknown.indicator = Value();
+    unknown.state = State::Unknown;
+    return unknown;
+  }
+  /// Get an ownership value in 'Unique' state with 'indicator' as parameter.
+  static Ownership getUnique(Value indicator) { return Ownership(indicator); }
+  /// Get an ownership value in 'Uninitialized' state.
+  static Ownership getUninitialized() { return Ownership(); }
+
+  /// Check if this ownership value is in the 'Uninitialized' state.
+  bool isUninitialized() const { return state == State::Uninitialized; }
+  /// Check if this ownership value is in the 'Unique' state.
+  bool isUnique() const { return state == State::Unique; }
+  /// Check if this ownership value is in the 'Unknown' state.
+  bool isUnknown() const { return state == State::Unknown; }
+
+  /// If this ownership value is in 'Unique' state, this function can be used to
+  /// get the indicator parameter. Using this function in any other state is UB.
+  Value getIndicator() const {
+    assert(isUnique() && "must have unique ownership to get the indicator");
+    return indicator;
+  }
+
+  /// Get the join of the two-element subset {this,other}. Does not modify
+  /// 'this'.
+  Ownership getCombined(Ownership other) const {
+    if (other.isUninitialized())
+      return *this;
+    if (isUninitialized())
+      return other;
+
+    if (!isUnique() || !other.isUnique())
+      return getUnknown();
+
+    // Since we create a new constant i1 value for (almost) each use-site, we
+    // should compare the actual value rather than just the SSA Value to avoid
+    // unnecessary invalidations.
+    if (isEqualConstantIntOrValue(indicator, other.indicator))
+      return *this;
+
+    // Return the join of the lattice if the indicator of both ownerships cannot
+    // be merged.
+    return getUnknown();
+  }
+
+  /// Modify 'this' ownership to be the join of the current 'this' and 'other'.
+  void combine(Ownership other) { *this = getCombined(other); }
+
+private:
+  enum class State {
+    Uninitialized,
+    Unique,
+    Unknown,
+  };
+
+  // The indicator value is only relevant in the 'Unique' state.
+  Value indicator;
+  State state = State::Uninitialized;
+};
+
 /// The buffer deallocation transformation which ensures that all allocs in the
 /// program have a corresponding de-allocation.
 class BufferDeallocation {
 public:
   BufferDeallocation(Operation *op, bool privateFuncDynamicOwnership)
-      : state(op) {
-    options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
+      : liveness(op), privateFuncDynamicOwnership(privateFuncDynamicOwnership) {
   }
 
   /// Performs the actual placement/creation of all dealloc operations.
@@ -199,16 +291,56 @@ private:
 
   /// Apply all supported interface handlers to the given op.
   FailureOr<Operation *> handleAllInterfaces(Operation *op) {
-    if (auto deallocOpInterface = dyn_cast<BufferDeallocationOpInterface>(op))
-      return deallocOpInterface.process(state, options);
-
     if (failed(verifyOperationPreconditions(op)))
       return failure();
 
     return handleOp<MemoryEffectOpInterface, RegionBranchOpInterface,
-                    CallOpInterface, BranchOpInterface,
+                    CallOpInterface, BranchOpInterface, cf::CondBranchOp,
                     RegionBranchTerminatorOpInterface>(op);
   }
+
+  /// While CondBranchOp also implements the BranchOpInterface, we add a
+  /// special-case implementation here because the BranchOpInterface does not
+  /// offer all of the functionality we need to insert dealloc operations in an
+  /// efficient way. More precisely, there is no way to extract the branch
+  /// condition without casting to CondBranchOp specifically. It would still be
+  /// possible to implement deallocation for cases where we don't know to which
+  /// successor the terminator branches before the actual branch happens by
+  /// inserting auxiliary blocks and putting the dealloc op there, however, this
+  /// can lead to less efficient code.
+  /// This function inserts two dealloc operations (one for each successor) and
+  /// adjusts the dealloc conditions according to the branch condition, then the
+  /// ownerships of the retained MemRefs are updated by combining the result
+  /// values of the two dealloc operations.
+  ///
+  /// Example:
+  /// ```
+  /// ^bb1:
+  ///   <more ops...>
+  ///   cf.cond_br cond, ^bb2(<forward-to-bb2>), ^bb3(<forward-to-bb2>)
+  /// ```
+  /// becomes
+  /// ```
+  /// // let (m, c) = getMemrefsAndConditionsToDeallocate(bb1)
+  /// // let r0 = getMemrefsToRetain(bb1, bb2, <forward-to-bb2>)
+  /// // let r1 = getMemrefsToRetain(bb1, bb3, <forward-to-bb3>)
+  /// ^bb1:
+  ///   <more ops...>
+  ///   let thenCond = map(c, (c) -> arith.andi cond, c)
+  ///   let elseCond = map(c, (c) -> arith.andi (arith.xori cond, true), c)
+  ///   o0 = bufferization.dealloc m if thenCond retain r0
+  ///   o1 = bufferization.dealloc m if elseCond retain r1
+  ///   // replace ownership(r0) with o0 element-wise
+  ///   // replace ownership(r1) with o1 element-wise
+  ///   // let ownership0 := (r) -> o in o0 corresponding to r
+  ///   // let ownership1 := (r) -> o in o1 corresponding to r
+  ///   // let cmn := intersection(r0, r1)
+  ///   foreach (a, b) in zip(map(cmn, ownership0), map(cmn, ownership1)):
+  ///     forall r in r0: replace ownership0(r) with arith.select cond, a, b)
+  ///     forall r in r1: replace ownership1(r) with arith.select cond, a, b)
+  ///   cf.cond_br cond, ^bb2(<forward-to-bb2>, o0), ^bb3(<forward-to-bb3>, o1)
+  /// ```
+  FailureOr<Operation *> handleInterface(cf::CondBranchOp op);
 
   /// Make sure that for each forwarded MemRef value, an ownership indicator
   /// `i1` value is forwarded as well such that the successor block knows
@@ -360,6 +492,18 @@ private:
   /// this function has to be called on blocks in a region in dominance order.
   LogicalResult deallocate(Block *block);
 
+  /// Small helper function to update the ownership map by taking the current
+  /// ownership ('Uninitialized' state if not yet present), computing the join
+  /// with the passed ownership and storing this new value in the map. By
+  /// default, it will be performed for the block where 'owned' is defined. If
+  /// the ownership of the given value should be updated for another block, the
+  /// 'block' argument can be explicitly passed.
+  void joinOwnership(Value owned, Ownership ownership, Block *block = nullptr);
+
+  /// Removes ownerships associated with all values in the passed range for
+  /// 'block'.
+  void clearOwnershipOf(ValueRange values, Block *block);
+
   /// After all relevant interfaces of an operation have been processed by the
   /// 'handleInterface' functions, this function sets the ownership of operation
   /// results that have not been set yet by the 'handleInterface' functions. It
@@ -372,6 +516,51 @@ private:
   /// re-building operations to have more result values, inserting clone
   /// operations, etc.).
   void populateRemainingOwnerships(Operation *op);
+
+  /// Given two basic blocks and the values passed via block arguments to the
+  /// destination block, compute the list of MemRefs that have to be retained in
+  /// the 'fromBlock' to not run into a use-after-free situation.
+  /// This list consists of the MemRefs in the successor operand list of the
+  /// terminator and the MemRefs in the 'out' set of the liveness analysis
+  /// intersected with the 'in' set of the destination block.
+  ///
+  /// toRetain = filter(successorOperands + (liveOut(fromBlock) insersect
+  ///   liveIn(toBlock)), isMemRef)
+  void getMemrefsToRetain(Block *fromBlock, Block *toBlock,
+                          ValueRange destOperands,
+                          SmallVectorImpl<Value> &toRetain) const;
+
+  /// For a given block, computes the list of MemRefs that potentially need to
+  /// be deallocated at the end of that block. This list also contains values
+  /// that have to be retained (and are thus part of the list returned by
+  /// `getMemrefsToRetain`) and is computed by taking the MemRefs in the 'in'
+  /// set of the liveness analysis of 'block'  appended by the set of MemRefs
+  /// allocated in 'block' itself and subtracted by the set of MemRefs
+  /// deallocated in 'block'.
+  /// Note that we don't have to take the intersection of the liveness 'in' set
+  /// with the 'out' set of the predecessor block because a value that is in the
+  /// 'in' set must be defined in an ancestor block that dominates all direct
+  /// predecessors and thus the 'in' set of this block is a subset of the 'out'
+  /// sets of each predecessor.
+  ///
+  /// memrefs = filter((liveIn(block) U
+  ///   allocated(block) U arguments(block)) \ deallocated(block), isMemRef)
+  ///
+  /// The list of conditions is then populated by querying the internal
+  /// datastructures for the ownership value of that MemRef.
+  LogicalResult
+  getMemrefsAndConditionsToDeallocate(OpBuilder &builder, Location loc,
+                                      Block *block,
+                                      SmallVectorImpl<Value> &memrefs,
+                                      SmallVectorImpl<Value> &conditions) const;
+
+  /// Given an SSA value of MemRef type, this function queries the ownership and
+  /// if it is not already in the 'Unique' state, potentially inserts IR to get
+  /// a new SSA value, returned as the first element of the pair, which has
+  /// 'Unique' ownership and can be used instead of the passed Value with the
+  /// the ownership indicator returned as the second element of the pair.
+  std::pair<Value, Value> getMemrefWithUniqueOwnership(OpBuilder &builder,
+                                                       Value memref);
 
   /// Given an SSA value of MemRef type, returns the same of a new SSA value
   /// which has 'Unique' ownership where the ownership indicator is guaranteed
@@ -413,13 +602,27 @@ private:
   static LogicalResult updateFunctionSignature(FunctionOpInterface op);
 
 private:
-  ///  Collects all analysis state and including liveness, caches, ownerships of
-  ///  already processed values and operations, and the MemRefs that have to be
-  ///  deallocated at the end of each block.
-  DeallocationState state;
+  // Mapping from each SSA value with MemRef type to the associated ownership in
+  // each block.
+  DenseMap<std::pair<Value, Block *>, Ownership> ownershipMap;
 
-  /// Collects all pass options in a single place.
-  DeallocationOptions options;
+  // Collects the list of MemRef values that potentially need to be deallocated
+  // per block. It is also fine (albeit not efficient) to add MemRef values that
+  // don't have to be deallocated, but only when the ownership is not 'Unknown'.
+  DenseMap<Block *, SmallVector<Value>> memrefsToDeallocatePerBlock;
+
+  // Symbol cache to lookup functions from call operations to check attributes
+  // on the function operation.
+  SymbolTableCollection symbolTable;
+
+  // The underlying liveness analysis to compute fine grained information about
+  // alloc and dealloc positions.
+  Liveness liveness;
+
+  // A pass option indicating whether private functions should be modified to
+  // pass the ownership of MemRef values instead of adhering to the function
+  // boundary ABI.
+  bool privateFuncDynamicOwnership;
 };
 
 } // namespace
@@ -427,6 +630,22 @@ private:
 //===----------------------------------------------------------------------===//
 // BufferDeallocation Implementation
 //===----------------------------------------------------------------------===//
+
+void BufferDeallocation::joinOwnership(Value owned, Ownership ownership,
+                                       Block *block) {
+  // In most cases we care about the block where the value is defined.
+  if (block == nullptr)
+    block = owned.getParentBlock();
+
+  // Update ownership of current memref itself.
+  ownershipMap[{owned, block}].combine(ownership);
+}
+
+void BufferDeallocation::clearOwnershipOf(ValueRange values, Block *block) {
+  for (Value val : values) {
+    ownershipMap[{val, block}] = Ownership::getUninitialized();
+  }
+}
 
 static bool regionOperatesOnMemrefValues(Region &region) {
   WalkResult result = region.walk([](Block *block) {
@@ -498,10 +717,10 @@ LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
 
     // We only support terminators with 0 or 1 successors for now and
     // special-case the conditional branch op.
-    if (op->getSuccessors().size() > 1)
+    if (op->getSuccessors().size() > 1 && !isa<cf::CondBranchOp>(op))
 
       return op->emitError("Terminators with more than one successor "
-                           "are not supported!");
+                           "are not supported (except cf.cond_br)!");
   }
 
   return success();
@@ -557,26 +776,80 @@ LogicalResult BufferDeallocation::deallocate(FunctionOpInterface op) {
   return updateFunctionSignature(op);
 }
 
+void BufferDeallocation::getMemrefsToRetain(
+    Block *fromBlock, Block *toBlock, ValueRange destOperands,
+    SmallVectorImpl<Value> &toRetain) const {
+  for (Value operand : destOperands) {
+    if (!isMemref(operand))
+      continue;
+    toRetain.push_back(operand);
+  }
+
+  SmallPtrSet<Value, 16> liveOut;
+  for (auto val : liveness.getLiveOut(fromBlock))
+    if (isMemref(val))
+      liveOut.insert(val);
+
+  if (toBlock)
+    llvm::set_intersect(liveOut, liveness.getLiveIn(toBlock));
+
+  // liveOut has non-deterministic order because it was constructed by iterating
+  // over a hash-set.
+  SmallVector<Value> retainedByLiveness(liveOut.begin(), liveOut.end());
+  std::sort(retainedByLiveness.begin(), retainedByLiveness.end(),
+            ValueComparator());
+  toRetain.append(retainedByLiveness);
+}
+
+LogicalResult BufferDeallocation::getMemrefsAndConditionsToDeallocate(
+    OpBuilder &builder, Location loc, Block *block,
+    SmallVectorImpl<Value> &memrefs, SmallVectorImpl<Value> &conditions) const {
+
+  for (auto [i, memref] :
+       llvm::enumerate(memrefsToDeallocatePerBlock.lookup(block))) {
+    Ownership ownership = ownershipMap.lookup({memref, block});
+    assert(ownership.isUnique() && "MemRef value must have valid ownership");
+
+    // Simply cast unranked MemRefs to ranked memrefs with 0 dimensions such
+    // that we can call extract_strided_metadata on it.
+    if (auto unrankedMemRefTy = dyn_cast<UnrankedMemRefType>(memref.getType()))
+      memref = builder.create<memref::ReinterpretCastOp>(
+          loc, MemRefType::get({}, unrankedMemRefTy.getElementType()), memref,
+          0, SmallVector<int64_t>{}, SmallVector<int64_t>{});
+
+    // Use the `memref.extract_strided_metadata` operation to get the base
+    // memref. This is needed because the same MemRef that was produced by the
+    // alloc operation has to be passed to the dealloc operation. Passing
+    // subviews, etc. to a dealloc operation is not allowed.
+    memrefs.push_back(
+        builder.create<memref::ExtractStridedMetadataOp>(loc, memref)
+            .getResult(0));
+    conditions.push_back(ownership.getIndicator());
+  }
+
+  return success();
+}
+
 LogicalResult BufferDeallocation::deallocate(Block *block) {
   OpBuilder builder = OpBuilder::atBlockBegin(block);
 
   // Compute liveness transfers of ownership to this block.
-  SmallVector<Value> liveMemrefs;
-  state.getLiveMemrefsIn(block, liveMemrefs);
-  for (auto li : liveMemrefs) {
+  for (auto li : liveness.getLiveIn(block)) {
+    if (!isMemref(li))
+      continue;
+
     // Ownership of implicitly captured memrefs from other regions is never
     // taken, but ownership of memrefs in the same region (but different block)
     // is taken.
     if (li.getParentRegion() == block->getParent()) {
-      state.updateOwnership(li, state.getOwnership(li, li.getParentBlock()),
-                            block);
-      state.addMemrefToDeallocate(li, block);
+      joinOwnership(li, ownershipMap[{li, li.getParentBlock()}], block);
+      memrefsToDeallocatePerBlock[block].push_back(li);
       continue;
     }
 
     if (li.getParentRegion()->isProperAncestor(block->getParent())) {
       Value falseVal = buildBoolValue(builder, li.getLoc(), false);
-      state.updateOwnership(li, falseVal, block);
+      joinOwnership(li, falseVal, block);
     }
   }
 
@@ -590,15 +863,14 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
     if (isFunctionWithoutDynamicOwnership(block->getParentOp()) &&
         block->isEntryBlock()) {
       Value newArg = buildBoolValue(builder, arg.getLoc(), false);
-      state.updateOwnership(arg, newArg);
-      state.addMemrefToDeallocate(arg, block);
+      joinOwnership(arg, newArg);
       continue;
     }
 
     // Pass MemRef ownerships along via `i1` values.
     Value newArg = block->addArgument(builder.getI1Type(), arg.getLoc());
-    state.updateOwnership(arg, newArg);
-    state.addMemrefToDeallocate(arg, block);
+    joinOwnership(arg, newArg);
+    memrefsToDeallocatePerBlock[block].push_back(arg);
   }
 
   // For each operation in the block, handle the interfaces that affect aliasing
@@ -632,6 +904,97 @@ Operation *BufferDeallocation::appendOpResults(Operation *op,
   op->erase();
 
   return newOp;
+}
+
+FailureOr<Operation *>
+BufferDeallocation::handleInterface(cf::CondBranchOp op) {
+  OpBuilder builder(op);
+
+  // The list of memrefs to pass to the `bufferization.dealloc` op as "memrefs
+  // to deallocate" in this block is independent of which branch is taken.
+  SmallVector<Value> memrefs, ownerships;
+  if (failed(getMemrefsAndConditionsToDeallocate(
+          builder, op.getLoc(), op->getBlock(), memrefs, ownerships)))
+    return failure();
+
+  // Helper lambda to factor out common logic for inserting the dealloc
+  // operations for each successor.
+  auto insertDeallocForBranch =
+      [&](Block *target, MutableOperandRange destOperands,
+          ArrayRef<Value> conditions,
+          DenseMap<Value, Value> &ownershipMapping) -> DeallocOp {
+    SmallVector<Value> toRetain;
+    getMemrefsToRetain(op->getBlock(), target, OperandRange(destOperands),
+                       toRetain);
+    auto deallocOp = builder.create<bufferization::DeallocOp>(
+        op.getLoc(), memrefs, conditions, toRetain);
+    clearOwnershipOf(deallocOp.getRetained(), op->getBlock());
+    for (auto [retained, ownership] :
+         llvm::zip(deallocOp.getRetained(), deallocOp.getUpdatedConditions())) {
+      joinOwnership(retained, ownership, op->getBlock());
+      ownershipMapping[retained] = ownership;
+    }
+    SmallVector<Value> replacements, ownerships;
+    for (Value operand : destOperands) {
+      replacements.push_back(operand);
+      if (isMemref(operand)) {
+        assert(ownershipMapping.contains(operand) &&
+               "Should be contained at this point");
+        ownerships.push_back(ownershipMapping[operand]);
+      }
+    }
+    replacements.append(ownerships);
+    destOperands.assign(replacements);
+    return deallocOp;
+  };
+
+  // Call the helper lambda and make sure the dealloc conditions are properly
+  // modified to reflect the branch condition as well.
+  DenseMap<Value, Value> thenOwnershipMap, elseOwnershipMap;
+
+  // Retain `trueDestOperands` if "true" branch is taken.
+  SmallVector<Value> thenOwnerships(
+      llvm::map_range(ownerships, [&](Value cond) {
+        return builder.create<arith::AndIOp>(op.getLoc(), cond,
+                                             op.getCondition());
+      }));
+  DeallocOp thenTakenDeallocOp =
+      insertDeallocForBranch(op.getTrueDest(), op.getTrueDestOperandsMutable(),
+                             thenOwnerships, thenOwnershipMap);
+
+  // Retain `elseDestOperands` if "false" branch is taken.
+  SmallVector<Value> elseOwnerships(
+      llvm::map_range(ownerships, [&](Value cond) {
+        Value trueVal = builder.create<arith::ConstantOp>(
+            op.getLoc(), builder.getBoolAttr(true));
+        Value negation = builder.create<arith::XOrIOp>(op.getLoc(), trueVal,
+                                                       op.getCondition());
+        return builder.create<arith::AndIOp>(op.getLoc(), cond, negation);
+      }));
+  DeallocOp elseTakenDeallocOp = insertDeallocForBranch(
+      op.getFalseDest(), op.getFalseDestOperandsMutable(), elseOwnerships,
+      elseOwnershipMap);
+
+  // We specifically need to update the ownerships of values that are retained
+  // in both dealloc operations again to get a combined 'Unique' ownership
+  // instead of an 'Unknown' ownership.
+  SmallPtrSet<Value, 16> thenValues(thenTakenDeallocOp.getRetained().begin(),
+                                    thenTakenDeallocOp.getRetained().end());
+  SetVector<Value> commonValues;
+  for (Value val : elseTakenDeallocOp.getRetained()) {
+    if (thenValues.contains(val))
+      commonValues.insert(val);
+  }
+
+  for (Value retained : commonValues) {
+    clearOwnershipOf(retained, op->getBlock());
+    Value combinedOwnership = builder.create<arith::SelectOp>(
+        op.getLoc(), op.getCondition(), thenOwnershipMap[retained],
+        elseOwnershipMap[retained]);
+    joinOwnership(retained, combinedOwnership, op->getBlock());
+  }
+
+  return op.getOperation();
 }
 
 FailureOr<Operation *>
@@ -670,18 +1033,44 @@ BufferDeallocation::handleInterface(RegionBranchOpInterface op) {
   RegionBranchOpInterface newOp = appendOpResults(op, ownershipResults);
 
   for (auto result : llvm::make_filter_range(newOp->getResults(), isMemref)) {
-    state.updateOwnership(result, newOp->getResult(counter++));
-    state.addMemrefToDeallocate(result, newOp->getBlock());
+    joinOwnership(result, newOp->getResult(counter++));
+    memrefsToDeallocatePerBlock[newOp->getBlock()].push_back(result);
   }
 
   return newOp.getOperation();
+}
+
+std::pair<Value, Value>
+BufferDeallocation::getMemrefWithUniqueOwnership(OpBuilder &builder,
+                                                 Value memref) {
+  auto iter = ownershipMap.find({memref, memref.getParentBlock()});
+  assert(iter != ownershipMap.end() &&
+         "Value must already have been registered in the ownership map");
+
+  Ownership ownership = iter->second;
+  if (ownership.isUnique())
+    return {memref, ownership.getIndicator()};
+
+  // Instead of inserting a clone operation we could also insert a dealloc
+  // operation earlier in the block and use the updated ownerships returned by
+  // the op for the retained values. Alternatively, we could insert code to
+  // check aliasing at runtime and use this information to combine two unique
+  // ownerships more intelligently to not end up with an 'Unknown' ownership in
+  // the first place.
+  auto cloneOp =
+      builder.create<bufferization::CloneOp>(memref.getLoc(), memref);
+  Value condition = buildBoolValue(builder, memref.getLoc(), true);
+  Value newMemref = cloneOp.getResult();
+  joinOwnership(newMemref, condition);
+  memrefsToDeallocatePerBlock[newMemref.getParentBlock()].push_back(newMemref);
+  return {newMemref, condition};
 }
 
 Value BufferDeallocation::getMemrefWithGuaranteedOwnership(OpBuilder &builder,
                                                            Value memref) {
   // First, make sure we at least have 'Unique' ownership already.
   std::pair<Value, Value> newMemrefAndOnwership =
-      state.getMemrefWithUniqueOwnership(builder, memref);
+      getMemrefWithUniqueOwnership(builder, memref);
   Value newMemref = newMemrefAndOnwership.first;
   Value condition = newMemrefAndOnwership.second;
 
@@ -707,16 +1096,17 @@ Value BufferDeallocation::getMemrefWithGuaranteedOwnership(OpBuilder &builder,
               })
           .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
-  state.updateOwnership(maybeClone, trueVal);
-  state.addMemrefToDeallocate(maybeClone, maybeClone.getParentBlock());
+  joinOwnership(maybeClone, trueVal);
+  memrefsToDeallocatePerBlock[maybeClone.getParentBlock()].push_back(
+      maybeClone);
   return maybeClone;
 }
 
 FailureOr<Operation *>
 BufferDeallocation::handleInterface(BranchOpInterface op) {
-  if (op->getNumSuccessors() > 1)
-    return op->emitError("BranchOpInterface operations with multiple "
-                         "successors are not supported yet");
+  // Skip conditional branches since we special case them for now.
+  if (isa<cf::CondBranchOp>(op.getOperation()))
+    return op.getOperation();
 
   if (op->getNumSuccessors() != 1)
     return emitError(op.getLoc(),
@@ -731,24 +1121,23 @@ BufferDeallocation::handleInterface(BranchOpInterface op) {
   Block *block = op->getBlock();
   OpBuilder builder(op);
   SmallVector<Value> memrefs, conditions, toRetain;
-  if (failed(state.getMemrefsAndConditionsToDeallocate(
-          builder, op.getLoc(), block, memrefs, conditions)))
+  if (failed(getMemrefsAndConditionsToDeallocate(builder, op.getLoc(), block,
+                                                 memrefs, conditions)))
     return failure();
 
   OperandRange forwardedOperands =
       op.getSuccessorOperands(0).getForwardedOperands();
-  state.getMemrefsToRetain(block, op->getSuccessor(0), forwardedOperands,
-                           toRetain);
+  getMemrefsToRetain(block, op->getSuccessor(0), forwardedOperands, toRetain);
 
   auto deallocOp = builder.create<bufferization::DeallocOp>(
       op.getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.
-  state.resetOwnerships(deallocOp.getRetained(), block);
+  clearOwnershipOf(deallocOp.getRetained(), block);
   for (auto [retained, ownership] :
        llvm::zip(deallocOp.getRetained(), deallocOp.getUpdatedConditions())) {
-    state.updateOwnership(retained, ownership, block);
+    joinOwnership(retained, ownership, block);
   }
 
   unsigned numAdditionalReturns = llvm::count_if(forwardedOperands, isMemref);
@@ -767,7 +1156,7 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
   // Lookup the function operation and check if it has private visibility. If
   // the function is referenced by SSA value instead of a Symbol, it's assumed
   // to be always private.
-  Operation *funcOp = op.resolveCallable(state.getSymbolTable());
+  Operation *funcOp = op.resolveCallable(&symbolTable);
   bool isPrivate = true;
   if (auto symbol = dyn_cast<SymbolOpInterface>(funcOp))
     isPrivate &= (symbol.getVisibility() == SymbolTable::Visibility::Private);
@@ -777,15 +1166,14 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
   // argument/result for each MemRef argument/result to dynamically pass the
   // current ownership indicator rather than adhering to the function boundary
   // ABI.
-  if (options.privateFuncDynamicOwnership && isPrivate) {
+  if (privateFuncDynamicOwnership && isPrivate) {
     SmallVector<Value> newOperands, ownershipIndicatorsToAdd;
     for (Value operand : op.getArgOperands()) {
       if (!isMemref(operand)) {
         newOperands.push_back(operand);
         continue;
       }
-      auto [memref, condition] =
-          state.getMemrefWithUniqueOwnership(builder, operand);
+      auto [memref, condition] = getMemrefWithUniqueOwnership(builder, operand);
       newOperands.push_back(memref);
       ownershipIndicatorsToAdd.push_back(condition);
     }
@@ -799,8 +1187,8 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
     op = appendOpResults(op, ownershipTypesToAppend);
 
     for (auto result : llvm::make_filter_range(op->getResults(), isMemref)) {
-      state.updateOwnership(result, op->getResult(ownershipCounter++));
-      state.addMemrefToDeallocate(result, result.getParentBlock());
+      joinOwnership(result, op->getResult(ownershipCounter++));
+      memrefsToDeallocatePerBlock[result.getParentBlock()].push_back(result);
     }
 
     return op.getOperation();
@@ -811,8 +1199,8 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
   // 'true' and remember to deallocate it.
   Value trueVal = buildBoolValue(builder, op.getLoc(), true);
   for (auto result : llvm::make_filter_range(op->getResults(), isMemref)) {
-    state.updateOwnership(result, trueVal);
-    state.addMemrefToDeallocate(result, result.getParentBlock());
+    joinOwnership(result, trueVal);
+    memrefsToDeallocatePerBlock[result.getParentBlock()].push_back(result);
   }
 
   return op.getOperation();
@@ -840,13 +1228,13 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
         // `memref.alloc`. If we wouldn't set the ownership of the result here,
         // the default ownership population in `populateRemainingOwnerships`
         // would assume aliasing with the MemRef operand.
-        state.resetOwnerships(res, block);
-        state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), false));
+        clearOwnershipOf(res, block);
+        joinOwnership(res, buildBoolValue(builder, op.getLoc(), false));
         continue;
       }
 
-      state.updateOwnership(res, buildBoolValue(builder, op.getLoc(), true));
-      state.addMemrefToDeallocate(res, block);
+      joinOwnership(res, buildBoolValue(builder, op.getLoc(), true));
+      memrefsToDeallocatePerBlock[block].push_back(res);
     }
   }
 
@@ -883,11 +1271,11 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
   // dealloc operation.
   Block *block = op->getBlock();
   SmallVector<Value> memrefs, conditions, toRetain;
-  if (failed(state.getMemrefsAndConditionsToDeallocate(
-          builder, op.getLoc(), block, memrefs, conditions)))
+  if (failed(getMemrefsAndConditionsToDeallocate(builder, op.getLoc(), block,
+                                                 memrefs, conditions)))
     return failure();
 
-  state.getMemrefsToRetain(block, nullptr, OperandRange(operands), toRetain);
+  getMemrefsToRetain(block, nullptr, OperandRange(operands), toRetain);
   if (memrefs.empty() && toRetain.empty())
     return op.getOperation();
 
@@ -896,10 +1284,10 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.
-  state.resetOwnerships(deallocOp.getRetained(), block);
+  clearOwnershipOf(deallocOp.getRetained(), block);
   for (auto [retained, ownership] :
        llvm::zip(deallocOp.getRetained(), deallocOp.getUpdatedConditions()))
-    state.updateOwnership(retained, ownership, block);
+    joinOwnership(retained, ownership, block);
 
   // Add an additional operand for every MemRef for the ownership indicator.
   if (!funcWithoutDynamicOwnership) {
@@ -916,7 +1304,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 
 bool BufferDeallocation::isFunctionWithoutDynamicOwnership(Operation *op) {
   auto funcOp = dyn_cast<FunctionOpInterface>(op);
-  return funcOp && (!options.privateFuncDynamicOwnership ||
+  return funcOp && (!privateFuncDynamicOwnership ||
                     funcOp.getVisibility() != SymbolTable::Visibility::Private);
 }
 
@@ -924,14 +1312,14 @@ void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
   for (auto res : op->getResults()) {
     if (!isMemref(res))
       continue;
-    if (!state.getOwnership(res, op->getBlock()).isUninitialized())
+    if (ownershipMap.count({res, op->getBlock()}))
       continue;
 
     // Don't take ownership of a returned memref if no allocate side-effect is
     // present, relevant for memref.get_global, for example.
     if (op->getNumOperands() == 0) {
       OpBuilder builder(op);
-      state.updateOwnership(res, buildBoolValue(builder, op->getLoc(), false));
+      joinOwnership(res, buildBoolValue(builder, op->getLoc(), false));
       continue;
     }
 
@@ -941,9 +1329,8 @@ void BufferDeallocation::populateRemainingOwnerships(Operation *op) {
       if (!isMemref(operand))
         continue;
 
-      state.updateOwnership(
-          res, state.getOwnership(operand, operand.getParentBlock()),
-          op->getBlock());
+      ownershipMap[{res, op->getBlock()}].combine(
+          ownershipMap[{operand, operand.getParentBlock()}]);
     }
   }
 }
