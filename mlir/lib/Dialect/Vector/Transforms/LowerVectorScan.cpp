@@ -87,9 +87,11 @@ static Value genOperator(Location loc, Value x, Value y,
     combinedResult = rewriter.create<arith::XOrIOp>(loc, x, y);
     break;
   case CombiningKind::MINF:
+  case CombiningKind::MINIMUMF:
     combinedResult = rewriter.create<arith::MinimumFOp>(loc, x, y);
     break;
   case CombiningKind::MAXF:
+  case CombiningKind::MAXIMUMF:
     combinedResult = rewriter.create<arith::MaximumFOp>(loc, x, y);
     break;
   }
@@ -104,7 +106,9 @@ static bool isValidKind(bool isInt, vector::CombiningKind kind) {
   KindType type{KindType::INVALID};
   switch (kind) {
   case CombiningKind::MINF:
+  case CombiningKind::MINIMUMF:
   case CombiningKind::MAXF:
+  case CombiningKind::MAXIMUMF:
     type = KindType::FLOAT;
     break;
   case CombiningKind::MINUI:
