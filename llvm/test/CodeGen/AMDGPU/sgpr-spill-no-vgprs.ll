@@ -7,11 +7,11 @@
 define amdgpu_kernel void @partial_no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %in) #1 {
 ; GCN-LABEL: partial_no_vgprs_last_sgpr_spill:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_add_u32 s0, s0, s13
+; GCN-NEXT:    s_add_u32 s0, s0, s15
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    s_load_dword s4, s[6:7], 0x2
+; GCN-NEXT:    s_load_dword s4, s[8:9], 0x2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_or_saveexec_b64 s[24:25], -1

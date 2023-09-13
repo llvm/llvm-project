@@ -30,8 +30,8 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT: bb.2.atomicrmw.start:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI %15(s64), %bb.2, [[C1]](s64), %bb.1
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[LOAD]](s32), %bb.1, %13(s32), %bb.2
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI %16(s64), %bb.2, [[C1]](s64), %bb.1
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[LOAD]](s32), %bb.1, %14(s32), %bb.2
   ; CHECK-NEXT:   [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[PHI1]], [[C]]
   ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[PHI1]], [[FSUB]] :: (load store seq_cst seq_cst (s32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](s1), [[PHI]](s64)
