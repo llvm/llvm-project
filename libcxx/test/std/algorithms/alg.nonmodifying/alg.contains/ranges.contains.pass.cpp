@@ -163,7 +163,7 @@ constexpr void test_iterators() {
     #pragma clang diagnostic ignored "-Wunused-result"
     ValueT a[] = {1, 9, 0, 13, 25};
     auto whole = std::ranges::subrange(Iter(a), Sent(Iter(a + 5)));
-    std::ranges::contains(whole.begin(), whole.end(), 12);
+    std::ranges::contains(whole, 12);
     #pragma clang diagnostic pop
   }
 
