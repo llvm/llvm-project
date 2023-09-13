@@ -43,4 +43,11 @@ void test_all_simd_abi() {
   types::for_each(arithmetic_no_bool_types(), TestAllSimdAbiFunctor<Func>());
 }
 
+constexpr size_t bit_ceil(size_t val) {
+  size_t pow = 1;
+  while (pow < val)
+    pow <<= 1;
+  return pow;
+}
+
 #endif // TEST_UTIL_H
