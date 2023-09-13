@@ -1223,7 +1223,7 @@ public:
   }
 
   /// Get a resource from the pool or create new ones. If the function
-  /// succeeeds, the handle to the resource is saved in \p Handle.
+  /// succeeds, the handle to the resource is saved in \p Handle.
   virtual Error getResource(ResourceHandleTy &Handle) {
     // Get a resource with an empty resource processor.
     return getResourcesImpl(1, &Handle,
@@ -1231,7 +1231,7 @@ public:
   }
 
   /// Get multiple resources from the pool or create new ones. If the function
-  /// succeeeds, the handles to the resources are saved in \p Handles.
+  /// succeeds, the handles to the resources are saved in \p Handles.
   virtual Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
     // Get resources with an empty resource processor.
     return getResourcesImpl(Num, Handles,
@@ -1247,7 +1247,7 @@ public:
 
 protected:
   /// Get multiple resources from the pool or create new ones. If the function
-  /// succeeeds, the handles to the resources are saved in \p Handles. Also
+  /// succeeds, the handles to the resources are saved in \p Handles. Also
   /// process each of the obtained resources with \p Processor.
   template <typename FuncTy>
   Error getResourcesImpl(uint32_t Num, ResourceHandleTy *Handles,
