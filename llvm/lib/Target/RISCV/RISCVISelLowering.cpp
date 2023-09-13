@@ -8805,15 +8805,6 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
       Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
     }
 
-    // Shrink down Vec so we're performing the slidedown on a smaller LMUL.
-    unsigned LastIdx = OrigIdx + SubVecVT.getVectorNumElements() - 1;
-    if (auto ShrunkVT =
-            getSmallestVTForIndex(ContainerVT, LastIdx, DL, DAG, Subtarget)) {
-      ContainerVT = *ShrunkVT;
-      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
-                        DAG.getVectorIdxConstant(0, DL));
-    }
-
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. This
@@ -14266,6 +14257,43 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
     break;
+  case RISCVISD::VSLIDEDOWN_VL: {
+    MVT OrigVT = N->getSimpleValueType(0);
+    auto *CVL = dyn_cast<ConstantSDNode>(N->getOperand(4));
+    auto *CIdx = dyn_cast<ConstantSDNode>(N->getOperand(2));
+    if (!CVL || !CIdx)
+      break;
+    unsigned MaxIdx = CVL->getZExtValue() + CIdx->getZExtValue() - 1;
+    // We can try and reduce the LMUL that a vslidedown uses if we know where
+    // the maximum index is. For example, if the target has Zvl128b, a
+    // vslidedown of e32 with with an offset of 4 and VL of 2 is only going to
+    // read from the first 2 registers at most. So if we were operating at
+    // LMUL=4 (nxv8i32), we can reduce it to LMUL=2(nxv4i32).
+    if (auto ShrunkVT =
+            getSmallestVTForIndex(OrigVT, MaxIdx, DL, DAG, Subtarget)) {
+      SDValue ShrunkPassthru =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, *ShrunkVT, N->getOperand(0),
+                      DAG.getVectorIdxConstant(0, DL));
+      SDValue ShrunkInVec =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, *ShrunkVT, N->getOperand(1),
+                      DAG.getVectorIdxConstant(0, DL));
+
+      // The only mask ever used in vslide*_vl nodes is vmset_vl, and the only
+      // patterns on vslide*_vl only accept vmset_vl. So create a new vmset
+      // since using an extract_subvector breaks patterns.
+      assert(N->getOperand(3).getOpcode() == RISCVISD::VMSET_VL);
+      SDValue ShrunkMask =
+          DAG.getNode(RISCVISD::VMSET_VL, SDLoc(N), getMaskTypeFor(*ShrunkVT),
+                      N->getOperand(4));
+      SDValue ShrunkSlidedown =
+          DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, *ShrunkVT,
+                      {ShrunkPassthru, ShrunkInVec, N->getOperand(2),
+                       ShrunkMask, N->getOperand(4), N->getOperand(5)});
+      return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigVT, N->getOperand(0),
+                         ShrunkSlidedown, DAG.getVectorIdxConstant(0, DL));
+    }
+    break;
+  }
   case RISCVISD::VFMV_V_F_VL: {
     const MVT VT = N->getSimpleValueType(0);
     SDValue Passthru = N->getOperand(0);
