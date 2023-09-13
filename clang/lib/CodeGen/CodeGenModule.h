@@ -437,10 +437,6 @@ private:
   void *SignedThunkPointers = nullptr;
   void *ConstantSignedPointersByConstant = nullptr;
 
-  // Store deferred function annotations so they can be emitted at the end with
-  // most up to date ValueDecl that will have all the inherited annotations.
-  llvm::DenseMap<StringRef, const ValueDecl *> DeferredAnnotations;
-
   /// Map used to get unique annotation strings.
   llvm::StringMap<llvm::Constant*> AnnotationStrings;
 
