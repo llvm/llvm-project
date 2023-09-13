@@ -384,8 +384,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
       return true;
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
-        if (CheckPointerAssignment(
-                exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
+        if (CheckPointerAssignment(exprAnalyzer_.context(), designator, *expr,
+                DEREF(scope_),
+                /*isBoundsRemapping=*/false, /*isAssumedRank=*/false)) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
             return true;
