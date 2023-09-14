@@ -56,7 +56,8 @@
 // CHECK-INVALID-ARG-SAME:        rules greater or equal to -1
 
 typedef long long rsize_t;
-typedef typeof(sizeof(int)) size_t;
+typedef __typeof(sizeof(int)) size_t;
+typedef signed long long ssize_t;
 typedef __WCHAR_TYPE__ wchar_t;
 void clang_analyzer_isTainted_char(char);
 void clang_analyzer_isTainted_wchar(wchar_t);
@@ -97,8 +98,6 @@ int fscanf(FILE *restrict stream, const char *restrict format, ...);
 int sprintf(char *str, const char *format, ...);
 void setproctitle(const char *fmt, ...);
 void setproctitle_init(int argc, char *argv[], char *envp[]);
-typedef __typeof(sizeof(int)) size_t;
-typedef signed long long ssize_t;
 
 // Define string functions. Use builtin for some of them. They all default to
 // the processing in the taint checker.
