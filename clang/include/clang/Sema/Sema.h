@@ -9875,7 +9875,7 @@ public:
 
   /// Used to change context to isConstantEvaluated without pushing a heavy
   /// ExpressionEvaluationContextRecord object.
-  bool isConstantEvaluatedOverride;
+  bool isConstantEvaluatedOverride = false;
 
   const ExpressionEvaluationContextRecord &currentEvaluationContext() const {
     assert(!ExprEvalContexts.empty() &&
