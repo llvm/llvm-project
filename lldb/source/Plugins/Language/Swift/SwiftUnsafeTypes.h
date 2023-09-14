@@ -26,6 +26,11 @@ bool UnsafeTypeSummaryProvider(ValueObject &valobj, Stream &stream,
 SyntheticChildrenFrontEnd *
 UnsafeTypeSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
 
+/// Extracts a value object with a given Swift pointer type, returning a vector
+/// of it's children. The number and types of children will depend on which type
+/// of Swift pointer type the value object has.
+std::vector<lldb::ValueObjectSP>
+ExtractChildrenFromSwiftPointerValueObject(lldb::ValueObjectSP valobj_sp);
 }; // namespace swift
 }; // namespace formatters
 }; // namespace lldb_private
