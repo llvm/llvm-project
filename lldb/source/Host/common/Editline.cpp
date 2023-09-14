@@ -53,10 +53,6 @@ int setupterm(char *term, int fildes, int *errret);
 
 /// https://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 #define ESCAPE "\x1b"
-/// Faint, decreased intensity or second colour.
-#define ANSI_FAINT ESCAPE "[2m"
-/// Normal colour or normal intensity (neither bold nor faint).
-#define ANSI_UNFAINT ESCAPE "[0m"
 #define ANSI_CLEAR_BELOW ESCAPE "[J"
 #define ANSI_CLEAR_RIGHT ESCAPE "[K"
 #define ANSI_SET_COLUMN_N ESCAPE "[%dG"
@@ -431,15 +427,13 @@ void Editline::MoveCursor(CursorLocation from, CursorLocation to) {
 void Editline::DisplayInput(int firstIndex) {
   fprintf(m_output_file, ANSI_SET_COLUMN_N ANSI_CLEAR_BELOW, 1);
   int line_count = (int)m_input_lines.size();
-  const char *faint = m_color_prompts ? ANSI_FAINT : "";
-  const char *unfaint = m_color_prompts ? ANSI_UNFAINT : "";
-
   for (int index = firstIndex; index < line_count; index++) {
-    fprintf(m_output_file, "%s"
-                           "%s"
-                           "%s" EditLineStringFormatSpec " ",
-            faint, PromptForIndex(index).c_str(), unfaint,
-            m_input_lines[index].c_str());
+    fprintf(m_output_file,
+            "%s"
+            "%s"
+            "%s" EditLineStringFormatSpec " ",
+            m_prompt_ansi_prefix.c_str(), PromptForIndex(index).c_str(),
+            m_prompt_ansi_suffix.c_str(), m_input_lines[index].c_str());
     if (index < line_count - 1)
       fprintf(m_output_file, "\n");
   }
@@ -548,14 +542,16 @@ unsigned char Editline::RecallHistory(HistoryOperation op) {
 int Editline::GetCharacter(EditLineGetCharType *c) {
   const LineInfoW *info = el_wline(m_editline);
 
-  // Paint a faint version of the desired prompt over the version libedit draws
-  // (will only be requested if colors are supported)
+  // Paint a ANSI formatted version of the desired prompt over the version
+  // libedit draws. (will only be requested if colors are supported)
   if (m_needs_prompt_repaint) {
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::EditingPrompt);
-    fprintf(m_output_file, "%s"
-                           "%s"
-                           "%s",
-            ANSI_FAINT, Prompt(), ANSI_UNFAINT);
+    fprintf(m_output_file,
+            "%s"
+            "%s"
+            "%s",
+            m_prompt_ansi_prefix.c_str(), Prompt(),
+            m_prompt_ansi_suffix.c_str());
     MoveCursor(CursorLocation::EditingPrompt, CursorLocation::EditingCursor);
     m_needs_prompt_repaint = false;
   }

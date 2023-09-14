@@ -99,6 +99,14 @@ let Definition = "debugger" in {
     DefaultEnumValue<"OptionValueString::eOptionEncodeCharacterEscapeSequences">,
     DefaultStringValue<"(lldb) ">,
     Desc<"The debugger command line prompt displayed for the user.">;
+  def PromptAnsiPrefix: Property<"prompt-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the prompt.">;
+  def PromptAnsiSuffix: Property<"prompt-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the prompt.">;
   def ScriptLanguage: Property<"script-lang", "Enum">,
     Global,
     DefaultEnumValue<"eScriptLanguagePython">,
