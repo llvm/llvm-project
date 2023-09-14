@@ -17,7 +17,7 @@ TEST(DriverTests, Basic) {
   const char *ArgV[] = {"clang", "-w", "t.cpp", "-o", "t.ll"};
 
   CXExternalActionList *EAL = clang_Driver_getExternalActionsForCommand_v0(
-      GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, nullptr, nullptr);
+      std::extent_v<decltype(ArgV)>, ArgV, nullptr, nullptr, nullptr);
   ASSERT_NE(EAL, nullptr);
   ASSERT_EQ(EAL->Count, 2);
   auto *CompileAction = EAL->Actions[0];
@@ -32,7 +32,7 @@ TEST(DriverTests, WorkingDirectory) {
   const char *ArgV[] = {"clang", "-c", "t.cpp", "-o", "t.o"};
 
   CXExternalActionList *EAL = clang_Driver_getExternalActionsForCommand_v0(
-      GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/", nullptr);
+      std::extent_v<decltype(ArgV)>, ArgV, nullptr, "/", nullptr);
   ASSERT_NE(EAL, nullptr);
   ASSERT_EQ(EAL->Count, 1);
   auto *CompileAction = EAL->Actions[0];
@@ -51,13 +51,15 @@ TEST(DriverTests, Diagnostics) {
   const char *ArgV[] = {"clang", "-c", "nosuchfile.cpp", "-o", "t.o"};
 
   CXExternalActionList *EAL = clang_Driver_getExternalActionsForCommand_v0(
-    GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/no/such/working/dir", nullptr);
+    std::extent_v<decltype(ArgV)>, ArgV, nullptr, "/no/such/working/dir",
+    nullptr);
   EXPECT_EQ(nullptr, EAL);
   clang_Driver_ExternalActionList_dispose(EAL);
 
   CXDiagnosticSet Diags;
   EAL = clang_Driver_getExternalActionsForCommand_v0(
-    GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/no/such/working/dir", &Diags);
+    std::extent_v<decltype(ArgV)>, ArgV, nullptr, "/no/such/working/dir",
+    &Diags);
   EXPECT_EQ(nullptr, EAL);
   ASSERT_NE(nullptr, Diags);
 
@@ -78,13 +80,13 @@ TEST(DriverTests, LanguageDiagnostics) {
                         "-",     "-o", "t.o"};
 
   CXExternalActionList *EAL = clang_Driver_getExternalActionsForCommand_v0(
-      GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/", nullptr);
+      std::extent_v<decltype(ArgV)>, ArgV, nullptr, "/", nullptr);
   EXPECT_EQ(nullptr, EAL);
   clang_Driver_ExternalActionList_dispose(EAL);
 
   CXDiagnosticSet Diags;
   EAL = clang_Driver_getExternalActionsForCommand_v0(
-      GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/", &Diags);
+      std::extent_v<decltype(ArgV)>, ArgV, nullptr, "/", &Diags);
   EXPECT_EQ(nullptr, EAL);
   ASSERT_NE(nullptr, Diags);
 
@@ -114,7 +116,7 @@ TEST(DriverTests, DriverParsesDiagnosticsOptions) {
 
   CXDiagnosticSet Diags;
   CXExternalActionList *EAL = clang_Driver_getExternalActionsForCommand_v0(
-      GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/", &Diags);
+      std::extent_v<decltype(ArgV)>, ArgV, nullptr, "/", &Diags);
   ASSERT_NE(EAL, nullptr);
   ASSERT_EQ(EAL->Count, 1);
   ASSERT_EQ(nullptr, Diags);
