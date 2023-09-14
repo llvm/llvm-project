@@ -193,11 +193,6 @@
 #  endif
 
 #  if defined(_LIBCPP_BUILDING_LIBRARY) || _LIBCPP_ABI_VERSION >= 2
-// Enable additional explicit instantiations of iostreams components. This
-// reduces the number of weak definitions generated in programs that use
-// iostreams by providing a single strong definition in the shared library.
-#    define _LIBCPP_ABI_ENABLE_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
-
 // Define a key function for `bad_function_call` in the library, to centralize
 // its vtable and typeinfo to libc++ rather than having all other libraries
 // using that class define their own copies.
