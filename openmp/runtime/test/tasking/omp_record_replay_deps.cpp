@@ -1,4 +1,3 @@
-// REQUIRES: ompx_taskgraph
 // RUN: %libomp-cxx-compile-and-run
 #include <iostream>
 #include <cassert>
@@ -43,9 +42,8 @@ int main() {
   #pragma omp parallel
   #pragma omp single
   for (int iter = 0; iter < NT; ++iter) {
-    int gtid = __kmpc_global_thread_num(nullptr);
-    int res =  __kmpc_start_record_task(nullptr, gtid, /* kmp_tdg_flags */0, /* tdg_id */0);
-    if (res) {
+    #pragma ompx taskgraph
+    {
       #pragma omp task depend(out:y)
       add();
       #pragma omp task depend(out:x)
@@ -53,7 +51,6 @@ int main() {
       #pragma omp task depend(in:x,y)
       mult();
     }
-    __kmpc_end_record_task(nullptr, gtid, /* kmp_tdg_flags */0, /* tdg_id */0);
   }
   assert(val==0);
 

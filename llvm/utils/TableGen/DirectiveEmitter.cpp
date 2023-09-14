@@ -230,6 +230,10 @@ static void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
      << "Version.\n";
   OS << "bool isAllowedClauseForDirective(Directive D, "
      << "Clause C, unsigned Version);\n";
+  OS << "/// Return true if \\p C is an extension clause\n";
+  OS << "bool isExtensionClause(Clause C);\n";
+  OS << "/// Return true if \\p D is an extension directive\n";
+  OS << "bool isExtensionDirective(Directive D);\n";
   OS << "\n";
   if (EnumHelperFuncs.length() > 0) {
     OS << EnumHelperFuncs;
@@ -379,6 +383,68 @@ GenerateCaseForVersionedClauses(const std::vector<Record *> &Clauses,
          << " <= Version && " << VerClause.getMaxVersion() << " >= Version;\n";
     }
   }
+}
+
+// Generate the isExtensionClause function implementation.
+static void GenerateIsExtensionClause(const DirectiveLanguage &DirLang,
+                                      raw_ostream &OS) {
+  OS << "\n";
+  OS << "bool llvm::" << DirLang.getCppNamespace()
+     << "::isExtensionClause(Clause C) {\n";
+  OS << "  assert(unsigned(C) <= llvm::" << DirLang.getCppNamespace()
+     << "::Clause_enumSize);\n";
+
+  OS << "  switch (C) {\n";
+
+  bool anyExtensionClause = false;
+  for (const auto &C : DirLang.getClauses()) {
+    Clause Dir{C};
+    if (Dir.isExtension()) {
+      OS << "    case " << DirLang.getClausePrefix() << Dir.getFormattedName()
+         << ":\n";
+      anyExtensionClause = true;
+    }
+  }
+  if (anyExtensionClause) {
+    OS << "      return true;\n";
+  }
+  OS << "    default:\n";
+  OS << "      return false;\n";
+  OS << "  }\n"; // End of clauses switch
+  OS << "  llvm_unreachable(\"Invalid " << DirLang.getName()
+     << " Clause kind\");\n";
+  OS << "}\n"; // End of function isExtensionClause
+}
+
+// Generate the isExtensionDirective function implementation.
+static void GenerateIsExtensionDirective(const DirectiveLanguage &DirLang,
+                                         raw_ostream &OS) {
+  OS << "\n";
+  OS << "bool llvm::" << DirLang.getCppNamespace()
+     << "::isExtensionDirective(Directive D) {\n";
+  OS << "  assert(unsigned(D) <= llvm::" << DirLang.getCppNamespace()
+     << "::Directive_enumSize);\n";
+
+  OS << "  switch (D) {\n";
+
+  bool anyExtensionDirective = false;
+  for (const auto &D : DirLang.getDirectives()) {
+    Directive Dir{D};
+    if (Dir.isExtension()) {
+      OS << "    case " << DirLang.getDirectivePrefix()
+         << Dir.getFormattedName() << ":\n";
+      anyExtensionDirective = true;
+    }
+  }
+  if (anyExtensionDirective) {
+    OS << "      return true;\n";
+  }
+  OS << "    default:\n";
+  OS << "      return false;\n";
+  OS << "  }\n"; // End of clauses switch
+  OS << "  llvm_unreachable(\"Invalid " << DirLang.getName()
+     << " Directive kind\");\n";
+  OS << "}\n"; // End of function isExtensionDirective
 }
 
 // Generate the isAllowedClauseForDirective function implementation.
@@ -876,6 +942,12 @@ void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   GenerateIsAllowedClause(DirLang, OS);
+
+  // isExtensionClause
+  GenerateIsExtensionClause(DirLang, OS);
+
+  // isExtensionDirective
+  GenerateIsExtensionDirective(DirLang, OS);
 }
 
 // Generate the implemenation section for the enumeration in the directive

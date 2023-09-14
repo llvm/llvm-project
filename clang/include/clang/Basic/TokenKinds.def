@@ -938,10 +938,13 @@ PRAGMA_ANNOTATION(pragma_opencl_extension)
 // distinguish between a real pragma and a converted pragma. It is not marked
 // as a PRAGMA_ANNOTATION because it doesn't get generated from a #pragma.
 ANNOTATION(attr_openmp)
+ANNOTATION(attr_openmp_extension)
 // The lexer produces these so that they only take effect when the parser
 // handles #pragma omp ... directives.
 PRAGMA_ANNOTATION(pragma_openmp)
 PRAGMA_ANNOTATION(pragma_openmp_end)
+// For support of OpenMP extensions. These tokens handle #pragma ompx ... directives
+PRAGMA_ANNOTATION(pragma_openmp_extension)
 
 // Annotations for loop pragma directives #pragma clang loop ...
 // The lexer produces these so that they only take effect when the parser

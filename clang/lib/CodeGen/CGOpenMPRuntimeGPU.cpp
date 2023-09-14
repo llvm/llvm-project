@@ -617,6 +617,7 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
+    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
@@ -700,6 +701,7 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
+  case OMPD_taskgraph:
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:

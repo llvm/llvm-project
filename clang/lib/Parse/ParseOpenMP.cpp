@@ -1648,7 +1648,7 @@ void Parser::ParseOpenMPClauses(OpenMPDirectiveKind DKind,
     SkipUntil(tok::comma, tok::identifier, tok::annot_pragma_openmp_end,
               StopBeforeMatch);
     FirstClauses[unsigned(CKind)].setInt(true);
-    if (Clause != nullptr)
+    if (Clause != nullptr && CheckOpenMPClauseExtension(CKind, Loc))
       Clauses.push_back(Clause);
     if (Tok.is(tok::annot_pragma_openmp_end)) {
       Actions.EndOpenMPClause();
@@ -2042,8 +2042,14 @@ void Parser::ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind BeginDKind,
 Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     AccessSpecifier &AS, ParsedAttributes &Attrs, bool Delayed,
     DeclSpec::TST TagType, Decl *Tag) {
-  assert(Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp) &&
+  assert(Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp,
+                     tok::annot_pragma_openmp_extension,
+                     tok::annot_attr_openmp_extension) &&
          "Not an OpenMP directive!");
+
+  bool isOmpx = Tok.isOneOf(tok::annot_pragma_openmp_extension,
+                            tok::annot_attr_openmp_extension);
+
   ParsingOpenMPDirectiveRAII DirScope(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -2061,7 +2067,9 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       Toks.push_back(Tok);
       while (Cnt && Tok.isNot(tok::eof)) {
         (void)ConsumeAnyToken();
-        if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp))
+        if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp,
+                        tok::annot_pragma_openmp_extension,
+                        tok::annot_attr_openmp_extension))
           ++Cnt;
         else if (Tok.is(tok::annot_pragma_openmp_end))
           --Cnt;
@@ -2079,6 +2087,24 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   } else {
     Loc = ConsumeAnnotationToken();
     DKind = parseOpenMPDirectiveKind(*this);
+  }
+
+  // Check if it is extension directive.
+  // Extension directives must have extension directives
+  // enabled and must use the ompx sentinel
+  if (isExtensionDirective(DKind)) {
+    if (!isOmpx)
+      Diag(Loc, diag::err_omp_extension_without_ompx)
+          << getOpenMPDirectiveName(DKind);
+    else if (!getLangOpts().OpenMPExtensions) {
+      Diag(Loc, diag::warn_omp_extension_directive_not_enabled)
+          << getOpenMPDirectiveName(DKind);
+      ConsumeToken();
+      skipUntilPragmaOpenMPEnd(DKind);
+      if (Tok.is(tok::annot_pragma_openmp_end))
+        ConsumeAnnotationToken();
+      return nullptr;
+    }
   }
 
   switch (DKind) {
@@ -2299,7 +2325,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     ConsumeAnyToken();
 
     DeclGroupPtrTy Ptr;
-    if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp)) {
+    if (Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp,
+                    tok::annot_pragma_openmp_extension)) {
       Ptr = ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs, Delayed,
                                                        TagType, Tag);
     } else if (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
@@ -2374,6 +2401,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
+  case OMPD_taskgraph:
   case OMPD_taskgroup:
   case OMPD_flush:
   case OMPD_depobj:
@@ -2491,8 +2519,13 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     ParsedStmtContext StmtCtx, bool ReadDirectiveWithinMetadirective) {
   if (!ReadDirectiveWithinMetadirective)
-    assert(Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp) &&
+    assert(Tok.isOneOf(tok::annot_pragma_openmp, tok::annot_attr_openmp,
+                       tok::annot_pragma_openmp_extension,
+                       tok::annot_attr_openmp_extension) &&
            "Not an OpenMP directive!");
+
+  bool isOmpx = Tok.isOneOf(tok::annot_pragma_openmp_extension,
+                            tok::annot_attr_openmp_extension);
   ParsingOpenMPDirectiveRAII DirScope(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   SmallVector<OMPClause *, 5> Clauses;
@@ -2515,6 +2548,24 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   DeclarationNameInfo DirName;
   StmtResult Directive = StmtError();
   bool HasAssociatedStatement = true;
+
+  // Check if it is extension directive.
+  // Extension directives must have extension directives
+  // enabled and must use the ompx sentinel
+  if (isExtensionDirective(DKind)) {
+    if (!isOmpx)
+      Diag(Loc, diag::err_omp_extension_without_ompx)
+          << getOpenMPDirectiveName(DKind);
+    else if (!getLangOpts().OpenMPExtensions) {
+      Diag(Loc, diag::warn_omp_extension_directive_not_enabled)
+          << getOpenMPDirectiveName(DKind);
+      ConsumeToken();
+      skipUntilPragmaOpenMPEnd(DKind);
+      if (Tok.is(tok::annot_pragma_openmp_end))
+        ConsumeAnnotationToken();
+      return Directive;
+    }
+  }
 
   switch (DKind) {
   case OMPD_nothing:
@@ -2798,6 +2849,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_parallel_master:
   case OMPD_parallel_masked:
   case OMPD_task:
+  case OMPD_taskgraph:
   case OMPD_ordered:
   case OMPD_atomic:
   case OMPD_target:
@@ -3002,6 +3054,16 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   return Directive;
 }
 
+bool Parser::CheckOpenMPClauseExtension(OpenMPClauseKind CKind,
+                                        SourceLocation Loc) {
+  if (!getLangOpts().OpenMPExtensions && isExtensionClause(CKind)) {
+    Diag(Loc, diag::warn_omp_extension_clause_not_enabled)
+        << getOpenMPClauseName(CKind);
+    return false;
+  }
+  return true;
+}
+
 // Parses simple list:
 //   simple-variable-list:
 //         '(' id-expression {, id-expression} ')'
@@ -3183,6 +3245,10 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     ErrorFound = true;
     WrongDirective = true;
   }
+
+  // Check if it is an extension
+  if (!CheckOpenMPClauseExtension(CKind, Tok.getLocation()))
+    ErrorFound = true;
 
   switch (CKind) {
   case OMPC_final:

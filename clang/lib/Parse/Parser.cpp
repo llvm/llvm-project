@@ -310,6 +310,8 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
       // Ran out of tokens.
       return false;
 
+    case tok::annot_pragma_openmp_extension:
+    case tok::annot_attr_openmp_extension:
     case tok::annot_pragma_openmp:
     case tok::annot_attr_openmp:
     case tok::annot_pragma_openmp_end:
@@ -848,6 +850,10 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     return nullptr;
   case tok::annot_attr_openmp:
   case tok::annot_pragma_openmp: {
+    AccessSpecifier AS = AS_none;
+    return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
+  }
+  case tok::annot_pragma_openmp_extension: {
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }

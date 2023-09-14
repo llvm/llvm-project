@@ -178,6 +178,18 @@ struct PragmaOpenMPHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaNoOpenMPXHandler : public PragmaHandler {
+  PragmaNoOpenMPXHandler() : PragmaHandler("ompx") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
+struct PragmaOpenMPXHandler : public PragmaHandler {
+  PragmaOpenMPXHandler() : PragmaHandler("ompx") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 /// PragmaCommentHandler - "\#pragma comment ...".
 struct PragmaCommentHandler : public PragmaHandler {
   PragmaCommentHandler(Sema &Actions)
@@ -417,11 +429,15 @@ void Parser::initializePragmaHandlers() {
 
     PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
   }
-  if (getLangOpts().OpenMP)
+  if (getLangOpts().OpenMP) {
     OpenMPHandler = std::make_unique<PragmaOpenMPHandler>();
-  else
+    OpenMPXHandler = std::make_unique<PragmaOpenMPXHandler>();
+  } else {
     OpenMPHandler = std::make_unique<PragmaNoOpenMPHandler>();
+    OpenMPXHandler = std::make_unique<PragmaNoOpenMPXHandler>();
+  }
   PP.AddPragmaHandler(OpenMPHandler.get());
+  PP.AddPragmaHandler(OpenMPXHandler.get());
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
@@ -540,7 +556,9 @@ void Parser::resetPragmaHandlers() {
     PP.RemovePragmaHandler("OPENCL", FPContractHandler.get());
   }
   PP.RemovePragmaHandler(OpenMPHandler.get());
+  PP.RemovePragmaHandler(OpenMPXHandler.get());
   OpenMPHandler.reset();
+  OpenMPXHandler.reset();
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
@@ -2644,6 +2662,59 @@ void PragmaOpenMPHandler::HandlePragma(Preprocessor &PP,
       while (InnerPragmaCnt != 0) {
         PP.Lex(Tok);
         if (Tok.is(tok::annot_pragma_openmp))
+          ++InnerPragmaCnt;
+        else if (Tok.is(tok::annot_pragma_openmp_end))
+          --InnerPragmaCnt;
+      }
+      PP.Lex(Tok);
+    }
+  }
+  SourceLocation EodLoc = Tok.getLocation();
+  Tok.startToken();
+  Tok.setKind(tok::annot_pragma_openmp_end);
+  Tok.setLocation(EodLoc);
+  Pragma.push_back(Tok);
+
+  auto Toks = std::make_unique<Token[]>(Pragma.size());
+  std::copy(Pragma.begin(), Pragma.end(), Toks.get());
+  PP.EnterTokenStream(std::move(Toks), Pragma.size(),
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+/// Handle '#pragma ompx ...' when OpenMP is disabled.
+///
+void PragmaNoOpenMPXHandler::HandlePragma(Preprocessor &PP,
+                                          PragmaIntroducer Introducer,
+                                          Token &FirstTok) {
+  if (!PP.getDiagnostics().isIgnored(diag::warn_pragma_omp_ignored,
+                                     FirstTok.getLocation())) {
+    PP.Diag(FirstTok, diag::warn_pragma_omp_ignored);
+    PP.getDiagnostics().setSeverity(diag::warn_pragma_omp_ignored,
+                                    diag::Severity::Ignored, SourceLocation());
+  }
+  PP.DiscardUntilEndOfDirective();
+}
+
+/// Handle '#pragma ompx ...' when OpenMP is enabled.
+///
+void PragmaOpenMPXHandler::HandlePragma(Preprocessor &PP,
+                                        PragmaIntroducer Introducer,
+                                        Token &FirstTok) {
+  SmallVector<Token, 16> Pragma;
+  Token Tok;
+  Tok.startToken();
+  Tok.setKind(tok::annot_pragma_openmp_extension);
+  Tok.setLocation(Introducer.Loc);
+
+  while (Tok.isNot(tok::eod) && Tok.isNot(tok::eof)) {
+    Pragma.push_back(Tok);
+    PP.Lex(Tok);
+    if (Tok.is(tok::annot_pragma_openmp_extension)) {
+      PP.Diag(Tok, diag::err_omp_unexpected_directive) << 0;
+      unsigned InnerPragmaCnt = 1;
+      while (InnerPragmaCnt != 0) {
+        PP.Lex(Tok);
+        if (Tok.is(tok::annot_pragma_openmp_extension))
           ++InnerPragmaCnt;
         else if (Tok.is(tok::annot_pragma_openmp_end))
           --InnerPragmaCnt;

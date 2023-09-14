@@ -466,6 +466,7 @@ Retry:
     return HandlePragmaCaptured();
 
   case tok::annot_pragma_openmp:
+  case tok::annot_pragma_openmp_extension:
     // Prohibit attributes that are not OpenMP attributes, but only before
     // processing a #pragma omp clause.
     ProhibitAttributes(CXX11Attrs);

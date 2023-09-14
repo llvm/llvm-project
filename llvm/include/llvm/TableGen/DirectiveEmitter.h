@@ -93,6 +93,8 @@ public:
 
   bool isDefault() const { return Def->getValueAsBit("isDefault"); }
 
+  bool isExtension() const { return Def->getValueAsBit("isExtension"); }
+
   // Returns the record name.
   StringRef getRecordName() const { return Def->getName(); }
 

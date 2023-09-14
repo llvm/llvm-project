@@ -175,6 +175,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> FPContractHandler;
   std::unique_ptr<PragmaHandler> OpenCLExtensionHandler;
   std::unique_ptr<PragmaHandler> OpenMPHandler;
+  std::unique_ptr<PragmaHandler> OpenMPXHandler;
   std::unique_ptr<PragmaHandler> PCSectionHandler;
   std::unique_ptr<PragmaHandler> MSCommentHandler;
   std::unique_ptr<PragmaHandler> MSDetectMismatchHandler;
@@ -2895,7 +2896,8 @@ private:
   }
 
   void ParseOpenMPAttributeArgs(const IdentifierInfo *AttrName,
-                                CachedTokens &OpenMPTokens);
+                                CachedTokens &OpenMPTokens,
+                                bool isOpenMPExtension);
 
   void ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                             CachedTokens &OpenMPTokens,
@@ -3401,6 +3403,14 @@ private:
       const llvm::function_ref<void(CXXScopeSpec &, DeclarationNameInfo)> &
           Callback,
       bool AllowScopeSpecifier);
+
+  /// Check if clause is extension and extensions are enabled.
+  ///
+  /// \param Kind Kind of the clause
+  /// \param Loc Location of the clause
+  ///
+  bool CheckOpenMPClauseExtension(OpenMPClauseKind Kind, SourceLocation Loc);
+
   /// Parses declarative or executable directive.
   ///
   /// \param StmtCtx The context in which we're parsing the directive.

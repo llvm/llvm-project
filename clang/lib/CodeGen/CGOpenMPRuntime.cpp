@@ -60,6 +60,8 @@ public:
     ParallelOutlinedRegion,
     /// Region with outlined function for standalone 'task' directive.
     TaskOutlinedRegion,
+    /// Region with outlined function for standalone 'taskgraph' directive.
+    TaskgraphOutlinedRegion,
     /// Region for constructs that do not require function outlining,
     /// like 'for', 'sections', 'atomic' etc. directives.
     InlinedRegion,
@@ -232,6 +234,26 @@ private:
   const VarDecl *ThreadIDVar;
   /// Action for emitting code for untied tasks.
   const UntiedTaskActionTy &Action;
+};
+
+/// API for captured statement code generation in OpenMP taskgraphs.
+class CGOpenMPTaskgraphRegionInfo final : public CGOpenMPRegionInfo {
+public:
+  CGOpenMPTaskgraphRegionInfo(const CapturedStmt &CS,
+                              const RegionCodeGenTy &CodeGen)
+      : CGOpenMPRegionInfo(CS, TaskgraphOutlinedRegion, CodeGen,
+                           llvm::omp::OMPD_taskgraph, false) {}
+
+  const VarDecl *getThreadIDVariable() const override { return 0; }
+
+  /// Get the name of the capture helper.
+  StringRef getHelperName() const override { return "taskgraph.omp_outlined."; }
+
+  static bool classof(const CGCapturedStmtInfo *Info) {
+    return CGOpenMPRegionInfo::classof(Info) &&
+           cast<CGOpenMPRegionInfo>(Info)->getRegionKind() ==
+               TaskgraphOutlinedRegion;
+  }
 };
 
 /// API for inlined captured statement code generation in OpenMP
@@ -5780,6 +5802,48 @@ void CGOpenMPRuntime::emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
     Region->emitUntiedSwitch(CGF);
 }
 
+void CGOpenMPRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
+                                        SourceLocation Loc,
+                                        const OMPExecutableDirective &D) {
+  if (!CGF.HaveInsertPoint())
+    return;
+
+  // Building kmp_taskgraph_flags_t flags for kmpc_taskgraph. C.f., kmp.h
+  enum {
+    NowaitFlag = 0x1, // Not used yet.
+    ReRecordFlag = 0x2,
+  };
+
+  unsigned Flags = 0;
+
+  CodeGenFunction OutlinedCGF(CGM, true);
+
+  const CapturedStmt *CS = cast<CapturedStmt>(D.getAssociatedStmt());
+
+  auto &&BodyGen = [CS](CodeGenFunction &CGF, PrePostActionTy &) {
+    CGF.EmitStmt(CS->getCapturedStmt());
+  };
+
+  LValue CapStruct = CGF.InitCapturedStruct(*CS);
+  CGOpenMPTaskgraphRegionInfo TaskgraphRegion(*CS, BodyGen);
+  CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(OutlinedCGF,
+                                                  &TaskgraphRegion);
+  llvm::Function *FnT = OutlinedCGF.GenerateCapturedStmtFunction(*CS);
+
+  std::vector<llvm::Value *> Args{
+      emitUpdateLocation(CGF, Loc),
+      getThreadID(CGF, Loc),
+      CGF.Builder.getInt32(Flags),
+      CGF.Builder.getInt32(D.getBeginLoc().getHashValue()),
+      CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(FnT, CGM.VoidPtrTy),
+      CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          CapStruct.getPointer(OutlinedCGF), CGM.VoidPtrTy)};
+
+  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                          CGM.getModule(), OMPRTL___kmpc_taskgraph),
+                      Args);
+}
+
 void CGOpenMPRuntime::emitInlinedDirective(CodeGenFunction &CGF,
                                            OpenMPDirectiveKind InnerKind,
                                            const RegionCodeGenTy &CodeGen,
@@ -6215,6 +6279,7 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
+  case OMPD_taskgraph:
   case OMPD_taskgroup:
   case OMPD_atomic:
   case OMPD_flush:
@@ -8963,6 +9028,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
+    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
@@ -9823,6 +9889,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
+    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
@@ -10428,6 +10495,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
+    case OMPD_taskgraph:
     case OMPD_taskgroup:
     case OMPD_atomic:
     case OMPD_flush:
@@ -12162,6 +12230,12 @@ Address CGOpenMPSIMDRuntime::getTaskReductionItem(CodeGenFunction &CGF,
 void CGOpenMPSIMDRuntime::emitTaskwaitCall(CodeGenFunction &CGF,
                                            SourceLocation Loc,
                                            const OMPTaskDataTy &Data) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitTaskgraphCall(CodeGenFunction &CGF,
+                                            SourceLocation Loc,
+                                            const OMPExecutableDirective &D) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
