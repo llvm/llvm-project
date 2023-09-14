@@ -114,16 +114,19 @@ public:
     if (!llvm::isPowerOf2_32(alignment))
       return emitError("expected alignment to be a power-of-two");
 
+    auto isUnaligned = [&](const uint8_t *ptr) {
+      return ((uintptr_t)ptr & (alignment - 1)) != 0;
+    };
+
     // Ensure the data buffer was sufficiently aligned in the first place.
-    if (LLVM_UNLIKELY(
-            !llvm::isAddrAligned(llvm::Align(alignment), buffer.begin()))) {
+    if (LLVM_UNLIKELY(isUnaligned(buffer.begin()))) {
       return emitError("expected bytecode buffer to be aligned to ", alignment,
                        ", but got pointer: '0x" +
                            llvm::utohexstr((uintptr_t)buffer.begin()) + "'");
     }
 
     // Shift the reader position to the next alignment boundary.
-    while (uintptr_t(dataIt) & (uintptr_t(alignment) - 1)) {
+    while (isUnaligned(dataIt)) {
       uint8_t padding;
       if (failed(parseByte(padding)))
         return failure();
@@ -135,7 +138,7 @@ public:
 
     // Ensure the data iterator is now aligned. This case is unlikely because we
     // *just* went through the effort to align the data iterator.
-    if (LLVM_UNLIKELY(!llvm::isAddrAligned(llvm::Align(alignment), dataIt))) {
+    if (LLVM_UNLIKELY(isUnaligned(dataIt))) {
       return emitError("expected data iterator aligned to ", alignment,
                        ", but got pointer: '0x" +
                            llvm::utohexstr((uintptr_t)dataIt) + "'");
