@@ -11,29 +11,33 @@
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Bytecode/Encoding.h"
-#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
+
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <list>
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <string>
 
 #define DEBUG_TYPE "mlir-bytecode-reader"
 
@@ -93,22 +97,30 @@ namespace {
 class EncodingReader {
 public:
   explicit EncodingReader(ArrayRef<uint8_t> contents, Location fileLoc)
-      : dataIt(contents.data()), dataEnd(contents.end()), fileLoc(fileLoc) {}
+      : buffer(contents), dataIt(buffer.begin()), fileLoc(fileLoc) {}
   explicit EncodingReader(StringRef contents, Location fileLoc)
       : EncodingReader({reinterpret_cast<const uint8_t *>(contents.data()),
                         contents.size()},
                        fileLoc) {}
 
   /// Returns true if the entire section has been read.
-  bool empty() const { return dataIt == dataEnd; }
+  bool empty() const { return dataIt == buffer.end(); }
 
   /// Returns the remaining size of the bytecode.
-  size_t size() const { return dataEnd - dataIt; }
+  size_t size() const { return buffer.end() - dataIt; }
 
   /// Align the current reader position to the specified alignment.
   LogicalResult alignTo(unsigned alignment) {
     if (!llvm::isPowerOf2_32(alignment))
       return emitError("expected alignment to be a power-of-two");
+
+    // Ensure the data buffer was sufficiently aligned in the first place.
+    if (LLVM_UNLIKELY(
+            !llvm::isAddrAligned(llvm::Align(alignment), buffer.begin()))) {
+      return emitError("expected bytecode buffer to be aligned to ", alignment,
+                       ", but got pointer: '0x" +
+                           llvm::utohexstr((uintptr_t)buffer.begin()) + "'");
+    }
 
     // Shift the reader position to the next alignment boundary.
     while (uintptr_t(dataIt) & (uintptr_t(alignment) - 1)) {
@@ -320,8 +332,11 @@ private:
     return success();
   }
 
-  /// The current data iterator, and an iterator to the end of the buffer.
-  const uint8_t *dataIt, *dataEnd;
+  /// The bytecode buffer.
+  ArrayRef<uint8_t> buffer;
+
+  /// The current iterator within the 'buffer'.
+  const uint8_t *dataIt;
 
   /// A location for the bytecode used to report errors.
   Location fileLoc;

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -18,6 +17,10 @@
 #include "llvm/Support/Endian.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include <algorithm>
+#include <cstdlib>
+#include <memory>
 
 using namespace llvm;
 using namespace mlir;
@@ -50,9 +53,18 @@ TEST(Bytecode, MultiModuleWithResource) {
   llvm::raw_string_ostream ostream(buffer);
   ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), ostream)));
 
+  // Make a sufficiently aligned copy of the buffer for reading it back.
+  ostream.flush();
+  constexpr std::size_t kAlignment = 16; // AsmResourceBlob alignment.
+  auto deleter = [](char *ptr) { std::free(ptr); };
+  std::unique_ptr<char, decltype(deleter)> aligned_buffer(
+      static_cast<char *>(std::aligned_alloc(kAlignment, buffer.size())),
+      deleter);
+  std::copy(buffer.begin(), buffer.end(), aligned_buffer.get());
+
   // Parse it back
-  OwningOpRef<Operation *> roundTripModule =
-      parseSourceString<Operation *>(ostream.str(), parseConfig);
+  OwningOpRef<Operation *> roundTripModule = parseSourceString<Operation *>(
+      {aligned_buffer.get(), buffer.size()}, parseConfig);
   ASSERT_TRUE(roundTripModule);
 
   // FIXME: Parsing external resources does not work on big-endian
