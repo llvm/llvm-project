@@ -830,7 +830,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
     if (GTI.isSequential()) {
       // Constant offsets of scalable types are not really constant.
-      if (isa<ScalableVectorType>(GTI.getIndexedType()))
+      if (GTI.getIndexedType()->isScalableTy())
         continue;
 
       // Tries to extract a constant offset from this GEP index.
@@ -1019,7 +1019,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
     if (GTI.isSequential()) {
       // Constant offsets of scalable types are not really constant.
-      if (isa<ScalableVectorType>(GTI.getIndexedType()))
+      if (GTI.getIndexedType()->isScalableTy())
         continue;
 
       // Splits this GEP index into a variadic part and a constant offset, and

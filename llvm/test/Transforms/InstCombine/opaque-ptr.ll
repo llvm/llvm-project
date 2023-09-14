@@ -298,6 +298,17 @@ define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
   ret ptr %a3
 }
 
+define ptr @geps_combinable_scalable_vector_array(ptr %a, i64 %idx) {
+; CHECK-LABEL: @geps_combinable_scalable_vector_array(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds [4 x <vscale x 2 x i32>], ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr inbounds [4 x <vscale x 2 x i32>], ptr %a, i64 1
+  %a3 = getelementptr inbounds i8, ptr %a2, i32 4
+  ret ptr %a3
+}
+
 define i1 @compare_geps_same_indices(ptr %a, ptr %b, i64 %idx) {
 ; CHECK-LABEL: @compare_geps_same_indices(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], [[B:%.*]]

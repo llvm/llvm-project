@@ -742,16 +742,16 @@ an optional list of attached :ref:`metadata <metadata>`.
 Variables and aliases can have a
 :ref:`Thread Local Storage Model <tls_model>`.
 
-:ref:`Scalable vectors <t_vector>` cannot be global variables or members of
-arrays because their size is unknown at compile time. They are allowed in
-structs to facilitate intrinsics returning multiple values. Generally, structs
-containing scalable vectors are not considered "sized" and cannot be used in
-loads, stores, allocas, or GEPs. The only exception to this rule is for structs
-that contain scalable vectors of the same type (e.g. ``{<vscale x 2 x i32>,
-<vscale x 2 x i32>}`` contains the same type while ``{<vscale x 2 x i32>,
-<vscale x 2 x i64>}`` doesn't). These kinds of structs (we may call them
-homogeneous scalable vector structs) are considered sized and can be used in
-loads, stores, allocas, but not GEPs.
+Globals cannot be or contain :ref:`Scalable vectors <t_vector>` because their
+size is unknown at compile time. They are allowed in structs to facilitate
+intrinsics returning multiple values. Generally, structs containing scalable
+vectors are not considered "sized" and cannot be used in loads, stores, allocas,
+or GEPs. The only exception to this rule is for structs that contain scalable
+vectors of the same type (e.g. ``{<vscale x 2 x i32>, <vscale x 2 x i32>}``
+contains the same type while ``{<vscale x 2 x i32>, <vscale x 2 x i64>}``
+doesn't). These kinds of structs (we may call them homogeneous scalable vector
+structs) are considered sized and can be used in loads, stores, allocas, but
+not GEPs.
 
 Syntax::
 
