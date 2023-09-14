@@ -100,7 +100,7 @@ protected: // Can only create subclasses.
 
   Reloc::Model RM = Reloc::Static;
   CodeModel::Model CMModel = CodeModel::Small;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
 
   /// Contains target specific asm information.
   std::unique_ptr<const MCAsmInfo> AsmInfo;
@@ -251,10 +251,10 @@ public:
   TLSModel::Model getTLSModel(const GlobalValue *GV) const;
 
   /// Returns the optimization level: None, Less, Default, or Aggressive.
-  CodeGenOpt::Level getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const;
 
   /// Overrides the optimization level.
-  void setOptLevel(CodeGenOpt::Level Level);
+  void setOptLevel(CodeGenOptLevel Level);
 
   void setFastISel(bool Enable) { Options.EnableFastISel = Enable; }
   bool getO0WantsFastISel() { return O0WantsFastISel; }
@@ -424,7 +424,7 @@ protected: // Can only create subclasses.
   LLVMTargetMachine(const Target &T, StringRef DataLayoutString,
                     const Triple &TT, StringRef CPU, StringRef FS,
                     const TargetOptions &Options, Reloc::Model RM,
-                    CodeModel::Model CM, CodeGenOpt::Level OL);
+                    CodeModel::Model CM, CodeGenOptLevel OL);
 
   void initAsmInfo();
 

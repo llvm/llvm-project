@@ -250,7 +250,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
         OutputFilename = std::string(IFN);
 
       switch (codegen::getFileType()) {
-      case CGFT_AssemblyFile:
+      case CodeGenFileType::AssemblyFile:
         if (TargetName[0] == 'c') {
           if (TargetName[1] == 0)
             OutputFilename += ".cbe.c";
@@ -261,13 +261,13 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
         } else
           OutputFilename += ".s";
         break;
-      case CGFT_ObjectFile:
+      case CodeGenFileType::ObjectFile:
         if (OS == Triple::Win32)
           OutputFilename += ".obj";
         else
           OutputFilename += ".o";
         break;
-      case CGFT_Null:
+      case CodeGenFileType::Null:
         OutputFilename = "-";
         break;
       }
@@ -277,10 +277,10 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
   // Decide if we need "binary" output.
   bool Binary = false;
   switch (codegen::getFileType()) {
-  case CGFT_AssemblyFile:
+  case CodeGenFileType::AssemblyFile:
     break;
-  case CGFT_ObjectFile:
-  case CGFT_Null:
+  case CodeGenFileType::ObjectFile:
+  case CodeGenFileType::Null:
     Binary = true;
     break;
   }
@@ -468,7 +468,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   bool SkipModule =
       CPUStr == "help" || (!MAttrs.empty() && MAttrs.front() == "help");
 
-  CodeGenOpt::Level OLvl;
+  CodeGenOptLevel OLvl;
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
     OLvl = *Level;
   } else {
@@ -665,7 +665,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
 
-  if (mc::getExplicitRelaxAll() && codegen::getFileType() != CGFT_ObjectFile)
+  if (mc::getExplicitRelaxAll() &&
+      codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
 
@@ -676,7 +677,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     // so we can memcmp the contents in CompileTwice mode
     SmallVector<char, 0> Buffer;
     std::unique_ptr<raw_svector_ostream> BOS;
-    if ((codegen::getFileType() != CGFT_AssemblyFile &&
+    if ((codegen::getFileType() != CodeGenFileType::AssemblyFile &&
          !Out->os().supportsSeeking()) ||
         CompileTwice) {
       BOS = std::make_unique<raw_svector_ostream>(Buffer);

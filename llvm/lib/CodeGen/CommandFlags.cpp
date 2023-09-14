@@ -180,15 +180,15 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
   CGBINDOPT(ExceptionModel);
 
   static cl::opt<CodeGenFileType> FileType(
-      "filetype", cl::init(CGFT_AssemblyFile),
+      "filetype", cl::init(CodeGenFileType::AssemblyFile),
       cl::desc(
           "Choose a file type (not all types are supported by all targets):"),
-      cl::values(
-          clEnumValN(CGFT_AssemblyFile, "asm", "Emit an assembly ('.s') file"),
-          clEnumValN(CGFT_ObjectFile, "obj",
-                     "Emit a native object ('.o') file"),
-          clEnumValN(CGFT_Null, "null",
-                     "Emit nothing, for performance testing")));
+      cl::values(clEnumValN(CodeGenFileType::AssemblyFile, "asm",
+                            "Emit an assembly ('.s') file"),
+                 clEnumValN(CodeGenFileType::ObjectFile, "obj",
+                            "Emit a native object ('.o') file"),
+                 clEnumValN(CodeGenFileType::Null, "null",
+                            "Emit nothing, for performance testing")));
   CGBINDOPT(FileType);
 
   static cl::opt<FramePointerKind> FramePointerUsage(
