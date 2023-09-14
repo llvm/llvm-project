@@ -1594,13 +1594,13 @@ matchSimpleAtomicOp(memref::AtomicRMWOp atomicOp) {
     return LLVM::AtomicBinOp::add;
   case arith::AtomicRMWKind::assign:
     return LLVM::AtomicBinOp::xchg;
-  case arith::AtomicRMWKind::maxf:
+  case arith::AtomicRMWKind::maximumf:
     return LLVM::AtomicBinOp::fmax;
   case arith::AtomicRMWKind::maxs:
     return LLVM::AtomicBinOp::max;
   case arith::AtomicRMWKind::maxu:
     return LLVM::AtomicBinOp::umax;
-  case arith::AtomicRMWKind::minf:
+  case arith::AtomicRMWKind::minimumf:
     return LLVM::AtomicBinOp::fmin;
   case arith::AtomicRMWKind::mins:
     return LLVM::AtomicBinOp::min;

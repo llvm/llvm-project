@@ -672,6 +672,7 @@ function(create_entrypoint_object fq_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
     target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
     add_dependencies(${internal_target_name} ${full_deps_list})
+    target_link_libraries(${internal_target_name} ${full_deps_list})
 
     add_library(
       ${fq_target_name}
@@ -685,6 +686,7 @@ function(create_entrypoint_object fq_target_name)
     target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
     target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
     add_dependencies(${fq_target_name} ${full_deps_list})
+    target_link_libraries(${fq_target_name} ${full_deps_list})
   endif()
 
   set_target_properties(

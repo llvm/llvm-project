@@ -125,6 +125,8 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
     return elementType.isIntOrIndex();
   case CombiningKind::MINF:
   case CombiningKind::MAXF:
+  case CombiningKind::MINIMUMF:
+  case CombiningKind::MAXIMUMF:
     return llvm::isa<FloatType>(elementType);
   }
   return false;
@@ -493,18 +495,18 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::muli:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MUL, vector);
-  case arith::AtomicRMWKind::minf:
+  case arith::AtomicRMWKind::minimumf:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MINF, vector);
+                                               CombiningKind::MINIMUMF, vector);
   case arith::AtomicRMWKind::mins:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MINSI, vector);
   case arith::AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MINUI, vector);
-  case arith::AtomicRMWKind::maxf:
+  case arith::AtomicRMWKind::maximumf:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MAXF, vector);
+                                               CombiningKind::MAXIMUMF, vector);
   case arith::AtomicRMWKind::maxs:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MAXSI, vector);
@@ -5947,11 +5949,13 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     result = b.createOrFold<arith::AndIOp>(loc, v1, acc);
     break;
   case CombiningKind::MAXF:
+  case CombiningKind::MAXIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
     result = b.createOrFold<arith::MaximumFOp>(loc, v1, acc);
     break;
   case CombiningKind::MINF:
+  case CombiningKind::MINIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
     result = b.createOrFold<arith::MinimumFOp>(loc, v1, acc);
