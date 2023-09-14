@@ -1029,8 +1029,10 @@ add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 add_library(cxx-headers INTERFACE)
 target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
 add_dependencies(cxx-headers generate-cxx-headers)
-target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_DIR}
-                                                 ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR})
+# It's important that the arch directory be included first so that its header files
+# which interpose on the default include dir be included instead of the default ones.
+target_include_directories(cxx-headers INTERFACE ${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}
+                                                 ${LIBCXX_GENERATED_INCLUDE_DIR})
 
 if (LIBCXX_INSTALL_HEADERS)
   foreach(file ${files})

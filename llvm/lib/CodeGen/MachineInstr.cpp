@@ -845,7 +845,8 @@ int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
     // If we reach the implicit register operands, stop looking.
     if (!FlagMO.isImm())
       return -1;
-    NumOps = 1 + InlineAsm::getNumOperandRegisters(FlagMO.getImm());
+    const InlineAsm::Flag F(FlagMO.getImm());
+    NumOps = 1 + F.getNumOperandRegisters();
     if (i + NumOps > OpIdx) {
       if (GroupNo)
         *GroupNo = Group;
@@ -922,16 +923,14 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
   if (FlagIdx < 0)
     return nullptr;
 
-  unsigned Flag = getOperand(FlagIdx).getImm();
+  const InlineAsm::Flag F(getOperand(FlagIdx).getImm());
   unsigned RCID;
-  if ((InlineAsm::getKind(Flag) == InlineAsm::Kind::RegUse ||
-       InlineAsm::getKind(Flag) == InlineAsm::Kind::RegDef ||
-       InlineAsm::getKind(Flag) == InlineAsm::Kind::RegDefEarlyClobber) &&
-      InlineAsm::hasRegClassConstraint(Flag, RCID))
+  if ((F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind()) &&
+      F.hasRegClassConstraint(RCID))
     return TRI->getRegClass(RCID);
 
   // Assume that all registers in a memory operand are pointers.
-  if (InlineAsm::getKind(Flag) == InlineAsm::Kind::Mem)
+  if (F.isMemKind())
     return TRI->getPointerRegClass(MF);
 
   return nullptr;
@@ -1196,12 +1195,13 @@ unsigned MachineInstr::findTiedOperandIdx(unsigned OpIdx) const {
     assert(FlagMO.isImm() && "Invalid tied operand on inline asm");
     unsigned CurGroup = GroupIdx.size();
     GroupIdx.push_back(i);
-    NumOps = 1 + InlineAsm::getNumOperandRegisters(FlagMO.getImm());
+    const InlineAsm::Flag F(FlagMO.getImm());
+    NumOps = 1 + F.getNumOperandRegisters();
     // OpIdx belongs to this operand group.
     if (OpIdx > i && OpIdx < i + NumOps)
       OpIdxGroup = CurGroup;
     unsigned TiedGroup;
-    if (!InlineAsm::isUseOperandTiedToDef(FlagMO.getImm(), TiedGroup))
+    if (!F.isUseOperandTiedToDef(TiedGroup))
       continue;
     // Operands in this group are tied to operands in TiedGroup which must be
     // earlier. Find the number of operands between the two groups.
@@ -1765,31 +1765,31 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       // Pretty print the inline asm operand descriptor.
       OS << '$' << AsmOpCount++;
       unsigned Flag = MO.getImm();
+      const InlineAsm::Flag F(Flag);
       OS << ":[";
-      OS << InlineAsm::getKindName(InlineAsm::getKind(Flag));
+      OS << F.getKindName();
 
-      unsigned RCID = 0;
-      if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
-          InlineAsm::hasRegClassConstraint(Flag, RCID)) {
+      unsigned RCID;
+      if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
         if (TRI) {
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
         } else
           OS << ":RC" << RCID;
       }
 
-      if (InlineAsm::isMemKind(Flag)) {
-        unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
+      if (F.isMemKind()) {
+        const unsigned MCID = F.getMemoryConstraintID();
         OS << ":" << InlineAsm::getMemConstraintName(MCID);
       }
 
-      unsigned TiedTo = 0;
-      if (InlineAsm::isUseOperandTiedToDef(Flag, TiedTo))
+      unsigned TiedTo;
+      if (F.isUseOperandTiedToDef(TiedTo))
         OS << " tiedto:$" << TiedTo;
 
       OS << ']';
 
       // Compute the index of the next operand descriptor.
-      AsmDescOp += 1 + InlineAsm::getNumOperandRegisters(Flag);
+      AsmDescOp += 1 + F.getNumOperandRegisters();
     } else {
       LLT TypeToPrint = MRI ? getTypeToPrint(i, PrintedTypes, *MRI) : LLT{};
       unsigned TiedOperandIdx = getTiedOperandIdx(i);

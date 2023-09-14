@@ -69,6 +69,9 @@ private:
   // recursing through their implicitly declared capabilities too.
   void pruneCapabilities(const CapabilityList &ToPrune);
 
+  void initAvailableCapabilitiesForOpenCL(const SPIRVSubtarget &ST);
+  void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
+
 public:
   RequirementHandler() : MinVersion(0), MaxVersion(0) {}
   void clear() {

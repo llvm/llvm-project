@@ -65,8 +65,6 @@ inline void registerAllPasses() {
   bufferization::registerBufferizationPasses();
   func::registerFuncPasses();
   registerGPUPasses();
-  registerGpuSerializeToCubinPass();
-  registerGpuSerializeToHsacoPass();
   registerLinalgPasses();
   registerNVGPUPasses();
   registerSparseTensorPasses();

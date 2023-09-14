@@ -291,7 +291,7 @@ void ScriptParser::readDefsym(StringRef name) {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  SymbolAssignment *cmd = make<SymbolAssignment>(name, e, getCurrentLocation());
+  auto *cmd = make<SymbolAssignment>(name, e, 0, getCurrentLocation());
   script->sectionCommands.push_back(cmd);
 }
 
@@ -568,7 +568,7 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
       max = std::max(max, cast<OutputDesc>(cmd)->osec.size);
     return addrExpr().getValue() + max;
   };
-  v.push_back(make<SymbolAssignment>(".", moveDot, getCurrentLocation()));
+  v.push_back(make<SymbolAssignment>(".", moveDot, 0, getCurrentLocation()));
   return v;
 }
 
@@ -1047,7 +1047,7 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
 SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   // Assert expression returns Dot, so this is equal to ".=."
   if (tok == "ASSERT")
-    return make<SymbolAssignment>(".", readAssert(), getCurrentLocation());
+    return make<SymbolAssignment>(".", readAssert(), 0, getCurrentLocation());
 
   size_t oldPos = pos;
   SymbolAssignment *cmd = nullptr;
@@ -1117,7 +1117,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
       }
     };
   }
-  return make<SymbolAssignment>(name, e, getCurrentLocation());
+  return make<SymbolAssignment>(name, e, ctx.scriptSymOrderCounter++,
+                                getCurrentLocation());
 }
 
 // This is an operator-precedence parser to parse a linker
@@ -1465,9 +1466,13 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());
+    // Return 1 if s is defined. If the definition is only found in a linker
+    // script, it must happen before this DEFINED.
+    auto order = ctx.scriptSymOrderCounter++;
     return [=] {
-      Symbol *b = symtab.find(name);
-      return (b && b->isDefined()) ? 1 : 0;
+      Symbol *s = symtab.find(name);
+      return s && s->isDefined() && ctx.scriptSymOrder.lookup(s) < order ? 1
+                                                                         : 0;
     };
   }
   if (tok == "LENGTH") {

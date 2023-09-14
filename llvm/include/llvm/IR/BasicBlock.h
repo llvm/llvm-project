@@ -173,6 +173,15 @@ public:
                        static_cast<const BasicBlock *>(this)->getFirstNonPHI());
   }
 
+  /// Iterator returning form of getFirstNonPHI. Installed as a placeholder for
+  /// the RemoveDIs project that will eventually remove debug intrinsics.
+  InstListType::const_iterator getFirstNonPHIIt() const;
+  InstListType::iterator getFirstNonPHIIt() {
+    BasicBlock::iterator It =
+      static_cast<const BasicBlock *>(this)->getFirstNonPHIIt().getNonConst();
+    return It;
+  }
+
   /// Returns a pointer to the first instruction in this block that is not a
   /// PHINode or a debug intrinsic, or any pseudo operation if \c SkipPseudoOp
   /// is true.

@@ -852,6 +852,14 @@ mlirUnmanagedDenseDoubleResourceElementsAttrGet(MlirType shapedType,
   return getDenseResource<DenseF64ResourceElementsAttr>(shapedType, name,
                                                         numElements, elements);
 }
+MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseBlobResourceElementsAttrGet(
+    MlirType shapedType, MlirStringRef name, const void *data,
+    size_t dataLength) {
+  return wrap(DenseResourceElementsAttr::get(
+      llvm::cast<ShapedType>(unwrap(shapedType)), unwrap(name),
+      UnmanagedAsmResourceBlob::allocateInferAlign(
+          llvm::ArrayRef(static_cast<const char *>(data), dataLength))));
+}
 
 template <typename U, typename T>
 static T getDenseResourceVal(MlirAttribute attr, intptr_t pos) {

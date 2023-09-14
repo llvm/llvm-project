@@ -42,17 +42,17 @@ _start:
 .section .tdata.foo,"aGwT",@progbits,foo,comdat
 .byte 0
 
-// CHECK:  1 .rodata  00000002
-// CHECK:  2 .gcc_except_table 00000001
-// CHECK:  3 .text         00000002
-// CHECK:  4 .tdata        00000001
-// CHECK:  5 .tbss         00000001
-// CHECK:  6 .data.rel.ro  00000004
-// CHECK:  7 .data         00000002
-// CHECK:  8 .foo.a        00000001
-// CHECK:  9 .foo          00000001
-// CHECK: 10 .bss          00000002
-// CHECK: 11 .comment      00000008
-// CHECK: 12 .symtab       00000030
-// CHECK: 13 .shstrtab     00000075
-// CHECK: 14 .strtab       00000008
+// CHECK:      .rodata           00000002
+// CHECK-NEXT: .gcc_except_table 00000001
+// CHECK-NEXT: .text             00000002
+// CHECK-NEXT: .tdata            00000001
+// CHECK-NEXT: .tbss             00000001
+// CHECK-NEXT: .data.rel.ro      00000004
+// CHECK-NEXT: .data             00000002
+// CHECK-NEXT: .foo.a            00000001
+// CHECK-NEXT: .foo              00000001
+// CHECK-NEXT: .bss              00000002
+// CHECK-NEXT: .comment          00000008
+// CHECK-NEXT: .symtab           00000030
+// CHECK-NEXT: .shstrtab         00000075
+// CHECK-NEXT: .strtab           00000008

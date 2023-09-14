@@ -53,6 +53,7 @@ def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
+def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -196,6 +197,12 @@ def CallBI : Opcode {
 def CallPtr : Opcode {
   let Args = [];
   let Types = [];
+}
+
+def OffsetOf : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgOffsetOfExpr];
+  let HasGroup = 1;
 }
 
 //===----------------------------------------------------------------------===//
