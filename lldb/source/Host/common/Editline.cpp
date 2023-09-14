@@ -25,6 +25,7 @@
 #include "lldb/Utility/Timeout.h"
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Locale.h"
 #include "llvm/Support/Threading.h"
 
 using namespace lldb_private;
@@ -99,6 +100,10 @@ bool IsOnlySpaces(const EditLineStringType &content) {
       return false;
   }
   return true;
+}
+
+static size_t ColumnWidth(llvm::StringRef str) {
+  return llvm::sys::locale::columnWidth(str);
 }
 
 static int GetOperation(HistoryOperation op) {
@@ -328,14 +333,16 @@ std::string Editline::PromptForIndex(int line_index) {
   std::string continuation_prompt = prompt;
   if (m_set_continuation_prompt.length() > 0) {
     continuation_prompt = m_set_continuation_prompt;
-
     // Ensure that both prompts are the same length through space padding
-    while (continuation_prompt.length() < prompt.length()) {
-      continuation_prompt += ' ';
-    }
-    while (prompt.length() < continuation_prompt.length()) {
-      prompt += ' ';
-    }
+    const size_t prompt_width = ColumnWidth(prompt);
+    const size_t cont_prompt_width = ColumnWidth(continuation_prompt);
+    const size_t padded_prompt_width =
+        std::max(prompt_width, cont_prompt_width);
+    if (prompt_width < padded_prompt_width)
+      prompt += std::string(padded_prompt_width - prompt_width, ' ');
+    else if (cont_prompt_width < padded_prompt_width)
+      continuation_prompt +=
+          std::string(padded_prompt_width - cont_prompt_width, ' ');
   }
 
   if (use_line_numbers) {
@@ -353,7 +360,7 @@ void Editline::SetCurrentLine(int line_index) {
   m_current_prompt = PromptForIndex(line_index);
 }
 
-int Editline::GetPromptWidth() { return (int)PromptForIndex(0).length(); }
+size_t Editline::GetPromptWidth() { return ColumnWidth(PromptForIndex(0)); }
 
 bool Editline::IsEmacs() {
   const char *editor;
@@ -441,7 +448,7 @@ void Editline::DisplayInput(int firstIndex) {
 int Editline::CountRowsForLine(const EditLineStringType &content) {
   std::string prompt =
       PromptForIndex(0); // Prompt width is constant during an edit session
-  int line_length = (int)(content.length() + prompt.length());
+  int line_length = (int)(content.length() + ColumnWidth(prompt));
   return (line_length / m_terminal_width) + 1;
 }
 

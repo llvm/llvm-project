@@ -44,3 +44,14 @@ class EditlineTest(PExpectTest):
             )
 
         self.quit()
+
+    @skipIfAsan
+    @skipIfEditlineSupportMissing
+    def test_prompt_unicode(self):
+        """Test that we can use Unicode in the LLDB prompt."""
+        self.launch(use_colors=True, encoding="utf-8")
+        self.child.send('settings set prompt "🐛 "\n')
+        # Check that the cursor is at position 4 ([4G)
+        # Prompt: 🐛 _
+        # Column: 1..4
+        self.child.expect(re.escape("🐛 \x1b[0m\x1b[4G"))
