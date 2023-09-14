@@ -31,7 +31,7 @@ static const char *const ErrorMsg =
     "comparing a pointer to member virtual function with other pointer is "
     "unspecified behavior, only compare it with a null-pointer constant for "
     "equality.";
-    
+
 } // namespace
 
 void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
@@ -58,9 +58,8 @@ void ComparePointerToMemberVirtualFunctionCheck::registerMatchers(
 
 void ComparePointerToMemberVirtualFunctionCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const BinaryOperator *BO =
-      Result.Nodes.getNodeAs<BinaryOperator>("binary_operator");
-  const DeclRefExpr *DRE =
+  const auto *BO = Result.Nodes.getNodeAs<BinaryOperator>("binary_operator");
+  const auto *DRE =
       Result.Nodes.getNodeAs<DeclRefExpr>("indirect_member_pointer");
 
   if (DRE == nullptr) {

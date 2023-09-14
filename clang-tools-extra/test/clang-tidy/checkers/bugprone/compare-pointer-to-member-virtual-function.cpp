@@ -59,7 +59,6 @@ void usingRecordName() {
   // CHECK-MESSAGES: :8:3: note: potential member virtual function is declared here.
 }
 
-
 typedef A C;
 void typedefRecordName() {
   Result = (&C::f1 == &C::f3);
@@ -71,7 +70,6 @@ void typedefRecordName() {
   // CHECK-MESSAGES: :7:3: note: potential member virtual function is declared here.
   // CHECK-MESSAGES: :8:3: note: potential member virtual function is declared here.
 }
-
 
 struct A1 : public A {
 };
@@ -86,5 +84,3 @@ void inheritClass() {
   // CHECK-MESSAGES: :7:3: note: potential member virtual function is declared here.
   // CHECK-MESSAGES: :8:3: note: potential member virtual function is declared here.
 }
-
-

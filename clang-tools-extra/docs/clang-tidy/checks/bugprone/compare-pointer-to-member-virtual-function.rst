@@ -6,7 +6,6 @@ bugprone-compare-pointer-to-member-virtual-function
 Detects unspecified behavior about equality comparison between pointer to member
 virtual function and anything other than null-pointer-constant.
 
-
 .. code-block:: c++
     struct A {
       void f1();
@@ -35,7 +34,6 @@ virtual function and anything other than null-pointer-constant.
       bool r8 = (v3 == &A::g1); // ok, no virtual function match void(A::*)(int) signature.
     }
 
-
 This check warns on equality comparisons involve pointers to member virtual
 function or variables which is potential pointer to member virtual function and
 any entity other than a null-pointer constant.
@@ -56,7 +54,6 @@ especially when dealing with pointers to member virtual functions or pure
 virtual functions, thereby improving the overall stability and maintainability
 of your code. In scenarios involving pointers to member virtual functions, it's
 only advisable to employ nullptr for comparisons.
-
 
 Limitations
 -----------
