@@ -1808,54 +1808,57 @@ SwiftLanguageRuntimeImpl::GetBridgedSyntheticChildProvider(
   return nullptr;
 }
 
-lldb::ValueObjectSP SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
+std::optional<std::pair<lldb::ValueObjectSP, bool>>
+SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(
     ValueObject &valobj) {
   ValueObjectSP swift_valobj;
 
-  // There are two flavors of c++ wrapper classes:
+  // There are three flavors of C++ wrapper classes:
   // - Reference types wrappers, which have no ivars, and have one super class
-  // which contains an opaque pointer to the swift instance.
+  // which contains an opaque pointer to the Swift instance.
+  // - Value type wrappers which has one ivar, an opaque pointer to the Swift
+  // instance.
   // - Value type wrappers, which has one ivar, a single char array with the
   // swift value embedded directly in it.
-  // In both cases the valobj should have exactly one child.
+  // In all cases the value object should have exactly one child.
   if (valobj.GetNumChildren() != 1)
-    return swift_valobj;
+    return {};
 
   auto child_valobj = valobj.GetChildAtIndex(0, true);
   auto child_type = child_valobj->GetCompilerType();
+  auto child_name = child_type.GetMangledTypeName();
+
   // If this is a reference wrapper, the first child is actually the super
   // class.
-  if (child_type.GetMangledTypeName() == "swift::_impl::RefCountedClass") {
+  if (child_name == "swift::_impl::RefCountedClass") {
     // The super class should have exactly one ivar, the opaque pointer that
     // points to the Swift instance.
     if (child_valobj->GetNumChildren() != 1)
-      return swift_valobj;
-
-    auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
-    swift_valobj = opaque_ptr_valobj;
-  } else if (child_type.GetMangledTypeName() == "swift::_impl::OpaqueStorage") {
-    if (child_valobj->GetNumChildren() != 1)
-      return swift_valobj;
+      return {};
 
     auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
 
-    Status error;
-    opaque_ptr_valobj = opaque_ptr_valobj->Dereference(error);
-    if (error.Success())
-      swift_valobj = opaque_ptr_valobj;
-    else
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Could not dereference opaque storage value object, error: %s",
-                error.AsCString());
-  } else {
-    CompilerType element_type;
-    if (child_type.IsArrayType(&element_type)) {
-      if (element_type.IsCharType()) {
-        swift_valobj = valobj.GetSP();
-      }
-    }
+    // This is a Swift class type, which is a reference, so no need to wrap the
+    // corresponding Swift type behind a pointer.
+    return {{opaque_ptr_valobj, false}};
   }
-  return swift_valobj;
+
+  if (child_name == "swift::_impl::OpaqueStorage") {
+    if (child_valobj->GetNumChildren() != 1)
+      return {};
+
+    auto opaque_ptr_valobj = child_valobj->GetChildAtIndex(0, true);
+    // This is a Swift value stored behind a pointer.
+    return {{opaque_ptr_valobj, true}};
+  }
+
+  CompilerType element_type;
+  if (child_type.IsArrayType(&element_type))
+    if (element_type.IsCharType())
+      // This is an Swift value type inlined directly into the C++ type as a
+      // char[n].
+      return {{valobj.GetSP(), false}};
+  return {};
 }
 
 void SwiftLanguageRuntimeImpl::WillStartExecutingUserExpression(
