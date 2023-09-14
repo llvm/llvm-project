@@ -27,11 +27,25 @@ class Triple;
 /// Describes a possible vectorization of a function.
 /// Function 'VectorFnName' is equivalent to 'ScalarFnName' vectorized
 /// by a factor 'VectorizationFactor'.
+/// The MangledName string holds scalar-to-vector mapping:
+///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
+///
+/// where:
+///
+/// <isa> = "_LLVM_"
+/// <mask> = "M" if masked, "N" if no mask.
+/// <vlen> = Number of concurrent lanes, stored in the `VectorizationFactor`
+///          field of the `VecDesc` struct. If the number of lanes is scalable
+///          then 'x' is printed instead.
+/// <vparams> = "v", as many as are the numArgs.
+/// <scalarname> = the name of the scalar function.
+/// <vectorname> = the name of the vector function.
 struct VecDesc {
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
   bool Masked;
+  StringRef MangledName;
 };
 
   enum LibFunc : unsigned {
@@ -163,18 +177,18 @@ public:
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
   bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
-    return !(getVectorizedFunction(F, VF, false).empty() &&
-             getVectorizedFunction(F, VF, true).empty());
+    return !(getVectorizedFunction(F, VF, false).first.empty() &&
+             getVectorizedFunction(F, VF, true).first.empty());
   }
 
   /// Return true if the function F has a vector equivalent with any
   /// vectorization factor.
   bool isFunctionVectorizable(StringRef F) const;
 
-  /// Return the name of the equivalent of F, vectorized with factor VF. If no
-  /// such mapping exists, return the empty string.
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
-                                  bool Masked) const;
+  /// Return the name of the equivalent of F, vectorized with factor VF and it's
+  /// mangled name. If no such mapping exists, return empty strings.
+  std::pair<StringRef, StringRef>
+  getVectorizedFunction(StringRef F, const ElementCount &VF, bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -350,8 +364,9 @@ public:
   bool isFunctionVectorizable(StringRef F) const {
     return Impl->isFunctionVectorizable(F);
   }
-  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
-                                  bool Masked = false) const {
+  std::pair<StringRef, StringRef>
+  getVectorizedFunction(StringRef F, const ElementCount &VF,
+                        bool Masked = false) const {
     return Impl->getVectorizedFunction(F, VF, Masked);
   }
 

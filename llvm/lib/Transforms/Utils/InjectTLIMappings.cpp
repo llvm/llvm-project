@@ -91,13 +91,13 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
                                                    Mappings.end());
 
   auto AddVariantDecl = [&](const ElementCount &VF, bool Predicate) {
-    const std::string TLIName =
-        std::string(TLI.getVectorizedFunction(ScalarName, VF, Predicate));
-    if (!TLIName.empty()) {
-      std::string MangledName = VFABI::mangleTLIVectorName(
-          TLIName, ScalarName, CI.arg_size(), VF, Predicate);
-      if (!OriginalSetOfMappings.count(MangledName)) {
-        Mappings.push_back(MangledName);
+    StringRef TLIName;
+    StringRef MangledName;
+    std::tie(TLIName, MangledName) =
+        TLI.getVectorizedFunction(ScalarName, VF, Predicate);
+    if (!TLIName.empty() && !MangledName.empty()) {
+      if (!OriginalSetOfMappings.count(std::string(MangledName))) {
+        Mappings.push_back(std::string(MangledName));
         ++NumCallInjected;
       }
       Function *VariantF = M->getFunction(TLIName);

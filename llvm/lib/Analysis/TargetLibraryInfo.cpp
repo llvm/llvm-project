@@ -1203,17 +1203,20 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   case SLEEFGNUABI: {
     const VecDesc VecFuncs_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF, /* MASK = */ false},
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MANGLN)                              \
+  {SCAL, VEC, VF, /* MASK = */ false, MANGLN},
 #include "llvm/Analysis/VecFuncs.def"
     };
     const VecDesc VecFuncs_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF) {SCAL, VEC, VF, /* MASK = */ false},
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MANGLN)                              \
+  {SCAL, VEC, VF, /* MASK = */ false, MANGLN},
 #include "llvm/Analysis/VecFuncs.def"
     };
     const VecDesc VecFuncs_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK) {SCAL, VEC, VF, MASK},
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, MANGLN)                        \
+  {SCAL, VEC, VF, MASK, MANGLN},
 #include "llvm/Analysis/VecFuncs.def"
     };
 
@@ -1232,7 +1235,8 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   case ArmPL: {
     const VecDesc VecFuncs[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
-#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK) {SCAL, VEC, VF, MASK},
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, MANGLN)                        \
+  {SCAL, VEC, VF, MASK, MANGLN},
 #include "llvm/Analysis/VecFuncs.def"
     };
 
@@ -1261,20 +1265,19 @@ bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
   return I != VectorDescs.end() && StringRef(I->ScalarFnName) == funcName;
 }
 
-StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
-                                                       const ElementCount &VF,
-                                                       bool Masked) const {
+std::pair<StringRef, StringRef> TargetLibraryInfoImpl::getVectorizedFunction(
+    StringRef F, const ElementCount &VF, bool Masked) const {
   F = sanitizeFunctionName(F);
   if (F.empty())
-    return F;
+    return std::make_pair(F, StringRef());
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
   while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == F) {
     if ((I->VectorizationFactor == VF) && (I->Masked == Masked))
-      return I->VectorFnName;
+      return std::make_pair(I->VectorFnName, I->MangledName);
     ++I;
   }
-  return StringRef();
+  return std::make_pair(StringRef(), StringRef());
 }
 
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
