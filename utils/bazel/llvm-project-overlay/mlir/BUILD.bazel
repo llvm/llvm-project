@@ -8000,6 +8000,7 @@ cc_library(
         "//llvm:Core",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
+        "//llvm:TransformUtils",
     ],
 )
 
