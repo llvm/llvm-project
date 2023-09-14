@@ -9589,28 +9589,44 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const DenormalMode DenormMode = Info->getMode().FP32Denormals;
 
-  const bool HasFP32Denormals = DenormMode != DenormalMode::getPreserveSign();
+  const bool PreservesDenormals = DenormMode == DenormalMode::getIEEE();
+  const bool HasDynamicDenormals =
+      (DenormMode.Input == DenormalMode::Dynamic) ||
+      (DenormMode.Output == DenormalMode::Dynamic);
 
-  if (!HasFP32Denormals) {
+  SDValue SavedDenormMode;
+
+  if (!PreservesDenormals) {
     // Note we can't use the STRICT_FMA/STRICT_FMUL for the non-strict FDIV
     // lowering. The chain dependence is insufficient, and we need glue. We do
     // not need the glue variants in a strictfp function.
 
     SDVTList BindParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
 
+    SDValue Glue = DAG.getEntryNode();
+    if (HasDynamicDenormals) {
+      SDNode *GetReg = DAG.getMachineNode(AMDGPU::S_GETREG_B32, SL,
+                                          DAG.getVTList(MVT::i32, MVT::Glue),
+                                          {BitField, Glue});
+      SavedDenormMode = SDValue(GetReg, 0);
+
+      Glue = DAG.getMergeValues(
+          {DAG.getEntryNode(), SDValue(GetReg, 0), SDValue(GetReg, 1)}, SL);
+    }
+
     SDNode *EnableDenorm;
     if (Subtarget->hasDenormModeInst()) {
       const SDValue EnableDenormValue =
           getSPDenormModeValue(FP_DENORM_FLUSH_NONE, DAG, Info, Subtarget);
 
-      EnableDenorm = DAG.getNode(AMDGPUISD::DENORM_MODE, SL, BindParamVTs,
-                                 DAG.getEntryNode(), EnableDenormValue).getNode();
+      EnableDenorm = DAG.getNode(AMDGPUISD::DENORM_MODE, SL, BindParamVTs, Glue,
+                                 EnableDenormValue)
+                         .getNode();
     } else {
       const SDValue EnableDenormValue = DAG.getConstant(FP_DENORM_FLUSH_NONE,
                                                         SL, MVT::i32);
-      EnableDenorm =
-          DAG.getMachineNode(AMDGPU::S_SETREG_B32, SL, BindParamVTs,
-                             {EnableDenormValue, BitField, DAG.getEntryNode()});
+      EnableDenorm = DAG.getMachineNode(AMDGPU::S_SETREG_B32, SL, BindParamVTs,
+                                        {EnableDenormValue, BitField, Glue});
     }
 
     SDValue Ops[3] = {
@@ -9640,12 +9656,9 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
   SDValue Fma4 = getFPTernOp(DAG, ISD::FMA, SL, MVT::f32, NegDivScale0, Fma3,
                              NumeratorScaled, Fma3, Flags);
 
-  if (!HasFP32Denormals) {
-    // FIXME: This mishandles dynamic denormal mode. We need to query the
-    // current mode and restore the original.
-
+  if (!PreservesDenormals) {
     SDNode *DisableDenorm;
-    if (Subtarget->hasDenormModeInst()) {
+    if (!HasDynamicDenormals && Subtarget->hasDenormModeInst()) {
       const SDValue DisableDenormValue = getSPDenormModeValue(
           FP_DENORM_FLUSH_IN_FLUSH_OUT, DAG, Info, Subtarget);
 
@@ -9653,8 +9666,11 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
                                   Fma4.getValue(1), DisableDenormValue,
                                   Fma4.getValue(2)).getNode();
     } else {
+      assert(HasDynamicDenormals == (bool)SavedDenormMode);
       const SDValue DisableDenormValue =
-          DAG.getConstant(FP_DENORM_FLUSH_IN_FLUSH_OUT, SL, MVT::i32);
+          HasDynamicDenormals
+              ? SavedDenormMode
+              : DAG.getConstant(FP_DENORM_FLUSH_IN_FLUSH_OUT, SL, MVT::i32);
 
       DisableDenorm = DAG.getMachineNode(
           AMDGPU::S_SETREG_B32, SL, MVT::Other,
