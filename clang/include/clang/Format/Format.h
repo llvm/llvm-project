@@ -2062,15 +2062,15 @@ struct FormatStyle {
   ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
   ///
-  /// In C#, Java, and JavaScript:
+  /// In C# and Java:
   /// \code
   ///    true:
-  ///    var x = "veryVeryVeryVeryVeryVe" +
-  ///            "ryVeryVeryVeryVeryVery" +
-  ///            "VeryLongString";
+  ///    string x = "veryVeryVeryVeryVeryVe" +
+  ///               "ryVeryVeryVeryVeryVery" +
+  ///               "VeryLongString";
   ///
   ///    false:
-  ///    var x =
+  ///    string x =
   ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
   ///
