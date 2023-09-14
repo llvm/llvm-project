@@ -92,6 +92,21 @@ func.func @sum_effects(%arg0: !fir.ref<!fir.array<2x2xf32>>, %arg1: i32) {
   return
 }
 
+func.func @maxval_no_effects(%arg0: !hlfir.expr<?xf32>) {
+// expected-remark@+1 {{operation has no memory effects}}
+  %maxval = hlfir.maxval %arg0 : (!hlfir.expr<?xf32>) -> f32
+// expected-remark@+1 {{operation has no memory effects}}
+  return
+}
+
+func.func @maxval_effects(%arg0: !fir.ref<!fir.array<2x2xf32>>, %arg1: i32) {
+// expected-remark@+2 {{found an instance of 'allocate' on a value, on resource '<Default>'}}
+// expected-remark@+1 {{found an instance of 'read' on a value, on resource '<Default>'}}
+  %maxval = hlfir.maxval %arg0 dim %arg1 : (!fir.ref<!fir.array<2x2xf32>>, i32) -> !hlfir.expr<2xf32>
+// expected-remark@+1 {{operation has no memory effects}}
+  return
+}
+
 func.func @dot_product_no_effects(%arg0: !hlfir.expr<?xf32>, %arg1: !hlfir.expr<?xf32>) {
 // expected-remark@+1 {{operation has no memory effects}}
   %0 = hlfir.dot_product %arg0 %arg1 : (!hlfir.expr<?xf32>, !hlfir.expr<?xf32>) -> f32

@@ -57,6 +57,9 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_function_call
     : public exception
 {
 public:
+    _LIBCPP_HIDE_FROM_ABI bad_function_call() _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_function_call(const bad_function_call&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_function_call& operator=(const bad_function_call&) _NOEXCEPT = default;
 // Note that when a key function is not used, every translation unit that uses
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.

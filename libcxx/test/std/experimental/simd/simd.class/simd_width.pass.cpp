@@ -11,21 +11,21 @@
 // <experimental/simd>
 //
 // [simd.class]
-// simd() = default;
+// static constexpr std::size_t size() noexcept;
 
-#include <cstdint>
-#include <experimental/simd>
-
-#include "test_macros.h"
+#include "../test_utils.h"
 
 namespace ex = std::experimental::parallelism_v2;
 
-int main(int, char**) {
-  static_assert(ex::native_simd<std::int32_t>().size() > 0, "");
-  static_assert(ex::fixed_size_simd<std::int32_t, 4>().size() == 4, "");
-  static_assert(ex::fixed_size_simd<std::int32_t, 5>().size() == 5, "");
-  static_assert(ex::fixed_size_simd<std::int32_t, 1>().size() == 1, "");
-  static_assert(ex::fixed_size_simd<char, 32>().size() == 32, "");
+template <class T, std::size_t>
+struct CheckSimdWidth {
+  template <class SimdAbi>
+  void operator()() {
+    static_assert(ex::simd<T, SimdAbi>::size() == ex::simd_size_v<T, SimdAbi>);
+  }
+};
 
+int main(int, char**) {
+  test_all_simd_abi<CheckSimdWidth>();
   return 0;
 }

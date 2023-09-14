@@ -39,7 +39,7 @@ jobs:
       contains(github.event.action == 'opened' && github.event.issue.body || github.event.comment.body, '/cherry-pick')
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: llvm/llvm-project
           # GitHub stores the token used for checkout and uses it for pushes
@@ -74,7 +74,7 @@ jobs:
 
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           persist-credentials: false
 

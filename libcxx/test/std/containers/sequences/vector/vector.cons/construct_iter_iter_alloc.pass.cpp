@@ -97,7 +97,6 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
         random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
     test<std::vector<int, safe_allocator<int> > >(a, an, alloc);
   }
-#endif
 
   // Regression test for https://github.com/llvm/llvm-project/issues/46841
   {
@@ -105,6 +104,7 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
     std::vector<int, min_allocator<int> > v1({}, forward_iterator<const int*>{}, alloc);
     std::vector<int, min_allocator<int> > v2(forward_iterator<const int*>{}, {}, alloc);
   }
+#endif
 }
 
 TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {

@@ -803,11 +803,11 @@ createReductionDecl(fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
           Fortran::parser::Unwrap<Fortran::parser::Name>(procDesignator)}) {
     if (name->source == "max") {
       reductionOp =
-          getReductionOperation<mlir::arith::MaxFOp, mlir::arith::MaxSIOp>(
+          getReductionOperation<mlir::arith::MaximumFOp, mlir::arith::MaxSIOp>(
               builder, type, loc, op1, op2);
     } else if (name->source == "min") {
       reductionOp =
-          getReductionOperation<mlir::arith::MinFOp, mlir::arith::MinSIOp>(
+          getReductionOperation<mlir::arith::MinimumFOp, mlir::arith::MinSIOp>(
               builder, type, loc, op1, op2);
     } else if (name->source == "ior") {
       assert((type.isIntOrIndex()) && "only integer is expected");

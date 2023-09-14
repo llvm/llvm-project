@@ -4088,9 +4088,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
           // For copy instructions, we use their operand as a leader,
           // which means we remove a user of the copy and it may become dead.
           if (isSSACopy) {
-            unsigned &IIUseCount = UseCounts[II];
-            if (--IIUseCount == 0)
-              ProbablyDead.insert(II);
+            auto It = UseCounts.find(II);
+            if (It != UseCounts.end()) {
+              unsigned &IIUseCount = It->second;
+              if (--IIUseCount == 0)
+                ProbablyDead.insert(II);
+            }
           }
           ++LeaderUseCount;
           AnythingReplaced = true;

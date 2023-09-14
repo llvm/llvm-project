@@ -408,7 +408,7 @@ func.func @reduction_sequence(%arg0: tensor<30x3xf32>) -> tensor<30x3xf32> {
       iterator_types = ["parallel", "reduction"]}
       ins(%arg0 : tensor<30x3xf32>) outs(%1 : tensor<30xf32>) {
     ^bb0(%arg1: f32, %arg2: f32):
-      %8 = arith.maxf %arg2, %arg1 : f32
+      %8 = arith.maximumf %arg2, %arg1 : f32
       linalg.yield %8 : f32
     } -> tensor<30xf32>
   %3 = tensor.empty() : tensor<30x3xf32>

@@ -38,7 +38,7 @@ jobs:
           pip3 install --user sphinx-markdown-tables
 
       - name: Checkout LLVM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Create Release
         run: |
@@ -57,7 +57,7 @@ jobs:
 
       - name: Clone www-releases
         if: ${{ !contains(steps.validate-tag.outputs.release-version, 'rc') }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/www-releases
           ref: main
@@ -81,7 +81,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: sudo apt-get install -y python3-setuptools
