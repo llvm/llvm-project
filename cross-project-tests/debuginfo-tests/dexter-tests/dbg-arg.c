@@ -1,6 +1,5 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
-// XFAIL: system-darwin
 //
 // This test case checks debug info during register moves for an argument.
 // RUN: %clang -std=gnu11 -m64 -mllvm -fast-isel=false -g %s -o %t

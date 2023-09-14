@@ -75,10 +75,6 @@ E: andrea.dibiagio@sony.com
 E: andrea.dibiagio@gmail.com
 D: MCA, llvm-mca
 
-N: Duncan P. N. Exon Smith
-E: dexonsmith@apple.com
-D: Branch weights and BlockFrequencyInfo
-
 N: Hal Finkel
 E: hfinkel@anl.gov
 D: The loop reroller and alias analysis
