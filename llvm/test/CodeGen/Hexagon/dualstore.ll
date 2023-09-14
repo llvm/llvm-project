@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj %s -o - | llvm-objdump -d - | FileCheck %s
+; RUN: llc -mtriple=hexagon -filetype=obj %s -o - | llvm-objdump -d - | FileCheck %s
 ; Check that we generate dual stores in one packet in V4
 
 ; CHECK: 00 40 9f 52 529f4000

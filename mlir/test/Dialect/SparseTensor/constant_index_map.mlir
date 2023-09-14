@@ -5,7 +5,7 @@
 #map1 = affine_map<(d0) -> (0, d0)>
 #map2 = affine_map<(d0) -> (d0)>
 
-#SpVec = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SpVec = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 // CHECK-LABEL:   func.func @main(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<1x77xi1>,

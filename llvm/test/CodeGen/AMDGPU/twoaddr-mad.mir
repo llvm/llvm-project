@@ -113,7 +113,7 @@ body:             |
 
 # GCN-LABEL: name: test_madak_sgpr_src0_f32
 # GCN: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
-# GCN: %2:vgpr_32 = V_MAD_F32_e64 0, killed %0, 0, %1, 0, %3:vgpr_32, 0, 0, implicit $mode, implicit $exec
+# GCN: %3:vgpr_32 = V_MAD_F32_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_madak_sgpr_src0_f32
@@ -127,14 +127,15 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
-    %2 = V_MAC_F32_e32 killed %0, %1, %3, implicit $mode, implicit $exec
+    %2 = IMPLICIT_DEF
+    %3 = V_MAC_F32_e32 killed %0, %1, %2, implicit $mode, implicit $exec
 
 ...
 
 # This can still fold if this is an inline immediate.
 
 # GCN-LABEL: name: test_madak_inlineimm_src0_f32
-# GCN: %1:vgpr_32 = V_MADMK_F32 1073741824, 1078523331, %2:vgpr_32, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_MADMK_F32 1073741824, 1078523331, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_madak_inlineimm_src0_f32
@@ -146,13 +147,14 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
-    %1 = V_MAC_F32_e32 1073741824, %0, %2, implicit $mode, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_MAC_F32_e32 1073741824, %0, %1, implicit $mode, implicit $exec
 
 ...
 # Non-inline immediate uses constant bus already.
 
 # GCN-LABEL: name: test_madak_otherimm_src0_f32
-# GCN: %1:vgpr_32 = V_MADMK_F32 %0, 1120403456, %2:vgpr_32, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_MADMK_F32 %0, 1120403456, %1, implicit $mode, implicit $exec
 
 ---
 name:            test_madak_otherimm_src0_f32
@@ -164,13 +166,14 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
-    %1 = V_MAC_F32_e32 1120403456, %0, %2, implicit $mode, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_MAC_F32_e32 1120403456, %0, %1, implicit $mode, implicit $exec
 
 ...
 # Non-inline immediate uses constant bus already.
 
 # GCN-LABEL: name: test_madak_other_constantlike_src0_f32
-# GCN: %1:vgpr_32 = V_MAC_F32_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
+# GCN: %2:vgpr_32 = V_MAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
 ---
 name:            test_madak_other_constantlike_src0_f32
 registers:
@@ -185,7 +188,8 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
-    %1 = V_MAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
+    %1 = IMPLICIT_DEF
+    %2 = V_MAC_F32_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -194,12 +198,8 @@ body:             |
 
 ---
 name:            test_madak_inline_literal_f16
-liveins:
-  - { reg: '$vgpr0', virtual-reg: '%3' }
 body:             |
   bb.0:
-    liveins: $vgpr0
-
     %3:vgpr_32 = COPY killed $vgpr0
 
     %26:vgpr_32 = V_MOV_B32_e32 49664, implicit $exec

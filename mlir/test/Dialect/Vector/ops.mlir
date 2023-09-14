@@ -576,9 +576,13 @@ func.func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   vector.reduction <mul>, %arg0, %arg1 : vector<16xf32> into f32
   // CHECK:    vector.reduction <minf>, %{{.*}} : vector<16xf32> into f32
   vector.reduction <minf>, %arg0 : vector<16xf32> into f32
-  // CHECK:    %[[X:.*]] = vector.reduction <maxf>, %{{.*}} : vector<16xf32> into f32
+  // CHECK:    %[[X0:.*]] = vector.reduction <maxf>, %{{.*}} : vector<16xf32> into f32
   %0 = vector.reduction <maxf>, %arg0 : vector<16xf32> into f32
-  // CHECK:    return %[[X]] : f32
+  // CHECK:    vector.reduction <minimumf>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <minimumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X1:.*]] = vector.reduction <maximumf>, %{{.*}} : vector<16xf32> into f32
+  %1 = vector.reduction <maximumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    return %[[X0]] : f32
   return %0 : f32
 }
 

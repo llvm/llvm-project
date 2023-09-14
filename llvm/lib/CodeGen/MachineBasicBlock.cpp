@@ -1275,8 +1275,6 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(VNI &&
                  "PHI sources should be live out of their predecessors.");
           LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-          for (auto &SR : LI.subranges())
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
         }
       }
     }
@@ -1296,18 +1294,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
         VNInfo *VNI = LI.getVNInfoAt(PrevIndex);
         assert(VNI && "LiveInterval should have VNInfo where it is live.");
         LI.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-        // Update subranges with live values
-        for (auto &SR : LI.subranges()) {
-          VNInfo *VNI = SR.getVNInfoAt(PrevIndex);
-          if (VNI)
-            SR.addSegment(LiveInterval::Segment(StartIndex, EndIndex, VNI));
-        }
       } else if (!isLiveOut && !isLastMBB) {
         LI.removeSegment(StartIndex, EndIndex);
-        for (auto &SR : LI.subranges()) {
-          if (SR.overlaps(StartIndex, EndIndex))
-            SR.removeSegment(StartIndex, EndIndex);
-        }
       }
     }
 

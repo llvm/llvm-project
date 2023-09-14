@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -disassemble %s | FileCheck -strict-whitespace -check-prefix=GFX11 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -disassemble %s | FileCheck -strict-whitespace -check-prefix=GFX11 %s
 
 # GFX11: v_interp_p10_f32 v0, v1, v2, v3{{$}}
 0x00,0x00,0x00,0xcd,0x01,0x05,0x0e,0x04

@@ -71,7 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
-void *memcpy(void *dest, const void *src, unsigned long n);
+void *memcpy(void *dest, const void *src, size_t n);
 
 //===----------------------------------------------------------------------===
 // strlen()

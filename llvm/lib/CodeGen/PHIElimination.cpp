@@ -136,7 +136,6 @@ INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<LiveVariables>();
-  AU.addUsedIfAvailable<LiveIntervals>();
   AU.addPreserved<LiveVariables>();
   AU.addPreserved<SlotIndexes>();
   AU.addPreserved<LiveIntervals>();
@@ -393,7 +392,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     if (IncomingReg) {
       // Add the region from the beginning of MBB to the copy instruction to
       // IncomingReg's live interval.
-      LiveInterval &IncomingLI = LIS->getOrCreateEmptyInterval(IncomingReg);
+      LiveInterval &IncomingLI = LIS->createEmptyInterval(IncomingReg);
       VNInfo *IncomingVNI = IncomingLI.getVNInfoAt(MBBStartIndex);
       if (!IncomingVNI)
         IncomingVNI = IncomingLI.getNextValue(MBBStartIndex,
@@ -404,49 +403,24 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
     }
 
     LiveInterval &DestLI = LIS->getInterval(DestReg);
-    assert(!DestLI.empty() && "PHIs should have non-empty LiveIntervals.");
-
-    SlotIndex NewStart = DestCopyIndex.getRegSlot();
-
-    SmallVector<LiveRange*> ToUpdate;
-    ToUpdate.push_back(&DestLI);
-    for (auto &SR : DestLI.subranges())
-      ToUpdate.push_back(&SR);
-
-    for (auto LR : ToUpdate) {
-      auto DestSegment = LR->find(MBBStartIndex);
-      assert(DestSegment != LR->end() && "PHI destination must be live in block");
-
-      if (LR->endIndex().isDead()) {
-        // A dead PHI's live range begins and ends at the start of the MBB, but
-        // the lowered copy, which will still be dead, needs to begin and end at
-        // the copy instruction.
-        VNInfo *OrigDestVNI = LR->getVNInfoAt(DestSegment->start);
-        assert(OrigDestVNI && "PHI destination should be live at block entry.");
-        LR->removeSegment(DestSegment->start, DestSegment->start.getDeadSlot());
-        LR->createDeadDef(NewStart, LIS->getVNInfoAllocator());
-        LR->removeValNo(OrigDestVNI);
-        continue;
-      }
-
-      if (DestSegment->start > NewStart) {
-        // With a single PHI removed from block the index of the copy may be
-        // lower than the original PHI. Extend live range backward to cover
-        // the copy.
-        VNInfo *VNI = LR->getVNInfoAt(DestSegment->start);
-        assert(VNI && "value should be defined for known segment");
-        LR->addSegment(LiveInterval::Segment(
-            NewStart, DestSegment->start, VNI));
-      } else if (DestSegment->start < NewStart) {
-        // Otherwise, remove the region from the beginning of MBB to the copy
-        // instruction from DestReg's live interval.
-        assert(DestSegment->start >= MBBStartIndex);
-        assert(DestSegment->end >= DestCopyIndex.getRegSlot());
-        LR->removeSegment(DestSegment->start, NewStart);
-      }
-      VNInfo *DestVNI = LR->getVNInfoAt(NewStart);
+    assert(!DestLI.empty() && "PHIs should have nonempty LiveIntervals.");
+    if (DestLI.endIndex().isDead()) {
+      // A dead PHI's live range begins and ends at the start of the MBB, but
+      // the lowered copy, which will still be dead, needs to begin and end at
+      // the copy instruction.
+      VNInfo *OrigDestVNI = DestLI.getVNInfoAt(MBBStartIndex);
+      assert(OrigDestVNI && "PHI destination should be live at block entry.");
+      DestLI.removeSegment(MBBStartIndex, MBBStartIndex.getDeadSlot());
+      DestLI.createDeadDef(DestCopyIndex.getRegSlot(),
+                           LIS->getVNInfoAllocator());
+      DestLI.removeValNo(OrigDestVNI);
+    } else {
+      // Otherwise, remove the region from the beginning of MBB to the copy
+      // instruction from DestReg's live interval.
+      DestLI.removeSegment(MBBStartIndex, DestCopyIndex.getRegSlot());
+      VNInfo *DestVNI = DestLI.getVNInfoAt(DestCopyIndex.getRegSlot());
       assert(DestVNI && "PHI destination should be live at its definition.");
-      DestVNI->def = NewStart;
+      DestVNI->def = DestCopyIndex.getRegSlot();
     }
   }
 
@@ -641,10 +615,6 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
           SlotIndex LastUseIndex = LIS->getInstructionIndex(*KillInst);
           SrcLI.removeSegment(LastUseIndex.getRegSlot(),
                               LIS->getMBBEndIdx(&opBlock));
-          for (auto &SR : SrcLI.subranges()) {
-            SR.removeSegment(LastUseIndex.getRegSlot(),
-                                LIS->getMBBEndIdx(&opBlock));
-          }
         }
       }
     }

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -sparsification | FileCheck %s
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait1 = {
   indexing_maps = [

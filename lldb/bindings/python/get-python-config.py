@@ -10,9 +10,10 @@ def relpath_nodots(path, base):
     rel = os.path.normpath(os.path.relpath(path, base))
     assert not os.path.isabs(rel)
     parts = rel.split(os.path.sep)
-    if parts and parts[0] == '..':
+    if parts and parts[0] == "..":
         raise ValueError(f"{path} is not under {base}")
     return rel
+
 
 def main():
     parser = argparse.ArgumentParser(description="extract cmake variables from python")
@@ -35,10 +36,10 @@ def main():
         except ValueError:
             # Try to fall back to something reasonable if sysconfig's platlib
             # is outside of sys.prefix
-            if os.name == 'posix':
-                print('lib/python%d.%d/site-packages' % sys.version_info[:2])
-            elif os.name == 'nt':
-                print('Lib\\site-packages')
+            if os.name == "posix":
+                print("lib/python%d.%d/site-packages" % sys.version_info[:2])
+            elif os.name == "nt":
+                print("Lib\\site-packages")
             else:
                 raise
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
@@ -57,16 +58,20 @@ def main():
                     exe = os.path.realpath(exe)
                     continue
                 else:
-                    print("Could not find a relative path to sys.executable under sys.prefix", file=sys.stderr)
+                    print(
+                        "Could not find a relative path to sys.executable under sys.prefix",
+                        file=sys.stderr,
+                    )
                     for e in tried:
                         print("tried:", e, file=sys.stderr)
                     print("realpath(sys.prefix):", prefix, file=sys.stderr)
                     print("sys.prefix:", sys.prefix, file=sys.stderr)
                     sys.exit(1)
     elif args.variable_name == "LLDB_PYTHON_EXT_SUFFIX":
-        print(sysconfig.get_config_var('EXT_SUFFIX'))
+        print(sysconfig.get_config_var("EXT_SUFFIX"))
     else:
         parser.error(f"unknown variable {args.variable_name}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -602,11 +602,15 @@ void ARM64::applyOptimizationHints(uint8_t *outBuf, const ObjFile &obj) const {
         addr < sectionAddr + section->getSize())
       return true;
 
+    if (obj.sections.empty())
+      return false;
     auto secIt = std::prev(llvm::upper_bound(
         obj.sections, addr,
         [](uint64_t off, const Section *sec) { return off < sec->addr; }));
     const Section *sec = *secIt;
 
+    if (sec->subsections.empty())
+      return false;
     auto subsecIt = std::prev(llvm::upper_bound(
         sec->subsections, addr - sec->addr,
         [](uint64_t off, Subsection subsec) { return off < subsec.offset; }));

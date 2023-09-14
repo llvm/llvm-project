@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
 
 image_load v[4:6], v[238:241], s[28:35] dmask:0x7 unorm
 // GFX90A: image_load v[4:6], v[238:241], s[28:35] dmask:0x7 unorm ; encoding: [0x00,0x17,0x00,0xf0,0xee,0x04,0x07,0x00]

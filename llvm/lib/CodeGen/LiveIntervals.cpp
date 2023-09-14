@@ -862,7 +862,7 @@ float LiveIntervals::getSpillWeight(bool isDef, bool isUse,
 
 LiveRange::Segment
 LiveIntervals::addSegmentToEndOfBlock(Register Reg, MachineInstr &startInst) {
-  LiveInterval &Interval = getOrCreateEmptyInterval(Reg);
+  LiveInterval &Interval = createEmptyInterval(Reg);
   VNInfo *VN = Interval.getNextValue(
       SlotIndex(getInstructionIndex(startInst).getRegSlot()),
       getVNInfoAllocator());

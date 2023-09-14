@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefix=GFX11 --implicit-check-not=error: %s
 
 v_fmaak_f32 v0, 0xff32, v0, 0
 // GFX11: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed

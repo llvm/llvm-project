@@ -110,3 +110,13 @@ cc_test(
         "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
+
+cc_test(
+    name = "type_traits_test",
+    srcs = ["type_traits_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_type_traits",
+        "//libc:libc_root",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)

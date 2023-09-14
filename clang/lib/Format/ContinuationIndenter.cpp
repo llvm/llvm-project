@@ -2241,6 +2241,12 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     if (Style.isJson() || !Style.BreakStringLiterals || !AllowBreak)
       return nullptr;
 
+    // Strings in TypeScript types and dictionary keys can not be broken.
+    if (Style.isJavaScript() && (Current.is(TT_SelectorName) ||
+                                 State.Line->startsWith(Keywords.kw_type))) {
+      return nullptr;
+    }
+
     // Don't break string literals inside preprocessor directives (except for
     // #define directives, as their contents are stored in separate lines and
     // are not affected by this check).

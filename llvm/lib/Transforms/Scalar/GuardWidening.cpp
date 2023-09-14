@@ -184,6 +184,7 @@ class GuardWideningImpl {
   /// Compute the score for widening the condition in \p DominatedInstr
   /// into \p WideningPoint.
   WideningScore computeWideningScore(Instruction *DominatedInstr,
+                                     Instruction *ToWiden,
                                      Instruction *WideningPoint,
                                      SmallVectorImpl<Value *> &ChecksToHoist,
                                      SmallVectorImpl<Value *> &ChecksToWiden);
@@ -423,8 +424,8 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
         continue;
       SmallVector<Value *> CandidateChecks;
       parseWidenableGuard(Candidate, CandidateChecks);
-      auto Score = computeWideningScore(Instr, WideningPoint, ChecksToHoist,
-                                        CandidateChecks);
+      auto Score = computeWideningScore(Instr, Candidate, WideningPoint,
+                                        ChecksToHoist, CandidateChecks);
       LLVM_DEBUG(dbgs() << "Score between " << *Instr << " and " << *Candidate
                         << " is " << scoreTypeToString(Score) << "\n");
       if (Score > BestScoreSoFar) {
@@ -456,8 +457,8 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
 }
 
 GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
-    Instruction *DominatedInstr, Instruction *WideningPoint,
-    SmallVectorImpl<Value *> &ChecksToHoist,
+    Instruction *DominatedInstr, Instruction *ToWiden,
+    Instruction *WideningPoint, SmallVectorImpl<Value *> &ChecksToHoist,
     SmallVectorImpl<Value *> &ChecksToWiden) {
   Loop *DominatedInstrLoop = LI.getLoopFor(DominatedInstr->getParent());
   Loop *DominatingGuardLoop = LI.getLoopFor(WideningPoint->getParent());
@@ -475,7 +476,10 @@ GuardWideningImpl::WideningScore GuardWideningImpl::computeWideningScore(
 
   if (!canBeHoistedTo(ChecksToHoist, WideningPoint))
     return WS_IllegalOrNegative;
-  if (!canBeHoistedTo(ChecksToWiden, WideningPoint))
+  // Further in the GuardWideningImpl::hoistChecks the entire condition might be
+  // widened, not the parsed list of checks. So we need to check the possibility
+  // of that condition hoisting.
+  if (!canBeHoistedTo(getCondition(ToWiden), WideningPoint))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached

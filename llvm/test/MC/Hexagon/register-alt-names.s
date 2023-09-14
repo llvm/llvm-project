@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon < %s | FileCheck %s
+# RUN: llvm-mc -triple=hexagon < %s | FileCheck %s
 
 # CHECK: r0 = r31
 r0 = lr
