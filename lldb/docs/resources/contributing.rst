@@ -18,19 +18,38 @@ Please refer to the `LLVM Developer Policy
 authoring and uploading a patch. LLDB differs from the LLVM Developer
 Policy in the following respects.
 
- - **Test infrastructure**: Like LLVM it is  important to submit tests with your
-   patches, but note that LLDB uses a different system for tests. Refer to the
-   `test documentation <test.html>`_ for more details and the ``lldb/test``
-   folder on disk for examples.
-
- - **Coding Style**: LLDB's code style differs from
-   `LLVM's coding style <https://llvm.org/docs/CodingStandards.html>`_.
-   Unfortunately there is no document describing the differences. Please be
-   consistent with the existing code.
-
 For anything not explicitly listed here, assume that LLDB follows the LLVM
 policy.
 
+Coding Style
+++++++++++++
+
+LLDB's code style differs from `LLVM's coding style <https://llvm.org/docs/CodingStandards.html>`_
+in a few ways. The 2 main ones are:
+
+* `Variable naming <https://llvm.org/docs/CodingStandards.html#name-types-functions-variables-and-enumerators-properly>`_:
+  LLDB prefers variables to be ``named_like_this`` and uses the ``m_`` prefix for
+  member variables.
+
+* `Use of asserts <https://llvm.org/docs/CodingStandards.html#assert-liberally>`_:
+  See the :ref:`section below<Error Handling>`.
+
+For any other contradications please follow the existing code's style.
+
+Code in LLDB does aim to conform to clang-format but older code may not yet. As
+always, consider the `golden rule <https://llvm.org/docs/CodingStandards.html#introduction>`_
+when working with such code. Reformatting before starting work is one possible
+option.
+
+Test Infrastructure
++++++++++++++++++++
+
+Like LLVM it is  important to submit tests with your patches, but note that LLDB
+uses a different system for tests. Refer to the `test documentation <test.html>`_
+for more details and the `lldb/test <https://github.com/llvm/llvm-project/tree/main/lldb/test>`_
+folder for examples.
+
+.. _Error handling:
 
 Error handling and use of assertions in LLDB
 --------------------------------------------
