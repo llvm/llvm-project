@@ -93,10 +93,12 @@ add_mlir_library(MLIRValueBoundsOpInterface
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
   DEPENDS
+  MLIRDestinationStyleOpInterface
   MLIRValueBoundsOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRDestinationStyleOpInterface
   MLIRIR
   )
 

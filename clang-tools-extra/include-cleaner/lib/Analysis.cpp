@@ -95,7 +95,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
              for (const Header &H : Providers) {
                if (H.kind() == Header::Physical &&
                    (H.physical() == MainFile ||
-                    H.physical()->getDir() == ResourceDir)) {
+                    H.physical().getDir() == ResourceDir)) {
                  Satisfied = true;
                }
                for (const Include *I : Inc.match(H)) {

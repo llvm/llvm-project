@@ -1,6 +1,7 @@
 name: "Labelling new pull requests"
 on:
-- pull_request_target
+  workflow_run:
+    workflows: ["PR Receive"]
 
 jobs:
   automate-prs-labels:
@@ -8,10 +9,48 @@ jobs:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
-    if: github.repository == 'llvm/llvm-project'
+    if: >
+      github.repository == 'llvm/llvm-project' &&
+      github.event.workflow_run.event == 'pull_request_target' &&
+      github.event.workflow_run.conclusion == 'success'
     steps:
-    - uses: actions/labeler@v4
-      with:
-        configuration-path: .github/new-prs-labeler.yml
-        # workaround for https://github.com/actions/labeler/issues/112
-        sync-labels: ''
+      # From: https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+      # Updated version here: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#using-data-from-the-triggering-workflow
+      - name: Debug
+        run: |
+          echo "Event: ${{ github.event.workflow_run.event }} Conclusion: ${{ github.event.workflow_run.conclusion }}"
+      - name: 'Download artifact'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            var artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+            var matchArtifact = artifacts.data.artifacts.filter((artifact) => {
+              return artifact.name == "pr"
+            })[0];
+            var download = await github.rest.actions.downloadArtifact({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               artifact_id: matchArtifact.id,
+               archive_format: 'zip',
+            });
+            var fs = require('fs');
+            fs.writeFileSync('${{github.workspace}}/pr.zip', Buffer.from(download.data));
+
+      - run: unzip pr.zip
+
+      - name: "Get PR Number"
+        id: vars
+        run:
+          echo "pr-number=`cat NR`" >> $GITHUB_OUTPUT
+
+      - uses: actions/labeler@v4
+        with:
+          configuration-path: .github/new-prs-labeler.yml
+          # workaround for https://github.com/actions/labeler/issues/112
+          sync-labels: ''
+          repo-token: ${{ secrets.ISSUE_SUBSCRIBER_TOKEN }}
+          pr-number: ${{steps.vars.outputs.pr-number}}

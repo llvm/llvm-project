@@ -88,6 +88,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fclose
     libc.src.stdio.fread
     libc.src.stdio.fputs
+    libc.src.stdio.fwrite
+    libc.src.stdio.fputc
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr

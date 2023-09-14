@@ -786,7 +786,7 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
   config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
   config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 endif()
-# TODO(LLVM 18): Remove this after branching for LLVM 17, this is a simple
+# TODO(LLVM 19): Remove this after branching for LLVM 18, this is a simple
 # courtesy for vendors to be notified about this change.
 if (LIBCXX_ENABLE_ASSERTIONS)
   message(FATAL_ERROR "LIBCXX_ENABLE_ASSERTIONS has been replaced by LIBCXX_HARDENING_MODE=hardened")

@@ -336,8 +336,10 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
   std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
   if (InSameTU.first)
     return XL.isBeforeInTranslationUnitThan(YL);
-  const FileEntry *XFE = SM.getFileEntryForID(XL.getSpellingLoc().getFileID());
-  const FileEntry *YFE = SM.getFileEntryForID(YL.getSpellingLoc().getFileID());
+  OptionalFileEntryRef XFE =
+      SM.getFileEntryRefForID(XL.getSpellingLoc().getFileID());
+  OptionalFileEntryRef YFE =
+      SM.getFileEntryRefForID(YL.getSpellingLoc().getFileID());
   if (!XFE || !YFE)
     return XFE && !YFE;
   int NameCmp = XFE->getName().compare(YFE->getName());

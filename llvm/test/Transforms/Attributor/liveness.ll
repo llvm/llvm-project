@@ -2359,12 +2359,12 @@ define void @call_via_pointer_with_dead_args(ptr %a, ptr %b, ptr %fp) {
 define internal void @call_via_pointer_with_dead_args_internal_a(ptr %a, ptr %b, ptr %fp) {
 ; TUNIT-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; TUNIT-SAME: (ptr [[A:%.*]], ptr noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; TUNIT-NEXT:    call void @called_via_pointer(ptr [[A]], ptr [[B]], ptr [[A]], i64 -1, ptr null)
+; TUNIT-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nonnull align 128 dereferenceable(4) [[B]], ptr [[A]], i64 -1, ptr null)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; CGSCC-SAME: (ptr [[A:%.*]], ptr noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nocapture nofree noundef nonnull [[B]], ptr nocapture nofree [[A]], i64 noundef -1, ptr nofree noundef null)
+; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nocapture nofree noundef nonnull align 128 dereferenceable(4) [[B]], ptr nocapture nofree [[A]], i64 noundef -1, ptr nofree noundef null)
 ; CGSCC-NEXT:    ret void
 ;
   call void %fp(ptr %a, ptr %b, ptr %a, i64 -1, ptr null)
@@ -2373,7 +2373,7 @@ define internal void @call_via_pointer_with_dead_args_internal_a(ptr %a, ptr %b,
 define internal void @call_via_pointer_with_dead_args_internal_b(ptr %a, ptr %b, ptr %fp) {
 ; TUNIT-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
 ; TUNIT-SAME: (ptr [[A:%.*]], ptr noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; TUNIT-NEXT:    call void @called_via_pointer_internal_2(ptr [[A]], ptr [[B]], ptr [[A]], i64 -1, ptr null)
+; TUNIT-NEXT:    call void @called_via_pointer_internal_2(ptr [[A]], ptr nonnull align 128 dereferenceable(4) [[B]], ptr [[A]], i64 -1, ptr null)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b

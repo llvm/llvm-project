@@ -112,10 +112,10 @@ TEST_F(WalkUsedTest, Basic) {
 
   TestAST AST(Inputs);
   auto &SM = AST.sourceManager();
-  auto HeaderFile = Header(AST.fileManager().getFile("header.h").get());
-  auto PrivateFile = Header(AST.fileManager().getFile("private.h").get());
+  auto HeaderFile = Header(*AST.fileManager().getOptionalFileRef("header.h"));
+  auto PrivateFile = Header(*AST.fileManager().getOptionalFileRef("private.h"));
   auto PublicFile = Header("\"path/public.h\"");
-  auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
+  auto MainFile = Header(*SM.getFileEntryRefForID(SM.getMainFileID()));
   auto VectorSTL = Header(*tooling::stdlib::Header::named("<vector>"));
   auto UtilitySTL = Header(*tooling::stdlib::Header::named("<utility>"));
   EXPECT_THAT(
@@ -152,9 +152,9 @@ TEST_F(WalkUsedTest, MultipleProviders) {
 
   TestAST AST(Inputs);
   auto &SM = AST.sourceManager();
-  auto HeaderFile1 = Header(AST.fileManager().getFile("header1.h").get());
-  auto HeaderFile2 = Header(AST.fileManager().getFile("header2.h").get());
-  auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
+  auto HeaderFile1 = Header(*AST.fileManager().getOptionalFileRef("header1.h"));
+  auto HeaderFile2 = Header(*AST.fileManager().getOptionalFileRef("header2.h"));
+  auto MainFile = Header(*SM.getFileEntryRefForID(SM.getMainFileID()));
   EXPECT_THAT(
       offsetToProviders(AST),
       Contains(Pair(Code.point("foo"),
@@ -173,8 +173,8 @@ TEST_F(WalkUsedTest, MacroRefs) {
   TestAST AST(Inputs);
   auto &SM = AST.sourceManager();
   auto &PP = AST.preprocessor();
-  const auto *HdrFile = SM.getFileManager().getFile("hdr.h").get();
-  auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
+  auto HdrFile = *SM.getFileManager().getOptionalFileRef("hdr.h");
+  auto MainFile = Header(*SM.getFileEntryRefForID(SM.getMainFileID()));
 
   auto HdrID = SM.translateFile(HdrFile);
 
@@ -490,9 +490,9 @@ TEST_F(WalkUsedTest, TemplateDecls) {
       guard("template<typename T> struct Foo<T*> {};");
   TestAST AST(Inputs);
   auto &SM = AST.sourceManager();
-  const auto *Fwd = SM.getFileManager().getFile("fwd.h").get();
-  const auto *Def = SM.getFileManager().getFile("def.h").get();
-  const auto *Partial = SM.getFileManager().getFile("partial.h").get();
+  auto Fwd = *SM.getFileManager().getOptionalFileRef("fwd.h");
+  auto Def = *SM.getFileManager().getOptionalFileRef("def.h");
+  auto Partial = *SM.getFileManager().getOptionalFileRef("partial.h");
 
   EXPECT_THAT(
       offsetToProviders(AST),
@@ -524,7 +524,7 @@ TEST_F(WalkUsedTest, IgnoresIdentityMacros) {
 
   TestAST AST(Inputs);
   auto &SM = AST.sourceManager();
-  auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
+  auto MainFile = Header(*SM.getFileEntryRefForID(SM.getMainFileID()));
   EXPECT_THAT(offsetToProviders(AST),
               UnorderedElementsAre(
                   // FIXME: we should have a reference from stdin to header.h
