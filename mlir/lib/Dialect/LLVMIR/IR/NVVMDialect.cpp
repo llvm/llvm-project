@@ -903,7 +903,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "{\n"
         ".reg .pred p;\n"
         "setp.ne.b32 p, $"
-     << (expectedOutputRegisters + 2)
+     << ((expectedOutputRegisters * 2) + 2)
      << ", 0;\n"
         "wgmma.mma_async.sync.aligned.m"
      << m << "n" << n << "k" << k << "." << outputTypeName << "."

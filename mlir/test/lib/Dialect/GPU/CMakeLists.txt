@@ -27,7 +27,7 @@ set(LIBS
   MLIRTransforms
   MLIRTransformUtils
   MLIRTranslateLib
-  MLIRVectorToLLVM
+  MLIRVectorToLLVMPass
   )
 
 add_mlir_library(MLIRGPUTestPasses

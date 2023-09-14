@@ -22,7 +22,7 @@ jobs:
           test "${{ github.actor }}" = "tstellar" || test "${{ github.actor }}" = "tru"
           echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
           release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
-          echo "release-version=$release_version" >> $GITHUB_OUTPUT
+          echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
       - name: Install Dependencies
         run: |
@@ -47,7 +47,7 @@ jobs:
       - name: Build Documentation
         run: |
           ./llvm/utils/release/build-docs.sh -release ${{ steps.validate-tag.outputs.release-version }}
-          ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files *doxygen*.tar.xz
+          ./llvm/utils/release/github-upload-release.py --token ${{ github.token }} --release ${{ steps.validate-tag.outputs.release-version }} upload --files ./*doxygen*.tar.xz
 
       - name: Create Release Notes Artifact
         uses: actions/download-artifact@v3

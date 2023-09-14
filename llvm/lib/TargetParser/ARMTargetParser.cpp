@@ -13,6 +13,7 @@
 
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cctype>
@@ -597,4 +598,13 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   }
 
   llvm_unreachable("invalid arch name");
+}
+
+void ARM::PrintSupportedExtensions() {
+  outs() << "All available -march extensions for ARM\n\n";
+  for (const auto &Ext : ARCHExtNames) {
+    // Extensions without a feature cannot be used with -march.
+    if (!Ext.Feature.empty())
+      outs() << '\t' << Ext.Name << "\n";
+  }
 }

@@ -1486,7 +1486,7 @@ public:
   };
 
   // Returns the size in number of SGPRs for preload user SGPR field.
-  static constexpr unsigned getNumUserSGPRForField(UserSGPRID ID) {
+  static unsigned getNumUserSGPRForField(UserSGPRID ID) {
     switch (ID) {
     case ImplicitBufferPtrID:
       return 2;

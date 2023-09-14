@@ -51,4 +51,5 @@ cmake -S ${MONOREPO_ROOT}/llvm -B ${BUILD_DIR} \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache
 
 echo "--- ninja"
-ninja -C "${BUILD_DIR}" "${targets}"
+# Targets are not escaped as they are passed as separate arguments.
+ninja -C "${BUILD_DIR}" ${targets}

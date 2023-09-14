@@ -5860,7 +5860,7 @@ TEST(TransferTest, EvaluateBlockWithUnreachablePreds) {
   // is marked unreachable). Trying to get the analysis state via
   // `getEnvironment` for the subexpression still should not crash.
   std::string Code = R"(
-    int cast(int i) {
+    int target(int i) {
       if ((i < 0 && true) || false) {
         return 0;
       }

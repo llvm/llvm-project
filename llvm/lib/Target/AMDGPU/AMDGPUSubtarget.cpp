@@ -775,7 +775,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static constexpr unsigned getMaxNumPreloadedSGPRs() {
+static unsigned getMaxNumPreloadedSGPRs() {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =

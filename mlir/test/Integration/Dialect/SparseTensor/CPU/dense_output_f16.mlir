@@ -30,8 +30,8 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
-#DenseVector = #sparse_tensor.encoding<{lvlTypes = ["dense"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
+#DenseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : dense)}>
 
 #trait_vec_op = {
   indexing_maps = [

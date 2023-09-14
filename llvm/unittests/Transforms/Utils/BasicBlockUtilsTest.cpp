@@ -23,7 +23,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
