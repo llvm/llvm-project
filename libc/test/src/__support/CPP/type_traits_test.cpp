@@ -168,6 +168,17 @@ struct Delegate {
   int (*ptr)(int) = &free_function_passtrough;
 };
 
+template <int tag> struct Tag {
+  static int value() { return tag; }
+};
+
+struct Functor {
+  auto operator()() & { return Tag<0>(); }
+  auto operator()() const & { return Tag<1>(); }
+  auto operator()() && { return Tag<2>(); }
+  auto operator()() const && { return Tag<3>(); }
+};
+
 } // namespace invoke_detail
 
 TEST(LlvmLibcTypeTraitsTest, invoke) {
@@ -175,62 +186,66 @@ TEST(LlvmLibcTypeTraitsTest, invoke) {
   { // member function call
     A a;
     EXPECT_EQ(a.state, INIT);
-    cpp::invoke(&A::apply, a);
+    invoke(&A::apply, a);
     EXPECT_EQ(a.state, A_APPLY_CALLED);
   }
   { // overriden member function call
     B b;
     EXPECT_EQ(b.state, INIT);
-    cpp::invoke(&A::apply, b);
+    invoke(&A::apply, b);
     EXPECT_EQ(b.state, B_APPLY_CALLED);
   }
   { // free function
-    cpp::invoke(&free_function);
-    EXPECT_EQ(cpp::invoke(&free_function_return_5), 5);
-    EXPECT_EQ(cpp::invoke(&free_function_passtrough, 1), 1);
+    invoke(&free_function);
+    EXPECT_EQ(invoke(&free_function_return_5), 5);
+    EXPECT_EQ(invoke(&free_function_passtrough, 1), 1);
   }
   { // pointer member function call
     Delegate d;
-    EXPECT_EQ(cpp::invoke(&Delegate::ptr, d, 2), 2);
+    EXPECT_EQ(invoke(&Delegate::ptr, d, 2), 2);
+  }
+  { // Functor with several ref qualifier
+    Functor f;
+    const Functor cf;
+    EXPECT_EQ(invoke(f).value(), 0);
+    EXPECT_EQ(invoke(cf).value(), 1);
+    EXPECT_EQ(invoke(move(f)).value(), 2);
+    EXPECT_EQ(invoke(move(cf)).value(), 3);
   }
   { // lambda
-    EXPECT_EQ(cpp::invoke([]() -> int { return 2; }), 2);
-    EXPECT_EQ(cpp::invoke([](int value) -> int { return value; }, 1), 1);
+    EXPECT_EQ(invoke([]() -> int { return 2; }), 2);
+    EXPECT_EQ(invoke([](int value) -> int { return value; }, 1), 1);
 
     const auto lambda = [](int) { return 0; };
-    EXPECT_EQ(cpp::invoke(lambda, 1), 0);
+    EXPECT_EQ(invoke(lambda, 1), 0);
   }
 }
 
 TEST(LlvmLibcTypeTraitsTest, invoke_result) {
   using namespace invoke_detail;
-  EXPECT_TRUE(
-      (cpp::is_same_v<cpp::invoke_result_t<decltype(&A::apply), A>, void>));
-  EXPECT_TRUE(
-      (cpp::is_same_v<cpp::invoke_result_t<decltype(&A::apply), B>, void>));
-  EXPECT_TRUE(
-      (cpp::is_same_v<cpp::invoke_result_t<decltype(&free_function)>, void>));
-  EXPECT_TRUE(
-      (cpp::is_same_v<cpp::invoke_result_t<decltype(&free_function_return_5)>,
-                      int>));
-  EXPECT_TRUE((cpp::is_same_v<
-               cpp::invoke_result_t<decltype(&free_function_passtrough), int>,
-               int>));
-  EXPECT_TRUE(
-      (cpp::is_same_v<
-          cpp::invoke_result_t<decltype(&Delegate::ptr), Delegate, int>, int>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<void (A::*)(), A>, void>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<void (A::*)(), B>, void>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<void (*)()>, void>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<int (*)()>, int>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<int (*)(int), int>, int>));
+  EXPECT_TRUE((
+      is_same_v<invoke_result_t<int (*Delegate::*)(int), Delegate, int>, int>));
+  // Functor with several ref qualifier
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor &>, Tag<0>>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor const &>, Tag<1>>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor &&>, Tag<2>>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor const &&>, Tag<3>>));
   {
     auto lambda = []() {};
-    EXPECT_TRUE((cpp::is_same_v<cpp::invoke_result_t<decltype(lambda)>, void>));
+    EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda)>, void>));
   }
   {
     auto lambda = []() { return 0; };
-    EXPECT_TRUE((cpp::is_same_v<cpp::invoke_result_t<decltype(lambda)>, int>));
+    EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda)>, int>));
   }
   {
     auto lambda = [](int) -> double { return 0; };
-    EXPECT_TRUE(
-        (cpp::is_same_v<cpp::invoke_result_t<decltype(lambda), int>, double>));
+    EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda), int>, double>));
   }
 }
 

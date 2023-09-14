@@ -9,14 +9,14 @@
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_INVOKE_RESULT_H
 
 #include "src/__support/CPP/type_traits/invoke.h"
+#include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/CPP/utility/declval.h"
 
 namespace __llvm_libc::cpp {
 
-template <class F, class... Args> struct invoke_result {
-  using type =
-      decltype(cpp::invoke(cpp::declval<F>(), cpp::declval<Args>()...));
-};
+template <class F, class... Args>
+struct invoke_result : cpp::type_identity<decltype(cpp::invoke(
+                           cpp::declval<F>(), cpp::declval<Args>()...))> {};
 
 template <class F, class... Args>
 using invoke_result_t = typename invoke_result<F, Args...>::type;
