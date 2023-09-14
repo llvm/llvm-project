@@ -47,6 +47,7 @@ class EditlineTest(PExpectTest):
 
     @skipIfAsan
     @skipIfEditlineSupportMissing
+    @skipIfEditlineWideCharSupportMissing
     def test_prompt_unicode(self):
         """Test that we can use Unicode in the LLDB prompt."""
         self.launch(use_colors=True, encoding="utf-8")
