@@ -12,6 +12,7 @@
 
 #include "SwiftLanguage.h"
 
+#include "SwiftUnsafeTypes.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
@@ -1024,9 +1025,9 @@ SwiftLanguage::GetHardcodedSynthetics() {
         return nullptr;
       }
 
-      auto swift_valobj =
+      auto maybe_swift_valobj =
           SwiftLanguageRuntime::ExtractSwiftValueObjectFromCxxWrapper(valobj);
-      if (!swift_valobj) {
+      if (!maybe_swift_valobj) {
         StreamString clang_desc;
         type.DumpTypeDescription(&clang_desc);
 
@@ -1040,9 +1041,16 @@ SwiftLanguage::GetHardcodedSynthetics() {
                   clang_desc.GetData(), swift_desc.GetData());
         return nullptr;
       }
+      auto [swift_valobj, should_wrap_in_ptr] = *maybe_swift_valobj;
+
+      CompilerType cast_target_type = swift_type;
+      if (should_wrap_in_ptr)
+        cast_target_type =
+            type_system_swift.GetPointerType(swift_type.GetOpaqueQualType());
+
       // Cast it to a Swift type since thhe swift runtime expects a Swift value
       // object.
-      auto casted_to_swift = swift_valobj->Cast(swift_type);
+      auto casted_to_swift = swift_valobj->Cast(cast_target_type);
       if (!casted_to_swift) {
         LLDB_LOGF(log, "[Matching CxxBridgedSyntheticChildProvider] - "
                        "Could not cast value object to swift type.");
@@ -1074,9 +1082,25 @@ SwiftLanguage::GetHardcodedSynthetics() {
 
       casted_to_swift->SetName(ConstString("Swift_Type"));
 
-      SyntheticChildrenSP synth_sp =
-          SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
-              casted_to_swift, SyntheticChildren::Flags()));
+      SyntheticChildrenSP synth_sp;
+      if (should_wrap_in_ptr) {
+        // If we have a pointer to a Swift value type, dereference the pointer
+        // and present those as the contents instead.
+        auto children = lldb_private::formatters::swift::
+            ExtractChildrenFromSwiftPointerValueObject(casted_to_swift);
+
+        if (children.empty())
+          return nullptr;
+        // The pointer should only have one child: the pointee.
+        assert(children.size() == 1 &&
+               "Unexpected size for pointer's children!");
+
+        synth_sp = SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
+            children[0], SyntheticChildren::Flags()));
+      } else {
+        synth_sp = SyntheticChildrenSP(new ValueObjectWrapperSyntheticChildren(
+            casted_to_swift, SyntheticChildren::Flags()));
+      }
       return synth_sp;
     });
     g_formatters.push_back([](lldb_private::ValueObject &valobj,

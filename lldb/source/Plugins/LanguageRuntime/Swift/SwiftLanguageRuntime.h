@@ -223,8 +223,11 @@ public:
       std::function<CompilerType(unsigned, unsigned)> finder);
 
   /// Extract the value object which contains the Swift type's "contents".
-  /// Returns null if this is not a C++ wrapping a Swift type.
-  static lldb::ValueObjectSP
+  /// Returns None if this is not a C++ wrapping a Swift type, returns
+  /// the a pair containing the extracted value object and a boolean indicating
+  /// whether the corresponding Swift type should be a pointer (for example, if
+  /// the Swift type is a value type but the storage is behind a C pointer.
+  static std::optional<std::pair<lldb::ValueObjectSP, bool>>
   ExtractSwiftValueObjectFromCxxWrapper(ValueObject &valobj);
 
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,

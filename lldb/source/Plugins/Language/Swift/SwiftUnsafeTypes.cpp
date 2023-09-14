@@ -423,9 +423,80 @@ bool lldb_private::formatters::swift::UnsafeTypeSummaryProvider(
   return true;
 }
 
+static std::vector<ValueObjectSP>
+ExtractChildrenFromSwiftPointerValueObject(ValueObjectSP valobj_sp,
+                                           SwiftUnsafeType &unsafe_ptr) {
+  if (!valobj_sp)
+    return {};
+
+  lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
+
+  if (!process_sp)
+    return {};
+
+  const addr_t start_addr = unsafe_ptr.GetStartAddress();
+  const size_t num_children = unsafe_ptr.GetCount();
+  const CompilerType element_type = unsafe_ptr.GetElementType();
+
+  auto stride = element_type.GetByteStride(process_sp.get());
+  if (!stride)
+    return {};
+
+  auto element_stride = *stride;
+  size_t buffer_size = num_children * element_stride;
+  if (buffer_size > 512 * 1024 * 1024) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "Suspiciously large object: num_children={0}, stride={1}",
+             num_children, element_stride);
+    return {};
+  }
+
+  std::unique_ptr<lldb_private::WritableDataBuffer> buffer_up(
+      new DataBufferHeap(buffer_size, 0));
+  Status error;
+  size_t read_bytes = process_sp->ReadMemory(start_addr, buffer_up->GetBytes(),
+                                             buffer_size, error);
+
+  if (!read_bytes || error.Fail())
+    return {};
+
+  auto ptr_size = process_sp->GetAddressByteSize();
+  auto order = process_sp->GetByteOrder();
+  DataExtractor buffer_data(buffer_up->GetBytes(), buffer_up->GetByteSize(),
+                            order, ptr_size);
+
+  std::vector<ValueObjectSP> children;
+  auto exe_ctx_ref = valobj_sp->GetExecutionContextRef();
+  // UnsafePointer/UnsafeMutablePointer have a `pointee` property.
+  if (unsafe_ptr.HasPointee()) {
+    DataExtractor data(buffer_data, 0, element_stride);
+    children.push_back(ValueObject::CreateValueObjectFromData(
+        "pointee", data, exe_ctx_ref, element_type));
+    return children;
+  }
+
+  for (size_t i = 0; i < num_children; i++) {
+    StreamString idx_name;
+    idx_name.Printf("[%zu]", i);
+    DataExtractor data(buffer_data, i * element_stride, element_stride);
+    children.push_back(ValueObject::CreateValueObjectFromData(
+        idx_name.GetString(), data, exe_ctx_ref, element_type));
+  }
+
+  return children;
+}
+
 namespace lldb_private {
 namespace formatters {
 namespace swift {
+std::vector<ValueObjectSP>
+ExtractChildrenFromSwiftPointerValueObject(ValueObjectSP valobj_sp) {
+  auto unsafe_ptr = ::SwiftUnsafeType::Create(*valobj_sp.get());
+  unsafe_ptr->Update();
+  return ::ExtractChildrenFromSwiftPointerValueObject(valobj_sp,
+                                                      *unsafe_ptr.get());
+}
+
 class UnsafeTypeSyntheticFrontEnd : public SwiftBasicTypeSyntheticFrontEnd {
 public:
   UnsafeTypeSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
@@ -437,12 +508,7 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
-  ExecutionContextRef m_exe_ctx_ref;
-  uint8_t m_ptr_size;
-  lldb::ByteOrder m_order;
-
   std::unique_ptr<SwiftUnsafeType> m_unsafe_ptr;
-  size_t m_element_stride;
   WritableDataBufferSP m_buffer_sp;
   std::vector<ValueObjectSP> m_children;
 };
@@ -458,8 +524,6 @@ lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::
   if (!process_sp)
     return;
 
-  m_ptr_size = process_sp->GetAddressByteSize();
-  m_order = process_sp->GetByteOrder();
 
   m_unsafe_ptr = ::SwiftUnsafeType::Create(*valobj_sp.get());
 
@@ -491,62 +555,15 @@ bool lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEnd::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
     return false;
-  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
-  lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
-  if (!process_sp)
-    return false;
   if (!m_unsafe_ptr)
     return false;
   if (!m_unsafe_ptr->Update())
     return false;
 
-  const addr_t start_addr = m_unsafe_ptr->GetStartAddress();
   const size_t num_children = CalculateNumChildren();
-  const CompilerType element_type = m_unsafe_ptr->GetElementType();
-
-  auto stride = element_type.GetByteStride(process_sp.get());
-  if (!stride)
-    return false;
-
-  m_element_stride = *stride;
-  if (m_children.empty()) {
-    size_t buffer_size = num_children * m_element_stride;
-    if (buffer_size > 512*1024*1024) {
-      LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-               "Suspiciously large object: num_children={0}, stride={1}",
-               num_children, m_element_stride);
-      return false;
-    }
-    m_buffer_sp.reset(new DataBufferHeap(buffer_size, 0));
-
-    Status error;
-    size_t read_bytes = process_sp->ReadMemory(
-        start_addr, m_buffer_sp->GetBytes(), buffer_size, error);
-
-    if (!read_bytes || error.Fail())
-      return false;
-
-    DataExtractor buffer_data(m_buffer_sp->GetBytes(),
-                              m_buffer_sp->GetByteSize(), m_order, m_ptr_size);
-
-    // UnsafePointer/UnsafeMutablePointer have a `pointee` property.
-    if (m_unsafe_ptr->HasPointee()) {
-      DataExtractor data(buffer_data, 0, m_element_stride);
-      m_children.push_back(CreateValueObjectFromData(
-          "pointee", data, m_exe_ctx_ref, element_type));
-      return true;
-    }
-
-    for (size_t i = 0; i < num_children; i++) {
-      StreamString idx_name;
-      idx_name.Printf("[%zu]", i);
-      DataExtractor data(buffer_data, i * m_element_stride, m_element_stride);
-      m_children.push_back(CreateValueObjectFromData(
-          idx_name.GetString(), data, m_exe_ctx_ref, element_type));
-    }
-  }
-
+  m_children = ::ExtractChildrenFromSwiftPointerValueObject(valobj_sp,
+                                                          *m_unsafe_ptr.get());
   return m_children.size() == num_children;
 }
 
