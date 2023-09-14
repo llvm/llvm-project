@@ -879,10 +879,9 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     auto sourcePtr = promote(unrankedSource);
     auto targetPtr = promote(unrankedTarget);
 
-    unsigned typeSize =
-        mlir::DataLayout::closest(op).getTypeSize(srcType.getElementType());
-    auto elemSize = rewriter.create<LLVM::ConstantOp>(
-        loc, getIndexType(), rewriter.getIndexAttr(typeSize));
+    // Derive size from llvm.getelementptr which will account for any
+    // potential alignment
+    auto elemSize = getSizeInBytes(loc, srcType.getElementType(), rewriter);
     auto copyFn = LLVM::lookupOrCreateMemRefCopyFn(
         op->getParentOfType<ModuleOp>(), getIndexType(), sourcePtr.getType());
     rewriter.create<LLVM::CallOp>(loc, copyFn,
