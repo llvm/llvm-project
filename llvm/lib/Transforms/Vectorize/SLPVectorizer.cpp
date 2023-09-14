@@ -4955,6 +4955,8 @@ void BoUpSLP::buildExternalUses(
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
       Value *Scalar = Entry->Scalars[Lane];
+      if (!isa<Instruction>(Scalar))
+        continue;
       int FoundLane = Entry->findLaneForValue(Scalar);
 
       // Check if the scalar is externally used as an extra arg.
@@ -9434,10 +9436,12 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root) {
     GatherShuffleExtractSeq.insert(InsElt);
     CSEBlocks.insert(InsElt->getParent());
     // Add to our 'need-to-extract' list.
-    if (TreeEntry *Entry = getTreeEntry(V)) {
-      // Find which lane we need to extract.
-      unsigned FoundLane = Entry->findLaneForValue(V);
-      ExternalUses.emplace_back(V, InsElt, FoundLane);
+    if (isa<Instruction>(V)) {
+      if (TreeEntry *Entry = getTreeEntry(V)) {
+        // Find which lane we need to extract.
+        unsigned FoundLane = Entry->findLaneForValue(V);
+        ExternalUses.emplace_back(V, InsElt, FoundLane);
+      }
     }
     return Vec;
   };
@@ -10697,10 +10701,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         // The pointer operand uses an in-tree scalar so we add the new
         // LoadInst to ExternalUses list to make sure that an extract will
         // be generated in the future.
-        if (TreeEntry *Entry = getTreeEntry(PO)) {
-          // Find which lane we need to extract.
-          unsigned FoundLane = Entry->findLaneForValue(PO);
-          ExternalUses.emplace_back(PO, NewLI, FoundLane);
+        if (isa<Instruction>(PO)) {
+          if (TreeEntry *Entry = getTreeEntry(PO)) {
+            // Find which lane we need to extract.
+            unsigned FoundLane = Entry->findLaneForValue(PO);
+            ExternalUses.emplace_back(PO, NewLI, FoundLane);
+          }
         }
       } else {
         assert((E->State == TreeEntry::ScatterVectorize ||
@@ -10740,10 +10746,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // The pointer operand uses an in-tree scalar, so add the new StoreInst to
       // ExternalUses to make sure that an extract will be generated in the
       // future.
-      if (TreeEntry *Entry = getTreeEntry(Ptr)) {
-        // Find which lane we need to extract.
-        unsigned FoundLane = Entry->findLaneForValue(Ptr);
-        ExternalUses.push_back(ExternalUser(Ptr, ST, FoundLane));
+      if (isa<Instruction>(Ptr)) {
+        if (TreeEntry *Entry = getTreeEntry(Ptr)) {
+          // Find which lane we need to extract.
+          unsigned FoundLane = Entry->findLaneForValue(Ptr);
+          ExternalUses.push_back(ExternalUser(Ptr, ST, FoundLane));
+        }
       }
 
       Value *V = propagateMetadata(ST, E->Scalars);
@@ -10852,7 +10860,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // The scalar argument uses an in-tree scalar so we add the new vectorized
       // call to ExternalUses list to make sure that an extract will be
       // generated in the future.
-      if (ScalarArg) {
+      if (isa_and_present<Instruction>(ScalarArg)) {
         if (TreeEntry *Entry = getTreeEntry(ScalarArg)) {
           // Find which lane we need to extract.
           unsigned FoundLane = Entry->findLaneForValue(ScalarArg);
