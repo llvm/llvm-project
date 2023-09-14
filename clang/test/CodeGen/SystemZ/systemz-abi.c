@@ -43,7 +43,7 @@ long long pass_longlong(long long arg) { return arg; }
 // CHECK-LABEL: define{{.*}} i64 @pass_longlong(i64 %{{.*}})
 
 __int128 pass_int128(__int128 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_int128(ptr noalias sret(i128) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_int128(ptr noalias sret(i128) align 8 %{{.*}}, ptr byval(i128) align 8 %0)
 
 float pass_float(float arg) { return arg; }
 // CHECK-LABEL: define{{.*}} float @pass_float(float %{{.*}})
@@ -52,34 +52,34 @@ double pass_double(double arg) { return arg; }
 // CHECK-LABEL: define{{.*}} double @pass_double(double %{{.*}})
 
 long double pass_longdouble(long double arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_longdouble(ptr noalias sret(fp128) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_longdouble(ptr noalias sret(fp128) align 8 %{{.*}}, ptr byval(fp128) align 8 %0)
 
 
 // Complex types
 
 _Complex char pass_complex_char(_Complex char arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_char(ptr noalias sret({ i8, i8 }) align 1 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_char(ptr noalias sret({ i8, i8 }) align 1 %{{.*}}, ptr byval({ i8, i8 }) align 1 %{{.*}}arg)
 
 _Complex short pass_complex_short(_Complex short arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_short(ptr noalias sret({ i16, i16 }) align 2 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_short(ptr noalias sret({ i16, i16 }) align 2 %{{.*}}, ptr byval({ i16, i16 }) align 2 %{{.*}}arg)
 
 _Complex int pass_complex_int(_Complex int arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_int(ptr noalias sret({ i32, i32 }) align 4 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_int(ptr noalias sret({ i32, i32 }) align 4 %{{.*}}, ptr byval({ i32, i32 }) align 4 %{{.*}}arg)
 
 _Complex long pass_complex_long(_Complex long arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_long(ptr noalias sret({ i64, i64 }) align 8 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_long(ptr noalias sret({ i64, i64 }) align 8 %{{.*}}, ptr byval({ i64, i64 }) align 8 %{{.*}}arg)
 
 _Complex long long pass_complex_longlong(_Complex long long arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_longlong(ptr noalias sret({ i64, i64 }) align 8 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_longlong(ptr noalias sret({ i64, i64 }) align 8 %{{.*}}, ptr byval({ i64, i64 }) align 8 %{{.*}}arg)
 
 _Complex float pass_complex_float(_Complex float arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_float(ptr noalias sret({ float, float }) align 4 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_float(ptr noalias sret({ float, float }) align 4 %{{.*}}, ptr byval({ float, float }) align 4 %{{.*}}arg)
 
 _Complex double pass_complex_double(_Complex double arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_double(ptr noalias sret({ double, double }) align 8 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_double(ptr noalias sret({ double, double }) align 8 %{{.*}}, ptr byval({ double, double }) align 8 %{{.*}}arg)
 
 _Complex long double pass_complex_longdouble(_Complex long double arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_complex_longdouble(ptr noalias sret({ fp128, fp128 }) align 8 %{{.*}}, ptr %{{.*}}arg)
+// CHECK-LABEL: define{{.*}} void @pass_complex_longdouble(ptr noalias sret({ fp128, fp128 }) align 8 %{{.*}}, ptr byval({ fp128, fp128 }) align 8 %{{.*}}arg)
 
 
 // Aggregate types
@@ -94,7 +94,7 @@ struct agg_2byte pass_agg_2byte(struct agg_2byte arg) { return arg; }
 
 struct agg_3byte { char a[3]; };
 struct agg_3byte pass_agg_3byte(struct agg_3byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_3byte(ptr noalias sret(%struct.agg_3byte) align 1 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_3byte(ptr noalias sret(%struct.agg_3byte) align 1 %{{.*}}, ptr byval(%struct.agg_3byte) align 1 %{{.*}})
 
 struct agg_4byte { char a[4]; };
 struct agg_4byte pass_agg_4byte(struct agg_4byte arg) { return arg; }
@@ -102,15 +102,15 @@ struct agg_4byte pass_agg_4byte(struct agg_4byte arg) { return arg; }
 
 struct agg_5byte { char a[5]; };
 struct agg_5byte pass_agg_5byte(struct agg_5byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_5byte(ptr noalias sret(%struct.agg_5byte) align 1 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_5byte(ptr noalias sret(%struct.agg_5byte) align 1 %{{.*}}, ptr byval(%struct.agg_5byte) align 1 %{{.*}})
 
 struct agg_6byte { char a[6]; };
 struct agg_6byte pass_agg_6byte(struct agg_6byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_6byte(ptr noalias sret(%struct.agg_6byte) align 1 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_6byte(ptr noalias sret(%struct.agg_6byte) align 1 %{{.*}}, ptr byval(%struct.agg_6byte) align 1 %{{.*}})
 
 struct agg_7byte { char a[7]; };
 struct agg_7byte pass_agg_7byte(struct agg_7byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_7byte(ptr noalias sret(%struct.agg_7byte) align 1 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_7byte(ptr noalias sret(%struct.agg_7byte) align 1 %{{.*}}, ptr byval(%struct.agg_7byte) align 1 %{{.*}})
 
 struct agg_8byte { char a[8]; };
 struct agg_8byte pass_agg_8byte(struct agg_8byte arg) { return arg; }
@@ -118,7 +118,7 @@ struct agg_8byte pass_agg_8byte(struct agg_8byte arg) { return arg; }
 
 struct agg_16byte { char a[16]; };
 struct agg_16byte pass_agg_16byte(struct agg_16byte arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_16byte(ptr noalias sret(%struct.agg_16byte) align 1 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_16byte(ptr noalias sret(%struct.agg_16byte) align 1 %{{.*}}, ptr byval(%struct.agg_16byte) align 1 %{{.*}})
 
 
 // Float-like aggregate types
@@ -135,7 +135,7 @@ struct agg_double pass_agg_double(struct agg_double arg) { return arg; }
 
 struct agg_longdouble { long double a; };
 struct agg_longdouble pass_agg_longdouble(struct agg_longdouble arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_longdouble(ptr noalias sret(%struct.agg_longdouble) align 8 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_longdouble(ptr noalias sret(%struct.agg_longdouble) align 8 %{{.*}}, ptr byval(%struct.agg_longdouble) align 8 %{{.*}})
 
 struct agg_float_a8 { float a __attribute__((aligned (8))); };
 struct agg_float_a8 pass_agg_float_a8(struct agg_float_a8 arg) { return arg; }
@@ -144,7 +144,7 @@ struct agg_float_a8 pass_agg_float_a8(struct agg_float_a8 arg) { return arg; }
 
 struct agg_float_a16 { float a __attribute__((aligned (16))); };
 struct agg_float_a16 pass_agg_float_a16(struct agg_float_a16 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_float_a16(ptr noalias sret(%struct.agg_float_a16) align 16 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_float_a16(ptr noalias sret(%struct.agg_float_a16) align 16 %{{.*}}, ptr byval(%struct.agg_float_a16) align 16 %{{.*}})
 
 
 // Verify that the following are *not* float-like aggregate types

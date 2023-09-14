@@ -54,91 +54,91 @@ unsigned int align = __alignof__ (v16i8);
 // CHECK-VECTOR: @align ={{.*}} global i32 8
 
 v1i8 pass_v1i8(v1i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1i8(ptr noalias sret(<1 x i8>) align 1 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1i8(ptr noalias sret(<1 x i8>) align 1 %{{.*}}, ptr byval(<1 x i8>) align 1 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x i8> @pass_v1i8(<1 x i8> %{{.*}})
 
 v2i8 pass_v2i8(v2i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v2i8(ptr noalias sret(<2 x i8>) align 2 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v2i8(ptr noalias sret(<2 x i8>) align 2 %{{.*}}, ptr byval(<2 x i8>) align 2 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x i8> @pass_v2i8(<2 x i8> %{{.*}})
 
 v4i8 pass_v4i8(v4i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v4i8(ptr noalias sret(<4 x i8>) align 4 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v4i8(ptr noalias sret(<4 x i8>) align 4 %{{.*}}, ptr byval(<4 x i8>) align 4 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <4 x i8> @pass_v4i8(<4 x i8> %{{.*}})
 
 v8i8 pass_v8i8(v8i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v8i8(ptr noalias sret(<8 x i8>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v8i8(ptr noalias sret(<8 x i8>) align 8 %{{.*}}, ptr byval(<8 x i8>) align 8 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <8 x i8> @pass_v8i8(<8 x i8> %{{.*}})
 
 v16i8 pass_v16i8(v16i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v16i8(ptr noalias sret(<16 x i8>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v16i8(ptr noalias sret(<16 x i8>) align 16 %{{.*}}, ptr byval(<16 x i8>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <16 x i8> @pass_v16i8(<16 x i8> %{{.*}})
 
 v32i8 pass_v32i8(v32i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v32i8(ptr noalias sret(<32 x i8>) align 32 %{{.*}}, ptr %0)
-// CHECK-VECTOR-LABEL: define{{.*}} void @pass_v32i8(ptr noalias sret(<32 x i8>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v32i8(ptr noalias sret(<32 x i8>) align 32 %{{.*}}, ptr byval(<32 x i8>) align 32 %0)
+// CHECK-VECTOR-LABEL: define{{.*}} void @pass_v32i8(ptr noalias sret(<32 x i8>) align 8 %{{.*}}, ptr byval(<32 x i8>) align 8 %0)
 
 v1i16 pass_v1i16(v1i16 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1i16(ptr noalias sret(<1 x i16>) align 2 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1i16(ptr noalias sret(<1 x i16>) align 2 %{{.*}}, ptr byval(<1 x i16>) align 2 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x i16> @pass_v1i16(<1 x i16> %{{.*}})
 
 v2i16 pass_v2i16(v2i16 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v2i16(ptr noalias sret(<2 x i16>) align 4 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v2i16(ptr noalias sret(<2 x i16>) align 4 %{{.*}}, ptr byval(<2 x i16>) align 4 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x i16> @pass_v2i16(<2 x i16> %{{.*}})
 
 v4i16 pass_v4i16(v4i16 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v4i16(ptr noalias sret(<4 x i16>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v4i16(ptr noalias sret(<4 x i16>) align 8 %{{.*}}, ptr byval(<4 x i16>) align 8 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <4 x i16> @pass_v4i16(<4 x i16> %{{.*}})
 
 v8i16 pass_v8i16(v8i16 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v8i16(ptr noalias sret(<8 x i16>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v8i16(ptr noalias sret(<8 x i16>) align 16 %{{.*}}, ptr byval(<8 x i16>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <8 x i16> @pass_v8i16(<8 x i16> %{{.*}})
 
 v1i32 pass_v1i32(v1i32 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1i32(ptr noalias sret(<1 x i32>) align 4 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1i32(ptr noalias sret(<1 x i32>) align 4 %{{.*}}, ptr byval(<1 x i32>) align 4 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x i32> @pass_v1i32(<1 x i32> %{{.*}})
 
 v2i32 pass_v2i32(v2i32 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v2i32(ptr noalias sret(<2 x i32>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v2i32(ptr noalias sret(<2 x i32>) align 8 %{{.*}}, ptr byval(<2 x i32>) align 8 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x i32> @pass_v2i32(<2 x i32> %{{.*}})
 
 v4i32 pass_v4i32(v4i32 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v4i32(ptr noalias sret(<4 x i32>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v4i32(ptr noalias sret(<4 x i32>) align 16 %{{.*}}, ptr byval(<4 x i32>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <4 x i32> @pass_v4i32(<4 x i32> %{{.*}})
 
 v1i64 pass_v1i64(v1i64 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1i64(ptr noalias sret(<1 x i64>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1i64(ptr noalias sret(<1 x i64>) align 8 %{{.*}}, ptr byval(<1 x i64>) align 8 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x i64> @pass_v1i64(<1 x i64> %{{.*}})
 
 v2i64 pass_v2i64(v2i64 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v2i64(ptr noalias sret(<2 x i64>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v2i64(ptr noalias sret(<2 x i64>) align 16 %{{.*}}, ptr byval(<2 x i64>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x i64> @pass_v2i64(<2 x i64> %{{.*}})
 
 v1i128 pass_v1i128(v1i128 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1i128(ptr noalias sret(<1 x i128>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1i128(ptr noalias sret(<1 x i128>) align 16 %{{.*}}, ptr byval(<1 x i128>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x i128> @pass_v1i128(<1 x i128> %{{.*}})
 
 v1f32 pass_v1f32(v1f32 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1f32(ptr noalias sret(<1 x float>) align 4 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1f32(ptr noalias sret(<1 x float>) align 4 %{{.*}}, ptr byval(<1 x float>) align 4 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x float> @pass_v1f32(<1 x float> %{{.*}})
 
 v2f32 pass_v2f32(v2f32 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v2f32(ptr noalias sret(<2 x float>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v2f32(ptr noalias sret(<2 x float>) align 8 %{{.*}}, ptr byval(<2 x float>) align 8 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x float> @pass_v2f32(<2 x float> %{{.*}})
 
 v4f32 pass_v4f32(v4f32 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v4f32(ptr noalias sret(<4 x float>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v4f32(ptr noalias sret(<4 x float>) align 16 %{{.*}}, ptr byval(<4 x float>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <4 x float> @pass_v4f32(<4 x float> %{{.*}})
 
 v1f64 pass_v1f64(v1f64 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1f64(ptr noalias sret(<1 x double>) align 8 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1f64(ptr noalias sret(<1 x double>) align 8 %{{.*}}, ptr byval(<1 x double>) align 8 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x double> @pass_v1f64(<1 x double> %{{.*}})
 
 v2f64 pass_v2f64(v2f64 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v2f64(ptr noalias sret(<2 x double>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v2f64(ptr noalias sret(<2 x double>) align 16 %{{.*}}, ptr byval(<2 x double>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <2 x double> @pass_v2f64(<2 x double> %{{.*}})
 
 v1f128 pass_v1f128(v1f128 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_v1f128(ptr noalias sret(<1 x fp128>) align 16 %{{.*}}, ptr %0)
+// CHECK-LABEL: define{{.*}} void @pass_v1f128(ptr noalias sret(<1 x fp128>) align 16 %{{.*}}, ptr byval(<1 x fp128>) align 16 %0)
 // CHECK-VECTOR-LABEL: define{{.*}} <1 x fp128> @pass_v1f128(<1 x fp128> %{{.*}})
 
 
@@ -166,13 +166,13 @@ struct agg_v8i8 pass_agg_v8i8(struct agg_v8i8 arg) { return arg; }
 
 struct agg_v16i8 { v16i8 a; };
 struct agg_v16i8 pass_agg_v16i8(struct agg_v16i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v16i8(ptr noalias sret(%struct.agg_v16i8) align 16 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v16i8(ptr noalias sret(%struct.agg_v16i8) align 16 %{{.*}}, ptr byval(%struct.agg_v16i8) align 16 %{{.*}})
 // CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v16i8(ptr noalias sret(%struct.agg_v16i8) align 8 %{{.*}}, <16 x i8> %{{.*}})
 
 struct agg_v32i8 { v32i8 a; };
 struct agg_v32i8 pass_agg_v32i8(struct agg_v32i8 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_agg_v32i8(ptr noalias sret(%struct.agg_v32i8) align 32 %{{.*}}, ptr %{{.*}})
-// CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v32i8(ptr noalias sret(%struct.agg_v32i8) align 8 %{{.*}}, ptr %{{.*}})
+// CHECK-LABEL: define{{.*}} void @pass_agg_v32i8(ptr noalias sret(%struct.agg_v32i8) align 32 %{{.*}}, ptr byval(%struct.agg_v32i8) align 32 %{{.*}})
+// CHECK-VECTOR-LABEL: define{{.*}} void @pass_agg_v32i8(ptr noalias sret(%struct.agg_v32i8) align 8 %{{.*}}, ptr byval(%struct.agg_v32i8) align 8 %{{.*}})
 
 
 // Verify that the following are *not* vector-like aggregate types
