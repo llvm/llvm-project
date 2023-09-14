@@ -113,6 +113,13 @@ struct PSVInfo {
   SmallVector<SignatureElement> SigOutputElements;
   SmallVector<SignatureElement> SigPatchOrPrimElements;
 
+  using MaskVector = SmallVector<llvm::yaml::Hex32>;
+  MaskVector OutputVectorMasks[4];
+  MaskVector PatchOrPrimMasks;
+  MaskVector InputOutputMap[4];
+  MaskVector InputPatchMap;
+  MaskVector PatchOutputMap;
+
   void mapInfoForVersion(yaml::IO &IO);
 
   PSVInfo();
@@ -143,6 +150,7 @@ struct Object {
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::Part)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)

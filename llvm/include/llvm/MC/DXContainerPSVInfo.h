@@ -51,6 +51,18 @@ struct PSVRuntimeInfo {
   SmallVector<PSVSignatureElement> OutputElements;
   SmallVector<PSVSignatureElement> PatchOrPrimElements;
 
+  // The interface here is bad, and we'll want to change this in the future. We
+  // probably will want to build out these mask vectors as vectors of bools and
+  // have this utility object convert them to the bit masks. I don't want to
+  // over-engineer this API now since we don't know what the data coming in to
+  // feed it will look like, so I kept it extremely simple for the immediate use
+  // case.
+  SmallVector<uint32_t> OutputVectorMasks[4];
+  SmallVector<uint32_t> PatchOrPrimMasks;
+  SmallVector<uint32_t> InputOutputMap[4];
+  SmallVector<uint32_t> InputPatchMap;
+  SmallVector<uint32_t> PatchOutputMap;
+
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
   // the highest supported version.
