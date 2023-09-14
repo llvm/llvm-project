@@ -1,7 +1,6 @@
 // Purpose:
 //      Check the `view` subtool works with typical inputs.
 //
-// XFAIL: system-darwin
 // RUN: %dexter_regression_test_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t --results %t.results -- %s
 //
