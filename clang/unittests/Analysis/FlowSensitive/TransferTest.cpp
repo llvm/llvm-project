@@ -1481,10 +1481,8 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
               getEnvironmentAtAnnotation(Results, "p");
         auto &SLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s");
         std::vector<const ValueDecl*> Fields;
-        for (auto [Field, _] : SLoc.children()) {
+        for (auto [Field, _] : SLoc.children())
           Fields.push_back(Field);
-          llvm::dbgs() << Field->getNameAsString() << "\n";
-        }
         // Only the fields that have simple accessor methods (that have a
         // single statement body that returns the member variable) should be modeled.
         ASSERT_THAT(Fields, UnorderedElementsAre(
