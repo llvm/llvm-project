@@ -153,8 +153,7 @@ using namespace line_editor;
 class Editline {
 public:
   Editline(const char *editor_name, FILE *input_file, FILE *output_file,
-           FILE *error_file, std::recursive_mutex &output_mutex,
-           bool color_prompts);
+           FILE *error_file, std::recursive_mutex &output_mutex);
 
   ~Editline();
 
@@ -371,7 +370,6 @@ private:
   bool m_multiline_enabled = false;
   std::vector<EditLineStringType> m_input_lines;
   EditorStatus m_editor_status;
-  bool m_color_prompts = true;
   int m_terminal_width = 0;
   int m_base_line_number = 0;
   unsigned m_current_line_index = 0;
