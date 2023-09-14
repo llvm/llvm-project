@@ -9771,6 +9771,36 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BufferDeallocationOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferDeallocationOpInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
+    deps = [
+        ":BufferDeallocationOpInterfaceTdFiles",
+    ],
+)
+
+td_library(
     name = "SubsetInsertionOpInterfaceTdFiles",
     srcs = [
         "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td",
@@ -12067,6 +12097,7 @@ gentbl_cc_library(
 cc_library(
     name = "BufferizationDialect",
     srcs = [
+        "lib/Dialect/Bufferization/IR/BufferDeallocationOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/BufferizableOpInterface.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationDialect.cpp",
         "lib/Dialect/Bufferization/IR/BufferizationOps.cpp",
@@ -12074,6 +12105,7 @@ cc_library(
         "lib/Dialect/Bufferization/IR/UnstructuredControlFlow.cpp",
     ],
     hdrs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
         "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
@@ -12084,7 +12116,9 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":AllocationOpInterface",
+        ":Analysis",
         ":ArithDialect",
+        ":BufferDeallocationOpInterfaceIncGen",
         ":BufferizableOpInterfaceIncGen",
         ":BufferizationBaseIncGen",
         ":BufferizationEnumsIncGen",

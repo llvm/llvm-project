@@ -1604,6 +1604,9 @@ TEST_F(FormatTestJS, StringLiteralConcatenation) {
   verifyFormat("/* type */ type x =\n"
                "    'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';",
                getGoogleJSStyleWithColumns(20));
+  verifyFormat("export type x =\n"
+               "    'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';",
+               getGoogleJSStyleWithColumns(20));
   // Dictionary keys can't be broken. Values can be broken.
   verifyFormat("var w = {\n"
                "  'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx':\n"
