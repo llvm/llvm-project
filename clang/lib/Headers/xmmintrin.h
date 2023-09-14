@@ -2140,7 +2140,7 @@ _mm_stream_pi(__m64 *__p, __m64 __a)
 /// \param __a
 ///    A 128-bit vector of [4 x float] containing the values to be moved.
 static __inline__ void __DEFAULT_FN_ATTRS
-_mm_stream_ps(float *__p, __m128 __a)
+_mm_stream_ps(void *__p, __m128 __a)
 {
   __builtin_nontemporal_store((__v4sf)__a, (__v4sf*)__p);
 }

@@ -3563,7 +3563,7 @@ _mm_maskstore_ps(float *__p, __m128i __m, __m128 __a)
 /// \param __b
 ///    A 256-bit integer vector containing the values to be moved.
 static __inline void __DEFAULT_FN_ATTRS
-_mm256_stream_si256(__m256i *__a, __m256i __b)
+_mm256_stream_si256(void *__a, __m256i __b)
 {
   typedef __v4di __v4di_aligned __attribute__((aligned(32)));
   __builtin_nontemporal_store((__v4di_aligned)__b, (__v4di_aligned*)__a);
@@ -3583,7 +3583,7 @@ _mm256_stream_si256(__m256i *__a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [4 x double] containing the values to be moved.
 static __inline void __DEFAULT_FN_ATTRS
-_mm256_stream_pd(double *__a, __m256d __b)
+_mm256_stream_pd(void *__a, __m256d __b)
 {
   typedef __v4df __v4df_aligned __attribute__((aligned(32)));
   __builtin_nontemporal_store((__v4df_aligned)__b, (__v4df_aligned*)__a);
@@ -3604,7 +3604,7 @@ _mm256_stream_pd(double *__a, __m256d __b)
 /// \param __a
 ///    A 256-bit vector of [8 x float] containing the values to be moved.
 static __inline void __DEFAULT_FN_ATTRS
-_mm256_stream_ps(float *__p, __m256 __a)
+_mm256_stream_ps(void *__p, __m256 __a)
 {
   typedef __v8sf __v8sf_aligned __attribute__((aligned(32)));
   __builtin_nontemporal_store((__v8sf_aligned)__a, (__v8sf_aligned*)__p);
