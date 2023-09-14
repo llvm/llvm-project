@@ -665,11 +665,7 @@ CharUnits VCallAndVBaseOffsetBuilder::getCurrentOffsetOffset() const {
   // vtable address point. (We subtract 3 to account for the information just
   // above the address point, the RTTI info, the offset to top, and the
   // vcall offset itself).
-  size_t NumComponentsAboveAddrPoint = 3;
-  if (Context.getLangOpts().OmitVTableRTTI)
-    NumComponentsAboveAddrPoint--;
-  int64_t OffsetIndex =
-      -(int64_t)(NumComponentsAboveAddrPoint + Components.size());
+  int64_t OffsetIndex = -(int64_t)(3 + Components.size());
 
   // Under the relative ABI, the offset widths are 32-bit ints instead of
   // pointer widths.
@@ -1673,8 +1669,7 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
   Components.push_back(VTableComponent::MakeOffsetToTop(OffsetToTop));
 
   // Next, add the RTTI.
-  if (!Context.getLangOpts().OmitVTableRTTI)
-    Components.push_back(VTableComponent::MakeRTTI(MostDerivedClass));
+  Components.push_back(VTableComponent::MakeRTTI(MostDerivedClass));
 
   uint64_t AddressPoint = Components.size();
 
