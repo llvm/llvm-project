@@ -458,7 +458,7 @@ if(MSVC)
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:10000000")
-elseif(MINGW) # FIXME: Also cygwin?
+elseif(MINGW OR CYGWIN)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
