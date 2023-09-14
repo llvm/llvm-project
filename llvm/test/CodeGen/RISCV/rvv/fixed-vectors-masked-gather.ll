@@ -12857,10 +12857,10 @@ define <4 x i32> @mgather_broadcast_load_unmasked(ptr %base) {
 ;
 ; RV64V-LABEL: mgather_broadcast_load_unmasked:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64V-NEXT:    vmv.v.i v10, 0
+; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV64V-NEXT:    vmv.v.i v9, 0
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei64.v v8, (a0), v10
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_broadcast_load_unmasked:
@@ -12949,10 +12949,10 @@ define <4 x i32> @mgather_broadcast_load_masked(ptr %base, <4 x i1> %m) {
 ;
 ; RV64V-LABEL: mgather_broadcast_load_masked:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64V-NEXT:    vmv.v.i v10, 0
+; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV64V-NEXT:    vmv.v.i v9, 0
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei64.v v8, (a0), v10, v0.t
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9, v0.t
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_broadcast_load_masked:
@@ -13016,11 +13016,11 @@ define <4 x i32> @mgather_unit_stride_load(ptr %base) {
 ;
 ; RV64V-LABEL: mgather_unit_stride_load:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64V-NEXT:    vid.v v8
-; RV64V-NEXT:    vsll.vi v10, v8, 2
+; RV64V-NEXT:    vsll.vi v9, v8, 2
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei64.v v8, (a0), v10
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_unit_stride_load:
@@ -13089,11 +13089,9 @@ define <4 x i32> @mgather_unit_stride_load_with_offset(ptr %base) {
 ; RV64V:       # %bb.0:
 ; RV64V-NEXT:    lui a1, 115073
 ; RV64V-NEXT:    addiw a1, a1, 1040
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64V-NEXT:    vmv.s.x v8, a1
-; RV64V-NEXT:    vsext.vf8 v10, v8
-; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei64.v v8, (a0), v10
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vmv.s.x v9, a1
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_unit_stride_load_with_offset:
@@ -13153,19 +13151,20 @@ define <4 x i32> @mgather_unit_stride_load_with_offset(ptr %base) {
 define <4 x i32> @mgather_unit_stride_load_narrow_idx(ptr %base) {
 ; RV32-LABEL: mgather_unit_stride_load_narrow_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsll.vi v8, v8, 2
-; RV32-NEXT:    vluxei32.v v8, (a0), v8
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_unit_stride_load_narrow_idx:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64V-NEXT:    vid.v v8
-; RV64V-NEXT:    vsll.vi v10, v8, 2
+; RV64V-NEXT:    vsll.vi v9, v8, 2
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei64.v v8, (a0), v10
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_unit_stride_load_narrow_idx:
@@ -13224,19 +13223,20 @@ define <4 x i32> @mgather_unit_stride_load_narrow_idx(ptr %base) {
 define <4 x i32> @mgather_unit_stride_load_wide_idx(ptr %base) {
 ; RV32-LABEL: mgather_unit_stride_load_wide_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsll.vi v8, v8, 2
-; RV32-NEXT:    vluxei32.v v8, (a0), v8
+; RV32-NEXT:    vsll.vi v9, v8, 2
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_unit_stride_load_wide_idx:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64V-NEXT:    vid.v v8
-; RV64V-NEXT:    vsll.vi v10, v8, 2
+; RV64V-NEXT:    vsll.vi v9, v8, 2
 ; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64V-NEXT:    vluxei64.v v8, (a0), v10
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_unit_stride_load_wide_idx:
@@ -13374,8 +13374,8 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV32-NEXT:    lui a1, %hi(.LCPI107_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI107_0)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle32.v v10, (a1)
-; RV32-NEXT:    vluxei32.v v8, (a0), v10
+; RV32-NEXT:    vle8.v v9, (a1)
+; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_strided_2xSEW:
@@ -13383,8 +13383,8 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV64V-NEXT:    lui a1, %hi(.LCPI107_0)
 ; RV64V-NEXT:    addi a1, a1, %lo(.LCPI107_0)
 ; RV64V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64V-NEXT:    vle64.v v12, (a1)
-; RV64V-NEXT:    vluxei64.v v8, (a0), v12
+; RV64V-NEXT:    vle8.v v9, (a1)
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_strided_2xSEW:
@@ -13491,8 +13491,8 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV32-NEXT:    lui a1, %hi(.LCPI108_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI108_0)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle32.v v10, (a1)
-; RV32-NEXT:    vluxei32.v v8, (a0), v10
+; RV32-NEXT:    vle8.v v9, (a1)
+; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_gather_2xSEW:
@@ -13500,8 +13500,8 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64V-NEXT:    lui a1, %hi(.LCPI108_0)
 ; RV64V-NEXT:    addi a1, a1, %lo(.LCPI108_0)
 ; RV64V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64V-NEXT:    vle64.v v12, (a1)
-; RV64V-NEXT:    vluxei64.v v8, (a0), v12
+; RV64V-NEXT:    vle8.v v9, (a1)
+; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mgather_gather_2xSEW:
