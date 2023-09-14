@@ -64,6 +64,7 @@ DisableOption(CfgConversion, "cfg-conversion", "disable FIR to CFG pass");
 DisableOption(FirAvc, "avc", "array value copy analysis and transformation");
 DisableOption(
     FirMao, "memory-allocation-opt", "memory allocation optimization");
+DisableOption(FirAliasTags, "fir-alias-tags", "fir alias analysis");
 
 /// CodeGen Passes
 #if !defined(FLANG_EXCLUDE_CODEGEN)
@@ -219,6 +220,9 @@ inline void createDefaultFIROptimizerPassPipeline(
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversionPass());
+
+  if (pc.AliasAnalysis && !disableFirAliasTags)
+    pm.addPass(fir::createAliasTagsPass());
 
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm);

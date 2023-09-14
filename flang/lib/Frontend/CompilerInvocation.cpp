@@ -214,6 +214,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::driver::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
 
+  opts.AliasAnalysis = false;
+  if (auto *arg =
+          args.getLastArg(clang::driver::options::OPT_falias_analysis,
+                          clang::driver::options::OPT_fno_alias_analysis)) {
+    if (arg->getOption().matches(clang::driver::options::OPT_falias_analysis))
+      opts.AliasAnalysis = true;
+  }
+
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
