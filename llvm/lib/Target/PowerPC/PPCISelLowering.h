@@ -370,10 +370,22 @@ namespace llvm {
     /// G8RC = TLSGD_AIX, TOC_ENTRY, TOC_ENTRY
     /// Op that combines two register copies of TOC entries
     /// (region handle into R3 and variable offset into R4) followed by a
-    /// GET_TLS_ADDR node which will be expanded to a call to __get_tls_addr.
+    /// GET_TLS_ADDR node which will be expanded to a call to __tls_get_addr.
     /// This node is used in 64-bit mode as well (in which case the result is
     /// G8RC and inputs are X3/X4).
     TLSGD_AIX,
+
+    /// %x3 = GET_TLS_MOD _$TLSML - For the AIX local-dynamic TLS model,
+    /// produces a call to __tls_get_mod(_$TLSML\@ml).
+    GET_TLS_MOD,
+
+    /// [GP|G8]RC = TLSLD_AIX, TOC_ENTRY(variable offset)
+    /// Op that internally creates TOC entry for the "_$TLSML" symbol, generates
+    /// GET_TLS_MOD node which will be expanded into a call to __tls_get_mod,
+    /// and then add the variable offset with the result from the call.
+    /// This node is used in both 32-bit and 64-bit modes. The only difference
+    /// is register class.
+    TLSLD_AIX,
 
     /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
     /// model, produces an ADDIS8 instruction that adds the GOT base

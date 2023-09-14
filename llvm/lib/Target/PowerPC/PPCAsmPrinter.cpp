@@ -613,12 +613,23 @@ void PPCAsmPrinter::LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::NOP));
 }
 
-/// This helper function creates the TlsGetAddr MCSymbol for AIX. We will
-/// create the csect and use the qual-name symbol instead of creating just the
-/// external symbol.
+/// This helper function creates the TlsGetAddr/TlsGetMod MCSymbol for AIX. We
+/// will create the csect and use the qual-name symbol instead of creating just
+/// the external symbol.
 static MCSymbol *createMCSymbolForTlsGetAddr(MCContext &Ctx, unsigned MIOpc) {
-  StringRef SymName =
-      MIOpc == PPC::GETtlsTpointer32AIX ? ".__get_tpointer" : ".__tls_get_addr";
+  StringRef SymName;
+  switch (MIOpc) {
+  default:
+    SymName = ".__tls_get_addr";
+    break;
+  case PPC::GETtlsTpointer32AIX:
+    SymName = ".__get_tpointer";
+    break;
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
+    SymName = ".__tls_get_mod";
+    break;
+  }
   return Ctx
       .getXCOFFSection(SymName, SectionKind::getText(),
                        XCOFF::CsectProperties(XCOFF::XMC_PR, XCOFF::XTY_ER))
@@ -660,14 +671,15 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
          "GETtls[ld]ADDR[32] must read GPR3");
 
   if (Subtarget->isAIXABI()) {
-    // On AIX, the variable offset should already be in R4 and the region handle
-    // should already be in R3.
-    // For TLSGD, which currently is the only supported access model, we only
-    // need to generate an absolute branch to .__tls_get_addr.
+    // On AIX, for TLSGD the variable offset should already be in R4 and the
+    // region handle should already be in R3, need to generate an absolute
+    // branch to .__tls_get_addr. For TLSLD the module handle should already be
+    // in R3, need to generate branch to .__tls_get_mod.
     Register VarOffsetReg = Subtarget->isPPC64() ? PPC::X4 : PPC::R4;
     (void)VarOffsetReg;
-    assert(MI->getOperand(2).isReg() &&
-           MI->getOperand(2).getReg() == VarOffsetReg &&
+    assert((MI->getNumExplicitOperands() < 3 ||
+            (MI->getOperand(2).isReg() &&
+             MI->getOperand(2).getReg() == VarOffsetReg)) &&
            "GETtls[ld]ADDR[32] must read GPR4");
     EmitAIXTlsCallHelper(MI);
     return;
@@ -710,6 +722,8 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
     return AP.GetJTISymbol(MO.getIndex());
   case MachineOperand::MO_BlockAddress:
     return AP.GetBlockAddressSymbol(MO.getBlockAddress());
+  case MachineOperand::MO_ExternalSymbol:
+    return AP.OutContext.getOrCreateSymbol(MO.getSymbolName());
   default:
     llvm_unreachable("Unexpected operand type to get symbol.");
   }
@@ -757,6 +771,16 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
     llvm_unreachable("Unexpected operand type to get TOC type.");
   }
 }
+
+// On AIX, TLS-local-dynamic requires that symbol for the module handle must
+// have the name "_$TLSML". This symbol is used as one TOC symbol reference
+// itself with ML relocation type, thus it has "[TC]" attached to its name.
+static inline bool isSpecialAIXSymbolTLSML(const MachineOperand &MO,
+                                           const bool IsAIX) {
+  return IsAIX && MO.isSymbol() &&
+         (std::strcmp(MO.getSymbolName(), "_$TLSML[TC]") == 0);
+}
+
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
 /// the current output stream.
 ///
@@ -846,6 +870,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM;
     if (MO.getTargetFlags() & PPCII::MO_TLSGD_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
+    if (MO.getTargetFlags() & PPCII::MO_TLSLD_FLAG) {
+      if (isSpecialAIXSymbolTLSML(MO, IsAIX))
+        // FIXME: On AIX the ML relocation type is only valid for a reference to
+        // a TOC symbol from the symbol itself, and right now its only user is
+        // symbol "_$TLSML". Use symbol name to decide that R_TLSML is expected.
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
+      if (IsAIX)
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
+    }
     return MCSymbolRefExpr::VariantKind::VK_None;
   };
 
@@ -964,7 +997,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LWZ);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
            "Invalid operand for LWZtoc.");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1053,7 +1087,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LD);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
            "Invalid operand!");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1091,7 +1126,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::ADDIS);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
            "Invalid operand for ADDIStocHA.");
 
     // Map the machine operand to its corresponding MCSymbol.
@@ -1124,7 +1160,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LWZ);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
            "Invalid operand for LWZtocL.");
 
     // Map the machine operand to its corresponding MCSymbol.
@@ -1156,7 +1193,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::ADDIS8);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
            "Invalid operand for ADDIStocHA8!");
 
     const MCSymbol *MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
@@ -1166,7 +1204,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const bool GlobalToc =
         MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal());
     if (GlobalToc || MO.isJTI() || MO.isBlockAddress() ||
-        (MO.isCPI() && TM.getCodeModel() == CodeModel::Large))
+        (MO.isCPI() && TM.getCodeModel() == CodeModel::Large) ||
+        isSpecialAIXSymbolTLSML(MO, IsAIX))
       MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
 
     VK = IsAIX ? MCSymbolRefExpr::VK_PPC_U : MCSymbolRefExpr::VK_PPC_TOC_HA;
@@ -1195,8 +1234,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LD);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() ||
-            MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            isSpecialAIXSymbolTLSML(MO, IsAIX)) &&
            "Invalid operand for LDtocL!");
 
     LLVM_DEBUG(assert(
@@ -1362,6 +1401,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDRPCREL:
   case PPC::GETtlsADDR32AIX:
   case PPC::GETtlsADDR64AIX:
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
     // Transform: %r3 = GETtlsADDRNNAIX %r3, %r4 (for NN == 32/64).
     // Into: BLA .__tls_get_addr()
     // Unlike on Linux, there is no symbol or relocation needed for this call.
@@ -2710,6 +2751,15 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
       TCEntry = cast<MCSectionXCOFF>(
           getObjFileLowering().getSectionForTOCEntry(S, TM));
+    } else if (I.first.second ==
+               MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML) {
+      // AIX assembler expects TC storage-mapping class for the "_$TLSML"
+      // symbol.
+      MCSection *MCSect = getObjFileLowering().getContext().getXCOFFSection(
+          cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName(),
+          SectionKind::getData(),
+          XCOFF::CsectProperties(XCOFF::XMC_TC, XCOFF::XTY_SD));
+      TCEntry = cast<MCSectionXCOFF>(MCSect);
     } else {
       TCEntry = cast<MCSectionXCOFF>(
           getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
@@ -2826,6 +2876,8 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 		 MMI->hasDebugInfo());
     break;
   }
+  case PPC::GETtlsMOD32AIX:
+  case PPC::GETtlsMOD64AIX:
   case PPC::GETtlsTpointer32AIX:
   case PPC::GETtlsADDR64AIX:
   case PPC::GETtlsADDR32AIX: {
