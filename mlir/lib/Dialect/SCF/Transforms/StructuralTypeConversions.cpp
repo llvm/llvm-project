@@ -247,12 +247,15 @@ public:
 };
 } // namespace
 
-void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
+void mlir::scf::populateSCFStructuralTypeConversions(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes,
                ConvertWhileOpTypes, ConvertConditionOpTypes>(
       typeConverter, patterns.getContext());
+}
+
+void mlir::scf::populateSCFStructuralTypeConversionTarget(
+    const TypeConverter &typeConverter, ConversionTarget &target) {
   target.addDynamicallyLegalOp<ForOp, IfOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getResultTypes());
   });
@@ -265,4 +268,11 @@ void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
   });
   target.addDynamicallyLegalOp<WhileOp, ConditionOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });
+}
+
+void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target) {
+  populateSCFStructuralTypeConversions(typeConverter, patterns);
+  populateSCFStructuralTypeConversionTarget(typeConverter, target);
 }
