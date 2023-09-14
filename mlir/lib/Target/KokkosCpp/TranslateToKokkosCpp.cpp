@@ -1908,9 +1908,11 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   os.indent();
   //FOR DEBUGGING THE EMITTED CODE:
   //The next 3 lines makes the generated function pause to let you attach a debugger
+  /*
   os << "std::cout << \"Starting MLIR function on process \" << getpid() << '\\n';\n";
   os << "std::cout << \"Optionally attach debugger now, then press <Enter> to continue: \";\n";
   os << "std::cin.get();\n";
+  */
   //Create/allocate device Kokkos::Views for the memref inputs.
   //TODO: if executing on on host, we might as well use the NumPy buffers directly
   if(!emitter.supportingSparse())
