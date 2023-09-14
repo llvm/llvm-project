@@ -622,7 +622,7 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
 }
 
 const char *Editline::Prompt() {
-  if (m_color_prompts)
+  if (!m_prompt_ansi_prefix.empty() || !m_prompt_ansi_suffix.empty())
     m_needs_prompt_repaint = true;
   return m_current_prompt.c_str();
 }
@@ -1084,13 +1084,9 @@ unsigned char Editline::TypedCharacter(int ch) {
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  const char *ansi_prefix =
-      m_color_prompts ? m_suggestion_ansi_prefix.c_str() : "";
-  const char *ansi_suffix =
-      m_color_prompts ? m_suggestion_ansi_suffix.c_str() : "";
-
   if (std::optional<std::string> to_add = m_suggestion_callback(line)) {
-    std::string to_add_color = ansi_prefix + to_add.value() + ansi_suffix;
+    std::string to_add_color =
+        m_suggestion_ansi_prefix + to_add.value() + m_suggestion_ansi_suffix;
     fputs(typed.c_str(), m_output_file);
     fputs(to_add_color.c_str(), m_output_file);
     size_t new_autosuggestion_size = line.size() + to_add->length();
@@ -1381,10 +1377,10 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 
 Editline::Editline(const char *editline_name, FILE *input_file,
                    FILE *output_file, FILE *error_file,
-                   std::recursive_mutex &output_mutex, bool color_prompts)
-    : m_editor_status(EditorStatus::Complete), m_color_prompts(color_prompts),
-      m_input_file(input_file), m_output_file(output_file),
-      m_error_file(error_file), m_input_connection(fileno(input_file), false),
+                   std::recursive_mutex &output_mutex)
+    : m_editor_status(EditorStatus::Complete), m_input_file(input_file),
+      m_output_file(output_file), m_error_file(error_file),
+      m_input_connection(fileno(input_file), false),
       m_output_mutex(output_mutex) {
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;

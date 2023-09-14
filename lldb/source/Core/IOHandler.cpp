@@ -226,7 +226,7 @@ IOHandlerEditline::IOHandlerEditline(
     Debugger &debugger, IOHandler::Type type,
     const char *editline_name, // Used for saving history files
     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
-    bool multi_line, bool color_prompts, uint32_t line_number_start,
+    bool multi_line, bool color, uint32_t line_number_start,
     IOHandlerDelegate &delegate)
     : IOHandlerEditline(debugger, type,
                         FileSP(),       // Inherit input from top input reader
@@ -234,7 +234,7 @@ IOHandlerEditline::IOHandlerEditline(
                         StreamFileSP(), // Inherit error from top input reader
                         0,              // Flags
                         editline_name,  // Used for saving history files
-                        prompt, continuation_prompt, multi_line, color_prompts,
+                        prompt, continuation_prompt, multi_line, color,
                         line_number_start, delegate) {}
 
 IOHandlerEditline::IOHandlerEditline(
@@ -243,7 +243,7 @@ IOHandlerEditline::IOHandlerEditline(
     uint32_t flags,
     const char *editline_name, // Used for saving history files
     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
-    bool multi_line, bool color_prompts, uint32_t line_number_start,
+    bool multi_line, bool color, uint32_t line_number_start,
     IOHandlerDelegate &delegate)
     : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags),
 #if LLDB_ENABLE_LIBEDIT
@@ -251,8 +251,8 @@ IOHandlerEditline::IOHandlerEditline(
 #endif
       m_delegate(delegate), m_prompt(), m_continuation_prompt(),
       m_current_lines_ptr(nullptr), m_base_line_number(line_number_start),
-      m_curr_line_idx(UINT32_MAX), m_multi_line(multi_line),
-      m_color_prompts(color_prompts), m_interrupt_exits(true) {
+      m_curr_line_idx(UINT32_MAX), m_multi_line(multi_line), m_color(color),
+      m_interrupt_exits(true) {
   SetPrompt(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
@@ -262,9 +262,9 @@ IOHandlerEditline::IOHandlerEditline(
                  m_input_sp && m_input_sp->GetIsRealTerminal();
 
   if (use_editline) {
-    m_editline_up = std::make_unique<Editline>(
-        editline_name, GetInputFILE(), GetOutputFILE(), GetErrorFILE(),
-        GetOutputMutex(), m_color_prompts);
+    m_editline_up = std::make_unique<Editline>(editline_name, GetInputFILE(),
+                                               GetOutputFILE(), GetErrorFILE(),
+                                               GetOutputMutex());
     m_editline_up->SetIsInputCompleteCallback(
         [this](Editline *editline, StringList &lines) {
           return this->IsInputCompleteCallback(editline, lines);
@@ -278,10 +278,12 @@ IOHandlerEditline::IOHandlerEditline(
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
         return this->SuggestionCallback(line);
       });
-      m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
-          debugger.GetAutosuggestionAnsiPrefix()));
-      m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
-          debugger.GetAutosuggestionAnsiSuffix()));
+      if (m_color) {
+        m_editline_up->SetSuggestionAnsiPrefix(ansi::FormatAnsiTerminalCodes(
+            debugger.GetAutosuggestionAnsiPrefix()));
+        m_editline_up->SetSuggestionAnsiSuffix(ansi::FormatAnsiTerminalCodes(
+            debugger.GetAutosuggestionAnsiSuffix()));
+      }
     }
     // See if the delegate supports fixing indentation
     const char *indent_chars = delegate.IOHandlerGetFixIndentationCharacters();
@@ -476,7 +478,7 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
     m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
-    if (m_debugger.GetUseColor()) {
+    if (m_color) {
       m_editline_up->SetPromptAnsiPrefix(
           ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
       m_editline_up->SetPromptAnsiSuffix(
