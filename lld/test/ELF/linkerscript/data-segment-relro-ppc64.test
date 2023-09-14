@@ -1,0 +1,79 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/a.s -o %t/a.o
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le %p/Inputs/shared.s -o %t/b.o
+# RUN: ld.lld -shared -soname=b %t/b.o -o %t/b.so
+
+# RUN: ld.lld -z max-page-size=65536 -z norelro %t/a.o %t/b.so -T %t/1.t -o %t/a1
+# RN: llvm-readelf -S -l %t/a1 | FileCheck %s --check-prefixes=CHECK1
+
+# RUN: ld.lld -z max-page-size=65536 -z relro %t/a.o %t/b.so -T %t/1.t -o %t/a2
+# RUN: llvm-readelf -S -l %t/a2 | FileCheck %s --check-prefixes=CHECK2
+
+## -z norelro suppresses the .relro_padding section.
+# CHECK1:      Name           Type     Address          Off      Size ES Flg
+# CHECK1:      .foo           PROGBITS
+# CHECK1-NEXT: .orphan.rw     PROGBITS
+# CHECK1-NEXT: .branch_lt     PROGBITS
+# CHECK1-NEXT: .got           PROGBITS
+# CHECK1-NEXT: .data          PROGBITS
+# CHECK1-NEXT: .bss           NOBITS
+
+# CHECK2:      Name           Type     Address          Off      Size ES Flg
+# CHECK2-NEXT:                NULL     {{.*}}
+# CHECK2:      .orphan.ro     PROGBITS {{.*}}                              A
+# CHECK2:      .dynamic       DYNAMIC  {{.*}}                             WA
+# CHECK2-NEXT: .branch_lt     PROGBITS {{.*}}                             WA
+# CHECK2-NEXT: .got           PROGBITS {{.*}}                             WA
+# CHECK2-NEXT: .relro_padding NOBITS   00000000000100f0 0100f0 000f10 00  WA
+# CHECK2-NEXT: .data          PROGBITS {{.*}}                             WA
+# CHECK2-NEXT: .foo           PROGBITS {{.*}}                             WA
+# CHECK2-NEXT: .orphan.rw     PROGBITS {{.*}}                             WA
+# CHECK2-NEXT: .bss           NOBITS   {{.*}}                             WA
+
+#--- a.s
+.global _start
+_start:
+  addis 3, 2, bar2@toc@ha
+  ld 12, bar2@toc@l(3)
+  mtctr 12
+  bctrl
+  b bar
+  nop
+
+.section .data,"aw"
+.quad 0
+
+.zero 4
+.section .foo,"aw"
+.section .bss,"",@nobits
+
+.section .orphan.ro,"a",@progbits
+.dc.a 0
+
+.section .orphan.rw,"aw",@progbits
+.dc.a .orphan.rw
+
+#--- 1.t
+SECTIONS {
+  . = SIZEOF_HEADERS;
+
+  .plt  : { *(.plt) }
+  .text : { *(.text) }
+
+  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
+
+  .dynamic : { *(.dynamic) }
+  .branch_lt : { *(.branch_lt) }
+  .got : { *(.got) }
+
+  . = DATA_SEGMENT_RELRO_END (0, .);
+
+  .plt : { *(.plt) }
+  .data : { *(.data) }
+  .bss : { *(.bss) }
+
+  . = DATA_SEGMENT_END (.);
+
+  .comment 0 : { *(.comment) }
+}
