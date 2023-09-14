@@ -68,15 +68,15 @@ template <class ContextT> void GenericConvergenceVerifier<ContextT>::clear() {
 }
 
 template <class ContextT>
+void GenericConvergenceVerifier<ContextT>::visit(const BlockT &BB) {
+  SeenFirstConvOp = false;
+}
+
+template <class ContextT>
 void GenericConvergenceVerifier<ContextT>::visit(const InstructionT &I) {
   auto ID = ContextT::getIntrinsicID(I);
   auto *TokenDef = findAndCheckConvergenceTokenUsed(I);
   bool IsCtrlIntrinsic = true;
-
-  // If this is the first instruction in the block, then we have not seen a
-  // convergent op yet.
-  if (!I.getPrevNode())
-    SeenFirstConvOp = false;
 
   switch (ID) {
   case Intrinsic::experimental_convergence_entry:
