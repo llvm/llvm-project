@@ -1446,7 +1446,7 @@ TEST(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
-TEST(TransferTest, StructModeledFieldsWithConstAccessor) {
+TEST(TransferTest, StructModeledFieldsWithAccessor) {
   std::string Code = R"(
     class S {
       int *P;
@@ -1457,9 +1457,9 @@ TEST(TransferTest, StructModeledFieldsWithConstAccessor) {
     public:
       int *getPtr() const { return P; }
       int *getPtrNonConst() { return Q; }
-      int getInt() const { return X; }
-      int getInt(int i) const { return Y; }
-      int getIntNonConst() { return Z; }
+      int getInt(int i) const { return X; }
+      int getWithOtherWork(int i) { Y += i; return Y; }
+      int getIntNotCalled() const { return Z; }
       int getIntNoDefinition() const;
     };
 
@@ -1467,9 +1467,9 @@ TEST(TransferTest, StructModeledFieldsWithConstAccessor) {
       S s;
       int *p = s.getPtr();
       int *q = s.getPtrNonConst();
-      int x = s.getInt();
-      int y = s.getIntNonConst();
-      int z = s.getIntNoDefinition();
+      int x = s.getInt(1);
+      int y = s.getWithOtherWork(1);
+      int w = s.getIntNoDefinition();
       // [[p]]
     }
   )";
@@ -1481,12 +1481,15 @@ TEST(TransferTest, StructModeledFieldsWithConstAccessor) {
               getEnvironmentAtAnnotation(Results, "p");
         auto &SLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s");
         std::vector<const ValueDecl*> Fields;
-        for (auto [Field, _] : SLoc.children())
+        for (auto [Field, _] : SLoc.children()) {
           Fields.push_back(Field);
-        // Only the fields that have corresponding const accessor methods
-        // should be modeled.
+          llvm::dbgs() << Field->getNameAsString() << "\n";
+        }
+        // Only the fields that have simple accessor methods (that have a
+        // single statement body that returns the member variable) should be modeled.
         ASSERT_THAT(Fields, UnorderedElementsAre(
-            findValueDecl(ASTCtx, "P"), findValueDecl(ASTCtx, "X")));
+            findValueDecl(ASTCtx, "P"), findValueDecl(ASTCtx, "Q"),
+            findValueDecl(ASTCtx, "X")));
       });
 }
 
