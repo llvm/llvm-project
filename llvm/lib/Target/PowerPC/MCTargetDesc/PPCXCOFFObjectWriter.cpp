@@ -116,6 +116,10 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
       return {XCOFF::RelocationType::R_TLS_IE, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForFKData};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
+      return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForFKData};
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSML:
+      return {XCOFF::RelocationType::R_TLSML, SignAndSizeForFKData};
     case MCSymbolRefExpr::VK_None:
       return {XCOFF::RelocationType::R_POS, SignAndSizeForFKData};
     }
