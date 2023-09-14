@@ -34,8 +34,7 @@
 !Filename = !llvm.ptr<i8>
 
 #DenseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense" ],
-  dimToLvl = affine_map<(i,j) -> (i,j)>
+  map = (d0, d1) -> (d0 : dense, d1 : dense)
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{

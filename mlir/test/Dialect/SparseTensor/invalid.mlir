@@ -371,7 +371,7 @@ func.func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 func.func @sparse_convert_rank_mismatch(%arg0: tensor<10x10xf64, #DCSR>) -> tensor<?xf64> {
   // expected-error@+1 {{unexpected conversion mismatch in rank}}
@@ -714,7 +714,7 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Unmatched number of arguments in the block}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -725,7 +725,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Expecting Index type for argument at index 1}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -736,7 +736,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -747,7 +747,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -758,7 +758,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   // expected-error@+1 {{Mismatch in number of init arguments and results}}
   sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 do {
@@ -769,7 +769,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   // expected-error@+1 {{Mismatch in types of init arguments and results}}
   %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> i32 do {
@@ -780,7 +780,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   // expected-error@+1 {{Mismatch in types of yield values and results}}
   %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> f32 do {
