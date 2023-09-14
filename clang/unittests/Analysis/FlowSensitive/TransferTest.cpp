@@ -2124,6 +2124,30 @@ TEST(TransferTest, AssignmentOperator) {
       });
 }
 
+TEST(TransferTest, AssignmentOperatorFromBase) {
+  // This is a crash repro. We don't model the copy this case, so no
+  // expectations on the copied field of the base class are checked.
+  std::string Code = R"(
+    struct Base {
+      int base;
+    };
+    struct Derived : public Base {
+      using Base::operator=;
+      int derived;
+    };
+    void target(Base B, Derived D) {
+      D.base = 1;
+      D.derived = 1;
+      D = B;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
 TEST(TransferTest, AssignmentOperatorFromCallResult) {
   std::string Code = R"(
     struct A {};
