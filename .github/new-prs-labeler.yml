@@ -172,6 +172,7 @@ mlir:dlti:
 
 mlir:emitc:
   - mlir/**/EmitC/**
+  - mlir/lib/Target/Cpp/**
 
 mlir:func:
   - mlir/**/Func/**
@@ -183,7 +184,8 @@ mlir:index:
   - mlir/**/Index/**
 
 mlir:llvm:
-  - mlir/**/LLVM/**
+  - mlir/**/LLVM*
+  - mlir/**/LLVM*/**
 
 mlir:linalg:
   - mlir/**/*linalg/**
@@ -493,14 +495,19 @@ llvm:ir:
   - llvm/lib/IR/**
   - llvm/include/llvm/IR/**
   - llvm/docs/LangRef.rst
+  - llvm/unittests/IR/**
 
 llvm:analysis:
   - llvm/lib/Analysis/**
   - llvm/include/llvm/Analysis/**
+  - llvm/test/Analysis/**
+  - llvm/unittests/Analysis/**
 
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
+  - llvm/test/Transforms/**
+  - llvm/unittests/Transforms/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -727,3 +734,33 @@ backend:X86:
 
 third-party:unittests:
   - third-party/unittests/**
+
+llvm:binary-utilities:
+  - llvm/docs/CommandGuide/llvm-*
+  - llvm/include/llvm/BinaryFormat/**
+  - llvm/include/llvm/DebugInfo/Symbolize/**
+  - llvm/include/llvm/ObjCopy/**
+  - llvm/include/llvm/Object/**
+  - llvm/lib/BinaryFormat/**
+  - llvm/lib/DebugInfo/Symbolize/**
+  - llvm/lib/ObjCopy/**
+  - llvm/lib/Object/**
+  - llvm/test/Object/**
+  - llvm/test/tools/llvm-ar/**
+  - llvm/test/tools/llvm-cxxfilt/**
+  - llvm/test/tools/llvm-nm/**
+  - llvm/test/tools/llvm-objcopy/**
+  - llvm/test/tools/llvm-objdump/**
+  - llvm/test/tools/llvm-readobj/**
+  - llvm/test/tools/llvm-size/**
+  - llvm/test/tools/llvm-strings/**
+  - llvm/test/tools/llvm-symbolizer/**
+  - llvm/tools/llvm-ar/**
+  - llvm/tools/llvm-cxxfilt/**
+  - llvm/tools/llvm-nm/**
+  - llvm/tools/llvm-objcopy/**
+  - llvm/tools/llvm-objdump/**
+  - llvm/tools/llvm-readobj/**
+  - llvm/tools/llvm-size/**
+  - llvm/tools/llvm-strings/**
+  - llvm/tools/llvm-symbolizer/**
