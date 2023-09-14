@@ -635,6 +635,7 @@ public:
   Triple::ArchType getArch() { return Target.getArch(); }
 
   Expected<uint64_t> materializeGroup(cas::ObjectRef ID);
+  Expected<uint64_t> materializeDebugAbbrevUnopt(ArrayRef<cas::ObjectRef> Refs);
   Expected<uint64_t> materializeSection(cas::ObjectRef ID, raw_ostream *Stream);
   Expected<uint64_t> materializeAtom(cas::ObjectRef ID, raw_ostream *Stream);
   Expected<uint64_t> reconstructSection(SmallVectorImpl<char> &SectionBuffer,
