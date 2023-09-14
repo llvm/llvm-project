@@ -187,6 +187,16 @@ public:
   /// Check whether this struct can be C++ zero-initialized with a
   /// zeroinitializer.
   bool isZeroInitializable() const { return IsZeroInitializable; }
+
+  /// Return the BitFieldInfo that corresponds to the field FD.
+  const CIRGenBitFieldInfo &getBitFieldInfo(const clang::FieldDecl *FD) const {
+    FD = FD->getCanonicalDecl();
+    assert(FD->isBitField() && "Invalid call for non-bit-field decl!");
+    llvm::DenseMap<const clang::FieldDecl *, CIRGenBitFieldInfo>::const_iterator
+        it = BitFields.find(FD);
+    assert(it != BitFields.end() && "Unable to find bitfield info");
+    return it->second;
+  }
 };
 
 } // namespace cir
