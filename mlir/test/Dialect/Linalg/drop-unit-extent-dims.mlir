@@ -854,7 +854,7 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
   iterator_types = ["parallel", "reduction"]
 }
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = ["dense", "compressed"] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 func.func @sparse_case(%arg0: tensor<8x8xf32, #CSR>, %arg1: tensor<8xf32>) -> tensor<8xf32> {
     %0 = tensor.empty() : tensor<8xf32>
