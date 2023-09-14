@@ -277,7 +277,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
 
   static const DenseSet<StringRef> PreservedSymbolsSet =
       buildPreservedSymbolsSet();
-  bool IsPreservedSymbol = PreservedSymbolsSet.count(GV->getName());
+  bool IsPreservedSymbol = PreservedSymbolsSet.contains(GV->getName());
 
   if (Used.count(GV) || IsPreservedSymbol)
     Sym.Flags |= 1 << storage::Symbol::FB_used;
