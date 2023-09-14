@@ -869,6 +869,12 @@ public:
                                 clang::SourceLocation Loc,
                                 LValueBaseInfo BaseInfo,
                                 bool isNontemporal = false);
+  mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
+                                mlir::Location Loc, LValueBaseInfo BaseInfo,
+                                bool isNontemporal = false);
+
+  RValue buildLoadOfBitfieldLValue(LValue LV, SourceLocation Loc);
+
   /// Load a scalar value from an address, taking care to appropriately convert
   /// from the memory representation to CIR value representation.
   mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
@@ -883,6 +889,7 @@ public:
   /// form the memory representation to the CIR value representation. The
   /// l-value must be a simple l-value.
   mlir::Value buildLoadOfScalar(LValue lvalue, clang::SourceLocation Loc);
+  mlir::Value buildLoadOfScalar(LValue lvalue, mlir::Location Loc);
 
   Address buildLoadOfReference(LValue RefLVal, mlir::Location Loc,
                                LValueBaseInfo *PointeeBaseInfo = nullptr);
@@ -1237,6 +1244,9 @@ public:
   /// is 'Ty'.
   void buildStoreThroughLValue(RValue Src, LValue Dst);
 
+  void buildStoreThroughBitfieldLValue(RValue Src, LValue Dst,
+                                       mlir::Value &Result);
+
   mlir::cir::BrOp buildBranchThroughCleanup(mlir::Location Loc, JumpDest Dest);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
@@ -1514,7 +1524,8 @@ public:
 
   AggValueSlot::Overlap_t getOverlapForFieldInit(const FieldDecl *FD);
   LValue buildLValueForField(LValue Base, const clang::FieldDecl *Field);
-
+  LValue buildLValueForBitField(LValue base, const FieldDecl *field);
+  
   /// Like buildLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
   /// stored in the reference.
@@ -1542,6 +1553,8 @@ public:
            "Invalid argument to GetAddrOfLocalVar(), no decl!");
     return it->second;
   }
+
+  Address getAddrOfField(LValue base, const clang::FieldDecl *field, unsigned index);
 
   /// Given an opaque value expression, return its LValue mapping if it exists,
   /// otherwise create one.

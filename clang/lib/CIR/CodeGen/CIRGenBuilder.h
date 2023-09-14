@@ -460,6 +460,11 @@ public:
     return getConstInt(
         loc, t, isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
   }
+  mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
+                            const llvm::APInt &val) {
+    return create<mlir::cir::ConstantOp>(loc, typ,
+                                         getAttr<mlir::cir::IntAttr>(typ, val));
+  }
   mlir::cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
                                          getCIRBoolAttr(state));
@@ -677,6 +682,65 @@ public:
                                       mlir::cir::UnaryOpKind::Not, value);
   }
 
+  mlir::Value createBinop(mlir::Value lhs, mlir::cir::BinOpKind kind,
+                          const llvm::APInt &rhs) {
+    return create<mlir::cir::BinOp>(
+        lhs.getLoc(), lhs.getType(), kind, lhs,
+        getConstAPInt(lhs.getLoc(), lhs.getType(), rhs));
+  }
+
+  mlir::Value createBinop(mlir::Value lhs, mlir::cir::BinOpKind kind,
+                          mlir::Value rhs) {
+    return create<mlir::cir::BinOp>(lhs.getLoc(), lhs.getType(), kind, lhs,
+                                    rhs);
+  }
+
+  mlir::Value createShift(mlir::Value lhs, const llvm::APInt &rhs,
+                          bool isShiftLeft) {
+    return create<mlir::cir::ShiftOp>(
+        lhs.getLoc(), lhs.getType(), lhs,
+        getConstAPInt(lhs.getLoc(), lhs.getType(), rhs), isShiftLeft);
+  }
+
+  mlir::Value createShift(mlir::Value lhs, unsigned bits, bool isShiftLeft) {
+    auto width = lhs.getType().dyn_cast<mlir::cir::IntType>().getWidth();
+    auto shift = llvm::APInt(width, bits);
+    return createShift(lhs, shift, isShiftLeft);
+  }
+
+  mlir::Value createShiftLeft(mlir::Value lhs, unsigned bits) {
+    return createShift(lhs, bits, true);
+  }
+
+  mlir::Value createShiftRight(mlir::Value lhs, unsigned bits) {
+    return createShift(lhs, bits, false);
+  }
+
+  mlir::Value createLowBitsSet(mlir::Location loc, unsigned size,
+                               unsigned bits) {
+    auto val = llvm::APInt::getLowBitsSet(size, bits);
+    auto typ = mlir::cir::IntType::get(getContext(), size, false);
+    return getConstAPInt(loc, typ, val);
+  }
+
+  mlir::Value createAnd(mlir::Value lhs, llvm::APInt rhs) {
+    auto val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
+    return createBinop(lhs, mlir::cir::BinOpKind::And, val);
+  }
+
+  mlir::Value createAnd(mlir::Value lhs, mlir::Value rhs) {
+    return createBinop(lhs, mlir::cir::BinOpKind::And, rhs);
+  }
+
+  mlir::Value createOr(mlir::Value lhs, llvm::APInt rhs) {
+    auto val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
+    return createBinop(lhs, mlir::cir::BinOpKind::Or, val);
+  }
+
+  mlir::Value createOr(mlir::Value lhs, mlir::Value rhs) {
+    return createBinop(lhs, mlir::cir::BinOpKind::Or, rhs);
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
@@ -727,6 +791,5 @@ public:
     return createCast(mlir::cir::CastKind::bitcast, src, newTy);
   }
 };
-
 } // namespace cir
 #endif

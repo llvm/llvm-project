@@ -1060,9 +1060,7 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
     std::swap(pointerOperand, indexOperand);
   }
 
-  bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
-
-  auto &DL = CGF.CGM.getDataLayout();
+  bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();  
 
   // Some versions of glibc and gcc use idioms (particularly in their malloc
   // routines) that add a pointer-sized integer (known to be a pointer value)
@@ -1863,7 +1861,7 @@ mlir::Value ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     // 'An assignment expression has the value of the left operand after the
     // assignment...'.
     if (LHS.isBitField()) {
-      llvm_unreachable("NYI");
+      CGF.buildStoreThroughBitfieldLValue(RValue::get(RHS), LHS, RHS);
     } else {
       CGF.buildNullabilityCheck(LHS, RHS, E->getExprLoc());
       CIRGenFunction::SourceLocRAIIObject loc{CGF,
@@ -1964,25 +1962,27 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     auto condV = CGF.evaluateExprAsBool(condExpr);
     assert(!UnimplementedFeature::incrementProfileCounter());
 
-    return builder.create<mlir::cir::TernaryOp>(
-        loc, condV, /*thenBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          auto lhs = Visit(lhsExpr);
-          if (!lhs) {
-            lhs = builder.getNullValue(CGF.VoidTy, loc);
-            lhsIsVoid = true;
-          }
-          builder.create<mlir::cir::YieldOp>(loc, lhs);
-        },
-        /*elseBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          auto rhs = Visit(rhsExpr);
-          if (lhsIsVoid) {
-            assert(!rhs && "lhs and rhs types must match");
-            rhs = builder.getNullValue(CGF.VoidTy, loc);
-          }
-          builder.create<mlir::cir::YieldOp>(loc, rhs);
-        }).getResult();
+    return builder
+        .create<mlir::cir::TernaryOp>(
+            loc, condV, /*thenBuilder=*/
+            [&](mlir::OpBuilder &b, mlir::Location loc) {
+              auto lhs = Visit(lhsExpr);
+              if (!lhs) {
+                lhs = builder.getNullValue(CGF.VoidTy, loc);
+                lhsIsVoid = true;
+              }
+              builder.create<mlir::cir::YieldOp>(loc, lhs);
+            },
+            /*elseBuilder=*/
+            [&](mlir::OpBuilder &b, mlir::Location loc) {
+              auto rhs = Visit(rhsExpr);
+              if (lhsIsVoid) {
+                assert(!rhs && "lhs and rhs types must match");
+                rhs = builder.getNullValue(CGF.VoidTy, loc);
+              }
+              builder.create<mlir::cir::YieldOp>(loc, rhs);
+            })
+        .getResult();
   }
 
   mlir::Value condV = CGF.buildOpOnBoolExpr(condExpr, loc, lhsExpr, rhsExpr);
@@ -2012,51 +2012,53 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     }
   };
 
-  return builder.create<mlir::cir::TernaryOp>(
-      loc, condV, /*trueBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        CIRGenFunction::LexicalScopeContext lexScope{loc,
-                                                     b.getInsertionBlock()};
-        CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
-        CGF.currLexScope->setAsTernary();
+  return builder
+      .create<mlir::cir::TernaryOp>(
+          loc, condV, /*trueBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            CIRGenFunction::LexicalScopeContext lexScope{loc,
+                                                         b.getInsertionBlock()};
+            CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
+            CGF.currLexScope->setAsTernary();
 
-        assert(!UnimplementedFeature::incrementProfileCounter());
-        eval.begin(CGF);
-        auto lhs = Visit(lhsExpr);
-        eval.end(CGF);
+            assert(!UnimplementedFeature::incrementProfileCounter());
+            eval.begin(CGF);
+            auto lhs = Visit(lhsExpr);
+            eval.end(CGF);
 
-        if (lhs) {
-          yieldTy = lhs.getType();
-          b.create<mlir::cir::YieldOp>(loc, lhs);
-          return;
-        }
-        // If LHS or RHS is a throw or void expression we need to patch arms
-        // as to properly match yield types.
-        insertPoints.push_back(b.saveInsertionPoint());
-      },
-      /*falseBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        CIRGenFunction::LexicalScopeContext lexScope{loc,
-                                                     b.getInsertionBlock()};
-        CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
-        CGF.currLexScope->setAsTernary();
+            if (lhs) {
+              yieldTy = lhs.getType();
+              b.create<mlir::cir::YieldOp>(loc, lhs);
+              return;
+            }
+            // If LHS or RHS is a throw or void expression we need to patch arms
+            // as to properly match yield types.
+            insertPoints.push_back(b.saveInsertionPoint());
+          },
+          /*falseBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            CIRGenFunction::LexicalScopeContext lexScope{loc,
+                                                         b.getInsertionBlock()};
+            CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+            CGF.currLexScope->setAsTernary();
 
-        assert(!UnimplementedFeature::incrementProfileCounter());
-        eval.begin(CGF);
-        auto rhs = Visit(rhsExpr);
-        eval.end(CGF);
+            assert(!UnimplementedFeature::incrementProfileCounter());
+            eval.begin(CGF);
+            auto rhs = Visit(rhsExpr);
+            eval.end(CGF);
 
-        if (rhs) {
-          yieldTy = rhs.getType();
-          b.create<mlir::cir::YieldOp>(loc, rhs);
-        } else {
-          // If LHS or RHS is a throw or void expression we need to patch arms
-          // as to properly match yield types.
-          insertPoints.push_back(b.saveInsertionPoint());
-        }
+            if (rhs) {
+              yieldTy = rhs.getType();
+              b.create<mlir::cir::YieldOp>(loc, rhs);
+            } else {
+              // If LHS or RHS is a throw or void expression we need to patch
+              // arms as to properly match yield types.
+              insertPoints.push_back(b.saveInsertionPoint());
+            }
 
-        patchVoidOrThrowSites();
-      }).getResult();
+            patchVoidOrThrowSites();
+          })
+      .getResult();
 }
 
 mlir::Value CIRGenFunction::buildScalarPrePostIncDec(const UnaryOperator *E,
