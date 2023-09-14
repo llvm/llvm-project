@@ -1771,8 +1771,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::ADDIS_TLSGD_HA:  return "PPCISD::ADDIS_TLSGD_HA";
   case PPCISD::ADDI_TLSGD_L:    return "PPCISD::ADDI_TLSGD_L";
   case PPCISD::GET_TLS_ADDR:    return "PPCISD::GET_TLS_ADDR";
-  case PPCISD::GET_TLS_MOD:
-    return "PPCISD::GET_TLS_MOD";
+  case PPCISD::GET_TLS_MOD_AIX:
+    return "PPCISD::GET_TLS_MOD_AIX";
   case PPCISD::GET_TPOINTER:    return "PPCISD::GET_TPOINTER";
   case PPCISD::ADDI_TLSGD_L_ADDR: return "PPCISD::ADDI_TLSGD_L_ADDR";
   case PPCISD::TLSGD_AIX:       return "PPCISD::TLSGD_AIX";

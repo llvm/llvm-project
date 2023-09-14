@@ -160,8 +160,10 @@ protected:
         if (IsAIX) {
           if (MI.getOpcode() == PPC::TLSLDAIX8 ||
               MI.getOpcode() == PPC::TLSLDAIX) {
-            // For Local-Dynamic
-            auto &Subtarget = MBB.getParent()->getSubtarget<PPCSubtarget>();
+            // For Local-Dynamic, the module handle is copied in r3. The copy is
+            // followed by GETtlsMOD32AIX/GETtlsMOD64AIX.
+            const PPCSubtarget &Subtarget =
+                MBB.getParent()->getSubtarget<PPCSubtarget>();
             bool IsLargeModel =
                 Subtarget.getTargetMachine().getCodeModel() == CodeModel::Large;
             Register ModuleHandleHReg;
@@ -190,9 +192,9 @@ protected:
                 .addReg(GPR3)
                 .addReg(MI.getOperand(1).getReg());
           } else {
-            // For Global-Dynamic
-            // The variable offset and region handle are copied in r4 and r3.
-            // The copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
+            // For Global-Dynamic, the variable offset and region handle are
+            // copied in r4 and r3. The copies are followed by
+            // GETtlsADDR32AIX/GETtlsADDR64AIX.
             if (!IsTLSTPRelMI) {
               BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
                   .addReg(MI.getOperand(1).getReg());
