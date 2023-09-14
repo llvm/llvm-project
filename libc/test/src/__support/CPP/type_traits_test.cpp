@@ -169,7 +169,7 @@ struct Delegate {
 };
 
 template <int tag> struct Tag {
-  static int value() { return tag; }
+  static constexpr int value = tag;
 };
 
 struct Functor {
@@ -177,6 +177,10 @@ struct Functor {
   auto operator()() const & { return Tag<1>(); }
   auto operator()() && { return Tag<2>(); }
   auto operator()() const && { return Tag<3>(); }
+
+  const Tag<0> &operator()(const Tag<0> &a) { return a; }
+  const Tag<0> &&operator()(const Tag<0> &&a) { return cpp::move(a); }
+  Tag<1> operator()(Tag<1> a) { return a; }
 };
 
 } // namespace invoke_detail
@@ -207,10 +211,10 @@ TEST(LlvmLibcTypeTraitsTest, invoke) {
   { // Functor with several ref qualifier
     Functor f;
     const Functor cf;
-    EXPECT_EQ(invoke(f).value(), 0);
-    EXPECT_EQ(invoke(cf).value(), 1);
-    EXPECT_EQ(invoke(move(f)).value(), 2);
-    EXPECT_EQ(invoke(move(cf)).value(), 3);
+    EXPECT_EQ(invoke(f).value, 0);
+    EXPECT_EQ(invoke(cf).value, 1);
+    EXPECT_EQ(invoke(move(f)).value, 2);
+    EXPECT_EQ(invoke(move(cf)).value, 3);
   }
   { // lambda
     EXPECT_EQ(invoke([]() -> int { return 2; }), 2);
@@ -230,11 +234,16 @@ TEST(LlvmLibcTypeTraitsTest, invoke_result) {
   EXPECT_TRUE((is_same_v<invoke_result_t<int (*)(int), int>, int>));
   EXPECT_TRUE((
       is_same_v<invoke_result_t<int (*Delegate::*)(int), Delegate, int>, int>));
-  // Functor with several ref qualifier
+  // Functor with several ref qualifiers
   EXPECT_TRUE((is_same_v<invoke_result_t<Functor &>, Tag<0>>));
   EXPECT_TRUE((is_same_v<invoke_result_t<Functor const &>, Tag<1>>));
   EXPECT_TRUE((is_same_v<invoke_result_t<Functor &&>, Tag<2>>));
   EXPECT_TRUE((is_same_v<invoke_result_t<Functor const &&>, Tag<3>>));
+  // Functor with several arg qualifiers
+  EXPECT_TRUE(
+      (is_same_v<invoke_result_t<Functor &&, Tag<0> &>, const Tag<0> &>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor, Tag<0>>, const Tag<0> &&>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor, Tag<1>>, Tag<1>>));
   {
     auto lambda = []() {};
     EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda)>, void>));

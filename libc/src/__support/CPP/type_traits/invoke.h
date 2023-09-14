@@ -26,7 +26,7 @@ template <class FunctionPtrType> struct invoke_dispatcher {
   template <class T, class... Args,
             typename = cpp::enable_if_t<
                 cpp::is_same_v<cpp::decay_t<T>, FunctionPtrType>>>
-  static auto call(T &&fun, Args &&...args) {
+  static decltype(auto) call(T &&fun, Args &&...args) {
     return cpp::forward<T>(fun)(cpp::forward<Args>(args)...);
   }
 };
@@ -37,7 +37,7 @@ struct invoke_dispatcher<FunctionReturnType Class::*> {
   using FunctionPtrType = FunctionReturnType Class::*;
 
   template <class T, class... Args, class DecayT = cpp::decay_t<T>>
-  static auto call(FunctionPtrType fun, T &&t1, Args &&...args) {
+  static decltype(auto) call(FunctionPtrType fun, T &&t1, Args &&...args) {
     if constexpr (cpp::is_base_of_v<Class, DecayT>) {
       // T is a (possibly cv ref) type.
       return (cpp::forward<T>(t1).*fun)(cpp::forward<Args>(args)...);
@@ -51,9 +51,8 @@ struct invoke_dispatcher<FunctionReturnType Class::*> {
 };
 
 } // namespace detail
-
 template <class Function, class... Args>
-auto invoke(Function &&fun, Args &&...args) {
+decltype(auto) invoke(Function &&fun, Args &&...args) {
   return detail::invoke_dispatcher<cpp::decay_t<Function>>::call(
       cpp::forward<Function>(fun), cpp::forward<Args>(args)...);
 }
