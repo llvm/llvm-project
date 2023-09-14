@@ -314,6 +314,12 @@ static cl::opt<bool> AnnotateSampleProfileInlinePhase(
     cl::desc("Annotate LTO phase (prelink / postlink), or main (no LTO) for "
              "sample-profile inline pass name."));
 
+static cl::opt<bool> BitCodeUseSampleProfile(
+    "bitcode-use-sample-profile", cl::Hidden, cl::init(false),
+    cl::desc("When bitcode file is as input and \"-fprofile-sample-use\" is be "
+             "used first, use this flag to make sure the bitcode file can do "
+             "pgo's optimation."));
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 }
@@ -950,6 +956,10 @@ updateIDTMetaData(Instruction &Inst,
                     NewCallTargets, Sum, IPVK_IndirectCallTarget, MaxMDCount);
 }
 
+static bool hasSampleProfile(const Function &F) {
+  return F.hasFnAttribute("use-sample-profile") || BitCodeUseSampleProfile;
+}
+
 /// Attempt to promote indirect call and also inline the promoted call.
 ///
 /// \param F  Caller function.
@@ -988,8 +998,8 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
   // recursive. As llvm does not inline recursive calls, we will
   // simply ignore it instead of handling it explicitly.
   if (!R->getValue()->isDeclaration() && R->getValue()->getSubprogram() &&
-      R->getValue()->hasFnAttribute("use-sample-profile") &&
-      R->getValue() != &F && isLegalToPromote(CI, R->getValue(), &Reason)) {
+      hasSampleProfile(*(R->getValue())) && R->getValue() != &F &&
+      isLegalToPromote(CI, R->getValue(), &Reason)) {
     // For promoted target, set its value with NOMORE_ICP_MAGICNUM count
     // in the value profile metadata so the target won't be promoted again.
     SmallVector<InstrProfValueData, 1> SortedCallTargets = {InstrProfValueData{
@@ -1869,7 +1879,7 @@ SampleProfileLoader::buildProfiledCallGraph(Module &M) {
   // the profile. This makes sure functions missing from the profile still
   // gets a chance to be processed.
   for (Function &F : M) {
-    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
+    if (F.isDeclaration() || !hasSampleProfile(F)))
       continue;
     ProfiledCG->addProfiledFunction(FunctionSamples::getCanonicalFnName(F));
   }
@@ -1897,7 +1907,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
     }
 
     for (Function &F : M)
-      if (!F.isDeclaration() && F.hasFnAttribute("use-sample-profile"))
+      if (!F.isDeclaration() && hasSampleProfile(F))
         FunctionOrderList.push_back(&F);
     return FunctionOrderList;
   }
@@ -1963,7 +1973,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
       }
       for (auto *Node : Range) {
         Function *F = SymbolMap.lookup(Node->Name);
-        if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
+        if (F && !F->isDeclaration() && hasSampleProfile(*F))
           FunctionOrderList.push_back(F);
       }
       ++CGI;
@@ -1974,7 +1984,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
       for (LazyCallGraph::SCC &C : RC) {
         for (LazyCallGraph::Node &N : C) {
           Function &F = N.getFunction();
-          if (!F.isDeclaration() && F.hasFnAttribute("use-sample-profile"))
+          if (!F.isDeclaration() && hasSampleProfile(F))
             FunctionOrderList.push_back(&F);
         }
       }
@@ -2449,7 +2459,7 @@ void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
   for (auto &F : M) {
-    if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
+    if (F.isDeclaration() || !hasSampleProfile(F))
       continue;
     runOnFunction(F);
   }
