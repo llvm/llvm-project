@@ -332,6 +332,21 @@ extern "C" {
 static_assert(std::is_same<index_type, uint64_t>::value,
               "Expected index_type == uint64_t");
 
+}
+
+template<typename PrintAs, typename SMR>
+void printSMR(SMR smr)
+{
+  static_assert(SMR::Rank == 1);
+  for(size_t i = 0; i < smr.sizes[0]; i++)
+  {
+    std::cout << PrintAs(smr.data[i]) << ' ';
+  }
+  std::cout << "\n";
+}
+
+extern "C" {
+
 // TODO: this swiss-army-knife should be split up into separate functions
 // for each action, since the various actions don't agree on (1) whether
 // the first two arguments are "sizes" vs "shapes", (2) whether the "lvl"
@@ -658,8 +673,23 @@ void *_mlir_ciface_newSparseTensorFromReader(
     void *p, StridedMemRefType<index_type, 1> *lvlSizesRef,
     StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
     StridedMemRefType<index_type, 1> *lvl2dimRef,
-    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType posTp,
-    OverheadType crdTp, PrimaryType valTp) {
+    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType ptrTp,
+    OverheadType indTp, PrimaryType valTp) {
+  /*
+  std::cout << "Hello from _mlir_ciface_newSparseTensorFromReader!\n";
+  std::cout << "Reader (p): " << p << '\n';
+  std::cout << "lvlSizesRef: ";
+  printSMR<index_type>(*lvlSizesRef);
+  std::cout << "lvlTypesRef: ";
+  printSMR<int>(*lvlTypesRef);
+  std::cout << "lvl2dimRef: ";
+  printSMR<index_type>(*lvl2dimRef);
+  std::cout << "dim2lvlRef: ";
+  printSMR<index_type>(*dim2lvlRef);
+  std::cout << "ptrTp = " << (int) ptrTp << '\n';
+  std::cout << "indTp = " << (int) indTp << '\n';
+  std::cout << "valTp = " << (int) valTp << '\n';
+  */
   assert(p);
   SparseTensorReader &reader = *static_cast<SparseTensorReader *>(p);
   ASSERT_NO_STRIDE(lvlSizesRef);

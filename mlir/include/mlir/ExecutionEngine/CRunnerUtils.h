@@ -129,6 +129,8 @@ class StridedMemrefIterator;
 /// StridedMemRef descriptor type with static rank.
 template <typename T, int N>
 struct StridedMemRefType {
+  using ValueType = T;
+  enum {Rank = N};
   T *basePtr;
   T *data;
   int64_t offset;
@@ -167,6 +169,8 @@ struct StridedMemRefType {
 /// StridedMemRef descriptor type specialized for rank 1.
 template <typename T>
 struct StridedMemRefType<T, 1> {
+  using ValueType = T;
+  enum {Rank = 1};
   T *basePtr;
   T *data;
   int64_t offset;
@@ -190,6 +194,8 @@ struct StridedMemRefType<T, 1> {
 /// StridedMemRef descriptor type specialized for rank 0.
 template <typename T>
 struct StridedMemRefType<T, 0> {
+  using ValueType = T;
+  enum {Rank = 0};
   T *basePtr;
   T *data;
   int64_t offset;
