@@ -142,6 +142,26 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
+  Arg *aliasAnalysis = Args.getLastArg(options::OPT_falias_analysis,
+                                       options::OPT_fno_alias_analysis);
+  Arg *optLevel =
+      Args.getLastArg(options::OPT_Ofast, options::OPT_O, options::OPT_O4);
+  if (aliasAnalysis) {
+    bool falias_analysis =
+        aliasAnalysis->getOption().matches(options::OPT_falias_analysis);
+    // only pass on the argument if it does not match that implied by the
+    // optimization level
+    if (optLevel) {
+      if (!falias_analysis) {
+        CmdArgs.push_back("-fno-alias-analysis");
+      }
+    } else {
+      if (falias_analysis)
+        // requested alias analysis but no optimization enabled
+        CmdArgs.push_back("-falias-analysis");
+    }
+  }
+
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
                             options::OPT_flang_experimental_polymorphism,
