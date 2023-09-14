@@ -1341,6 +1341,30 @@ func.func @reduce_fminimum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
 
 // -----
 
+func.func @reduce_fmax_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <maxf>, %arg0, %arg1 : vector<16xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmax_f32(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmax(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.maxnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
+func.func @reduce_fmin_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <minf>, %arg0, %arg1 : vector<16xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmin_f32(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmin(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.minnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
 func.func @reduce_minui_i32(%arg0: vector<16xi32>) -> i32 {
   %0 = vector.reduction <minui>, %arg0 : vector<16xi32> into i32
   return %0 : i32
