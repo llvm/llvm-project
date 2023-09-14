@@ -1904,6 +1904,20 @@ void transform::onlyReadsPayload(
   effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
 }
 
+bool transform::doesModifyPayload(transform::TransformOpInterface transform) {
+  auto iface = cast<MemoryEffectOpInterface>(transform.getOperation());
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+  return ::hasEffect<MemoryEffects::Write, PayloadIRResource>(effects);
+}
+
+bool transform::doesReadPayload(transform::TransformOpInterface transform) {
+  auto iface = cast<MemoryEffectOpInterface>(transform.getOperation());
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+  return ::hasEffect<MemoryEffects::Read, PayloadIRResource>(effects);
+}
+
 void transform::getConsumedBlockArguments(
     Block &block, llvm::SmallDenseSet<unsigned int> &consumedArguments) {
   SmallVector<MemoryEffects::EffectInstance> effects;
