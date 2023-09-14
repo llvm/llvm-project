@@ -2509,6 +2509,51 @@ bool RISCVTargetLowering::shouldExpandBuildVectorWithShuffles(
   return false;
 }
 
+InstructionCost RISCVTargetLowering::getLMULCost(MVT VT) const {
+  // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
+  // implementation-defined.
+  if (!VT.isVector())
+    return InstructionCost::getInvalid();
+  unsigned DLenFactor = Subtarget.getDLenFactor();
+  unsigned Cost;
+  if (VT.isScalableVector()) {
+    unsigned LMul;
+    bool Fractional;
+    std::tie(LMul, Fractional) =
+        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
+    if (Fractional)
+      Cost = LMul <= DLenFactor ? (DLenFactor / LMul) : 1;
+    else
+      Cost = (LMul * DLenFactor);
+  } else {
+    Cost = divideCeil(VT.getSizeInBits(), Subtarget.getRealMinVLen() / DLenFactor);
+  }
+  return Cost;
+}
+
+
+/// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
+/// is generally quadratic in the number of vreg implied by LMUL.  Note that
+/// operand (index and possibly mask) are handled separately.
+InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
+  return getLMULCost(VT) * getLMULCost(VT);
+}
+
+/// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
+/// vrgather.vi/vx may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTargetLowering::getVRGatherVICost(MVT VT) const {
+  return getLMULCost(VT);
+}
+
+/// Return the cost of a vslidedown.vi/vx or vslideup.vi/vx instruction
+/// for the type VT.  (This does not cover the vslide1up or vslide1down
+/// variants.)  Slides may be linear in the number of vregs implied by LMUL,
+/// or may track the vrgather.vv cost. It is implementation-dependent.
+InstructionCost RISCVTargetLowering::getVSlideCost(MVT VT) const {
+  return getLMULCost(VT);
+}
+
 static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
   // RISC-V FP-to-int conversions saturate to the destination register size, but
@@ -3455,6 +3500,27 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
 
   if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
     return Res;
+
+  // If the number of signbits allows, see if we can lower as a <N x i8>.
+  // We restrict this to N <= 4 to ensure the resulting narrow vector is
+  // 32 bits of smaller and can thus be materialized cheaply from scalar.
+  // The main motivation for this is the constant index vector required
+  // by vrgather.vv.  This covers all indice vectors up to size 4.
+  // TODO: We really should be costing the smaller vector.  There are
+  // profitable cases this misses.
+  const unsigned ScalarSize =
+    Op.getSimpleValueType().getScalarSizeInBits();
+  if (ScalarSize > 8 && NumElts <= 4) {
+    unsigned SignBits = DAG.ComputeNumSignBits(Op);
+    if (ScalarSize - SignBits < 8) {
+      SDValue Source =
+        DAG.getNode(ISD::TRUNCATE, DL, VT.changeVectorElementType(MVT::i8), Op);
+      Source = convertToScalableVector(ContainerVT.changeVectorElementType(MVT::i8),
+                                       Source, DAG, Subtarget);
+      SDValue Res = DAG.getNode(RISCVISD::VSEXT_VL, DL, ContainerVT, Source, Mask, VL);
+      return convertFromScalableVector(VT, Res, DAG, Subtarget);
+    }
+  }
 
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the

@@ -216,6 +216,8 @@ Bug Fixes in This Version
   local structs.
 - Correctly parse non-ascii identifiers that appear immediately after a line splicing
   (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
+- Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
+  an invalid conversion during method function overload resolution.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -302,6 +304,9 @@ AMDGPU Support
 X86 Support
 ^^^^^^^^^^^
 
+- Added option ``-m[no-]evex512`` to disable ZMM and 64-bit mask instructions
+  for AVX512 features.
+
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -336,6 +341,12 @@ CUDA Support
 AIX Support
 ^^^^^^^^^^^
 
+- Introduced the ``-maix-small-local-exec-tls`` option to produce a faster
+  access sequence for local-exec TLS variables where the offset from the TLS
+  base is encoded as an immediate operand.
+  This access sequence is not used for TLS variables larger than 32KB, and is
+  currently only supported on 64-bit mode.
+
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -357,6 +368,10 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 - Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
 - ``__builtin_isfpclass`` builtin now supports vector types.
+- ``#pragma float_control(precise,on)`` enables precise floating-point
+  semantics. If ``math-errno`` is disabled in the current TU, clang will
+  re-enable ``math-errno`` in the presense of
+  ``#pragma float_control(precise,on)``.
 
 AST Matchers
 ------------

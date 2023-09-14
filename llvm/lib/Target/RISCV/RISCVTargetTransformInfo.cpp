@@ -34,28 +34,6 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
-InstructionCost RISCVTTIImpl::getLMULCost(MVT VT) const {
-  // TODO: Here assume reciprocal throughput is 1 for LMUL_1, it is
-  // implementation-defined.
-  if (!VT.isVector())
-    return InstructionCost::getInvalid();
-  unsigned DLenFactor = ST->getDLenFactor();
-  unsigned Cost;
-  if (VT.isScalableVector()) {
-    unsigned LMul;
-    bool Fractional;
-    std::tie(LMul, Fractional) =
-        RISCVVType::decodeVLMUL(RISCVTargetLowering::getLMUL(VT));
-    if (Fractional)
-      Cost = LMul <= DLenFactor ? (DLenFactor / LMul) : 1;
-    else
-      Cost = (LMul * DLenFactor);
-  } else {
-    Cost = divideCeil(VT.getSizeInBits(), ST->getRealMinVLen() / DLenFactor);
-  }
-  return Cost;
-}
-
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                             TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
@@ -263,28 +241,6 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
   return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
 }
 
-/// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
-/// is generally quadratic in the number of vreg implied by LMUL.  Note that
-/// operand (index and possibly mask) are handled separately.
-InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) const {
-  return getLMULCost(VT) * getLMULCost(VT);
-}
-
-/// Return the cost of a vrgather.vi (or vx) instruction for the type VT.
-/// vrgather.vi/vx may be linear in the number of vregs implied by LMUL,
-/// or may track the vrgather.vv cost. It is implementation-dependent.
-InstructionCost RISCVTTIImpl::getVRGatherVICost(MVT VT) const {
-  return getLMULCost(VT);
-}
-
-/// Return the cost of a vslidedown.vi/vx or vslideup.vi/vx instruction
-/// for the type VT.  (This does not cover the vslide1up or vslide1down
-/// variants.)  Slides may be linear in the number of vregs implied by LMUL,
-/// or may track the vrgather.vv cost. It is implementation-dependent.
-InstructionCost RISCVTTIImpl::getVSlideCost(MVT VT) const {
-  return getLMULCost(VT);
-}
-
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
                                              TTI::TargetCostKind CostKind,
@@ -314,14 +270,14 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           //   li       a0, -1                   (ignored)
           //   vwmaccu.vx   v10, a0, v9
           if (ShuffleVectorInst::isInterleaveMask(Mask, 2, Mask.size()))
-            return 2 * LT.first * getLMULCost(LT.second);
+            return 2 * LT.first * TLI->getLMULCost(LT.second);
 
           if (Mask[0] == 0 || Mask[0] == 1) {
             auto DeinterleaveMask = createStrideMask(Mask[0], 2, Mask.size());
             // Example sequence:
             //   vnsrl.wi   v10, v8, 0
             if (equal(DeinterleaveMask, Mask))
-              return LT.first * getLMULCost(LT.second);
+              return LT.first * TLI->getLMULCost(LT.second);
           }
         }
       }
@@ -332,7 +288,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
            LT.second.getVectorNumElements() <= 256)) {
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-        return IndexCost + getVRGatherVVCost(LT.second);
+        return IndexCost + TLI->getVRGatherVVCost(LT.second);
       }
       [[fallthrough]];
     }
@@ -350,7 +306,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
-        return 2 * IndexCost + 2 * getVRGatherVVCost(LT.second) + MaskCost;
+        return 2 * IndexCost + 2 * TLI->getVRGatherVVCost(LT.second) + MaskCost;
       }
       [[fallthrough]];
     }
@@ -402,19 +358,19 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslidedown.vi  v8, v9, 2
-    return LT.first * getVSlideCost(LT.second);
+    return LT.first * TLI->getVSlideCost(LT.second);
   case TTI::SK_InsertSubvector:
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
-    return LT.first * getVSlideCost(LT.second);
+    return LT.first * TLI->getVSlideCost(LT.second);
   case TTI::SK_Select: {
     // Example sequence:
     // li           a0, 90
     // vsetivli     zero, 8, e8, mf2, ta, ma (ignored)
     // vmv.s.x      v0, a0
     // vmerge.vvm   v8, v9, v8, v0
-    return LT.first * 3 * getLMULCost(LT.second);
+    return LT.first * 3 * TLI->getLMULCost(LT.second);
   }
   case TTI::SK_Broadcast: {
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
@@ -426,7 +382,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         //   vsetivli zero, 2, e8, mf8, ta, ma (ignored)
         //   vmv.v.x v8, a0
         //   vmsne.vi v0, v8, 0
-        return LT.first * getLMULCost(LT.second) * 3;
+        return LT.first * TLI->getLMULCost(LT.second) * 3;
       }
       // Example sequence:
       //   vsetivli  zero, 2, e8, mf8, ta, mu (ignored)
@@ -437,24 +393,24 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       //   vmv.v.x v8, a0
       //   vmsne.vi  v0, v8, 0
 
-      return LT.first * getLMULCost(LT.second) * 6;
+      return LT.first * TLI->getLMULCost(LT.second) * 6;
     }
 
     if (HasScalar) {
       // Example sequence:
       //   vmv.v.x v8, a0
-      return LT.first * getLMULCost(LT.second);
+      return LT.first * TLI->getLMULCost(LT.second);
     }
 
     // Example sequence:
     //   vrgather.vi     v9, v8, 0
-    return LT.first * getVRGatherVICost(LT.second);
+    return LT.first * TLI->getVRGatherVICost(LT.second);
   }
   case TTI::SK_Splice:
     // vslidedown+vslideup.
     // TODO: Multiplying by LT.first implies this legalizes into multiple copies
     // of similar code, but I think we expand through memory.
-    return 2 * LT.first * getVSlideCost(LT.second);
+    return 2 * LT.first * TLI->getVSlideCost(LT.second);
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
     // * Illegal vector types
@@ -474,7 +430,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    InstructionCost GatherCost = 2 + getVRGatherVVCost(LT.second);
+    InstructionCost GatherCost = 2 + TLI->getVRGatherVVCost(LT.second);
     // Mask operation additionally required extend and truncate
     InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
     return LT.first * (LenCost + GatherCost + ExtendCost);
@@ -1393,7 +1349,7 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // handles the LT.first term for us.
   if (std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
       LT.second.isVector())
-    BaseCost *= getLMULCost(LT.second);
+    BaseCost *= TLI->getLMULCost(LT.second);
   return Cost + BaseCost;
 
 }
@@ -1641,7 +1597,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FNEG: {
-    return ConstantMatCost + getLMULCost(LT.second) * LT.first * 1;
+    return ConstantMatCost + TLI->getLMULCost(LT.second) * LT.first * 1;
   }
   default:
     return ConstantMatCost +

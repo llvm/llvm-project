@@ -103,7 +103,7 @@ static cl::opt<bool>
 static cl::opt<bool> MergeStringPool(
     "ppc-merge-string-pool",
     cl::desc("Merge all of the strings in a module into one pool"),
-    cl::init(false), cl::Hidden);
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool> EnablePPCGenScalarMASSEntries(
     "enable-ppc-gen-scalar-mass", cl::init(false),

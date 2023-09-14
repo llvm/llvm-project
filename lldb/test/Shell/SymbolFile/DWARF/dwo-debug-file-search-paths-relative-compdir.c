@@ -1,6 +1,7 @@
 /// Check that LLDB uses the paths in target.debug-file-search-paths to find
 /// split DWARF files with a relative DW_AT_comp_dir set, when the program file
 /// has been moved and/or we're executing it from another directory.
+// UNSUPPORTED: system-darwin
 // RUN: rm -rf %t.compdir/ %t.e/
 // RUN: mkdir -p %t.compdir/a/b/c/d/
 // RUN: cp %s %t.compdir/a/b/c/d/main.c

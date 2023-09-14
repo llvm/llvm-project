@@ -836,7 +836,9 @@ public:
   }
   std::string
   mangleName(const Fortran::semantics::Symbol &symbol) override final {
-    return Fortran::lower::mangle::mangleName(symbol, scopeBlockIdMap);
+    return Fortran::lower::mangle::mangleName(
+        symbol, scopeBlockIdMap, /*keepExternalInScope=*/false,
+        getLoweringOptions().getUnderscoring());
   }
   std::string mangleName(
       const Fortran::semantics::DerivedTypeSpec &derivedType) override final {
@@ -2293,8 +2295,7 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.fctCtx(), getEval(), accDecl,
-                                   accRoutineInfos);
+                                   bridge.fctCtx(), accDecl, accRoutineInfos);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }

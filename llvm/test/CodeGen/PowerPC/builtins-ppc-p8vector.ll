@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+power8-vector -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+power8-vector -mattr=-vsx < %s | FileCheck %s -check-prefix=P7
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s -check-prefix=CHECK-VSX
 
 @vsc = global <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5>, align 16
@@ -22,9 +22,12 @@ entry:
   ret void
 ; CHECK-LABEL: @test1
 ; CHECK: lvx [[REG1:[0-9]+]], 0, 3
-; CHECK: lvx [[REG2:[0-9]+]], 0, 4
+; CHECK: lvx [[REG2:[0-9]+]], 0, 3
 ; CHECK: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 ; CHECK-VSX: vbpermq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; P7: lvx [[REG1:[0-9]+]], 0, 3
+; P7: lvx [[REG2:[0-9]+]], 0, 4
+; P7: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 }
 
 ; Function Attrs: nounwind
@@ -37,9 +40,12 @@ entry:
   ret void
 ; CHECK-LABEL: @test2
 ; CHECK: lvx [[REG1:[0-9]+]], 0, 3
-; CHECK: lvx [[REG2:[0-9]+]], 0, 4
+; CHECK: lvx [[REG2:[0-9]+]], 0, 3
 ; CHECK: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 ; CHECK-VSX: vbpermq {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; P7: lvx [[REG1:[0-9]+]], 0, 3
+; P7: lvx [[REG2:[0-9]+]], 0, 4
+; P7: vbpermq {{[0-9]+}}, [[REG1]], [[REG2]]
 }
 
 ; Function Attrs: nounwind

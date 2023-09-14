@@ -757,6 +757,51 @@ bool GenericKind::Is(GenericKind::OtherKind x) const {
   return y && *y == x;
 }
 
+std::string Symbol::OmpFlagToClauseName(Symbol::Flag ompFlag) {
+  std::string clauseName;
+  switch (ompFlag) {
+  case Symbol::Flag::OmpShared:
+    clauseName = "SHARED";
+    break;
+  case Symbol::Flag::OmpPrivate:
+    clauseName = "PRIVATE";
+    break;
+  case Symbol::Flag::OmpLinear:
+    clauseName = "LINEAR";
+    break;
+  case Symbol::Flag::OmpFirstPrivate:
+    clauseName = "FIRSTPRIVATE";
+    break;
+  case Symbol::Flag::OmpLastPrivate:
+    clauseName = "LASTPRIVATE";
+    break;
+  case Symbol::Flag::OmpMapTo:
+  case Symbol::Flag::OmpMapFrom:
+  case Symbol::Flag::OmpMapToFrom:
+  case Symbol::Flag::OmpMapAlloc:
+  case Symbol::Flag::OmpMapRelease:
+  case Symbol::Flag::OmpMapDelete:
+    clauseName = "MAP";
+    break;
+  case Symbol::Flag::OmpUseDevicePtr:
+    clauseName = "USE_DEVICE_PTR";
+    break;
+  case Symbol::Flag::OmpUseDeviceAddr:
+    clauseName = "USE_DEVICE_ADDR";
+    break;
+  case Symbol::Flag::OmpCopyIn:
+    clauseName = "COPYIN";
+    break;
+  case Symbol::Flag::OmpCopyPrivate:
+    clauseName = "COPYPRIVATE";
+    break;
+  default:
+    clauseName = "";
+    break;
+  }
+  return clauseName;
+}
+
 bool SymbolOffsetCompare::operator()(
     const SymbolRef &x, const SymbolRef &y) const {
   const Symbol *xCommon{FindCommonBlockContaining(*x)};

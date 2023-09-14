@@ -64,6 +64,7 @@
 // AVX512F: #define __AVX2__ 1
 // AVX512F: #define __AVX512F__ 1
 // AVX512F: #define __AVX__ 1
+// AVX512F: #define __EVEX512__ 1
 // AVX512F: #define __SSE2_MATH__ 1
 // AVX512F: #define __SSE2__ 1
 // AVX512F: #define __SSE3__ 1
@@ -79,6 +80,7 @@
 // AVX512CD: #define __AVX512CD__ 1
 // AVX512CD: #define __AVX512F__ 1
 // AVX512CD: #define __AVX__ 1
+// AVX512CD: #define __EVEX512__ 1
 // AVX512CD: #define __SSE2_MATH__ 1
 // AVX512CD: #define __SSE2__ 1
 // AVX512CD: #define __SSE3__ 1
@@ -94,6 +96,7 @@
 // AVX512ER: #define __AVX512ER__ 1
 // AVX512ER: #define __AVX512F__ 1
 // AVX512ER: #define __AVX__ 1
+// AVX512ER: #define __EVEX512__ 1
 // AVX512ER: #define __SSE2_MATH__ 1
 // AVX512ER: #define __SSE2__ 1
 // AVX512ER: #define __SSE3__ 1
@@ -109,6 +112,7 @@
 // AVX512PF: #define __AVX512F__ 1
 // AVX512PF: #define __AVX512PF__ 1
 // AVX512PF: #define __AVX__ 1
+// AVX512PF: #define __EVEX512__ 1
 // AVX512PF: #define __SSE2_MATH__ 1
 // AVX512PF: #define __SSE2__ 1
 // AVX512PF: #define __SSE3__ 1
@@ -124,6 +128,7 @@
 // AVX512DQ: #define __AVX512DQ__ 1
 // AVX512DQ: #define __AVX512F__ 1
 // AVX512DQ: #define __AVX__ 1
+// AVX512DQ: #define __EVEX512__ 1
 // AVX512DQ: #define __SSE2_MATH__ 1
 // AVX512DQ: #define __SSE2__ 1
 // AVX512DQ: #define __SSE3__ 1
@@ -139,6 +144,7 @@
 // AVX512BW: #define __AVX512BW__ 1
 // AVX512BW: #define __AVX512F__ 1
 // AVX512BW: #define __AVX__ 1
+// AVX512BW: #define __EVEX512__ 1
 // AVX512BW: #define __SSE2_MATH__ 1
 // AVX512BW: #define __SSE2__ 1
 // AVX512BW: #define __SSE3__ 1
@@ -154,6 +160,7 @@
 // AVX512VL: #define __AVX512F__ 1
 // AVX512VL: #define __AVX512VL__ 1
 // AVX512VL: #define __AVX__ 1
+// AVX512VL: #define __EVEX512__ 1
 // AVX512VL: #define __SSE2_MATH__ 1
 // AVX512VL: #define __SSE2__ 1
 // AVX512VL: #define __SSE3__ 1
@@ -168,6 +175,7 @@
 // AVX512F2: #define __AVX2__ 1
 // AVX512F2-NOT: #define __AVX512F__ 1
 // AVX512F2-NOT: #define __AVX512PF__ 1
+// AVX512F2-NOT: #define __EVEX512__ 1
 // AVX512F2: #define __AVX__ 1
 // AVX512F2: #define __SSE2_MATH__ 1
 // AVX512F2: #define __SSE2__ 1
@@ -184,6 +192,7 @@
 // AVX512IFMA: #define __AVX512F__ 1
 // AVX512IFMA: #define __AVX512IFMA__ 1
 // AVX512IFMA: #define __AVX__ 1
+// AVX512IFMA: #define __EVEX512__ 1
 // AVX512IFMA: #define __SSE2_MATH__ 1
 // AVX512IFMA: #define __SSE2__ 1
 // AVX512IFMA: #define __SSE3__ 1
@@ -200,6 +209,7 @@
 // AVX512VBMI: #define __AVX512F__ 1
 // AVX512VBMI: #define __AVX512VBMI__ 1
 // AVX512VBMI: #define __AVX__ 1
+// AVX512VBMI: #define __EVEX512__ 1
 // AVX512VBMI: #define __SSE2_MATH__ 1
 // AVX512VBMI: #define __SSE2__ 1
 // AVX512VBMI: #define __SSE3__ 1
@@ -216,6 +226,7 @@
 // AVX512BITALG: #define __AVX512BW__ 1
 // AVX512BITALG: #define __AVX512F__ 1
 // AVX512BITALG: #define __AVX__ 1
+// AVX512BITALG: #define __EVEX512__ 1
 // AVX512BITALG: #define __SSE2_MATH__ 1
 // AVX512BITALG: #define __SSE2__ 1
 // AVX512BITALG: #define __SSE3__ 1
@@ -230,6 +241,7 @@
 
 // AVX512VBMINOAVX512BW-NOT: #define __AVX512BW__ 1
 // AVX512VBMINOAVX512BW-NOT: #define __AVX512VBMI__ 1
+// AVX512VBMINOAVX512BW: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512vbmi2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512VBMI2 %s
 
@@ -238,6 +250,7 @@
 // AVX512VBMI2: #define __AVX512F__ 1
 // AVX512VBMI2: #define __AVX512VBMI2__ 1
 // AVX512VBMI2: #define __AVX__ 1
+// AVX512VBMI2: #define __EVEX512__ 1
 // AVX512VBMI2: #define __SSE2_MATH__ 1
 // AVX512VBMI2: #define __SSE2__ 1
 // AVX512VBMI2: #define __SSE3__ 1
@@ -251,11 +264,13 @@
 
 // AVX512VBMI2NOAVX512BW-NOT: #define __AVX512BW__ 1
 // AVX512VBMI2NOAVX512BW-NOT: #define __AVX512VBMI2__ 1
+// AVX512VBMI2NOAVX512BW: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bitalg -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BITALGNOAVX512BW %s
 
 // AVX512BITALGNOAVX512BW-NOT: #define __AVX512BITALG__ 1
 // AVX512BITALGNOAVX512BW-NOT: #define __AVX512BW__ 1
+// AVX512BITALGNOAVX512BW: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -msse4.2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=SSE42POPCNT %s
 
@@ -467,24 +482,29 @@
 // AVX512BF16: #define __AVX512BF16__ 1
 // AVX512BF16: #define __AVX512BW__ 1
 // AVX512BF16-NOT: #define __AVX512VL__ 1
+// AVX512BF16: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16_NOAVX512BW %s
 
 // AVX512BF16_NOAVX512BW-NOT: #define __AVX512BF16__ 1
+// AVX512BF16_NOAVX512BW: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512bf16 -mno-avx512vl -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512BF16_NOAVX512VL %s
 
 // AVX512BF16_NOAVX512VL: #define __AVX512BF16__ 1
+// AVX512BF16_NOAVX512VL: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavx512vp2intersect -x c -E -dM -o - %s | FileCheck  -check-prefix=VP2INTERSECT %s
 
 // VP2INTERSECT: #define __AVX512F__ 1
 // VP2INTERSECT: #define __AVX512VP2INTERSECT__ 1
+// VP2INTERSECT: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-avx512vp2intersect -x c -E -dM -o - %s | FileCheck  -check-prefix=NOVP2INTERSECT %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mavx512vp2intersect -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=NOVP2INTERSECT %s
 
 // NOVP2INTERSECT-NOT: #define __AVX512VP2INTERSECT__ 1
+// NOVP2INTERSECT-NOT: #define __EVEX512__ 1
 
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mkl -x c -E -dM -o - %s | FileCheck  -check-prefix=KEYLOCKER %s
@@ -591,21 +611,37 @@
 // AVX512FP16: #define __AVX512DQ__ 1
 // AVX512FP16: #define __AVX512FP16__ 1
 // AVX512FP16: #define __AVX512VL__ 1
+// AVX512FP16: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -mno-avx512vl -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16NOAVX512VL %s
 
 // AVX512FP16NOAVX512VL-NOT: #define __AVX512FP16__ 1
 // AVX512FP16NOAVX512VL-NOT: #define __AVX512VL__ 1
+// AVX512FP16NOAVX512VL: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -mno-avx512bw -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16NOAVX512BW %s
 
 // AVX512FP16NOAVX512BW-NOT: #define __AVX512BW__ 1
 // AVX512FP16NOAVX512BW-NOT: #define __AVX512FP16__ 1
+// AVX512FP16NOAVX512BW: #define __EVEX512__ 1
 
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavx512fp16 -mno-avx512dq -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512FP16NOAVX512DQ %s
 
 // AVX512FP16NOAVX512DQ-NOT: #define __AVX512DQ__ 1
 // AVX512FP16NOAVX512DQ-NOT: #define __AVX512FP16__ 1
+// AVX512FP16NOAVX512DQ: #define __EVEX512__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512f -mno-avx512f -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOEVEX512 %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512cd -mno-avx512f -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOEVEX512 %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512er -mno-avx512f -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOEVEX512 %s
+// NOEVEX512-NOT: #define __AVX512F__ 1
+// NOEVEX512-NOT: #define __EVEX512__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512f -mno-evex512 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512NOEVEX512 %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512cd -mno-evex512 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512NOEVEX512 %s
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavx512er -mno-evex512 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVX512NOEVEX512 %s
+// AVX512NOEVEX512: #define __AVX512F__ 1
+// AVX512NOEVEX512-NOT: #define __EVEX512__ 1
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -march=atom -mcmpccxadd -x c -E -dM -o - %s | FileCheck  -check-prefix=CMPCCXADD %s
 

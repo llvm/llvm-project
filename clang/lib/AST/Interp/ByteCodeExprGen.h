@@ -277,8 +277,6 @@ private:
 
   bool emitPrimCast(PrimType FromT, PrimType ToT, QualType ToQT, const Expr *E);
   bool emitRecordDestruction(const Descriptor *Desc);
-  bool emitDerivedToBaseCasts(const RecordType *DerivedType,
-                              const RecordType *BaseType, const Expr *E);
   unsigned collectBaseOffset(const RecordType *BaseType,
                              const RecordType *DerivedType);
 

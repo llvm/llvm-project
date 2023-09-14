@@ -109,5 +109,7 @@ std::string AsFortran(IgnoreTKRSet);
 bool AreCompatibleCUDADataAttrs(
     std::optional<CUDADataAttr>, std::optional<CUDADataAttr>, IgnoreTKRSet);
 
+static constexpr char blankCommonObjectName[] = "__BLNK__";
+
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_FORTRAN_H_

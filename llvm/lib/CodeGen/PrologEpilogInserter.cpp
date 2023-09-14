@@ -293,7 +293,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t StackSize = MFI.getStackSize();
 
-  unsigned Threshold = UINT_MAX;
+  uint64_t Threshold = TFI->getStackThreshold();
   if (MF.getFunction().hasFnAttribute("warn-stack-size")) {
     bool Failed = MF.getFunction()
                       .getFnAttribute("warn-stack-size")

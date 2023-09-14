@@ -95,7 +95,7 @@ struct DefMethodsWithoutBody {
   // CHECK-NEXT: DefMethodsWithoutBody() = default;
   ~DefMethodsWithoutBody() = default;
 
-  // CHECK-NEXT: void m1() __attribute__((alias("X")));
+  // CHECK-NEXT: __attribute__((alias("X"))) void m1();
   void m1() __attribute__((alias("X")));
 
   // CHECK-NEXT: };

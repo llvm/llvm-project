@@ -22,6 +22,7 @@
 #include <optional>
 
 namespace llvm {
+class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
 namespace RISCVISD {
@@ -519,6 +520,13 @@ public:
   bool
   shouldExpandBuildVectorWithShuffles(EVT VT,
                                       unsigned DefinedValues) const override;
+
+  /// Return the cost of LMUL for linear operations.
+  InstructionCost getLMULCost(MVT VT) const;
+
+  InstructionCost getVRGatherVVCost(MVT VT) const;
+  InstructionCost getVRGatherVICost(MVT VT) const;
+  InstructionCost getVSlideCost(MVT VT) const;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
