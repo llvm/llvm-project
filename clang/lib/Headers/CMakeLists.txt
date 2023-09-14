@@ -624,6 +624,11 @@ install(
   COMPONENT riscv-resource-headers)
 
 install(
+  FILES ${sifive_files}
+  DESTINATION ${header_install_dir}
+  COMPONENT riscv-resource-headers)
+
+install(
   FILES ${systemz_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
