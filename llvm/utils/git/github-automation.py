@@ -56,6 +56,9 @@ def escape_description(str):
     str = re.sub("#(?=\d+\s)", "#<!-- -->", str)
     return str
 
+def sanitize_markdown_code_block(str):
+    # remove codeblocks terminators
+    return re.sub("^\s*```\s*$", r"` ` `", str)
 
 class IssueSubscriber:
     @property
@@ -148,18 +151,21 @@ class PRSubscriber:
 
         # Get the diff
         try:
-            patch = html.escape(requests.get(self.pr.diff_url).text)
+            patch = requests.get(self.pr.diff_url).text
         except:
             patch = ""
 
-        # GitHub limits comments to 65,536 characters, let's limit the diff to 20kB.
+        patch = sanitize_markdown_code_block(patch)
+
         patch_link = f"Full diff: {self.pr.diff_url}\n"
         if len(patch) > DIFF_LIMIT:
             patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
-            patch = html.escape(patch[0:DIFF_LIMIT]) + "...\n<truncated>\n"
+            patch = patch[0:DIFF_LIMIT] + "...\n[truncated]\n"
         team_mention = "@llvm/{}".format(team.slug)
 
         body = escape_description(self.pr.body)
+# Note: the comment is in markdown and the code below
+# is sensible to line break
         comment = f"""
 {self.COMMENT_TAG}
 {team_mention}
@@ -172,9 +178,10 @@ class PRSubscriber:
 
 {diff_stats}
 
-<pre lang="diff">
+```diff
 {patch}
-</pre>
+```
+
 </details>
 """
 
