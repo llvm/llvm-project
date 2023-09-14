@@ -447,8 +447,8 @@ bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned SystemZInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved,
-                                        SlotIndexes *Indexes) const {
+                                        SlotIndexes *Indexes,
+                                        int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   // Most of the code and comments here are boilerplate.
@@ -481,12 +481,10 @@ reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   return false;
 }
 
-unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                        MachineBasicBlock *TBB,
-                                        MachineBasicBlock *FBB,
-                                        ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL, int *BytesAdded,
-                                        SlotIndexes *Indexes) const {
+unsigned SystemZInstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, SlotIndexes *Indexes,
+    int *BytesAdded) const {
   // In this function we output 32-bit branches, which should always
   // have enough range.  They can be shortened and relaxed by later code
   // in the pipeline, if desired.

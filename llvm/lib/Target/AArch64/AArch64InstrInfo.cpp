@@ -535,8 +535,8 @@ bool AArch64InstrInfo::reverseBranchCondition(
 }
 
 unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved,
-                                        SlotIndexes *Indexes) const {
+                                        SlotIndexes *Indexes,
+                                        int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return 0;
@@ -599,12 +599,10 @@ void AArch64InstrInfo::instantiateCondBranch(MachineBasicBlock &MBB,
   }
 }
 
-unsigned AArch64InstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                        MachineBasicBlock *TBB,
-                                        MachineBasicBlock *FBB,
-                                        ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL, int *BytesAdded,
-                                        SlotIndexes *Indexes) const {
+unsigned AArch64InstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, SlotIndexes *Indexes,
+    int *BytesAdded) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
 

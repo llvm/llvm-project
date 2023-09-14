@@ -228,8 +228,8 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *TBB,
                                    MachineBasicBlock *FBB,
                                    ArrayRef<MachineOperand> Cond,
-                                   const DebugLoc &DL, int *BytesAdded,
-                                   SlotIndexes *Indexes) const {
+                                   const DebugLoc &DL, SlotIndexes *Indexes,
+                                   int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "VE branch conditions should have three component!");
@@ -296,8 +296,8 @@ unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned VEInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
-                                   SlotIndexes *Indexes) const {
+unsigned VEInstrInfo::removeBranch(MachineBasicBlock &MBB, SlotIndexes *Indexes,
+                                   int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();

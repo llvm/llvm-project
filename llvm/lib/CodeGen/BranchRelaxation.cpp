@@ -364,7 +364,8 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
                                 MachineBasicBlock *DestBB) {
     unsigned &BBSize = BlockInfo[MBB->getNumber()].Size;
     int NewBrSize = 0;
-    TII->insertUnconditionalBranch(*MBB, DestBB, DL, &NewBrSize);
+    TII->insertUnconditionalBranch(*MBB, DestBB, DL, /*Indexes=*/nullptr,
+                                   &NewBrSize);
     BBSize += NewBrSize;
   };
   auto insertBranch = [&](MachineBasicBlock *MBB, MachineBasicBlock *TBB,
@@ -372,13 +373,14 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
                           SmallVectorImpl<MachineOperand>& Cond) {
     unsigned &BBSize = BlockInfo[MBB->getNumber()].Size;
     int NewBrSize = 0;
-    TII->insertBranch(*MBB, TBB, FBB, Cond, DL, &NewBrSize);
+    TII->insertBranch(*MBB, TBB, FBB, Cond, DL, /*Indexes=*/nullptr,
+                      &NewBrSize);
     BBSize += NewBrSize;
   };
   auto removeBranch = [&](MachineBasicBlock *MBB) {
     unsigned &BBSize = BlockInfo[MBB->getNumber()].Size;
     int RemovedSize = 0;
-    TII->removeBranch(*MBB, &RemovedSize);
+    TII->removeBranch(*MBB, /*Indexes=*/nullptr, &RemovedSize);
     BBSize -= RemovedSize;
   };
 

@@ -680,19 +680,24 @@ public:
   /// Remove the branching code at the end of the specific MBB.
   /// This is only invoked in cases where analyzeBranch returns success. It
   /// returns the number of instructions that were removed.
+  /// If \p Indexes is non-null, then instructions will also be removed from
+  /// SlotIndexes.
   /// If \p BytesRemoved is non-null, report the change in code size from the
   /// removed instructions.
   virtual unsigned removeBranch(MachineBasicBlock &MBB,
-                                int *BytesRemoved = nullptr,
-                                SlotIndexes *Indexes = nullptr) const {
+                                SlotIndexes *Indexes = nullptr,
+                                int *BytesRemoved = nullptr) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::removeBranch!");
   }
 
   /// Insert branch code into the end of the specified MachineBasicBlock. The
   /// operands to this method are the same as those returned by analyzeBranch.
   /// This is only invoked in cases where analyzeBranch returns success. It
-  /// returns the number of instructions inserted. If \p BytesAdded is non-null,
-  /// report the change in code size from the added instructions.
+  /// returns the number of instructions inserted.
+  /// If \p Indexes is non-null, then added instructions will be inserted into
+  /// SlotIndexes.
+  /// If \p BytesAdded is non-null, report the change in code size from the
+  /// added instructions.
   ///
   /// It is also invoked by tail merging to add unconditional branches in
   /// cases where analyzeBranch doesn't apply because there was no original
@@ -704,18 +709,19 @@ public:
   virtual unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 MachineBasicBlock *FBB,
                                 ArrayRef<MachineOperand> Cond,
-                                const DebugLoc &DL, int *BytesAdded = nullptr,
-                                SlotIndexes *Indexes = nullptr) const {
+                                const DebugLoc &DL,
+                                SlotIndexes *Indexes = nullptr,
+                                int *BytesAdded = nullptr) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertBranch!");
   }
 
   unsigned insertUnconditionalBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *DestBB,
                                      const DebugLoc &DL,
-                                     int *BytesAdded = nullptr,
-                                     SlotIndexes *Indexes = nullptr) const {
+                                     SlotIndexes *Indexes = nullptr,
+                                     int *BytesAdded = nullptr) const {
     return insertBranch(MBB, DestBB, nullptr, ArrayRef<MachineOperand>(), DL,
-                        BytesAdded, Indexes);
+                        Indexes, BytesAdded);
   }
 
   /// Object returned by analyzeLoopForPipelining. Allows software pipelining

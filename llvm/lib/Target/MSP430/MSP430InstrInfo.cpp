@@ -105,8 +105,8 @@ void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                       int *BytesRemoved,
-                                       SlotIndexes *Indexes) const {
+                                       SlotIndexes *Indexes,
+                                       int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -258,8 +258,8 @@ unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                        MachineBasicBlock *TBB,
                                        MachineBasicBlock *FBB,
                                        ArrayRef<MachineOperand> Cond,
-                                       const DebugLoc &DL, int *BytesAdded,
-                                       SlotIndexes *Indexes) const {
+                                       const DebugLoc &DL, SlotIndexes *Indexes,
+                                       int *BytesAdded) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&

@@ -701,7 +701,7 @@ void MachineBasicBlock::updateTerminator(
       // The block has an unconditional branch. If its successor is now its
       // layout successor, delete the branch.
       if (isLayoutSuccessor(TBB))
-        TII->removeBranch(*this, nullptr, Indexes);
+        TII->removeBranch(*this, Indexes);
     } else {
       // The block has an unconditional fallthrough, or the end of the block is
       // unreachable.
@@ -718,7 +718,7 @@ void MachineBasicBlock::updateTerminator(
       // successor, insert a branch to jump to it.
       if (!isLayoutSuccessor(PreviousLayoutSuccessor))
         TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL,
-                          nullptr, Indexes);
+                          Indexes);
     }
     return;
   }
@@ -730,11 +730,11 @@ void MachineBasicBlock::updateTerminator(
     if (isLayoutSuccessor(TBB)) {
       if (TII->reverseBranchCondition(Cond))
         return;
-      TII->removeBranch(*this, nullptr, Indexes);
-      TII->insertBranch(*this, FBB, nullptr, Cond, DL, nullptr, Indexes);
+      TII->removeBranch(*this, Indexes);
+      TII->insertBranch(*this, FBB, nullptr, Cond, DL, Indexes);
     } else if (isLayoutSuccessor(FBB)) {
-      TII->removeBranch(*this, nullptr, Indexes);
-      TII->insertBranch(*this, TBB, nullptr, Cond, DL, nullptr, Indexes);
+      TII->removeBranch(*this, Indexes);
+      TII->insertBranch(*this, TBB, nullptr, Cond, DL, Indexes);
     }
     return;
   }
@@ -748,10 +748,10 @@ void MachineBasicBlock::updateTerminator(
     // We had a fallthrough to the same basic block as the conditional jump
     // targets.  Remove the conditional jump, leaving an unconditional
     // fallthrough or an unconditional jump.
-    TII->removeBranch(*this, nullptr, Indexes);
+    TII->removeBranch(*this, Indexes);
     if (!isLayoutSuccessor(TBB)) {
       Cond.clear();
-      TII->insertBranch(*this, TBB, nullptr, Cond, DL, nullptr, Indexes);
+      TII->insertBranch(*this, TBB, nullptr, Cond, DL, Indexes);
     }
     return;
   }
@@ -762,16 +762,15 @@ void MachineBasicBlock::updateTerminator(
       // We can't reverse the condition, add an unconditional branch.
       Cond.clear();
       TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL,
-                        nullptr, Indexes);
+                        Indexes);
       return;
     }
-    TII->removeBranch(*this, nullptr, Indexes);
+    TII->removeBranch(*this, Indexes);
     TII->insertBranch(*this, PreviousLayoutSuccessor, nullptr, Cond, DL,
-                      nullptr, Indexes);
-  } else if (!isLayoutSuccessor(PreviousLayoutSuccessor)) {
-    TII->removeBranch(*this, nullptr, Indexes);
-    TII->insertBranch(*this, TBB, PreviousLayoutSuccessor, Cond, DL, nullptr,
                       Indexes);
+  } else if (!isLayoutSuccessor(PreviousLayoutSuccessor)) {
+    TII->removeBranch(*this, Indexes);
+    TII->insertBranch(*this, TBB, PreviousLayoutSuccessor, Cond, DL, Indexes);
   }
 }
 
@@ -1183,7 +1182,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   if (!NMBB->isLayoutSuccessor(Succ)) {
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-    TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL, nullptr, Indexes);
+    TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL, Indexes);
   }
 
   // Fix PHI nodes in Succ so they refer to NMBB instead of this.

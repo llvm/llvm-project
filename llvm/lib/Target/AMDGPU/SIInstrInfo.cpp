@@ -2843,8 +2843,8 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   return analyzeBranchImpl(MBB, I, TBB, FBB, Cond, AllowModify);
 }
 
-unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
-                                   SlotIndexes *Indexes) const {
+unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB, SlotIndexes *Indexes,
+                                   int *BytesRemoved) const {
   unsigned Count = 0;
   unsigned RemovedSize = 0;
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB.terminators())) {
@@ -2875,8 +2875,8 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *TBB,
                                    MachineBasicBlock *FBB,
                                    ArrayRef<MachineOperand> Cond,
-                                   const DebugLoc &DL, int *BytesAdded,
-                                   SlotIndexes *Indexes) const {
+                                   const DebugLoc &DL, SlotIndexes *Indexes,
+                                   int *BytesAdded) const {
   if (!FBB && Cond.empty()) {
     MachineInstr *UncondBr =
         BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH)).addMBB(TBB);

@@ -688,11 +688,13 @@ public:
   }
 
   /// Update the terminator instructions in block to account for changes to
-  /// block layout which may have been made. PreviousLayoutSuccessor should be
-  /// set to the block which may have been used as fallthrough before the block
-  /// layout was modified.  If the block previously fell through to that block,
-  /// it may now need a branch. If it previously branched to another block, it
-  /// may now be able to fallthrough to the current layout successor.
+  /// block layout which may have been made. \p PreviousLayoutSuccessor should
+  /// be set to the block which may have been used as fallthrough before the
+  /// block layout was modified.  If the block previously fell through to that
+  /// block, it may now need a branch. If it previously branched to another
+  /// block, it may now be able to fallthrough to the current layout successor.
+  /// SlotIndexes provided by \p Indexes will be updated to reflect any
+  /// instructions inserted or removed.
   void updateTerminator(MachineBasicBlock *PreviousLayoutSuccessor,
                         SlotIndexes *Indexes = nullptr);
 

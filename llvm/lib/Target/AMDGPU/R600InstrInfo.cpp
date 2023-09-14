@@ -731,8 +731,8 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *TBB,
                                      MachineBasicBlock *FBB,
                                      ArrayRef<MachineOperand> Cond,
-                                     const DebugLoc &DL, int *BytesAdded,
-                                     SlotIndexes *Indexes) const {
+                                     const DebugLoc &DL, SlotIndexes *Indexes,
+                                     int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
 
@@ -782,8 +782,9 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
   }
 }
 
-unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
-                                     SlotIndexes *Indexes) const {
+unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                     SlotIndexes *Indexes,
+                                     int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   // Note : we leave PRED* instructions there.

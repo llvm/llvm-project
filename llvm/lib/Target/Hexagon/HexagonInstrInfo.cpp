@@ -604,8 +604,8 @@ bool HexagonInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned HexagonInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved,
-                                        SlotIndexes *Indexes) const {
+                                        SlotIndexes *Indexes,
+                                        int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   LLVM_DEBUG(dbgs() << "\nRemoving branches out of " << printMBBReference(MBB));
@@ -629,12 +629,10 @@ unsigned HexagonInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                        MachineBasicBlock *TBB,
-                                        MachineBasicBlock *FBB,
-                                        ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL, int *BytesAdded,
-                                        SlotIndexes *Indexes) const {
+unsigned HexagonInstrInfo::insertBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, SlotIndexes *Indexes,
+    int *BytesAdded) const {
   unsigned BOpc   = Hexagon::J2_jump;
   unsigned BccOpc = Hexagon::J2_jumpt;
   assert(validateBranchCond(Cond) && "Invalid branching condition");
@@ -660,8 +658,8 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
           !analyzeBranch(MBB, NewTBB, NewFBB, Cond, false) &&
           MachineFunction::iterator(NewTBB) == ++MBB.getIterator()) {
         reverseBranchCondition(Cond);
-        removeBranch(MBB, nullptr, Indexes);
-        return insertBranch(MBB, TBB, nullptr, Cond, DL, nullptr, Indexes);
+        removeBranch(MBB, Indexes);
+        return insertBranch(MBB, TBB, nullptr, Cond, DL, Indexes);
       }
       MachineInstr *MI = BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
       if (Indexes)

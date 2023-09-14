@@ -329,8 +329,8 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TBB,
                                       MachineBasicBlock *FBB,
                                       ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL, int *BytesAdded,
-                                      SlotIndexes *Indexes) const {
+                                      const DebugLoc &DL, SlotIndexes *Indexes,
+                                      int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() <= 3) &&
          "Sparc branch conditions should have at most three components!");
@@ -373,8 +373,9 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
-                                      SlotIndexes *Indexes) const {
+unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                      SlotIndexes *Indexes,
+                                      int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
   int Removed = 0;

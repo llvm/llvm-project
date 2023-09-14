@@ -139,8 +139,8 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *TBB,
                                      MachineBasicBlock *FBB,
                                      ArrayRef<MachineOperand> Cond,
-                                     const DebugLoc &DL, int *BytesAdded,
-                                     SlotIndexes *Indexes) const {
+                                     const DebugLoc &DL, SlotIndexes *Indexes,
+                                     int *BytesAdded) const {
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
@@ -173,8 +173,9 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 1;
 }
 
-unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
-                                     SlotIndexes *Indexes) const {
+unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                     SlotIndexes *Indexes,
+                                     int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::reverse_iterator I = MBB.rbegin(), REnd = MBB.rend();

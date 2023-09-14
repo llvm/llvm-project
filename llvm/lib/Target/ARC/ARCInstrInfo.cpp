@@ -252,8 +252,9 @@ bool ARCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
-                                    SlotIndexes *Indexes) const {
+unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                    SlotIndexes *Indexes,
+                                    int *BytesRemoved) const {
   assert(!BytesRemoved && "Code size not handled");
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
@@ -375,8 +376,8 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL, int *BytesAdded,
-                                    SlotIndexes *Indexes) const {
+                                    const DebugLoc &DL, SlotIndexes *Indexes,
+                                    int *BytesAdded) const {
   assert(!BytesAdded && "Code size not handled.");
 
   // Shouldn't be a fall through.
