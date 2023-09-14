@@ -16,3 +16,13 @@
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
 /runtimes/ @llvm/reviewers-libcxx
+
+/llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
+/llvm/lib/Analysis/InstructionSimplify.cpp @nikic
+/llvm/lib/Analysis/LazyValueInfo.cpp @nikic
+/llvm/lib/Analysis/ScalarEvolution.cpp @nikic
+/llvm/lib/Analysis/ValueTracking.cpp @nikic
+/llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
+/llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
+/llvm/lib/Transforms/InstCombine/ @nikic
