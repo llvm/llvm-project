@@ -132,14 +132,14 @@ class PRSubscriber:
             patch = html.escape(requests.get(self.pr.diff_url).text)
         except:
             patch = ""
-        diff_stats += "\n<pre>\n" + patch
+        diff_stats += "\n<pre>\n" + html.escape(patch)
 
         # GitHub limits comments to 65,536 characters, let's limit the diff to 20kB.
         DIFF_LIMIT = 20 * 1024
         patch_link = f"Full diff: {self.pr.diff_url}\n"
         if len(patch) > DIFF_LIMIT:
             patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
-            diff_stats = html.escape(diff_stats[0:DIFF_LIMIT]) + "...\n<truncated>\n"
+            diff_stats = diff_stats[0:DIFF_LIMIT] + "...\n<truncated>\n"
         diff_stats += "</pre>"
         team_mention = "@llvm/{}".format(team.slug)
 
