@@ -26,6 +26,7 @@ class PExpectTest(TestBase):
         dimensions=None,
         run_under=None,
         post_spawn=None,
+        encoding=None,
         use_colors=False,
     ):
         logfile = getattr(sys.stdout, "buffer", sys.stdout) if self.TraceOn() else None
@@ -58,6 +59,7 @@ class PExpectTest(TestBase):
             timeout=timeout,
             dimensions=dimensions,
             env=env,
+            encoding=encoding,
         )
         self.child.ptyproc.delayafterclose = timeout / 10
         self.child.ptyproc.delayafterterminate = timeout / 10
