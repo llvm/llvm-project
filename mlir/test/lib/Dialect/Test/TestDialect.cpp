@@ -1315,6 +1315,16 @@ void TestStoreWithARegion::getSuccessorRegions(
     regions.emplace_back();
 }
 
+void TestStoreWithALoopRegion::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Both the operation itself and the region may be branching into the body or
+  // back into the operation itself. It is possible for the operation not to
+  // enter the body.
+  regions.emplace_back(
+      RegionSuccessor(&getBody(), getBody().front().getArguments()));
+  regions.emplace_back();
+}
+
 LogicalResult
 TestVersionedOpA::readProperties(::mlir::DialectBytecodeReader &reader,
                                  ::mlir::OperationState &state) {
