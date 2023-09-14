@@ -70,27 +70,37 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   Block &opBlock = op.getBody().emplaceBlock();
   OpBuilder consBuilder = OpBuilder::atBlockBegin(&opBlock);
 
-  // Extract operands of the operation.
-  SmallVector<Value> operands;
-  for (const NamedTypeConstraint &namedCons : tblgenOp.getOperands()) {
-    assert(namedCons.isVariableLength() &&
-           "Variable length operands not supported yet");
-    auto operand = createConstraint(consBuilder, namedCons);
-    operands.push_back(operand);
-  }
+  auto getValues = [&](tblgen::Operator::const_value_range namedCons) {
+    SmallVector<Value> operands;
+    SmallVector<irdl::VariadicityAttr> variadicity;
+    for (const NamedTypeConstraint &namedCons : namedCons) {
+      auto operand = createConstraint(consBuilder, namedCons);
+      operands.push_back(operand);
 
-  // Extract results of the operation.
-  SmallVector<Value> results;
-  for (const NamedTypeConstraint &namedCons : tblgenOp.getResults()) {
-    assert(namedCons.isVariableLength() &&
-           "Variable length operands not supported yet");
-    auto result = createConstraint(consBuilder, namedCons);
-    results.push_back(result);
-  }
+      irdl::VariadicityAttr var;
+      if (namedCons.isOptional())
+        var = consBuilder.getAttr<irdl::VariadicityAttr>(
+            irdl::Variadicity::optional);
+      else if (namedCons.isVariadic())
+        var = consBuilder.getAttr<irdl::VariadicityAttr>(
+            irdl::Variadicity::variadic);
+      else
+        var = consBuilder.getAttr<irdl::VariadicityAttr>(
+            irdl::Variadicity::single);
+
+      variadicity.push_back(var);
+    }
+    return std::make_tuple(operands, variadicity);
+  };
+
+  auto [operands, operandVariadicity] = getValues(tblgenOp.getOperands());
+  auto [results, resultVariadicity] = getValues(tblgenOp.getResults());
 
   // Create the operands and results operations.
-  consBuilder.create<irdl::OperandsOp>(UnknownLoc::get(ctx), operands);
-  consBuilder.create<irdl::ResultsOp>(UnknownLoc::get(ctx), results);
+  consBuilder.create<irdl::OperandsOp>(UnknownLoc::get(ctx), operands,
+                                       operandVariadicity);
+  consBuilder.create<irdl::ResultsOp>(UnknownLoc::get(ctx), results,
+                                      resultVariadicity);
 
   return op;
 }
