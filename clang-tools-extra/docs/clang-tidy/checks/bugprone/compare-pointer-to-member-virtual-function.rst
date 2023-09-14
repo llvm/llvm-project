@@ -34,7 +34,7 @@ virtual function and anything other than null-pointer-constant.
       bool r8 = (v3 == &A::g1); // ok, no virtual function match void(A::*)(int) signature.
     }
 
-This check warns on equality comparisons involve pointers to member virtual
+Provide warnings on equality comparisons involve pointers to member virtual
 function or variables which is potential pointer to member virtual function and
 any entity other than a null-pointer constant.
 
@@ -53,11 +53,11 @@ method, you can mitigate potential issues related to unspecified behavior,
 especially when dealing with pointers to member virtual functions or pure
 virtual functions, thereby improving the overall stability and maintainability
 of your code. In scenarios involving pointers to member virtual functions, it's
-only advisable to employ nullptr for comparisons.
+only advisable to employ ``nullptr`` for comparisons.
 
 Limitations
 -----------
 
-The check will not analyze values stored in a variable. For variable, the check
-will analyze all virtual methods in the same ``class`` or ``struct`` and diagnose
-when assigning a pointer to member virtual function to this variable is possible.
+Does not analyze values stored in a variable. For variable, only analyze all virtual
+methods in the same ``class`` or ``struct`` and diagnose when assigning a pointer
+to member virtual function to this variable is possible.
