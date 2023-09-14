@@ -85,7 +85,8 @@ public:
     if (srcRank < dstRank) {
       // Duplication.
       VectorType resType =
-          VectorType::get(dstType.getShape().drop_front(), eltType);
+          VectorType::get(dstType.getShape().drop_front(), eltType,
+                          dstType.getScalableDims().drop_front());
       Value bcst =
           rewriter.create<vector::BroadcastOp>(loc, resType, op.getSource());
       Value result = rewriter.create<arith::ConstantOp>(
