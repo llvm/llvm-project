@@ -457,7 +457,7 @@ public:
       return "o";
     case ConstraintCode::v:
       return "v";
-    case InlineAsm::Constraint::A:
+    case ConstraintCode::A:
       return "A";
     case ConstraintCode::Q:
       return "Q";
