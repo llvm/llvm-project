@@ -1033,13 +1033,18 @@ public:
   static PyDenseResourceElementsAttribute
   getFromBuffer(py::buffer buffer, std::string name, PyType type,
                 DefaultingPyMlirContext contextWrapper) {
-    // Request a contiguous view. In exotic cases, this will cause a copy.
-    int flags = PyBUF_ND;
+    // Do not request any conversions as we must ensure to use caller
+    // managed memory.
+    int flags = 0;
     Py_buffer view;
     if (PyObject_GetBuffer(buffer.ptr(), &view, flags) != 0) {
       throw py::error_already_set();
     }
     auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
+
+    if (!PyBuffer_IsContiguous(&view, 'A')) {
+      throw std::invalid_argument("Contiguous buffer is required");
+    }
 
     if (!mlirTypeIsAShaped(type)) {
       throw std::invalid_argument(
