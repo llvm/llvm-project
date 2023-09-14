@@ -9,6 +9,7 @@
 #include "rpc_server.h"
 
 #include "src/__support/RPC/rpc.h"
+#include "src/stdio/gpu/file.h"
 #include <atomic>
 #include <cstdio>
 #include <cstring>
@@ -166,19 +167,19 @@ private:
     }
     case RPC_FEOF: {
       port->recv_and_send([](rpc::Buffer *buffer) {
-        buffer->data[0] = feof(reinterpret_cast<FILE *>(buffer->data[0]));
+        buffer->data[0] = feof(file::to_stream(buffer->data[0]));
       });
       break;
     }
     case RPC_FERROR: {
       port->recv_and_send([](rpc::Buffer *buffer) {
-        buffer->data[0] = ferror(reinterpret_cast<FILE *>(buffer->data[0]));
+        buffer->data[0] = ferror(file::to_stream(buffer->data[0]));
       });
       break;
     }
     case RPC_CLEARERR: {
       port->recv_and_send([](rpc::Buffer *buffer) {
-        clearerr(reinterpret_cast<FILE *>(buffer->data[0]));
+        clearerr(file::to_stream(buffer->data[0]));
       });
       break;
     }

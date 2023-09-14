@@ -65,5 +65,38 @@ LIBC_INLINE uint64_t read(::FILE *f, void *data, size_t size) {
     return read_from_stream<RPC_READ_FROM_STREAM>(f, data, size);
 }
 
+enum Stream {
+  File = 0,
+  Stdin = 1,
+  Stdout = 2,
+  Stderr = 3,
+};
+
+// When copying between the client and server we need to indicate if this is one
+// of the special streams. We do this by enocding the low order bits of the
+// pointer to indicate if we need to use the host's standard stream.
+LIBC_INLINE uintptr_t from_stream(::FILE *f) {
+  if (f == stdin)
+    return reinterpret_cast<uintptr_t>(f) | Stdin;
+  if (f == stdout)
+    return reinterpret_cast<uintptr_t>(f) | Stdout;
+  if (f == stderr)
+    return reinterpret_cast<uintptr_t>(f) | Stderr;
+  return reinterpret_cast<uintptr_t>(f);
+}
+
+// Get the associated stream out of an encoded number.
+LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
+  ::FILE *stream = reinterpret_cast<FILE *>(f & ~0x3ull);
+  Stream type = static_cast<Stream>(f & 0x3ull);
+  if (type == Stdin)
+    return stdin;
+  if (type == Stdout)
+    return stdout;
+  if (type == Stderr)
+    return stderr;
+  return stream;
+}
+
 } // namespace file
 } // namespace __llvm_libc

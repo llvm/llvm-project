@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/feof.h"
-#include "src/__support/RPC/rpc_client.h"
+#include "file.h"
 
 #include <stdio.h>
 
@@ -17,9 +17,7 @@ LLVM_LIBC_FUNCTION(int, feof, (::FILE * stream)) {
   int ret;
   rpc::Client::Port port = rpc::client.open<RPC_FEOF>();
   port.send_and_recv(
-      [=](rpc::Buffer *buffer) {
-        buffer->data[0] = reinterpret_cast<uintptr_t>(stream);
-      },
+      [=](rpc::Buffer *buffer) { buffer->data[0] = file::from_stream(stream); },
       [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
   port.close();
   return ret;

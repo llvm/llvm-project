@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/clearerr.h"
-#include "src/__support/RPC/rpc_client.h"
+#include "file.h"
 
 #include <stdio.h>
 
@@ -16,9 +16,7 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
   rpc::Client::Port port = rpc::client.open<RPC_FERROR>();
   port.send_and_recv(
-      [=](rpc::Buffer *buffer) {
-        buffer->data[0] = reinterpret_cast<uintptr_t>(stream);
-      },
+      [=](rpc::Buffer *buffer) { buffer->data[0] = file::from_stream(stream); },
       [&](rpc::Buffer *) {});
   port.close();
 }
