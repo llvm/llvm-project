@@ -40,6 +40,7 @@ def which(program):
                 return exe_file
     return None
 
+
 # ===================================================
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================
@@ -55,6 +56,7 @@ def disassemble(target, function_or_symbol):
     for i in insts:
         print(i, file=buf)
     return buf.getvalue()
+
 
 # ==========================================================
 # Integer (byte size 1, 2, 4, and 8) to bytearray conversion
@@ -75,11 +77,11 @@ def int_to_bytearray(val, bytesize):
     # Little endian followed by a format character.
     template = "<%c"
     if bytesize == 2:
-        fmt = template % 'h'
+        fmt = template % "h"
     elif bytesize == 4:
-        fmt = template % 'i'
+        fmt = template % "i"
     elif bytesize == 4:
-        fmt = template % 'q'
+        fmt = template % "q"
     else:
         return None
 
@@ -101,11 +103,11 @@ def bytearray_to_int(bytes, bytesize):
     # Little endian followed by a format character.
     template = "<%c"
     if bytesize == 2:
-        fmt = template % 'h'
+        fmt = template % "h"
     elif bytesize == 4:
-        fmt = template % 'i'
+        fmt = template % "i"
     elif bytesize == 4:
-        fmt = template % 'q'
+        fmt = template % "q"
     else:
         return None
 
@@ -126,7 +128,7 @@ def get_description(obj, option=None):
         o lldb.eDescriptionLevelFull
         o lldb.eDescriptionLevelVerbose
     """
-    method = getattr(obj, 'GetDescription')
+    method = getattr(obj, "GetDescription")
     if not method:
         return None
     tuple = (lldb.SBTarget, lldb.SBBreakpointLocation, lldb.SBWatchpoint)
@@ -147,6 +149,7 @@ def get_description(obj, option=None):
 # =================================================
 # Convert some enum value to its string counterpart
 # =================================================
+
 
 def state_type_to_str(enum):
     """Returns the stateType string given an enum."""
@@ -280,36 +283,44 @@ def value_type_to_str(enum):
 # Get stopped threads due to each stop reason.
 # ==================================================
 
-def sort_stopped_threads(process,
-                         breakpoint_threads=None,
-                         crashed_threads=None,
-                         watchpoint_threads=None,
-                         signal_threads=None,
-                         exiting_threads=None,
-                         other_threads=None):
-    """ Fills array *_threads with threads stopped for the corresponding stop
-        reason.
+
+def sort_stopped_threads(
+    process,
+    breakpoint_threads=None,
+    crashed_threads=None,
+    watchpoint_threads=None,
+    signal_threads=None,
+    exiting_threads=None,
+    other_threads=None,
+):
+    """Fills array *_threads with threads stopped for the corresponding stop
+    reason.
     """
-    for lst in [breakpoint_threads,
-                watchpoint_threads,
-                signal_threads,
-                exiting_threads,
-                other_threads]:
+    for lst in [
+        breakpoint_threads,
+        watchpoint_threads,
+        signal_threads,
+        exiting_threads,
+        other_threads,
+    ]:
         if lst is not None:
             lst[:] = []
 
     for thread in process:
         dispatched = False
-        for (reason, list) in [(lldb.eStopReasonBreakpoint, breakpoint_threads),
-                               (lldb.eStopReasonException, crashed_threads),
-                               (lldb.eStopReasonWatchpoint, watchpoint_threads),
-                               (lldb.eStopReasonSignal, signal_threads),
-                               (lldb.eStopReasonThreadExiting, exiting_threads),
-                               (None, other_threads)]:
+        for reason, list in [
+            (lldb.eStopReasonBreakpoint, breakpoint_threads),
+            (lldb.eStopReasonException, crashed_threads),
+            (lldb.eStopReasonWatchpoint, watchpoint_threads),
+            (lldb.eStopReasonSignal, signal_threads),
+            (lldb.eStopReasonThreadExiting, exiting_threads),
+            (None, other_threads),
+        ]:
             if not dispatched and list is not None:
                 if thread.GetStopReason() == reason or reason is None:
                     list.append(thread)
                     dispatched = True
+
 
 # ==================================================
 # Utility functions for setting breakpoints
@@ -317,23 +328,25 @@ def sort_stopped_threads(process,
 
 
 def run_break_set_by_file_and_line(
-        test,
-        file_name,
-        line_number,
-        extra_options=None,
-        num_expected_locations=1,
-        loc_exact=False,
-        module_name=None):
+    test,
+    file_name,
+    line_number,
+    extra_options=None,
+    num_expected_locations=1,
+    loc_exact=False,
+    module_name=None,
+):
     """Set a breakpoint by file and line, returning the breakpoint number.
 
     If extra_options is not None, then we append it to the breakpoint set command.
 
     If num_expected_locations is -1 we check that we got AT LEAST one location, otherwise we check that num_expected_locations equals the number of locations.
 
-    If loc_exact is true, we check that there is one location, and that location must be at the input file and line number."""
+    If loc_exact is true, we check that there is one location, and that location must be at the input file and line number.
+    """
 
     if file_name is None:
-        command = 'breakpoint set -l %d' % (line_number)
+        command = "breakpoint set -l %d" % (line_number)
     else:
         command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
 
@@ -352,26 +365,28 @@ def run_break_set_by_file_and_line(
             num_locations=num_expected_locations,
             file_name=file_name,
             line_number=line_number,
-            module_name=module_name)
+            module_name=module_name,
+        )
     else:
         check_breakpoint_result(
-            test,
-            break_results,
-            num_locations=num_expected_locations)
+            test, break_results, num_locations=num_expected_locations
+        )
 
     return get_bpno_from_match(break_results)
 
 
 def run_break_set_by_symbol(
-        test,
-        symbol,
-        extra_options=None,
-        num_expected_locations=-1,
-        sym_exact=False,
-        module_name=None):
+    test,
+    symbol,
+    extra_options=None,
+    num_expected_locations=-1,
+    sym_exact=False,
+    module_name=None,
+):
     """Set a breakpoint by symbol name.  Common options are the same as run_break_set_by_file_and_line.
 
-    If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match."""
+    If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match.
+    """
     command = 'breakpoint set -n "%s"' % (symbol)
 
     if module_name:
@@ -388,22 +403,19 @@ def run_break_set_by_symbol(
             break_results,
             num_locations=num_expected_locations,
             symbol_name=symbol,
-            module_name=module_name)
+            module_name=module_name,
+        )
     else:
         check_breakpoint_result(
-            test,
-            break_results,
-            num_locations=num_expected_locations)
+            test, break_results, num_locations=num_expected_locations
+        )
 
     return get_bpno_from_match(break_results)
 
 
 def run_break_set_by_selector(
-        test,
-        selector,
-        extra_options=None,
-        num_expected_locations=-1,
-        module_name=None):
+    test, selector, extra_options=None, num_expected_locations=-1, module_name=None
+):
     """Set a breakpoint by selector.  Common options are the same as run_break_set_by_file_and_line."""
 
     command = 'breakpoint set -S "%s"' % (selector)
@@ -423,21 +435,19 @@ def run_break_set_by_selector(
             num_locations=num_expected_locations,
             symbol_name=selector,
             symbol_match_exact=False,
-            module_name=module_name)
+            module_name=module_name,
+        )
     else:
         check_breakpoint_result(
-            test,
-            break_results,
-            num_locations=num_expected_locations)
+            test, break_results, num_locations=num_expected_locations
+        )
 
     return get_bpno_from_match(break_results)
 
 
 def run_break_set_by_regexp(
-        test,
-        regexp,
-        extra_options=None,
-        num_expected_locations=-1):
+    test, regexp, extra_options=None, num_expected_locations=-1
+):
     """Set a breakpoint by regular expression match on symbol name.  Common options are the same as run_break_set_by_file_and_line."""
 
     command = 'breakpoint set -r "%s"' % (regexp)
@@ -446,19 +456,14 @@ def run_break_set_by_regexp(
 
     break_results = run_break_set_command(test, command)
 
-    check_breakpoint_result(
-        test,
-        break_results,
-        num_locations=num_expected_locations)
+    check_breakpoint_result(test, break_results, num_locations=num_expected_locations)
 
     return get_bpno_from_match(break_results)
 
 
 def run_break_set_by_source_regexp(
-        test,
-        regexp,
-        extra_options=None,
-        num_expected_locations=-1):
+    test, regexp, extra_options=None, num_expected_locations=-1
+):
     """Set a breakpoint by source regular expression.  Common options are the same as run_break_set_by_file_and_line."""
     command = 'breakpoint set -p "%s"' % (regexp)
     if extra_options:
@@ -466,10 +471,7 @@ def run_break_set_by_source_regexp(
 
     break_results = run_break_set_command(test, command)
 
-    check_breakpoint_result(
-        test,
-        break_results,
-        num_locations=num_expected_locations)
+    check_breakpoint_result(test, break_results, num_locations=num_expected_locations)
 
     return get_bpno_from_match(break_results)
 
@@ -496,120 +498,120 @@ def run_break_set_command(test, command):
         r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>[0-9]+) locations\.$",
         r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>no) locations \(pending\)\.",
         r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+), address = (?P<address>0x[0-9a-fA-F]+)$",
-        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>.*)( \+ (?P<offset>[0-9]+)){0,1}, address = (?P<address>0x[0-9a-fA-F]+)$"]
+        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>.*)( \+ (?P<offset>[0-9]+)){0,1}, address = (?P<address>0x[0-9a-fA-F]+)$",
+    ]
     match_object = test.match(command, patterns)
     break_results = match_object.groupdict()
 
     # We always insert the breakpoint number, setting it to -1 if we couldn't find it
     # Also, make sure it gets stored as an integer.
-    if not 'bpno' in break_results:
-        break_results['bpno'] = -1
+    if not "bpno" in break_results:
+        break_results["bpno"] = -1
     else:
-        break_results['bpno'] = int(break_results['bpno'])
+        break_results["bpno"] = int(break_results["bpno"])
 
     # We always insert the number of locations
     # If ONE location is set for the breakpoint, then the output doesn't mention locations, but it has to be 1...
     # We also make sure it is an integer.
 
-    if not 'num_locations' in break_results:
+    if not "num_locations" in break_results:
         num_locations = 1
     else:
-        num_locations = break_results['num_locations']
-        if num_locations == 'no':
+        num_locations = break_results["num_locations"]
+        if num_locations == "no":
             num_locations = 0
         else:
-            num_locations = int(break_results['num_locations'])
+            num_locations = int(break_results["num_locations"])
 
-    break_results['num_locations'] = num_locations
+    break_results["num_locations"] = num_locations
 
-    if 'line_no' in break_results:
-        break_results['line_no'] = int(break_results['line_no'])
+    if "line_no" in break_results:
+        break_results["line_no"] = int(break_results["line_no"])
 
     return break_results
 
 
 def get_bpno_from_match(break_results):
-    return int(break_results['bpno'])
+    return int(break_results["bpno"])
 
 
 def check_breakpoint_result(
-        test,
-        break_results,
-        file_name=None,
-        line_number=-1,
-        symbol_name=None,
-        symbol_match_exact=True,
-        module_name=None,
-        offset=-1,
-        num_locations=-1):
-
-    out_num_locations = break_results['num_locations']
+    test,
+    break_results,
+    file_name=None,
+    line_number=-1,
+    symbol_name=None,
+    symbol_match_exact=True,
+    module_name=None,
+    offset=-1,
+    num_locations=-1,
+):
+    out_num_locations = break_results["num_locations"]
 
     if num_locations == -1:
-        test.assertTrue(out_num_locations > 0,
-                        "Expecting one or more locations, got none.")
+        test.assertTrue(
+            out_num_locations > 0, "Expecting one or more locations, got none."
+        )
     else:
         test.assertTrue(
             num_locations == out_num_locations,
-            "Expecting %d locations, got %d." %
-            (num_locations,
-             out_num_locations))
+            "Expecting %d locations, got %d." % (num_locations, out_num_locations),
+        )
 
     if file_name:
         out_file_name = ""
-        if 'file' in break_results:
-            out_file_name = break_results['file']
+        if "file" in break_results:
+            out_file_name = break_results["file"]
         test.assertTrue(
             file_name == out_file_name,
-            "Breakpoint file name '%s' doesn't match resultant name '%s'." %
-            (file_name,
-             out_file_name))
+            "Breakpoint file name '%s' doesn't match resultant name '%s'."
+            % (file_name, out_file_name),
+        )
 
     if line_number != -1:
         out_file_line = -1
-        if 'line_no' in break_results:
-            out_line_number = break_results['line_no']
+        if "line_no" in break_results:
+            out_line_number = break_results["line_no"]
 
         test.assertTrue(
             line_number == out_line_number,
-            "Breakpoint line number %s doesn't match resultant line %s." %
-            (line_number,
-             out_line_number))
+            "Breakpoint line number %s doesn't match resultant line %s."
+            % (line_number, out_line_number),
+        )
 
     if symbol_name:
         out_symbol_name = ""
         # Look first for the inlined symbol name, otherwise use the symbol
         # name:
-        if 'inline_symbol' in break_results and break_results['inline_symbol']:
-            out_symbol_name = break_results['inline_symbol']
-        elif 'symbol' in break_results:
-            out_symbol_name = break_results['symbol']
+        if "inline_symbol" in break_results and break_results["inline_symbol"]:
+            out_symbol_name = break_results["inline_symbol"]
+        elif "symbol" in break_results:
+            out_symbol_name = break_results["symbol"]
 
         if symbol_match_exact:
             test.assertTrue(
                 symbol_name == out_symbol_name,
-                "Symbol name '%s' doesn't match resultant symbol '%s'." %
-                (symbol_name,
-                 out_symbol_name))
+                "Symbol name '%s' doesn't match resultant symbol '%s'."
+                % (symbol_name, out_symbol_name),
+            )
         else:
             test.assertTrue(
-                out_symbol_name.find(symbol_name) != -
-                1,
-                "Symbol name '%s' isn't in resultant symbol '%s'." %
-                (symbol_name,
-                 out_symbol_name))
+                out_symbol_name.find(symbol_name) != -1,
+                "Symbol name '%s' isn't in resultant symbol '%s'."
+                % (symbol_name, out_symbol_name),
+            )
 
     if module_name:
         out_nodule_name = None
-        if 'module' in break_results:
-            out_module_name = break_results['module']
+        if "module" in break_results:
+            out_module_name = break_results["module"]
 
         test.assertTrue(
-            module_name.find(out_module_name) != -
-            1,
-            "Symbol module name '%s' isn't in expected module name '%s'." %
-            (out_module_name,
-             module_name))
+            module_name.find(out_module_name) != -1,
+            "Symbol module name '%s' isn't in expected module name '%s'."
+            % (out_module_name, module_name),
+        )
+
 
 # ==================================================
 # Utility functions related to Threads and Processes
@@ -658,7 +660,7 @@ def get_stopped_thread(process, reason):
 
 
 def get_threads_stopped_at_breakpoint(process, bkpt):
-    """ For a stopped process returns the thread stopped at the breakpoint passed in bkpt"""
+    """For a stopped process returns the thread stopped at the breakpoint passed in bkpt"""
     stopped_threads = []
     threads = []
 
@@ -677,7 +679,7 @@ def get_threads_stopped_at_breakpoint(process, bkpt):
 
 
 def continue_to_breakpoint(process, bkpt):
-    """ Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""
+    """Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""
     process.Continue()
     if process.GetState() != lldb.eStateStopped:
         return None
@@ -703,6 +705,7 @@ def get_function_names(thread):
     """
     Returns a sequence of function names from the stack frames of this thread.
     """
+
     def GetFuncName(i):
         return thread.GetFrameAtIndex(i).GetFunctionName()
 
@@ -713,6 +716,7 @@ def get_symbol_names(thread):
     """
     Returns a sequence of symbols for this thread.
     """
+
     def GetSymbol(i):
         return thread.GetFrameAtIndex(i).GetSymbol().GetName()
 
@@ -723,6 +727,7 @@ def get_pc_addresses(thread):
     """
     Returns a sequence of pc addresses for this thread.
     """
+
     def GetPCAddress(i):
         return thread.GetFrameAtIndex(i).GetPCAddress()
 
@@ -733,9 +738,9 @@ def get_filenames(thread):
     """
     Returns a sequence of file names from the stack frames of this thread.
     """
+
     def GetFilename(i):
-        return thread.GetFrameAtIndex(
-            i).GetLineEntry().GetFileSpec().GetFilename()
+        return thread.GetFrameAtIndex(i).GetLineEntry().GetFileSpec().GetFilename()
 
     return [GetFilename(i) for i in range(thread.GetNumFrames())]
 
@@ -744,6 +749,7 @@ def get_line_numbers(thread):
     """
     Returns a sequence of line numbers from the stack frames of this thread.
     """
+
     def GetLineNumber(i):
         return thread.GetFrameAtIndex(i).GetLineEntry().GetLine()
 
@@ -754,9 +760,9 @@ def get_module_names(thread):
     """
     Returns a sequence of module names from the stack frames of this thread.
     """
+
     def GetModuleName(i):
-        return thread.GetFrameAtIndex(
-            i).GetModule().GetFileSpec().GetFilename()
+        return thread.GetFrameAtIndex(i).GetModule().GetFileSpec().GetFilename()
 
     return [GetModuleName(i) for i in range(thread.GetNumFrames())]
 
@@ -765,6 +771,7 @@ def get_stack_frames(thread):
     """
     Returns a sequence of stack frames for this thread.
     """
+
     def GetStackFrame(i):
         return thread.GetFrameAtIndex(i)
 
@@ -790,8 +797,13 @@ def print_stacktrace(thread, string_buffer=False):
         desc = "stop reason=" + stop_reason_to_str(thread.GetStopReason())
     else:
         desc = ""
-    print("Stack trace for thread id={0:#x} name={1} queue={2} ".format(
-        thread.GetThreadID(), thread.GetName(), thread.GetQueueName()) + desc, file=output)
+    print(
+        "Stack trace for thread id={0:#x} name={1} queue={2} ".format(
+            thread.GetThreadID(), thread.GetName(), thread.GetQueueName()
+        )
+        + desc,
+        file=output,
+    )
 
     for i in range(depth):
         frame = thread.GetFrameAtIndex(i)
@@ -802,13 +814,31 @@ def print_stacktrace(thread, string_buffer=False):
             file_addr = addrs[i].GetFileAddress()
             start_addr = frame.GetSymbol().GetStartAddress().GetFileAddress()
             symbol_offset = file_addr - start_addr
-            print("  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}".format(
-                num=i, addr=load_addr, mod=mods[i], symbol=symbols[i], offset=symbol_offset), file=output)
+            print(
+                "  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}".format(
+                    num=i,
+                    addr=load_addr,
+                    mod=mods[i],
+                    symbol=symbols[i],
+                    offset=symbol_offset,
+                ),
+                file=output,
+            )
         else:
-            print("  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}".format(
-                num=i, addr=load_addr, mod=mods[i], func='%s [inlined]' %
-                funcs[i] if frame.IsInlined() else funcs[i], file=files[i], line=lines[i], args=get_args_as_string(
-                    frame, showFuncName=False) if not frame.IsInlined() else '()'), file=output)
+            print(
+                "  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}".format(
+                    num=i,
+                    addr=load_addr,
+                    mod=mods[i],
+                    func="%s [inlined]" % funcs[i] if frame.IsInlined() else funcs[i],
+                    file=files[i],
+                    line=lines[i],
+                    args=get_args_as_string(frame, showFuncName=False)
+                    if not frame.IsInlined()
+                    else "()",
+                ),
+                file=output,
+            )
 
     if string_buffer:
         return output.getvalue()
@@ -826,6 +856,7 @@ def print_stacktraces(process, string_buffer=False):
 
     if string_buffer:
         return output.getvalue()
+
 
 # ===================================
 # Utility functions related to Frames
@@ -859,9 +890,7 @@ def get_args_as_string(frame, showFuncName=True):
     vars = frame.GetVariables(True, False, False, True)  # type of SBValueList
     args = []  # list of strings
     for var in vars:
-        args.append("(%s)%s=%s" % (var.GetTypeName(),
-                                   var.GetName(),
-                                   var.GetValue()))
+        args.append("(%s)%s=%s" % (var.GetTypeName(), var.GetName(), var.GetValue()))
     if frame.GetFunction():
         name = frame.GetFunction().GetName()
     elif frame.GetSymbol():
@@ -882,15 +911,20 @@ def print_registers(frame, string_buffer=False):
     print("Register sets for " + str(frame), file=output)
 
     registerSet = frame.GetRegisters()  # Return type of SBValueList.
-    print("Frame registers (size of register set = %d):" % registerSet.GetSize(
-    ), file=output)
+    print(
+        "Frame registers (size of register set = %d):" % registerSet.GetSize(),
+        file=output,
+    )
     for value in registerSet:
-        #print >> output, value
-        print("%s (number of children = %d):" % (
-            value.GetName(), value.GetNumChildren()), file=output)
+        # print >> output, value
+        print(
+            "%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()),
+            file=output,
+        )
         for child in value:
-            print("Name: %s, Value: %s" % (
-                child.GetName(), child.GetValue()), file=output)
+            print(
+                "Name: %s, Value: %s" % (child.GetName(), child.GetValue()), file=output
+            )
 
     if string_buffer:
         return output.getvalue()
@@ -950,6 +984,7 @@ def get_ESRs(frame):
     """
     return get_registers(frame, "exception state")
 
+
 # ======================================
 # Utility classes/functions for SBValues
 # ======================================
@@ -970,11 +1005,15 @@ class BasicFormatter(object):
             val = value.GetValue()
         if val is None and value.GetNumChildren() > 0:
             val = "%s (location)" % value.GetLocation()
-        print("{indentation}({type}) {name} = {value}".format(
-            indentation=' ' * indent,
-            type=value.GetTypeName(),
-            name=value.GetName(),
-            value=val), file=output)
+        print(
+            "{indentation}({type}) {name} = {value}".format(
+                indentation=" " * indent,
+                type=value.GetTypeName(),
+                name=value.GetName(),
+                value=val,
+            ),
+            file=output,
+        )
         return output.getvalue()
 
 
@@ -996,8 +1035,7 @@ class ChildVisitingFormatter(BasicFormatter):
 
         BasicFormatter.format(self, value, buffer=output)
         for child in value:
-            BasicFormatter.format(
-                self, child, buffer=output, indent=self.cindent)
+            BasicFormatter.format(self, child, buffer=output, indent=self.cindent)
 
         return output.getvalue()
 
@@ -1025,14 +1063,12 @@ class RecursiveDecentFormatter(BasicFormatter):
         new_indent = self.lindent + self.cindent
         for child in value:
             if child.GetSummary() is not None:
-                BasicFormatter.format(
-                    self, child, buffer=output, indent=new_indent)
+                BasicFormatter.format(self, child, buffer=output, indent=new_indent)
             else:
                 if child.GetNumChildren() > 0:
                     rdf = RecursiveDecentFormatter(indent_level=new_indent)
                     rdf.format(child, buffer=output)
                 else:
-                    BasicFormatter.format(
-                        self, child, buffer=output, indent=new_indent)
+                    BasicFormatter.format(self, child, buffer=output, indent=new_indent)
 
         return output.getvalue()

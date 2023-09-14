@@ -36,7 +36,7 @@ namespace {
 /// AtomicRMWOpLowering pattern, e.g. with "minf" or "maxf" attributes, to
 /// `memref.generic_atomic_rmw` with the expanded code.
 ///
-/// %x = atomic_rmw "maxf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
+/// %x = atomic_rmw "maximumf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
 ///
 /// will be lowered to
 ///
@@ -54,10 +54,10 @@ public:
                                 PatternRewriter &rewriter) const final {
     arith::CmpFPredicate predicate;
     switch (op.getKind()) {
-    case arith::AtomicRMWKind::maxf:
+    case arith::AtomicRMWKind::maximumf:
       predicate = arith::CmpFPredicate::OGT;
       break;
-    case arith::AtomicRMWKind::minf:
+    case arith::AtomicRMWKind::minimumf:
       predicate = arith::CmpFPredicate::OLT;
       break;
     default:
@@ -137,8 +137,8 @@ struct ExpandOpsPass : public memref::impl::ExpandOpsBase<ExpandOpsPass> {
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect>();
     target.addDynamicallyLegalOp<memref::AtomicRMWOp>(
         [](memref::AtomicRMWOp op) {
-          return op.getKind() != arith::AtomicRMWKind::maxf &&
-                 op.getKind() != arith::AtomicRMWKind::minf;
+          return op.getKind() != arith::AtomicRMWKind::maximumf &&
+                 op.getKind() != arith::AtomicRMWKind::minimumf;
         });
     target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
       return !cast<MemRefType>(op.getShape().getType()).hasStaticShape();

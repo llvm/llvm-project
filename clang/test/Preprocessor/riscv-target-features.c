@@ -643,7 +643,7 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izicntr -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZICNTR-EXT %s
-// CHECK-ZICNTR-EXT: __riscv_zicntr 1000000{{$}}
+// CHECK-ZICNTR-EXT: __riscv_zicntr 2000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
 // RUN: -march=rv32izicsr2p0 -x c -E -dM %s \
@@ -676,6 +676,14 @@
 // RUN: -march=rv64izihintpause2p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZIHINTPAUSE-EXT %s
 // CHECK-ZIHINTPAUSE-EXT: __riscv_zihintpause 2000000{{$}}
+
+// RUN: %clang -target riscv32-unknown-linux-gnu \
+// RUN: -march=rv32izihpm -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZIHPM-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izihpm -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZIHPM-EXT %s
+// CHECK-ZIHPM-EXT: __riscv_zihpm 2000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
 // RUN: -march=rv32izk1p0 -x c -E -dM %s \
