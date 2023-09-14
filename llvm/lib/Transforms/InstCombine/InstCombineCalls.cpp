@@ -899,7 +899,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 
   Value *FAbsSrc;
   if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fabs(Mask)));
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), inverse_fabs(Mask)));
     return replaceOperand(II, 0, FAbsSrc);
   }
 
