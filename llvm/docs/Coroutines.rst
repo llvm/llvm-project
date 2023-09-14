@@ -151,8 +151,8 @@ lowerings:
 - In yield-once returned-continuation lowering, the coroutine must
   suspend itself exactly once (or throw an exception).  The ramp
   function returns a continuation function pointer and yielded
-  values, but the continuation function simply returns `void`
-  when the coroutine has run to completion.
+  values, the continuation function may optionally return ordinary
+  results when the coroutine has run to completion.
 
 The coroutine frame is maintained in a fixed-size buffer that is
 passed to the `coro.id` intrinsic, which guarantees a certain size
