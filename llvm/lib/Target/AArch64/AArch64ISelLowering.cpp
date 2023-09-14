@@ -26407,7 +26407,7 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
 
     return B.CreateIntrinsic(IdMap[(int)Rotation], Ty,
-                             {Accumulator, InputB, InputA});
+                             {Accumulator, InputA, InputB});
   }
 
   if (OperationType == ComplexDeinterleavingOperation::CAdd) {
