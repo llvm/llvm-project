@@ -743,11 +743,16 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(
           errc::invalid_argument,
           "'--gap-fill' is only supported for binary output");
-    ErrorOr<uint8_t> Val = getAsInteger<uint8_t>(A->getValue());
+    ErrorOr<uint64_t> Val = getAsInteger<uint64_t>(A->getValue());
     if (!Val)
-      return createStringError(Val.getError(), "bad number for --gap-fill: %s",
+      return createStringError(Val.getError(), "--gap-fill: bad number: %s",
                                A->getValue());
-    Config.GapFill = Val.get();
+    uint8_t ByteVal = Val.get();
+    if (ByteVal != Val.get())
+      llvm::errs() << "warning: truncating gap-fill from 0x"
+                   << llvm::utohexstr(Val.get(), true) << " to 0x"
+                   << llvm::utohexstr(ByteVal, true) << '\n';
+    Config.GapFill = ByteVal;
   } else
     Config.GapFill = 0; // The value of zero is equivalent to no fill.
 
@@ -758,10 +763,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
           "'--pad-to' is only supported for binary output");
     ErrorOr<uint64_t> Addr = getAsInteger<uint64_t>(A->getValue());
     if (!Addr)
-      return createStringError(Addr.getError(), "bad address for --pad-to: %s",
+      return createStringError(Addr.getError(), "--pad-to: bad number: %s",
                                A->getValue());
     Config.PadTo = *Addr;
-  }
+  } else
+    Config.PadTo = 0;
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))

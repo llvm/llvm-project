@@ -1,39 +1,32 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
-## Verify section headers before we perform several testings.
-# RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=ORG-SHDR
-# ORG-SHDR: Section Headers:
-# ORG-SHDR:  [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
-# ORG-SHDR:  [ 0]                   NULL            0000000000000000 000000 000000 00      0   0  0
-# ORG-SHDR:  [ 1] .nogap            PROGBITS        0000000000000102 000042 000006 00   A  0   0  1
-# ORG-SHDR:  [ 2] .gap1             PROGBITS        0000000000000108 000048 000007 00  AX  0   0  1
-# ORG-SHDR:  [ 3] .gap2             PROGBITS        0000000000000110 000050 000004 00   A  0   0  1
-# ORG-SHDR:  [ 4] .nobit_tbss       NOBITS          0000000000000180 000058 000018 00 WAT  0   0  8
-# ORG-SHDR:  [ 5] .foo              PROGBITS        0000000000000184 00005c 000004 00  WA  0   0  1
-# ORG-SHDR:  [ 6] .nobit_bss        NOBITS          000000000000018a 000060 000008 00  WA  0   0  1
+## This test is partially based on one from D67689.
 
 # RUN: not llvm-objcopy --gap-fill 1 %t 2>&1 | FileCheck %s --check-prefix=NOT-BINARY
 # NOT-BINARY: error: '--gap-fill' is only supported for binary output
 
 # RUN: not llvm-objcopy -O binary --gap-fill %t 2>&1 | FileCheck %s --check-prefix=EMPTY
-# EMPTY: no input file specified
+# EMPTY: error: no input file specified
 
 # RUN: not llvm-objcopy -O binary --gap-fill= %t 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
-# BAD-FORMAT: bad number for --gap-fill:
+# BAD-FORMAT: error: --gap-fill: bad number:
 
 # RUN: not llvm-objcopy -O binary --gap-fill=x %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT
-# BAD-INPUT: bad number for --gap-fill: x
+# BAD-INPUT: error: --gap-fill: bad number: x
 
 # RUN: not llvm-objcopy -O binary --gap-fill=0x1G %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT2
-# BAD-INPUT2: bad number for --gap-fill: 0x1G
+# BAD-INPUT2: error: --gap-fill: bad number: 0x1G
 
-# RUN: not llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=BAD-INPUT3
-# BAD-INPUT3: bad number for --gap-fill: 0x1122
+# RUN: not llvm-objcopy -O binary --gap-fill=ff %t 2>&1 | FileCheck %s --check-prefix=BAD-INPUT3
+# BAD-INPUT3: error: --gap-fill: bad number: ff
 
-# Test no gap fill gap fill with all allocatable output sections
+# RUN: llvm-objcopy -O binary --gap-fill=0x1122 %t %t-val16 2>&1 | FileCheck %s --check-prefix=TRUNCATED
+# TRUNCATED: warning: truncating gap-fill from 0x1122 to 0x22
+
+## Test no gap fill with all allocatable output sections.
 # RUN: llvm-objcopy -O binary %t %t-default
-# RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT
-# DEFAULT: 000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 00 a1 b2
+# RUN: od -v -Ax -t x1 %t-default | FileCheck %s --check-prefix=DEFAULT --match-full-lines
+# DEFAULT:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 00 a1 b2
 # DEFAULT-NEXT: 000010 c3 d4 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # DEFAULT-NEXT: 000020 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # DEFAULT-NEXT: 000030 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
@@ -44,10 +37,10 @@
 # DEFAULT-NEXT: 000080 00 00 89 ab cd ef
 # DEFAULT-NEXT: 000086
 
-# Test gap fill with all allocatable output sections
+## Test gap fill with all allocatable output sections
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL
-# FULL: 000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=FULL --match-full-lines
+# FULL:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
 # FULL-NEXT: 000010 c3 d4 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
 # FULL-NEXT: 000020 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
 # FULL-NEXT: 000030 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
@@ -58,17 +51,31 @@
 # FULL-NEXT: 000080 e9 e9 89 ab cd ef
 # FULL-NEXT: 000086
 
-# Test gap fill with the last section removed, should be truncated
+## Test gap fill with a decimal value.
+# RUN: llvm-objcopy -O binary --gap-fill=99 %t %t-filled-decimal
+# RUN: od -v -Ax -t x1 %t-filled-decimal | FileCheck %s --check-prefix=DEC --match-full-lines
+# DEC:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba 63 a1 b2
+# DEC-NEXT: 000010 c3 d4 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000020 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000030 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000040 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000050 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000060 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000070 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63 63
+# DEC-NEXT: 000080 63 63 89 ab cd ef
+# DEC-NEXT: 000086
+
+## Test gap fill with the last section removed, should be truncated.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 --remove-section=.foo %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-LAST-SECTION
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-LAST-SECTION --match-full-lines
 # REMOVE-LAST-SECTION: 000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 a1 b2
 # REMOVE-LAST-SECTION-NEXT: 000010 c3 d4
 # REMOVE-LAST-SECTION-NEXT: 000012
 
-# Test gap fill with the middle section removed, should be filled
+## Test gap fill with the middle section removed, should be filled.
 # RUN: llvm-objcopy -O binary --gap-fill=0xe9 --remove-section=.gap2 %t %t-filled
-# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-MIDDLE-SECTION
-# REMOVE-MIDDLE-SECTION: 000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 e9 e9
+# RUN: od -v -Ax -t x1 %t-filled | FileCheck %s --check-prefix=REMOVE-MIDDLE-SECTION --match-full-lines
+# REMOVE-MIDDLE-SECTION:      000000 ee ff 11 22 33 44 aa bb cc dd fe dc ba e9 e9 e9
 # REMOVE-MIDDLE-SECTION-NEXT: 000010 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
 # REMOVE-MIDDLE-SECTION-NEXT: 000020 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
 # REMOVE-MIDDLE-SECTION-NEXT: 000030 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9 e9
@@ -123,7 +130,7 @@ Sections:
     Address:         0x0180
     AddressAlign:    0x0008
     Size:            0x0018
-  - Name:            .space4             # in the different segment
+  - Name:            .space4
     Type:            Fill
     Pattern:         '01234567'
     Size:            0x4
@@ -145,5 +152,4 @@ Sections:
     AddressAlign:    0x0001
     EntSize:         0x0001
     Content:         4743433A
-
 ...

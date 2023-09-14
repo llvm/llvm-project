@@ -215,7 +215,7 @@ struct CommonConfig {
   uint32_t GnuDebugLinkCRC32;
   std::optional<StringRef> ExtractPartition;
   uint8_t GapFill = 0;
-  std::optional<uint64_t> PadTo;
+  uint64_t PadTo = 0;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
   StringRef AllocSectionsPrefix;
