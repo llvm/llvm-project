@@ -104,11 +104,11 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
   return *Res.first->second;
 }
 
-void DataflowAnalysisContext::addCommonConstraint(const Formula &Constraint) {
-  if (GlobalConstraints == nullptr)
-    GlobalConstraints = &Constraint;
+void DataflowAnalysisContext::addInvariant(const Formula &Constraint) {
+  if (Invariant == nullptr)
+    Invariant = &Constraint;
   else
-    GlobalConstraints = &arena().makeAnd(*GlobalConstraints, Constraint);
+    Invariant = &arena().makeAnd(*Invariant, Constraint);
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
@@ -181,8 +181,8 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   llvm::DenseSet<Atom> AddedTokens;
   std::vector<Atom> Remaining = {Token};
 
-  if (GlobalConstraints)
-    Constraints.insert(GlobalConstraints);
+  if (Invariant)
+    Constraints.insert(Invariant);
   // Define all the flow conditions that might be referenced in constraints.
   while (!Remaining.empty()) {
     auto Token = Remaining.back();

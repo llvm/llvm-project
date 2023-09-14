@@ -110,13 +110,12 @@ public:
 
   /// Adds `Constraint` to current and future flow conditions in this context.
   ///
-  /// The common condition must contain only flow-insensitive information, i.e.
-  /// facts that are true on all paths through the program.
+  /// Invariants must contain only flow-insensitive information, i.e. facts that
+  /// are true on all paths through the program.
   /// Information can be added eagerly (when analysis begins), or lazily (e.g.
   /// when values are first used). The analysis must be careful that the same
-  /// information is added to the common condition regardless of which order
-  /// blocks are analyzed in.
-  void addCommonConstraint(const Formula &Constraint);
+  /// information is added regardless of which order blocks are analyzed in.
+  void addInvariant(const Formula &Constraint);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
@@ -233,7 +232,7 @@ private:
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
-  const Formula *GlobalConstraints = nullptr;
+  const Formula *Invariant = nullptr;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 
