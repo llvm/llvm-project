@@ -13,6 +13,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
+#include <type_traits>
 
 namespace clang::dataflow {
 
