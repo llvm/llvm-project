@@ -358,3 +358,12 @@ define <8 x ptr> @gep_vector_index_op3_poison_constant_index_afterwards(ptr %ptr
   %res = getelementptr inbounds %t.3, ptr %ptr, i64 0, i32 1, <8 x i64> poison, i32 1
   ret <8 x ptr> %res
 }
+
+define i64 @gep_array_of_scalable_vectors_ptrdiff(ptr %ptr) {
+  %c1 = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr %ptr, i64 4
+  %c2 = getelementptr inbounds [8 x <vscale x 4 x i32>], ptr %ptr, i64 6
+  %c1.int = ptrtoint ptr %c1 to i64
+  %c2.int = ptrtoint ptr %c2 to i64
+  %diff = sub i64 %c2.int, %c1.int
+  ret i64 %diff
+}
