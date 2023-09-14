@@ -434,12 +434,6 @@ flang/**/CodeGen/ @llvm/pr-subscribers-flang-codegen
 /llvm/utils/TableGen/CodeGenDAG* @llvm/pr-subscribers-selectiondag
 /llvm/utils/TableGen/DAGISel* @llvm/pr-subscribers-selectiondag
 
-# spirv
-/clang/lib/Driver/ToolChains/SPIRV.* @llvm/pr-subscribers-spirv
-/llvm/lib/Target/SPIRV @llvm/pr-subscribers-spirv
-/llvm/test/CodeGen/SPIRV @llvm/pr-subscribers-spirv
-/llvm/docs/SPIRVUsage.rst @llvm/pr-subscribers-spirv
-
 # register allocation
 /llvm/**/*RegAlloc @llvm/pr-subscribers-regalloc
 /llvm/**/CodeGen/Register* @llvm/pr-subscribers-regalloc

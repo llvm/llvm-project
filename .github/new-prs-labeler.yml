@@ -523,6 +523,13 @@ backend:DirectX:
   - clang/lib/Basic/Targets/DirectX*
   - llvm/include/llvm/IR/IntrinsicsDirectX.td
 
+backend:SPIR-V:
+  - clang/lib/Driver/ToolChains/SPIRV.*
+  - llvm/lib/Target/SPIRV/**
+  - llvm/test/CodeGen/SPIRV/**
+  - llvm/test/Frontend/HLSL/**
+  - llvm/docs/SPIRVUsage.rst
+
 mlgo:
   - llvm/lib/Analysis/ML*
   - llvm/include/llvm/Analysis/ML*
