@@ -887,6 +887,10 @@ void LinkerScript::diagnoseOrphanHandling() const {
   if (config->orphanHandling == OrphanHandlingPolicy::Place)
     return;
   for (const InputSectionBase *sec : orphanSections) {
+    // .relro_padding is inserted before DATA_SEGMENT_RELRO_END, if present,
+    // automatically. The section is not supposed to be specified by scripts.
+    if (sec == in.relroPadding.get())
+      continue;
     // Input SHT_REL[A] retained by --emit-relocs are ignored by
     // computeInputSections(). Don't warn/error.
     if (isa<InputSection>(sec) &&
@@ -1079,6 +1083,11 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     }
   }
 
+  // If .relro_padding is present, round up the end to a common-page-size
+  // boundary to protect the last page.
+  if (in.relroPadding && sec == in.relroPadding->getParent())
+    expandOutputSection(alignToPowerOf2(dot, config->commonPageSize) - dot);
+
   // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
   // as they are not part of the process image.
   if (!(sec->flags & SHF_ALLOC)) {
@@ -1160,6 +1169,7 @@ void LinkerScript::adjustOutputSections() {
   uint64_t flags = SHF_ALLOC;
 
   SmallVector<StringRef, 0> defPhdrs;
+  bool seenRelro = false;
   for (SectionCommand *&cmd : sectionCommands) {
     if (!isa<OutputDesc>(cmd))
       continue;
@@ -1196,9 +1206,17 @@ void LinkerScript::adjustOutputSections() {
     if (sec->sectionIndex != UINT32_MAX)
       maybePropagatePhdrs(*sec, defPhdrs);
 
+    // Discard .relro_padding if we have not seen one RELRO section. Note: when
+    // .tbss is the only RELRO section, there is no associated PT_LOAD segment
+    // (needsPtLoad), so we don't append .relro_padding in the case.
+    if (in.relroPadding && in.relroPadding->getParent() == sec && !seenRelro)
+      discardable = true;
     if (discardable) {
       sec->markDead();
       cmd = nullptr;
+    } else {
+      seenRelro |=
+          sec->relro && !(sec->type == SHT_NOBITS && (sec->flags & SHF_TLS));
     }
   }
 
