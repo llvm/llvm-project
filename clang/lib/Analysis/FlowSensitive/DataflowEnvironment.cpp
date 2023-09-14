@@ -288,6 +288,18 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
+static Expr *getRetValueFromSingleReturnStmtMethod(const CXXMemberCallExpr &C) {
+  auto *D = cast_or_null<CXXMethodDecl>(C.getMethodDecl()->getDefinition());
+  if (!D)
+    return nullptr;
+  auto *S = cast<CompoundStmt>(D->getBody());
+  if (S->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*S->body_begin()))
+    return RS->getRetValue()->IgnoreParenImpCasts();
+  return nullptr;
+}
+
 static void
 getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
@@ -324,6 +336,12 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = dyn_cast_or_null<MemberExpr>(
+        getRetValueFromSingleReturnStmtMethod(*C)))
+      getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
