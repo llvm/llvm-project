@@ -288,7 +288,6 @@ endif()
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all
 # of the other directories.
-# TODO: Add testing support for the libc GPU target.
 add_subdirectory(lib)
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)
