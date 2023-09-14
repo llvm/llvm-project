@@ -39,9 +39,9 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:  store i32 %[[A2]], ptr %[[A1]], align 4, !tbaa ![[A_ACCESS_TAG]]
 // CHECK:  ret void
 // CHECK: }
+// CHECK: ![[ANY_ACCESS_TYPE:.*]] = !{!"any access", ![[ROOT:.*]], i64 0}
+// CHECK: ![[ROOT]] = !{!"Flang function root _QPsimple"}
 // CHECK: ![[A_ACCESS_TAG]] = !{![[A_ACCESS_TYPE:.*]], ![[A_ACCESS_TYPE]], i64 0}
 // CHECK: ![[A_ACCESS_TYPE]] = !{!"dummy arg data/a", ![[DUMMY_ARG_TYPE:.*]], i64 0}
 // CHECK: ![[DUMMY_ARG_TYPE]] = !{!"dummy arg data", ![[DATA_ACCESS_TYPE:.*]], i64 0}
-// CHECK: ![[DATA_ACCESS_TYPE]] = !{!"any data access", ![[ANY_ACCESS_TYPE:.*]], i64 0}
-// CHECK: ![[ANY_ACCESS_TYPE]] = !{!"any access", ![[ROOT:.*]], i64 0}
-// CHECK: ![[ROOT]] = !{!"Flang function root _QPsimple"}
+// CHECK: ![[DATA_ACCESS_TYPE]] = !{!"any data access", ![[ANY_ACCESS_TYPE]], i64 0}
