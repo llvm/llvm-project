@@ -9771,6 +9771,36 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "BufferDeallocationOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferDeallocationOpInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
+    deps = [
+        ":BufferDeallocationOpInterfaceTdFiles",
+    ],
+)
+
+td_library(
     name = "SubsetInsertionOpInterfaceTdFiles",
     srcs = [
         "include/mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td",
