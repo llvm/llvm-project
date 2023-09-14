@@ -71,7 +71,7 @@ class TestSwiftArrayType(lldbtest.TestBase):
             "frame variable arrint",
             substrs=[
                 "([Int]) arrint = 5 values {", "[0] = 1",
-                "[0] = 1", "[1] = 2", "[2] = 3", "[3] = 4", "[4] = 5"])
+                "[1] = 2", "[2] = 3", "[3] = 4", "[4] = 5"])
         self.expect(
             "frame variable arrfoo",
             substrs=["Foo]) arrfoo = 0 values {}"])
