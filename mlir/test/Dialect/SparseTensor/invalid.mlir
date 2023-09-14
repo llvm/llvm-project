@@ -44,7 +44,7 @@ func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coord
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], posWidth=32, crdWidth=32}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed), posWidth=32, crdWidth=32}>
 
 func.func @invalid_pack_mis_position(%values: tensor<6xf64>, %coordinates: tensor<6xi32>)
                                      -> tensor<2x100xf64, #CSR> {
@@ -80,7 +80,7 @@ func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: t
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], posWidth=32, crdWidth=32}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed), posWidth=32, crdWidth=32}>
 
 func.func @invalid_unpack_mis_position(%sp: tensor<2x100xf64, #CSR>, %values: tensor<6xf64>, %coordinates: tensor<6xi32>) {
   // expected-error@+1 {{inconsistent number of fields between input/output}}
@@ -297,7 +297,7 @@ func.func @sparse_unannotated_insert(%arg0: tensor<128xf64>, %arg1: index, %arg2
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 func.func @sparse_wrong_arity_insert(%arg0: tensor<128x64xf64, #CSR>, %arg1: index, %arg2: f64) {
   // expected-error@+1 {{'sparse_tensor.insert' op incorrect number of coordinates}}
@@ -347,7 +347,7 @@ func.func @sparse_unannotated_compression(%arg0: memref<?xf64>,
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 func.func @sparse_wrong_arity_compression(%arg0: memref<?xf64>,
                                           %arg1: memref<?xi1>,
@@ -381,7 +381,7 @@ func.func @sparse_convert_rank_mismatch(%arg0: tensor<10x10xf64, #DCSR>) -> tens
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 func.func @sparse_convert_dim_mismatch(%arg0: tensor<10x?xf32>) -> tensor<10x10xf32, #CSR> {
   // expected-error@+1 {{unexpected conversion mismatch in dimension 1}}
@@ -632,7 +632,7 @@ func.func @invalid_select_wrong_yield(%arg0: f64) -> f64 {
 
 // -----
 
-#DC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func @invalid_concat_less_inputs(%arg: tensor<9x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
   // expected-error@+1 {{Need at least two tensors to concatenate.}}
   %0 = sparse_tensor.concatenate %arg {dimension = 1 : index}
@@ -642,7 +642,7 @@ func.func @invalid_concat_less_inputs(%arg: tensor<9x4xf64, #DC>) -> tensor<9x4x
 
 // -----
 
-#DC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
                               %arg1: tensor<3x4xf64, #DC>,
                               %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
@@ -657,7 +657,7 @@ func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
 // -----
 
 #C = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
-#DC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 #DCC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed", "compressed"]}>
 func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
                                         %arg1: tensor<3x4xf64, #DC>,
@@ -672,7 +672,7 @@ func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
 
 // -----
 
-#DC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func @invalid_concat_size_mismatch_dyn(%arg0: tensor<?x4xf64, #DC>,
                                             %arg1: tensor<5x4xf64, #DC>,
                                             %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
@@ -686,7 +686,7 @@ func.func @invalid_concat_size_mismatch_dyn(%arg0: tensor<?x4xf64, #DC>,
 
 // -----
 
-#DC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func @invalid_concat_size_mismatch(%arg0: tensor<3x4xf64, #DC>,
                                         %arg1: tensor<5x4xf64, #DC>,
                                         %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
@@ -700,7 +700,7 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<3x4xf64, #DC>,
 
 // -----
 
-#DC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
                                         %arg1: tensor<3x3xf64, #DC>,
                                         %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
@@ -844,7 +844,7 @@ func.func @sparse_sort_coo_y_too_small(%arg0: memref<60xindex>, %arg1: memref<10
 
 // -----
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 func.func @sparse_alloc_escapes(%arg0: index) -> tensor<10x?xf64, #CSR> {
   // expected-error@+1 {{sparse tensor allocation should not escape function}}

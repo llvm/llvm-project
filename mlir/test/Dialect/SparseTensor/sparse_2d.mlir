@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -sparsification | FileCheck %s
 
 #Tdd = #sparse_tensor.encoding<{ lvlTypes = [ "dense",      "dense"      ] }>
-#Tds = #sparse_tensor.encoding<{ lvlTypes = [ "dense",      "compressed" ] }>
+#Tds = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 #Tsd = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "dense"      ] }>
 #Tss = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
 

@@ -1,7 +1,6 @@
 // Purpose:
 //      Check that we can use label-relative line numbers.
 //
-// XFAIL: system-darwin
 // RUN: %dexter_regression_test_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -v -- %s | FileCheck %s
 //
