@@ -58,7 +58,7 @@ func.func @escape_attr_non_bufferizable(%m0: memref<?xf32>) {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
   // expected-error @+1{{sparse tensor allocation should not escape function}}
@@ -68,7 +68,7 @@ func.func @sparse_alloc_direct_return() -> tensor<20x40xf32, #DCSR> {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 func.func private @foo(tensor<20x40xf32, #DCSR>) -> ()
 
