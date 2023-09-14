@@ -50,7 +50,11 @@ def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
 def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
-    return str.replace("@", "@<!-- -->").replace("#", "#<!-- -->")
+    # '@' followed by alphanum is a user name
+    str = re.sub("@(?=\w+)","@<!-- -->", str)
+    # '#' followed by digits is considered an issue number
+    str = re.sub("#(?=\d+\s)", "#<!-- -->", str)
+    return str
 
 
 class IssueSubscriber:
