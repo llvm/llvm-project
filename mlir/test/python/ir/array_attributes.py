@@ -451,6 +451,7 @@ def testGetDenseResourceElementsAttr():
 
     test_attribute(context, mview)
     mview = None
+    gc.collect()
     # CHECK: FREEING CONTEXT
     print("FREEING CONTEXT")
     context = None
