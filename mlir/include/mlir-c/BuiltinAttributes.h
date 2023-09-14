@@ -558,6 +558,9 @@ mlirDenseElementsAttrGetRawData(MlirAttribute attr);
 // Resource blob attributes.
 //===----------------------------------------------------------------------===//
 
+MLIR_CAPI_EXPORTED bool
+mlirAttributeIsADenseResourceElements(MlirAttribute attr);
+
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseBoolResourceElementsAttrGet(
     MlirType shapedType, MlirStringRef name, intptr_t numElements,
     const int *elements);

@@ -72,6 +72,31 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
+static const char kDenseResourceElementsAttrGetUnsafeDocstring[] =
+    R"(Gets a DenseResourceElementsAttr from a Python buffer or array.
+
+This function is extremely unsafe and must be used when strict invariants
+are met:
+
+* The contents of the buffer matches the contiguous data layout implied
+  by the given ShapedType.
+* The caller arranges to keep the backing memory alive and valid for the
+  duration of any use of the attribute.
+
+Args:
+  buffer: The array or buffer to convert.
+  name: Name to provide to the resource (may be changed upon collision).
+  type: The explicit ShapedType to construct the attribute with.
+  context: Explicit context, if not from context manager.
+
+Returns:
+  DenseResourceElementsAttr on success.
+
+Raises:
+  ValueError: If the type of the buffer or array cannot be matched to an MLIR
+    type or if the buffer does not meet expectations.
+)";
+
 namespace {
 
 static MlirStringRef toMlirStringRef(const std::string &s) {
@@ -997,6 +1022,51 @@ public:
   }
 };
 
+class PyDenseResourceElementsAttribute
+    : public PyConcreteAttribute<PyDenseResourceElementsAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction =
+      mlirAttributeIsADenseResourceElements;
+  static constexpr const char *pyClassName = "DenseResourceElementsAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+
+  static PyDenseResourceElementsAttribute
+  getFromBuffer(py::buffer buffer, std::string name, PyType type,
+                DefaultingPyMlirContext contextWrapper) {
+    // Request a contiguous view. In exotic cases, this will cause a copy.
+    int flags = PyBUF_ND;
+    Py_buffer view;
+    if (PyObject_GetBuffer(buffer.ptr(), &view, flags) != 0) {
+      throw py::error_already_set();
+    }
+    auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
+
+    if (!mlirTypeIsAShaped(type)) {
+      throw std::invalid_argument(
+          "Constructing a DenseResourceElementsAttr requires a ShapedType");
+    }
+    size_t rawBufferSize = view.len;
+    MlirAttribute attr = mlirUnmanagedDenseBlobResourceElementsAttrGet(
+        type, toMlirStringRef(name), view.buf, rawBufferSize);
+    if (mlirAttributeIsNull(attr)) {
+      throw std::invalid_argument(
+          "DenseResourceElementsAttr could not be constructed from the given "
+          "buffer. "
+          "This may mean that the Python buffer layout does not match that "
+          "MLIR expected layout and is a bug.");
+    }
+    return PyDenseResourceElementsAttribute(contextWrapper->getRef(), attr);
+  }
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get_unsafe_from_buffer",
+                 PyDenseResourceElementsAttribute::getFromBuffer,
+                 py::arg("array"), py::arg("name"), py::arg("type"),
+                 py::arg("context") = py::none(),
+                 kDenseResourceElementsAttrGetUnsafeDocstring);
+  }
+};
+
 class PyDictAttribute : public PyConcreteAttribute<PyDictAttribute> {
 public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADictionary;
@@ -1273,6 +1343,7 @@ void mlir::python::populateIRAttributes(py::module &m) {
   PyGlobals::get().registerTypeCaster(
       mlirDenseIntOrFPElementsAttrGetTypeID(),
       pybind11::cpp_function(denseIntOrFPElementsAttributeCaster));
+  PyDenseResourceElementsAttribute::bind(m);
 
   PyDictAttribute::bind(m);
   PySymbolRefAttribute::bind(m);

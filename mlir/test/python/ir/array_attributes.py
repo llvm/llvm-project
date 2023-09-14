@@ -417,3 +417,24 @@ def testGetDenseElementsIndex():
         print(arr)
         # CHECK: True
         print(arr.dtype == np.int64)
+
+
+# CHECK-LABEL: TEST: testGetDenseResourceElementsAttr
+@run
+def testGetDenseResourceElementsAttr():
+    with Context(), Location.unknown():
+        element_type = IntegerType.get_signless(32)
+        tensor_type = RankedTensorType.get((2, 3), element_type)
+        array = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
+        resource = DenseResourceElementsAttr.get_unsafe_from_buffer(
+            array, "from_py", tensor_type
+        )
+        module = Module.parse("module {}")
+        module.operation.attributes["test.resource"] = resource
+        # CHECK: test.resource = dense_resource<from_py> : tensor<2x3xi32>
+        # CHECK: from_py: "0x01000000010000000200000003000000040000000500000006000000"
+        print(module)
+
+        # Verifies type casting.
+        # CHECK: dense_resource<from_py> : tensor<2x3xi32>
+        print(DenseResourceElementsAttr(module.operation.attributes["test.resource"]))

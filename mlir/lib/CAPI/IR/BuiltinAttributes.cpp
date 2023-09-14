@@ -770,6 +770,10 @@ const void *mlirDenseElementsAttrGetRawData(MlirAttribute attr) {
 // Resource blob attributes.
 //===----------------------------------------------------------------------===//
 
+bool mlirAttributeIsADenseResourceElements(MlirAttribute attr) {
+  return llvm::isa<DenseResourceElementsAttr>(unwrap(attr));
+}
+
 template <typename U, typename T>
 static MlirAttribute getDenseResource(MlirType shapedType, MlirStringRef name,
                                       intptr_t numElements, const T *elements) {
