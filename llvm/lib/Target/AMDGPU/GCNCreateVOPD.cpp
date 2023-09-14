@@ -110,12 +110,6 @@ public:
       auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
       bool IsVOP3 = SII->isVOP3(*MI[CompIdx]);
       for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
-        if (MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e64 &&
-            CompSrcIdx == 2) {
-          assert(SII->getNamedOperand(*MI[CompIdx], AMDGPU::OpName::src2)
-                     ->getReg() == AMDGPU::VCC_LO);
-          continue;
-        }
         if (AMDGPU::hasNamedOperand(VOPDOpc, Mods[CompIdx][CompSrcIdx])) {
           const MachineOperand *Mod =
               SII->getNamedOperand(*MI[CompIdx], SrcMods[CompSrcIdx]);
@@ -125,6 +119,8 @@ public:
             InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx, IsVOP3);
         VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
       }
+      if (MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e32 && CI.IsVOPD3)
+        VOPDInst.addReg(AMDGPU::VCC_LO);
     }
 
     if (CI.IsVOPD3) {

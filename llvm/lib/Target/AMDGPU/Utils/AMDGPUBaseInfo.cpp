@@ -689,17 +689,19 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
                                                                            1;
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
-  if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opcode, OpName::src0))) {
+  if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
+      Opcode == AMDGPU::V_CNDMASK_B32_e64) {
+    // CNDMASK is an awkward exception, it has FP modifiers, but not FP
+    // operands.
+    NumVOPD3Mods = 2;
+    if (IsVOP3)
+      SrcOperandsNum = 3;
+  } else if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
     // for tied src2.
     NumVOPD3Mods = SrcOperandsNum;
     if (HasSrc2Acc)
       --NumVOPD3Mods;
-  } else if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
-             Opcode == AMDGPU::V_CNDMASK_B32_e64) {
-    // CNDMASK is an awkward exception, it has FP modifiers, but not FP
-    // operands.
-    NumVOPD3Mods = 2;
   }
 
   if (OpDesc.TSFlags & SIInstrFlags::VOP3)

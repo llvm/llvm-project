@@ -118,11 +118,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
           if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3))
             continue;
           if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
-            // Only allow VCC which is implicit in a dual instruction. We cannot
-            // encode any other SGPR.
-            if (Src->getReg() != AMDGPU::VCC_LO)
-              return false;
-            UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
+            UniqueScalarRegs.push_back(Src->getReg());
             continue;
           }
         }

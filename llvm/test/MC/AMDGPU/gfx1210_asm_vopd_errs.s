@@ -111,6 +111,11 @@ v_dual_cndmask_b32  v255, s1, v2                 ::  v_dual_cndmask_b32   v6, s2
 // GFX12-NEXT:{{^}}v_dual_cndmask_b32  v255, s1, v2                 ::  v_dual_cndmask_b32   v6, s2, v3
 // GFX12-NEXT:{{^}}                                                                              ^
 
+v_dual_cndmask_b32 v1, s2, v3, vcc_lo :: v_dual_cndmask_b32 v2, s3, v4, vcc_lo
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+// GFX12-NEXT:{{^}}v_dual_cndmask_b32 v1, s2, v3, vcc_lo :: v_dual_cndmask_b32 v2, s3, v4, vcc_lo
+// GFX12-NEXT:{{^}}                                                                        ^
+
 // SGPR + LITERAL + VCC
 
 v_dual_cndmask_b32  v255, s1, v2                 ::  v_dual_mov_b32       v254, 0xbabe

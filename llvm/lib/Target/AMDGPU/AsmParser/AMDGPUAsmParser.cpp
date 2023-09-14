@@ -3555,8 +3555,10 @@ static OperandIndices getSrcOperandIndices(unsigned Opcode,
 
     return {getNamedOperandIdx(Opcode, OpName::src0X),
             getNamedOperandIdx(Opcode, OpName::vsrc1X),
+            getNamedOperandIdx(Opcode, OpName::vsrc2X),
             getNamedOperandIdx(Opcode, OpName::src0Y),
             getNamedOperandIdx(Opcode, OpName::vsrc1Y),
+            getNamedOperandIdx(Opcode, OpName::vsrc2Y),
             ImmDeferredIdx,
             ImmIdx};
   }
@@ -3798,6 +3800,13 @@ bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(getSTI());
   if (!getCanBeVOPD(II[VOPD::X].getOpcode(), EncodingFamily, false).X ||
       !getCanBeVOPD(II[VOPD::Y].getOpcode(), EncodingFamily, false).Y)
+    return false;
+
+  // This is an awkward exception, VOPD3 variant of V_DUAL_CNDMASK_B32 has
+  // explicit src2 even if it is vcc_lo. If it was parsed as VOPD3 it cannot
+  // be parsed as VOPD which does not accept src2.
+  if (II[VOPD::X].getOpcode() == AMDGPU::V_CNDMASK_B32_e32 ||
+      II[VOPD::Y].getOpcode() == AMDGPU::V_CNDMASK_B32_e32)
     return false;
 
   // If any modifiers are set this cannot be VOPD.

@@ -83,22 +83,13 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{46} = !if(!and(VDY.Pfl.HasVOPD3Src2, VDY.Pfl.HasModifiers), vsrc2Y_modifiers, 0);
   let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), 0, vsrc1X);
 
-  // Set src2 to VCC for V_DUAL_CNDMASK_B32.
-  // SP3 allows to use an SGPR in place of VSRC2 operand for this instruction
+  // SP3 allows to use an SGPR in place of VSRC2 operand for V_DUAL_CNDMASK_B32
   // despite the fact the operand does not accept SGPRs.
-  // Actual HW behavior: it does not read and ignores the field, default VCC is
-  // used.
-  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1),
-                            !if(!eq(VDX, V_CNDMASK_B32_e32),
-                                !cast<int>(VCC.HWEncoding), 0),
-                            vsrc2X);
+  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), 0, vsrc2X);
   let Inst{71-64} = vdstX;
   let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), 0, vsrc1Y);
   let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPD3Y, "bitop"), -1), bitop3,
-                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1),
-                            !if(!eq(VDY, V_CNDMASK_B32_e32),
-                                !cast<int>(VCC.HWEncoding), 0),
-                            vsrc2Y));
+                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1), 0, vsrc2Y));
   let Inst{95-88} = vdstY;
 }
 
@@ -183,6 +174,12 @@ class VOPD3<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
       VOPD3e<XasVC.VOPDOp, YasVC.VOPDOp, VDX, VDY> {
   let VOPD3 = 1;
   let Size = 12;
+  // VOPD3 uses promoted form of VOP2 instructions, so V_CNDMASK_B32 is not
+  // limited to VCC src2 only, and a real SGPR will be used as an operand
+  // instead.
+  defvar UsesX = !if(!eq(VDX, V_CNDMASK_B32_e32), !filter(x, VDX.Uses, !ne(x, VCC)), VDX.Uses);
+  defvar UsesY = !if(!eq(VDY, V_CNDMASK_B32_e32), !filter(x, VDY.Uses, !ne(x, VCC)), VDY.Uses);
+  let Uses = RegListUnion<UsesX, UsesY>.ret;
 }
 
 // V_DUAL_DOT2ACC_F32_BF16 is a legal instruction, but V_DOT2ACC_F32_BF16 is

@@ -130,68 +130,68 @@ v_dual_add_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x11,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_add_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x10,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x10,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_add_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x10,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x10,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_add_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x10,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x10,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_add_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x10,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x10,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_add_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x10,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x10,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_add_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x10,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x10,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_add_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x10,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x10,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_add_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x10,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x10,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_add_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x10,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x10,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_add_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x10,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x10,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_add_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x10,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x10,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_add_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x10,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x10,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_add_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x10,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x10,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_add_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x10,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_add_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x10,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_add_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x10,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_add_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_add_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x10,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x10,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_add_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x10,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_add_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -778,780 +778,780 @@ v_dual_add_f32 v255, v4, v2 :: v_dual_bitop2_b32 v7, v1, v3
 // GFX12: v_dual_add_f32 v255, v4, v2 :: v_dual_bitop2_b32 v7, v1, v3 ; encoding: [0x04,0x21,0x11,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_add_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_add_f32 v7, v1, v3 ; encoding: [0x04,0x41,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_add_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_add_f32 v7, v1, v3 ; encoding: [0x04,0x41,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_add_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_add_f32 v7, v255, v3 ; encoding: [0x01,0x41,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_add_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_add_f32 v7, v255, v3 ; encoding: [0x01,0x41,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_add_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_add_f32 v7, v2, v3 ; encoding: [0xff,0x41,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_add_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_add_f32 v7, v2, v3 ; encoding: [0xff,0x41,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_add_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_add_f32 v7, v3, v3 ; encoding: [0x02,0x41,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_add_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_add_f32 v7, v3, v3 ; encoding: [0x02,0x41,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_add_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_add_f32 v7, v4, v3 ; encoding: [0x03,0x41,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_add_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_add_f32 v7, v4, v3 ; encoding: [0x03,0x41,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_add_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_add_f32 v7, s105, v3 ; encoding: [0x69,0x40,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_add_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_add_f32 v7, s105, v3 ; encoding: [0x69,0x40,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_add_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_add_f32 v7, s1, v3 ; encoding: [0x01,0x40,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_add_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_add_f32 v7, s1, v3 ; encoding: [0x01,0x40,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_add_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_add_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x40,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_add_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_add_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x40,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_add_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_add_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x40,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_add_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_add_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x40,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_add_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_add_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x40,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_add_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_add_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x40,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_add_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_add_f32 v7, m0, v3 ; encoding: [0x7d,0x40,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_add_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_add_f32 v7, m0, v3 ; encoding: [0x7d,0x40,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_add_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_add_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x40,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_add_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_add_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x40,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_add_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_add_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x40,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_add_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_add_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x40,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_add_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_add_f32 v7, -1, v3 ; encoding: [0xfd,0x40,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_add_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_add_f32 v7, -1, v3 ; encoding: [0xfd,0x40,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_add_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_add_f32 v7, 0.5, v2 ; encoding: [0xf0,0x40,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_add_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_add_f32 v7, 0.5, v2 ; encoding: [0xf0,0x40,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_add_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_add_f32 v7, src_scc, v5 ; encoding: [0xc1,0x40,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_add_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_add_f32 v7, src_scc, v5 ; encoding: [0xc1,0x40,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_add_nc_u32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_add_nc_u32 v7, v1, v3 ; encoding: [0x04,0x01,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_add_nc_u32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_add_nc_u32 v7, v1, v3 ; encoding: [0x04,0x01,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_add_nc_u32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_add_nc_u32 v7, v255, v3 ; encoding: [0x01,0x01,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_add_nc_u32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_add_nc_u32 v7, v255, v3 ; encoding: [0x01,0x01,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_add_nc_u32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_add_nc_u32 v7, v2, v3 ; encoding: [0xff,0x01,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_add_nc_u32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_add_nc_u32 v7, v2, v3 ; encoding: [0xff,0x01,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_add_nc_u32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_add_nc_u32 v7, v3, v3 ; encoding: [0x02,0x01,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_add_nc_u32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_add_nc_u32 v7, v3, v3 ; encoding: [0x02,0x01,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_add_nc_u32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_add_nc_u32 v7, v4, v3 ; encoding: [0x03,0x01,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_add_nc_u32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_add_nc_u32 v7, v4, v3 ; encoding: [0x03,0x01,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_add_nc_u32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_add_nc_u32 v7, s105, v3 ; encoding: [0x69,0x00,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_add_nc_u32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_add_nc_u32 v7, s105, v3 ; encoding: [0x69,0x00,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_add_nc_u32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_add_nc_u32 v7, s1, v3 ; encoding: [0x01,0x00,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_add_nc_u32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_add_nc_u32 v7, s1, v3 ; encoding: [0x01,0x00,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_add_nc_u32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_add_nc_u32 v7, ttmp15, v3 ; encoding: [0x7b,0x00,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_add_nc_u32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_add_nc_u32 v7, ttmp15, v3 ; encoding: [0x7b,0x00,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_add_nc_u32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_add_nc_u32 v7, exec_hi, v3 ; encoding: [0x7f,0x00,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_add_nc_u32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_add_nc_u32 v7, exec_hi, v3 ; encoding: [0x7f,0x00,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_add_nc_u32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_add_nc_u32 v7, exec_lo, v3 ; encoding: [0x7e,0x00,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_add_nc_u32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_add_nc_u32 v7, exec_lo, v3 ; encoding: [0x7e,0x00,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_add_nc_u32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_add_nc_u32 v7, m0, v3 ; encoding: [0x7d,0x00,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_add_nc_u32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_add_nc_u32 v7, m0, v3 ; encoding: [0x7d,0x00,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_add_nc_u32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_add_nc_u32 v7, vcc_hi, v3 ; encoding: [0x6b,0x00,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_add_nc_u32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_add_nc_u32 v7, vcc_hi, v3 ; encoding: [0x6b,0x00,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_add_nc_u32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_add_nc_u32 v7, vcc_lo, v3 ; encoding: [0x6a,0x00,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_add_nc_u32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_add_nc_u32 v7, vcc_lo, v3 ; encoding: [0x6a,0x00,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_add_nc_u32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_add_nc_u32 v7, -1, v3 ; encoding: [0xfd,0x00,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_add_nc_u32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_add_nc_u32 v7, -1, v3 ; encoding: [0xfd,0x00,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_add_nc_u32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_add_nc_u32 v7, 0.5, v2 ; encoding: [0xf0,0x00,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_add_nc_u32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_add_nc_u32 v7, 0.5, v2 ; encoding: [0xf0,0x00,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_add_nc_u32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x6a,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x6a,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3 ; encoding: [0x04,0x01,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_fmac_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_fmac_f32 v7, v1, v3 ; encoding: [0x04,0x01,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_fmac_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_fmac_f32 v7, v255, v3 ; encoding: [0x01,0x01,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_fmac_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_fmac_f32 v7, v255, v3 ; encoding: [0x01,0x01,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_fmac_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_fmac_f32 v7, v2, v3 ; encoding: [0xff,0x01,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_fmac_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_fmac_f32 v7, v2, v3 ; encoding: [0xff,0x01,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_fmac_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_fmac_f32 v7, v3, v3 ; encoding: [0x02,0x01,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_fmac_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_fmac_f32 v7, v3, v3 ; encoding: [0x02,0x01,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_fmac_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_fmac_f32 v7, v4, v3 ; encoding: [0x03,0x01,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_fmac_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_fmac_f32 v7, v4, v3 ; encoding: [0x03,0x01,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_fmac_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_fmac_f32 v7, s105, v3 ; encoding: [0x69,0x00,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_fmac_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_fmac_f32 v7, s105, v3 ; encoding: [0x69,0x00,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_fmac_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_fmac_f32 v7, s1, v3 ; encoding: [0x01,0x00,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_fmac_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_fmac_f32 v7, s1, v3 ; encoding: [0x01,0x00,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_fmac_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_fmac_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x00,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_fmac_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_fmac_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x00,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_fmac_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_fmac_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x00,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_fmac_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_fmac_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x00,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_fmac_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_fmac_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x00,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_fmac_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_fmac_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x00,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_fmac_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_fmac_f32 v7, m0, v3 ; encoding: [0x7d,0x00,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_fmac_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_fmac_f32 v7, m0, v3 ; encoding: [0x7d,0x00,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_fmac_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_fmac_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x00,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_fmac_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_fmac_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x00,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_fmac_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_fmac_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x00,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_fmac_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_fmac_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x00,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_fmac_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_fmac_f32 v7, -1, v3 ; encoding: [0xfd,0x00,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_fmac_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_fmac_f32 v7, -1, v3 ; encoding: [0xfd,0x00,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_fmac_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_fmac_f32 v7, 0.5, v2 ; encoding: [0xf0,0x00,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_fmac_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_fmac_f32 v7, 0.5, v2 ; encoding: [0xf0,0x00,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_fmac_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_fmac_f32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_fmac_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_fmac_f32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_lshlrev_b32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_lshlrev_b32 v7, v1, v3 ; encoding: [0x04,0x11,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v1, v3 ; encoding: [0x04,0x11,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_lshlrev_b32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_lshlrev_b32 v7, v255, v3 ; encoding: [0x01,0x11,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v255, v3 ; encoding: [0x01,0x11,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_lshlrev_b32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_lshlrev_b32 v7, v2, v3 ; encoding: [0xff,0x11,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v2, v3 ; encoding: [0xff,0x11,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_lshlrev_b32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_lshlrev_b32 v7, v3, v3 ; encoding: [0x02,0x11,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v3, v3 ; encoding: [0x02,0x11,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_lshlrev_b32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_lshlrev_b32 v7, v4, v3 ; encoding: [0x03,0x11,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_lshlrev_b32 v7, v4, v3 ; encoding: [0x03,0x11,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_lshlrev_b32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_lshlrev_b32 v7, s105, v3 ; encoding: [0x69,0x10,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_lshlrev_b32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_lshlrev_b32 v7, s105, v3 ; encoding: [0x69,0x10,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_lshlrev_b32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_lshlrev_b32 v7, s1, v3 ; encoding: [0x01,0x10,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_lshlrev_b32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_lshlrev_b32 v7, s1, v3 ; encoding: [0x01,0x10,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_lshlrev_b32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_lshlrev_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x10,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_lshlrev_b32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_lshlrev_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x10,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_lshlrev_b32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_lshlrev_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x10,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_lshlrev_b32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_lshlrev_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x10,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_lshlrev_b32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_lshlrev_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x10,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_lshlrev_b32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_lshlrev_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x10,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_lshlrev_b32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_lshlrev_b32 v7, m0, v3 ; encoding: [0x7d,0x10,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_lshlrev_b32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_lshlrev_b32 v7, m0, v3 ; encoding: [0x7d,0x10,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_lshlrev_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_lshlrev_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x10,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_lshlrev_b32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_lshlrev_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x10,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_lshlrev_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_lshlrev_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x10,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_lshlrev_b32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_lshlrev_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x10,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_lshlrev_b32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_lshlrev_b32 v7, -1, v3 ; encoding: [0xfd,0x10,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_lshlrev_b32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_lshlrev_b32 v7, -1, v3 ; encoding: [0xfd,0x10,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_lshlrev_b32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_lshlrev_b32 v7, 0.5, v2 ; encoding: [0xf0,0x10,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_lshlrev_b32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_lshlrev_b32 v7, 0.5, v2 ; encoding: [0xf0,0x10,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_lshlrev_b32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_lshlrev_b32 v7, src_scc, v5 ; encoding: [0xc1,0x10,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_lshlrev_b32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_lshlrev_b32 v7, src_scc, v5 ; encoding: [0xc1,0x10,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_max_num_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_max_num_f32 v7, v1, v3 ; encoding: [0x04,0xa1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_max_num_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_max_num_f32 v7, v1, v3 ; encoding: [0x04,0xa1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_max_num_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_max_num_f32 v7, v255, v3 ; encoding: [0x01,0xa1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_max_num_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_max_num_f32 v7, v255, v3 ; encoding: [0x01,0xa1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_max_num_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_max_num_f32 v7, v2, v3 ; encoding: [0xff,0xa1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_max_num_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_max_num_f32 v7, v2, v3 ; encoding: [0xff,0xa1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_max_num_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_max_num_f32 v7, v3, v3 ; encoding: [0x02,0xa1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_max_num_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_max_num_f32 v7, v3, v3 ; encoding: [0x02,0xa1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_max_num_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_max_num_f32 v7, v4, v3 ; encoding: [0x03,0xa1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_max_num_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_max_num_f32 v7, v4, v3 ; encoding: [0x03,0xa1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_max_num_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_max_num_f32 v7, s105, v3 ; encoding: [0x69,0xa0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_max_num_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_max_num_f32 v7, s105, v3 ; encoding: [0x69,0xa0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_max_num_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_max_num_f32 v7, s1, v3 ; encoding: [0x01,0xa0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_max_num_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_max_num_f32 v7, s1, v3 ; encoding: [0x01,0xa0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_max_num_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_max_num_f32 v7, ttmp15, v3 ; encoding: [0x7b,0xa0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_max_num_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_max_num_f32 v7, ttmp15, v3 ; encoding: [0x7b,0xa0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_max_num_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_max_num_f32 v7, exec_hi, v3 ; encoding: [0x7f,0xa0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_max_num_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_max_num_f32 v7, exec_hi, v3 ; encoding: [0x7f,0xa0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_max_num_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_max_num_f32 v7, exec_lo, v3 ; encoding: [0x7e,0xa0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_max_num_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_max_num_f32 v7, exec_lo, v3 ; encoding: [0x7e,0xa0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_max_num_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_max_num_f32 v7, m0, v3 ; encoding: [0x7d,0xa0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_max_num_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_max_num_f32 v7, m0, v3 ; encoding: [0x7d,0xa0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_max_num_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_max_num_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0xa0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_max_num_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_max_num_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0xa0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_max_num_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_max_num_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0xa0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_max_num_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_max_num_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0xa0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_max_num_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_max_num_f32 v7, -1, v3 ; encoding: [0xfd,0xa0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_max_num_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_max_num_f32 v7, -1, v3 ; encoding: [0xfd,0xa0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_max_num_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_max_num_f32 v7, 0.5, v2 ; encoding: [0xf0,0xa0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_max_num_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_max_num_f32 v7, 0.5, v2 ; encoding: [0xf0,0xa0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_max_num_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_max_num_f32 v7, src_scc, v5 ; encoding: [0xc1,0xa0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_max_num_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_max_num_f32 v7, src_scc, v5 ; encoding: [0xc1,0xa0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_min_num_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_min_num_f32 v7, v1, v3 ; encoding: [0x04,0xb1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_min_num_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_min_num_f32 v7, v1, v3 ; encoding: [0x04,0xb1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_min_num_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_min_num_f32 v7, v255, v3 ; encoding: [0x01,0xb1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_min_num_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_min_num_f32 v7, v255, v3 ; encoding: [0x01,0xb1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_min_num_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_min_num_f32 v7, v2, v3 ; encoding: [0xff,0xb1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_min_num_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_min_num_f32 v7, v2, v3 ; encoding: [0xff,0xb1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_min_num_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_min_num_f32 v7, v3, v3 ; encoding: [0x02,0xb1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_min_num_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_min_num_f32 v7, v3, v3 ; encoding: [0x02,0xb1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_min_num_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_min_num_f32 v7, v4, v3 ; encoding: [0x03,0xb1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_min_num_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_min_num_f32 v7, v4, v3 ; encoding: [0x03,0xb1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_min_num_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_min_num_f32 v7, s105, v3 ; encoding: [0x69,0xb0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_min_num_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_min_num_f32 v7, s105, v3 ; encoding: [0x69,0xb0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_min_num_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_min_num_f32 v7, s1, v3 ; encoding: [0x01,0xb0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_min_num_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_min_num_f32 v7, s1, v3 ; encoding: [0x01,0xb0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_min_num_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_min_num_f32 v7, ttmp15, v3 ; encoding: [0x7b,0xb0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_min_num_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_min_num_f32 v7, ttmp15, v3 ; encoding: [0x7b,0xb0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_min_num_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_min_num_f32 v7, exec_hi, v3 ; encoding: [0x7f,0xb0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_min_num_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_min_num_f32 v7, exec_hi, v3 ; encoding: [0x7f,0xb0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_min_num_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_min_num_f32 v7, exec_lo, v3 ; encoding: [0x7e,0xb0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_min_num_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_min_num_f32 v7, exec_lo, v3 ; encoding: [0x7e,0xb0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_min_num_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_min_num_f32 v7, m0, v3 ; encoding: [0x7d,0xb0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_min_num_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_min_num_f32 v7, m0, v3 ; encoding: [0x7d,0xb0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_min_num_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_min_num_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0xb0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_min_num_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_min_num_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0xb0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_min_num_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_min_num_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0xb0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_min_num_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_min_num_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0xb0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_min_num_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_min_num_f32 v7, -1, v3 ; encoding: [0xfd,0xb0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_min_num_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_min_num_f32 v7, -1, v3 ; encoding: [0xfd,0xb0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_min_num_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_min_num_f32 v7, 0.5, v2 ; encoding: [0xf0,0xb0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_min_num_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_min_num_f32 v7, 0.5, v2 ; encoding: [0xf0,0xb0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_min_num_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_min_num_f32 v7, src_scc, v5 ; encoding: [0xc1,0xb0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_min_num_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_min_num_f32 v7, src_scc, v5 ; encoding: [0xc1,0xb0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v255 :: v_dual_mov_b32 v7, v1
-// GFX1210: v_dual_cndmask_b32 v255, v4, v255 :: v_dual_mov_b32 v7, v1 ; encoding: [0x04,0x81,0x24,0xcf,0x01,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v255, vcc_lo :: v_dual_mov_b32 v7, v1
+// GFX1210: v_dual_cndmask_b32 v255, v4, v255, vcc_lo :: v_dual_mov_b32 v7, v1 ; encoding: [0x04,0x81,0x24,0xcf,0x01,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v255 :: v_dual_mov_b32 v7, v255
-// GFX1210: v_dual_cndmask_b32 v255, v1, v255 :: v_dual_mov_b32 v7, v255 ; encoding: [0x01,0x81,0x24,0xcf,0xff,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v255, vcc_lo :: v_dual_mov_b32 v7, v255
+// GFX1210: v_dual_cndmask_b32 v255, v1, v255, vcc_lo :: v_dual_mov_b32 v7, v255 ; encoding: [0x01,0x81,0x24,0xcf,0xff,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v255 :: v_dual_mov_b32 v7, v2
-// GFX1210: v_dual_cndmask_b32 v255, v255, v255 :: v_dual_mov_b32 v7, v2 ; encoding: [0xff,0x81,0x24,0xcf,0x02,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v255, vcc_lo :: v_dual_mov_b32 v7, v2
+// GFX1210: v_dual_cndmask_b32 v255, v255, v255, vcc_lo :: v_dual_mov_b32 v7, v2 ; encoding: [0xff,0x81,0x24,0xcf,0x02,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v255 :: v_dual_mov_b32 v7, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v255 :: v_dual_mov_b32 v7, v3 ; encoding: [0x02,0x81,0x24,0xcf,0x03,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v255, vcc_lo :: v_dual_mov_b32 v7, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v255, vcc_lo :: v_dual_mov_b32 v7, v3 ; encoding: [0x02,0x81,0x24,0xcf,0x03,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v255 :: v_dual_mov_b32 v7, v4
-// GFX1210: v_dual_cndmask_b32 v255, v3, v255 :: v_dual_mov_b32 v7, v4 ; encoding: [0x03,0x81,0x24,0xcf,0x04,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v255, vcc_lo :: v_dual_mov_b32 v7, v4
+// GFX1210: v_dual_cndmask_b32 v255, v3, v255, vcc_lo :: v_dual_mov_b32 v7, v4 ; encoding: [0x03,0x81,0x24,0xcf,0x04,0x01,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v255 :: v_dual_mov_b32 v7, s105
-// GFX1210: v_dual_cndmask_b32 v255, s105, v255 :: v_dual_mov_b32 v7, s105 ; encoding: [0x69,0x80,0x24,0xcf,0x69,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v255, vcc_lo :: v_dual_mov_b32 v7, s105
+// GFX1210: v_dual_cndmask_b32 v255, s105, v255, vcc_lo :: v_dual_mov_b32 v7, s105 ; encoding: [0x69,0x80,0x24,0xcf,0x69,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v255 :: v_dual_mov_b32 v7, s1
-// GFX1210: v_dual_cndmask_b32 v255, s1, v255 :: v_dual_mov_b32 v7, s1 ; encoding: [0x01,0x80,0x24,0xcf,0x01,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v255, vcc_lo :: v_dual_mov_b32 v7, s1
+// GFX1210: v_dual_cndmask_b32 v255, s1, v255, vcc_lo :: v_dual_mov_b32 v7, s1 ; encoding: [0x01,0x80,0x24,0xcf,0x01,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v255 :: v_dual_mov_b32 v7, ttmp15
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v255 :: v_dual_mov_b32 v7, ttmp15 ; encoding: [0x7b,0x80,0x24,0xcf,0x7b,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v255, vcc_lo :: v_dual_mov_b32 v7, ttmp15
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v255, vcc_lo :: v_dual_mov_b32 v7, ttmp15 ; encoding: [0x7b,0x80,0x24,0xcf,0x7b,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v255 :: v_dual_mov_b32 v7, exec_hi
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v255 :: v_dual_mov_b32 v7, exec_hi ; encoding: [0x7f,0x80,0x24,0xcf,0x7f,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v255, vcc_lo :: v_dual_mov_b32 v7, exec_hi
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v255, vcc_lo :: v_dual_mov_b32 v7, exec_hi ; encoding: [0x7f,0x80,0x24,0xcf,0x7f,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v255 :: v_dual_mov_b32 v7, exec_lo
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v255 :: v_dual_mov_b32 v7, exec_lo ; encoding: [0x7e,0x80,0x24,0xcf,0x7e,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v255, vcc_lo :: v_dual_mov_b32 v7, exec_lo
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v255, vcc_lo :: v_dual_mov_b32 v7, exec_lo ; encoding: [0x7e,0x80,0x24,0xcf,0x7e,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v255 :: v_dual_mov_b32 v7, m0
-// GFX1210: v_dual_cndmask_b32 v255, m0, v255 :: v_dual_mov_b32 v7, m0 ; encoding: [0x7d,0x80,0x24,0xcf,0x7d,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v255, vcc_lo :: v_dual_mov_b32 v7, m0
+// GFX1210: v_dual_cndmask_b32 v255, m0, v255, vcc_lo :: v_dual_mov_b32 v7, m0 ; encoding: [0x7d,0x80,0x24,0xcf,0x7d,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v255 :: v_dual_mov_b32 v7, vcc_hi
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v255 :: v_dual_mov_b32 v7, vcc_hi ; encoding: [0x6b,0x80,0x24,0xcf,0x6b,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v255, vcc_lo :: v_dual_mov_b32 v7, vcc_hi
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v255, vcc_lo :: v_dual_mov_b32 v7, vcc_hi ; encoding: [0x6b,0x80,0x24,0xcf,0x6b,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v255 :: v_dual_mov_b32 v7, vcc_lo
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v255 :: v_dual_mov_b32 v7, vcc_lo ; encoding: [0x6a,0x80,0x24,0xcf,0x6a,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v255, vcc_lo :: v_dual_mov_b32 v7, vcc_lo
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v255, vcc_lo :: v_dual_mov_b32 v7, vcc_lo ; encoding: [0x6a,0x80,0x24,0xcf,0x6a,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v255 :: v_dual_mov_b32 v7, -1
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v255 :: v_dual_mov_b32 v7, -1 ; encoding: [0xfd,0x80,0x24,0xcf,0xc1,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v255, vcc_lo :: v_dual_mov_b32 v7, -1
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v255, vcc_lo :: v_dual_mov_b32 v7, -1 ; encoding: [0xfd,0x80,0x24,0xcf,0xc1,0x00,0xff,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_mov_b32 v7, 0.5
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_mov_b32 v7, 0.5 ; encoding: [0xf0,0x80,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_mov_b32 v7, 0.5
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_mov_b32 v7, 0.5 ; encoding: [0xf0,0x80,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_mov_b32 v7, src_scc
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_mov_b32 v7, src_scc ; encoding: [0xc1,0x80,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x00,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_mov_b32 v7, src_scc
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_mov_b32 v7, src_scc ; encoding: [0xc1,0x80,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x00,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_mul_dx9_zero_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_mul_dx9_zero_f32 v7, v1, v3 ; encoding: [0x04,0x71,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v1, v3 ; encoding: [0x04,0x71,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_mul_dx9_zero_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_mul_dx9_zero_f32 v7, v255, v3 ; encoding: [0x01,0x71,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v255, v3 ; encoding: [0x01,0x71,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_mul_dx9_zero_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_mul_dx9_zero_f32 v7, v2, v3 ; encoding: [0xff,0x71,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v2, v3 ; encoding: [0xff,0x71,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_mul_dx9_zero_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_mul_dx9_zero_f32 v7, v3, v3 ; encoding: [0x02,0x71,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v3, v3 ; encoding: [0x02,0x71,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_mul_dx9_zero_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_mul_dx9_zero_f32 v7, v4, v3 ; encoding: [0x03,0x71,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, v4, v3 ; encoding: [0x03,0x71,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_mul_dx9_zero_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_mul_dx9_zero_f32 v7, s105, v3 ; encoding: [0x69,0x70,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, s105, v3 ; encoding: [0x69,0x70,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_mul_dx9_zero_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_mul_dx9_zero_f32 v7, s1, v3 ; encoding: [0x01,0x70,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, s1, v3 ; encoding: [0x01,0x70,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_mul_dx9_zero_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_mul_dx9_zero_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x70,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x70,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_mul_dx9_zero_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_mul_dx9_zero_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x70,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x70,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_mul_dx9_zero_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_mul_dx9_zero_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x70,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x70,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_mul_dx9_zero_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_mul_dx9_zero_f32 v7, m0, v3 ; encoding: [0x7d,0x70,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, m0, v3 ; encoding: [0x7d,0x70,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_mul_dx9_zero_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_mul_dx9_zero_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x70,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x70,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_mul_dx9_zero_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_mul_dx9_zero_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x70,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x70,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_mul_dx9_zero_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_mul_dx9_zero_f32 v7, -1, v3 ; encoding: [0xfd,0x70,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, -1, v3 ; encoding: [0xfd,0x70,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_mul_dx9_zero_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_mul_dx9_zero_f32 v7, 0.5, v2 ; encoding: [0xf0,0x70,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, 0.5, v2 ; encoding: [0xf0,0x70,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_mul_dx9_zero_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_mul_dx9_zero_f32 v7, src_scc, v5 ; encoding: [0xc1,0x70,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_mul_dx9_zero_f32 v7, src_scc, v5 ; encoding: [0xc1,0x70,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_mul_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_mul_f32 v7, v1, v3 ; encoding: [0x04,0x31,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_mul_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_mul_f32 v7, v1, v3 ; encoding: [0x04,0x31,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_mul_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_mul_f32 v7, v255, v3 ; encoding: [0x01,0x31,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_mul_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_mul_f32 v7, v255, v3 ; encoding: [0x01,0x31,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_mul_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_mul_f32 v7, v2, v3 ; encoding: [0xff,0x31,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_mul_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_mul_f32 v7, v2, v3 ; encoding: [0xff,0x31,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_mul_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_mul_f32 v7, v3, v3 ; encoding: [0x02,0x31,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_mul_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_mul_f32 v7, v3, v3 ; encoding: [0x02,0x31,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_mul_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_mul_f32 v7, v4, v3 ; encoding: [0x03,0x31,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_mul_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_mul_f32 v7, v4, v3 ; encoding: [0x03,0x31,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_mul_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_mul_f32 v7, s105, v3 ; encoding: [0x69,0x30,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_mul_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_mul_f32 v7, s105, v3 ; encoding: [0x69,0x30,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_mul_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_mul_f32 v7, s1, v3 ; encoding: [0x01,0x30,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_mul_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_mul_f32 v7, s1, v3 ; encoding: [0x01,0x30,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_mul_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_mul_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x30,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_mul_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_mul_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x30,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_mul_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_mul_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x30,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_mul_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_mul_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x30,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_mul_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_mul_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x30,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_mul_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_mul_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x30,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_mul_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_mul_f32 v7, m0, v3 ; encoding: [0x7d,0x30,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_mul_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_mul_f32 v7, m0, v3 ; encoding: [0x7d,0x30,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_mul_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_mul_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x30,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_mul_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_mul_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x30,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_mul_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_mul_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x30,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_mul_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_mul_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x30,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_mul_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_mul_f32 v7, -1, v3 ; encoding: [0xfd,0x30,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_mul_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_mul_f32 v7, -1, v3 ; encoding: [0xfd,0x30,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_mul_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_mul_f32 v7, 0.5, v2 ; encoding: [0xf0,0x30,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_mul_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_mul_f32 v7, 0.5, v2 ; encoding: [0xf0,0x30,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_mul_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_mul_f32 v7, src_scc, v5 ; encoding: [0xc1,0x30,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_mul_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_mul_f32 v7, src_scc, v5 ; encoding: [0xc1,0x30,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_sub_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_sub_f32 v7, v1, v3 ; encoding: [0x04,0x51,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_sub_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_sub_f32 v7, v1, v3 ; encoding: [0x04,0x51,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_sub_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_sub_f32 v7, v255, v3 ; encoding: [0x01,0x51,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_sub_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_sub_f32 v7, v255, v3 ; encoding: [0x01,0x51,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_sub_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_sub_f32 v7, v2, v3 ; encoding: [0xff,0x51,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_sub_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_sub_f32 v7, v2, v3 ; encoding: [0xff,0x51,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_sub_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_sub_f32 v7, v3, v3 ; encoding: [0x02,0x51,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_sub_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_sub_f32 v7, v3, v3 ; encoding: [0x02,0x51,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_sub_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_sub_f32 v7, v4, v3 ; encoding: [0x03,0x51,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_sub_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_sub_f32 v7, v4, v3 ; encoding: [0x03,0x51,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_sub_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_sub_f32 v7, s105, v3 ; encoding: [0x69,0x50,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_sub_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_sub_f32 v7, s105, v3 ; encoding: [0x69,0x50,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_sub_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_sub_f32 v7, s1, v3 ; encoding: [0x01,0x50,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_sub_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_sub_f32 v7, s1, v3 ; encoding: [0x01,0x50,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_sub_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_sub_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x50,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_sub_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_sub_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x50,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_sub_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_sub_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x50,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_sub_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_sub_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x50,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_sub_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_sub_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x50,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_sub_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_sub_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x50,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_sub_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_sub_f32 v7, m0, v3 ; encoding: [0x7d,0x50,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_sub_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_sub_f32 v7, m0, v3 ; encoding: [0x7d,0x50,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_sub_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_sub_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x50,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_sub_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_sub_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x50,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_sub_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_sub_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x50,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_sub_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_sub_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x50,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_sub_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_sub_f32 v7, -1, v3 ; encoding: [0xfd,0x50,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_sub_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_sub_f32 v7, -1, v3 ; encoding: [0xfd,0x50,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_sub_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_sub_f32 v7, 0.5, v2 ; encoding: [0xf0,0x50,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_sub_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_sub_f32 v7, 0.5, v2 ; encoding: [0xf0,0x50,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_sub_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_sub_f32 v7, src_scc, v5 ; encoding: [0xc1,0x50,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_sub_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_sub_f32 v7, src_scc, v5 ; encoding: [0xc1,0x50,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_subrev_f32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_subrev_f32 v7, v1, v3 ; encoding: [0x04,0x61,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_subrev_f32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_subrev_f32 v7, v1, v3 ; encoding: [0x04,0x61,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_subrev_f32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_subrev_f32 v7, v255, v3 ; encoding: [0x01,0x61,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_subrev_f32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_subrev_f32 v7, v255, v3 ; encoding: [0x01,0x61,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_subrev_f32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_subrev_f32 v7, v2, v3 ; encoding: [0xff,0x61,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_subrev_f32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_subrev_f32 v7, v2, v3 ; encoding: [0xff,0x61,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_subrev_f32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_subrev_f32 v7, v3, v3 ; encoding: [0x02,0x61,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_subrev_f32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_subrev_f32 v7, v3, v3 ; encoding: [0x02,0x61,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_subrev_f32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_subrev_f32 v7, v4, v3 ; encoding: [0x03,0x61,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_subrev_f32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_subrev_f32 v7, v4, v3 ; encoding: [0x03,0x61,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_subrev_f32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_subrev_f32 v7, s105, v3 ; encoding: [0x69,0x60,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_subrev_f32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_subrev_f32 v7, s105, v3 ; encoding: [0x69,0x60,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_subrev_f32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_subrev_f32 v7, s1, v3 ; encoding: [0x01,0x60,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_subrev_f32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_subrev_f32 v7, s1, v3 ; encoding: [0x01,0x60,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_subrev_f32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_subrev_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x60,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_subrev_f32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_subrev_f32 v7, ttmp15, v3 ; encoding: [0x7b,0x60,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_subrev_f32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_subrev_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x60,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_subrev_f32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_subrev_f32 v7, exec_hi, v3 ; encoding: [0x7f,0x60,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_subrev_f32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_subrev_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x60,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_subrev_f32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_subrev_f32 v7, exec_lo, v3 ; encoding: [0x7e,0x60,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_subrev_f32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_subrev_f32 v7, m0, v3 ; encoding: [0x7d,0x60,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_subrev_f32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_subrev_f32 v7, m0, v3 ; encoding: [0x7d,0x60,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_subrev_f32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_subrev_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x60,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_subrev_f32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_subrev_f32 v7, vcc_hi, v3 ; encoding: [0x6b,0x60,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_subrev_f32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_subrev_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x60,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_subrev_f32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_subrev_f32 v7, vcc_lo, v3 ; encoding: [0x6a,0x60,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_subrev_f32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_subrev_f32 v7, -1, v3 ; encoding: [0xfd,0x60,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_subrev_f32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_subrev_f32 v7, -1, v3 ; encoding: [0xfd,0x60,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_subrev_f32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_subrev_f32 v7, 0.5, v2 ; encoding: [0xf0,0x60,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_subrev_f32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_subrev_f32 v7, 0.5, v2 ; encoding: [0xf0,0x60,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_subrev_f32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_subrev_f32 v7, src_scc, v5 ; encoding: [0xc1,0x60,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_subrev_f32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_subrev_f32 v7, src_scc, v5 ; encoding: [0xc1,0x60,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_fma_f32 v7, v1, v3, v4
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_fma_f32 v7, v1, v3, v4 ; encoding: [0x04,0x31,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x04,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_fma_f32 v7, v1, v3, v4
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_fma_f32 v7, v1, v3, v4 ; encoding: [0x04,0x31,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x04,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_bitop2_b32 v7, v1, v3 bitop3:1
-// GFX12: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_bitop2_b32 v7, v1, v3 bitop3:1 ; encoding: [0x04,0x21,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x01,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_bitop2_b32 v7, v1, v3 bitop3:1
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_bitop2_b32 v7, v1, v3 bitop3:1 ; encoding: [0x04,0x21,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x01,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v255, v4, v2 :: v_dual_add_f32 v7, v1, v3
@@ -1682,68 +1682,68 @@ v_dual_fmac_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_fmac_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x01,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_fmac_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x00,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x00,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_fmac_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x00,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x00,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_fmac_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x00,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x00,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_fmac_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x00,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x00,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_fmac_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x00,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x00,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_fmac_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x00,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x00,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_fmac_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x00,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x00,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_fmac_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x00,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x00,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_fmac_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x00,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x00,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_fmac_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x00,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x00,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_fmac_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x00,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x00,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_fmac_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x00,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x00,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_fmac_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x00,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x00,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_fmac_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x00,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_fmac_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x00,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_fmac_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x00,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_fmac_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x00,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fmac_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_fmac_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x00,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_fmac_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_fmac_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x00,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v7, v4, v2 :: v_dual_fmac_f32 v9, v1, v3
@@ -2458,68 +2458,68 @@ v_dual_max_num_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_max_num_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x29,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_max_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x28,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x28,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_max_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x28,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x28,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_max_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x28,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x28,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_max_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x28,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x28,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_max_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x28,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x28,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_max_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x28,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x28,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_max_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x28,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x28,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_max_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x28,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x28,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_max_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x28,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x28,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_max_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x28,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x28,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_max_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x28,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x28,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_max_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x28,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x28,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_max_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x28,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x28,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_max_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x28,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_max_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x28,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_max_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x28,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_max_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x28,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_max_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x28,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_max_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_max_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x28,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_max_num_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -3234,68 +3234,68 @@ v_dual_min_num_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_min_num_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x2d,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_min_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x2c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x2c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_min_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x2c,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x2c,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_min_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x2c,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x2c,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_min_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x2c,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x2c,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_min_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x2c,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x2c,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_min_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x2c,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x2c,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_min_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x2c,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x2c,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_min_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x2c,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x2c,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_min_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x2c,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x2c,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_min_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x2c,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x2c,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_min_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x2c,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x2c,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_min_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x2c,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x2c,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_min_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x2c,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x2c,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_min_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x2c,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_min_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x2c,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_min_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x2c,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_min_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x2c,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_min_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x2c,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_min_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_min_num_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x2c,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_min_num_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -4010,68 +4010,68 @@ v_dual_mov_b32 v255, -1 :: v_dual_add_nc_u32 v7, src_scc, v4
 // GFX1210: v_dual_mov_b32 v255, -1 :: v_dual_add_nc_u32 v7, src_scc, v4 ; encoding: [0xc1,0x00,0x21,0xcf,0xfd,0x00,0x00,0x00,0xff,0x04,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, v4 :: v_dual_cndmask_b32 v7, v1, v255
-// GFX1210: v_dual_mov_b32 v255, v4 :: v_dual_cndmask_b32 v7, v1, v255 ; encoding: [0x04,0x91,0x20,0xcf,0x01,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, v4 :: v_dual_cndmask_b32 v7, v1, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, v4 :: v_dual_cndmask_b32 v7, v1, v255, vcc_lo ; encoding: [0x04,0x91,0x20,0xcf,0x01,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, v1 :: v_dual_cndmask_b32 v7, v255, v255
-// GFX1210: v_dual_mov_b32 v255, v1 :: v_dual_cndmask_b32 v7, v255, v255 ; encoding: [0x01,0x91,0x20,0xcf,0xff,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, v1 :: v_dual_cndmask_b32 v7, v255, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, v1 :: v_dual_cndmask_b32 v7, v255, v255, vcc_lo ; encoding: [0x01,0x91,0x20,0xcf,0xff,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, v255 :: v_dual_cndmask_b32 v7, v2, v255
-// GFX1210: v_dual_mov_b32 v255, v255 :: v_dual_cndmask_b32 v7, v2, v255 ; encoding: [0xff,0x91,0x20,0xcf,0x02,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, v255 :: v_dual_cndmask_b32 v7, v2, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, v255 :: v_dual_cndmask_b32 v7, v2, v255, vcc_lo ; encoding: [0xff,0x91,0x20,0xcf,0x02,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, v2 :: v_dual_cndmask_b32 v7, v3, v255
-// GFX1210: v_dual_mov_b32 v255, v2 :: v_dual_cndmask_b32 v7, v3, v255 ; encoding: [0x02,0x91,0x20,0xcf,0x03,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, v2 :: v_dual_cndmask_b32 v7, v3, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, v2 :: v_dual_cndmask_b32 v7, v3, v255, vcc_lo ; encoding: [0x02,0x91,0x20,0xcf,0x03,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, v3 :: v_dual_cndmask_b32 v7, v4, v255
-// GFX1210: v_dual_mov_b32 v255, v3 :: v_dual_cndmask_b32 v7, v4, v255 ; encoding: [0x03,0x91,0x20,0xcf,0x04,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, v3 :: v_dual_cndmask_b32 v7, v4, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, v3 :: v_dual_cndmask_b32 v7, v4, v255, vcc_lo ; encoding: [0x03,0x91,0x20,0xcf,0x04,0x01,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, s105 :: v_dual_cndmask_b32 v7, s105, v255
-// GFX1210: v_dual_mov_b32 v255, s105 :: v_dual_cndmask_b32 v7, s105, v255 ; encoding: [0x69,0x90,0x20,0xcf,0x69,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, s105 :: v_dual_cndmask_b32 v7, s105, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, s105 :: v_dual_cndmask_b32 v7, s105, v255, vcc_lo ; encoding: [0x69,0x90,0x20,0xcf,0x69,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, s1 :: v_dual_cndmask_b32 v7, s1, v255
-// GFX1210: v_dual_mov_b32 v255, s1 :: v_dual_cndmask_b32 v7, s1, v255 ; encoding: [0x01,0x90,0x20,0xcf,0x01,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, s1 :: v_dual_cndmask_b32 v7, s1, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, s1 :: v_dual_cndmask_b32 v7, s1, v255, vcc_lo ; encoding: [0x01,0x90,0x20,0xcf,0x01,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, ttmp15 :: v_dual_cndmask_b32 v7, ttmp15, v255
-// GFX1210: v_dual_mov_b32 v255, ttmp15 :: v_dual_cndmask_b32 v7, ttmp15, v255 ; encoding: [0x7b,0x90,0x20,0xcf,0x7b,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, ttmp15 :: v_dual_cndmask_b32 v7, ttmp15, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, ttmp15 :: v_dual_cndmask_b32 v7, ttmp15, v255, vcc_lo ; encoding: [0x7b,0x90,0x20,0xcf,0x7b,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, exec_hi :: v_dual_cndmask_b32 v7, exec_hi, v255
-// GFX1210: v_dual_mov_b32 v255, exec_hi :: v_dual_cndmask_b32 v7, exec_hi, v255 ; encoding: [0x7f,0x90,0x20,0xcf,0x7f,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, exec_hi :: v_dual_cndmask_b32 v7, exec_hi, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, exec_hi :: v_dual_cndmask_b32 v7, exec_hi, v255, vcc_lo ; encoding: [0x7f,0x90,0x20,0xcf,0x7f,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, exec_lo :: v_dual_cndmask_b32 v7, exec_lo, v255
-// GFX1210: v_dual_mov_b32 v255, exec_lo :: v_dual_cndmask_b32 v7, exec_lo, v255 ; encoding: [0x7e,0x90,0x20,0xcf,0x7e,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, exec_lo :: v_dual_cndmask_b32 v7, exec_lo, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, exec_lo :: v_dual_cndmask_b32 v7, exec_lo, v255, vcc_lo ; encoding: [0x7e,0x90,0x20,0xcf,0x7e,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, m0 :: v_dual_cndmask_b32 v7, m0, v255
-// GFX1210: v_dual_mov_b32 v255, m0 :: v_dual_cndmask_b32 v7, m0, v255 ; encoding: [0x7d,0x90,0x20,0xcf,0x7d,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, m0 :: v_dual_cndmask_b32 v7, m0, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, m0 :: v_dual_cndmask_b32 v7, m0, v255, vcc_lo ; encoding: [0x7d,0x90,0x20,0xcf,0x7d,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, vcc_hi :: v_dual_cndmask_b32 v7, vcc_hi, v255
-// GFX1210: v_dual_mov_b32 v255, vcc_hi :: v_dual_cndmask_b32 v7, vcc_hi, v255 ; encoding: [0x6b,0x90,0x20,0xcf,0x6b,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, vcc_hi :: v_dual_cndmask_b32 v7, vcc_hi, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, vcc_hi :: v_dual_cndmask_b32 v7, vcc_hi, v255, vcc_lo ; encoding: [0x6b,0x90,0x20,0xcf,0x6b,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, vcc_lo :: v_dual_cndmask_b32 v7, vcc_lo, v255
-// GFX1210: v_dual_mov_b32 v255, vcc_lo :: v_dual_cndmask_b32 v7, vcc_lo, v255 ; encoding: [0x6a,0x90,0x20,0xcf,0x6a,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, vcc_lo :: v_dual_cndmask_b32 v7, vcc_lo, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, vcc_lo :: v_dual_cndmask_b32 v7, vcc_lo, v255, vcc_lo ; encoding: [0x6a,0x90,0x20,0xcf,0x6a,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, src_scc :: v_dual_cndmask_b32 v7, -1, v255
-// GFX1210: v_dual_mov_b32 v255, src_scc :: v_dual_cndmask_b32 v7, -1, v255 ; encoding: [0xfd,0x90,0x20,0xcf,0xc1,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
+v_dual_mov_b32 v255, src_scc :: v_dual_cndmask_b32 v7, -1, v255, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, src_scc :: v_dual_cndmask_b32 v7, -1, v255, vcc_lo ; encoding: [0xfd,0x90,0x20,0xcf,0xc1,0x00,0x00,0x00,0xff,0xff,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, 0.5 :: v_dual_cndmask_b32 v7, 0.5, v3
-// GFX1210: v_dual_mov_b32 v255, 0.5 :: v_dual_cndmask_b32 v7, 0.5, v3 ; encoding: [0xf0,0x90,0x20,0xcf,0xf0,0x00,0x00,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mov_b32 v255, 0.5 :: v_dual_cndmask_b32 v7, 0.5, v3, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, 0.5 :: v_dual_cndmask_b32 v7, 0.5, v3, vcc_lo ; encoding: [0xf0,0x90,0x20,0xcf,0xf0,0x00,0x00,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b32 v255, -1 :: v_dual_cndmask_b32 v7, src_scc, v4
-// GFX1210: v_dual_mov_b32 v255, -1 :: v_dual_cndmask_b32 v7, src_scc, v4 ; encoding: [0xc1,0x90,0x20,0xcf,0xfd,0x00,0x00,0x00,0xff,0x04,0x6a,0x07]
+v_dual_mov_b32 v255, -1 :: v_dual_cndmask_b32 v7, src_scc, v4, vcc_lo
+// GFX1210: v_dual_mov_b32 v255, -1 :: v_dual_cndmask_b32 v7, src_scc, v4, vcc_lo ; encoding: [0xc1,0x90,0x20,0xcf,0xfd,0x00,0x00,0x00,0xff,0x04,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_mov_b32 v255, v4 :: v_dual_fmac_f32 v7, v1, v255
@@ -4786,68 +4786,68 @@ v_dual_mul_dx9_zero_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_mul_dx9_zero_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x1d,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x1c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x1c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x1c,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x1c,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x1c,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x1c,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x1c,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x1c,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x1c,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x1c,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x1c,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x1c,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x1c,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x1c,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x1c,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x1c,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x1c,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x1c,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x1c,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x1c,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x1c,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x1c,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x1c,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x1c,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x1c,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x1c,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x1c,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x1c,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x1c,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x1c,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_dx9_zero_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_mul_dx9_zero_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x1c,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_mul_dx9_zero_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_mul_dx9_zero_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x1c,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -5562,68 +5562,68 @@ v_dual_mul_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_mul_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x0d,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_mul_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x0c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x0c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_mul_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x0c,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x0c,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_mul_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x0c,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x0c,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_mul_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x0c,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x0c,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_mul_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x0c,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x0c,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_mul_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x0c,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x0c,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_mul_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x0c,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x0c,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_mul_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x0c,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x0c,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_mul_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x0c,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x0c,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_mul_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x0c,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x0c,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_mul_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x0c,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x0c,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_mul_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x0c,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x0c,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_mul_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x0c,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x0c,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_mul_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x0c,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_mul_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x0c,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_mul_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x0c,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_mul_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x0c,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_mul_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x0c,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_mul_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_mul_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x0c,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_mul_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -6338,68 +6338,68 @@ v_dual_sub_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_sub_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x15,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_sub_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x14,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x14,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_sub_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x14,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x14,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_sub_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x14,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x14,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_sub_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x14,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x14,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_sub_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x14,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x14,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_sub_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x14,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x14,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_sub_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x14,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x14,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_sub_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x14,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x14,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_sub_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x14,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x14,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_sub_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x14,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x14,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_sub_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x14,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x14,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_sub_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x14,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x14,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_sub_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x14,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x14,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_sub_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x14,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x14,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_sub_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x14,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_sub_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x14,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_sub_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x14,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_sub_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_sub_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x14,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_sub_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -7114,68 +7114,68 @@ v_dual_subrev_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_subrev_f32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x19,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX1210: v_dual_subrev_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x18,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x18,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX1210: v_dual_subrev_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x18,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x18,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX1210: v_dual_subrev_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x18,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x18,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX1210: v_dual_subrev_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x18,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x18,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX1210: v_dual_subrev_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x18,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x18,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX1210: v_dual_subrev_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x18,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x18,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX1210: v_dual_subrev_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x18,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x18,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX1210: v_dual_subrev_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x18,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x18,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX1210: v_dual_subrev_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x18,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x18,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX1210: v_dual_subrev_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x18,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x18,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX1210: v_dual_subrev_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x18,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x18,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_subrev_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x18,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x18,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_subrev_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x18,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x18,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX1210: v_dual_subrev_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x18,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_subrev_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x18,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX1210: v_dual_subrev_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x18,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_subrev_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x18,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_subrev_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX1210: v_dual_subrev_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x18,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_subrev_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX1210: v_dual_subrev_f32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x18,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_subrev_f32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -7826,68 +7826,68 @@ v_dual_add_f32 v255, -1, v4 :: v_dual_max_i32 v7, src_scc, v5
 // GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_max_i32 v7, src_scc, v5 ; encoding: [0xc1,0xe0,0x10,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_max_i32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_max_i32 v7, v1, v3 ; encoding: [0x04,0xe1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_max_i32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_max_i32 v7, v1, v3 ; encoding: [0x04,0xe1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_max_i32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_max_i32 v7, v255, v3 ; encoding: [0x01,0xe1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_max_i32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_max_i32 v7, v255, v3 ; encoding: [0x01,0xe1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_max_i32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_max_i32 v7, v2, v3 ; encoding: [0xff,0xe1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_max_i32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_max_i32 v7, v2, v3 ; encoding: [0xff,0xe1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_max_i32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_max_i32 v7, v3, v3 ; encoding: [0x02,0xe1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_max_i32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_max_i32 v7, v3, v3 ; encoding: [0x02,0xe1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_max_i32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_max_i32 v7, v4, v3 ; encoding: [0x03,0xe1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_max_i32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_max_i32 v7, v4, v3 ; encoding: [0x03,0xe1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_max_i32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_max_i32 v7, s105, v3 ; encoding: [0x69,0xe0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_max_i32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_max_i32 v7, s105, v3 ; encoding: [0x69,0xe0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_max_i32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_max_i32 v7, s1, v3 ; encoding: [0x01,0xe0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_max_i32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_max_i32 v7, s1, v3 ; encoding: [0x01,0xe0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_max_i32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_max_i32 v7, ttmp15, v3 ; encoding: [0x7b,0xe0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_max_i32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_max_i32 v7, ttmp15, v3 ; encoding: [0x7b,0xe0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_max_i32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_max_i32 v7, exec_hi, v3 ; encoding: [0x7f,0xe0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_max_i32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_max_i32 v7, exec_hi, v3 ; encoding: [0x7f,0xe0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_max_i32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_max_i32 v7, exec_lo, v3 ; encoding: [0x7e,0xe0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_max_i32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_max_i32 v7, exec_lo, v3 ; encoding: [0x7e,0xe0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_max_i32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_max_i32 v7, m0, v3 ; encoding: [0x7d,0xe0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_max_i32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_max_i32 v7, m0, v3 ; encoding: [0x7d,0xe0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_max_i32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_max_i32 v7, vcc_hi, v3 ; encoding: [0x6b,0xe0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_max_i32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_max_i32 v7, vcc_hi, v3 ; encoding: [0x6b,0xe0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_max_i32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_max_i32 v7, vcc_lo, v3 ; encoding: [0x6a,0xe0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_max_i32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_max_i32 v7, vcc_lo, v3 ; encoding: [0x6a,0xe0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_max_i32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_max_i32 v7, -1, v3 ; encoding: [0xfd,0xe0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_max_i32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_max_i32 v7, -1, v3 ; encoding: [0xfd,0xe0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_max_i32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_max_i32 v7, 0.5, v2 ; encoding: [0xf0,0xe0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_max_i32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_max_i32 v7, 0.5, v2 ; encoding: [0xf0,0xe0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_max_i32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_max_i32 v7, src_scc, v5 ; encoding: [0xc1,0xe0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_max_i32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_max_i32 v7, src_scc, v5 ; encoding: [0xc1,0xe0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v255, v4, v2 :: v_dual_max_i32 v7, v1, v3
@@ -8466,68 +8466,68 @@ v_dual_add_f32 v255, -1, v4 :: v_dual_min_i32 v7, src_scc, v5
 // GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_min_i32 v7, src_scc, v5 ; encoding: [0xc1,0xf0,0x10,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_min_i32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_min_i32 v7, v1, v3 ; encoding: [0x04,0xf1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_min_i32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_min_i32 v7, v1, v3 ; encoding: [0x04,0xf1,0x24,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_min_i32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_min_i32 v7, v255, v3 ; encoding: [0x01,0xf1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_min_i32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_min_i32 v7, v255, v3 ; encoding: [0x01,0xf1,0x24,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_min_i32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_min_i32 v7, v2, v3 ; encoding: [0xff,0xf1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_min_i32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_min_i32 v7, v2, v3 ; encoding: [0xff,0xf1,0x24,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_min_i32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_min_i32 v7, v3, v3 ; encoding: [0x02,0xf1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_min_i32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_min_i32 v7, v3, v3 ; encoding: [0x02,0xf1,0x24,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_min_i32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_min_i32 v7, v4, v3 ; encoding: [0x03,0xf1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_min_i32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_min_i32 v7, v4, v3 ; encoding: [0x03,0xf1,0x24,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_min_i32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_min_i32 v7, s105, v3 ; encoding: [0x69,0xf0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_min_i32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_min_i32 v7, s105, v3 ; encoding: [0x69,0xf0,0x24,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_min_i32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_min_i32 v7, s1, v3 ; encoding: [0x01,0xf0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_min_i32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_min_i32 v7, s1, v3 ; encoding: [0x01,0xf0,0x24,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_min_i32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_min_i32 v7, ttmp15, v3 ; encoding: [0x7b,0xf0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_min_i32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_min_i32 v7, ttmp15, v3 ; encoding: [0x7b,0xf0,0x24,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_min_i32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_min_i32 v7, exec_hi, v3 ; encoding: [0x7f,0xf0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_min_i32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_min_i32 v7, exec_hi, v3 ; encoding: [0x7f,0xf0,0x24,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_min_i32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_min_i32 v7, exec_lo, v3 ; encoding: [0x7e,0xf0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_min_i32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_min_i32 v7, exec_lo, v3 ; encoding: [0x7e,0xf0,0x24,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_min_i32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_min_i32 v7, m0, v3 ; encoding: [0x7d,0xf0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_min_i32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_min_i32 v7, m0, v3 ; encoding: [0x7d,0xf0,0x24,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_min_i32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_min_i32 v7, vcc_hi, v3 ; encoding: [0x6b,0xf0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_min_i32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_min_i32 v7, vcc_hi, v3 ; encoding: [0x6b,0xf0,0x24,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_min_i32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_min_i32 v7, vcc_lo, v3 ; encoding: [0x6a,0xf0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_min_i32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_min_i32 v7, vcc_lo, v3 ; encoding: [0x6a,0xf0,0x24,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_min_i32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_min_i32 v7, -1, v3 ; encoding: [0xfd,0xf0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_min_i32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_min_i32 v7, -1, v3 ; encoding: [0xfd,0xf0,0x24,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_min_i32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_min_i32 v7, 0.5, v2 ; encoding: [0xf0,0xf0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_min_i32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_min_i32 v7, 0.5, v2 ; encoding: [0xf0,0xf0,0x24,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_min_i32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_min_i32 v7, src_scc, v5 ; encoding: [0xc1,0xf0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_min_i32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_min_i32 v7, src_scc, v5 ; encoding: [0xc1,0xf0,0x24,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v255, v4, v2 :: v_dual_min_i32 v7, v1, v3
@@ -9106,68 +9106,68 @@ v_dual_add_f32 v255, -1, v4 :: v_dual_sub_nc_u32 v7, src_scc, v5
 // GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_sub_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x40,0x11,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_sub_nc_u32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_sub_nc_u32 v7, v1, v3 ; encoding: [0x04,0x41,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v1, v3 ; encoding: [0x04,0x41,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_sub_nc_u32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_sub_nc_u32 v7, v255, v3 ; encoding: [0x01,0x41,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v255, v3 ; encoding: [0x01,0x41,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_sub_nc_u32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_sub_nc_u32 v7, v2, v3 ; encoding: [0xff,0x41,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v2, v3 ; encoding: [0xff,0x41,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_sub_nc_u32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_sub_nc_u32 v7, v3, v3 ; encoding: [0x02,0x41,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v3, v3 ; encoding: [0x02,0x41,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_sub_nc_u32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_sub_nc_u32 v7, v4, v3 ; encoding: [0x03,0x41,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_sub_nc_u32 v7, v4, v3 ; encoding: [0x03,0x41,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_sub_nc_u32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_sub_nc_u32 v7, s105, v3 ; encoding: [0x69,0x40,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_sub_nc_u32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_sub_nc_u32 v7, s105, v3 ; encoding: [0x69,0x40,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_sub_nc_u32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_sub_nc_u32 v7, s1, v3 ; encoding: [0x01,0x40,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_sub_nc_u32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_sub_nc_u32 v7, s1, v3 ; encoding: [0x01,0x40,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_sub_nc_u32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_sub_nc_u32 v7, ttmp15, v3 ; encoding: [0x7b,0x40,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_sub_nc_u32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_sub_nc_u32 v7, ttmp15, v3 ; encoding: [0x7b,0x40,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_sub_nc_u32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_sub_nc_u32 v7, exec_hi, v3 ; encoding: [0x7f,0x40,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_sub_nc_u32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_sub_nc_u32 v7, exec_hi, v3 ; encoding: [0x7f,0x40,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_sub_nc_u32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_sub_nc_u32 v7, exec_lo, v3 ; encoding: [0x7e,0x40,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_sub_nc_u32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_sub_nc_u32 v7, exec_lo, v3 ; encoding: [0x7e,0x40,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_sub_nc_u32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_sub_nc_u32 v7, m0, v3 ; encoding: [0x7d,0x40,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_sub_nc_u32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_sub_nc_u32 v7, m0, v3 ; encoding: [0x7d,0x40,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_sub_nc_u32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_sub_nc_u32 v7, vcc_hi, v3 ; encoding: [0x6b,0x40,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_sub_nc_u32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_sub_nc_u32 v7, vcc_hi, v3 ; encoding: [0x6b,0x40,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_sub_nc_u32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_sub_nc_u32 v7, vcc_lo, v3 ; encoding: [0x6a,0x40,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_sub_nc_u32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_sub_nc_u32 v7, vcc_lo, v3 ; encoding: [0x6a,0x40,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_sub_nc_u32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_sub_nc_u32 v7, -1, v3 ; encoding: [0xfd,0x40,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_sub_nc_u32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_sub_nc_u32 v7, -1, v3 ; encoding: [0xfd,0x40,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_sub_nc_u32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_sub_nc_u32 v7, 0.5, v2 ; encoding: [0xf0,0x40,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_sub_nc_u32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_sub_nc_u32 v7, 0.5, v2 ; encoding: [0xf0,0x40,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_sub_nc_u32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_sub_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x40,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_sub_nc_u32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_sub_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x40,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v255, v4, v2 :: v_dual_sub_nc_u32 v7, v1, v3
@@ -9746,68 +9746,68 @@ v_dual_add_f32 v255, -1, v4 :: v_dual_lshrrev_b32 v7, src_scc, v5
 // GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_lshrrev_b32 v7, src_scc, v5 ; encoding: [0xc1,0x50,0x11,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_lshrrev_b32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_lshrrev_b32 v7, v1, v3 ; encoding: [0x04,0x51,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v1, v3 ; encoding: [0x04,0x51,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_lshrrev_b32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_lshrrev_b32 v7, v255, v3 ; encoding: [0x01,0x51,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v255, v3 ; encoding: [0x01,0x51,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_lshrrev_b32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_lshrrev_b32 v7, v2, v3 ; encoding: [0xff,0x51,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v2, v3 ; encoding: [0xff,0x51,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_lshrrev_b32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_lshrrev_b32 v7, v3, v3 ; encoding: [0x02,0x51,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v3, v3 ; encoding: [0x02,0x51,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_lshrrev_b32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_lshrrev_b32 v7, v4, v3 ; encoding: [0x03,0x51,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_lshrrev_b32 v7, v4, v3 ; encoding: [0x03,0x51,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_lshrrev_b32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_lshrrev_b32 v7, s105, v3 ; encoding: [0x69,0x50,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_lshrrev_b32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_lshrrev_b32 v7, s105, v3 ; encoding: [0x69,0x50,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_lshrrev_b32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_lshrrev_b32 v7, s1, v3 ; encoding: [0x01,0x50,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_lshrrev_b32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_lshrrev_b32 v7, s1, v3 ; encoding: [0x01,0x50,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_lshrrev_b32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_lshrrev_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x50,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_lshrrev_b32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_lshrrev_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x50,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_lshrrev_b32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_lshrrev_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x50,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_lshrrev_b32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_lshrrev_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x50,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_lshrrev_b32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_lshrrev_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x50,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_lshrrev_b32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_lshrrev_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x50,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_lshrrev_b32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_lshrrev_b32 v7, m0, v3 ; encoding: [0x7d,0x50,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_lshrrev_b32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_lshrrev_b32 v7, m0, v3 ; encoding: [0x7d,0x50,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_lshrrev_b32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_lshrrev_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x50,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_lshrrev_b32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_lshrrev_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x50,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_lshrrev_b32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_lshrrev_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x50,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_lshrrev_b32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_lshrrev_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x50,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_lshrrev_b32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_lshrrev_b32 v7, -1, v3 ; encoding: [0xfd,0x50,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_lshrrev_b32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_lshrrev_b32 v7, -1, v3 ; encoding: [0xfd,0x50,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_lshrrev_b32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_lshrrev_b32 v7, 0.5, v2 ; encoding: [0xf0,0x50,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_lshrrev_b32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_lshrrev_b32 v7, 0.5, v2 ; encoding: [0xf0,0x50,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_lshrrev_b32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_lshrrev_b32 v7, src_scc, v5 ; encoding: [0xc1,0x50,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_lshrrev_b32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_lshrrev_b32 v7, src_scc, v5 ; encoding: [0xc1,0x50,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v255, v4, v2 :: v_dual_lshrrev_b32 v7, v1, v3
@@ -10386,68 +10386,68 @@ v_dual_add_f32 v255, -1, v4 :: v_dual_ashrrev_i32 v7, src_scc, v5
 // GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_ashrrev_i32 v7, src_scc, v5 ; encoding: [0xc1,0x60,0x11,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v4, v2 :: v_dual_ashrrev_i32 v7, v1, v3
-// GFX1210: v_dual_cndmask_b32 v255, v4, v2 :: v_dual_ashrrev_i32 v7, v1, v3 ; encoding: [0x04,0x61,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v1, v3
+// GFX1210: v_dual_cndmask_b32 v255, v4, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v1, v3 ; encoding: [0x04,0x61,0x25,0xcf,0x01,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v1, v2 :: v_dual_ashrrev_i32 v7, v255, v3
-// GFX1210: v_dual_cndmask_b32 v255, v1, v2 :: v_dual_ashrrev_i32 v7, v255, v3 ; encoding: [0x01,0x61,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v255, v3
+// GFX1210: v_dual_cndmask_b32 v255, v1, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v255, v3 ; encoding: [0x01,0x61,0x25,0xcf,0xff,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v255, v2 :: v_dual_ashrrev_i32 v7, v2, v3
-// GFX1210: v_dual_cndmask_b32 v255, v255, v2 :: v_dual_ashrrev_i32 v7, v2, v3 ; encoding: [0xff,0x61,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v2, v3
+// GFX1210: v_dual_cndmask_b32 v255, v255, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v2, v3 ; encoding: [0xff,0x61,0x25,0xcf,0x02,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v2, v2 :: v_dual_ashrrev_i32 v7, v3, v3
-// GFX1210: v_dual_cndmask_b32 v255, v2, v2 :: v_dual_ashrrev_i32 v7, v3, v3 ; encoding: [0x02,0x61,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v3, v3
+// GFX1210: v_dual_cndmask_b32 v255, v2, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v3, v3 ; encoding: [0x02,0x61,0x25,0xcf,0x03,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, v3, v2 :: v_dual_ashrrev_i32 v7, v4, v3
-// GFX1210: v_dual_cndmask_b32 v255, v3, v2 :: v_dual_ashrrev_i32 v7, v4, v3 ; encoding: [0x03,0x61,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v4, v3
+// GFX1210: v_dual_cndmask_b32 v255, v3, v2, vcc_lo :: v_dual_ashrrev_i32 v7, v4, v3 ; encoding: [0x03,0x61,0x25,0xcf,0x04,0x01,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s105, v2 :: v_dual_ashrrev_i32 v7, s105, v3
-// GFX1210: v_dual_cndmask_b32 v255, s105, v2 :: v_dual_ashrrev_i32 v7, s105, v3 ; encoding: [0x69,0x60,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_ashrrev_i32 v7, s105, v3
+// GFX1210: v_dual_cndmask_b32 v255, s105, v2, vcc_lo :: v_dual_ashrrev_i32 v7, s105, v3 ; encoding: [0x69,0x60,0x25,0xcf,0x69,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, s1, v2 :: v_dual_ashrrev_i32 v7, s1, v3
-// GFX1210: v_dual_cndmask_b32 v255, s1, v2 :: v_dual_ashrrev_i32 v7, s1, v3 ; encoding: [0x01,0x60,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_ashrrev_i32 v7, s1, v3
+// GFX1210: v_dual_cndmask_b32 v255, s1, v2, vcc_lo :: v_dual_ashrrev_i32 v7, s1, v3 ; encoding: [0x01,0x60,0x25,0xcf,0x01,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_ashrrev_i32 v7, ttmp15, v3
-// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2 :: v_dual_ashrrev_i32 v7, ttmp15, v3 ; encoding: [0x7b,0x60,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_ashrrev_i32 v7, ttmp15, v3
+// GFX1210: v_dual_cndmask_b32 v255, ttmp15, v2, vcc_lo :: v_dual_ashrrev_i32 v7, ttmp15, v3 ; encoding: [0x7b,0x60,0x25,0xcf,0x7b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_ashrrev_i32 v7, exec_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2 :: v_dual_ashrrev_i32 v7, exec_hi, v3 ; encoding: [0x7f,0x60,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_ashrrev_i32 v7, exec_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_hi, v2, vcc_lo :: v_dual_ashrrev_i32 v7, exec_hi, v3 ; encoding: [0x7f,0x60,0x25,0xcf,0x7f,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_ashrrev_i32 v7, exec_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2 :: v_dual_ashrrev_i32 v7, exec_lo, v3 ; encoding: [0x7e,0x60,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_ashrrev_i32 v7, exec_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, exec_lo, v2, vcc_lo :: v_dual_ashrrev_i32 v7, exec_lo, v3 ; encoding: [0x7e,0x60,0x25,0xcf,0x7e,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, m0, v2 :: v_dual_ashrrev_i32 v7, m0, v3
-// GFX1210: v_dual_cndmask_b32 v255, m0, v2 :: v_dual_ashrrev_i32 v7, m0, v3 ; encoding: [0x7d,0x60,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_ashrrev_i32 v7, m0, v3
+// GFX1210: v_dual_cndmask_b32 v255, m0, v2, vcc_lo :: v_dual_ashrrev_i32 v7, m0, v3 ; encoding: [0x7d,0x60,0x25,0xcf,0x7d,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_ashrrev_i32 v7, vcc_hi, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2 :: v_dual_ashrrev_i32 v7, vcc_hi, v3 ; encoding: [0x6b,0x60,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_ashrrev_i32 v7, vcc_hi, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_hi, v2, vcc_lo :: v_dual_ashrrev_i32 v7, vcc_hi, v3 ; encoding: [0x6b,0x60,0x25,0xcf,0x6b,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_ashrrev_i32 v7, vcc_lo, v3
-// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2 :: v_dual_ashrrev_i32 v7, vcc_lo, v3 ; encoding: [0x6a,0x60,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_ashrrev_i32 v7, vcc_lo, v3
+// GFX1210: v_dual_cndmask_b32 v255, vcc_lo, v2, vcc_lo :: v_dual_ashrrev_i32 v7, vcc_lo, v3 ; encoding: [0x6a,0x60,0x25,0xcf,0x6a,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_ashrrev_i32 v7, -1, v3
-// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2 :: v_dual_ashrrev_i32 v7, -1, v3 ; encoding: [0xfd,0x60,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
+v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_ashrrev_i32 v7, -1, v3
+// GFX1210: v_dual_cndmask_b32 v255, src_scc, v2, vcc_lo :: v_dual_ashrrev_i32 v7, -1, v3 ; encoding: [0xfd,0x60,0x25,0xcf,0xc1,0x00,0x02,0x6a,0xff,0x03,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_ashrrev_i32 v7, 0.5, v2
-// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3 :: v_dual_ashrrev_i32 v7, 0.5, v2 ; encoding: [0xf0,0x60,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
+v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_ashrrev_i32 v7, 0.5, v2
+// GFX1210: v_dual_cndmask_b32 v255, 0.5, v3, vcc_lo :: v_dual_ashrrev_i32 v7, 0.5, v2 ; encoding: [0xf0,0x60,0x25,0xcf,0xf0,0x00,0x03,0x6a,0xff,0x02,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v255, -1, v4 :: v_dual_ashrrev_i32 v7, src_scc, v5
-// GFX1210: v_dual_cndmask_b32 v255, -1, v4 :: v_dual_ashrrev_i32 v7, src_scc, v5 ; encoding: [0xc1,0x60,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
+v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_ashrrev_i32 v7, src_scc, v5
+// GFX1210: v_dual_cndmask_b32 v255, -1, v4, vcc_lo :: v_dual_ashrrev_i32 v7, src_scc, v5 ; encoding: [0xc1,0x60,0x25,0xcf,0xfd,0x00,0x04,0x6a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v255, v4, v2 :: v_dual_ashrrev_i32 v7, v1, v3
@@ -11090,68 +11090,68 @@ v_dual_add_nc_u32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_add_nc_u32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x41,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_add_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x40,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x40,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_add_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x40,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x40,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_add_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x40,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x40,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_add_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x40,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x40,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_add_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x40,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x40,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX12: v_dual_add_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x40,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x40,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX12: v_dual_add_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x40,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x40,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX12: v_dual_add_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x40,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x40,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX12: v_dual_add_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x40,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x40,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX12: v_dual_add_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x40,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x40,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX12: v_dual_add_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x40,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x40,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_add_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x40,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x40,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_add_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x40,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x40,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_add_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x40,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_add_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x40,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_add_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x40,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_add_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x40,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_add_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x40,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_add_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_add_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x40,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_add_nc_u32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -11878,68 +11878,68 @@ v_dual_lshlrev_b32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_lshlrev_b32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x45,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x44,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x44,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_lshlrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x44,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x44,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_lshlrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x44,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x44,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_lshlrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x44,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x44,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_lshlrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x44,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x44,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX12: v_dual_lshlrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x44,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x44,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX12: v_dual_lshlrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x44,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x44,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX12: v_dual_lshlrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x44,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x44,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX12: v_dual_lshlrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x44,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x44,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX12: v_dual_lshlrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x44,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x44,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX12: v_dual_lshlrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x44,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x44,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_lshlrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x44,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x44,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_lshlrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x44,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x44,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_lshlrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x44,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshlrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x44,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_lshlrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x44,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_lshlrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x44,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshlrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_lshlrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x44,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_lshlrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_lshlrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x44,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -12666,68 +12666,68 @@ v_dual_sub_nc_u32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_sub_nc_u32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x51,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x50,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x50,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_sub_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x50,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x50,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_sub_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x50,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x50,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_sub_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x50,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x50,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_sub_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x50,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x50,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX12: v_dual_sub_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x50,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x50,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX12: v_dual_sub_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x50,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x50,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX12: v_dual_sub_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x50,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x50,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX12: v_dual_sub_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x50,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x50,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX12: v_dual_sub_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x50,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x50,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX12: v_dual_sub_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x50,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x50,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_sub_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x50,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x50,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_sub_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x50,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x50,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_sub_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x50,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_sub_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x50,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_sub_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x50,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_sub_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x50,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_sub_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_sub_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x50,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_sub_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_sub_nc_u32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x50,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -13454,68 +13454,68 @@ v_dual_ashrrev_i32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_ashrrev_i32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x59,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x58,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x58,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_ashrrev_i32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x58,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x58,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_ashrrev_i32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x58,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x58,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_ashrrev_i32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x58,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x58,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_ashrrev_i32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x58,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x58,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX12: v_dual_ashrrev_i32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x58,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x58,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX12: v_dual_ashrrev_i32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x58,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x58,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX12: v_dual_ashrrev_i32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x58,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x58,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX12: v_dual_ashrrev_i32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x58,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x58,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX12: v_dual_ashrrev_i32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x58,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x58,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX12: v_dual_ashrrev_i32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x58,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x58,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_ashrrev_i32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x58,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x58,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_ashrrev_i32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x58,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x58,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_ashrrev_i32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x58,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_ashrrev_i32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x58,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_ashrrev_i32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x58,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_ashrrev_i32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x58,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_ashrrev_i32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_ashrrev_i32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x58,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_ashrrev_i32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_ashrrev_i32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x58,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -14242,68 +14242,68 @@ v_dual_lshrrev_b32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_lshrrev_b32 v255, -1, v4 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x55,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x54,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x54,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_lshrrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x54,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, v1, v2 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x54,0xcf,0xff,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_lshrrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x54,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, v255, v2 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x54,0xcf,0x02,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_lshrrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x54,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, v2, v2 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x54,0xcf,0x03,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_lshrrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x54,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, v3, v2 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x54,0xcf,0x04,0x01,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX12: v_dual_lshrrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x54,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, s105, v2 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x54,0xcf,0x69,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX12: v_dual_lshrrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x54,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, s1, v2 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x54,0xcf,0x01,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX12: v_dual_lshrrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x54,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, ttmp15, v2 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x54,0xcf,0x7b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX12: v_dual_lshrrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x54,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, exec_hi, v2 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x54,0xcf,0x7f,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX12: v_dual_lshrrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x54,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, exec_lo, v2 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x54,0xcf,0x7e,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX12: v_dual_lshrrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x54,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, m0, v2 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x54,0xcf,0x7d,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_lshrrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x54,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, vcc_hi, v2 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x54,0xcf,0x6b,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_lshrrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x54,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, vcc_lo, v2 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x54,0xcf,0x6a,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_lshrrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x54,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
+v_dual_lshrrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, src_scc, v2 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x54,0xcf,0xc1,0x00,0x02,0x00,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_lshrrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x54,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
+v_dual_lshrrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, 0.5, v3 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x54,0xcf,0xf0,0x00,0x03,0x00,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshrrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_lshrrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x54,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
+v_dual_lshrrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_lshrrev_b32 v255, -1, v4 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x54,0xcf,0xfd,0x00,0x04,0x00,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_fmac_f32 v7, v1, v3
@@ -14998,44 +14998,44 @@ v_dual_mov_b64 v[200:201], -1 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_mov_b64 v[200:201], -1 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x75,0xcf,0xfd,0x00,0x00,0x00,0xc8,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x06,0x91,0x74,0xcf,0x01,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x06,0x91,0x74,0xcf,0x01,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], v[16:17] :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_mov_b64 v[200:201], v[16:17] :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x10,0x91,0x74,0xcf,0xff,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], v[16:17] :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], v[16:17] :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x10,0x91,0x74,0xcf,0xff,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_mov_b64 v[200:201], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x74,0xcf,0x02,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x74,0xcf,0x02,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], v[8:9] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_mov_b64 v[200:201], v[8:9] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x08,0x91,0x74,0xcf,0x03,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], v[8:9] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], v[8:9] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x08,0x91,0x74,0xcf,0x03,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], v[14:15] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_mov_b64 v[200:201], v[14:15] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x0e,0x91,0x74,0xcf,0x04,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], v[14:15] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], v[14:15] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x0e,0x91,0x74,0xcf,0x04,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], s[104:105] :: v_dual_cndmask_b32 v7, v105, v3
-// GFX12: v_dual_mov_b64 v[200:201], s[104:105] :: v_dual_cndmask_b32 v7, v105, v3 ; encoding: [0x68,0x90,0x74,0xcf,0x69,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], s[104:105] :: v_dual_cndmask_b32 v7, v105, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], s[104:105] :: v_dual_cndmask_b32 v7, v105, v3, vcc_lo ; encoding: [0x68,0x90,0x74,0xcf,0x69,0x01,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], vcc :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_mov_b64 v[200:201], vcc :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6a,0x90,0x74,0xcf,0x6b,0x00,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], vcc :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], vcc :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x74,0xcf,0x6a,0x00,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], src_scc :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_mov_b64 v[200:201], src_scc :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x74,0xcf,0xc1,0x00,0x00,0x00,0xc8,0x03,0x6a,0x07]
+v_dual_mov_b64 v[200:201], src_scc :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], src_scc :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x74,0xcf,0xc1,0x00,0x00,0x00,0xc8,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], 0.5 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_mov_b64 v[200:201], 0.5 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x74,0xcf,0xf0,0x00,0x00,0x00,0xc8,0x02,0x6a,0x07]
+v_dual_mov_b64 v[200:201], 0.5 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], 0.5 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x74,0xcf,0xf0,0x00,0x00,0x00,0xc8,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mov_b64 v[200:201], -1 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_mov_b64 v[200:201], -1 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x74,0xcf,0xfd,0x00,0x00,0x00,0xc8,0x05,0x6a,0x07]
+v_dual_mov_b64 v[200:201], -1 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_mov_b64 v[200:201], -1 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x74,0xcf,0xfd,0x00,0x00,0x00,0xc8,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_fmac_f32 v7, v1, v3
@@ -15618,68 +15618,68 @@ v_dual_fma_f32 v255, -1, v4, v10 :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_fma_f32 v255, -1, v4, v10 :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x4d,0xcf,0xfd,0x00,0x04,0x0a,0xff,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x04,0x91,0x4c,0xcf,0x01,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x04,0x91,0x4c,0xcf,0x01,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, v1, v2, v10 :: v_dual_cndmask_b32 v7, v255, v3
-// GFX12: v_dual_fma_f32 v255, v1, v2, v10 :: v_dual_cndmask_b32 v7, v255, v3 ; encoding: [0x01,0x91,0x4c,0xcf,0xff,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, v1, v2, v10 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, v1, v2, v10 :: v_dual_cndmask_b32 v7, v255, v3, vcc_lo ; encoding: [0x01,0x91,0x4c,0xcf,0xff,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, v255, v2, v10 :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_fma_f32 v255, v255, v2, v10 :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0xff,0x91,0x4c,0xcf,0x02,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, v255, v2, v10 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, v255, v2, v10 :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0xff,0x91,0x4c,0xcf,0x02,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, v2, v2, v10 :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_fma_f32 v255, v2, v2, v10 :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x02,0x91,0x4c,0xcf,0x03,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, v2, v2, v10 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, v2, v2, v10 :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x02,0x91,0x4c,0xcf,0x03,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, v3, v2, v10 :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_fma_f32 v255, v3, v2, v10 :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x03,0x91,0x4c,0xcf,0x04,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, v3, v2, v10 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, v3, v2, v10 :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x03,0x91,0x4c,0xcf,0x04,0x01,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, s105, v2, v10 :: v_dual_cndmask_b32 v7, s105, v3
-// GFX12: v_dual_fma_f32 v255, s105, v2, v10 :: v_dual_cndmask_b32 v7, s105, v3 ; encoding: [0x69,0x90,0x4c,0xcf,0x69,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, s105, v2, v10 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, s105, v2, v10 :: v_dual_cndmask_b32 v7, s105, v3, vcc_lo ; encoding: [0x69,0x90,0x4c,0xcf,0x69,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, s1, v2, v10 :: v_dual_cndmask_b32 v7, s1, v3
-// GFX12: v_dual_fma_f32 v255, s1, v2, v10 :: v_dual_cndmask_b32 v7, s1, v3 ; encoding: [0x01,0x90,0x4c,0xcf,0x01,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, s1, v2, v10 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, s1, v2, v10 :: v_dual_cndmask_b32 v7, s1, v3, vcc_lo ; encoding: [0x01,0x90,0x4c,0xcf,0x01,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, ttmp15, v2, v10 :: v_dual_cndmask_b32 v7, ttmp15, v3
-// GFX12: v_dual_fma_f32 v255, ttmp15, v2, v10 :: v_dual_cndmask_b32 v7, ttmp15, v3 ; encoding: [0x7b,0x90,0x4c,0xcf,0x7b,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, ttmp15, v2, v10 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, ttmp15, v2, v10 :: v_dual_cndmask_b32 v7, ttmp15, v3, vcc_lo ; encoding: [0x7b,0x90,0x4c,0xcf,0x7b,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, exec_hi, v2, v10 :: v_dual_cndmask_b32 v7, exec_hi, v3
-// GFX12: v_dual_fma_f32 v255, exec_hi, v2, v10 :: v_dual_cndmask_b32 v7, exec_hi, v3 ; encoding: [0x7f,0x90,0x4c,0xcf,0x7f,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, exec_hi, v2, v10 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, exec_hi, v2, v10 :: v_dual_cndmask_b32 v7, exec_hi, v3, vcc_lo ; encoding: [0x7f,0x90,0x4c,0xcf,0x7f,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, exec_lo, v2, v10 :: v_dual_cndmask_b32 v7, exec_lo, v3
-// GFX12: v_dual_fma_f32 v255, exec_lo, v2, v10 :: v_dual_cndmask_b32 v7, exec_lo, v3 ; encoding: [0x7e,0x90,0x4c,0xcf,0x7e,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, exec_lo, v2, v10 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, exec_lo, v2, v10 :: v_dual_cndmask_b32 v7, exec_lo, v3, vcc_lo ; encoding: [0x7e,0x90,0x4c,0xcf,0x7e,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, m0, v2, v10 :: v_dual_cndmask_b32 v7, m0, v3
-// GFX12: v_dual_fma_f32 v255, m0, v2, v10 :: v_dual_cndmask_b32 v7, m0, v3 ; encoding: [0x7d,0x90,0x4c,0xcf,0x7d,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, m0, v2, v10 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, m0, v2, v10 :: v_dual_cndmask_b32 v7, m0, v3, vcc_lo ; encoding: [0x7d,0x90,0x4c,0xcf,0x7d,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, vcc_hi, v2, v10 :: v_dual_cndmask_b32 v7, vcc_hi, v3
-// GFX12: v_dual_fma_f32 v255, vcc_hi, v2, v10 :: v_dual_cndmask_b32 v7, vcc_hi, v3 ; encoding: [0x6b,0x90,0x4c,0xcf,0x6b,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, vcc_hi, v2, v10 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, vcc_hi, v2, v10 :: v_dual_cndmask_b32 v7, vcc_hi, v3, vcc_lo ; encoding: [0x6b,0x90,0x4c,0xcf,0x6b,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, vcc_lo, v2, v10 :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_fma_f32 v255, vcc_lo, v2, v10 :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x4c,0xcf,0x6a,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, vcc_lo, v2, v10 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, vcc_lo, v2, v10 :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x4c,0xcf,0x6a,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, src_scc, v2, v10 :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_fma_f32 v255, src_scc, v2, v10 :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x4c,0xcf,0xc1,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
+v_dual_fma_f32 v255, src_scc, v2, v10 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_fma_f32 v255, src_scc, v2, v10 :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x4c,0xcf,0xc1,0x00,0x02,0x0a,0xff,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, 0.5, v3, v10 :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_fma_f32 v255, 0.5, v3, v10 :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x4c,0xcf,0xf0,0x00,0x03,0x0a,0xff,0x02,0x6a,0x07]
+v_dual_fma_f32 v255, 0.5, v3, v10 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_fma_f32 v255, 0.5, v3, v10 :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x4c,0xcf,0xf0,0x00,0x03,0x0a,0xff,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f32 v255, -1, v4, v10 :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_fma_f32 v255, -1, v4, v10 :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x4c,0xcf,0xfd,0x00,0x04,0x0a,0xff,0x05,0x6a,0x07]
+v_dual_fma_f32 v255, -1, v4, v10 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_fma_f32 v255, -1, v4, v10 :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x4c,0xcf,0xfd,0x00,0x04,0x0a,0xff,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_fmac_f32 v7, v1, v3
@@ -16374,52 +16374,52 @@ v_dual_lshl_add_u64 v[254:255], -1, v4, v[10:11] :: v_dual_add_nc_u32 v7, src_sc
 // GFX12: v_dual_lshl_add_u64 v[254:255], -1, v4, v[10:11] :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x79,0xcf,0xfd,0x00,0x04,0x0a,0xfe,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x78,0xcf,0x02,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x78,0xcf,0x02,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], v[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v253, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], v[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v253, v3 ; encoding: [0x02,0x91,0x78,0xcf,0xfd,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], v[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], v[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo ; encoding: [0x02,0x91,0x78,0xcf,0xfd,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], v[254:255], v2, v[10:11] :: v_dual_cndmask_b32 v7, v5, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], v[254:255], v2, v[10:11] :: v_dual_cndmask_b32 v7, v5, v3 ; encoding: [0xfe,0x91,0x78,0xcf,0x05,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], v[254:255], v2, v[10:11] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], v[254:255], v2, v[10:11] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo ; encoding: [0xfe,0x91,0x78,0xcf,0x05,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x04,0x91,0x78,0xcf,0x03,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x04,0x91,0x78,0xcf,0x03,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], v[6:7], v2, v[10:11] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], v[6:7], v2, v[10:11] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x06,0x91,0x78,0xcf,0x04,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], v[6:7], v2, v[10:11] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], v[6:7], v2, v[10:11] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x06,0x91,0x78,0xcf,0x04,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], s[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], s[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x02,0x90,0x78,0xcf,0x01,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], s[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], s[2:3], v2, v[10:11] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x02,0x90,0x78,0xcf,0x01,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], ttmp[14:15], v2, v[10:11] :: v_dual_cndmask_b32 v7, v15, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], ttmp[14:15], v2, v[10:11] :: v_dual_cndmask_b32 v7, v15, v3 ; encoding: [0x7a,0x90,0x78,0xcf,0x0f,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], ttmp[14:15], v2, v[10:11] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], ttmp[14:15], v2, v[10:11] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo ; encoding: [0x7a,0x90,0x78,0xcf,0x0f,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], exec, v2, v[10:11] :: v_dual_cndmask_b32 v7, v10, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], exec, v2, v[10:11] :: v_dual_cndmask_b32 v7, v10, v3 ; encoding: [0x7e,0x90,0x78,0xcf,0x0a,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], exec, v2, v[10:11] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], exec, v2, v[10:11] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo ; encoding: [0x7e,0x90,0x78,0xcf,0x0a,0x01,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], vcc, v2, v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], vcc, v2, v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x78,0xcf,0x6a,0x00,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], vcc, v2, v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], vcc, v2, v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x78,0xcf,0x6a,0x00,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], src_scc, v2, v[10:11] :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_lshl_add_u64 v[254:255], src_scc, v2, v[10:11] :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x78,0xcf,0xc1,0x00,0x02,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], src_scc, v2, v[10:11] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], src_scc, v2, v[10:11] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x78,0xcf,0xc1,0x00,0x02,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], 0.5, v3, v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_lshl_add_u64 v[254:255], 0.5, v3, v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x78,0xcf,0xf0,0x00,0x03,0x0a,0xfe,0x02,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], 0.5, v3, v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], 0.5, v3, v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x78,0xcf,0xf0,0x00,0x03,0x0a,0xfe,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_lshl_add_u64 v[254:255], -1, v4, v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_lshl_add_u64 v[254:255], -1, v4, v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x78,0xcf,0xfd,0x00,0x04,0x0a,0xfe,0x05,0x6a,0x07]
+v_dual_lshl_add_u64 v[254:255], -1, v4, v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_lshl_add_u64 v[254:255], -1, v4, v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x78,0xcf,0xfd,0x00,0x04,0x0a,0xfe,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_fmac_f32 v9, v2, v3
@@ -16974,52 +16974,52 @@ v_dual_fma_f64 v[254:255], -1, v[6:7], v[10:11] :: v_dual_add_nc_u32 v7, src_scc
 // GFX12: v_dual_fma_f64 v[254:255], -1, v[6:7], v[10:11] :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x5d,0xcf,0xfd,0x00,0x06,0x0a,0xfe,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x5c,0xcf,0x02,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x5c,0xcf,0x02,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], v[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v253, v3
-// GFX12: v_dual_fma_f64 v[254:255], v[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v253, v3 ; encoding: [0x02,0x91,0x5c,0xcf,0xfd,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], v[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], v[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo ; encoding: [0x02,0x91,0x5c,0xcf,0xfd,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], v[254:255], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v5, v3
-// GFX12: v_dual_fma_f64 v[254:255], v[254:255], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v5, v3 ; encoding: [0xfe,0x91,0x5c,0xcf,0x05,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], v[254:255], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], v[254:255], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo ; encoding: [0xfe,0x91,0x5c,0xcf,0x05,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x04,0x91,0x5c,0xcf,0x03,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x04,0x91,0x5c,0xcf,0x03,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], v[6:7], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_fma_f64 v[254:255], v[6:7], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x06,0x91,0x5c,0xcf,0x04,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], v[6:7], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], v[6:7], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x06,0x91,0x5c,0xcf,0x04,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], s[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_fma_f64 v[254:255], s[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x02,0x90,0x5c,0xcf,0x01,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], s[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], s[2:3], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x02,0x90,0x5c,0xcf,0x01,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], ttmp[14:15], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v15, v3
-// GFX12: v_dual_fma_f64 v[254:255], ttmp[14:15], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v15, v3 ; encoding: [0x7a,0x90,0x5c,0xcf,0x0f,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], ttmp[14:15], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], ttmp[14:15], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo ; encoding: [0x7a,0x90,0x5c,0xcf,0x0f,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], exec, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v10, v3
-// GFX12: v_dual_fma_f64 v[254:255], exec, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v10, v3 ; encoding: [0x7e,0x90,0x5c,0xcf,0x0a,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], exec, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], exec, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo ; encoding: [0x7e,0x90,0x5c,0xcf,0x0a,0x01,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], vcc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_fma_f64 v[254:255], vcc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x5c,0xcf,0x6a,0x00,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], vcc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], vcc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x5c,0xcf,0x6a,0x00,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], src_scc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_fma_f64 v[254:255], src_scc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x5c,0xcf,0xc1,0x00,0x04,0x0a,0xfe,0x03,0x6a,0x07]
+v_dual_fma_f64 v[254:255], src_scc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], src_scc, v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x5c,0xcf,0xc1,0x00,0x04,0x0a,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], 0.5, v[8:9], v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_fma_f64 v[254:255], 0.5, v[8:9], v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x5c,0xcf,0xf0,0x00,0x08,0x0a,0xfe,0x02,0x6a,0x07]
+v_dual_fma_f64 v[254:255], 0.5, v[8:9], v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], 0.5, v[8:9], v[10:11] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x5c,0xcf,0xf0,0x00,0x08,0x0a,0xfe,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_fma_f64 v[254:255], -1, v[6:7], v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_fma_f64 v[254:255], -1, v[6:7], v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x5c,0xcf,0xfd,0x00,0x06,0x0a,0xfe,0x05,0x6a,0x07]
+v_dual_fma_f64 v[254:255], -1, v[6:7], v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_fma_f64 v[254:255], -1, v[6:7], v[10:11] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x5c,0xcf,0xfd,0x00,0x06,0x0a,0xfe,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_fmac_f32 v9, v2, v3
@@ -17574,52 +17574,52 @@ v_dual_add_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_add_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x61,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x60,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x60,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3
-// GFX12: v_dual_add_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3 ; encoding: [0x02,0x91,0x60,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo ; encoding: [0x02,0x91,0x60,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3
-// GFX12: v_dual_add_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3 ; encoding: [0xfe,0x91,0x60,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo ; encoding: [0xfe,0x91,0x60,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x04,0x91,0x60,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x04,0x91,0x60,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_add_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x06,0x91,0x60,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x06,0x91,0x60,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_add_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x02,0x90,0x60,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x02,0x90,0x60,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3
-// GFX12: v_dual_add_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3 ; encoding: [0x7a,0x90,0x60,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo ; encoding: [0x7a,0x90,0x60,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3
-// GFX12: v_dual_add_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3 ; encoding: [0x7e,0x90,0x60,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo ; encoding: [0x7e,0x90,0x60,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_add_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x60,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x60,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_add_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x60,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_add_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x60,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_add_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x60,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
+v_dual_add_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x60,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_add_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_add_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x60,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
+v_dual_add_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_add_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x60,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_fmac_f32 v9, v2, v3
@@ -18174,52 +18174,52 @@ v_dual_mul_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_mul_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x65,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x64,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x64,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3
-// GFX12: v_dual_mul_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3 ; encoding: [0x02,0x91,0x64,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo ; encoding: [0x02,0x91,0x64,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3
-// GFX12: v_dual_mul_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3 ; encoding: [0xfe,0x91,0x64,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo ; encoding: [0xfe,0x91,0x64,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x04,0x91,0x64,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x04,0x91,0x64,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_mul_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x06,0x91,0x64,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x06,0x91,0x64,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_mul_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x02,0x90,0x64,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x02,0x90,0x64,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3
-// GFX12: v_dual_mul_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3 ; encoding: [0x7a,0x90,0x64,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo ; encoding: [0x7a,0x90,0x64,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3
-// GFX12: v_dual_mul_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3 ; encoding: [0x7e,0x90,0x64,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo ; encoding: [0x7e,0x90,0x64,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_mul_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x64,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x64,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_mul_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x64,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_mul_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x64,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_mul_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x64,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
+v_dual_mul_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x64,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_mul_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_mul_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x64,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
+v_dual_mul_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_mul_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x64,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_fmac_f32 v9, v2, v3
@@ -18774,52 +18774,52 @@ v_dual_max_num_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_max_num_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x6d,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x6c,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x6c,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3
-// GFX12: v_dual_max_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3 ; encoding: [0x02,0x91,0x6c,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo ; encoding: [0x02,0x91,0x6c,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3
-// GFX12: v_dual_max_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3 ; encoding: [0xfe,0x91,0x6c,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo ; encoding: [0xfe,0x91,0x6c,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x04,0x91,0x6c,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x04,0x91,0x6c,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_max_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x06,0x91,0x6c,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x06,0x91,0x6c,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_max_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x02,0x90,0x6c,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x02,0x90,0x6c,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3
-// GFX12: v_dual_max_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3 ; encoding: [0x7a,0x90,0x6c,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo ; encoding: [0x7a,0x90,0x6c,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3
-// GFX12: v_dual_max_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3 ; encoding: [0x7e,0x90,0x6c,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo ; encoding: [0x7e,0x90,0x6c,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_max_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x6c,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x6c,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_max_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x6c,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x6c,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_max_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x6c,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x6c,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_max_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x6c,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
+v_dual_max_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_max_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x6c,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_fmac_f32 v9, v2, v3
@@ -19374,52 +19374,52 @@ v_dual_min_num_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5
 // GFX12: v_dual_min_num_f64 v[254:255], -1, v[6:7] :: v_dual_add_nc_u32 v7, src_scc, v5 ; encoding: [0xc1,0x00,0x71,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x00,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3
-// GFX12: v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3 ; encoding: [0x04,0x91,0x70,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, vcc_lo ; encoding: [0x04,0x91,0x70,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3
-// GFX12: v_dual_min_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3 ; encoding: [0x02,0x91,0x70,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], v[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v253, v3, vcc_lo ; encoding: [0x02,0x91,0x70,0xcf,0xfd,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3
-// GFX12: v_dual_min_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3 ; encoding: [0xfe,0x91,0x70,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], v[254:255], v[4:5] :: v_dual_cndmask_b32 v7, v5, v3, vcc_lo ; encoding: [0xfe,0x91,0x70,0xcf,0x05,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3
-// GFX12: v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3 ; encoding: [0x04,0x91,0x70,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v3, v3, vcc_lo ; encoding: [0x04,0x91,0x70,0xcf,0x03,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3
-// GFX12: v_dual_min_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3 ; encoding: [0x06,0x91,0x70,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], v[6:7], v[4:5] :: v_dual_cndmask_b32 v7, v4, v3, vcc_lo ; encoding: [0x06,0x91,0x70,0xcf,0x04,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3
-// GFX12: v_dual_min_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3 ; encoding: [0x02,0x90,0x70,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], s[2:3], v[4:5] :: v_dual_cndmask_b32 v7, v1, v3, vcc_lo ; encoding: [0x02,0x90,0x70,0xcf,0x01,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3
-// GFX12: v_dual_min_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3 ; encoding: [0x7a,0x90,0x70,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], ttmp[14:15], v[4:5] :: v_dual_cndmask_b32 v7, v15, v3, vcc_lo ; encoding: [0x7a,0x90,0x70,0xcf,0x0f,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3
-// GFX12: v_dual_min_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3 ; encoding: [0x7e,0x90,0x70,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], exec, v[4:5] :: v_dual_cndmask_b32 v7, v10, v3, vcc_lo ; encoding: [0x7e,0x90,0x70,0xcf,0x0a,0x01,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3
-// GFX12: v_dual_min_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3 ; encoding: [0x6a,0x90,0x70,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], vcc, v[4:5] :: v_dual_cndmask_b32 v7, vcc_lo, v3, vcc_lo ; encoding: [0x6a,0x90,0x70,0xcf,0x6a,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3
-// GFX12: v_dual_min_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3 ; encoding: [0xfd,0x90,0x70,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], src_scc, v[4:5] :: v_dual_cndmask_b32 v7, -1, v3, vcc_lo ; encoding: [0xfd,0x90,0x70,0xcf,0xc1,0x00,0x04,0x00,0xfe,0x03,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2
-// GFX12: v_dual_min_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2 ; encoding: [0xf0,0x90,0x70,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], 0.5, v[8:9] :: v_dual_cndmask_b32 v7, 0.5, v2, vcc_lo ; encoding: [0xf0,0x90,0x70,0xcf,0xf0,0x00,0x08,0x00,0xfe,0x02,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_min_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5
-// GFX12: v_dual_min_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5 ; encoding: [0xc1,0x90,0x70,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
+v_dual_min_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo
+// GFX12: v_dual_min_num_f64 v[254:255], -1, v[6:7] :: v_dual_cndmask_b32 v7, src_scc, v5, vcc_lo ; encoding: [0xc1,0x90,0x70,0xcf,0xfd,0x00,0x06,0x00,0xfe,0x05,0x6a,0x07]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_fmac_f32 v9, v2, v3
@@ -19918,8 +19918,8 @@ v_dual_add_f32 v0, -v1, v2 :: v_dual_add_nc_u32 v5, v6, v7
 // GFX12: v_dual_add_f32 v0, -v1, v2 :: v_dual_add_nc_u32 v5, v6, v7 ; encoding: [0x01,0x01,0x11,0xcf,0x06,0x03,0x02,0x00,0x00,0x07,0x00,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v0, v1, v2 :: v_dual_fmac_f32 v5, -v6, -v7
-// GFX12: v_dual_cndmask_b32 v0, v1, v2 :: v_dual_fmac_f32 v5, -v6, -v7 ; encoding: [0x01,0x01,0x24,0xcf,0x06,0x31,0x02,0x6a,0x00,0x07,0x00,0x05]
+v_dual_cndmask_b32 v0, v1, v2, vcc_lo :: v_dual_fmac_f32 v5, -v6, -v7
+// GFX12: v_dual_cndmask_b32 v0, v1, v2, vcc_lo :: v_dual_fmac_f32 v5, -v6, -v7 ; encoding: [0x01,0x01,0x24,0xcf,0x06,0x31,0x02,0x6a,0x00,0x07,0x00,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fmac_f32 v0, -v1, -v2 :: v_dual_ashrrev_i32 v5, v6, v7
@@ -19930,8 +19930,8 @@ v_dual_fmac_f32 v0, v1, -v2 :: v_dual_fmac_f32 v5, -v6, v7
 // GFX12: v_dual_fmac_f32 v0, v1, -v2 :: v_dual_fmac_f32 v5, -v6, v7 ; encoding: [0x01,0x01,0x00,0xcf,0x06,0x15,0x02,0x00,0x00,0x07,0x00,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_max_num_f32 v0, v1, -v2 :: v_dual_cndmask_b32 v5, v6, v7
-// GFX12: v_dual_max_num_f32 v0, v1, -v2 :: v_dual_cndmask_b32 v5, v6, v7 ; encoding: [0x01,0x91,0x28,0xcf,0x06,0x05,0x02,0x00,0x00,0x07,0x6a,0x05]
+v_dual_max_num_f32 v0, v1, -v2 :: v_dual_cndmask_b32 v5, v6, v7, vcc_lo
+// GFX12: v_dual_max_num_f32 v0, v1, -v2 :: v_dual_cndmask_b32 v5, v6, v7, vcc_lo ; encoding: [0x01,0x91,0x28,0xcf,0x06,0x05,0x02,0x00,0x00,0x07,0x6a,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_max_num_f32 v0, -v1, v2 :: v_dual_min_num_f32 v5, v6, v7
@@ -19986,8 +19986,8 @@ v_dual_add_nc_u32 v0, v1, v2 :: v_dual_fma_f32 v5, -v6, v7, -v8
 // GFX12: v_dual_add_nc_u32 v0, v1, v2 :: v_dual_fma_f32 v5, -v6, v7, -v8 ; encoding: [0x01,0x31,0x41,0xcf,0x06,0x51,0x02,0x00,0x00,0x07,0x08,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
-v_dual_cndmask_b32 v0, v1, v2 :: v_dual_add_f32 v5, -s6, -v7
-// GFX12: v_dual_cndmask_b32 v0, v1, v2 :: v_dual_add_f32 v5, -s6, -v7 ; encoding: [0x01,0x41,0x24,0xcf,0x06,0x30,0x02,0x6a,0x00,0x07,0x00,0x05]
+v_dual_cndmask_b32 v0, v1, v2, vcc_lo :: v_dual_add_f32 v5, -s6, -v7
+// GFX12: v_dual_cndmask_b32 v0, v1, v2, vcc_lo :: v_dual_add_f32 v5, -s6, -v7 ; encoding: [0x01,0x41,0x24,0xcf,0x06,0x30,0x02,0x6a,0x00,0x07,0x00,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
 v_dual_fma_f64 v[0:1], -v[8:9], -v[4:5], -v[10:11] :: v_dual_add_nc_u32 v5, v6, v7
@@ -20084,4 +20084,176 @@ v_dual_subrev_f32 v0, v1, -v2 :: v_dual_max_i32 v5, v6, v7
 
 v_dual_subrev_f32 v0, -s1, -v2 :: v_dual_mul_f32 v5, -s6, -v7
 // GFX12: v_dual_subrev_f32 v0, -s1, -v2 :: v_dual_mul_f32 v5, -s6, -v7 ; encoding: [0x01,0x30,0x18,0xcf,0x06,0x36,0x02,0x00,0x00,0x07,0x00,0x05]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_add_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_add_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x10,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_add_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_add_f32 v7, v1, v3 ; encoding: [0x04,0x41,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_add_nc_u32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_add_nc_u32 v7, v1, v3 ; encoding: [0x04,0x01,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s97 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s97 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x24,0xcf,0x01,0x01,0x02,0x61,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_fmac_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_fmac_f32 v7, v1, v3 ; encoding: [0x04,0x01,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_lshlrev_b32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_lshlrev_b32 v7, v1, v3 ; encoding: [0x04,0x11,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_max_num_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_max_num_f32 v7, v1, v3 ; encoding: [0x04,0xa1,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_min_num_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_min_num_f32 v7, v1, v3 ; encoding: [0x04,0xb1,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v255, s96 :: v_dual_mov_b32 v7, v1
+// GFX12: v_dual_cndmask_b32 v255, v4, v255, s96 :: v_dual_mov_b32 v7, v1 ; encoding: [0x04,0x81,0x24,0xcf,0x01,0x01,0xff,0x60,0xff,0x00,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_mul_dx9_zero_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_mul_dx9_zero_f32 v7, v1, v3 ; encoding: [0x04,0x71,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_mul_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_mul_f32 v7, v1, v3 ; encoding: [0x04,0x31,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_sub_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_sub_f32 v7, v1, v3 ; encoding: [0x04,0x51,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_subrev_f32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_subrev_f32 v7, v1, v3 ; encoding: [0x04,0x61,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_fma_f32 v7, v1, v3, v4
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_fma_f32 v7, v1, v3, v4 ; encoding: [0x04,0x31,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x04,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_bitop2_b32 v7, v1, v3 bitop3:1
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_bitop2_b32 v7, v1, v3 bitop3:1 ; encoding: [0x04,0x21,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x01,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_fmac_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_fmac_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x00,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_max_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_max_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x28,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_min_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_min_num_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x2c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_mov_b32 v255, v4 :: v_dual_cndmask_b32 v7, v1, v255, s96
+// GFX12: v_dual_mov_b32 v255, v4 :: v_dual_cndmask_b32 v7, v1, v255, s96 ; encoding: [0x04,0x91,0x20,0xcf,0x01,0x01,0x00,0x00,0xff,0xff,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_mul_dx9_zero_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x1c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_mul_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_mul_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x0c,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_subrev_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_subrev_f32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x18,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_max_i32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_max_i32 v7, v1, v3 ; encoding: [0x04,0xe1,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_min_i32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_min_i32 v7, v1, v3 ; encoding: [0x04,0xf1,0x24,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_sub_nc_u32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_sub_nc_u32 v7, v1, v3 ; encoding: [0x04,0x41,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_lshrrev_b32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_lshrrev_b32 v7, v1, v3 ; encoding: [0x04,0x51,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_ashrrev_i32 v7, v1, v3
+// GFX12: v_dual_cndmask_b32 v255, v4, v2, s96 :: v_dual_ashrrev_i32 v7, v1, v3 ; encoding: [0x04,0x61,0x25,0xcf,0x01,0x01,0x02,0x60,0xff,0x03,0x00,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_add_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_add_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x40,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_lshlrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x44,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_sub_nc_u32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x50,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_ashrrev_i32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x58,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_lshrrev_b32 v255, v4, v2 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x54,0xcf,0x01,0x01,0x02,0x00,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_mov_b64 v[200:201], v[6:7] :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x06,0x91,0x74,0xcf,0x01,0x01,0x00,0x00,0xc8,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_cndmask_b32 v7, v1, v3, s96
+// GFX12: v_dual_fma_f32 v255, v4, v2, v10 :: v_dual_cndmask_b32 v7, v1, v3, s96 ; encoding: [0x04,0x91,0x4c,0xcf,0x01,0x01,0x02,0x0a,0xff,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, s96
+// GFX12: v_dual_lshl_add_u64 v[254:255], v[4:5], v2, v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, s96 ; encoding: [0x04,0x91,0x78,0xcf,0x02,0x01,0x02,0x0a,0xfe,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, s96
+// GFX12: v_dual_fma_f64 v[254:255], v[4:5], v[4:5], v[10:11] :: v_dual_cndmask_b32 v7, v2, v3, s96 ; encoding: [0x04,0x91,0x5c,0xcf,0x02,0x01,0x04,0x0a,0xfe,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96
+// GFX12: v_dual_add_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96 ; encoding: [0x04,0x91,0x60,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96
+// GFX12: v_dual_mul_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96 ; encoding: [0x04,0x91,0x64,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96
+// GFX12: v_dual_max_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96 ; encoding: [0x04,0x91,0x6c,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96
+// GFX12: v_dual_min_num_f64 v[254:255], v[4:5], v[4:5] :: v_dual_cndmask_b32 v7, v2, v3, s96 ; encoding: [0x04,0x91,0x70,0xcf,0x02,0x01,0x04,0x00,0xfe,0x03,0x60,0x07]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v0, v1, v2, s96 :: v_dual_fmac_f32 v5, -v6, -v7
+// GFX12: v_dual_cndmask_b32 v0, v1, v2, s96 :: v_dual_fmac_f32 v5, -v6, -v7 ; encoding: [0x01,0x01,0x24,0xcf,0x06,0x31,0x02,0x60,0x00,0x07,0x00,0x05]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_max_num_f32 v0, v1, -v2 :: v_dual_cndmask_b32 v5, v6, v7, s96
+// GFX12: v_dual_max_num_f32 v0, v1, -v2 :: v_dual_cndmask_b32 v5, v6, v7, s96 ; encoding: [0x01,0x91,0x28,0xcf,0x06,0x05,0x02,0x00,0x00,0x07,0x60,0x05]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
+
+v_dual_cndmask_b32 v0, v1, v2, s96 :: v_dual_add_f32 v5, -s6, -v7
+// GFX12: v_dual_cndmask_b32 v0, v1, v2, s96 :: v_dual_add_f32 v5, -s6, -v7 ; encoding: [0x01,0x41,0x24,0xcf,0x06,0x30,0x02,0x60,0x00,0x07,0x00,0x05]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
