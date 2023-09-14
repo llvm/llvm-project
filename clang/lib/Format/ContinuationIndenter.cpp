@@ -2242,8 +2242,10 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       return nullptr;
 
     // Strings in TypeScript types and dictionary keys can not be broken.
-    if (Style.isJavaScript() && (Current.is(TT_SelectorName) ||
-                                 State.Line->startsWith(Keywords.kw_type))) {
+    if (Style.isJavaScript() &&
+        (Current.is(TT_SelectorName) ||
+         State.Line->startsWith(Keywords.kw_type) ||
+         State.Line->startsWith(tok::kw_export, Keywords.kw_type))) {
       return nullptr;
     }
 
