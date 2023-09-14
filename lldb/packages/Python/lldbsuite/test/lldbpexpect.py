@@ -29,7 +29,12 @@ class PExpectTest(TestBase):
         encoding=None,
         use_colors=False,
     ):
-        logfile = getattr(sys.stdout, "buffer", sys.stdout) if self.TraceOn() else None
+        # Using a log file is incompatible with using utf-8 as the encoding.
+        logfile = (
+            getattr(sys.stdout, "buffer", sys.stdout)
+            if (self.TraceOn() and not encoding)
+            else None
+        )
 
         args = []
         if run_under is not None:
