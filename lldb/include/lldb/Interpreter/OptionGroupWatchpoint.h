@@ -31,13 +31,15 @@ public:
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 
   // Note:
-  // eWatchRead == LLDB_WATCH_TYPE_READ; and
+  // eWatchRead == LLDB_WATCH_TYPE_READ
   // eWatchWrite == LLDB_WATCH_TYPE_WRITE
+  // eWatchModify == LLDB_WATCH_TYPE_MODIFY
   enum WatchType {
     eWatchInvalid = 0,
     eWatchRead,
     eWatchWrite,
-    eWatchReadWrite
+    eWatchModify,
+    eWatchReadModify
   };
 
   WatchType watch_type;

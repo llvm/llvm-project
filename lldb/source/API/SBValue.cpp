@@ -1436,7 +1436,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
     if (read)
       watch_type |= LLDB_WATCH_TYPE_READ;
     if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
+      watch_type |= LLDB_WATCH_TYPE_MODIFY;
 
     Status rc;
     CompilerType type(value_sp->GetCompilerType());

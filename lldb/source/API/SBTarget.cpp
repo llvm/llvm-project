@@ -1336,7 +1336,7 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
     if (read)
       watch_type |= LLDB_WATCH_TYPE_READ;
     if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
+      watch_type |= LLDB_WATCH_TYPE_MODIFY;
     if (watch_type == 0) {
       error.SetErrorString(
           "Can't create a watchpoint that is neither read nor write.");
