@@ -266,9 +266,10 @@ function f1(n1) result(res1)
   ! CHECK:   %[[V_9:[0-9]+]] = arith.select %[[V_8]], %c5{{.*}}, %c5{{.*}} : index
   ! CHECK:   %[[V_10:[0-9]+]] = fir.convert %[[V_9]] : (index) -> i64
   ! CHECK:   %[[V_11:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_10]] : i64
+  ! CHECK:   %[[notVolatile:.*]] = arith.constant 0 : i8
   ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_12]], %[[V_13]], %[[V_11]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_12]], %[[V_13]], %[[V_11]], %[[notVolatile]]{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:   %[[V_14:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_15:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_16:[0-9]+]] = fir.insert_value %[[V_15]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -295,9 +296,10 @@ function f1(n1) result(res1)
   ! CHECK:   %[[V_23:[0-9]+]] = arith.select %[[V_22]], %c5{{.*}}, %c5{{.*}} : index
   ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %[[V_23]] : (index) -> i64
   ! CHECK:   %[[V_25:[0-9]+]] = arith.muli %c1{{.*}}_i64_6, %[[V_24]] : i64
+  ! CHECK:   %[[notVolatile:.*]] = arith.constant 0 : i8
   ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_27:[0-9]+]] = fir.convert %[[V_21]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_26]], %[[V_27]], %[[V_25]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_26]], %[[V_27]], %[[V_25]], %[[notVolatile]]{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:   %[[V_28:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_29:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_30:[0-9]+]] = fir.insert_value %[[V_29]], %c32{{.*}}_i8_9, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -341,9 +343,10 @@ entry f2(n2)
   ! CHECK:   %[[V_11:[0-9]+]] = arith.select %[[V_10]], %c5{{.*}}, %c5{{.*}} : index
   ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_11]] : (index) -> i64
   ! CHECK:   %[[V_13:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_12]] : i64
+  ! CHECK:   %[[notVolatile:.*]] = arith.constant 0 : i8
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_15:[0-9]+]] = fir.convert %[[V_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_14]], %[[V_15]], %[[V_13]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_14]], %[[V_15]], %[[V_13]], %[[notVolatile]]{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:   %[[V_16:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_17:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_18:[0-9]+]] = fir.insert_value %[[V_17]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -380,9 +383,10 @@ entry f3
   ! CHECK:   %[[V_10:[0-9]+]] = arith.select %[[V_9]], %c5{{.*}}, %c5{{.*}} : index
   ! CHECK:   %[[V_11:[0-9]+]] = fir.convert %[[V_10]] : (index) -> i64
   ! CHECK:   %[[V_12:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_11]] : i64
+  ! CHECK:   %[[notVolatile:.*]] = arith.constant 0 : i8
   ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_8]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_13]], %[[V_14]], %[[V_12]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_13]], %[[V_14]], %[[V_12]], %[[notVolatile]]{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:   %[[V_15:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_16:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_17:[0-9]+]] = fir.insert_value %[[V_16]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -410,9 +414,10 @@ contains
     ! CHECK:   %[[V_5:[0-9]+]] = arith.select %[[V_4]], %[[V_2]]#1, %c5{{.*}} : index
     ! CHECK:   %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (index) -> i64
     ! CHECK:   %[[V_7:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_6]] : i64
+    ! CHECK:   %[[notVolatile:.*]] = arith.constant 0 : i8
     ! CHECK:   %[[V_8:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK:   %[[V_9:[0-9]+]] = fir.convert %[[V_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %[[notVolatile]]{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
     ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
     ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
     ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -436,9 +441,10 @@ contains
     ! CHECK:   %[[V_5:[0-9]+]] = arith.select %[[V_4]], %[[V_2]]#1, %c5{{.*}} : index
     ! CHECK:   %[[V_6:[0-9]+]] = fir.convert %[[V_5]] : (index) -> i64
     ! CHECK:   %[[V_7:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_6]] : i64
+    ! CHECK:   %[[notVolatile:.*]] = arith.constant 0 : i8
     ! CHECK:   %[[V_8:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK:   %[[V_9:[0-9]+]] = fir.convert %[[V_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %[[notVolatile]]{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
     ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
     ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
     ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>

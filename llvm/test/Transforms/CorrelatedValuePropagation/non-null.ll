@@ -93,7 +93,7 @@ declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
 
 define void @test4(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -108,7 +108,7 @@ bb:
 
 define void @test4_no_null_opt(ptr %dest, ptr %src) #0 {
 ; CHECK-LABEL: @test4_no_null_opt(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[DEST]], null
@@ -126,7 +126,7 @@ bb:
 declare void @llvm.memmove.p0.p0.i32(ptr, ptr, i32, i1)
 define void @test5(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    ret void
@@ -141,7 +141,7 @@ bb:
 
 define void @test5_no_null_opt(ptr %dest, ptr %src) #0 {
 ; CHECK-LABEL: @test5_no_null_opt(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[DEST]], null
@@ -188,7 +188,7 @@ bb:
 
 define void @test7(ptr %dest, ptr %src, i32 %len) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 [[LEN:%.*]], i8 0)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[KEEP1:%.*]] = icmp ne ptr [[DEST]], null
@@ -206,7 +206,7 @@ bb:
 declare void @llvm.memcpy.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1)
 define void @test8(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) [[DEST:%.*]], ptr addrspace(1) [[SRC:%.*]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) [[DEST:%.*]], ptr addrspace(1) [[SRC:%.*]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[KEEP1:%.*]] = icmp ne ptr addrspace(1) [[DEST]], null
@@ -223,7 +223,7 @@ bb:
 
 define void @test9(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[DEST:%.*]], ptr [[SRC:%.*]], i32 1, i8 3)
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[KEEP1:%.*]] = icmp ne ptr [[DEST]], null

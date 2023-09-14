@@ -263,7 +263,7 @@ llvm.func @loopOptions(%arg1 : i32, %arg2 : i32) {
     %7 = llvm.cmpxchg %4, %5, %6 acq_rel monotonic {access_groups = [#group1, #group2]} : !llvm.ptr, i32
     %9 = llvm.mlir.constant(42 : i8) : i8
     // CHECK: llvm.memcpy{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
-    "llvm.intr.memcpy"(%4, %4, %0) <{isVolatile = false}> {access_groups = [#group1, #group2]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
+    "llvm.intr.memcpy"(%4, %4, %0) <{isVolatile = 0 : i8}> {access_groups = [#group1, #group2]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
     // CHECK: llvm.memset{{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]
     "llvm.intr.memset"(%4, %9, %0) <{isVolatile = false}> {access_groups = [#group1, #group2]} : (!llvm.ptr, i8, i32) -> ()
     // CHECK: call void @foo({{.*}} !llvm.access.group ![[ACCESS_GROUPS_NODE]]

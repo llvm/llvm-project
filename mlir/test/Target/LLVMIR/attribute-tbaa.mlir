@@ -69,7 +69,7 @@ llvm.func @tbaa2(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   %7 = llvm.cmpxchg %5, %6, %4 acq_rel monotonic {tbaa = [#tbaa_tag_7]} : !llvm.ptr, i32
   %9 = llvm.mlir.constant(42 : i8) : i8
   // CHECK: llvm.memcpy{{.*}} !tbaa ![[STAG]]
-  "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = false}> {tbaa = [#tbaa_tag_7]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = 0 : i8}> {tbaa = [#tbaa_tag_7]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK: llvm.memset{{.*}} !tbaa ![[STAG]]
   "llvm.intr.memset"(%arg1, %9, %0) <{isVolatile = false}> {tbaa = [#tbaa_tag_7]} : (!llvm.ptr, i8, i32) -> ()
   // CHECK: call void @foo({{.*}} !tbaa ![[STAG]]

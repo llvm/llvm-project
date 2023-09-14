@@ -43,7 +43,7 @@ void f(void) {
   // CHECK: store float 2.000000e+00, ptr %[[v4]], align 4
   float A[6][6]  = {1.0f, 2.0f};
 
-  // CHECK: call void @llvm.memcpy.p0.p2.i32(ptr align 4 %S, ptr addrspace(2) align 4 @__const.f.S, i32 12, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p2.i32(ptr align 4 %S, ptr addrspace(2) align 4 @__const.f.S, i32 12, i8 0)
   StrucTy S = {1, 2};
 
   // CHECK: store <2 x i32> <i32 1, i32 2>, ptr %[[compoundliteral1]], align 8

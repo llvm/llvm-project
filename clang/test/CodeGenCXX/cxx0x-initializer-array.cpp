@@ -39,7 +39,7 @@ namespace ValueInitArrayOfMemPtr {
     // CHECK: store i32 -1,
 
     Agg2 b = { n };
-    // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 @[[THREE_NULL_MEMPTRS]], i32 12, i1 false)
+    // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 4 @[[THREE_NULL_MEMPTRS]], i32 12, i8 0)
   }
 
   // Test dynamic initialization.

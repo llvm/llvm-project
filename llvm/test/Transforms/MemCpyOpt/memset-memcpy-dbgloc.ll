@@ -14,7 +14,7 @@ define void @test_constant(i64 %src_size, ptr %dst, i64 %dst_size, i8 %c) !dbg !
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 0, i64 [[TMP2]], !dbg [[DBG11]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 [[SRC_SIZE]], !dbg [[DBG11]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP4]], i8 [[C:%.*]], i64 [[TMP3]], i1 false), !dbg [[DBG11]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr @C, i64 [[SRC_SIZE]], i1 false), !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr @C, i64 [[SRC_SIZE]], i8 0), !dbg [[DBG12:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG13:![0-9]+]]
 ;
   call void @llvm.memset.p0.i64(ptr %dst, i8 %c, i64 %dst_size, i1 false), !dbg !11

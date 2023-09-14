@@ -7,10 +7,10 @@ entry:
   %dst = alloca [1000 x i8], align 2
   %src = alloca [1000 x i8], align 4
 ; CHECK: Undefined behavior: Memory reference address is misaligned
-; CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 %dst, ptr align 4 %src, i32 200, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 8 %dst, ptr align 4 %src, i32 200, i8 0)
   call void @llvm.memcpy.p0.p0.i32(ptr align 8 %dst, ptr align 4 %src, i32 200, i1 false)
 ; CHECK: Undefined behavior: Memory reference address is misaligned
-; CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %dst, ptr align 8 %src, i32 200, i1 false)
+; CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %dst, ptr align 8 %src, i32 200, i8 0)
   call void @llvm.memcpy.p0.p0.i32(ptr align 2 %dst, ptr align 8 %src, i32 200, i1 false)
 ; CHECK-NOT: @llvm.memcpy.p0.p0.i32
   call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dst, ptr align 4 %src, i32 200, i1 false)
@@ -27,10 +27,10 @@ entry:
   %dst = alloca [1000 x i8], align 2
   %src = alloca [1000 x i8], align 4
 ; CHECK: Undefined behavior: Memory reference address is misaligned
-; CHECK-NEXT: call void @llvm.memmove.p0.p0.i32(ptr align 4 %dst, ptr align 4 %src, i32 200, i1 false)
+; CHECK-NEXT: call void @llvm.memmove.p0.p0.i32(ptr align 4 %dst, ptr align 4 %src, i32 200, i8 0)
   call void @llvm.memmove.p0.p0.i32(ptr align 4 %dst, ptr align 4 %src, i32 200, i1 false)
 ; CHECK: Undefined behavior: Memory reference address is misaligned
-; CHECK-NEXT: call void @llvm.memmove.p0.p0.i32(ptr align 2 %dst, ptr align 8 %src, i32 200, i1 false)
+; CHECK-NEXT: call void @llvm.memmove.p0.p0.i32(ptr align 2 %dst, ptr align 8 %src, i32 200, i8 0)
   call void @llvm.memmove.p0.p0.i32(ptr align 2 %dst, ptr align 8 %src, i32 200, i1 false)
 ; CHECK-NOT: @llvm.memmove.p0.p0.i32
   call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 4 %src, i32 200, i1 false)

@@ -173,7 +173,7 @@ int main() {
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[DOTOMP_IS_LAST]], metadata [[META71:![0-9]+]], metadata !DIExpression()), !dbg [[DBG55]]
 // CHECK1-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4, !dbg [[DBG68]]
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[B4]], metadata [[META72:![0-9]+]], metadata !DIExpression()), !dbg [[DBG55]]
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B4]], ptr align 4 [[TMP4]], i64 400, i1 false), !dbg [[DBG65]]
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B4]], ptr align 4 [[TMP4]], i64 400, i8 0), !dbg [[DBG65]]
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[I]], metadata [[META73:![0-9]+]], metadata !DIExpression()), !dbg [[DBG55]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG65]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4, !dbg [[DBG65]]

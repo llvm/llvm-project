@@ -64,7 +64,7 @@ void test9 (int x, struct test9 y)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 8, i8 0)
 struct test1 test1va (int x, ...)
 {
   struct test1 y;
@@ -81,7 +81,7 @@ struct test1 test1va (int x, ...)
 // CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 16, i8 0)
 struct test2 test2va (int x, ...)
 {
   struct test2 y;
@@ -98,7 +98,7 @@ struct test2 test2va (int x, ...)
 // CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 32
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 32 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 32 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 32, i8 0)
 struct test3 test3va (int x, ...)
 {
   struct test3 y;
@@ -113,7 +113,7 @@ struct test3 test3va (int x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 12, i8 0)
 struct test4 test4va (int x, ...)
 {
   struct test4 y;
@@ -129,7 +129,7 @@ struct test4 test4va (int x, ...)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
 // CHECK: [[T0:%.*]] = getelementptr inbounds i8, ptr %[[CUR]], i64 7
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 1 [[T0]], i64 1, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 1 [[T0]], i64 1, i8 0)
 struct test8 test8va (int x, ...)
 {
   struct test8 y;
@@ -145,7 +145,7 @@ struct test8 test8va (int x, ...)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
 // CHECK: [[T0:%.*]] = getelementptr inbounds i8, ptr %[[CUR]], i64 6
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 2 [[T0]], i64 2, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 2 [[T0]], i64 2, i8 0)
 struct test9 test9va (int x, ...)
 {
   struct test9 y;
@@ -160,7 +160,7 @@ struct test9 test9va (int x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 16, i8 0)
 struct test_longdouble { long double x; };
 struct test_longdouble testva_longdouble (int x, ...)
 {
@@ -178,7 +178,7 @@ struct test_longdouble testva_longdouble (int x, ...)
 // CHECK: %[[ALIGN:[^ ]+]] = call ptr @llvm.ptrmask.p0.i64(ptr %[[TMP0]], i64 -16)
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[ALIGN]], i64 16
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[AGG_RESULT]], ptr align 16 %[[ALIGN]], i64 16, i8 0)
 struct test_vector { vector int x; };
 struct test_vector testva_vector (int x, ...)
 {

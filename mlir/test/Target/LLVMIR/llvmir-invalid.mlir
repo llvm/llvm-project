@@ -108,7 +108,7 @@ llvm.func @powi_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
 
 llvm.func @memcpy_intr_wrong_type(%src : i64, %dst : i64, %len : i64) {
   // expected-error @below{{op operand #0 must be LLVM pointer type, but got 'i64'}}
-  "llvm.intr.memcpy"(%src, %dst, %len) <{isVolatile = false}> : (i64, i64, i64) -> ()
+  "llvm.intr.memcpy"(%src, %dst, %len) <{isVolatile = 0 : i8}> : (i64, i64, i64) -> ()
   llvm.return
 }
 
@@ -116,7 +116,7 @@ llvm.func @memcpy_intr_wrong_type(%src : i64, %dst : i64, %len : i64) {
 
 llvm.func @memmove_intr_wrong_type(%src : !llvm.ptr, %dst : i64, %len : i64) {
   // expected-error @below{{op operand #1 must be LLVM pointer type, but got 'i64'}}
-  "llvm.intr.memmove"(%src, %dst, %len) <{isVolatile = false}> : (!llvm.ptr, i64, i64) -> ()
+  "llvm.intr.memmove"(%src, %dst, %len) <{isVolatile = 0 : i8}> : (!llvm.ptr, i64, i64) -> ()
   llvm.return
 }
 

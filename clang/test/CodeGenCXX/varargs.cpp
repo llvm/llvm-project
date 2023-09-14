@@ -32,7 +32,7 @@ namespace test1 {
   // CHECK-LABEL:    define{{.*}} void @_ZN5test14testEv()
   // CHECK:      [[X:%.*]] = alloca [[A:%.*]], align 4
   // CHECK-NEXT: [[TMP:%.*]] = alloca [[A]], align 4
-  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP]], ptr align 4 [[X]], i64 8, i1 false)
+  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP]], ptr align 4 [[X]], i64 8, i8 0)
   // CHECK-NEXT: [[T1:%.*]] = load i64, ptr [[TMP]], align 4
   // CHECK-NEXT: call void (...) @_ZN5test13fooEz(i64 [[T1]])
   // CHECK-NEXT: ret void

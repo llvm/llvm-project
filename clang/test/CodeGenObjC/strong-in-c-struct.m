@@ -190,7 +190,7 @@ void test_constructor_destructor_StrongOuter(void) {
 // CHECK: store ptr %[[SRC]], ptr %[[SRC_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[DST_ADDR]], align 8
 // CHECK: %[[V1:.*]] = load ptr, ptr %[[SRC_ADDR]], align 8
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[V0]], ptr align 8 %[[V1]], i64 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[V0]], ptr align 8 %[[V1]], i64 16, i8 0)
 // CHECK: %[[V5:.*]] = getelementptr inbounds i8, ptr %[[V0]], i64 16
 // CHECK: %[[V8:.*]] = getelementptr inbounds i8, ptr %[[V1]], i64 16
 // CHECK: %[[V10:.*]] = load ptr, ptr %[[V8]], align 8
@@ -614,8 +614,8 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 // CHECK: store i16 %[[V4]], ptr %{{.*}}, align 8
 // CHECK: %[[V21:.*]] = load i32, ptr %{{.*}}, align 8
 // CHECK: store i32 %[[V21]], ptr %{{.*}}, align 8
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 12, i1 false)
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 9, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 12, i8 0)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 9, i8 0)
 // CHECK: %[[I5:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], ptr %[[V0:.*]], i32 0, i32 8
 // CHECK: %[[I51:.*]] = getelementptr inbounds %[[STRUCT_BITFIELD1]], ptr %[[V1:.*]], i32 0, i32 8
 // CHECK: %[[BF_LOAD:.*]] = load volatile i8, ptr %[[I51]], align 8

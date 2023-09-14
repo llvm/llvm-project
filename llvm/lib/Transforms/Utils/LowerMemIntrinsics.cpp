@@ -532,8 +532,8 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* CopyLen */ CI,
         /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
         /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ Memcpy->isVolatile(),
-        /* DstIsVolatile */ Memcpy->isVolatile(),
+        /* SrcIsVolatile */ Memcpy->isSrcVolatile(),
+        /* DstIsVolatile */ Memcpy->isDstVolatile(),
         /* CanOverlap */ CanOverlap,
         /* TargetTransformInfo */ TTI);
   } else {
@@ -544,8 +544,8 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* CopyLen */ Memcpy->getLength(),
         /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
         /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ Memcpy->isVolatile(),
-        /* DstIsVolatile */ Memcpy->isVolatile(),
+        /* SrcIsVolatile */ Memcpy->isSrcVolatile(),
+        /* DstIsVolatile */ Memcpy->isDstVolatile(),
         /* CanOverlap */ CanOverlap,
         /* TargetTransformInfo */ TTI);
   }
@@ -558,8 +558,8 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   Value *DstAddr = Memmove->getRawDest();
   Align SrcAlign = Memmove->getSourceAlign().valueOrOne();
   Align DstAlign = Memmove->getDestAlign().valueOrOne();
-  bool SrcIsVolatile = Memmove->isVolatile();
-  bool DstIsVolatile = SrcIsVolatile;
+  bool SrcIsVolatile = Memmove->isSrcVolatile();
+  bool DstIsVolatile = Memmove->isDstVolatile();
   IRBuilder<> CastBuilder(Memmove);
 
   unsigned SrcAS = SrcAddr->getType()->getPointerAddressSpace();

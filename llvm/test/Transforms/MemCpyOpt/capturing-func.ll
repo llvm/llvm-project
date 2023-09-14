@@ -15,7 +15,7 @@ define void @test() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @foo(ptr [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i8 0)
 ; CHECK-NEXT:    call void @foo(ptr [[PTR1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -33,7 +33,7 @@ define void @test_bitcast() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca [2 x i8], align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca [2 x i8], align 1
 ; CHECK-NEXT:    call void @foo(ptr [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 2, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 2, i8 0)
 ; CHECK-NEXT:    call void @foo(ptr [[PTR1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -74,7 +74,7 @@ define void @test_lifetime_not_end() {
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[PTR2]])
 ; CHECK-NEXT:    call void @foo(ptr [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr [[PTR2]])
 ; CHECK-NEXT:    call void @foo(ptr [[PTR1]])
 ; CHECK-NEXT:    ret void
@@ -111,7 +111,7 @@ define void @test_terminator() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @foo(ptr [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    call void @foo(ptr [[PTR1]])
@@ -135,7 +135,7 @@ define void @test_terminator2() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @foo(ptr [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i8 0)
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
 ; CHECK-NEXT:    ret void
@@ -159,7 +159,7 @@ define void @test_dest_captured_before_alloca() {
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @capture(ptr [[PTR1]])
 ; CHECK-NEXT:    call void @foo(ptr [[PTR2]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = alloca i8
@@ -179,7 +179,7 @@ define void @test_dest_captured_before_global() {
 ; CHECK-LABEL: define {{[^@]+}}@test_dest_captured_before_global() {
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @icmp_g(ptr [[PTR]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr @g, ptr [[PTR]], i32 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr @g, ptr [[PTR]], i32 1, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %ptr = alloca i8

@@ -135,21 +135,21 @@ int foo(int n) {
   // CHECK:       [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr @{{.*}}, i32 [[GTID]], i32 1, i[[SZ]] {{152|88}}, i[[SZ]] {{16|12}}, ptr [[TASK_ENTRY1_:@.+]], i64 [[DEV2]])
   // CHECK:       [[BASE:%.+]] = getelementptr inbounds [[TASK_TY1_:%.+]], ptr [[TASK]], i32 0, i32 1
   // CHECK-64:    [[BP_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 1
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BP_BASE]], ptr align 8 [[BP_START]], i64 24, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[BP_BASE]], ptr align 8 [[BP_START]], i64 24, i8 0)
   // CHECK-64:    [[P_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 2
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P_BASE]], ptr align 8 [[P_START]], i64 24, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P_BASE]], ptr align 8 [[P_START]], i64 24, i8 0)
   // CHECK-64:    [[SZ_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 3
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SZ_BASE]], ptr align 8 [[SIZET]], i64 24, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SZ_BASE]], ptr align 8 [[SIZET]], i64 24, i8 0)
   // CHECK-64:    [[M_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
-  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[M_BASE]], ptr align 8 [[M]], i64 24, i1 false)
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[M_BASE]], ptr align 8 [[M]], i64 24, i8 0)
   // CHECK-32:    [[SZ_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 0
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SZ_BASE]], ptr align 4 [[SIZET]], i32 24, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SZ_BASE]], ptr align 4 [[SIZET]], i32 24, i8 0)
   // CHECK-32:    [[BP_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY:%.+]], ptr [[BASE]], i32 0, i32 3
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BP_BASE]], ptr align 4 [[BP_START]], i32 12, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[BP_BASE]], ptr align 4 [[BP_START]], i32 12, i8 0)
   // CHECK-32:    [[P_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 4
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[P_BASE]], ptr align 4 [[P_START]], i32 12, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[P_BASE]], ptr align 4 [[P_START]], i32 12, i8 0)
   // CHECK-32:    [[M_BASE:%.+]] = getelementptr inbounds [[PRIVS_TY]], ptr [[BASE]], i32 0, i32 5
-  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[M_BASE]], ptr align 4 [[M]], i32 12, i1 false)
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[M_BASE]], ptr align 4 [[M]], i32 12, i8 0)
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START:%.+]], i[[SZ]] 1
   // CHECK:       getelementptr %struct.kmp_depend_info, ptr [[DEP_START]], i[[SZ]] 2
   // CHECK:       call i32 @__kmpc_omp_task_with_deps(ptr @1, i32 [[GTID]], ptr [[TASK]], i32 3, ptr [[DEP_START]], i32 0, ptr null)

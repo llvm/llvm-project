@@ -196,7 +196,7 @@ int main() {
 // CHECK: [[TASK:%.+]] = getelementptr inbounds [[KMP_TASK_MAIN_TY]], ptr [[RES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[SHAREDS_REF_ADDR:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], ptr [[TASK]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[SHAREDS_REF:%.+]] = load ptr, ptr [[SHAREDS_REF_ADDR]],
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SHAREDS_REF]], ptr align 8 %{{.+}}, i64 40, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SHAREDS_REF]], ptr align 8 %{{.+}}, i64 40, i8 0)
 
 // Initialize kmp_task_t->privates with default values (no init for simple types, default constructors for classes).
 // Also copy address of private copy to the corresponding shareds reference.
@@ -363,7 +363,7 @@ int main() {
 // CHECK: [[TASK:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], ptr [[RES]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[SHAREDS_REF_ADDR:%.+]] = getelementptr inbounds [[KMP_TASK_T_TY]], ptr [[TASK]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: [[SHAREDS_REF:%.+]] = load ptr, ptr [[SHAREDS_REF_ADDR]],
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SHAREDS_REF]], ptr align 8 %{{.+}}, i64 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SHAREDS_REF]], ptr align 8 %{{.+}}, i64 32, i8 0)
 
 // Initialize kmp_task_t->privates with default values (no init for simple types, default constructors for classes).
 // CHECK: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_TMAIN_TY]], ptr [[RES]], i{{[0-9]+}} 0, i{{[0-9]+}} 2

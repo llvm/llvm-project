@@ -18,7 +18,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define ptr @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
   %ret = call ptr @__memcpy_chk(ptr @t1, ptr @t2, i64 1824, i64 1824)
@@ -27,7 +27,7 @@ define ptr @test_simplify1() {
 
 define ptr @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t3, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t3, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
   %ret = call ptr @__memcpy_chk(ptr @t1, ptr @t3, i64 1824, i64 2848)
@@ -37,7 +37,7 @@ define ptr @test_simplify2() {
 ; Same as test_simplify1 but with a tail call rather than vanilla call.
 define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
   %ret = tail call ptr @__memcpy_chk(ptr @t1, ptr @t2, i64 1824, i64 1824)
@@ -76,7 +76,7 @@ define ptr @test_no_simplify3(ptr %dst, ptr %src, i64 %a, i64 %b) {
 define ptr @test_simplify_return_indcall(ptr %alloc) {
 ; CHECK-LABEL: @test_simplify_return_indcall(
 ; CHECK-NEXT:    [[DST:%.*]] = call ptr [[ALLOC:%.*]]()
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(1824) [[DST]], ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(1824) [[DST]], ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr [[DST]]
 ;
   %dst = call ptr %alloc()
@@ -86,7 +86,7 @@ define ptr @test_simplify_return_indcall(ptr %alloc) {
 
 define ptr @test_no_incompatible_attr(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
   %ret = call dereferenceable(1) ptr @__memcpy_chk(ptr @t1, ptr @t2, i64 1824, i64 1824)

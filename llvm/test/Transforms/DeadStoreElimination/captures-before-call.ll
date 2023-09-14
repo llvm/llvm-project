@@ -601,7 +601,7 @@ define void @test_escaping_store_removed(ptr %src, ptr %escape) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A]], ptr [[SRC:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A]], ptr [[SRC:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    store ptr [[A]], ptr [[ESCAPE:%.*]], align 8
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    store i64 99, ptr [[A]], align 8

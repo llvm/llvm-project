@@ -2521,7 +2521,7 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
   case Intrinsic::memmove: {
     const MemTransferInst &MTI = cast<MemTransferInst>(I);
     // Don't handle volatile.
-    if (MTI.isVolatile())
+    if (MTI.isAnyVolatile())
       return false;
 
     // Disable inlining for memmove before calls to ComputeAddress.  Otherwise,

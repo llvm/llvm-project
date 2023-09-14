@@ -69,16 +69,16 @@ const GUID& zeroiid = __uuidof(0);
 // CHECK: @_GUID_87654321_4321_4321_4321_ba0987654321 = linkonce_odr constant { i32, i16, i16, [8 x i8] } { i32 -2023406815, i16 17185, i16 17185, [8 x i8] c"C!\BA\09\87eC!" }, comdat
 
 // The static initializer for thing.
-// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @thing, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ac, i32 16, i1 false)
-// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @thing, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ac, i32 4, i1 false)
+// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @thing, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ac, i32 16, i8 0)
+// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @thing, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ac, i32 4, i8 0)
 
 // The static initializer for g.
-// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @g, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i1 false)
-// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @g, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i1 false)
+// CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @g, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i8 0)
+// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @g, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i8 0)
 
 // We don't constant-initialize const_init if the definition of _GUID is dodgy.
 // CHECK-DEFINE-GUID-NOT: @const_init
-// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @const_init, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ac, i32 4, i1 false)
+// CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 @const_init, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ac, i32 4, i8 0)
 
 #ifdef DEFINE_GUID
 void fun() {
@@ -89,16 +89,16 @@ void fun() {
   // CHECK-DEFINE-GUID: %s1_3 = alloca %struct._GUID, align 4
   // CHECK-DEFINE-WRONG-GUID: %s1_3 = alloca %struct._GUID, align 4
 
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_1, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i1 false)
-  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_1, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_1, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i8 0)
+  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_1, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i8 0)
   GUID s1_1 = (side_effect(), __uuidof(S1));
 
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_2, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i1 false)
-  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_2, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_2, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i8 0)
+  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_2, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i8 0)
   GUID s1_2 = (side_effect(), __uuidof(S1));
 
-  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_3, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i1 false)
-  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_3, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i1 false)
+  // CHECK-DEFINE-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_3, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 16, i8 0)
+  // CHECK-DEFINE-WRONG-GUID: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %s1_3, ptr align 4 @_GUID_12345678_1234_1234_1234_1234567890ab, i32 4, i8 0)
   GUID s1_3 = (side_effect(), __uuidof(s1));
 }
 #endif

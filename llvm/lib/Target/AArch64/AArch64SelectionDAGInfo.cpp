@@ -19,7 +19,7 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
                                           SelectionDAG &DAG, const SDLoc &DL,
                                           SDValue Chain, SDValue Dst,
                                           SDValue SrcOrValue, SDValue Size,
-                                          Align Alignment, bool isVolatile,
+                                          Align Alignment, MemTransferVolatility Volatile,
                                           MachinePointerInfo DstPtrInfo,
                                           MachinePointerInfo SrcPtrInfo) const {
 
@@ -46,18 +46,14 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
     }
   }();
 
-  MachineMemOperand::Flags Flags = MachineMemOperand::MOStore;
-  if (isVolatile)
-    Flags |= MachineMemOperand::MOVolatile;
-  if (!IsSet)
-    Flags |= MachineMemOperand::MOLoad;
-
   MachineFunction &MF = DAG.getMachineFunction();
 
+  MachineMemOperand::Flags DstFlags =
+      MachineMemOperand::MOStore |
+      (Volatile.isDstVolatile() ? MachineMemOperand::MOVolatile
+                                : MachineMemOperand::MONone);
   auto *DstOp =
-      MF.getMachineMemOperand(DstPtrInfo, Flags, ConstSize, Alignment);
-  auto *SrcOp =
-      MF.getMachineMemOperand(SrcPtrInfo, Flags, ConstSize, Alignment);
+      MF.getMachineMemOperand(DstPtrInfo, DstFlags, ConstSize, Alignment);
 
   if (IsSet) {
     // Extend value to i64 if required
@@ -72,6 +68,13 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
     SDValue Ops[] = {Dst, SrcOrValue, Size, Chain};
     const EVT ResultTys[] = {MVT::i64, MVT::i64, MVT::i64, MVT::Other};
     MachineSDNode *Node = DAG.getMachineNode(MachineOpcode, DL, ResultTys, Ops);
+
+    MachineMemOperand::Flags SrcFlags =
+        MachineMemOperand::MOLoad |
+        (Volatile.isSrcVolatile() ? MachineMemOperand::MOVolatile
+                                  : MachineMemOperand::MONone);
+    auto *SrcOp =
+        MF.getMachineMemOperand(SrcPtrInfo, SrcFlags, ConstSize, Alignment);
     DAG.setNodeMemRefs(Node, {DstOp, SrcOp});
     return SDValue(Node, 3);
   }
@@ -79,13 +82,13 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(AArch64ISD::NodeType SDOpcode,
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
+    SDValue Size, Align Alignment, MemTransferVolatility Volatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   if (STI.hasMOPS())
     return EmitMOPS(AArch64ISD::MOPS_MEMCOPY, DAG, DL, Chain, Dst, Src, Size,
-                    Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+                    Alignment, Volatile, DstPtrInfo, SrcPtrInfo);
   return SDValue();
 }
 
@@ -98,20 +101,20 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMSET, DAG, dl, Chain, Dst, Src, Size,
-                    Alignment, isVolatile, DstPtrInfo, MachinePointerInfo{});
+                    Alignment, {isVolatile, false}, DstPtrInfo, MachinePointerInfo{});
   }
   return SDValue();
 }
 
 SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile,
+    SDValue Size, Align Alignment, MemTransferVolatility Volatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const AArch64Subtarget &STI =
       DAG.getMachineFunction().getSubtarget<AArch64Subtarget>();
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMMOVE, DAG, dl, Chain, Dst, Src, Size,
-                    Alignment, isVolatile, DstPtrInfo, SrcPtrInfo);
+                    Alignment, Volatile, DstPtrInfo, SrcPtrInfo);
   }
   return SDValue();
 }

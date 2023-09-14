@@ -38,7 +38,7 @@ define ptr @test_memccpy_tail() {
 
 define ptr @test_mempcpy() {
 ; CHECK-LABEL: @test_mempcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(15) @a, ptr noundef nonnull align 1 dereferenceable(15) @b, i64 15, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(15) @a, ptr noundef nonnull align 1 dereferenceable(15) @b, i64 15, i8 0)
 ; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i64 0, i64 15)
 ;
   %ret = call ptr @__mempcpy_chk(ptr @a, ptr @b, i64 15, i64 -1)
@@ -56,7 +56,7 @@ define ptr @test_not_mempcpy() {
 
 define ptr @test_mempcpy_tail() {
 ; CHECK-LABEL: @test_mempcpy_tail(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(15) @a, ptr noundef nonnull align 1 dereferenceable(15) @b, i64 15, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(15) @a, ptr noundef nonnull align 1 dereferenceable(15) @b, i64 15, i8 0)
 ; CHECK-NEXT:    ret ptr getelementptr inbounds ([60 x i8], ptr @a, i64 0, i64 15)
 ;
   %ret = tail call ptr @__mempcpy_chk(ptr @a, ptr @b, i64 15, i64 -1)

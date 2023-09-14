@@ -4,7 +4,7 @@
 define void @looper(ptr noalias nocapture readonly %M, ptr noalias nocapture %out) {
 ; CHECK-LABEL: @looper(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[M:%.*]], i64 256, i1 false), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[M:%.*]], i64 256, i8 0), !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -38,7 +38,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
 define void @looperBadMerge(ptr noalias nocapture readonly %M, ptr noalias nocapture %out) {
 ; CHECK-LABEL: @looperBadMerge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[M:%.*]], i64 256, i1 false), !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[M:%.*]], i64 256, i8 0), !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -71,7 +71,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
 define void @looperGoodMerge(ptr noalias nocapture readonly %M, ptr noalias nocapture %out) {
 ; CHECK-LABEL: @looperGoodMerge(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[M:%.*]], i64 256, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[M:%.*]], i64 256, i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -104,7 +104,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3
 define void @looperConstantTBAAStruct(ptr nocapture noalias %out, ptr nocapture noalias %in) {
 ; CHECK-LABEL: @looperConstantTBAAStruct(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[IN:%.*]], i64 32, i1 false), !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[IN:%.*]], i64 32, i8 0), !tbaa [[TBAA5:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]
@@ -139,7 +139,7 @@ define void @looperVarTBAAStruct(ptr nocapture noalias %out, ptr nocapture noali
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[LEN:%.*]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[UMAX]], 3
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[IN:%.*]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 8 [[IN:%.*]], i64 [[TMP0]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[J_020:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY4]] ]

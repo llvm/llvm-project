@@ -165,17 +165,17 @@ int foo(int n) {
   // CHECK-64: [[TASK:%.+]] = call ptr @__kmpc_omp_target_task_alloc(ptr {{.+}}, i32 %0, i32 1, i64 104, i64 16, ptr [[OMP_TASK_ENTRY:@.+]], i64 [[DEVICE]])
   // CHECK: [[TASK_WITH_PRIVATES_GEP:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES]], ptr [[TASK]], i32 0, i32 1
   // CHECK-32: [[SIZEGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 0
-  // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SIZEGEP]], ptr align 4 [[SIZET]], i32 16, i1 false)
+  // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SIZEGEP]], ptr align 4 [[SIZET]], i32 16, i8 0)
   // CHECK-32: [[FPBPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 3
-  // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[FPBPRGEP]], ptr align 4 [[BPRGEP]], i32 8, i1 false)
+  // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[FPBPRGEP]], ptr align 4 [[BPRGEP]], i32 8, i8 0)
   // CHECK-32: [[FPPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 4
-  // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[FPPRGEP]], ptr align 4 [[PRGEP]], i32 8, i1 false)
+  // CHECK-32: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[FPPRGEP]], ptr align 4 [[PRGEP]], i32 8, i8 0)
   // CHECK-64: [[FPBPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 1
-  // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPRGEP]], ptr align 8 [[BPRGEP]], i64 16, i1 false)
+  // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPRGEP]], ptr align 8 [[BPRGEP]], i64 16, i8 0)
   // CHECK-64: [[FPPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 2
-  // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPRGEP]], ptr align 8 [[PRGEP]], i64 16, i1 false)
+  // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPRGEP]], ptr align 8 [[PRGEP]], i64 16, i8 0)
   // CHECK-64: [[SIZEGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[TASK_WITH_PRIVATES_GEP]], i32 0, i32 3
-  // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZEGEP]], ptr align 8 [[SIZET]], i64 16, i1 false)
+  // CHECK-64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZEGEP]], ptr align 8 [[SIZET]], i64 16, i8 0)
   // CHECK: call i32 @__kmpc_omp_task(ptr {{.+}}, i32 {{.+}}, ptr [[TASK]])
   #pragma omp target device(global + a) nowait
   {

@@ -8,7 +8,7 @@ define void @copy_both_noalias(ptr noalias nocapture %d, ptr noalias nocapture r
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[SZ]], 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[D:%.*]], ptr align 4 [[S:%.*]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[D:%.*]], ptr align 4 [[S:%.*]], i64 [[TMP0]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -58,7 +58,7 @@ define void @copy_one_noalias(ptr nocapture %d, ptr noalias nocapture readonly %
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT1]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[SZ]], 2
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[D:%.*]], ptr align 4 [[S:%.*]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[D:%.*]], ptr align 4 [[S:%.*]], i64 [[TMP0]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -109,7 +109,7 @@ define dso_local void @memcpy_loop(ptr noalias nocapture %p, ptr noalias nocaptu
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[P:%.*]], ptr align 1 [[Q:%.*]], i64 [[TMP0]], i8 0)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]

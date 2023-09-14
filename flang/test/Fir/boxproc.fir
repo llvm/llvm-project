@@ -95,7 +95,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_6:.*]] = extractvalue { ptr, i64 } %[[VAL_4]], 1
 // CHECK:         %[[VAL_8:.*]] = icmp sgt i64 %[[VAL_6]], 10
 // CHECK:         %[[VAL_9:.*]] = select i1 %[[VAL_8]], i64 10, i64 %[[VAL_6]]
-// CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_0]], ptr %[[VAL_5]], i64 %[[VAL_9]], i1 false)
+// CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_0]], ptr %[[VAL_5]], i64 %[[VAL_9]], i8 0)
 // CHECK:         %[[VAL_10:.*]] = sub i64 10, %[[VAL_9]]
 // CHECK:         br label %[[VAL_11:.*]]
 // CHECK:         %[[VAL_14:.*]] = phi i64
@@ -120,7 +120,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         %[[VAL_12:.*]] = call { ptr, i64 } %[[VAL_7]](ptr %[[VAL_10]], i64 %[[VAL_8]])
 // CHECK:         %[[VAL_13:.*]] = add i64 %[[VAL_8]], 12
 // CHECK:         %[[VAL_14:.*]] = alloca i8, i64 %[[VAL_13]], align 1
-// CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_14]], ptr {{.*}}, i64 12, i1 false)
+// CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_14]], ptr {{.*}}, i64 12, i8 0)
 // CHECK:         %[[VAL_18:.*]] = phi i64
 // CHECK:         %[[VAL_20:.*]] = phi i64
 // CHECK:         %[[VAL_22:.*]] = icmp sgt i64 %[[VAL_20]], 0
@@ -131,7 +131,7 @@ func.func @_QPtest_proc_dummy_other(%arg0: !fir.boxproc<() -> ()>) {
 // CHECK:         store [1 x i8] %[[VAL_27]], ptr %[[VAL_29]], align 1
 // CHECK:         %[[VAL_30:.*]] = icmp sgt i64 %[[VAL_13]], 40
 // CHECK:         %[[VAL_31:.*]] =  select i1 %[[VAL_30]], i64 40, i64 %[[VAL_13]]
-// CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_0]], ptr %[[VAL_14]], i64 %[[VAL_31]], i1 false)
+// CHECK:         call void @llvm.memmove.p0.p0.i64(ptr %[[VAL_0]], ptr %[[VAL_14]], i64 %[[VAL_31]], i8 0)
 // CHECK:         %[[VAL_32:.*]] = sub i64 40, %[[VAL_31]]
 // CHECK:         %[[VAL_35:.*]] = phi i64
 // CHECK:         %[[VAL_37:.*]] = phi i64
@@ -156,6 +156,7 @@ func.func @_QPtest_proc_dummy_char() {
   %c10_i64 = arith.constant 10 : i64
   %c40 = arith.constant 40 : index
   %c0 = arith.constant 0 : index
+  %c0_i8 = arith.constant 0 : i8
   %0 = fir.alloca !fir.char<1,40> {bindc_name = ".result"}
   %1 = fir.alloca !fir.char<1,10> {bindc_name = "message", uniq_name = "_QFtest_proc_dummy_charEmessage"}
   %2 = fir.alloca tuple<!fir.boxchar<1>>
@@ -167,7 +168,7 @@ func.func @_QPtest_proc_dummy_char() {
   %7 = fir.convert %c9 : (index) -> i64
   %8 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
   %9 = fir.convert %6 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
-  fir.call @llvm.memmove.p0.p0.i64(%8, %9, %7, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  fir.call @llvm.memmove.p0.p0.i64(%8, %9, %7, %c0_i8) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   %10 = fir.undefined !fir.char<1>
   %11 = fir.insert_value %10, %c32_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
   cf.br ^bb1(%c9, %c1 : index, index)
@@ -205,6 +206,7 @@ func.func @_QFtest_proc_dummy_charPgen_message(%arg0: !fir.ref<!fir.char<1,10>>,
   %false = arith.constant false
   %c1 = arith.constant 1 : index
   %c32_i8 = arith.constant 32 : i8
+  %c0_i8 = arith.constant 0 : i8
   %c0 = arith.constant 0 : index
   %0 = fir.coordinate_of %arg2, %c0_i32 : (!fir.ref<tuple<!fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
   %1 = fir.load %0 : !fir.ref<!fir.boxchar<1>>
@@ -215,7 +217,7 @@ func.func @_QFtest_proc_dummy_charPgen_message(%arg0: !fir.ref<!fir.char<1,10>>,
   %6 = fir.convert %5 : (index) -> i64
   %7 = fir.convert %3 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   %8 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  fir.call @llvm.memmove.p0.p0.i64(%7, %8, %6, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  fir.call @llvm.memmove.p0.p0.i64(%7, %8, %6, %c0_i8) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   %9 = fir.undefined !fir.char<1>
   %10 = fir.insert_value %9, %c32_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
   %11 = arith.subi %c10, %5 : index
@@ -240,6 +242,7 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %false = arith.constant false
   %c1 = arith.constant 1 : index
   %c32_i8 = arith.constant 32 : i8
+  %c0_i8 = arith.constant 0 : i8
   %c0 = arith.constant 0 : index
   %0 = fir.convert %arg0 : (!fir.ref<!fir.char<1,40>>) -> !fir.ref<!fir.char<1,?>>
   %1 = fir.address_of(@_QQcl.6D6573736167652069733A20) : !fir.ref<!fir.char<1,12>>
@@ -256,7 +259,7 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %12 = fir.convert %c12 : (index) -> i64
   %13 = fir.convert %11 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   %14 = fir.convert %1 : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-  fir.call @llvm.memmove.p0.p0.i64(%13, %14, %12, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  fir.call @llvm.memmove.p0.p0.i64(%13, %14, %12, %c0_i8) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   cf.br ^bb1(%c12, %8 : index, index)
 ^bb1(%15: index, %16: index):  // 2 preds: ^bb0, ^bb2
   %17 = arith.cmpi sgt, %16, %c0 : index
@@ -277,7 +280,7 @@ func.func @_QPget_message(%arg0: !fir.ref<!fir.char<1,40>>, %arg1: index, %arg2:
   %27 = arith.select %26, %c40, %10 : index
   %28 = fir.convert %27 : (index) -> i64
   %29 = fir.convert %0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  fir.call @llvm.memmove.p0.p0.i64(%29, %13, %28, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  fir.call @llvm.memmove.p0.p0.i64(%29, %13, %28, %c0_i8) : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   %30 = fir.undefined !fir.char<1>
   %31 = fir.insert_value %30, %c32_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
   %32 = arith.subi %c40, %27 : index
@@ -301,7 +304,7 @@ fir.global linkonce @_QQcl.486920746865726521 constant : !fir.char<1,9> {
   %0 = fir.string_lit "Hi there!"(9) : !fir.char<1,9>
   fir.has_value %0 : !fir.char<1,9>
 }
-func.func private @llvm.memmove.p0.p0.i64(!fir.ref<i8>, !fir.ref<i8>, i64, i1)
+func.func private @llvm.memmove.p0.p0.i64(!fir.ref<i8>, !fir.ref<i8>, i64, i8)
 fir.global linkonce @_QQcl.2E2F682E66393000 constant : !fir.char<1,8> {
   %0 = fir.string_lit "./h.f90\00"(8) : !fir.char<1,8>
   fir.has_value %0 : !fir.char<1,8>

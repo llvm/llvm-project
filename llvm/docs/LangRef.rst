@@ -14201,9 +14201,9 @@ support all bit widths however.
 ::
 
       declare void @llvm.memcpy.p0.p0.i32(ptr <dest>, ptr <src>,
-                                          i32 <len>, i1 <isvolatile>)
+                                          i32 <len>, i8 <volatileFlags>)
       declare void @llvm.memcpy.p0.p0.i64(ptr <dest>, ptr <src>,
-                                          i64 <len>, i1 <isvolatile>)
+                                          i64 <len>, i8 <volatileFlags>)
 
 Overview:
 """""""""
@@ -14226,9 +14226,11 @@ boolean indicating a volatile access.
 The :ref:`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the ``isvolatile`` parameter is ``true``, the ``llvm.memcpy`` call is
-a :ref:`volatile operation <volatile>`. The detailed access behavior is not
-very cleanly specified and it is unwise to depend on it.
+The ``volatileFlags`` parameter indicates the volatility of the
+storage ``dest`` (bit 0) and ``src`` (bit 1) point to.  When set,
+an access to the respective storage is a :ref:`volatile operation
+<volatile>`.  The detailed access behavior is not very cleanly
+specified and it is unwise to depend on it.
 
 Semantics:
 """"""""""
@@ -14260,9 +14262,9 @@ support all bit widths however.
 ::
 
       declare void @llvm.memcpy.inline.p0.p0.i32(ptr <dest>, ptr <src>,
-                                                 i32 <len>, i1 <isvolatile>)
+                                                 i32 <len>, i8 <volatileFlags>)
       declare void @llvm.memcpy.inline.p0.p0.i64(ptr <dest>, ptr <src>,
-                                                 i64 <len>, i1 <isvolatile>)
+                                                 i64 <len>, i8 <volatileFlags>)
 
 Overview:
 """""""""
@@ -14286,9 +14288,11 @@ boolean indicating a volatile access.
 The :ref:`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the ``isvolatile`` parameter is ``true``, the ``llvm.memcpy.inline`` call is
-a :ref:`volatile operation <volatile>`. The detailed access behavior is not
-very cleanly specified and it is unwise to depend on it.
+The ``volatileFlags`` parameter indicates the volatility of the
+storage ``dest`` (bit 0) and ``src`` (bit 1) point to.  When set,
+an access to the respective storage is a :ref:`volatile operation
+<volatile>`. The detailed access behavior is not very cleanly
+specified and it is unwise to depend on it.
 
 Semantics:
 """"""""""
@@ -14317,9 +14321,9 @@ bit widths however.
 ::
 
       declare void @llvm.memmove.p0.p0.i32(ptr <dest>, ptr <src>,
-                                           i32 <len>, i1 <isvolatile>)
+                                           i32 <len>, i8 <volatileFlags>)
       declare void @llvm.memmove.p0.p0.i64(ptr <dest>, ptr <src>,
-                                           i64 <len>, i1 <isvolatile>)
+                                           i64 <len>, i8 <volatileFlags>)
 
 Overview:
 """""""""
@@ -14344,9 +14348,11 @@ boolean indicating a volatile access.
 The :ref:`align <attr_align>` parameter attribute can be provided
 for the first and second arguments.
 
-If the ``isvolatile`` parameter is ``true``, the ``llvm.memmove`` call
-is a :ref:`volatile operation <volatile>`. The detailed access behavior is
-not very cleanly specified and it is unwise to depend on it.
+The ``volatileFlags`` parameter indicates the volatility of the
+storage ``dest`` (bit 0) and ``src`` (bit 1) point to.  When set,
+an access to the respective storage is a :ref:`volatile operation
+<volatile>`.  The detailed access behavior is not very cleanly
+specified and it is unwise to depend on it.
 
 Semantics:
 """"""""""

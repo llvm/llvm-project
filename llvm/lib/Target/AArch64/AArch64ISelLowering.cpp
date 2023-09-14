@@ -4882,14 +4882,14 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Val = DAG.getAnyExtOrTrunc(Val, DL, MVT::i64);
     SDValue Size = Op.getOperand(4);
     auto Alignment = Node->getMemOperand()->getAlign();
-    bool IsVol = Node->isVolatile();
+    MemTransferVolatility Vol = {Node->isVolatile(), false};
     auto DstPtrInfo = Node->getPointerInfo();
 
     const auto &SDI =
         static_cast<const AArch64SelectionDAGInfo &>(DAG.getSelectionDAGInfo());
     SDValue MS =
         SDI.EmitMOPS(AArch64ISD::MOPS_MEMSET_TAGGING, DAG, DL, Chain, Dst, Val,
-                     Size, Alignment, IsVol, DstPtrInfo, MachinePointerInfo{});
+                     Size, Alignment, Vol, DstPtrInfo, MachinePointerInfo{});
 
     // MOPS_MEMSET_TAGGING has 3 results (DstWb, SizeWb, Chain) whereas the
     // intrinsic has 2. So hide SizeWb using MERGE_VALUES. Otherwise
@@ -7623,7 +7623,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         SDValue Cpy = DAG.getMemcpy(
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
-            /*isVol = */ false, /*AlwaysInline = */ false,
+            /*Vol = */ {false, false}, /*AlwaysInline = */ false,
             /*isTailCall = */ false, DstInfo, MachinePointerInfo());
 
         MemOpChains.push_back(Cpy);
@@ -9668,7 +9668,7 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, false,
+                       Align(PtrSize), /*Vol=*/{false, false}, false, false,
                        MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
 }
 

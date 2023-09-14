@@ -4070,7 +4070,7 @@ void bar() {
 // CK20-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[B]] to i64
 // CK20-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // CK20-NEXT:    [[TMP25:%.*]] = sdiv exact i64 [[TMP24]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK20-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes.1, i64 16, i1 false)
+// CK20-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes.1, i64 16, i8 0)
 // CK20-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CK20-NEXT:    store ptr [[THIS1]], ptr [[TMP26]], align 8
 // CK20-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
@@ -4129,7 +4129,7 @@ void bar() {
 // CK20-NEXT:    [[TMP54:%.*]] = ptrtoint ptr [[A8]] to i64
 // CK20-NEXT:    [[TMP55:%.*]] = sub i64 [[TMP53]], [[TMP54]]
 // CK20-NEXT:    [[TMP56:%.*]] = sdiv exact i64 [[TMP55]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK20-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES13]], ptr align 8 @.offload_sizes.3, i64 24, i1 false)
+// CK20-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES13]], ptr align 8 @.offload_sizes.3, i64 24, i8 0)
 // CK20-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS10]], i32 0, i32 0
 // CK20-NEXT:    store ptr [[THIS1]], ptr [[TMP57]], align 8
 // CK20-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
@@ -4357,7 +4357,7 @@ void bar() {
 // CK21-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[B]] to i64
 // CK21-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // CK21-NEXT:    [[TMP25:%.*]] = sdiv exact i64 [[TMP24]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK21-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes.1, i64 16, i1 false)
+// CK21-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES]], ptr align 8 @.offload_sizes.1, i64 16, i8 0)
 // CK21-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CK21-NEXT:    store ptr [[THIS1]], ptr [[TMP26]], align 8
 // CK21-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
@@ -4416,7 +4416,7 @@ void bar() {
 // CK21-NEXT:    [[TMP54:%.*]] = ptrtoint ptr [[A8]] to i64
 // CK21-NEXT:    [[TMP55:%.*]] = sub i64 [[TMP53]], [[TMP54]]
 // CK21-NEXT:    [[TMP56:%.*]] = sdiv exact i64 [[TMP55]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK21-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES13]], ptr align 8 @.offload_sizes.3, i64 24, i1 false)
+// CK21-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DOTOFFLOAD_SIZES13]], ptr align 8 @.offload_sizes.3, i64 24, i8 0)
 // CK21-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS10]], i32 0, i32 0
 // CK21-NEXT:    store ptr [[THIS1]], ptr [[TMP57]], align 8
 // CK21-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
@@ -4644,7 +4644,7 @@ void bar() {
 // CK22-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[B]] to i64
 // CK22-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // CK22-NEXT:    [[TMP25:%.*]] = sdiv exact i64 [[TMP24]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK22-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes.1, i32 16, i1 false)
+// CK22-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes.1, i32 16, i8 0)
 // CK22-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CK22-NEXT:    store ptr [[THIS1]], ptr [[TMP26]], align 4
 // CK22-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
@@ -4703,7 +4703,7 @@ void bar() {
 // CK22-NEXT:    [[TMP54:%.*]] = ptrtoint ptr [[A8]] to i64
 // CK22-NEXT:    [[TMP55:%.*]] = sub i64 [[TMP53]], [[TMP54]]
 // CK22-NEXT:    [[TMP56:%.*]] = sdiv exact i64 [[TMP55]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK22-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES13]], ptr align 4 @.offload_sizes.3, i32 24, i1 false)
+// CK22-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES13]], ptr align 4 @.offload_sizes.3, i32 24, i8 0)
 // CK22-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS10]], i32 0, i32 0
 // CK22-NEXT:    store ptr [[THIS1]], ptr [[TMP57]], align 4
 // CK22-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0
@@ -4931,7 +4931,7 @@ void bar() {
 // CK23-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[B]] to i64
 // CK23-NEXT:    [[TMP24:%.*]] = sub i64 [[TMP22]], [[TMP23]]
 // CK23-NEXT:    [[TMP25:%.*]] = sdiv exact i64 [[TMP24]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK23-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes.1, i32 16, i1 false)
+// CK23-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES]], ptr align 4 @.offload_sizes.1, i32 16, i8 0)
 // CK23-NEXT:    [[TMP26:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CK23-NEXT:    store ptr [[THIS1]], ptr [[TMP26]], align 4
 // CK23-NEXT:    [[TMP27:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
@@ -4990,7 +4990,7 @@ void bar() {
 // CK23-NEXT:    [[TMP54:%.*]] = ptrtoint ptr [[A8]] to i64
 // CK23-NEXT:    [[TMP55:%.*]] = sub i64 [[TMP53]], [[TMP54]]
 // CK23-NEXT:    [[TMP56:%.*]] = sdiv exact i64 [[TMP55]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CK23-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES13]], ptr align 4 @.offload_sizes.3, i32 24, i1 false)
+// CK23-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[DOTOFFLOAD_SIZES13]], ptr align 4 @.offload_sizes.3, i32 24, i8 0)
 // CK23-NEXT:    [[TMP57:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_BASEPTRS10]], i32 0, i32 0
 // CK23-NEXT:    store ptr [[THIS1]], ptr [[TMP57]], align 4
 // CK23-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [3 x ptr], ptr [[DOTOFFLOAD_PTRS11]], i32 0, i32 0

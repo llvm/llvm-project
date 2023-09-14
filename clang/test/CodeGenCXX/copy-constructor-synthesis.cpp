@@ -141,7 +141,7 @@ void f(B b1) {
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[THIS]], i32 0, i32 1
 // CHECK-NEXT: [[OTHER:%.*]] = load ptr, ptr
 // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], ptr [[OTHER]], i32 0, i32 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T0]], ptr align 8 [[T2]], i64 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T0]], ptr align 8 [[T2]], i64 8, i8 0)
 // CHECK-NEXT: ret ptr [[THIS]]
 
 // CHECK-LABEL: define linkonce_odr void @_ZN6PR66281BC2ERKS0_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %0) unnamed_addr
@@ -167,7 +167,7 @@ void f(B b1) {
 // CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [[A]], ptr [[THIS]], i32 0, i32 1
 // CHECK-NEXT: [[OTHER:%.*]] = load ptr, ptr
 // CHECK-NEXT: [[T2:%.*]] = getelementptr inbounds [[A]], ptr [[OTHER]], i32 0, i32 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T0]], ptr align 8 [[T2]], i64 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T0]], ptr align 8 [[T2]], i64 8, i8 0)
 // CHECK-NEXT: ret void
 }
 

@@ -786,7 +786,7 @@ void mapInt128() {
 // CHECK1-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i8 0)
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i64 99
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -906,7 +906,7 @@ void mapInt128() {
 // CHECK1-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i8 0)
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i64 99
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -2020,7 +2020,7 @@ void mapInt128() {
 // CHECK3-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 4
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i8 0)
 // CHECK3-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i32 99
 // CHECK3-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -2140,7 +2140,7 @@ void mapInt128() {
 // CHECK3-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 4
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i8 0)
 // CHECK3-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK3-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i32 99
 // CHECK3-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -2491,7 +2491,7 @@ void mapInt128() {
 // CHECK5-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 8
-// CHECK5-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i1 false)
+// CHECK5-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i8 0)
 // CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i64 99
 // CHECK5-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -2611,7 +2611,7 @@ void mapInt128() {
 // CHECK5-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 8
-// CHECK5-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i1 false)
+// CHECK5-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i64 352, i8 0)
 // CHECK5-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK5-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i64 99
 // CHECK5-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -3139,7 +3139,7 @@ void mapInt128() {
 // CHECK7-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 4
-// CHECK7-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i1 false)
+// CHECK7-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i8 0)
 // CHECK7-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i32 99
 // CHECK7-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]
@@ -3259,7 +3259,7 @@ void mapInt128() {
 // CHECK7-NEXT:    store ptr [[Z]], ptr [[Z_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[Y_ADDR]], align 4
 // CHECK7-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[Z_ADDR]], align 4
-// CHECK7-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i1 false)
+// CHECK7-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Y1]], ptr align 4 [[TMP0]], i32 352, i8 0)
 // CHECK7-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [99 x i32], ptr [[Z2]], i32 0, i32 0
 // CHECK7-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[ARRAY_BEGIN]], i32 99
 // CHECK7-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq ptr [[ARRAY_BEGIN]], [[TMP2]]

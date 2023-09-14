@@ -366,7 +366,7 @@ subroutine test_char(c)
 ! CHECK:  %[[VAL_6:.*]] = fir.if %[[VAL_2]] -> (!fir.ref<!fir.char<1,?>>) {
 ! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_5]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_14:.*]] = fir.convert %[[VAL_1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_13]], %[[VAL_14]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 ! CHECK:    fir.result %[[VAL_5]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_24:.*]] = fir.absent !fir.ref<!fir.char<1,?>>
@@ -395,7 +395,7 @@ subroutine test_char_ptr(c)
 ! CHECK:  %[[VAL_12:.*]] = fir.if %[[VAL_5]] -> (!fir.ref<!fir.char<1,?>>) {
 ! CHECK:    %[[VAL_19:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_20:.*]] = fir.convert %[[VAL_8]] : (!fir.ptr<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:    fir.call @llvm.memmove.p0.p0.i64(%[[VAL_19]], %[[VAL_20]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 ! CHECK:    fir.result %[[VAL_11]] : !fir.ref<!fir.char<1,?>>
 ! CHECK:  } else {
 ! CHECK:    %[[VAL_30:.*]] = fir.absent !fir.ref<!fir.char<1,?>>

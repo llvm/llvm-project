@@ -2717,16 +2717,22 @@ public:
     EmitAggregateCopy(Dest, Src, Src.getType(), MayOverlap);
   }
 
+  void EmitAggregateCopy(LValue Dest, LValue Src, QualType EltTy,
+                         AggValueSlot::Overlap_t MayOverlap,
+                         bool isVolatile = false) {
+    EmitAggregateCopy(Dest, Src, EltTy, MayOverlap, isVolatile, isVolatile);
+  }
+
   /// EmitAggregateCopy - Emit an aggregate copy.
   ///
-  /// \param isVolatile \c true iff either the source or the destination is
-  ///        volatile.
+  /// \param isVolDst \c true iff either the destination is volatile.
+  /// \param isVolSrc \c true iff either the source is volatile.
   /// \param MayOverlap Whether the tail padding of the destination might be
   ///        occupied by some other object. More efficient code can often be
   ///        generated if not.
   void EmitAggregateCopy(LValue Dest, LValue Src, QualType EltTy,
-                         AggValueSlot::Overlap_t MayOverlap,
-                         bool isVolatile = false);
+                         AggValueSlot::Overlap_t MayOverlap, bool isVolDst,
+                         bool isVolSrc);
 
   /// GetAddrOfLocalVar - Return the address of a local variable.
   Address GetAddrOfLocalVar(const VarDecl *VD) {

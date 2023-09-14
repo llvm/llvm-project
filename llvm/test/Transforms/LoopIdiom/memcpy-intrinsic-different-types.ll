@@ -44,7 +44,7 @@ define linkonce_odr dso_local ptr @_ZNSt20__uninitialized_copyILb0EE13__uninit_c
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[__CUR_017:%.*]] = phi ptr [ [[INCDEC_PTR1:%.*]], [[FOR_INC]] ], [ [[__RESULT:%.*]], [[FOR_INC_PREHEADER]] ]
 ; CHECK-NEXT:    [[__FIRST_ADDR_016:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_INC]] ], [ [[__FIRST]], [[FOR_INC_PREHEADER]] ]
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) [[__CUR_017]], ptr noundef nonnull align 8 dereferenceable(12) [[__FIRST_ADDR_016]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) [[__CUR_017]], ptr noundef nonnull align 8 dereferenceable(12) [[__FIRST_ADDR_016]], i64 12, i8 0)
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds [[CLASS_SDUSE:%.*]], ptr [[__FIRST_ADDR_016]], i64 1
 ; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds [[CLASS_SDVALUE:%.*]], ptr [[__CUR_017]], i64 1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[INCDEC_PTR]], [[__LAST]]

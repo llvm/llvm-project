@@ -5,7 +5,7 @@ program main
     use ISO_FORTRAN_ENV, only: compiler_options
     implicit none
     character (len = :), allocatable :: v
-! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %{{[0-9]+}}, ptr [[OPTSVAR]], i64 [[OPTSLEN]], i1 false)
+! CHECK: call void @llvm.memmove.p0.p0.i64(ptr %{{[0-9]+}}, ptr [[OPTSVAR]], i64 [[OPTSLEN]], i8 0)
     v = compiler_options()
     print *, v
     deallocate(v)

@@ -45,14 +45,14 @@ define dso_local void @_Z7dostuff1AS_i(ptr nocapture byval(%struct.A) align 8 %a
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i64 [[INC]], i64 [[TMP1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[AGG_TMP]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(80) [[B]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(80) [[B]], i64 80, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[AGG_TMP5]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP5]], ptr nonnull align 8 dereferenceable(80) [[A]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP5]], ptr nonnull align 8 dereferenceable(80) [[A]], i64 80, i8 0)
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I_TR]], 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 [[AGG_TMP]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP52]], ptr align 8 [[AGG_TMP5]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[AGG_TMP1]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 8 [[AGG_TMP52]], i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 [[AGG_TMP]], i64 80, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP52]], ptr align 8 [[AGG_TMP5]], i64 80, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[AGG_TMP1]], i64 80, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 8 [[AGG_TMP52]], i64 80, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 80, ptr nonnull [[AGG_TMP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 80, ptr nonnull [[AGG_TMP5]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
@@ -106,8 +106,8 @@ define dso_local i32 @main() local_unnamed_addr #3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_A:%.*]], align 8
 ; CHECK-NEXT:    [[AGG_TMP1:%.*]] = alloca [[STRUCT_A]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 @global, i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 @global, i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 @global, i64 80, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 @global, i64 80, i8 0)
 ; CHECK-NEXT:    tail call void @_Z7dostuff1AS_i(ptr byval([[STRUCT_A]]) align 8 [[AGG_TMP]], ptr byval([[STRUCT_A]]) align 8 [[AGG_TMP1]], i32 0)
 ; CHECK-NEXT:    ret i32 0
 ;

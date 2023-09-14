@@ -10,7 +10,7 @@ define i16 @test(ptr %ts2.i) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S_SROA_0:%.*]] = alloca [3 x i8], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS2_I:%.*]], ptr align 8 [[S_SROA_0]], i32 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS2_I:%.*]], ptr align 8 [[S_SROA_0]], i32 3, i8 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[TS2_I]], align 2
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;

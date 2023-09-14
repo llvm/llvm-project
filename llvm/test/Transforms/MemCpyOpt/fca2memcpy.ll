@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @copy(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @copy(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -18,7 +18,7 @@ define void @copy(ptr %src, ptr %dst) {
 
 define void @noaliassrc(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: @noaliassrc(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -28,7 +28,7 @@ define void @noaliassrc(ptr noalias %src, ptr %dst) {
 
 define void @noaliasdst(ptr %src, ptr noalias %dst) {
 ; CHECK-LABEL: @noaliasdst(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -51,8 +51,8 @@ define void @destroysrc(ptr %src, ptr %dst) {
 
 define void @destroynoaliassrc(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: @destroynoaliassrc(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -64,7 +64,7 @@ define void @destroynoaliassrc(ptr noalias %src, ptr %dst) {
 define void @copyalias(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @copyalias(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load [[S:%.*]], ptr [[SRC:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 16, i8 0)
 ; CHECK-NEXT:    store [[S]] [[TMP1]], ptr [[DST]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -79,9 +79,9 @@ define void @copyalias(ptr %src, ptr %dst) {
 ; sure we lift the computation as well if needed and possible.
 define void @addrproducer(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @addrproducer(
-; CHECK-NEXT:    [[DST2:%.*]] = getelementptr [[S:%.*]], ptr [[DST]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST:%.*]], i8 undef, i64 16, i1 false)
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr [[S:%.*]], ptr [[DST:%.*]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST]], i8 undef, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -110,11 +110,11 @@ define void @aliasaddrproducer(ptr %src, ptr %dst, ptr %dstidptr) {
 
 define void @noaliasaddrproducer(ptr %src, ptr noalias %dst, ptr noalias %dstidptr) {
 ; CHECK-LABEL: @noaliasaddrproducer(
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DSTIDPTR:%.*]], align 4
-; CHECK-NEXT:    [[DSTINDEX:%.*]] = or i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DSTIDPTR:%.*]], align 4
+; CHECK-NEXT:    [[DSTINDEX:%.*]] = or i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[DST2:%.*]] = getelementptr [[S:%.*]], ptr [[DST:%.*]], i32 [[DSTINDEX]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC:%.*]], i8 undef, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[SRC:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC]], i8 undef, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %1 = load %S, ptr %src
@@ -130,7 +130,7 @@ define void @throwing_call(ptr noalias %src, ptr %dst) {
 ; CHECK-LABEL: @throwing_call(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load [[S:%.*]], ptr [[SRC:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SRC]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    call void @call() [[ATTR2:#.*]]
+; CHECK-NEXT:    call void @call() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store [[S]] [[TMP1]], ptr [[DST:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -73,7 +73,7 @@ void testva (int n, ...) {
   // CHECK: [[P:%[a-z0-9]+]] = load ptr, ptr [[I]]
   // CHECK: [[IN:%[a-z0-9]+]] = getelementptr inbounds i8, ptr [[I]], i32 4
   // CHECK: store ptr [[IN]], ptr [[AP]]
-  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[V5]], ptr align 4 [[P]], i32 20, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[V5]], ptr align 4 [[P]], i32 20, i8 0)
   // CHECK: call void @f(ptr noundef [[V5]])
 
   int* v6 = va_arg (ap, int[4]);  // an unusual aggregate type
@@ -82,7 +82,7 @@ void testva (int n, ...) {
   // CHECK: [[P:%[a-z0-9]+]] = load ptr, ptr [[I]]
   // CHECK: [[IN:%[a-z0-9]+]] = getelementptr inbounds i8, ptr [[I]], i32 4
   // CHECK: store ptr [[IN]], ptr [[AP]]
-  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[P]], i32 16, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[P]], i32 16, i8 0)
   // CHECK: [[V2:%[a-z0-9]+]] = getelementptr inbounds [4 x i32], ptr [[TMP]], i32 0, i32 0
   // CHECK: store ptr [[V2]], ptr [[V:%[a-z0-9]+]], align 4
   // CHECK: [[V3:%[a-z0-9]+]] = load ptr, ptr [[V]], align 4

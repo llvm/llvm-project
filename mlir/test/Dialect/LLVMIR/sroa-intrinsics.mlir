@@ -249,8 +249,8 @@ llvm.func @memcpy_dest(%other_array: !llvm.ptr) -> i32 {
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> : (i32) -> !llvm.ptr
   %memcpy_len = llvm.mlir.constant(40 : i32) : i32
   // CHECK: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SLOT_IN_OTHER]], %[[MEMCPY_LEN]]) <{isVolatile = false}>
-  "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[SLOT_IN_OTHER]], %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
+  "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -272,14 +272,14 @@ llvm.func @memcpy_src(%other_array: !llvm.ptr) -> i32 {
   // We can only check that the amount of operations and allocated slots is correct, which should be sufficient
   // as unused slots are not generated.
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = false}>
+  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = false}>
+  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = false}>
+  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = false}>
-  "llvm.intr.memcpy"(%other_array, %1, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK-DAG: "llvm.intr.memcpy"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
+  "llvm.intr.memcpy"(%other_array, %1, %memcpy_len) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -297,9 +297,9 @@ llvm.func @memcpy_double() -> i32 {
   %2 = llvm.alloca %0 x !llvm.array<1 x i32> : (i32) -> !llvm.ptr
   %memcpy_len = llvm.mlir.constant(4 : i32) : i32
   // CHECK-NOT: "llvm.intr.memcpy"
-  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = false}>
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-NOT: "llvm.intr.memcpy"
-  "llvm.intr.memcpy"(%1, %2, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy"(%1, %2, %memcpy_len) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %3 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<1 x i32>
   %4 = llvm.load %3 : !llvm.ptr -> i32
   llvm.return %4 : i32
@@ -316,8 +316,8 @@ llvm.func @memcpy_no_partial(%other_array: !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> : (i32) -> !llvm.ptr
   %memcpy_len = llvm.mlir.constant(21 : i32) : i32
-  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[OTHER_ARRAY]], %[[MEMCPY_LEN]]) <{isVolatile = false}>
-  "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[OTHER_ARRAY]], %[[MEMCPY_LEN]]) <{isVolatile = 0 : i8}>
+  "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -334,8 +334,8 @@ llvm.func @memcpy_no_volatile(%other_array: !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> : (i32) -> !llvm.ptr
   %memcpy_len = llvm.mlir.constant(40 : i32) : i32
-  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[OTHER_ARRAY]], %[[MEMCPY_LEN]]) <{isVolatile = true}>
-  "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = true}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[OTHER_ARRAY]], %[[MEMCPY_LEN]]) <{isVolatile = 3 : i8}>
+  "llvm.intr.memcpy"(%1, %other_array, %memcpy_len) <{isVolatile = 3 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -354,8 +354,8 @@ llvm.func @memmove_dest(%other_array: !llvm.ptr) -> i32 {
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> : (i32) -> !llvm.ptr
   %memmove_len = llvm.mlir.constant(40 : i32) : i32
   // CHECK: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  // CHECK: "llvm.intr.memmove"(%[[ALLOCA]], %[[SLOT_IN_OTHER]], %[[MEMMOVE_LEN]]) <{isVolatile = false}>
-  "llvm.intr.memmove"(%1, %other_array, %memmove_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: "llvm.intr.memmove"(%[[ALLOCA]], %[[SLOT_IN_OTHER]], %[[MEMMOVE_LEN]]) <{isVolatile = 0 : i8}>
+  "llvm.intr.memmove"(%1, %other_array, %memmove_len) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -377,14 +377,14 @@ llvm.func @memmove_src(%other_array: !llvm.ptr) -> i32 {
   // We can only check that the amount of operations and allocated slots is correct, which should be sufficient
   // as unused slots are not generated.
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = false}>
+  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = false}>
+  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = false}>
+  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = 0 : i8}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = false}>
-  "llvm.intr.memmove"(%other_array, %1, %memmove_len) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK-DAG: "llvm.intr.memmove"(%[[SLOT_IN_OTHER]], %{{.*}}, %[[MEMMOVE_LEN]]) <{isVolatile = 0 : i8}>
+  "llvm.intr.memmove"(%other_array, %1, %memmove_len) <{isVolatile = 0 : i8}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -401,8 +401,8 @@ llvm.func @memcpy_inline_dest(%other_array: !llvm.ptr) -> i32 {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.array<10 x i32> : (i32) -> !llvm.ptr
   // CHECK: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
-  // CHECK: "llvm.intr.memcpy.inline"(%[[ALLOCA]], %[[SLOT_IN_OTHER]]) <{isVolatile = false, len = 4 : i32}>
-  "llvm.intr.memcpy.inline"(%1, %other_array) <{isVolatile = false, len = 40 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
+  // CHECK: "llvm.intr.memcpy.inline"(%[[ALLOCA]], %[[SLOT_IN_OTHER]]) <{isVolatile = 0 : i8, len = 4 : i32}>
+  "llvm.intr.memcpy.inline"(%1, %other_array) <{isVolatile = 0 : i8, len = 40 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<10 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32
@@ -422,14 +422,14 @@ llvm.func @memcpy_inline_src(%other_array: !llvm.ptr) -> i32 {
   // We can only check that the amount of operations and allocated slots is correct, which should be sufficient
   // as unused slots are not generated.
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = false, len = 4 : i32}>
+  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = 0 : i8, len = 4 : i32}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = false, len = 4 : i32}>
+  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = 0 : i8, len = 4 : i32}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = false, len = 4 : i32}>
+  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = 0 : i8, len = 4 : i32}>
   // CHECK-DAG: %[[SLOT_IN_OTHER:.*]] = llvm.getelementptr %[[OTHER_ARRAY]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
-  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = false, len = 4 : i32}>
-  "llvm.intr.memcpy.inline"(%other_array, %1) <{isVolatile = false, len = 16 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
+  // CHECK-DAG: "llvm.intr.memcpy.inline"(%[[SLOT_IN_OTHER]], %{{.*}}) <{isVolatile = 0 : i8, len = 4 : i32}>
+  "llvm.intr.memcpy.inline"(%other_array, %1) <{isVolatile = 0 : i8, len = 16 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<4 x i32>
   %3 = llvm.load %2 : !llvm.ptr -> i32
   llvm.return %3 : i32

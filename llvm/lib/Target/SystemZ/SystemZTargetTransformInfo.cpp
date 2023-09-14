@@ -39,7 +39,7 @@ static bool isUsedAsMemCpySource(const Value *V, bool &OtherUse) {
         continue;
       }
       if (const MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(User)) {
-        if (Memcpy->getOperand(1) == V && !Memcpy->isVolatile()) {
+        if (Memcpy->getOperand(1) == V && !Memcpy->isSrcVolatile()) {
           UsedAsMemCpySource = true;
           continue;
         }

@@ -88,7 +88,7 @@ int main(void) {
   // CHECK: [[BYTES:%.+]] = mul nuw i64 24, [[SIZE]]
   // CHECK: [[POS:%.+]] = load i64, ptr [[DEP_COUNTER_ADDR]], align 8
   // CHECK: [[VLA_D:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[VLA]], i64 [[POS]]
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align {{.+}} [[VLA_D]], ptr align {{.+}} [[BC]], i64 [[BYTES]], i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align {{.+}} [[VLA_D]], ptr align {{.+}} [[BC]], i64 [[BYTES]], i8 0)
   // CHECK: [[ADD:%.+]] = add nuw i64 [[POS]], [[SIZE]]
   // CHECK: store i64 [[ADD]], ptr [[DEP_COUNTER_ADDR]], align 8
   // CHECK: [[BC:%.+]] = load ptr, ptr [[X_ADDR]], align 8
@@ -98,7 +98,7 @@ int main(void) {
   // CHECK: [[BYTES:%.+]] = mul nuw i64 24, [[SIZE]]
   // CHECK: [[POS:%.+]] = load i64, ptr [[DEP_COUNTER_ADDR]], align 8
   // CHECK: [[VLA_X:%.+]] = getelementptr %struct.kmp_depend_info, ptr [[VLA]], i64 [[POS]]
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align {{.+}} [[VLA_X]], ptr align {{.+}} [[BC]], i64 [[BYTES]], i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align {{.+}} [[VLA_X]], ptr align {{.+}} [[BC]], i64 [[BYTES]], i8 0)
   // CHECK: [[ADD:%.+]] = add nuw i64 [[POS]], [[SIZE]]
   // CHECK: store i64 [[ADD]], ptr [[DEP_COUNTER_ADDR]], align 8
   // CHECK: call i32 @__kmpc_omp_task_with_deps(ptr @{{.+}}, i32 [[GTID]], ptr [[ALLOC]], i32 [[SIZE32]], ptr [[VLA]], i32 0, ptr null)

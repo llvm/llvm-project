@@ -3287,7 +3287,7 @@ int a;
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8
 // CHECK-64-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
-// CHECK-64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B]], ptr align 4 @"__const.<captured>.b", i64 12, i1 false)
+// CHECK-64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B]], ptr align 4 @"__const.<captured>.b", i64 12, i8 0)
 // CHECK-64-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK-64-NEXT:    store i32 9, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK-64-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -12058,7 +12058,7 @@ int a;
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
 // CHECK-32-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
-// CHECK-32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 @"__const.<captured>.b", i32 12, i1 false)
+// CHECK-32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 @"__const.<captured>.b", i32 12, i8 0)
 // CHECK-32-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK-32-NEXT:    store i32 9, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK-32-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -20744,7 +20744,7 @@ int a;
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
 // CHECK-32-EX-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
-// CHECK-32-EX-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 @"__const.<captured>.b", i32 12, i1 false)
+// CHECK-32-EX-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B]], ptr align 4 @"__const.<captured>.b", i32 12, i8 0)
 // CHECK-32-EX-NEXT:    store i32 0, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK-32-EX-NEXT:    store i32 9, ptr [[DOTOMP_COMB_UB]], align 4
 // CHECK-32-EX-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4

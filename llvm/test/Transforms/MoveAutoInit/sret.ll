@@ -18,7 +18,7 @@ define void @f(ptr noalias sret(%struct.S) align 4 %0, i32 noundef %1) {
 ; CHECK-NEXT:    store ptr [[TMP6]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    store i32 [[TMP1:%.*]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast ptr [[TMP0]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP7]], ptr align 4 @pattern, i32 8, i1 false), !annotation !0
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP7]], ptr align 4 @pattern, i32 8, i8 0), !annotation !0
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 42
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP10:%.*]], label [[TMP13:%.*]]
@@ -26,7 +26,7 @@ define void @f(ptr noalias sret(%struct.S) align 4 %0, i32 noundef %1) {
 ; CHECK-NEXT:    call void @g(ptr sret([[STRUCT_S]]) align 4 [[TMP5]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast ptr [[TMP0]] to ptr
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast ptr [[TMP5]] to ptr
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP11]], ptr align 4 [[TMP12]], i32 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP11]], ptr align 4 [[TMP12]], i32 8, i8 0)
 ; CHECK-NEXT:    br label [[TMP13]]
 ; CHECK:       13:
 ; CHECK-NEXT:    ret void

@@ -331,7 +331,8 @@ void fir::factory::CharacterExprHelper::createCopy(
     auto castCount = builder.createConvert(loc, i64Ty, count);
     auto totalBytes =
         builder.create<mlir::arith::MulIOp>(loc, kindBytes, castCount);
-    auto notVolatile = builder.createBool(loc, false);
+    auto notVolatile =
+        builder.createIntegerConstant(loc, builder.getI8Type(), 0);
     auto memmv = getLlvmMemmove(builder);
     auto argTys = memmv.getFunctionType().getInputs();
     auto toPtr = builder.createConvert(loc, argTys[0], toBuff);

@@ -777,7 +777,7 @@ define void @TwoAllocasOK() {
 ; CHECK: a[4]: [0,1){{$}}
 ; CHECK: y[1]: [0,1){{$}}
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %y, ptr %a, i32 1, i1 false)
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %y, ptr %a, i32 1, i8 0)
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4
@@ -920,7 +920,7 @@ define void @MixedAccesses6(ptr %arg) {
 ; CHECK-NEXT: allocas uses:
 ; CHECK: a[4]: [0,4)
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %arg, i32 4, i1 false)
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %arg, i32 4, i8 0)
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4
@@ -954,7 +954,7 @@ define void @NoStackAccess(ptr %arg1, ptr %arg2) {
 ; CHECK-NEXT: allocas uses:
 ; CHECK: a[4]: empty-set{{$}}
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg2, i32 4, i1 false)
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %arg1, ptr %arg2, i32 4, i8 0)
 ; CHECK-EMPTY:
 entry:
   %a = alloca i32, align 4

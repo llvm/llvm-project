@@ -105,7 +105,7 @@ define void @MemcpyInBounds() {
 ; CHECK-NEXT: x[4]: [0,4){{$}}
 ; CHECK-NEXT: y[4]: [0,4){{$}}
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 4, i1 false)
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 4, i8 0)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
@@ -165,7 +165,7 @@ define void @MemcpySelfInBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,8){{$}}
 ; GLOBAL-NEXT: safe accesses
-; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %x2, i32 3, i1 false)
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %x2, i32 3, i8 0)
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -241,7 +241,7 @@ define void @MemcpyInBoundsCast2(i8 %zint8) {
 ; CHECK-NEXT: y[256]: [0,255){{$}}
 ; CHECK-NEXT: z[1]: empty-set{{$}}
 ; GLOBAL-NEXT: safe accesses:
-; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 %zint32, i1 false)
+; GLOBAL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr %x, ptr %y, i32 %zint32, i8 0)
 ; CHECK-EMPTY:
 entry:
   %x = alloca [256 x i8], align 4

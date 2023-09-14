@@ -30,9 +30,9 @@ define i64 @foo(i64 %guard, ...) #1 {
 ; CHECK: [[MetaSize:%.*]] = add i64 160, [[OverflowSize]]
 ; CHECK: [[ShadowBackup:%.*]] = alloca {{.*}} [[MetaSize]]
 ; CHECK: [[MetaCopySize:%.*]] = call i64 @llvm.umin.i64(i64 [[MetaSize]], i64 800)
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ShadowBackup]], ptr align 8 %va_arg_shadow, i64 [[MetaCopySize]], i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ShadowBackup]], ptr align 8 %va_arg_shadow, i64 [[MetaCopySize]], i8 0)
 ; CHECK: [[OverflowBackup:%.*]] = alloca {{.*}} [[MetaSize]]
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowBackup]], ptr align 8 %va_arg_origin, i64 [[MetaCopySize]], i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowBackup]], ptr align 8 %va_arg_origin, i64 [[MetaCopySize]], i8 0)
 
 ; Check that va_start() correctly copies the shadow backup into the shadow of
 ; the va_list. Register save area and overflow arg area are copied separately.
@@ -47,7 +47,7 @@ define i64 @foo(i64 %guard, ...) #1 {
 ; CHECK: call void @__msan_metadata_ptr_for_store_1(ptr [[TMP]], ptr [[RegSaveArea]])
 ; CHECK: [[RegSaveAreaMeta:%.*]] = load { ptr, ptr }, ptr [[TMP]]
 ; CHECK: [[RegSaveAreaShadow:%.*]] = extractvalue { ptr, ptr } [[RegSaveAreaMeta]], 0
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RegSaveAreaShadow]], ptr align 8 [[ShadowBackup]], i64 56, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RegSaveAreaShadow]], ptr align 8 [[ShadowBackup]], i64 56, i8 0)
 ; CHECK: [[VlAddr:%.*]] = ptrtoint ptr %vl to i64
 ; CHECK: [[OverflowAddrAddr:%.*]] = add i64 [[VlAddr]], 16
 ; CHECK: [[OverflowAddr:%.*]] = inttoptr i64 [[OverflowAddrAddr]] to ptr
@@ -56,7 +56,7 @@ define i64 @foo(i64 %guard, ...) #1 {
 ; CHECK: [[OverflowMeta:%.*]] = load { ptr, ptr }, ptr [[TMP]]
 ; CHECK: [[OverflowShadow:%.*]] = extractvalue { ptr, ptr } [[OverflowMeta]], 0
 ; CHECK: [[OverflowShadowBackup:%.*]] = getelementptr i8, ptr [[ShadowBackup]], i32 160
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowShadow]], ptr align 8 [[OverflowShadowBackup]], i64 [[OverflowSize]], i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowShadow]], ptr align 8 [[OverflowShadowBackup]], i64 [[OverflowSize]], i8 0)
 
 declare i32 @random_i32()
 declare i64 @random_i64()

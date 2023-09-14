@@ -18,7 +18,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define ptr @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
 
@@ -28,7 +28,7 @@ define ptr @test_simplify1() {
 
 define ptr @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t3, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t3, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
 
@@ -38,7 +38,7 @@ define ptr @test_simplify2() {
 
 define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
 
@@ -79,7 +79,7 @@ define ptr @test_no_simplify3(ptr %dst, ptr %src, i64 %a, i64 %b) {
 
 define ptr @test_no_incompatible_attr(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(1824) @t1, ptr noundef nonnull align 4 dereferenceable(1824) @t2, i64 1824, i8 0)
 ; CHECK-NEXT:    ret ptr @t1
 ;
 

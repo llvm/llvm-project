@@ -107,7 +107,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    store i32 0, ptr addrspace(5) [[FLAGS]], align 4
 // NOCPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8
 // NOCPU-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4
-// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false)
+// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0)
 // NOCPU-NEXT:    [[BLOCK_SIZE:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr addrspace(5) [[BLOCK]], i32 0, i32 0
 // NOCPU-NEXT:    store i32 25, ptr addrspace(5) [[BLOCK_SIZE]], align 8
 // NOCPU-NEXT:    [[BLOCK_ALIGN:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr addrspace(5) [[BLOCK]], i32 0, i32 1
@@ -124,7 +124,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[TMP5:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP0]], i32 [[TMP1]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[TMP]], ptr @__test_block_invoke_kernel, ptr [[TMP4]])
 // NOCPU-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8
 // NOCPU-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4
-// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP2]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false)
+// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP2]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0)
 // NOCPU-NEXT:    [[BLOCK_SIZE4:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK3]], i32 0, i32 0
 // NOCPU-NEXT:    store i32 41, ptr addrspace(5) [[BLOCK_SIZE4]], align 8
 // NOCPU-NEXT:    [[BLOCK_ALIGN5:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK3]], i32 0, i32 1
@@ -147,7 +147,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[TMP13:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP6]], i32 [[TMP7]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[VARTMP2]], ptr @__test_block_invoke_2_kernel, ptr [[TMP12]])
 // NOCPU-NEXT:    [[TMP14:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8
 // NOCPU-NEXT:    [[TMP15:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4
-// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP11]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false)
+// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP11]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0)
 // NOCPU-NEXT:    [[BLOCK_SIZE13:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK12]], i32 0, i32 0
 // NOCPU-NEXT:    store i32 41, ptr addrspace(5) [[BLOCK_SIZE13]], align 8
 // NOCPU-NEXT:    [[BLOCK_ALIGN14:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK12]], i32 0, i32 1
@@ -186,7 +186,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    store ptr [[BLOCK21_ASCAST]], ptr addrspace(5) [[BLOCK20]], align 8
 // NOCPU-NEXT:    [[TMP25:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8
 // NOCPU-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4
-// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP27]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false)
+// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP27]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0)
 // NOCPU-NEXT:    [[TMP27:%.*]] = load ptr, ptr addrspace(5) [[BLOCK20]], align 8
 // NOCPU-NEXT:    [[TMP28:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK21]] to ptr
 // NOCPU-NEXT:    [[TMP29:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP25]], i32 [[TMP26]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[VARTMP27]], ptr @__test_block_invoke_4_kernel, ptr [[TMP28]])
@@ -335,7 +335,7 @@ kernel void test_target_features_kernel(global int *i) {
 // NOCPU-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.s.memtime()
 // NOCPU-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8
 // NOCPU-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4
-// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false)
+// NOCPU-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0)
 // NOCPU-NEXT:    [[TMP3:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP1]], i32 [[TMP2]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[TMP]], ptr @__test_target_features_kernel_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__block_literal_global to ptr))
 // NOCPU-NEXT:    ret void
 //
@@ -423,7 +423,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[NDRANGE]]) #[[ATTR8]]
 // GFX900-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8, !tbaa [[TBAA16:![0-9]+]]
 // GFX900-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4, !tbaa [[TBAA14]]
-// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT18:![0-9]+]]
+// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0), !tbaa.struct [[TBAA_STRUCT18:![0-9]+]]
 // GFX900-NEXT:    [[BLOCK_SIZE:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr addrspace(5) [[BLOCK]], i32 0, i32 0
 // GFX900-NEXT:    store i32 25, ptr addrspace(5) [[BLOCK_SIZE]], align 8
 // GFX900-NEXT:    [[BLOCK_ALIGN:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), i8 }>, ptr addrspace(5) [[BLOCK]], i32 0, i32 1
@@ -440,7 +440,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[TMP5:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP0]], i32 [[TMP1]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[TMP]], ptr @__test_block_invoke_kernel, ptr [[TMP4]])
 // GFX900-NEXT:    [[TMP6:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4, !tbaa [[TBAA14]]
-// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP2]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT18]]
+// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP2]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0), !tbaa.struct [[TBAA_STRUCT18]]
 // GFX900-NEXT:    [[BLOCK_SIZE4:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK3]], i32 0, i32 0
 // GFX900-NEXT:    store i32 41, ptr addrspace(5) [[BLOCK_SIZE4]], align 8
 // GFX900-NEXT:    [[BLOCK_ALIGN5:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK3]], i32 0, i32 1
@@ -463,7 +463,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[TMP13:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP6]], i32 [[TMP7]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[VARTMP2]], ptr @__test_block_invoke_2_kernel, ptr [[TMP12]])
 // GFX900-NEXT:    [[TMP14:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[TMP15:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4, !tbaa [[TBAA14]]
-// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP11]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT18]]
+// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP11]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0), !tbaa.struct [[TBAA_STRUCT18]]
 // GFX900-NEXT:    [[BLOCK_SIZE13:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK12]], i32 0, i32 0
 // GFX900-NEXT:    store i32 41, ptr addrspace(5) [[BLOCK_SIZE13]], align 8
 // GFX900-NEXT:    [[BLOCK_ALIGN14:%.*]] = getelementptr inbounds <{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1), i64, i8 }>, ptr addrspace(5) [[BLOCK12]], i32 0, i32 1
@@ -505,7 +505,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    store ptr [[BLOCK21_ASCAST]], ptr addrspace(5) [[BLOCK20]], align 8, !tbaa [[TBAA13]]
 // GFX900-NEXT:    [[TMP25:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[TMP26:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4, !tbaa [[TBAA14]]
-// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP27]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT18]]
+// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[VARTMP27]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0), !tbaa.struct [[TBAA_STRUCT18]]
 // GFX900-NEXT:    [[TMP27:%.*]] = load ptr, ptr addrspace(5) [[BLOCK20]], align 8, !tbaa [[TBAA13]]
 // GFX900-NEXT:    [[TMP28:%.*]] = addrspacecast ptr addrspace(5) [[BLOCK21]] to ptr
 // GFX900-NEXT:    [[TMP29:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP25]], i32 [[TMP26]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[VARTMP27]], ptr @__test_block_invoke_4_kernel, ptr [[TMP28]])
@@ -653,7 +653,7 @@ kernel void test_target_features_kernel(global int *i) {
 // GFX900-NEXT:    [[TMP0:%.*]] = call i64 @llvm.amdgcn.s.memtime()
 // GFX900-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[DEFAULT_QUEUE]], align 8, !tbaa [[TBAA16]]
 // GFX900-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[FLAGS]], align 4, !tbaa [[TBAA14]]
-// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i1 false), !tbaa.struct [[TBAA_STRUCT18]]
+// GFX900-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 4 [[TMP]], ptr addrspace(5) align 4 [[NDRANGE]], i64 4, i8 0), !tbaa.struct [[TBAA_STRUCT18]]
 // GFX900-NEXT:    [[TMP3:%.*]] = call i32 @__enqueue_kernel_basic(ptr addrspace(1) [[TMP1]], i32 [[TMP2]], ptr addrspace(5) byval([[STRUCT_NDRANGE_T]]) [[TMP]], ptr @__test_target_features_kernel_block_invoke_kernel, ptr addrspacecast (ptr addrspace(1) @__block_literal_global to ptr))
 // GFX900-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[NDRANGE]]) #[[ATTR8]]
 // GFX900-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[FLAGS]]) #[[ATTR8]]

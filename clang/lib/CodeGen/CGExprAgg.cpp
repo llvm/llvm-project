@@ -376,6 +376,9 @@ void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
   AggValueSlot srcAgg = AggValueSlot::forLValue(
       src, CGF, AggValueSlot::IsDestructed, needsGC(type),
       AggValueSlot::IsAliased, AggValueSlot::MayOverlap);
+  // A non-volatile src might have a volatile member.
+  if (!srcAgg.isVolatile() && CGF.hasVolatileMember(type))
+    srcAgg.setVolatile(true);
   EmitCopy(type, Dest, srcAgg);
 }
 
@@ -401,7 +404,7 @@ void AggExprEmitter::EmitCopy(QualType type, const AggValueSlot &dest,
   LValue DestLV = CGF.MakeAddrLValue(dest.getAddress(), type);
   LValue SrcLV = CGF.MakeAddrLValue(src.getAddress(), type);
   CGF.EmitAggregateCopy(DestLV, SrcLV, type, dest.mayOverlap(),
-                        dest.isVolatile() || src.isVolatile());
+                        dest.isVolatile(), src.isVolatile());
 }
 
 /// Emit the initializer for a std::initializer_list initialized with a
@@ -2101,7 +2104,7 @@ AggValueSlot::Overlap_t CodeGenFunction::getOverlapForBaseInit(
 
 void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         AggValueSlot::Overlap_t MayOverlap,
-                                        bool isVolatile) {
+                                        bool isVolDst, bool isVolSrc) {
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
 
   Address DestPtr = Dest.getAddress(*this);
@@ -2183,8 +2186,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   //   a = b;
   // }
   //
-  // we need to use a different call here.  We use isVolatile to indicate when
-  // either the source or the destination is volatile.
+  // we need to use a different call here.  We use isVolDst and isVolSrc to
+  // indicate when the destination and/or source is volatile.
 
   DestPtr = DestPtr.withElementType(Int8Ty);
   SrcPtr = SrcPtr.withElementType(Int8Ty);
@@ -2210,7 +2213,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  auto Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  auto Inst =
+      Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, {isVolDst, isVolSrc});
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

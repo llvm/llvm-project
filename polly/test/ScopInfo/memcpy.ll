@@ -21,7 +21,7 @@
 ; IR:   %[[r3:[a-zA-Z0-9]*]] = getelementptr i8, ptr %B, i64 64
 ;
 ; IR: polly.stmt.for.body3:
-; IR:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[r1]], ptr align 4 %[[r3]], i64 37, i1 false)
+; IR:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[r1]], ptr align 4 %[[r3]], i64 37, i8 0)
 ;
 ;
 ;    #include <string.h>

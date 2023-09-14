@@ -5,7 +5,7 @@ define i8 @test(i8 %input) {
   %tmp = alloca i8
   %dst = alloca i8
   %src = alloca i8
-; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 1, i1 false), !alias.scope ![[SCOPE:[0-9]+]]
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 1, i8 0), !alias.scope ![[SCOPE:[0-9]+]]
   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %src), !noalias !4
   store i8 %input, ptr %src
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 1, i1 false), !alias.scope !0

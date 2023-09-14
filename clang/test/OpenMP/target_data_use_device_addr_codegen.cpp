@@ -64,7 +64,7 @@ int main() {
 // CHECK-NEXT: [[ARR_IDX2:%.+]] = getelementptr inbounds [4 x float], ptr [[ARR_ADDR]], i64 0, i64 0
 // CHECK: [[P10:%.+]] = mul nuw i64 {{.+}}, 4
 // CHECK-NEXT: [[ARR_IDX5:%.+]] = getelementptr inbounds float, ptr [[VLA_ADDR]], i64 0
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZES]], ptr align 8 [[SIZES1]], i64 48, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZES]], ptr align 8 [[SIZES1]], i64 48, i8 0)
 // CHECK: [[BPTR0:%.+]] = getelementptr inbounds [6 x ptr], ptr [[BPTRS]], i32 0, i32 0
 // CHECK: store ptr [[A_ADDR]], ptr [[BPTR0]],
 // CHECK: [[PTR0:%.+]] = getelementptr inbounds [6 x ptr], ptr [[PTRS]], i32 0, i32 0

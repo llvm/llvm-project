@@ -29,7 +29,7 @@ for.body3:
   %add = add nsw i32 %i.0, 1
   %conv = sext i32 %add to i64
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i1 false)
-; MEMOP_ANNOTATION: call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i1 false)
+; MEMOP_ANNOTATION: call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %conv, i8 0)
 ; MEMOP_ANNOTATION-SAME: !prof ![[MEMOP_VALUESITE:[0-9]+]]
   %memcmp = call i32 @memcmp(ptr %dst, ptr %src, i64 %conv)
 ; MEMOP_ANNOTATION: call i32 @memcmp(ptr %dst, ptr %src, i64 %conv)

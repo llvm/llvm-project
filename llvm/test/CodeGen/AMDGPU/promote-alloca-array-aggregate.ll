@@ -212,7 +212,7 @@ define amdgpu_vs void @promote_memcpy_two_aggrs() #0 {
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
 ; CHECK-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[FOO5]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 [[F2]], ptr addrspace(5) align 4 [[F1]], i32 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p5.i32(ptr addrspace(5) align 4 [[F2]], ptr addrspace(5) align 4 [[F1]], i32 8, i8 0)
 ; CHECK-NEXT:    [[FOO6:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F2]], i32 0, i32 [[FOO4]]
 ; CHECK-NEXT:    [[FOO7:%.*]] = load float, ptr addrspace(5) [[FOO6]], align 4
 ; CHECK-NEXT:    store float [[FOO7]], ptr addrspace(1) @pv, align 4
@@ -255,7 +255,7 @@ define amdgpu_vs void @promote_memcpy_p1p5_aggr(ptr addrspace(1) inreg %src) #0 
 ; CHECK-NEXT:    [[FOO4:%.*]] = load i32, ptr addrspace(1) [[FOO3]], align 4
 ; CHECK-NEXT:    [[FOO5:%.*]] = getelementptr [5 x float], ptr addrspace(5) [[F1]], i32 0, i32 [[FOO4]]
 ; CHECK-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[FOO5]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) align 4 @pv, ptr addrspace(5) align 4 [[F1]], i32 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p5.i32(ptr addrspace(1) align 4 @pv, ptr addrspace(5) align 4 [[F1]], i32 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %f1 = alloca [5 x float], addrspace(5)

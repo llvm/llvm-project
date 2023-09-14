@@ -387,7 +387,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[_TMP1]], align 8
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP4]], i64 40, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP4]], i64 40, i8 0)
 // CHECK1-NEXT:    store ptr [[L3]], ptr [[_TMP4]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4
@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    store ptr [[TMP2]], ptr [[_TMP1]], align 8
 // CHECK1-NEXT:    store ptr [[TMP4]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i8 0)
 // CHECK1-NEXT:    store ptr [[L3]], ptr [[_TMP4]], align 8
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK1-NEXT:    store i32 [[TMP6]], ptr [[ARGC5]], align 4
@@ -653,7 +653,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[TMP]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i8 0)
 // CHECK1-NEXT:    store ptr [[L1]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZZN1S3fooEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(8) [[TMP3]])
@@ -707,7 +707,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP1]], ptr [[TMP]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i8 0)
 // CHECK1-NEXT:    store ptr [[L1]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZZN1S3fooEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(8) [[TMP3]])
@@ -807,7 +807,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 8 [[TMP1]], i64 8, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 8 [[TMP1]], i64 8, i8 0)
 // CHECK1-NEXT:    store ptr [[T1]], ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK1-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_ZZN1S3fooEvENKUlvE_clEv(ptr noundef nonnull align 8 dereferenceable(8) [[TMP2]])
@@ -839,7 +839,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP3]], i64 8, i1 false)
+// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP3]], i64 8, i8 0)
 // CHECK2-NEXT:    store ptr [[L1]], ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[TMP4]], i32 0, i32 0
@@ -912,7 +912,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L_ADDR]], align 8
 // CHECK2-NEXT:    store ptr [[TMP1]], ptr [[TMP]], align 8
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i1 false)
+// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i8 0)
 // CHECK2-NEXT:    store ptr [[L1]], ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[TMP3]], i32 0, i32 0
@@ -958,7 +958,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK2:       user_code.entry:
 // CHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i1 false)
+// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i8 0)
 // CHECK2-NEXT:    store ptr [[L3]], ptr [[_TMP4]], align 8
 // CHECK2-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
@@ -1083,7 +1083,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    store ptr [[TMP2]], ptr [[_TMP1]], align 8
 // CHECK2-NEXT:    store ptr [[TMP4]], ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i1 false)
+// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i8 0)
 // CHECK2-NEXT:    store ptr [[L3]], ptr [[_TMP4]], align 8
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK2-NEXT:    store i32 [[TMP6]], ptr [[ARGC5]], align 4
@@ -1154,7 +1154,7 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 8
 // CHECK2-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
 // CHECK2-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 8 [[TMP1]], i64 8, i1 false)
+// CHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 8 [[TMP1]], i64 8, i8 0)
 // CHECK2-NEXT:    store ptr [[T1]], ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK2-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP2]], align 8
@@ -1198,7 +1198,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
 // CHECK3-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i8 0)
 // CHECK3-NEXT:    store ptr [[L3]], ptr [[_TMP4]], align 8
 // CHECK3-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
@@ -1323,7 +1323,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    store ptr [[TMP2]], ptr [[_TMP1]], align 8
 // CHECK3-NEXT:    store ptr [[TMP4]], ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[_TMP2]], align 8
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L3]], ptr align 8 [[TMP5]], i64 40, i8 0)
 // CHECK3-NEXT:    store ptr [[L3]], ptr [[_TMP4]], align 8
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK3-NEXT:    store i32 [[TMP6]], ptr [[ARGC5]], align 4
@@ -1373,7 +1373,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK3:       user_code.entry:
 // CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP3]], i64 8, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP3]], i64 8, i8 0)
 // CHECK3-NEXT:    store ptr [[L1]], ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[TMP4]], i32 0, i32 0
@@ -1446,7 +1446,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L_ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[TMP1]], ptr [[TMP]], align 8
 // CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[L1]], ptr align 8 [[TMP2]], i64 8, i8 0)
 // CHECK3-NEXT:    store ptr [[L1]], ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[TMP3]], i32 0, i32 0
@@ -1495,7 +1495,7 @@ int main(int argc, char **argv) {
 // CHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[TMP0]], ptr [[TMP]], align 8
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
-// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 8 [[TMP1]], i64 8, i1 false)
+// CHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 8 [[TMP1]], i64 8, i8 0)
 // CHECK3-NEXT:    store ptr [[T1]], ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP2]], align 8
 // CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[_TMP2]], align 8

@@ -84,11 +84,11 @@ define void @test5(ptr %ptr, ptr %esc) {
 ; CHECK-NEXT:    [[E:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
 ; CHECK-NEXT:    [[F:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
 ; CHECK-NEXT:    [[G:%.*]] = call dereferenceable_or_null(700) ptr @malloc(i32 700)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(32) [[A]], i32 32, i1 false)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[PTR]], ptr noundef nonnull align 1 dereferenceable(32) [[B]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(32) [[A]], i32 32, i8 0)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[PTR]], ptr noundef nonnull align 1 dereferenceable(32) [[B]], i32 32, i8 0)
 ; CHECK-NEXT:    store ptr [[C]], ptr [[ESC:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[D]], ptr [[PTR]], i32 32, i1 true)
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[E]], ptr [[PTR]], i32 32, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[D]], ptr [[PTR]], i32 32, i8 3)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr [[E]], ptr [[PTR]], i32 32, i8 3)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr [[F]], i8 5, i32 32, i1 true)
 ; CHECK-NEXT:    store volatile i8 4, ptr [[G]], align 1
 ; CHECK-NEXT:    ret void
@@ -268,7 +268,7 @@ define void @test14(ptr %foo) nofree {
 ; TODO: free call marked no-free ->  %foo must be null
 define void @test15(ptr %foo) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @free(ptr [[FOO:%.*]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @free(ptr %foo) nofree

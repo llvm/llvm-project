@@ -1978,8 +1978,8 @@ static void emitNonZeroVLAInit(CodeGenFunction &CGF, QualType baseType,
     dest.getAlignment().alignmentOfArrayElement(baseSize);
 
   // memcpy the individual element bit-pattern.
-  Builder.CreateMemCpy(Address(cur, CGF.Int8Ty, curAlign), src, baseSizeInChars,
-                       /*volatile*/ false);
+  Builder.CreateMemCpy(Address(cur, CGF.Int8Ty, curAlign), src,
+                       baseSizeInChars);
 
   // Go to the next element.
   llvm::Value *next =
@@ -2054,14 +2054,14 @@ CodeGenFunction::EmitNullInitialization(Address DestPtr, QualType Ty) {
     if (vla) return emitNonZeroVLAInit(*this, Ty, DestPtr, SrcPtr, SizeVal);
 
     // Get and call the appropriate llvm.memcpy overload.
-    Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, false);
+    Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal);
     return;
   }
 
   // Otherwise, just memset the whole thing to zero.  This is legal
   // because in LLVM, all default initializers (other than the ones we just
   // handled above) are guaranteed to have a bit pattern of all zeros.
-  Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal);
 }
 
 llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {

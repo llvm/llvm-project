@@ -13,7 +13,7 @@ define ptr @test1(ptr nocapture %src) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MALLOCCALL:%.*]] = tail call ptr @malloc(i32 trunc (i64 mul nuw (i64 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64), i64 13) to i32))
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[MALLOCCALL]], ptr [[SRC:%.*]], i64 13, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[MALLOCCALL]], ptr [[SRC:%.*]], i64 13, i8 0)
 ; CHECK-NEXT:    ret ptr [[MALLOCCALL]]
 ;
 entry:
@@ -29,7 +29,7 @@ define void @test2(ptr %P) nounwind {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 16
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[ADD_PTR]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P]], ptr [[ADD_PTR]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -43,7 +43,7 @@ define void @test3(ptr %P) nounwind {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 16
-; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[ADD_PTR]], i64 17, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr [[P]], ptr [[ADD_PTR]], i64 17, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -54,7 +54,7 @@ entry:
 
 define void @test4(ptr %P) nounwind {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr @C, i64 17, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[P:%.*]], ptr @C, i64 17, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memmove.p0.p0.i64(ptr %P, ptr @C, i64 17, i1 false)

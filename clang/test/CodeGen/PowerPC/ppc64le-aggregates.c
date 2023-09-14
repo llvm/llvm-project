@@ -103,7 +103,7 @@ void call_f8(void) { global_f8 = func_f8(global_f8); }
 
 // CHECK-LABEL: @call_f9
 // CHECK: %[[TMP1:[^ ]+]] = alloca [5 x i64]
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f9, i64 36, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f9, i64 36, i8 0)
 // CHECK: %[[TMP3:[^ ]+]] = load [5 x i64], ptr %[[TMP1]]
 // CHECK: call void @func_f9(ptr sret(%struct.f9) align 4 %{{[^ ]+}}, [5 x i64] %[[TMP3]])
 struct f9 global_f9;

@@ -6,8 +6,8 @@ define void @test(ptr %src, i64 %size) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i64 [[SIZE:%.*]], align 1
 ; CHECK-NEXT:    [[DST:%.*]] = alloca i8, i64 [[SIZE]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC:%.*]], i64 [[SIZE]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC]], i64 [[SIZE]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC:%.*]], i64 [[SIZE]], i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC]], i64 [[SIZE]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i8, i64 %size
@@ -23,8 +23,8 @@ define void @negative_test(ptr %src, i64 %size1, i64 %size2) {
 ; CHECK-LABEL: @negative_test(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1
 ; CHECK-NEXT:    [[DST:%.*]] = alloca i8, i64 [[SIZE2:%.*]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC:%.*]], i64 [[SIZE1]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[TMP]], i64 [[SIZE2]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP]], ptr align 8 [[SRC:%.*]], i64 [[SIZE1]], i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[TMP]], i64 [[SIZE2]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i8, i64 %size1

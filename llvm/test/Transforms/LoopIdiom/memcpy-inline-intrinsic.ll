@@ -27,7 +27,7 @@ define dso_local i32 @copy_noalias(ptr noalias nocapture %a, ptr nocapture reado
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I_08]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_S:%.*]], ptr [[B:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i64(ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX2]], ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX]], i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i64(ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX2]], ptr nonnull align 4 dereferenceable(12) [[ARRAYIDX]], i64 12, i8 0)
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]

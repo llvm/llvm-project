@@ -321,21 +321,21 @@ void foo(int a){
   // CK0-DAG: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES_4]], ptr [[TASK_2]], i32 0, i32 1
   // CK0-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 1
   // CK0-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 0
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK0-DAG: [[BPGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP]], i32 0, i32 0
   // CK0-DAG: store ptr [[C:%[^,]+]], ptr [[BPGEP]], align
   // CK0-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 2
   // CK0-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 1
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i32 0, i32 0
   // CK0-DAG: [[PGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK0-DAG: store ptr [[C]], ptr [[PGEP]], align
   // CK0-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 0
   // CK0-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 2
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[EDNWSIZES]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[EDNWSIZES]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[FPMPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_5]], ptr [[PRIVATES]], i32 0, i32 3
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPMPRGEP]], ptr align {{4|8}} [[MPR:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPMPRGEP]], ptr align {{4|8}} [[MPR:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[MPRGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[MPR]], i[[sz]] 0, i[[sz]] 0
   // CK0-DAG: store ptr [[MPRFUNC]], ptr [[MPRGEP]], align
   #pragma omp target enter data map(mapper(id),to: c) nowait
@@ -356,21 +356,21 @@ void foo(int a){
   // CK0-DAG: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES_7]], ptr [[TASK_3]], i32 0, i32 1
   // CK0-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 1
   // CK0-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 0
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK0-DAG: [[BPGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP]], i32 0, i32 0
   // CK0-DAG: store ptr [[C:%[^,]+]], ptr [[BPGEP]], align
   // CK0-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 2
   // CK0-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 1
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i32 0, i32 0
   // CK0-DAG: [[PGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK0-DAG: store ptr [[C]], ptr [[PGEP]], align
   // CK0-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 0
   // CK0-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 2
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[EXDNWSIZES]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[EXDNWSIZES]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[FPMPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_8]], ptr [[PRIVATES]], i32 0, i32 3
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPMPRGEP]], ptr align {{4|8}} [[MPR:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPMPRGEP]], ptr align {{4|8}} [[MPR:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[MPRGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[MPR]], i[[sz]] 0, i[[sz]] 0
   // CK0-DAG: store ptr [[MPRFUNC]], ptr [[MPRGEP]], align
   #pragma omp target exit data map(mapper(id),from: c) nowait
@@ -402,21 +402,21 @@ void foo(int a){
   // CK0-DAG: [[PRIVATES:%.+]] = getelementptr inbounds [[KMP_TASK_T_WITH_PRIVATES_10]], ptr [[TASK_4]], i32 0, i32 1
   // CK0-32-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 1
   // CK0-64-DAG: [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 0
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPBPGEP]], ptr align {{4|8}} [[BPGEP:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[BPGEP]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], i32 0, i32 0
   // CK0-DAG: [[BPGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP]], i32 0, i32 0
   // CK0-DAG: store ptr [[C:%[^,]+]], ptr [[BPGEP]], align
   // CK0-32-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 2
   // CK0-64-DAG: [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 1
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPPGEP]], ptr align {{4|8}} [[PGEP:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[PGEP]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i32 0, i32 0
   // CK0-DAG: [[PGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P]], i32 0, i32 0
   // CK0-DAG: store ptr [[C]], ptr [[PGEP]], align
   // CK0-32-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 0
   // CK0-64-DAG: [[FPSZGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 2
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[FNWSIZES]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPSZGEP]], ptr align {{4|8}} [[FNWSIZES]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[FPMPRGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T_11]], ptr [[PRIVATES]], i32 0, i32 3
-  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPMPRGEP]], ptr align {{4|8}} [[MPR:%.+]], i[[sz]] {{4|8}}, i1 false)
+  // CK0-DAG: call void @llvm.memcpy.p0.p0.i[[sz]](ptr align {{4|8}} [[FPMPRGEP]], ptr align {{4|8}} [[MPR:%.+]], i[[sz]] {{4|8}}, i8 0)
   // CK0-DAG: [[MPRGEP:%.+]] = getelementptr inbounds [1 x ptr], ptr [[MPR]], i[[sz]] 0, i[[sz]] 0
   // CK0-DAG: store ptr [[MPRFUNC]], ptr [[MPRGEP]], align
   #pragma omp target update from(mapper(id): c) nowait

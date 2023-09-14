@@ -9,7 +9,7 @@ struct __declspec(dllexport) Derived : virtual Base {
 // CHECK:      %[[dest_a_gep:.*]] = getelementptr inbounds %struct.Derived, ptr %[[this]], i32 0, i32 1
 // CHECK-NEXT: %[[src_load:.*]]   = load ptr, ptr {{.*}}
 // CHECK-NEXT: %[[src_a_gep:.*]]  = getelementptr inbounds %struct.Derived, ptr %[[src_load:.*]], i32 0, i32 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[dest_a_gep]], ptr align 4 %[[src_a_gep]], i64 1, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[dest_a_gep]], ptr align 4 %[[src_a_gep]], i64 1, i8 0)
 // CHECK-NEXT: %[[dest_this:.*]] = load ptr, ptr %[[retval]]
 // CHECK-NEXT: ret ptr %[[dest_this]]
   bool a : 1;
@@ -24,7 +24,7 @@ struct __declspec(dllexport) Derived2 : virtual Base {
 // CHECK:      %[[dest_a_gep:.*]] = getelementptr inbounds %struct.Derived2, ptr %[[this]], i32 0, i32 1
 // CHECK-NEXT: %[[src_load:.*]]   = load ptr, ptr {{.*}}
 // CHECK-NEXT: %[[src_a_gep:.*]]  = getelementptr inbounds %struct.Derived2, ptr %[[src_load:.*]], i32 0, i32 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[dest_a_gep]], ptr align 4 %[[src_a_gep]], i32 4, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[dest_a_gep]], ptr align 4 %[[src_a_gep]], i32 4, i8 0)
 // CHECK-NEXT: %[[dest_this:.*]] = load ptr, ptr %[[retval]]
 // CHECK-NEXT: ret ptr %[[dest_this]]
   int Array[1];

@@ -30,6 +30,6 @@ typedef struct D {
 } D;
 
 // AIX: define void @_Z3foo1D(ptr noalias sret(%struct.D) align 4 %agg.result, ptr noundef %x)
-// AIX32  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 %x, i32 16, i1 false)
-// AIX64: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.result, ptr align 4 %x, i64 16, i1 false)
+// AIX32  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 %x, i32 16, i8 0)
+// AIX64: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.result, ptr align 4 %x, i64 16, i8 0)
 D foo(D x) { return x; }

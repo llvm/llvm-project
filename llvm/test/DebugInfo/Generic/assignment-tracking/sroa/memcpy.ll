@@ -32,10 +32,10 @@
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 96), metadata ![[ID_3]], metadata ptr %To.sroa.4, metadata !DIExpression()), !dbg
 
 ;; Split memcpy.
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.0, ptr align 4 @From, i64 12, i1 false),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
+; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.0, ptr align 4 @From, i64 12, i8 0),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
 ;; This slice has been split and is promoted.
 ; CHECK: %To.sroa.3.0.copyload = load i32, ptr getelementptr inbounds (i8, ptr @From, i64 12)
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.4, ptr align 4 getelementptr inbounds (i8, ptr @From, i64 16), i64 12, i1 false){{.*}}!DIAssignID ![[ID_6:[0-9]+]]
+; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.4, ptr align 4 getelementptr inbounds (i8, ptr @From, i64 16), i64 12, i8 0){{.*}}!DIAssignID ![[ID_6:[0-9]+]]
 
 ;; Intrinsics for the splits above.
 ; CHECK-NEXT: call void @llvm.dbg.assign(metadata {{.+}} undef, metadata ![[TO]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 96), metadata ![[ID_4]], metadata ptr %To.sroa.0, metadata !DIExpression()), !dbg

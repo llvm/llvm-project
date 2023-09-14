@@ -45,7 +45,7 @@ AVAILABLE_EXTERNALLY_ALTERNATE void *memmove(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[C_ADDR_I]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP3]], ptr align 1 [[TMP4]], i64 [[TMP5]], i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP3]], ptr align 1 [[TMP4]], i64 [[TMP5]], i8 0)
 // CHECK-NEXT:    ret ptr [[TMP3]]
 //
 void *foo(void *a, const void *b, size_t c) {
@@ -73,7 +73,7 @@ void *foo(void *a, const void *b, size_t c) {
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_I]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[C_ADDR_I]], align 8
-// CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[TMP3]], ptr align 1 [[TMP4]], i64 [[TMP5]], i1 false)
+// CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[TMP3]], ptr align 1 [[TMP4]], i64 [[TMP5]], i8 0)
 // CHECK-NEXT:    ret ptr [[TMP3]]
 //
 void *foo_alt(void *a, const void *b, size_t c) {

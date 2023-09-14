@@ -8,7 +8,7 @@ define void @test(ptr %src) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[DST:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC:%.*]], i64 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC:%.*]], i64 1, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i8

@@ -659,7 +659,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; SCCP-NEXT:    [[TMP57:%.*]] = add nsw i32 [[TMP40]], -1
 ; SCCP-NEXT:    br label [[BB60]]
 ; SCCP:       bb58:
-; SCCP-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 [[TMP33]], i64 4, i1 false)
+; SCCP-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 [[TMP33]], i64 4, i8 0)
 ; SCCP-NEXT:    br label [[BB60]]
 ; SCCP:       bb60:
 ; SCCP-NEXT:    [[TMP61:%.*]] = phi i32 [ [[TMP57]], [[BB56]] ], [ [[TMP40]], [[BB39]] ], [ [[TMP11]], [[BB58]] ]
@@ -739,7 +739,7 @@ define ptr @wobble(ptr %arg, i32 %arg1) align 2 {
 ; IPSCCP:       bb56:
 ; IPSCCP-NEXT:    br label [[BB60]]
 ; IPSCCP:       bb58:
-; IPSCCP-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 [[TMP33]], i64 4, i1 false)
+; IPSCCP-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 @global.11, ptr align 2 [[TMP33]], i64 4, i8 0)
 ; IPSCCP-NEXT:    br label [[BB60]]
 ; IPSCCP:       bb60:
 ; IPSCCP-NEXT:    [[TMP61:%.*]] = phi i32 [ 6, [[BB56]] ], [ 7, [[BB39]] ], [ [[TMP11]], [[BB58]] ]

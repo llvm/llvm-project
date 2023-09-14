@@ -71,7 +71,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounw
 
 define void @test2(i32 %cmd) nounwind {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr null, ptr undef, i64 20, i1 false) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr null, ptr undef, i64 20, i8 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr undef, ptr undef, i64 20, i1 false) nounwind

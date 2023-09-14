@@ -4,7 +4,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @test(ptr noalias dereferenceable(1) %in, ptr noalias dereferenceable(1) %out) {
   %tmp = alloca i8
   %tmp2 = alloca i8
-; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %out, ptr align 8 %in, i64 1, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %out, ptr align 8 %in, i64 1, i8 0)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %in, i64 1, i1 false), !alias.scope !4
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp2, ptr align 8 %tmp, i64 1, i1 false), !alias.scope !5
 

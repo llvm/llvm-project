@@ -40,7 +40,7 @@ define void @test2(ptr sret(i8) noalias nocapture %out, ptr %in) nounwind noinli
 define void @test3(ptr sret(i8) noalias nocapture %out, ptr %in) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[IN:%.*]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[IN]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[IN]], i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.lifetime.start.p0(i64 4, ptr %in)
@@ -52,7 +52,7 @@ define void @test3(ptr sret(i8) noalias nocapture %out, ptr %in) nounwind noinli
 define void @test_lifetime_may_alias(ptr %lifetime, ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_lifetime_may_alias(
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[LIFETIME:%.*]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.lifetime.start.p0(i64 8, ptr %lifetime)
@@ -96,7 +96,7 @@ define void @test_lifetime_partial_alias_3(ptr noalias %dst) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 4, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
@@ -112,7 +112,7 @@ define void @test_lifetime_partial_alias_4(ptr noalias %dst) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]

@@ -88,7 +88,7 @@ int compareMyCLH(void) {
 // for a local variable.
 // CHECK-LABEL: define{{.*}} i32 @compound_array_fn()
 // CHECK: [[COMPOUND_ARRAY:%.*]] = alloca [8 x i32]
-// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}}, i64 32, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64({{.*}}, i64 32, i8 0)
 int compound_array_fn(void) {
   int compound_array[] = (int[]){1,2,3,4,5,6,7,8};
   return compound_array[0];

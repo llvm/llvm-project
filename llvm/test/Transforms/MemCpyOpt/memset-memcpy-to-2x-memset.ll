@@ -28,7 +28,7 @@ define void @test_smaller_memcpy(ptr %dst1, ptr %dst2, i8 %c) {
 define void @test_smaller_memset(ptr %dst1, ptr %dst2, i8 %c) {
 ; CHECK-LABEL: @test_smaller_memset(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST1:%.*]], i8 [[C:%.*]], i64 100, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[DST1]], i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[DST1]], i64 128, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %dst1, i8 %c, i64 100, i1 false)
@@ -73,7 +73,7 @@ define void @test_different_source_gep(ptr %dst1, ptr %dst2, i8 %c) {
 ; CHECK-LABEL: @test_different_source_gep(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST1:%.*]], i8 [[C:%.*]], i64 128, i1 false)
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[DST1]], i64 64
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[P]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[P]], i64 64, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %dst1, i8 %c, i64 128, i1 false)
@@ -86,7 +86,7 @@ define void @test_different_source_gep(ptr %dst1, ptr %dst2, i8 %c) {
 define void @test_variable_size_1(ptr %dst1, i64 %dst1_size, ptr %dst2, i8 %c) {
 ; CHECK-LABEL: @test_variable_size_1(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST1:%.*]], i8 [[C:%.*]], i64 [[DST1_SIZE:%.*]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[DST1]], i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[DST1]], i64 128, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %dst1, i8 %c, i64 %dst1_size, i1 false)
@@ -97,7 +97,7 @@ define void @test_variable_size_1(ptr %dst1, i64 %dst1_size, ptr %dst2, i8 %c) {
 define void @test_variable_size_2(ptr %dst1, ptr %dst2, i64 %dst2_size, i8 %c) {
 ; CHECK-LABEL: @test_variable_size_2(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[DST1:%.*]], i8 [[C:%.*]], i64 128, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[DST1]], i64 [[DST2_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST2:%.*]], ptr [[DST1]], i64 [[DST2_SIZE:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr %dst1, i8 %c, i64 128, i1 false)

@@ -62,7 +62,7 @@ define void @test_copy_larger_than_lifetime_size(ptr %result) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr [[A]])
 ; CHECK-NEXT:    call void @free(ptr [[A]])
 ; CHECK-NEXT:    ret void
@@ -80,7 +80,7 @@ define void @test_copy_larger_than_lifetime_size(ptr %result) {
 define void @test_not_undef_memory(ptr %result, ptr %input) {
 ; CHECK-LABEL: @test_not_undef_memory(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[INPUT:%.*]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[INPUT]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[INPUT]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memset.p0.i64(ptr align 8 %input, i8 0, i64 12, i1 false)
@@ -107,7 +107,7 @@ define void @test_volatile_memcpy(ptr %result) {
 ; CHECK-LABEL: @test_volatile_memcpy(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 true)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i8 3)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -122,7 +122,7 @@ define void @test_write_between(ptr %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    store i8 -1, ptr [[A]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -139,7 +139,7 @@ define void @test_write_before_memset_in_memset_region(ptr %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    store i8 -1, ptr [[A]], align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -157,7 +157,7 @@ define void @test_write_before_memset_in_memcpy_region(ptr %result) {
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[T]], ptr [[A]], i64 0, i32 2
 ; CHECK-NEXT:    store i32 -1, ptr [[C]], align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 8, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -176,7 +176,7 @@ define void @test_write_before_memset_in_both_regions(ptr %result) {
 ; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[T]], ptr [[A]], i64 0, i32 1
 ; CHECK-NEXT:    store i32 -1, ptr [[C]], align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 10, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8

@@ -19,7 +19,7 @@ define void @test1(ptr %A, ptr %B, i32 %N) {
 define void @test2(ptr %A, i32 %N) {
   ;; dest can't alias source since we can't write to source!
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A:%.*]], ptr nonnull align 16 @S, i32 [[N:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A:%.*]], ptr nonnull align 16 @S, i32 [[N:%.*]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.p0.p0.i32(ptr %A, ptr @S, i32 %N, i1 false)

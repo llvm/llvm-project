@@ -505,7 +505,7 @@ end:
 define void @widget(ptr %tmp) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP:%.*]], ptr nonnull align 16 undef, i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP:%.*]], ptr nonnull align 16 undef, i64 64, i8 0)
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr @global, align 8

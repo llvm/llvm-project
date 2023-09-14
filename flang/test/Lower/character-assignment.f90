@@ -13,9 +13,10 @@ subroutine assign1(lhs, rhs)
 
   ! Copy of rhs into lhs
   ! CHECK: %[[count:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
+  ! CHECK: %[[notVolatile:.*]] = arith.constant 0 : i8
   ! CHECK-DAG: %[[bug:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[src:.*]] = fir.convert %[[rhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%{{.*}}, %[[src]], %[[count]], %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%{{.*}}, %[[src]], %[[count]], %[[notVolatile]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -72,7 +73,8 @@ subroutine assign_constant(lhs)
   ! CHECK-DAG: %[[dst:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[src:.*]] = fir.convert %[[cst]] : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[count:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %[[count]], %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK-DAG: %[[notVolatile:.*]] = arith.constant 0 : i8
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %[[count]], %[[notVolatile]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>

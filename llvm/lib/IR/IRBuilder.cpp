@@ -218,12 +218,13 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
 
 CallInst *IRBuilderBase::CreateMemTransferInst(
     Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
-    MaybeAlign SrcAlign, Value *Size, bool isVolatile, MDNode *TBAATag,
-    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+    MaybeAlign SrcAlign, Value *Size, MemTransferVolatility Vol,
+    MDNode *TBAATag, MDNode *TBAAStructTag, MDNode *ScopeTag,
+    MDNode *NoAliasTag) {
   assert((IntrID == Intrinsic::memcpy || IntrID == Intrinsic::memcpy_inline ||
           IntrID == Intrinsic::memmove) &&
          "Unexpected intrinsic ID");
-  Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
+  Value *Ops[] = {Dst, Src, Size, Vol.getAsInt(Context)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Function *TheFn = Intrinsic::getDeclaration(M, IntrID, Tys);

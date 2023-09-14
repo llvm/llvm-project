@@ -172,7 +172,7 @@ end subroutine
 ! CHECK: %[[length:.*]] = arith.muli %[[c1]], %[[select_i64]] : i64
 ! CHECK: %[[cast_temp_i8:.*]] = fir.convert %[[temp]] : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
 ! CHECK: %[[cast_arg_i8:.*]] = fir.convert %[[cast_arg]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[cast_temp_i8]], %[[cast_arg_i8]], %[[length]], %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[cast_temp_i8]], %[[cast_arg_i8]], %[[length]], %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 ! CHECK: %[[c1_i64:.*]] = arith.constant 1 : i64
 ! CHECK: %[[ub:.*]] = arith.subi %[[c10]], %[[c1_i64]] : i64
 ! CHECK: %[[ub_index:.*]] = fir.convert %[[ub]] : (i64) -> index

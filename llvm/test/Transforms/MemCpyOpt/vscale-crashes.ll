@@ -7,7 +7,7 @@
 define void @byval_caller(ptr %P) {
 ; CHECK-LABEL: @byval_caller(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 [[P:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 [[P:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    call void @byval_callee(ptr byval(<vscale x 1 x i8>) align 1 [[A]])
 ; CHECK-NEXT:    ret void
 ;

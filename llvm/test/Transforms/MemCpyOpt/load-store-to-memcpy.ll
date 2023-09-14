@@ -10,7 +10,7 @@
 ; a memmove when the source and dest may alias
 define void @test_memmove(ptr align 8 %a, ptr align 16 %b) {
 ; CHECK-LABEL: @test_memmove(
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 16 [[B:%.*]], ptr align 8 [[A:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 16 [[B:%.*]], ptr align 8 [[A:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %val = load %T, ptr %a, align 8
@@ -22,7 +22,7 @@ define void @test_memmove(ptr align 8 %a, ptr align 16 %b) {
 ; a memcpy when the source and dest do not alias
 define void @test_memcpy(ptr noalias align 8 %a, ptr noalias align 16 %b) {
 ; CHECK-LABEL: @test_memcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B:%.*]], ptr align 8 [[A:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[B:%.*]], ptr align 8 [[A:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %val = load %T, ptr %a, align 8
@@ -32,7 +32,7 @@ define void @test_memcpy(ptr noalias align 8 %a, ptr noalias align 16 %b) {
 
 define void @test_memcpy_constant(ptr %d) {
 ; CHECK-LABEL: @test_memcpy_constant(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[D:%.*]], ptr align 8 @C, i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[D:%.*]], ptr align 8 @C, i64 8, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %val = load %T, ptr @C, align 8

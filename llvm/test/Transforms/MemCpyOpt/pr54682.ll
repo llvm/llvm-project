@@ -18,7 +18,7 @@ define void @test(i1 %c, ptr nocapture noundef readonly %path, ptr noundef write
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP_IV_1:%.*]] = getelementptr inbounds i8, ptr [[TMP_IV]], i64 1
 ; CHECK-NEXT:    [[LEN:%.*]] = sub nsw i64 259, [[IV]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[NAME:%.*]], ptr nonnull align 1 [[TMP_IV_1]], i64 [[LEN]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[NAME:%.*]], ptr nonnull align 1 [[TMP_IV_1]], i64 [[LEN]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:

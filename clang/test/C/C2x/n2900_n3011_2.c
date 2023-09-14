@@ -101,8 +101,8 @@ void test_nested_structs() {
   // CHECK-NEXT: %[[T1:.+]] = alloca %struct.T
   // CHECK-NEXT: %[[T2:.+]] = alloca %struct.T
   // CHECK-NEXT: %[[T3:.+]] = alloca %struct.T
-  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}} %[[T1]], ptr {{.*}} @[[CONST_T1]], i64 12, i1 false)
-  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}} %[[T2]], ptr {{.*}} @[[CONST_T2]], i64 12, i1 false)
+  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}} %[[T1]], ptr {{.*}} @[[CONST_T1]], i64 12, i8 0)
+  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}} %[[T2]], ptr {{.*}} @[[CONST_T2]], i64 12, i8 0)
   // CHECK-NEXT: call void @llvm.memset.p0.i64(ptr {{.*}} %[[T3]], i8 0, i64 12, i1 false)
 }
 

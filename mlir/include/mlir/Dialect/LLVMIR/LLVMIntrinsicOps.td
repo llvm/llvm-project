@@ -214,14 +214,14 @@ class LLVM_MemcpyIntrOpBase<string name> :
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  AnySignlessInteger:$len, I1Attr:$isVolatile);
+                  AnySignlessInteger:$len, I8Attr:$isVolatile);
   // Append the alias attributes defined by LLVM_IntrOpBase.
   let arguments = !con(args, aliasAttrs);
   let builders = [
     OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
                    "bool":$isVolatile), [{
       build($_builder, $_state, dst, src, len,
-            $_builder.getBoolAttr(isVolatile));
+            $_builder.getI8IntegerAttr(isVolatile ? 3 : 0));
     }]>,
     OpBuilder<(ins "Value":$dst, "Value":$src, "Value":$len,
                    "IntegerAttr":$isVolatile), [{
@@ -238,7 +238,7 @@ class LLVM_MemcpyIntrOpBase<string name> :
     auto *inst = createIntrinsicCall(
       builder, llvm::Intrinsic::}] # llvmEnumName # [{,
       {$dst, $src, $len,
-       builder.getInt1(op.getIsVolatile())},
+       builder.getInt8(op.getIsVolatile())},
       }] # declTypes # [{ ); }]
       # setAccessGroupsMetadataCode
       # setAliasAnalysisMetadataCode;
@@ -255,14 +255,14 @@ def LLVM_MemcpyInlineOp :
     /*requiresAccessGroup=*/1, /*requiresAliasAnalysis=*/1> {
   dag args = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
                   Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
-                  APIntAttr:$len, I1Attr:$isVolatile);
+                  APIntAttr:$len, I8Attr:$isVolatile);
   // Append the alias attributes defined by LLVM_IntrOpBase.
   let arguments = !con(args, aliasAttrs);
   let builders = [
     OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
                    "bool":$isVolatile), [{
       build($_builder, $_state, dst, src, len,
-            $_builder.getBoolAttr(isVolatile));
+            $_builder.getI8IntegerAttr(isVolatile ? 3 : 0));
     }]>,
     OpBuilder<(ins "Value":$dst, "Value":$src, "IntegerAttr":$len,
                    "IntegerAttr":$isVolatile), [{
@@ -279,7 +279,7 @@ def LLVM_MemcpyInlineOp :
     auto *inst = createIntrinsicCall(
       builder, llvm::Intrinsic::}] # llvmEnumName # [{,
       {$dst, $src, builder.getInt(op.getLen()),
-       builder.getInt1(op.getIsVolatile())}, { }]
+       builder.getInt8(op.getIsVolatile())}, { }]
       # !interleave(!listconcat(declTypeList, [
        [{ moduleTranslation.convertType(op.getLenAttr().getType()) }]
        ]), ", ") # [{ }); }]

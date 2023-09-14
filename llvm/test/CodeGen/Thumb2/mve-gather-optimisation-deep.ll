@@ -259,7 +259,7 @@ define void @gatherload(i32 %n, i32 %m, i32* nocapture %a, i32* nocapture readon
 ; CHECK:       for.body.us.us:
 ; CHECK-NEXT:    [[I_039_US_US:%.*]] = phi i32 [ [[INC15_US_US:%.*]], [[FOR_COND5_FOR_END13_CRIT_EDGE_US_US:%.*]] ], [ 0, [[FOR_BODY_US_US_PREHEADER]] ]
 ; CHECK-NEXT:    [[VLA_US_US:%.*]] = alloca i32, i32 [[CALL_US_US:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 4 [[VLA_US_US]], ptr align 4 [[A]], i32 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nonnull align 4 [[VLA_US_US]], ptr align 4 [[A]], i32 [[TMP0]], i8 0)
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[MIN_ITERS_CHECK]], i1 true, i1 [[FOUND_CONFLICT]]
 ; CHECK-NEXT:    br i1 [[BRMERGE]], label [[FOR_BODY7_US_US_PREHEADER:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

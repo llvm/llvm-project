@@ -146,10 +146,10 @@ define void @fold_stpncpy_s1(ptr %dst) {
 ; BE-NEXT:    store i16 13312, ptr [[DST]], align 1
 ; BE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(3) @str.6, i64 3, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(3) @str.6, i64 3, i8 0)
 ; BE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR1]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.7, i64 9, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.7, i64 9, i8 0)
 ; BE-NEXT:    [[ENDPTR2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR2]])
 ; BE-NEXT:    ret void
@@ -162,10 +162,10 @@ define void @fold_stpncpy_s1(ptr %dst) {
 ; LE-NEXT:    store i16 52, ptr [[DST]], align 1
 ; LE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(3) @str.6, i64 3, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(3) @str.6, i64 3, i8 0)
 ; LE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR1]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.7, i64 9, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.7, i64 9, i8 0)
 ; LE-NEXT:    [[ENDPTR2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 1
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR2]])
 ; LE-NEXT:    ret void
@@ -209,13 +209,13 @@ define void @fold_stpncpy_s4(ptr %dst, i64 %n) {
 ; BE-NEXT:    store i16 12594, ptr [[DST]], align 1
 ; BE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @s4, i64 3, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @s4, i64 3, i8 0)
 ; BE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR1]])
 ; BE-NEXT:    store i32 825373492, ptr [[DST]], align 1
 ; BE-NEXT:    [[ENDPTR2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR2]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.8, i64 9, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.8, i64 9, i8 0)
 ; BE-NEXT:    [[ENDPTR3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR3]])
 ; BE-NEXT:    ret void
@@ -228,13 +228,13 @@ define void @fold_stpncpy_s4(ptr %dst, i64 %n) {
 ; LE-NEXT:    store i16 12849, ptr [[DST]], align 1
 ; LE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @s4, i64 3, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @s4, i64 3, i8 0)
 ; LE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR1]])
 ; LE-NEXT:    store i32 875770417, ptr [[DST]], align 1
 ; LE-NEXT:    [[ENDPTR2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR2]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.8, i64 9, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.8, i64 9, i8 0)
 ; LE-NEXT:    [[ENDPTR3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR3]])
 ; LE-NEXT:    ret void
@@ -317,16 +317,16 @@ define void @fold_stpncpy_a4(ptr %dst, i64 %n) {
 ; BE-NEXT:    store i16 12594, ptr [[DST]], align 1
 ; BE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 3, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 3, i8 0)
 ; BE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR1]])
 ; BE-NEXT:    store i32 825373492, ptr [[DST]], align 1
 ; BE-NEXT:    [[ENDPTR2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR2]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 5, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 5, i8 0)
 ; BE-NEXT:    [[ENDPTR3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR3]])
-; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.9, i64 9, i1 false)
+; BE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.9, i64 9, i8 0)
 ; BE-NEXT:    [[ENDPTR4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; BE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR4]])
 ; BE-NEXT:    ret void
@@ -339,16 +339,16 @@ define void @fold_stpncpy_a4(ptr %dst, i64 %n) {
 ; LE-NEXT:    store i16 12849, ptr [[DST]], align 1
 ; LE-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 3, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(3) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 3, i8 0)
 ; LE-NEXT:    [[ENDPTR1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 3
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR1]])
 ; LE-NEXT:    store i32 875770417, ptr [[DST]], align 1
 ; LE-NEXT:    [[ENDPTR2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR2]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 5, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST]], ptr noundef nonnull align 1 dereferenceable(5) @a4, i64 5, i8 0)
 ; LE-NEXT:    [[ENDPTR3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR3]])
-; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.9, i64 9, i1 false)
+; LE-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], ptr noundef nonnull align 1 dereferenceable(9) @str.9, i64 9, i8 0)
 ; LE-NEXT:    [[ENDPTR4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 4
 ; LE-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[ENDPTR4]])
 ; LE-NEXT:    ret void

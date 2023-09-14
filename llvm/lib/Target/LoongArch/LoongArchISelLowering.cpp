@@ -3776,7 +3776,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue SizeNode = DAG.getConstant(Size, DL, GRLenVT);
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
-                          /*IsVolatile=*/false,
+                          /*Vol=*/{false, false},
                           /*AlwaysInline=*/false, /*isTailCall=*/IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);

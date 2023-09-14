@@ -2703,7 +2703,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   case Intrinsic::memcpy: {
     const MemCpyInst *MCI = cast<MemCpyInst>(II);
     // Don't handle volatile or variable length memcpys.
-    if (MCI->isVolatile())
+    if (MCI->isAnyVolatile())
       return false;
 
     if (isa<ConstantInt>(MCI->getLength())) {

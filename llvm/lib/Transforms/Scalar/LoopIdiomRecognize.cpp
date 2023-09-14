@@ -759,7 +759,7 @@ bool LoopIdiomRecognize::processLoopMemIntrinsic(
 bool LoopIdiomRecognize::processLoopMemCpy(MemCpyInst *MCI,
                                            const SCEV *BECount) {
   // We can only handle non-volatile memcpys with a constant size.
-  if (MCI->isVolatile() || !isa<ConstantInt>(MCI->getLength()))
+  if (MCI->isAnyVolatile() || !isa<ConstantInt>(MCI->getLength()))
     return false;
 
   // If we're not allowed to hack on memcpy, we fail.
@@ -1389,11 +1389,11 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     if (UseMemMove)
       NewCall = Builder.CreateMemMove(
           StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
-          /*isVolatile=*/false, AATags.TBAA, AATags.Scope, AATags.NoAlias);
+          /*Vol=*/{false, false}, AATags.TBAA, AATags.Scope, AATags.NoAlias);
     else
       NewCall =
           Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign,
-                               NumBytes, /*isVolatile=*/false, AATags.TBAA,
+                               NumBytes, /*Vol=*/{false, false}, AATags.TBAA,
                                AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   } else {
     // For now don't support unordered atomic memmove.

@@ -143,7 +143,7 @@ void test_static_var_local(void) {
 // NOOPT: store ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) %sp2, align 4
 // NOOPT: store ptr addrspace(5) null, ptr addrspace(5) %sp3, align 4
 // NOOPT: store ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) %sp4, align 4
-// NOOPT: call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 %SS1, ptr addrspace(4) align 8 @__const.test_func_scope_var_private.SS1, i64 32, i1 false)
+// NOOPT: call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 %SS1, ptr addrspace(4) align 8 @__const.test_func_scope_var_private.SS1, i64 32, i8 0)
 // NOOPT: call void @llvm.memset.p5.i64(ptr addrspace(5) align 8 %SS2, i8 0, i64 24, i1 false)
 void test_func_scope_var_private(void) {
   private char *sp1 = 0;
@@ -161,7 +161,7 @@ void test_func_scope_var_private(void) {
 // NOOPT: store ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(5) %sp2, align 4
 // NOOPT: store ptr addrspace(3) null, ptr addrspace(5) %sp3, align 4
 // NOOPT: store ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(5) %sp4, align 4
-// NOOPT: call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 %SS1, ptr addrspace(4) align 8 @__const.test_func_scope_var_local.SS1, i64 32, i1 false)
+// NOOPT: call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 8 %SS1, ptr addrspace(4) align 8 @__const.test_func_scope_var_local.SS1, i64 32, i8 0)
 // NOOPT: call void @llvm.memset.p5.i64(ptr addrspace(5) align 8 %SS2, i8 0, i64 24, i1 false)
 void test_func_scope_var_local(void) {
   local char *sp1 = 0;

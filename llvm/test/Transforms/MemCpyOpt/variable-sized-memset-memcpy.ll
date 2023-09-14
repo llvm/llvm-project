@@ -24,7 +24,7 @@ define void @negative_test(ptr %src, i8 %c, i64 %size1, i64 %size2) {
 ; CHECK-NEXT:    [[DST1:%.*]] = alloca i8, i64 [[SIZE1:%.*]], align 1
 ; CHECK-NEXT:    [[DST2:%.*]] = alloca i8, i64 [[SIZE2:%.*]], align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST1]], i8 [[C:%.*]], i64 [[SIZE1]], i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[DST1]], i64 [[SIZE2]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST2]], ptr align 8 [[DST1]], i64 [[SIZE2]], i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %dst1 = alloca i8, i64 %size1

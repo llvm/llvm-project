@@ -91,7 +91,7 @@ void call_f2(void) { global_f2 = func_f2(global_f2); }
 // CHECK-LABEL: @call_f3
 // CHECK-BE: %[[TMP0:[^ ]+]] = alloca %struct.f3, align 4
 // CHECK: %[[TMP1:[^ ]+]] = alloca [2 x i64]
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f3, i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f3, i64 12, i8 0)
 // CHECK: %[[TMP3:[^ ]+]] = load [2 x i64], ptr %[[TMP1]]
 // CHECK-LE: call { i64, i64 } @func_f3([2 x i64] %[[TMP3]])
 // CHECK-BE: call void @func_f3(ptr sret(%struct.f3) align 4 %[[TMP0]], [2 x i64] %[[TMP3]])
@@ -109,7 +109,7 @@ void call_f4(void) { global_f4 = func_f4(global_f4); }
 // CHECK-LABEL: @call_f5
 // CHECK: %[[TMP0:[^ ]+]] = alloca %struct.f5, align 4
 // CHECK: %[[TMP1:[^ ]+]] = alloca [3 x i64]
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f5, i64 20, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f5, i64 20, i8 0)
 // CHECK: %[[TMP3:[^ ]+]] = load [3 x i64], ptr %[[TMP1]]
 // CHECK: call void @func_f5(ptr sret(%struct.f5) align 4 %[[TMP0]], [3 x i64] %[[TMP3]])
 struct f5 global_f5;
@@ -125,7 +125,7 @@ void call_f6(void) { global_f6 = func_f6(global_f6); }
 // CHECK-LABEL: @call_f7
 // CHECK: %[[TMP0:[^ ]+]] = alloca %struct.f7, align 4
 // CHECK: %[[TMP1:[^ ]+]] = alloca [4 x i64], align 8
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f7, i64 28, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f7, i64 28, i8 0)
 // CHECK: %[[TMP3:[^ ]+]] = load [4 x i64], ptr %[[TMP1]], align 8
 // CHECK: call void @func_f7(ptr sret(%struct.f7) align 4 %[[TMP0]], [4 x i64] %[[TMP3]])
 struct f7 global_f7;
@@ -140,7 +140,7 @@ void call_f8(void) { global_f8 = func_f8(global_f8); }
 
 // CHECK-LABEL: @call_f9
 // CHECK: %[[TMP1:[^ ]+]] = alloca [5 x i64]
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f9, i64 36, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP1]], ptr align 4 @global_f9, i64 36, i8 0)
 // CHECK: %[[TMP3:[^ ]+]] = load [5 x i64], ptr %[[TMP1]]
 // CHECK: call void @func_f9(ptr sret(%struct.f9) align 4 %{{[^ ]+}}, [5 x i64] %[[TMP3]])
 struct f9 global_f9;
@@ -157,7 +157,7 @@ void call_fab(void) { global_fab = func_fab(global_fab); }
 // CHECK-LABEL: @call_fabc
 // CHECK-BE: %[[TMPX:[^ ]+]] = alloca %struct.fabc, align 4
 // CHECK: %[[TMP0:[^ ]+]] = alloca [2 x i64], align 8
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP0]], ptr align 4 @global_fabc, i64 12, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP0]], ptr align 4 @global_fabc, i64 12, i8 0)
 // CHECK: %[[TMP3:[^ ]+]] = load [2 x i64], ptr %[[TMP0]], align 8
 // CHECK-LE: %call = call { i64, i64 } @func_fabc([2 x i64] %[[TMP3]])
 // CHECK-BE: call void @func_fabc(ptr sret(%struct.fabc) align 4 %[[TMPX]], [2 x i64] %[[TMP3]])

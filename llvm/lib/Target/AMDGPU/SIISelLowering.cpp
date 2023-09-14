@@ -3375,7 +3375,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         SDValue Cpy =
             DAG.getMemcpy(Chain, DL, DstAddr, Arg, SizeNode,
                           Outs[i].Flags.getNonZeroByValAlign(),
-                          /*isVol = */ false, /*AlwaysInline = */ true,
+                          /*Vol = */ {false, false}, /*AlwaysInline = */ true,
                           /*isTailCall = */ false, DstInfo,
                           MachinePointerInfo(AMDGPUAS::PRIVATE_ADDRESS));
 

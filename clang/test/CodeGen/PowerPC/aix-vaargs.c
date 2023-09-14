@@ -45,8 +45,8 @@ void testva (int n, ...) {
 // AIX64-NEXT:  store ptr %argp.next, ptr %ap, align 8
 
 
-// AIX32-NEXT:  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %t, ptr align 4 %argp.cur, i32 16, i1 false)
-// AIX64-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %t, ptr align 8 %argp.cur, i64 16, i1 false)
+// AIX32-NEXT:  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %t, ptr align 4 %argp.cur, i32 16, i8 0)
+// AIX64-NEXT:  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %t, ptr align 8 %argp.cur, i64 16, i8 0)
 
 // CHECK-NEXT:  call void @llvm.va_copy(ptr %ap2, ptr %ap)
 
@@ -68,8 +68,8 @@ void testva (int n, ...) {
 
 // CHECK: declare void @llvm.va_start(ptr)
 
-// AIX32: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
-// AIX64: declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+// AIX32: declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i8 immarg)
+// AIX64: declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i8 immarg)
 
 // CHECK: declare void @llvm.va_copy(ptr, ptr)
 // CHECK: declare void @llvm.va_end(ptr)

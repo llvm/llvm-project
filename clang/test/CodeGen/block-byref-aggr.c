@@ -24,7 +24,7 @@ void test0(void) {
 // CHECK-NEXT: [[A_FORWARDING:%.*]] = getelementptr inbounds [[BYREF]], ptr [[A]], i32 0, i32 1
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[A_FORWARDING]]
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[BYREF]], ptr [[T0]], i32 0, i32 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i8 0)
 //   Verify that there's nothing else significant in the function.
 // CHECK-NEXT: call void @_Block_object_dispose(ptr [[A]], i32 8)
 // CHECK-NEXT: ret void
@@ -48,12 +48,12 @@ void test1(void) {
 // CHECK-NEXT: [[B_FORWARDING:%.*]] = getelementptr inbounds [[B_BYREF]], ptr [[B]], i32 0, i32 1
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[B_FORWARDING]]
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[B_BYREF]], ptr [[T0]], i32 0, i32 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i8 0)
 //   Then for 'a':
 // CHECK-NEXT: [[A_FORWARDING:%.*]] = getelementptr inbounds [[A_BYREF]], ptr [[A]], i32 0, i32 1
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[A_FORWARDING]]
 // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds [[A_BYREF]], ptr [[T0]], i32 0, i32 4
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[T1]], ptr align 4 [[TEMP]], i64 4, i8 0)
 //   Verify that there's nothing else significant in the function.
 // CHECK-NEXT: call void @_Block_object_dispose(ptr [[B]], i32 8)
 // CHECK-NEXT: call void @_Block_object_dispose(ptr [[A]], i32 8)

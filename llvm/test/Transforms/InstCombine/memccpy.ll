@@ -30,7 +30,7 @@ define ptr @memccpy_to_memcpy2(ptr %dst) {
 
 define void @memccpy_to_memcpy3(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(5) @hello, i64 5, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(5) @hello, i64 5, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %call = call ptr @memccpy(ptr %dst, ptr @hello, i32 111, i64 10) ; 111 is 'o'
@@ -39,7 +39,7 @@ define void @memccpy_to_memcpy3(ptr %dst) {
 
 define void @memccpy_to_memcpy3_tail(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy3_tail(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(5) @hello, i64 5, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(5) @hello, i64 5, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %call = tail call ptr @memccpy(ptr %dst, ptr @hello, i32 111, i64 10) ; 111 is 'o'
@@ -58,7 +58,7 @@ define ptr @memccpy_to_memcpy3_musttail(ptr %dst, ptr %x, i32 %y, i64 %z) {
 
 define void @memccpy_to_memcpy4(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy4(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @hello, i64 11, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @hello, i64 11, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %call = call ptr @memccpy(ptr %dst, ptr @hello, i32 0, i64 12)
@@ -67,7 +67,7 @@ define void @memccpy_to_memcpy4(ptr %dst) {
 
 define ptr @memccpy_to_memcpy5(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy5(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(7) @hello, i64 7, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(7) @hello, i64 7, i8 0)
 ; CHECK-NEXT:    ret ptr null
 ;
   %call = call ptr @memccpy(ptr %dst, ptr @hello, i32 114, i64 7)
@@ -76,7 +76,7 @@ define ptr @memccpy_to_memcpy5(ptr %dst) {
 
 define ptr @memccpy_to_memcpy5_tail(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy5_tail(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(7) @hello, i64 7, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(7) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(7) @hello, i64 7, i8 0)
 ; CHECK-NEXT:    ret ptr null
 ;
   %call = tail call ptr @memccpy(ptr %dst, ptr @hello, i32 114, i64 7)
@@ -94,7 +94,7 @@ define ptr @memccpy_to_memcpy5_musttail(ptr %dst, ptr %x, i32 %y, i64 %z) {
 
 define ptr @memccpy_to_memcpy6(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy6(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(6) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i64 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(6) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i64 6, i8 0)
 ; CHECK-NEXT:    ret ptr null
 ;
   %call = call ptr @memccpy(ptr %dst, ptr @hello, i32 114, i64 6);
@@ -103,7 +103,7 @@ define ptr @memccpy_to_memcpy6(ptr %dst) {
 
 define ptr @memccpy_to_memcpy7(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy7(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(5) @hello, i64 5, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(5) @hello, i64 5, i8 0)
 ; CHECK-NEXT:    ret ptr null
 ;
   %call = call ptr @memccpy(ptr %dst, ptr @hello, i32 115, i64 5) ; 115 is 's'
@@ -112,7 +112,7 @@ define ptr @memccpy_to_memcpy7(ptr %dst) {
 
 define ptr @memccpy_to_memcpy8(ptr %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy8(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @hello, i64 11, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @hello, i64 11, i8 0)
 ; CHECK-NEXT:    ret ptr null
 ;
   %call = call ptr @memccpy(ptr %dst, ptr @hello, i32 115, i64 11) ; 115 is 's'
@@ -121,7 +121,7 @@ define ptr @memccpy_to_memcpy8(ptr %dst) {
 
 define ptr @memccpy_to_memcpy9(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @memccpy_to_memcpy9(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(12) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(12) @StopCharAfterNulTerminator, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(12) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(12) @StopCharAfterNulTerminator, i64 12, i8 0)
 ; CHECK-NEXT:    [[CALL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 12
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
@@ -131,7 +131,7 @@ define ptr @memccpy_to_memcpy9(ptr %dst, i64 %n) {
 
 define ptr @memccpy_to_memcpy10(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @memccpy_to_memcpy10(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @StringWithEOF, i64 11, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @StringWithEOF, i64 11, i8 0)
 ; CHECK-NEXT:    [[CALL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 11
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
@@ -141,7 +141,7 @@ define ptr @memccpy_to_memcpy10(ptr %dst, i64 %n) {
 
 define ptr @memccpy_to_memcpy11(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @memccpy_to_memcpy11(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @StringWithEOF, i64 11, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @StringWithEOF, i64 11, i8 0)
 ; CHECK-NEXT:    [[CALL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 11
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
@@ -151,7 +151,7 @@ define ptr @memccpy_to_memcpy11(ptr %dst, i64 %n) {
 
 define ptr @memccpy_to_memcpy12(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @memccpy_to_memcpy12(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @StringWithEOF, i64 11, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(11) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(11) @StringWithEOF, i64 11, i8 0)
 ; CHECK-NEXT:    [[CALL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 11
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;

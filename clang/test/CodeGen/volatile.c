@@ -14,9 +14,10 @@ volatile int vA[10];
 struct { int x; } F;
 struct { volatile int x; } vF;
 
-struct { int x; } F2;
-volatile struct { int x; } vF2;
-volatile struct { int x; } *vpF2;
+typedef struct { int x; } F2_t;
+F2_t F2;
+volatile F2_t vF2;
+volatile F2_t *vpF2;
 
 struct { struct { int y; } x; } F3;
 volatile struct { struct { int y; } x; } vF3;
@@ -203,16 +204,20 @@ int main(void) {
 // CHECK: store volatile i32 {{.*}}, ptr @vtS
   (void)vF2;
   // From vF2 to a temporary
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*}} @vF2, {{.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*}} @vF2, {{.*}}, i8 2)
   vF2 = vF2;
   // vF2 to itself
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
   vF2 = vF2 = vF2;
   // vF2 to itself twice
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
   vF2 = (vF2, vF2);
   // vF2 to a temporary, then vF2 to itself
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*@vF2.*}}, i1 true)
-// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i1 true)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr align {{[0-9]+}} %{{.*}}, ptr {{.*@vF2.*}}, i8 2)
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr {{.*@vF2.*}}, i8 3)
+  F2_t aF2 = {0};
+  vF2 = aF2;
+  // vF2 from a temporary
+// CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*@vF2.*}}, ptr align {{[0-9]+}} %{{.*}}, i8 1)
 }

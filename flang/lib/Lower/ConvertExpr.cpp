@@ -6242,9 +6242,11 @@ private:
           builder.create<mlir::arith::MulIOp>(loc, arrSz, eleSz);
       auto buff = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
       mlir::Value buffi = computeCoordinate(buff, off);
+      mlir::Value notVolatile =
+          builder.createIntegerConstant(loc, builder.getI8Type(), 0);
       llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
           builder, loc, memcpyType(), buffi, v.getAddr(), byteSz,
-          /*volatile=*/builder.createBool(loc, false));
+          /*volatile=*/notVolatile);
       createCallMemcpy(args);
 
       // Save the incremented buffer position.
@@ -6293,9 +6295,11 @@ private:
             mlir::Value buff =
                 builder.createConvert(loc, fir::HeapType::get(resTy), mem);
             mlir::Value buffi = computeCoordinate(buff, off);
+            mlir::Value notVolatile =
+                builder.createIntegerConstant(loc, builder.getI8Type(), 0);
             llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
                 builder, loc, memcpyType(), buffi, v.getAddr(), eleSz,
-                /*volatile=*/builder.createBool(loc, false));
+                /*volatile=*/notVolatile);
             createCallMemcpy(args);
 
             builder.create<fir::StoreOp>(loc, plusOne, buffPos);

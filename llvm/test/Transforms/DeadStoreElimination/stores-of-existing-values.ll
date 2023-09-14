@@ -605,8 +605,8 @@ define void @pr49927(ptr %q, ptr %p) {
 
 define void @pr50339(ptr nocapture readonly %0) {
 ; CHECK-LABEL: @pr50339(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) @a, ptr noundef nonnull align 1 dereferenceable(16) [[TMP0:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) @a, ptr noundef nonnull align 1 dereferenceable(16) [[TMP0]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) @a, ptr noundef nonnull align 1 dereferenceable(16) [[TMP0:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) @a, ptr noundef nonnull align 1 dereferenceable(16) [[TMP0]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(16) @a, ptr noundef nonnull align 1 dereferenceable(16) %0, i64 16, i1 false)
@@ -619,10 +619,10 @@ define void @pr50339(ptr nocapture readonly %0) {
 ; in between.
 define i8 @memset_optimized_access(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @memset_optimized_access(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 16, i8 0)
 ; CHECK-NEXT:    store i8 99, ptr [[SRC]], align 1
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[DST]], align 1
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 16, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 16, i8 0)
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
   tail call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 16, i1 false)

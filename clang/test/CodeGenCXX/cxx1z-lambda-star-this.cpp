@@ -14,7 +14,7 @@ int X = A{}.foo()();
 // get the first object with the closure type, which is of type 'struct.A'
 //CHECK: %[[I0:.+]] = getelementptr inbounds %[[A_LAMBDA]], ptr %[[A_LAMBDA_RETVAL]], i32 0, i32 0
 // copy the contents ...
-//CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 8 %[[I0]], ptr align 8 %this1, i32 8, i1 false)
+//CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 8 %[[I0]], ptr align 8 %this1, i32 8, i8 0)
 
 struct B {
   double b = 222;

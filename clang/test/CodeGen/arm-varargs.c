@@ -28,7 +28,7 @@ struct bigstruct simple_struct(void) {
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 40
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 [[CUR]], i32 40, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 [[CUR]], i32 40, i8 0)
 // CHECK: ret void
 }
 
@@ -45,7 +45,7 @@ struct aligned_bigstruct simple_aligned_struct(void) {
 // CHECK: [[CUR_ALIGNED:%[a-z0-9._]+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[CUR_INT_ADD]], i32 -8)
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR_ALIGNED]], i32 16
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 8 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 8 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i8 0)
 // CHECK: ret void
 }
 
@@ -71,7 +71,7 @@ struct hfa simple_hfa(void) {
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 8
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 [[CUR]], i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 [[CUR]], i32 8, i8 0)
 // CHECK: ret void
 }
 
@@ -149,7 +149,7 @@ underaligned_int_struct underaligned_int_struct_test(void) {
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 4
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[CUR]], i32 4, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[CUR]], i32 4, i8 0)
 // CHECK: [[COERCE:%[a-z0-9._]+]] = getelementptr inbounds %struct.underaligned_int_struct, ptr [[RETVAL]], i32 0, i32 0
 // CHECK: [[RESULT:%[a-z0-9._]+]] = load i32, ptr [[COERCE]]
 // CHECK: ret i32 [[RESULT]]
@@ -164,7 +164,7 @@ overaligned_int_struct overaligned_int_struct_test(void) {
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 16
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 4 [[CUR]], i32 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 4 [[CUR]], i32 16, i8 0)
 // CHECK: ret void
 }
 
@@ -177,7 +177,7 @@ underaligned_long_long_struct underaligned_long_long_struct_test(void) {
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 8
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 4 [[CUR]], i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 4 [[CUR]], i32 8, i8 0)
 // CHECK: ret void
 }
 
@@ -192,7 +192,7 @@ overaligned_long_long_struct overaligned_long_long_struct_test(void) {
 // CHECK: [[CUR_ALIGNED:%[a-z0-9._]+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[CUR_INT_ADD]], i32 -8)
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR_ALIGNED]], i32 16
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i8 0)
 // CHECK: ret void
 }
 
@@ -209,7 +209,7 @@ underaligned_int_struct_member underaligned_int_struct_member_test(void) {
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 4
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[CUR]], i32 4, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[RETVAL]], ptr align 4 [[CUR]], i32 4, i8 0)
 // CHECK: [[COERCE:%[a-z0-9._]+]] = getelementptr inbounds %struct.underaligned_int_struct_member, ptr [[RETVAL]], i32 0, i32 0
 // CHECK: [[RESULT:%[a-z0-9._]+]] = load i32, ptr [[COERCE]]
 // CHECK: ret i32 [[RESULT]]
@@ -226,7 +226,7 @@ overaligned_int_struct_member overaligned_int_struct_member_test(void) {
 // CHECK: [[CUR_ALIGNED:%[a-z0-9._]+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[CUR_INT_ADD]], i32 -8)
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR_ALIGNED]], i32 16
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i8 0)
 // CHECK: ret void
 }
 
@@ -239,7 +239,7 @@ underaligned_long_long_struct_member underaligned_long_long_struct_member_test(v
 // CHECK: [[CUR:%[a-z0-9._]+]] = load ptr, ptr @the_list, align 4
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR]], i32 8
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 4 [[CUR]], i32 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 4 [[CUR]], i32 8, i8 0)
 // CHECK: ret void
 }
 
@@ -254,7 +254,7 @@ overaligned_long_long_struct_member overaligned_long_long_struct_member_test(voi
 // CHECK: [[CUR_ALIGNED:%[a-z0-9._]+]] = call ptr @llvm.ptrmask.p0.i32(ptr [[CUR_INT_ADD]], i32 -8)
 // CHECK: [[NEXT:%[a-z0-9._]+]] = getelementptr inbounds i8, ptr [[CUR_ALIGNED]], i32 16
 // CHECK: store ptr [[NEXT]], ptr @the_list, align 4
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 16 %agg.result, ptr align 8 [[CUR_ALIGNED]], i32 16, i8 0)
 // CHECK: ret void
 }
 

@@ -8,25 +8,25 @@ struct X foo(void);
 
 struct X test1(void) {
   // CHECK: @test1
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i8 0)
   return g.y;
 }
 struct X test2(void) {
   // CHECK: @test2
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i8 0)
   struct X a = g.y;
   return a;
 }
 
 void test3(struct X a) {
   // CHECK: @test3
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), ptr {{.*}}, i64 24, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), ptr {{.*}}, i64 24, i8 0)
   g.y = a;
 }
 
 void test4(void) {
   // CHECK: @test4
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}, ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), i64 24, i8 0)
   f(g.y);
 }
 
@@ -39,7 +39,7 @@ int test5(void) {
 
 void test6(void) {
   // CHECK: @test6
-  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), ptr align 4 %{{.*}}, i64 24, i1 false)
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (%struct.Y, ptr @g, i32 0, i32 1), ptr align 4 %{{.*}}, i64 24, i8 0)
   g.y = foo();
 }
 

@@ -61,10 +61,10 @@ end subroutine s
 ! CHECK:             %[[VAL_49:.*]] = arith.constant 1 : i64
 ! CHECK:             %[[VAL_50:.*]] = fir.convert %[[VAL_48]] : (index) -> i64
 ! CHECK:             %[[VAL_51:.*]] = arith.muli %[[VAL_49]], %[[VAL_50]] : i64
-! CHECK:             %[[VAL_52:.*]] = arith.constant false
+! CHECK:             %[[VAL_52:.*]] = arith.constant 0 : i8
 ! CHECK:             %[[VAL_53:.*]] = fir.convert %[[VAL_41]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_54:.*]] = fir.convert %[[VAL_25]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-! CHECK:             fir.call @llvm.memmove.p0.p0.i64(%[[VAL_53]], %[[VAL_54]], %[[VAL_51]], %[[VAL_52]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:             fir.call @llvm.memmove.p0.p0.i64(%[[VAL_53]], %[[VAL_54]], %[[VAL_51]], %[[VAL_52]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
 ! CHECK:             %[[VAL_55:.*]] = arith.constant 1 : index
 ! CHECK:             %[[VAL_56:.*]] = arith.subi %[[VAL_46]], %[[VAL_55]] : index
 ! CHECK:             %[[VAL_57:.*]] = arith.constant 32 : i8

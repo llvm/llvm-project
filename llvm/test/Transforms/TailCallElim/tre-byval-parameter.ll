@@ -38,18 +38,18 @@ define dso_local i32 @_Z3fooi1S(i32 %count, ptr nocapture readonly byval(%struct
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[COUNT_TR]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(20) [[P1]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(20) [[P1]], i64 20, i8 0)
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z3zoo1S(ptr nonnull byval([[STRUCT_S]]) align 8 [[AGG_TMP]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[COUNT_TR]], 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], ptr nonnull align 8 dereferenceable(20) [[P1]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], ptr nonnull align 8 dereferenceable(20) [[P1]], i64 20, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[AGG_TMP14]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[AGG_TMP_I]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP_I]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP_I1]], ptr align 8 [[AGG_TMP_I]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P1]], ptr align 8 [[AGG_TMP_I1]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], i64 20, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP_I]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], i64 20, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP_I1]], ptr align 8 [[AGG_TMP_I]], i64 20, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P1]], ptr align 8 [[AGG_TMP_I1]], i64 20, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[AGG_TMP14]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[AGG_TMP_I]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]

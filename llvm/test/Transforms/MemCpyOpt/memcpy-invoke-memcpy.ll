@@ -9,7 +9,7 @@ define hidden void @test_normal(ptr noalias %dst, ptr %src) personality ptr @__g
 ; CHECK-LABEL: @test_normal(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP:%.*]] = alloca i8, i32 64, align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr nonnull align 8 [[SRC:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr nonnull align 8 [[SRC:%.*]], i64 64, i8 0)
 ; CHECK-NEXT:    invoke void @invoke_me()
 ; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
@@ -17,7 +17,7 @@ define hidden void @test_normal(ptr noalias %dst, ptr %src) personality ptr @__g
 ; CHECK-NEXT:    catch ptr null
 ; CHECK-NEXT:    ret void
 ; CHECK:       try.cont:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 64, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -42,13 +42,13 @@ define hidden void @test_unwind(ptr noalias %dst, ptr %src) personality ptr @__g
 ; CHECK-LABEL: @test_unwind(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEMP:%.*]] = alloca i8, i32 64, align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr nonnull align 8 [[SRC:%.*]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP]], ptr nonnull align 8 [[SRC:%.*]], i64 64, i8 0)
 ; CHECK-NEXT:    invoke void @invoke_me()
 ; CHECK-NEXT:    to label [[TRY_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    catch ptr null
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 64, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST:%.*]], ptr align 8 [[SRC]], i64 64, i8 0)
 ; CHECK-NEXT:    ret void
 ; CHECK:       try.cont:
 ; CHECK-NEXT:    ret void

@@ -38,7 +38,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // SPIR32-NEXT:    store i32 0, ptr [[FLAGS]], align 4
 // SPIR32-NEXT:    [[TMP0:%.*]] = load target("spirv.Queue"), ptr [[DEFAULT_QUEUE]], align 4
 // SPIR32-NEXT:    [[TMP1:%.*]] = load i32, ptr [[FLAGS]], align 4
-// SPIR32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i1 false)
+// SPIR32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i8 0)
 // SPIR32-NEXT:    [[BLOCK_SIZE:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 0
 // SPIR32-NEXT:    store i32 24, ptr [[BLOCK_SIZE]], align 4
 // SPIR32-NEXT:    [[BLOCK_ALIGN:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 1
@@ -109,7 +109,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    store i32 0, ptr [[FLAGS]], align 4
 // STRICTFP-NEXT:    [[TMP0:%.*]] = load target("spirv.Queue"), ptr [[DEFAULT_QUEUE]], align 4
 // STRICTFP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[FLAGS]], align 4
-// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i1 false) #[[ATTR5:[0-9]+]]
+// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i8 0) #[[ATTR5:[0-9]+]]
 // STRICTFP-NEXT:    [[BLOCK_SIZE:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 0
 // STRICTFP-NEXT:    store i32 24, ptr [[BLOCK_SIZE]], align 4
 // STRICTFP-NEXT:    [[BLOCK_ALIGN:%.*]] = getelementptr inbounds <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 1
@@ -162,30 +162,30 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    ret void
 //
 //.
-// SPIR32: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// SPIR32: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// SPIR32: attributes #[[ATTR2]] = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// SPIR32: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// SPIR32: attributes #[[ATTR4]] = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #0 = { convergent noinline norecurse nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// SPIR32: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// SPIR32: attributes #2 = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// SPIR32: attributes #4 = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
-// STRICTFP: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone strictfp "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
-// STRICTFP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// STRICTFP: attributes #[[ATTR2]] = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
-// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #[[ATTR5]] = { strictfp }
+// STRICTFP: attributes #0 = { convergent noinline norecurse nounwind optnone strictfp "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+// STRICTFP: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// STRICTFP: attributes #2 = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #3 = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
+// STRICTFP: attributes #4 = { convergent nounwind "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #5 = { strictfp }
 //.
-// SPIR32: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// SPIR32: [[META1:![0-9]+]] = !{i32 2, i32 0}
-// SPIR32: [[META2:![0-9]+]] = !{i32 1, i32 1, i32 0}
-// SPIR32: [[META3:![0-9]+]] = !{!"none", !"none", !"none"}
-// SPIR32: [[META4:![0-9]+]] = !{!"float*", !"float*", !"int"}
-// SPIR32: [[META5:![0-9]+]] = !{!"", !"", !""}
+// SPIR32: !0 = !{i32 1, !"wchar_size", i32 4}
+// SPIR32: !1 = !{i32 2, i32 0}
+// SPIR32: !2 = !{i32 1, i32 1, i32 0}
+// SPIR32: !3 = !{!"none", !"none", !"none"}
+// SPIR32: !4 = !{!"float*", !"float*", !"int"}
+// SPIR32: !5 = !{!"", !"", !""}
 //.
-// STRICTFP: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// STRICTFP: [[META1:![0-9]+]] = !{i32 2, i32 0}
-// STRICTFP: [[META2:![0-9]+]] = !{i32 1, i32 1, i32 0}
-// STRICTFP: [[META3:![0-9]+]] = !{!"none", !"none", !"none"}
-// STRICTFP: [[META4:![0-9]+]] = !{!"float*", !"float*", !"int"}
-// STRICTFP: [[META5:![0-9]+]] = !{!"", !"", !""}
+// STRICTFP: !0 = !{i32 1, !"wchar_size", i32 4}
+// STRICTFP: !1 = !{i32 2, i32 0}
+// STRICTFP: !2 = !{i32 1, i32 1, i32 0}
+// STRICTFP: !3 = !{!"none", !"none", !"none"}
+// STRICTFP: !4 = !{!"float*", !"float*", !"int"}
+// STRICTFP: !5 = !{!"", !"", !""}
 //.

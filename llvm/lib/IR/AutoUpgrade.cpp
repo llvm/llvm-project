@@ -1045,13 +1045,20 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
-    // alignment parameter to embedding the alignment as an attribute of
-    // the pointer args.
-    if (unsigned ID = StringSwitch<unsigned>(Name)
-                          .StartsWith("memcpy.", Intrinsic::memcpy)
-                          .StartsWith("memmove.", Intrinsic::memmove)
-                          .Default(0)) {
-      if (F->arg_size() == 5) {
+    // alignment parameter to embedding the alignment as an attribute of the
+    // pointer args. Update memcpy/memcpy.inline/memmove's i1 isVolatile to an
+    // i8 bitflag. (The trailing 'p' is to avoid any possiblity of matching on
+    // related intrinsics such as 'memcpy.element.unordered.atomic' and
+    // friends.)
+    if (unsigned ID =
+            StringSwitch<unsigned>(Name)
+                .StartsWith("memcpy.inline.p", Intrinsic::memcpy_inline)
+                .StartsWith("memcpy.p", Intrinsic::memcpy)
+                .StartsWith("memmove.p", Intrinsic::memmove)
+                .Default(0)) {
+      if (F->arg_size() == 5 ||
+          (F->arg_size() == 4 &&
+           F->getFunctionType()->getParamType(3)->isIntegerTy(1))) {
         rename(F);
         // Get the types of dest, src, and len
         ArrayRef<Type *> ParamTypes =
@@ -4571,37 +4578,77 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   }
 
   case Intrinsic::memcpy:
+  case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
   case Intrinsic::memset: {
     // We have to make sure that the call signature is what we're expecting.
-    // We only want to change the old signatures by removing the alignment arg:
-    //  @llvm.mem[cpy|move]...(i8*, i8*, i[32|i64], i32, i1)
-    //    -> @llvm.mem[cpy|move]...(i8*, i8*, i[32|i64], i1)
-    //  @llvm.memset...(i8*, i8, i[32|64], i32, i1)
-    //    -> @llvm.memset...(i8*, i8, i[32|64], i1)
-    // Note: i8*'s in the above can be any pointer type
-    if (CI->arg_size() != 5) {
+    //
+    // 1) Change signatures that had an explict alignment argument (arg 3) to
+    // pass that information via attributes.
+    //
+    // 2) Change the bool isVolatile argument (last arg) to an i8 bitflag (not
+    // for memset).
+    //
+    // Copy attributes, metadata and tailcallness.
+    unsigned NArgs = CI->arg_size();
+    Value *VolFlags = CI->getArgOperand(NArgs - 1);
+    bool UpdateVolatile = (NewFn->getIntrinsicID() != Intrinsic::memset &&
+                           VolFlags->getType()->isIntegerTy(1));
+    bool UpdateAlign = NArgs == 5;
+    if (!UpdateVolatile && !UpdateAlign) {
       DefaultCase();
       return;
     }
-    // Remove alignment argument (3), and add alignment attributes to the
-    // dest/src pointers.
+
+    if (UpdateVolatile) {
+      // Convert i1:false->i8:0 and i1:true->i8:3.
+      Type *Ty = Type::getInt8Ty(C);
+      if (auto *Incoming = dyn_cast<ConstantInt>(VolFlags))
+        VolFlags = ConstantInt::get(Ty, Incoming->isZero() ? 0 : 3);
+      else
+        // Bogus bitcode might not have a constant here, such bitcode will
+        // already cause failures later, an Undef will also do that, but won't
+        // die here.
+        VolFlags = UndefValue::get(Ty);
+    }
+
+    // Get any bundles (probably none).
+    SmallVector<OperandBundleDef, 1> Bundles;
+    CI->getOperandBundlesAsDefs(Bundles);
+
+    // Drop the alignment argument, if there is one.
     Value *Args[4] = {CI->getArgOperand(0), CI->getArgOperand(1),
-                      CI->getArgOperand(2), CI->getArgOperand(4)};
-    NewCall = Builder.CreateCall(NewFn, Args);
-    AttributeList OldAttrs = CI->getAttributes();
-    AttributeList NewAttrs = AttributeList::get(
-        C, OldAttrs.getFnAttrs(), OldAttrs.getRetAttrs(),
-        {OldAttrs.getParamAttrs(0), OldAttrs.getParamAttrs(1),
-         OldAttrs.getParamAttrs(2), OldAttrs.getParamAttrs(4)});
-    NewCall->setAttributes(NewAttrs);
-    auto *MemCI = cast<MemIntrinsic>(NewCall);
-    // All mem intrinsics support dest alignment.
-    const ConstantInt *Align = cast<ConstantInt>(CI->getArgOperand(3));
-    MemCI->setDestAlignment(Align->getMaybeAlignValue());
-    // Memcpy/Memmove also support source alignment.
-    if (auto *MTI = dyn_cast<MemTransferInst>(MemCI))
-      MTI->setSourceAlignment(Align->getMaybeAlignValue());
+                      CI->getArgOperand(2), VolFlags};
+
+    NewCall = Builder.CreateCall(NewFn, Args, Bundles);
+
+    // Copy attributes
+    AttributeList Attrs = CI->getAttributes();
+    if (UpdateAlign)
+      // Drop the Align argument's attributes
+      Attrs = AttributeList::get(
+          C, Attrs.getFnAttrs(), Attrs.getRetAttrs(),
+          {Attrs.getParamAttrs(0), Attrs.getParamAttrs(1),
+           Attrs.getParamAttrs(2), Attrs.getParamAttrs(NArgs - 1)});
+    NewCall->setAttributes(Attrs);
+
+    // Copy metadata, and tailcall kind -- these intrinsics might end up being
+    // actual calls.
+    NewCall->copyMetadata(*CI, {});
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+
+    if (UpdateAlign)
+      // Bogus bitcode might not have a constant here, ignore it if it's wrong.
+      if (auto *Align = dyn_cast<ConstantInt>(CI->getArgOperand(3))) {
+        // Convert the alignment argument to src & dst alignment attributes
+        auto *MemCI = cast<MemIntrinsic>(NewCall);
+        // All mem intrinsics support dest alignment.
+        MemCI->setDestAlignment(Align->getMaybeAlignValue());
+        // Memcpy/Memmove also support source alignment.
+        if (auto *MTI = dyn_cast<MemTransferInst>(MemCI))
+          MTI->setSourceAlignment(Align->getMaybeAlignValue());
+      }
+
     break;
   }
   }

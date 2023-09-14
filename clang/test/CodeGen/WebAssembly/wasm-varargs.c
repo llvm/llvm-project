@@ -78,7 +78,7 @@ struct S {
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i8 0)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 // CHECK-NEXT:    ret void
 //
@@ -106,12 +106,12 @@ struct Z {};
 // CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 0
 // CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[U]], ptr align 4 [[ARGP_CUR]], i32 0, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[U]], ptr align 4 [[ARGP_CUR]], i32 0, i8 0)
 // CHECK-NEXT:    [[ARGP_CUR1:%.*]] = load ptr, ptr [[VA]], align 4
 // CHECK-NEXT:    [[ARGP_NEXT2:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR1]], i32 4
 // CHECK-NEXT:    store ptr [[ARGP_NEXT2]], ptr [[VA]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARGP_CUR1]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i1 false)
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_RESULT]], ptr align 4 [[TMP0]], i32 12, i8 0)
 // CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 // CHECK-NEXT:    ret void
 //

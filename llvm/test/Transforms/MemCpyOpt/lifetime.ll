@@ -32,11 +32,11 @@ define void @memcpy_memcpy_across_lifetime(ptr noalias %p1, ptr noalias %p2, ptr
 ; CHECK-LABEL: @memcpy_memcpy_across_lifetime(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A]], ptr [[P1:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P1]], ptr [[P2:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2]], ptr [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[A]], ptr [[P1:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P1]], ptr [[P2:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2]], ptr [[A]], i64 16, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P3:%.*]], ptr [[P2]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P3:%.*]], ptr [[P2]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
@@ -78,7 +78,7 @@ define i32 @call_slot_two_lifetime_starts() {
 ; CHECK-NEXT:    call void @call(ptr [[TMP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[DST]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DST]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -101,7 +101,7 @@ define i32 @call_slot_clobber_before_lifetime_start() {
 ; CHECK-NEXT:    call void @call(ptr [[TMP]])
 ; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i8 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[DST]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DST]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
@@ -121,10 +121,10 @@ define void @call_slot_lifetime_bitcast(ptr %ptr) {
 ; CHECK-LABEL: @call_slot_lifetime_bitcast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 4 [[PTR:%.*]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 4 [[PTR:%.*]], i64 4, i8 0)
 ; CHECK-NEXT:    [[TMP1_CAST:%.*]] = bitcast ptr [[TMP1]] to ptr
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP1_CAST]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1_CAST]], ptr align 4 [[PTR]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1_CAST]], ptr align 4 [[PTR]], i64 4, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %tmp1 = alloca i32

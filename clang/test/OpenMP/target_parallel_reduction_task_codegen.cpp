@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP57]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP59:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T:%.*]], ptr [[TMP58]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP60:%.*]] = load ptr, ptr [[TMP59]], align 8
-// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP60]], ptr align 8 [[AGG_CAPTURED]], i64 24, i1 false)
+// CHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP60]], ptr align 8 [[AGG_CAPTURED]], i64 24, i8 0)
 // CHECK1-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [[STRUCT_KMP_TASK_T_WITH_PRIVATES]], ptr [[TMP57]], i32 0, i32 1
 // CHECK1-NEXT:    [[TMP62:%.*]] = getelementptr inbounds [[STRUCT__KMP_PRIVATES_T:%.*]], ptr [[TMP61]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP63:%.*]] = load ptr, ptr [[DOTTASK_RED_]], align 8

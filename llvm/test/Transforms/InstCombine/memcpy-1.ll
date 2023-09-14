@@ -11,7 +11,7 @@ declare ptr @memcpy(ptr, ptr, i32)
 
 define ptr @test_simplify1(ptr %mem1, ptr %mem2, i32 %size) {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[MEM1:%.*]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[MEM1:%.*]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i8 0)
 ; CHECK-NEXT:    ret ptr [[MEM1]]
 ;
   %ret = call ptr @memcpy(ptr %mem1, ptr %mem2, i32 %size)
@@ -22,7 +22,7 @@ define ptr @test_simplify1(ptr %mem1, ptr %mem2, i32 %size) {
 
 define ptr @test_simplify2(ptr %mem1, ptr %mem2, i32 %size) strictfp {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[MEM1:%.*]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i1 false) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[MEM1:%.*]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i8 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[MEM1]]
 ;
   %ret = call ptr @memcpy(ptr %mem1, ptr %mem2, i32 %size) strictfp
@@ -36,7 +36,7 @@ declare ptr @get_dest()
 define ptr @test_simplify3(ptr %mem2, i32 %size) {
 ; CHECK-LABEL: @test_simplify3(
 ; CHECK-NEXT:    [[DEST:%.*]] = call ptr @get_dest()
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i8 0)
 ; CHECK-NEXT:    ret ptr [[DEST]]
 ;
 
@@ -47,7 +47,7 @@ define ptr @test_simplify3(ptr %mem2, i32 %size) {
 
 define ptr @test_no_incompatible_attr(ptr %mem1, ptr %mem2, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[MEM1:%.*]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[MEM1:%.*]], ptr align 1 [[MEM2:%.*]], i32 [[SIZE:%.*]], i8 0)
 ; CHECK-NEXT:    ret ptr [[MEM1]]
 ;
 

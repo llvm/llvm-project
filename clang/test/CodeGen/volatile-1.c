@@ -214,8 +214,8 @@ void test(void) {
   // gcc.
 
   // Not a use.  gcc forgets to do the assignment.
-  // CHECK-NEXT: call void @llvm.memcpy{{.*}}, i1 true
-  // CHECK-NEXT: call void @llvm.memcpy{{.*}}, i1 true
+  // CHECK-NEXT: call void @llvm.memcpy{{.*}}, i8 3
+  // CHECK-NEXT: call void @llvm.memcpy{{.*}}, i8 2
   ((a=a),a);
 
   // Not a use.  gcc gets this wrong, it doesn't emit the copy!  

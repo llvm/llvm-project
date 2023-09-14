@@ -85,7 +85,7 @@ define void @reuse_cast_2(i32 %x, ptr %ptr.1.start) {
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [2 x i32], align 4
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use.i8(ptr [[STACK]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[STACK]], ptr align 4 [[PTR_1_START:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[STACK]], ptr align 4 [[PTR_1_START:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

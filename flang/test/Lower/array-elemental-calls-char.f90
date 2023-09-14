@@ -214,7 +214,7 @@ subroutine foo6(c)
   ! CHECK-DAG:     %[[VAL_1:.*]] = arith.constant 10 : index
   ! CHECK-DAG:     %[[VAL_2:.*]] = arith.constant 1 : index
   ! CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 0 : index
-  ! CHECK-DAG:     %[[VAL_4:.*]] = arith.constant false
+  ! CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : i8
   ! CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 32 : i8
   ! CHECK:         %[[VAL_6:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK:         %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
@@ -239,7 +239,7 @@ subroutine foo6(c)
   ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (index) -> i64
   ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:         %[[VAL_24:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_23]], %[[VAL_24]], %[[VAL_22]], %[[VAL_4]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_23]], %[[VAL_24]], %[[VAL_22]], %[[VAL_4]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i8) -> ()
   ! CHECK:         %[[VAL_25:.*]] = arith.subi %[[VAL_6]]#1, %[[VAL_2]] : index
   ! CHECK:         %[[VAL_26:.*]] = fir.undefined !fir.char<1>
   ! CHECK:         %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_5]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>

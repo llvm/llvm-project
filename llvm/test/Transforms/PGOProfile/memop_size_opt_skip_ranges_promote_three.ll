@@ -12,16 +12,16 @@ entry:
 ; CHECK:    i64 2, label %[[CASE_2_LABEL:.*]]
 ; CHECK:  ], !prof [[SWITCH_BW:![0-9]+]]
 ; CHECK: [[CASE_0_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 0, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 0, i8 0)
 ; CHECK:   br label %[[MERGE_LABEL:.*]]
 ; CHECK: [[CASE_1_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 1, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 1, i8 0)
 ; CHECK:   br label %[[MERGE_LABEL:.*]]
 ; CHECK: [[CASE_2_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 2, i1 false)
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 2, i8 0)
 ; CHECK:   br label %[[MERGE_LABEL:.*]]
 ; CHECK: [[DEFAULT_LABEL]]:
-; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %n, i1 false), !prof [[NEWVP:![0-9]+]]
+; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %n, i8 0), !prof [[NEWVP:![0-9]+]]
 ; CHECK:   br label %[[MERGE_LABEL]]
 ; CHECK: [[MERGE_LABEL]]:
 ; CHECK:   ret void

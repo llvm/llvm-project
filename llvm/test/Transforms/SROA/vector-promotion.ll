@@ -1140,14 +1140,14 @@ define i1 @test18() {
 define void @swap-8bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-8bytes(
 ; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i8 0)
 ; CHECK-NEXT:    store i64 [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUG-LABEL: @swap-8bytes(
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr undef, metadata [[META455:![0-9]+]], metadata !DIExpression()), !dbg [[DBG456:![0-9]+]]
 ; DEBUG-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i64, ptr [[X:%.*]], align 1, !dbg [[DBG457:![0-9]+]]
-; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i1 false), !dbg [[DBG458:![0-9]+]]
+; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 8, i8 0), !dbg [[DBG458:![0-9]+]]
 ; DEBUG-NEXT:    store i64 [[TMP_SROA_0_0_COPYLOAD]], ptr [[Y]], align 1, !dbg [[DBG459:![0-9]+]]
 ; DEBUG-NEXT:    ret void, !dbg [[DBG460:![0-9]+]]
 ;
@@ -1161,17 +1161,17 @@ define void @swap-8bytes(ptr %x, ptr %y) {
 define void @swap-7bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-7bytes(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 7, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 7, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 7, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 7, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 7, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 7, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUG-LABEL: @swap-7bytes(
 ; DEBUG-NEXT:    [[TMP:%.*]] = alloca [7 x i8], align 1, !dbg [[DBG464:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP]], metadata [[META463:![0-9]+]], metadata !DIExpression()), !dbg [[DBG464]]
-; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 7, i1 false), !dbg [[DBG465:![0-9]+]]
-; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 7, i1 false), !dbg [[DBG466:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 7, i1 false), !dbg [[DBG467:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 7, i8 0), !dbg [[DBG465:![0-9]+]]
+; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 7, i8 0), !dbg [[DBG466:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 7, i8 0), !dbg [[DBG467:![0-9]+]]
 ; DEBUG-NEXT:    ret void, !dbg [[DBG468:![0-9]+]]
 ;
   %tmp = alloca [7 x i8]
@@ -1184,17 +1184,17 @@ define void @swap-7bytes(ptr %x, ptr %y) {
 define void @swap-16bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-16bytes(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [2 x i64], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 16, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 16, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUG-LABEL: @swap-16bytes(
 ; DEBUG-NEXT:    [[TMP:%.*]] = alloca [2 x i64], align 8, !dbg [[DBG472:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP]], metadata [[META471:![0-9]+]], metadata !DIExpression()), !dbg [[DBG472]]
-; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 16, i1 false), !dbg [[DBG473:![0-9]+]]
-; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 16, i1 false), !dbg [[DBG474:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 16, i1 false), !dbg [[DBG475:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 16, i8 0), !dbg [[DBG473:![0-9]+]]
+; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 16, i8 0), !dbg [[DBG474:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 16, i8 0), !dbg [[DBG475:![0-9]+]]
 ; DEBUG-NEXT:    ret void, !dbg [[DBG476:![0-9]+]]
 ;
   %tmp = alloca [2 x i64]
@@ -1207,17 +1207,17 @@ define void @swap-16bytes(ptr %x, ptr %y) {
 define void @swap-15bytes(ptr %x, ptr %y) {
 ; CHECK-LABEL: @swap-15bytes(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [15 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 15, i1 false)
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 15, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 15, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 15, i8 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 15, i8 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 15, i8 0)
 ; CHECK-NEXT:    ret void
 ;
 ; DEBUG-LABEL: @swap-15bytes(
 ; DEBUG-NEXT:    [[TMP:%.*]] = alloca [15 x i8], align 1, !dbg [[DBG480:![0-9]+]]
 ; DEBUG-NEXT:    call void @llvm.dbg.value(metadata ptr [[TMP]], metadata [[META479:![0-9]+]], metadata !DIExpression()), !dbg [[DBG480]]
-; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 15, i1 false), !dbg [[DBG481:![0-9]+]]
-; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 15, i1 false), !dbg [[DBG482:![0-9]+]]
-; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 15, i1 false), !dbg [[DBG483:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[TMP]], ptr [[X:%.*]], i64 15, i8 0), !dbg [[DBG481:![0-9]+]]
+; DEBUG-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr [[X]], ptr [[Y:%.*]], i64 15, i8 0), !dbg [[DBG482:![0-9]+]]
+; DEBUG-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[Y]], ptr [[TMP]], i64 15, i8 0), !dbg [[DBG483:![0-9]+]]
 ; DEBUG-NEXT:    ret void, !dbg [[DBG484:![0-9]+]]
 ;
   %tmp = alloca [15 x i8]

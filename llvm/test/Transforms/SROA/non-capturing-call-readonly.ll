@@ -588,7 +588,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcp
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[RETVAL_FULL]], ptr [[RETVAL]], i32 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[RETVAL_FULL]], ptr [[RETVAL]], i32 4, i8 0)
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_FULL]])
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
@@ -644,7 +644,7 @@ define [2 x i32] @all_parts_of_alloca_used_in_call_with_multiple_args_with_memcp
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @user_of_alloca_with_multiple_args(ptr [[RETVAL]], ptr [[RETVAL_FULL]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[RETVAL_FULL]], ptr [[RETVAL]], i32 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[RETVAL_FULL]], ptr [[RETVAL]], i32 4, i8 0)
 ; CHECK-NEXT:    [[I1_FCA_0_GEP:%.*]] = getelementptr inbounds [2 x i32], ptr [[RETVAL_FULL]], i32 0, i32 0
 ; CHECK-NEXT:    [[I1_FCA_0_LOAD:%.*]] = load i32, ptr [[I1_FCA_0_GEP]], align 4
 ; CHECK-NEXT:    [[I1_FCA_0_INSERT:%.*]] = insertvalue [2 x i32] poison, i32 [[I1_FCA_0_LOAD]], 0

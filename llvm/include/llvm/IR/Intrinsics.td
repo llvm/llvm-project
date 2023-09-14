@@ -931,7 +931,7 @@ def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
 
 def int_memcpy  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
-                             llvm_i1_ty],
+                             llvm_i8_ty],
                             [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
                              IntrNoCallback,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
@@ -945,7 +945,7 @@ def int_memcpy  : Intrinsic<[],
 // The third argument (specifying the size) must be a constant.
 def int_memcpy_inline
     : Intrinsic<[],
-      [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i1_ty],
+      [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty, llvm_i8_ty],
       [IntrArgMemOnly, IntrWillReturn, IntrNoFree, IntrNoCallback,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
        NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>,
@@ -954,7 +954,7 @@ def int_memcpy_inline
 
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
-                             llvm_i1_ty],
+                             llvm_i8_ty],
                             [IntrArgMemOnly, IntrWillReturn, IntrNoFree,
                              IntrNoCallback,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,

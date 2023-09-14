@@ -18,9 +18,9 @@ declare ptr @llvm.invariant.start.p0(i64, ptr nocapture) nounwind readonly
 define void @test1(ptr %P, ptr %Q) nounwind  {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[MEMTMP]], ptr align 16 [[P:%.*]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[MEMTMP]], ptr align 16 [[P:%.*]], i32 32, i8 0)
 ; CHECK-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 32, ptr [[P]])
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P]], i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr align 16 [[Q:%.*]], ptr align 16 [[P]], i32 32, i8 0)
 ; CHECK-NEXT:    ret void
 ;
   %memtmp = alloca %0, align 16
