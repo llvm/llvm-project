@@ -96,6 +96,9 @@ llabs          |check|
 div            |check|
 ldiv           |check|
 lldiv          |check|
+bsearch        |check|
+qsort          |check|
+qsort_r        |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|
