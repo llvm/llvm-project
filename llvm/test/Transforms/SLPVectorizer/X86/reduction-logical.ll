@@ -458,7 +458,7 @@ define i1 @logical_and_icmp_extra_op(<4 x i32> %x, <4 x i32> %y, i1 %c) {
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C:%.*]], i1 [[C]], i1 false
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 [[S3]], i1 false
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[S3]], i1 [[TMP3]], i1 false
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
@@ -487,7 +487,7 @@ define i1 @logical_or_icmp_extra_op(<4 x i32> %x, <4 x i32> %y, i1 %c) {
 ; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[C]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP3]], i1 true, i1 [[S3]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[S3]], i1 true, i1 [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
