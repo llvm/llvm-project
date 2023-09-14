@@ -13,6 +13,8 @@
 # CHECK-NEXT: .dynamic
 # CHECK-NEXT: .got
 # CHECK-NEXT: .toc
+## The end of .relro_padding is aligned to a common-page-size boundary.
+# CHECK-NEXT: .relro_padding NOBITS 0000000010020400 000400 000c00 00 WA 0 0 1
 # CHECK-NEXT: .data
 # CHECK-NEXT: .branch_lt
 
