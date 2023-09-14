@@ -179,6 +179,17 @@
 // #   define _LIBCPP_AVAILABILITY_HAS_NO_TZDB
 #   define _LIBCPP_AVAILABILITY_TZDB
 
+// Enable additional explicit instantiations of iostreams components. This
+// reduces the number of weak definitions generated in programs that use
+// iostreams by providing a single strong definition in the shared library.
+//
+// TODO: Enable additional explicit instantiations on GCC once it supports exclude_from_explicit_instantiation,
+//       or once libc++ doesn't use the attribute anymore.
+// TODO: Enable them on Windows once https://llvm.org/PR41018 has been fixed.
+#if defined(_LIBCPP_COMPILER_GCC) || defined(_WIN32)
+#  define _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+#endif
+
 #elif defined(__APPLE__)
 
     // shared_mutex and shared_timed_mutex
@@ -356,6 +367,12 @@
 #  define _LIBCPP_AVAILABILITY_HAS_NO_TZDB
 #  define _LIBCPP_AVAILABILITY_TZDB __attribute__((unavailable))
 
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 120000)   || \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 150000) || \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 150000)         || \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 80000)
+#    define _LIBCPP_AVAILABILITY_HAS_NO_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1
+#  endif
 #else
 
 // ...New vendors can add availability markup here...
