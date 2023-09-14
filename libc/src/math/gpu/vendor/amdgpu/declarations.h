@@ -36,6 +36,7 @@ int __ocml_ilogb_f64(double);
 int __ocml_ilogb_f32(float);
 float __ocml_ldexp_f32(float, int);
 double __ocml_ldexp_f64(double, int);
+float __ocml_native_cos_f32(float);
 float __ocml_nextafter_f32(float, float);
 double __ocml_nextafter_f64(double, double);
 float __ocml_pow_f32(float, float);

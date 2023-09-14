@@ -29,6 +29,9 @@ LIBC_INLINE float expf(float x) { return __nv_expf(x); }
 LIBC_INLINE float exp2f(float x) { return __nv_exp2f(x); }
 LIBC_INLINE float exp10f(float x) { return __nv_exp10f(x); }
 LIBC_INLINE float expm1f(float x) { return __nv_expm1f(x); }
+namespace fast {
+  LIBC_INLINE float cosf(float x) { return __nv_fast_cosf(x); }
+}
 LIBC_INLINE double fdim(double x, double y) { return __nv_fdim(x, y); }
 LIBC_INLINE float fdimf(float x, float y) { return __nv_fdimf(x, y); }
 LIBC_INLINE double hypot(double x, double y) { return __nv_hypot(x, y); }

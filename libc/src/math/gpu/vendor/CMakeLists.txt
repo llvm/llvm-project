@@ -118,6 +118,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fast_cosf
+  SRCS
+    cosf.cpp
+  HDRS
+    ../../cosf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -D__CLANG_GPU_APPROX_TRANSCENDENTALS__ -O3 -ffast-math
+)
+
+add_entrypoint_object(
   cosh
   SRCS
     cosh.cpp

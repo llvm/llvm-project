@@ -10,8 +10,14 @@
 #define LLVM_LIBC_SRC_MATH_COSF_H
 
 namespace __llvm_libc {
-
+#if defined(__CLANG_GPU_APPROX_TRANSCENDENTALS__)
+namespace fast {
+    float cosf(float x);
+}
+using fast::cosf;
+#else
 float cosf(float x);
+#endif
 
 } // namespace __llvm_libc
 

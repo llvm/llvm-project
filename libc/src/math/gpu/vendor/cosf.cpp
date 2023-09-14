@@ -13,6 +13,12 @@
 
 namespace __llvm_libc {
 
+#if defined(__CLANG_GPU_APPROX_TRANSCENDENTALS__)
+namespace fast {
+  LLVM_LIBC_FUNCTION(float, cosf, (float x)) { return __llvm_libc::internal::fast::cosf(x); }
+}
+#else
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) { return internal::cosf(x); }
+#endif
 
 } // namespace __llvm_libc

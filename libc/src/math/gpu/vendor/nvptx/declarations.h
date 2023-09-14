@@ -26,6 +26,7 @@ float __nv_expf(float);
 float __nv_exp2f(float);
 float __nv_exp10f(float);
 float __nv_expm1f(float);
+float __nv_fast_cosf(float);
 double __nv_fdim(double, double);
 float __nv_fdimf(float, float);
 double __nv_hypot(double, double);

@@ -102,6 +102,8 @@ add_math_entrypoint_object(floor)
 add_math_entrypoint_object(floorf)
 add_math_entrypoint_object(floorl)
 
+add_math_entrypoint_object(fast_cosf)
+
 add_math_entrypoint_object(fma)
 add_math_entrypoint_object(fmaf)
 

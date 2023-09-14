@@ -30,6 +30,9 @@ LIBC_INLINE float expf(float x) { return __builtin_expf(x); }
 LIBC_INLINE float exp2f(float x) { return __builtin_exp2f(x); }
 LIBC_INLINE float exp10f(float x) { return __ocml_exp10_f32(x); }
 LIBC_INLINE float expm1f(float x) { return __ocml_expm1_f32(x); }
+namespace fast {
+  LIBC_INLINE float cosf(float x) { return __ocml_native_cos_f32(x); }
+}
 LIBC_INLINE double fdim(double x, double y) { return __ocml_fdim_f64(x, y); }
 LIBC_INLINE float fdimf(float x, float y) { return __ocml_fdim_f32(x, y); }
 LIBC_INLINE double hypot(double x, double y) { return __ocml_hypot_f64(x, y); }
