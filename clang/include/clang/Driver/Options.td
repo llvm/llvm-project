@@ -2671,12 +2671,6 @@ def fno_experimental_relative_cxx_abi_vtables :
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Do not use the experimental C++ class ABI for classes with virtual tables">;
 
-defm experimental_omit_vtable_rtti : BoolFOption<"experimental-omit-vtable-rtti",
-  LangOpts<"OmitVTableRTTI">, DefaultFalse,
-  PosFlag<SetTrue, [], [CC1Option], "Omit">,
-  NegFlag<SetFalse, [], [CC1Option], "Do not omit">,
-  BothFlags<[], [CC1Option], " the RTTI component from virtual tables">>;
-
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
                   HelpText<"C++ ABI to use. This will override the target C++ ABI.">;
