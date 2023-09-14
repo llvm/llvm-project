@@ -570,6 +570,18 @@ def FeatureD128 : SubtargetFeature<"d128", "HasD128",
     "and Instructions (FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128)",
     [FeatureLSE128]>;
 
+def FeatureDisableLdp : SubtargetFeature<"disable-ldp", "HasDisableLdp",
+    "true", "Do not emit ldp">;
+
+def FeatureDisableStp : SubtargetFeature<"disable-stp", "HasDisableStp",
+    "true", "Do not emit stp">;
+
+def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedOnly",
+    "true", "In order to emit ldp, first check if the load will be aligned to 2 * element_size">;
+
+def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
+    "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
@@ -1239,7 +1251,9 @@ def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    FeatureArithmeticBccFusion,
                                    FeatureCmpBccFusion,
                                    FeatureFuseAddress,
-                                   FeatureFuseLiterals]>;
+                                   FeatureFuseLiterals,
+			           FeatureLdpAlignedOnly,
+                                   FeatureStpAlignedOnly]>;
 
 def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     "Ampere Computing Ampere-1A processors", [
@@ -1252,7 +1266,9 @@ def TuneAmpere1A : SubtargetFeature<"ampere1a", "ARMProcFamily", "Ampere1A",
                                     FeatureCmpBccFusion,
                                     FeatureFuseAddress,
                                     FeatureFuseLiterals,
-                                    FeatureFuseLiterals]>;
+                                    FeatureFuseLiterals,
+                                    FeatureLdpAlignedOnly,
+                                    FeatureStpAlignedOnly]>;
 
 def ProcessorFeatures {
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
