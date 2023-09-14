@@ -51,6 +51,11 @@ protected:
       bool Is64Bit = MBB.getParent()->getSubtarget<PPCSubtarget>().isPPC64();
       bool IsAIX = MBB.getParent()->getSubtarget<PPCSubtarget>().isAIXABI();
       bool IsPCREL = false;
+      MachineFunction *MF = MBB.getParent();
+      MachineRegisterInfo &RegInfo = MF->getRegInfo();
+      const TargetRegisterClass *GPRNoZero =
+          Is64Bit ? &PPC::G8RC_and_G8RC_NOX0RegClass
+                  : &PPC::GPRC_and_GPRC_NOR0RegClass;
 
       for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
            I != IE;) {
@@ -64,6 +69,8 @@ protected:
             MI.getOpcode() != PPC::ADDItlsldLADDR &&
             MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
             MI.getOpcode() != PPC::ADDItlsldLADDR32 &&
+            MI.getOpcode() != PPC::TLSLDAIX &&
+            MI.getOpcode() != PPC::TLSLDAIX8 &&
             MI.getOpcode() != PPC::TLSGDAIX &&
             MI.getOpcode() != PPC::TLSGDAIX8 && !IsTLSTPRelMI && !IsPCREL) {
           // Although we create ADJCALLSTACKDOWN and ADJCALLSTACKUP
@@ -109,6 +116,12 @@ protected:
           Opc1 = PPC::ADDItlsldL32;
           Opc2 = PPC::GETtlsldADDR32;
           break;
+        case PPC::TLSLDAIX:
+          Opc2 = PPC::GETtlsMOD32AIX;
+          break;
+        case PPC::TLSLDAIX8:
+          Opc2 = PPC::GETtlsMOD64AIX;
+          break;
         case PPC::TLSGDAIX8:
           // TLSGDAIX8 is expanded to two copies and GET_TLS_ADDR, so we only
           // set Opc2 here.
@@ -145,19 +158,55 @@ protected:
                                                               .addImm(0);
 
         if (IsAIX) {
-          // The variable offset and region handle are copied in r4 and r3. The
-          // copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
-          if (!IsTLSTPRelMI) {
-            BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
-                .addReg(MI.getOperand(1).getReg());
+          if (MI.getOpcode() == PPC::TLSLDAIX8 ||
+              MI.getOpcode() == PPC::TLSLDAIX) {
+            // For Local-Dynamic
+            auto &Subtarget = MBB.getParent()->getSubtarget<PPCSubtarget>();
+            bool IsLargeModel =
+                Subtarget.getTargetMachine().getCodeModel() == CodeModel::Large;
+            Register ModuleHandleHReg;
+            unsigned LDTocOp =
+                Is64Bit ? (IsLargeModel ? PPC::LDtocL : PPC::LDtoc)
+                        : (IsLargeModel ? PPC::LWZtocL : PPC::LWZtoc);
+            if (IsLargeModel) {
+              ModuleHandleHReg = RegInfo.createVirtualRegister(GPRNoZero);
+              BuildMI(MBB, I, DL,
+                      TII->get(Is64Bit ? PPC::ADDIStocHA8 : PPC::ADDIStocHA),
+                      ModuleHandleHReg)
+                  .addReg(Subtarget.getTOCPointerRegister())
+                  .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG);
+            }
+            Register MHReg = RegInfo.createVirtualRegister(GPRNoZero);
+            BuildMI(MBB, I, DL, TII->get(LDTocOp), MHReg)
+                .addExternalSymbol("_$TLSML[TC]", PPCII::MO_TLSLD_FLAG)
+                .addReg(IsLargeModel
+                            ? ModuleHandleHReg
+                            : Register(Subtarget.getTOCPointerRegister()));
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
-                .addReg(MI.getOperand(2).getReg());
-            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3).addReg(GPR4);
-          } else
-            // The opcode of GETtlsTpointer32AIX does not change, because later
-            // this instruction will be expanded into a call to .__get_tpointer,
-            // which will return the thread pointer into r3.
-            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
+                .addReg(MHReg);
+            // The call to __tls_get_mod.
+            BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
+            BuildMI(MBB, I, DL, TII->get(Is64Bit ? PPC::ADD8 : PPC::ADD4), GPR3)
+                .addReg(GPR3)
+                .addReg(MI.getOperand(1).getReg());
+          } else {
+            // For Global-Dynamic
+            // The variable offset and region handle are copied in r4 and r3.
+            // The copies are followed by GETtlsADDR32AIX/GETtlsADDR64AIX.
+            if (!IsTLSTPRelMI) {
+              BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR4)
+                  .addReg(MI.getOperand(1).getReg());
+              BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
+                  .addReg(MI.getOperand(2).getReg());
+              BuildMI(MBB, I, DL, TII->get(Opc2), GPR3)
+                  .addReg(GPR3)
+                  .addReg(GPR4);
+            } else
+              // The opcode of GETtlsTpointer32AIX does not change, because
+              // later this instruction will be expanded into a call to
+              // .__get_tpointer, which will return the thread pointer into r3.
+              BuildMI(MBB, I, DL, TII->get(Opc2), GPR3);
+          }
         } else {
           MachineInstr *Addi;
           if (IsPCREL) {
