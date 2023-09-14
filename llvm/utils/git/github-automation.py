@@ -56,6 +56,7 @@ def escape_description(str):
     str = re.sub("#(?=\d+\s)", "#<!-- -->", str)
     return str
 
+
 def sanitize_markdown_code_block(str):
     # remove codeblocks terminators
     return re.sub("^\s*```\s*$", r"` ` `", str)
@@ -164,8 +165,8 @@ class PRSubscriber:
         team_mention = "@llvm/{}".format(team.slug)
 
         body = escape_description(self.pr.body)
-# Note: the comment is in markdown and the code below
-# is sensible to line break
+        # Note: the comment is in markdown and the code below
+        # is sensible to line break
         comment = f"""
 {self.COMMENT_TAG}
 {team_mention}
