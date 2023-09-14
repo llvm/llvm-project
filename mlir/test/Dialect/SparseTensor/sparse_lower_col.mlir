@@ -9,8 +9,7 @@
 // RUN: FileCheck %s --check-prefix=CHECK-LIR
 
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 #trait_matvec = {

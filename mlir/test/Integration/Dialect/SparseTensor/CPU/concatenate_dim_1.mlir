@@ -28,7 +28,7 @@
 // RUN: %{compile} | %{run} | FileCheck %s
 
 #MAT_C_C = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
-#MAT_D_C = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#MAT_D_C = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 #MAT_C_D = #sparse_tensor.encoding<{lvlTypes = ["compressed", "dense"]}>
 #MAT_D_D = #sparse_tensor.encoding<{
   lvlTypes = ["dense", "dense"],
@@ -46,8 +46,7 @@
 }>
 
 #MAT_D_C_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 module {

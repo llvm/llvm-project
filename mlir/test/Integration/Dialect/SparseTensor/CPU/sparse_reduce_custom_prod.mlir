@@ -32,10 +32,9 @@
 // sparse_reducitons.mlir)
 
 #SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 //

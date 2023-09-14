@@ -25,7 +25,7 @@ module attributes { transform.with_named_sequence } {
   }
 }
 
-#CSR = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
+#CSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
 
 func.func @payload(%lhs: tensor<10x20xf16>,
                    %sp_lhs: tensor<10x20xf16, #CSR>,
