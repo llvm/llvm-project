@@ -17392,13 +17392,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log_clamp);
   case AMDGPU::BI__builtin_amdgcn_ldexp:
-  case AMDGPU::BI__builtin_amdgcn_ldexpf:
-  case AMDGPU::BI__builtin_amdgcn_ldexph: {
+  case AMDGPU::BI__builtin_amdgcn_ldexpf: {
     llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
     llvm::Function *F =
         CGM.getIntrinsic(Intrinsic::ldexp, {Src0->getType(), Src1->getType()});
     return Builder.CreateCall(F, {Src0, Src1});
+  }
+  case AMDGPU::BI__builtin_amdgcn_ldexph: {
+    // The raw instruction has a different behavior for out of bounds exponent
+    // values (implicit truncation instead of saturate to short_min/short_max).
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::ldexp, {Src0->getType(), Int16Ty});
+    return Builder.CreateCall(F, {Src0, Builder.CreateTrunc(Src1, Int16Ty)});
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_mant:
   case AMDGPU::BI__builtin_amdgcn_frexp_mantf:

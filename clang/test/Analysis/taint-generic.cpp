@@ -7,6 +7,12 @@ int scanf(const char*, ...);
 int mySource1();
 int mySource3();
 
+typedef struct _FILE FILE;
+extern "C" {
+extern FILE *stdin;
+}
+int fscanf(FILE *stream, const char *format, ...);
+
 bool isOutOfRange2(const int*);
 
 void mySink2(int);
@@ -123,4 +129,10 @@ void testConfigurationMemberFunc() {
 
   foo.myMemberScanf("%d", &x);
   Buffer[x] = 1; // expected-warning {{Out of bound memory access }}
+}
+
+void testReadingFromStdin(char **p) {
+  int n;
+  fscanf(stdin, "%d", &n);
+  Buffer[n] = 1; // expected-warning {{Out of bound memory access (index is tainted)}}
 }

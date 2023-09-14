@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -sparsification | FileCheck %s
 
 #SpVec = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
-#CSR   = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#CSR   = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 #Row   = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "dense" ] }>
 #EncDenseVec = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
 
