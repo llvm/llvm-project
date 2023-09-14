@@ -126,6 +126,27 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoad(void *data) {
   return module;
 }
 
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
+                                                                int optLevel) {
+  ScopedContext scopedContext;
+  CUmodule module = nullptr;
+  char jitErrorBuffer[4096] = {0};
+  CUjit_option jitOptions[] = {CU_JIT_ERROR_LOG_BUFFER,
+                               CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES,
+                               CU_JIT_OPTIMIZATION_LEVEL};
+  void *jitOptionsVals[] = {jitErrorBuffer,
+                            reinterpret_cast<void *>(sizeof(jitErrorBuffer)),
+                            reinterpret_cast<void *>(optLevel)};
+
+  CUresult result =
+      cuModuleLoadDataEx(&module, data, 3, jitOptions, jitOptionsVals);
+  if (result) {
+    fprintf(stderr, "JIT compilation failed with: '%s'\n", jitErrorBuffer);
+    CUDA_REPORT_IF_ERROR(result);
+  }
+  return module;
+}
+
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuModuleUnload(CUmodule module) {
   CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
 }
