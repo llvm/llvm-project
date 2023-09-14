@@ -11,7 +11,7 @@ jobs:
   pr-target:
     runs-on: ubuntu-latest
     # Ignore PRs with more than 10 commits.  Pull requests with a lot of
-    # commits tend to be accidents usually when somone made a mistake while trying
+    # commits tend to be accidents usually when someone made a mistake while trying
     # to rebase.  We want to ignore these pull requests to avoid excessive
     # notifications.
     if: github.repository == 'llvm/llvm-project' &&
