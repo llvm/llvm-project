@@ -47,8 +47,8 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
     target, assembly is PTX code, which can be JITted at runtime.
     3. `Binary`: represents executable code for a GPU single architecture. For
     example, PTX code that was compiled for a specific compute capability. Note
-    that this format is likely to throw an error if there is an arch mismatch
-    between the compiled and running arch.
+    that this format is likely to throw an error if there is an architecture
+    mismatch between the compiled and running architecture.
     4. `Fatbin`: represents a GPU fat binary with executable code for multiple
     architectures. This format is the default; thus, it gets elided inassembly
     code.

@@ -153,11 +153,12 @@ struct SparseCompilerOptions
   /// Option 1 adds a significant runtime performance hit, however, tests are
   /// more likely to pass with this option.
   /// Option 2 is better for execution time as there is no JIT; however, the
-  /// program will fail if there's an arch mismatch between `gpuChip` and the
-  /// GPU running the program.
-  /// Option 3 is the best compromise between options 1 & 2 as it can JIT in
-  /// case of an arch mismatch between `gpuChip` and the running arch. However,
-  /// it's only possible to JIT to a higher CC than `gpuChip`.
+  /// program will fail if there's an architecture mismatch between `gpuChip`
+  /// and the GPU running the program.
+  /// Option 3 is the best compromise between options 1 and 2 as it can JIT in
+  /// case of an architecture mismatch between `gpuChip` and the running
+  /// architecture. However, it's only possible to JIT to a higher CC than
+  /// `gpuChip`.
   PassOptions::Option<std::string> gpuFormat{
       *this, "gpu-format", desc("GPU compilation format"), init("fatbin")};
 
