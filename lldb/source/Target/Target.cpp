@@ -66,7 +66,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 
-#include <_types/_uint32_t.h>
 #include <memory>
 #include <mutex>
 #include <optional>

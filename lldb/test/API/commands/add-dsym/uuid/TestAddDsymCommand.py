@@ -70,20 +70,15 @@ class AddDsymCommandCase(TestBase):
             lldb.SBTarget.eBroadcastBitSymbolsLoaded,
         )
 
-
-        self.exe_name = "a.out"
-
         # Add the dSYM
         self.do_add_dsym_with_success(self.exe_name)
 
         # Get the next event
-        # event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
         event = lldb.SBEvent()
         listener.WaitForEvent(1, event)
 
         # Check that the event is valid
         self.assertTrue(event.IsValid(), "Got a valid eBroadcastBitSymbolsLoaded event.")
-
 
     def generate_main_cpp(self, version=0):
         """Generate main.cpp from main.cpp.template."""

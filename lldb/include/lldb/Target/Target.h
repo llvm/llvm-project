@@ -9,7 +9,6 @@
 #ifndef LLDB_TARGET_TARGET_H
 #define LLDB_TARGET_TARGET_H
 
-#include <_types/_uint32_t.h>
 #include <list>
 #include <map>
 #include <memory>
