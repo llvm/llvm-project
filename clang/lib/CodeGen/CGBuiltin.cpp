@@ -2360,7 +2360,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (Trip.isGNUEnvironment() || Trip.isOSMSVCRT())
       ConstAlways = true;
     break;
-    }
+  }
   default:
     break;
   }  
