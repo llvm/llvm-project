@@ -813,9 +813,9 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
   auto matA = reinterpret_cast<cusparseLtSpMatHandleAndData *>(a);
   auto matB = reinterpret_cast<cusparseLtDnMatHandleAndData *>(b);
   auto matC = reinterpret_cast<cusparseLtDnMatHandleAndData *>(c);
-  auto workspace_size = reinterpret_cast<int64_t *>(bs);
-  auto compressed_size = &(reinterpret_cast<int64_t *>(bs)[1]);
-  auto compressed_buffer_size = &(reinterpret_cast<int64_t *>(bs)[2]);
+  auto workspace_size = reinterpret_cast<size_t *>(bs);
+  auto compressed_size = &(reinterpret_cast<size_t *>(bs)[1]);
+  auto compressed_buffer_size = &(reinterpret_cast<size_t *>(bs)[2]);
   auto cTp = static_cast<cusparseComputeType>(ctp);
 
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
