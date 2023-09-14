@@ -6068,8 +6068,9 @@ SwitchLookupTable::SwitchLookupTable(
     bool LinearMappingPossible = true;
     APInt PrevVal;
     APInt DistToPrev;
-    // When linear map is monotonic, we can attach nsw.
-    bool Wrapped = false;
+    // When linear map is monotonic and signed overflow doesn't happen on
+    // maximum index, we can attach nsw on Add and Mul.
+    bool NonMonotonic = false;
     assert(TableSize >= 2 && "Should be a SingleValue table.");
     // Check if there is the same distance between two consecutive values.
     for (uint64_t I = 0; I < TableSize; ++I) {
@@ -6089,7 +6090,7 @@ SwitchLookupTable::SwitchLookupTable(
           LinearMappingPossible = false;
           break;
         }
-        Wrapped |=
+        NonMonotonic |=
             Dist.isStrictlyPositive() ? Val.sle(PrevVal) : Val.sgt(PrevVal);
       }
       PrevVal = Val;
@@ -6097,7 +6098,10 @@ SwitchLookupTable::SwitchLookupTable(
     if (LinearMappingPossible) {
       LinearOffset = cast<ConstantInt>(TableContents[0]);
       LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
-      LinearMapValWrapped = Wrapped;
+      bool MayWrap = false;
+      APInt M = LinearMultiplier->getValue();
+      (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
+      LinearMapValWrapped = NonMonotonic || MayWrap;
       Kind = LinearMapKind;
       ++NumLinearMaps;
       return;
