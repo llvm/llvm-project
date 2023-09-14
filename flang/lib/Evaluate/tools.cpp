@@ -702,15 +702,14 @@ std::optional<Expr<SomeType>> ConvertToType(
 bool IsAssumedRank(const Symbol &original) {
   if (const auto *assoc{original.detailsIf<semantics::AssocEntityDetails>()}) {
     if (assoc->rank()) {
-      return false; // in SELECT RANK case
+      return false; // in RANK(n) or RANK(*)
+    } else if (assoc->IsAssumedRank()) {
+      return true; // RANK DEFAULT
     }
   }
   const Symbol &symbol{semantics::ResolveAssociations(original)};
-  if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    return details->IsAssumedRank();
-  } else {
-    return false;
-  }
+  const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
+  return object && object->IsAssumedRank();
 }
 
 bool IsAssumedRank(const ActualArgument &arg) {
@@ -1209,17 +1208,7 @@ namespace Fortran::semantics {
 const Symbol &ResolveAssociations(const Symbol &original) {
   const Symbol &symbol{original.GetUltimate()};
   if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
-      return ResolveAssociations(*nested);
-    }
-  }
-  return symbol;
-}
-
-const Symbol &ResolveAssociationsExceptSelectRank(const Symbol &original) {
-  const Symbol &symbol{original.GetUltimate()};
-  if (const auto *details{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (!details->rank()) {
+    if (!details->rank()) { // Not RANK(n) or RANK(*)
       if (const Symbol * nested{UnwrapWholeSymbolDataRef(details->expr())}) {
         return ResolveAssociations(*nested);
       }
