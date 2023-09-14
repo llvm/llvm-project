@@ -47,7 +47,7 @@ public:
   /// Constructor initializing the toolkit path, the list of files to link to,
   /// extra command line options, the compilation target and a callback for
   /// obtaining the parent symbol table. The default compilation target is
-  /// `binOrFatbin`.
+  /// `Fatbin`.
   TargetOptions(
       StringRef toolkitPath = {}, ArrayRef<std::string> linkFiles = {},
       StringRef cmdOptions = {},
