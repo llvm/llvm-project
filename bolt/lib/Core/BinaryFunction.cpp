@@ -965,6 +965,20 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
   return Label;
 }
 
+MCSymbol *BinaryFunction::getOrCreateInstructionLabel(uint64_t Address) {
+  const uint64_t Offset = Address - getAddress();
+  assert(Offset < getSize() && "Instruction label past function end");
+
+  auto LI = InstructionLabels.find(Offset);
+  if (LI != InstructionLabels.end())
+    return LI->second;
+
+  MCSymbol *Label = BC.Ctx->createNamedTempSymbol();
+  InstructionLabels[Offset] = Label;
+
+  return Label;
+}
+
 ErrorOr<ArrayRef<uint8_t>> BinaryFunction::getData() const {
   BinarySection &Section = *getOriginSection();
   assert(Section.containsRange(getAddress(), getMaxSize()) &&
@@ -1362,6 +1376,10 @@ add_instruction:
       //       5 bytes. Preserve the size info using annotations.
       MIB->addAnnotation(Instruction, "Size", static_cast<uint32_t>(Size));
     }
+
+    auto InstructionLabel = InstructionLabels.find(Offset);
+    if (InstructionLabel != InstructionLabels.end())
+      BC.MIB->setLabel(Instruction, InstructionLabel->second);
 
     addInstruction(Offset, std::move(Instruction));
   }

@@ -1863,6 +1863,8 @@ void BinaryContext::printInstruction(raw_ostream &OS, const MCInst &Instruction,
   }
   if (std::optional<uint32_t> Offset = MIB->getOffset(Instruction))
     OS << " # Offset: " << *Offset;
+  if (auto Label = MIB->getLabel(Instruction))
+    OS << " # Label: " << **Label;
 
   MIB->printAnnotations(Instruction, OS);
 

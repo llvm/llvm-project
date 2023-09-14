@@ -2545,7 +2545,9 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // Adjust the point of reference to a code location inside a function.
     if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
       RefFunctionOffset = Address - ReferencedBF->getAddress();
-      if (RefFunctionOffset) {
+      if (Relocation::isInstructionReference(RType)) {
+        ReferencedSymbol = ReferencedBF->getOrCreateInstructionLabel(Address);
+      } else if (RefFunctionOffset) {
         if (ContainingBF && ContainingBF != ReferencedBF) {
           ReferencedSymbol =
               ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
