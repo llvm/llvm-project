@@ -59,7 +59,7 @@ namespace llvm {
 /// createHexagonISelDag - This pass converts a legalized DAG into a
 /// Hexagon-specific DAG, ready for instruction scheduling.
 FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   return new HexagonDAGToDAGISel(TM, OptLevel);
 }
 }

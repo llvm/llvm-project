@@ -765,7 +765,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   for (auto MI : PHINodes) {
     processPHINode(*MI);
   }
-  if (MF.getTarget().getOptLevel() > CodeGenOpt::None && EnableM0Merge)
+  if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
     hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
