@@ -3220,7 +3220,8 @@ static void emitCppBoilerplate(KokkosCppEmitter &emitter, bool enablePythonWrapp
     emitter << "#endif\n";
     emitter << "\n";
     emitter << "// If building a CPP driver, need to provide a version of\n";
-    emitter << "//_mlir_ciface_newSparseTensor() that takes enum types, not underlying integer types.\n";
+    emitter << "// _mlir_ciface_newSparseTensor() that takes underlying integer types, not enum types like DimLevelType.\n";
+    emitter << "// The MLIR-Kokkos generated code doesn't know about the enum types at all.\n";
     emitter << "#ifdef PYTACO_CPP_DRIVER\n";
     emitter << "int8_t* _mlir_ciface_newSparseTensor(\n";
     emitter << "  StridedMemRefType<index_type, 1> *dimSizesRef,\n";
