@@ -1981,29 +1981,6 @@ static mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
   return converter.getFirOpBuilder().getIntegerType(loopVarTypeSize);
 }
 
-/// Create empty blocks for the current region.
-/// These blocks replace blocks parented to an enclosing region.
-static void createEmptyRegionBlocks(
-    fir::FirOpBuilder &firOpBuilder,
-    std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
-  mlir::Region *region = &firOpBuilder.getRegion();
-  for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
-    if (eval.block) {
-      if (eval.block->empty()) {
-        eval.block->erase();
-        eval.block = firOpBuilder.createBlock(region);
-      } else {
-        [[maybe_unused]] mlir::Operation &terminatorOp = eval.block->back();
-        assert((mlir::isa<mlir::omp::TerminatorOp>(terminatorOp) ||
-                mlir::isa<mlir::omp::YieldOp>(terminatorOp)) &&
-               "expected terminator op");
-      }
-    }
-    if (!eval.isDirective() && eval.hasNestedEvaluations())
-      createEmptyRegionBlocks(firOpBuilder, eval.getNestedEvaluations());
-  }
-}
-
 static void resetBeforeTerminator(fir::FirOpBuilder &firOpBuilder,
                                   mlir::Operation *storeOp,
                                   mlir::Block &block) {
@@ -2092,7 +2069,9 @@ static void createBodyOfOp(
   // If it is an unstructured region and is not the outer region of a combined
   // construct, create empty blocks for all evaluations.
   if (eval.lowerAsUnstructured() && !outerCombined)
-    createEmptyRegionBlocks(firOpBuilder, eval.getNestedEvaluations());
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
 
   // Insert the terminator.
   if constexpr (std::is_same_v<Op, mlir::omp::WsLoopOp> ||

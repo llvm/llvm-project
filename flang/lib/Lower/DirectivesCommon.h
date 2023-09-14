@@ -587,6 +587,30 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointToStart(&block);
 }
 
+/// Create empty blocks for the current region.
+/// These blocks replace blocks parented to an enclosing region.
+template <typename... TerminatorOps>
+void createEmptyRegionBlocks(
+    fir::FirOpBuilder &builder,
+    std::list<Fortran::lower::pft::Evaluation> &evaluationList) {
+  mlir::Region *region = &builder.getRegion();
+  for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+    if (eval.block) {
+      if (eval.block->empty()) {
+        eval.block->erase();
+        eval.block = builder.createBlock(region);
+      } else {
+        [[maybe_unused]] mlir::Operation &terminatorOp = eval.block->back();
+        assert(mlir::isa<TerminatorOps...>(terminatorOp) &&
+               "expected terminator op");
+      }
+    }
+    if (!eval.isDirective() && eval.hasNestedEvaluations())
+      createEmptyRegionBlocks<TerminatorOps...>(builder,
+                                                eval.getNestedEvaluations());
+  }
+}
+
 } // namespace lower
 } // namespace Fortran
 
