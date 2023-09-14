@@ -426,7 +426,7 @@ def testGetDenseResourceElementsAttr():
         element_type = IntegerType.get_signless(32)
         tensor_type = RankedTensorType.get((2, 3), element_type)
         array = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int32)
-        resource = DenseResourceElementsAttr.get_unsafe_from_buffer(
+        resource = DenseResourceElementsAttr.get_from_buffer(
             array, "from_py", tensor_type
         )
         module = Module.parse("module {}")

@@ -72,16 +72,17 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
-static const char kDenseResourceElementsAttrGetUnsafeDocstring[] =
+static const char kDenseResourceElementsAttrGetFromBufferDocstring[] =
     R"(Gets a DenseResourceElementsAttr from a Python buffer or array.
 
-This function is extremely unsafe and must be used when strict invariants
-are met:
+This function does minimal validation or massaging of the data, and it is
+up to the caller to ensure that the buffer meets the characteristics
+implied by the shape.
 
-* The contents of the buffer matches the contiguous data layout implied
-  by the given ShapedType.
-* The caller arranges to keep the backing memory alive and valid for the
-  duration of any use of the attribute.
+The backing buffer and any user objects will be retained for the lifetime
+of the resource blob. This is typically bounded to the context but the
+resource can have a shorter lifespan depending on how it is used in
+subsequent processing.
 
 Args:
   buffer: The array or buffer to convert.
@@ -1033,26 +1034,42 @@ public:
   static PyDenseResourceElementsAttribute
   getFromBuffer(py::buffer buffer, std::string name, PyType type,
                 DefaultingPyMlirContext contextWrapper) {
-    // Do not request any conversions as we must ensure to use caller
-    // managed memory.
-    int flags = 0;
-    Py_buffer view;
-    if (PyObject_GetBuffer(buffer.ptr(), &view, flags) != 0) {
-      throw py::error_already_set();
-    }
-    auto freeBuffer = llvm::make_scope_exit([&]() { PyBuffer_Release(&view); });
-
-    if (!PyBuffer_IsContiguous(&view, 'A')) {
-      throw std::invalid_argument("Contiguous buffer is required");
-    }
-
     if (!mlirTypeIsAShaped(type)) {
       throw std::invalid_argument(
           "Constructing a DenseResourceElementsAttr requires a ShapedType");
     }
-    size_t rawBufferSize = view.len;
-    MlirAttribute attr = mlirUnmanagedDenseBlobResourceElementsAttrGet(
-        type, toMlirStringRef(name), view.buf, rawBufferSize);
+
+    // Do not request any conversions as we must ensure to use caller
+    // managed memory.
+    int flags = 0;
+    std::unique_ptr<Py_buffer> view = std::make_unique<Py_buffer>();
+    if (PyObject_GetBuffer(buffer.ptr(), view.get(), flags) != 0) {
+      throw py::error_already_set();
+    }
+
+    // This scope releaser will only release if we haven't yet transferred
+    // ownership.
+    auto freeBuffer = llvm::make_scope_exit([&]() {
+      if (view)
+        PyBuffer_Release(view.get());
+    });
+
+    if (!PyBuffer_IsContiguous(view.get(), 'A')) {
+      throw std::invalid_argument("Contiguous buffer is required");
+    }
+
+    // The userData is a Py_buffer* that the deleter owns.
+    auto deleter = [](void *userData, const void *data, size_t size,
+                      size_t align) {
+      Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
+      PyBuffer_Release(ownedView);
+      delete ownedView;
+    };
+
+    size_t rawBufferSize = view->len;
+    MlirAttribute attr = mlirUnmanagedDenseResourceElementsAttrGet(
+        type, toMlirStringRef(name), view->buf, rawBufferSize, deleter,
+        static_cast<void *>(view.get()));
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseResourceElementsAttr could not be constructed from the given "
@@ -1060,15 +1077,16 @@ public:
           "This may mean that the Python buffer layout does not match that "
           "MLIR expected layout and is a bug.");
     }
+    view.release();
     return PyDenseResourceElementsAttribute(contextWrapper->getRef(), attr);
   }
 
   static void bindDerived(ClassTy &c) {
-    c.def_static("get_unsafe_from_buffer",
+    c.def_static("get_from_buffer",
                  PyDenseResourceElementsAttribute::getFromBuffer,
                  py::arg("array"), py::arg("name"), py::arg("type"),
                  py::arg("context") = py::none(),
-                 kDenseResourceElementsAttrGetUnsafeDocstring);
+                 kDenseResourceElementsAttrGetFromBufferDocstring);
   }
 };
 
