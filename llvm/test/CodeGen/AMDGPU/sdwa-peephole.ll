@@ -2103,10 +2103,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; NOSDWA:       ; %bb.0: ; %bb0
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; NOSDWA-NEXT:    s_mov_b64 s[4:5], 0
-; NOSDWA-NEXT:    v_mov_b32_e32 v0, 0xff
-; NOSDWA-NEXT:    v_and_b32_e32 v0, s4, v0
-; NOSDWA-NEXT:    v_lshlrev_b16_e64 v1, 8, 1
-; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v1
+; NOSDWA-NEXT:    v_mov_b32_e32 v0, 0x100
 ; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
 ; NOSDWA-NEXT:  .LBB22_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2126,9 +2123,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX89:       ; %bb.0: ; %bb0
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX89-NEXT:    s_mov_b64 s[4:5], 0
-; GFX89-NEXT:    v_lshlrev_b16_e64 v0, 8, 1
-; GFX89-NEXT:    v_mov_b32_e32 v1, s4
-; GFX89-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX89-NEXT:    v_mov_b32_e32 v0, 0x100
 ; GFX89-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX89-NEXT:  .LBB22_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2148,8 +2143,7 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX9:       ; %bb.0: ; %bb0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], 0
-; GFX9-NEXT:    v_lshlrev_b16_e64 v0, 8, 1
-; GFX9-NEXT:    v_or_b32_sdwa v0, s4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x100
 ; GFX9-NEXT:    s_and_b64 vcc, exec, -1
 ; GFX9-NEXT:  .LBB22_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2168,18 +2162,16 @@ define void @crash_lshlrevb16_not_reg_op() {
 ; GFX10-LABEL: crash_lshlrevb16_not_reg_op:
 ; GFX10:       ; %bb.0: ; %bb0
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_lshlrev_b16 v0, 8, 1
-; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX10-NEXT:    v_or_b32_sdwa v0, s4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
+; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX10-NEXT:  .LBB22_1: ; %bb1
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_lshl_b32 s6, s4, 3
-; GFX10-NEXT:    v_mov_b32_e32 v1, s4
-; GFX10-NEXT:    v_mov_b32_e32 v2, s5
-; GFX10-NEXT:    v_lshrrev_b16 v3, s6, v0
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_lshrrev_b16 v2, s6, 0x100
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 1
-; GFX10-NEXT:    flat_store_byte v[1:2], v3
+; GFX10-NEXT:    flat_store_byte v[0:1], v2
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB22_1
 ; GFX10-NEXT:  ; %bb.2: ; %DummyReturnBlock
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
