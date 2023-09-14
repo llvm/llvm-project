@@ -1,4 +1,4 @@
-// test that tbaa attributes can be added to fir.load and fir.store
+// Test that tbaa attributes can be added to fir.load and fir.store
 // and that these attributes are propagated to LLVMIR
 
 // RUN: tco %s | FileCheck %s
