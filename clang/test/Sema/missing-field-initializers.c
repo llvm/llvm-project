@@ -57,4 +57,7 @@ struct S {
   int f1[];
 };
 
-struct S s = {1, {1, 2}}; // No warning
+// We previously would accidentally diagnose missing a field initializer for
+// f1, now we no longer issue that warning (note, this code is still unsafe
+// because of the buffer overrun).
+struct S s = {1, {1, 2}};
