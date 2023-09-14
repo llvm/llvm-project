@@ -660,6 +660,11 @@ static bool needEndFinalization(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol())
     return false;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
+  const Fortran::semantics::Scope &owner = sym.owner();
+  if (owner.kind() == Fortran::semantics::Scope::Kind::MainProgram) {
+    // The standard does not require finalizing main program variables.
+    return false;
+  }
   if (!Fortran::semantics::IsPointer(sym) &&
       !Fortran::semantics::IsAllocatable(sym) &&
       !Fortran::semantics::IsDummy(sym) &&
