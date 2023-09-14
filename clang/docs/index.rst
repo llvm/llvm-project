@@ -65,6 +65,7 @@ Using Clang as a Library
    Tooling
    ExternalClangExamples
    IntroductionToTheClangAST
+   ASTsForTemplates
    LibTooling
    LibClang
    LibFormat

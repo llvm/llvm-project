@@ -1,0 +1,560 @@
+{
+  "drawFileName": true,
+  "entities": [
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "fillColor": "Focus Node",
+      "loc": {
+        "x": 115,
+        "y": 85
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FunctionTemplateDecl 14",
+      "size": {
+        "h": 85,
+        "w": 255
+      }
+    },
+    {
+      "loc": {
+        "x": 20,
+        "y": 35
+      },
+      "name": "TU",
+      "objectGraphNodeID": "TranslationUnitDecl 1",
+      "size": {
+        "h": 450,
+        "w": 30
+      }
+    },
+    {
+      "attributes": "template <class T>\nT identity(T t)\n{\n  return t;\n}\n",
+      "fillColor": "Yellow",
+      "loc": {
+        "x": 565,
+        "y": 285
+      },
+      "name": "Source Code",
+      "size": {
+        "h": 105,
+        "w": 115
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFields)",
+      "loc": {
+        "x": 115,
+        "y": 35
+      },
+      "name": "$(graphNodeID) (__int128)",
+      "objectGraphNodeID": "TypedefDecl 2",
+      "size": {
+        "h": 20,
+        "w": 250
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 430,
+        "y": 85
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FunctionTemplateDecl::Common 25",
+      "size": {
+        "h": 65,
+        "w": 250
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 315,
+        "y": 195
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "TemplateTypeParmDecl 15",
+      "size": {
+        "h": 75,
+        "w": 280
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 115,
+        "y": 300
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FunctionDecl 17",
+      "size": {
+        "h": 75,
+        "w": 255
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 305,
+        "y": 410
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ParmVarDecl 19",
+      "size": {
+        "h": 75,
+        "w": 275
+      }
+    },
+    {
+      "fillColor": "Stmt",
+      "loc": {
+        "x": 115,
+        "y": 410
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "CompoundStmt 20",
+      "size": {
+        "h": 20,
+        "w": 125
+      }
+    },
+    {
+      "loc": {
+        "x": 115,
+        "y": 450
+      },
+      "name": "(rest of body AST)",
+      "shape": "ES_NO_SHAPE",
+      "size": {
+        "h": 20,
+        "w": 125
+      }
+    }
+  ],
+  "inheritances": [],
+  "namedColors": [
+    {
+      "color": "RGB(0,0,0)",
+      "name": "Black"
+    },
+    {
+      "color": "RGB(192,192,192)",
+      "name": "Gray"
+    },
+    {
+      "color": "RGB(255,255,255)",
+      "name": "White"
+    },
+    {
+      "color": "RGB(224,224,224)",
+      "name": "Light Gray"
+    },
+    {
+      "color": "RGB(236,125,70)",
+      "name": "Orange"
+    },
+    {
+      "color": "RGB(234,236,52)",
+      "name": "Yellow"
+    },
+    {
+      "color": "RGB(76,222,76)",
+      "name": "Green"
+    },
+    {
+      "color": "RGB(135,193,255)",
+      "name": "Sky Blue"
+    },
+    {
+      "color": "RGB(161,140,237)",
+      "name": "Purple"
+    },
+    {
+      "color": "RGB(227,120,236)",
+      "name": "Pink"
+    },
+    {
+      "color": "RGB(248,50,50)",
+      "name": "Red"
+    },
+    {
+      "color": "RGB(150,255,150)",
+      "name": "CanonicalType"
+    },
+    {
+      "color": "RGB(60,200,60)",
+      "name": "Type"
+    },
+    {
+      "color": "RGB(227,120,236)",
+      "name": "Stmt"
+    },
+    {
+      "color": "RGB(255,204,204)",
+      "name": "Focus Node"
+    }
+  ],
+  "objectGraph": {
+    "BuiltinType 10": {"syntax": "\"char\""},
+    "BuiltinType 3": {"syntax": "\"__int128\""},
+    "BuiltinType 5": {"syntax": "\"unsigned __int128\""},
+    "CXXRecordDecl 23": {"skipping reserved": "\"__NSConstantString_tag\""},
+    "CXXRecordDecl 24": {"skipping reserved": "\"__va_list_tag\""},
+    "CompoundStmt 20": {},
+    "ConstantArrayType 12": {"syntax": "\"struct __va_list_tag[1]\""},
+    "DeclRefExpr 22": {
+      "D": {"ptr": "ParmVarDecl 19"},
+      "DNLoc": "(none)",
+      "DeclRefExprBits": "",
+      "Dependent": "Instantiation|Type|Value",
+      "Loc": "in/src/ft-defn.cc:7:10",
+      "ObjectKind": "OK_Ordinary",
+      "TR": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "ValueKind": "VK_LValue"
+    },
+    "FunctionDecl 17": {
+      "Access": "AS_none",
+      "Body": {"ptr": "CompoundStmt 20"},
+      "DC": {"ptr": "TranslationUnitDecl 1"},
+      "DNLoc": "(none)",
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "FunctionDecl",
+      "DeclType": {
+        "preview": "T (T)",
+        "ptr": "FunctionProtoType 18"
+      },
+      "DefaultKWLoc": "<invalid loc>",
+      "EndRangeLoc": "in/src/ft-defn.cc:8:1",
+      "ExtInfo": "absent",
+      "FTD": {"ptr": "FunctionTemplateDecl 14"},
+      "FirstDecl": {"ptr": "ParmVarDecl 19"},
+      "FunctionDeclBits": "HasWrittenPrototype",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InnerLocStart": "in/src/ft-defn.cc:5:1",
+      "LDC": {"ptr": "TranslationUnitDecl 1"},
+      "LastDecl": {"ptr": "ParmVarDecl 19"},
+      "Linkage": "ExternalLinkage",
+      "Loc": "in/src/ft-defn.cc:5:3",
+      "LookupPtr": "null",
+      "Name": "\"identity\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "0",
+      "ParamInfo[0]": {"ptr": "ParmVarDecl 19"},
+      "RD::First": {"ptr": "FunctionDecl 17"},
+      "RD::Prev": {"ptr": "FunctionDecl 17"},
+      "SClass": "SC_None",
+      "TInfo": "FunctionProto(\"T (T)\", <in/src/ft-defn.cc:5:1, col:15>, TemplateTypeParm(\"T\", <in/src/ft-defn.cc:5:1>, NullTypeLoc))",
+      "getDescribedFunctionTemplate()": {"ptr": "FunctionTemplateDecl 14"},
+      "getInstantiatedFromMemberFunction()": {"ptr": "null"},
+      "getMemberSpecializationInfo()": {"ptr": "null"},
+      "getPrimaryTemplate()": {"ptr": "null"},
+      "getTemplateInstantiationPattern(false)": {"ptr": "null"},
+      "getTemplateInstantiationPattern(true)": {"ptr": "null"},
+      "getTemplateSpecializationInfo()": {"ptr": "null"},
+      "getTemplatedKind()": "TK_FunctionTemplate",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "FunctionProtoType 18": {
+      "Canon": {
+        "preview": "type-parameter-0-0 (type-parameter-0-0)",
+        "ptr": "FunctionProtoType 27"
+      },
+      "ResultType": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "paramType[0]": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "syntax": "\"T (T)\""
+    },
+    "FunctionProtoType 27": {
+      "ResultType": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 26"
+      },
+      "paramType[0]": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 26"
+      },
+      "syntax": "\"type-parameter-0-0 (type-parameter-0-0)\""
+    },
+    "FunctionTemplateDecl 14": {
+      "Access": "AS_none",
+      "Cmn": {"ptr": "FunctionTemplateDecl::Common 25"},
+      "DC": {"ptr": "TranslationUnitDecl 1"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "LDC": {"ptr": "TranslationUnitDecl 1"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ft-defn.cc:5:3",
+      "Name": "\"identity\"",
+      "NextInContext": {"ptr": "null"},
+      "Param[0]": {"ptr": "TemplateTypeParmDecl 15"},
+      "RD::First": {"ptr": "FunctionTemplateDecl 14"},
+      "RD::Prev": {"ptr": "FunctionTemplateDecl 14"},
+      "TP": "\"template <class T>\"",
+      "TP->Flags": "",
+      "TP->LAngleLoc": "in/src/ft-defn.cc:4:10",
+      "TP->NumTParams": "1",
+      "TP->RAngleLoc": "in/src/ft-defn.cc:4:18",
+      "TP->Requires": {"ptr": "null"},
+      "TP->TemplateLoc": "in/src/ft-defn.cc:4:1",
+      "TdD": {"ptr": "FunctionDecl 17"},
+      "getInstantiatedFromMemberTemplate()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "FunctionTemplateDecl::Common 25": {
+      "InjectedArgs": "null",
+      "InstantiatedFromMember": {"ptr": "null"},
+      "LazySpecializations": "null",
+      "Specializations": "empty",
+      "associated decl": {"ptr": "FunctionTemplateDecl 14"},
+      "explicitMemberSpec": "0"
+    },
+    "ParmVarDecl 19": {
+      "ARCPseudoStrong": "0",
+      "Access": "AS_none",
+      "DC": {"ptr": "FunctionDecl 17"},
+      "Decl::flags": "Referenced",
+      "DeclType": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "DefaultArgKind": "DAK_Normal",
+      "ExtInfo": "absent",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InitStmt": {"ptr": "null"},
+      "InitStyle": "CInit",
+      "InnerLocStart": "in/src/ft-defn.cc:5:12",
+      "LDC": {"ptr": "FunctionDecl 17"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ft-defn.cc:5:14",
+      "Name": "\"t\"",
+      "NextInContext": {"ptr": "null"},
+      "ParameterIndex": "0",
+      "ParmVarDeclBits flags": "",
+      "SClass": "SC_None",
+      "ScopeDepthOrObjCQuals": "0",
+      "TInfo": "TemplateTypeParm(\"T\", <in/src/ft-defn.cc:5:12>, NullTypeLoc)",
+      "TSCSpec": "TSCS_unspecified",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "PointerType 9": {
+      "PointeeType": {
+        "preview": "char",
+        "ptr": "BuiltinType 10"
+      },
+      "syntax": "\"char *\""
+    },
+    "RecordType 13": {
+      "decl": {"ptr": "CXXRecordDecl 24"},
+      "syntax": "\"struct __va_list_tag\""
+    },
+    "RecordType 7": {
+      "decl": {"ptr": "CXXRecordDecl 23"},
+      "syntax": "\"struct __NSConstantString_tag\""
+    },
+    "ReturnStmt 21": {},
+    "TemplateTypeParmDecl 15": {
+      "Access": "AS_public",
+      "DC": {"ptr": "FunctionDecl 17"},
+      "Decl::flags": "Referenced",
+      "IdentifierNamespace": "IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "FunctionDecl 17"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ft-defn.cc:4:17",
+      "LocStart": "in/src/ft-defn.cc:4:11",
+      "Name": "\"T\"",
+      "NextInContext": {"ptr": "null"},
+      "NumExpanded": "0",
+      "TemplateTypeParmDecl flags": "",
+      "TypeForDecl": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TemplateTypeParmType 16": {
+      "Canon": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 26"
+      },
+      "Depth": "0",
+      "Index": "0",
+      "TTPDecl": {"ptr": "TemplateTypeParmDecl 15"},
+      "isParameterPack": "0",
+      "syntax": "\"T\""
+    },
+    "TemplateTypeParmType 26": {
+      "Depth": "0",
+      "Index": "0",
+      "TTPDecl": {"ptr": "null"},
+      "isParameterPack": "0",
+      "syntax": "\"type-parameter-0-0\""
+    },
+    "TranslationUnitDecl 1": {
+      "Access": "AS_none",
+      "DC": {"ptr": "null"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "TranslationUnitDecl",
+      "FirstDecl": {"ptr": "TypedefDecl 2"},
+      "IdentifierNamespace": "0",
+      "LDC": {"ptr": "null"},
+      "LastDecl": {"ptr": "FunctionTemplateDecl 14"},
+      "Linkage": "(not set)",
+      "Loc": "<invalid loc>",
+      "LookupPtr": "StoredDeclsMap with 6 entries",
+      "NextInContext": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TypedefDecl 11": {"skipping reserved": "\"__builtin_va_list\""},
+    "TypedefDecl 2": {"skipping reserved": "\"__int128_t\""},
+    "TypedefDecl 4": {"skipping reserved": "\"__uint128_t\""},
+    "TypedefDecl 6": {"skipping reserved": "\"__NSConstantString\""},
+    "TypedefDecl 8": {"skipping reserved": "\"__builtin_ms_va_list\""}
+  },
+  "objectGraphConfig": {
+    "newNodeAttributes": null,
+    "newNodeName": null,
+    "showFields": [
+      "Name",
+      "NumParams",
+      "InstantiatedFromMember.ptr",
+      "Specializations",
+      "TypeForDecl",
+      "DeclType",
+      "NextInContext",
+      "TemplateParameterList",
+      "TP->NumTParams",
+      "TP",
+      "InstantiatedFromMember"
+    ]
+  },
+  "objectGraphSourceFile": "../../out/ft-defn.cc.abbrev.json",
+  "relations": [
+    {
+      "end": {"entityRef": 0},
+      "label": "LastDecl",
+      "start": {"entityRef": 1}
+    },
+    {
+      "dashStructure": [
+        1,
+        2
+      ],
+      "end": {"entityRef": 0},
+      "label": "NextInContext",
+      "start": {"entityRef": 3}
+    },
+    {
+      "end": {"entityRef": 3},
+      "label": "FirstDecl",
+      "start": {"entityRef": 1}
+    },
+    {
+      "end": {"entityRef": 4},
+      "label": "Cmn",
+      "start": {"entityRef": 0}
+    },
+    {
+      "end": {"entityRef": 5},
+      "label": "Param[0]",
+      "start": {"entityRef": 0}
+    },
+    {
+      "end": {"entityRef": 6},
+      "label": "DC",
+      "start": {"entityRef": 5}
+    },
+    {
+      "end": {"entityRef": 1},
+      "label": "DC",
+      "start": {"entityRef": 6}
+    },
+    {
+      "controlPts": [{
+        "x": 300,
+        "y": 270
+      }],
+      "end": {"entityRef": 0},
+      "label": "FTD",
+      "start": {"entityRef": 6}
+    },
+    {
+      "controlPts": [{
+        "x": 135,
+        "y": 190
+      }],
+      "end": {"entityRef": 6},
+      "label": "TdD",
+      "start": {"entityRef": 0}
+    },
+    {
+      "controlPts": [{
+        "x": 465,
+        "y": 340
+      }],
+      "end": {"entityRef": 7},
+      "label": "ParamInfo[0]",
+      "start": {"entityRef": 6}
+    },
+    {
+      "controlPts": [{
+        "x": 315,
+        "y": 390
+      }],
+      "end": {"entityRef": 6},
+      "label": "DC",
+      "start": {"entityRef": 7}
+    },
+    {
+      "controlPts": [{
+        "x": 60,
+        "y": 140
+      }],
+      "end": {"entityRef": 1},
+      "label": "DC",
+      "start": {"entityRef": 0}
+    },
+    {
+      "end": {"entityRef": 8},
+      "label": "Body",
+      "start": {"entityRef": 6}
+    },
+    {
+      "dashStructure": [
+        1,
+        2
+      ],
+      "end": {"entityRef": 9},
+      "start": {"entityRef": 8}
+    },
+    {
+      "end": {"entityRef": 7},
+      "label": "FirstDecl",
+      "start": {"entityRef": 6}
+    },
+    {
+      "controlPts": [{
+        "x": 435,
+        "y": 365
+      }],
+      "end": {"entityRef": 7},
+      "label": "LastDecl",
+      "start": {"entityRef": 6}
+    }
+  ],
+  "type": "Diagram Editor Diagram",
+  "version": 30,
+  "windowSize": {
+    "h": 506,
+    "w": 700
+  }
+}

@@ -1,0 +1,2489 @@
+{
+  "drawFileName": true,
+  "entities": [
+    {
+      "loc": {
+        "x": 15,
+        "y": 25
+      },
+      "name": "TU",
+      "objectGraphNodeID": "TranslationUnitDecl 1",
+      "size": {
+        "h": 640,
+        "w": 20
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Sentence",
+      "loc": {
+        "x": 55,
+        "y": 25
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateDecl 14",
+      "size": {
+        "h": 60,
+        "w": 145
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 55,
+        "y": 105
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "CXXRecordDecl 17",
+      "size": {
+        "h": 60,
+        "w": 180
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 95,
+        "y": 180
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateDecl 19",
+      "size": {
+        "h": 60,
+        "w": 150
+      }
+    },
+    {
+      "loc": {
+        "x": 55,
+        "y": 165
+      },
+      "name": "17",
+      "objectGraphNodeID": "CXXRecordDecl 17",
+      "size": {
+        "h": 315,
+        "w": 20
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n\n\n\n\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 95,
+        "y": 260
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "CXXRecordDecl 22",
+      "size": {
+        "h": 60,
+        "w": 180
+      }
+    },
+    {
+      "attributes": "template <class T>\nstruct Outer {\n  template <class U>\n  struct Inner;\n\n  template <class V>\n  struct Inner<V*> {\n    T t;\n    V *u;\n  };\n};\n\nOuter<int>::Inner<float*> i;\n",
+      "fillColor": "Yellow",
+      "loc": {
+        "x": 770,
+        "y": 20
+      },
+      "name": "Source Code",
+      "size": {
+        "h": 215,
+        "w": 155
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 275,
+        "y": 165
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateDecl::Common 67",
+      "size": {
+        "h": 75,
+        "w": 200
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 230,
+        "y": 25
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateDecl::Common 63",
+      "size": {
+        "h": 75,
+        "w": 200
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Sentence",
+      "loc": {
+        "x": 495,
+        "y": 30
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateSpecializationDecl 30",
+      "size": {
+        "h": 130,
+        "w": 220
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 535,
+        "y": 180
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateDecl 32",
+      "size": {
+        "h": 60,
+        "w": 145
+      }
+    },
+    {
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Sentence",
+      "loc": {
+        "x": 495,
+        "y": 160
+      },
+      "name": "30",
+      "objectGraphNodeID": "ClassTemplateSpecializationDecl 30",
+      "size": {
+        "h": 365,
+        "w": 20
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 725,
+        "y": 245
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateDecl::Common 75",
+      "size": {
+        "h": 45,
+        "w": 190
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 535,
+        "y": 260
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "CXXRecordDecl 35",
+      "size": {
+        "h": 60,
+        "w": 180
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Sentence",
+      "fillColor": "Focus Node",
+      "loc": {
+        "x": 535,
+        "y": 510
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplateSpecializationDecl 36",
+      "size": {
+        "h": 145,
+        "w": 220
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Whitespace",
+      "loc": {
+        "x": 775,
+        "y": 500
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FieldDecl 38",
+      "size": {
+        "h": 85,
+        "w": 150
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Whitespace",
+      "loc": {
+        "x": 775,
+        "y": 590
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FieldDecl 41",
+      "size": {
+        "h": 75,
+        "w": 150
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Sentence",
+      "loc": {
+        "x": 95,
+        "y": 335
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplatePartialSpecializationDecl 23",
+      "size": {
+        "h": 145,
+        "w": 250
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Whitespace",
+      "loc": {
+        "x": 365,
+        "y": 335
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FieldDecl 28",
+      "size": {
+        "h": 85,
+        "w": 95
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Whitespace",
+      "loc": {
+        "x": 365,
+        "y": 425
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "FieldDecl 29",
+      "size": {
+        "h": 85,
+        "w": 95
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Sentence",
+      "loc": {
+        "x": 535,
+        "y": 340
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ClassTemplatePartialSpecializationDecl 78",
+      "size": {
+        "h": 145,
+        "w": 250
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "loc": {
+        "x": 95,
+        "y": 490
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "VarDecl 55",
+      "size": {
+        "h": 45,
+        "w": 80
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "fillColor": "Type",
+      "loc": {
+        "x": 95,
+        "y": 555
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "ElaboratedType 56",
+      "size": {
+        "h": 45,
+        "w": 200
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "fillColor": "Type",
+      "loc": {
+        "x": 95,
+        "y": 620
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "TemplateSpecializationType 58",
+      "size": {
+        "h": 45,
+        "w": 190
+      }
+    },
+    {
+      "attributes": "$(graphNodeShowFieldsAttrs)\n\n$(graphNodeShowFieldsPtrs)\n",
+      "attributesWrapTextIndentSpaces": 4,
+      "attributesWrapTextPolicy": "Whitespace",
+      "fillColor": "CanonicalType",
+      "loc": {
+        "x": 330,
+        "y": 605
+      },
+      "name": "$(graphNodeID)",
+      "objectGraphNodeID": "RecordType 51",
+      "size": {
+        "h": 60,
+        "w": 165
+      }
+    }
+  ],
+  "inheritances": [],
+  "namedColors": [
+    {
+      "color": "RGB(0,0,0)",
+      "name": "Black"
+    },
+    {
+      "color": "RGB(192,192,192)",
+      "name": "Gray"
+    },
+    {
+      "color": "RGB(255,255,255)",
+      "name": "White"
+    },
+    {
+      "color": "RGB(224,224,224)",
+      "name": "Light Gray"
+    },
+    {
+      "color": "RGB(236,125,70)",
+      "name": "Orange"
+    },
+    {
+      "color": "RGB(234,236,52)",
+      "name": "Yellow"
+    },
+    {
+      "color": "RGB(76,222,76)",
+      "name": "Green"
+    },
+    {
+      "color": "RGB(135,193,255)",
+      "name": "Sky Blue"
+    },
+    {
+      "color": "RGB(161,140,237)",
+      "name": "Purple"
+    },
+    {
+      "color": "RGB(227,120,236)",
+      "name": "Pink"
+    },
+    {
+      "color": "RGB(248,50,50)",
+      "name": "Red"
+    },
+    {
+      "color": "RGB(150,255,150)",
+      "name": "CanonicalType"
+    },
+    {
+      "color": "RGB(60,200,60)",
+      "name": "Type"
+    },
+    {
+      "color": "RGB(227,120,236)",
+      "name": "Stmt"
+    },
+    {
+      "color": "RGB(255,204,204)",
+      "name": "Focus Node"
+    }
+  ],
+  "objectGraph": {
+    "BuiltinType 10": {"syntax": "\"char\""},
+    "BuiltinType 3": {"syntax": "\"__int128\""},
+    "BuiltinType 40": {"syntax": "\"int\""},
+    "BuiltinType 44": {"syntax": "\"float\""},
+    "BuiltinType 5": {"syntax": "\"unsigned __int128\""},
+    "BuiltinType 91": {"syntax": "\"void\""},
+    "CXXConstructExpr 60": {
+      "Dependent": "None",
+      "ObjectKind": "OK_Ordinary",
+      "TR": {
+        "preview": "Outer<int>::Inner<float *>",
+        "ptr": "ElaboratedType 56"
+      },
+      "ValueKind": "VK_PRValue"
+    },
+    "CXXConstructorDecl 45": {
+      "Access": "AS_public",
+      "Body": {"ptr": "CompoundStmt 46"},
+      "CXXConstructorDeclBits flags": "",
+      "CXXConstructorDeclBits.NumCtorInitializers": "0",
+      "CtorInitializers": "TODO",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "DNLoc": "(none)",
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit Used Referenced",
+      "DeclContextBits": "",
+      "DeclKind": "CXXConstructorDecl",
+      "DeclType": {
+        "preview": "void (void) noexcept",
+        "ptr": "FunctionProtoType 79"
+      },
+      "DefaultKWLoc": "<invalid loc>",
+      "EndRangeLoc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "ExtInfo": "absent",
+      "FirstDecl": {"ptr": "null"},
+      "FunctionDeclBits": "IsInline IsInlineSpecified HasWrittenPrototype IsTrivial IsDefaulted Constexpr",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InheritedConstructor": "TODO",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "CXXConstructorDecl 47"},
+      "ODRHash": "0",
+      "ParamInfo": "(empty)",
+      "RD::First": {"ptr": "CXXConstructorDecl 45"},
+      "RD::Prev": {"ptr": "CXXConstructorDecl 45"},
+      "SClass": "SC_None",
+      "TInfo": "NullTSI",
+      "TemplateOrSpecialization": "null",
+      "getDescribedFunctionTemplate()": {"ptr": "null"},
+      "getExplicitSpecifierInternal()": "TODO",
+      "getInstantiatedFromMemberFunction()": {"ptr": "null"},
+      "getMemberSpecializationInfo()": {"ptr": "null"},
+      "getPrimaryTemplate()": {"ptr": "null"},
+      "getTemplateInstantiationPattern(false)": {"ptr": "null"},
+      "getTemplateInstantiationPattern(true)": {"ptr": "null"},
+      "getTemplateSpecializationInfo()": {"ptr": "null"},
+      "getTemplatedKind()": "TK_NonTemplate",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXConstructorDecl 47": {
+      "Access": "AS_public",
+      "Body": {"ptr": "null"},
+      "CXXConstructorDeclBits flags": "",
+      "CXXConstructorDeclBits.NumCtorInitializers": "0",
+      "CtorInitializers": "TODO",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "DNLoc": "(none)",
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit",
+      "DeclContextBits": "",
+      "DeclKind": "CXXConstructorDecl",
+      "DeclType": {
+        "preview": "void (const Inner<float *> &)",
+        "ptr": "FunctionProtoType 80"
+      },
+      "DefaultKWLoc": "<invalid loc>",
+      "EndRangeLoc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "ExtInfo": "absent",
+      "FirstDecl": {"ptr": "null"},
+      "FunctionDeclBits": "IsInline IsInlineSpecified HasWrittenPrototype IsTrivial IsTrivialForCall IsDefaulted Constexpr",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InheritedConstructor": "TODO",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "CXXConstructorDecl 52"},
+      "ODRHash": "0",
+      "ParamInfo[0]": {"ptr": "ParmVarDecl 48"},
+      "RD::First": {"ptr": "CXXConstructorDecl 47"},
+      "RD::Prev": {"ptr": "CXXConstructorDecl 47"},
+      "SClass": "SC_None",
+      "TInfo": "NullTSI",
+      "TemplateOrSpecialization": "null",
+      "getDescribedFunctionTemplate()": {"ptr": "null"},
+      "getExplicitSpecifierInternal()": "TODO",
+      "getInstantiatedFromMemberFunction()": {"ptr": "null"},
+      "getMemberSpecializationInfo()": {"ptr": "null"},
+      "getPrimaryTemplate()": {"ptr": "null"},
+      "getTemplateInstantiationPattern(false)": {"ptr": "null"},
+      "getTemplateInstantiationPattern(true)": {"ptr": "null"},
+      "getTemplateSpecializationInfo()": {"ptr": "null"},
+      "getTemplatedKind()": "TK_NonTemplate",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXConstructorDecl 52": {
+      "Access": "AS_public",
+      "Body": {"ptr": "null"},
+      "CXXConstructorDeclBits flags": "",
+      "CXXConstructorDeclBits.NumCtorInitializers": "0",
+      "CtorInitializers": "TODO",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "DNLoc": "(none)",
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit",
+      "DeclContextBits": "",
+      "DeclKind": "CXXConstructorDecl",
+      "DeclType": {
+        "preview": "void (Inner<float *> &&)",
+        "ptr": "FunctionProtoType 82"
+      },
+      "DefaultKWLoc": "<invalid loc>",
+      "EndRangeLoc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "ExtInfo": "absent",
+      "FirstDecl": {"ptr": "null"},
+      "FunctionDeclBits": "IsInline IsInlineSpecified HasWrittenPrototype IsTrivial IsTrivialForCall IsDefaulted Constexpr",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InheritedConstructor": "TODO",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "0",
+      "ParamInfo[0]": {"ptr": "ParmVarDecl 53"},
+      "RD::First": {"ptr": "CXXConstructorDecl 52"},
+      "RD::Prev": {"ptr": "CXXConstructorDecl 52"},
+      "SClass": "SC_None",
+      "TInfo": "NullTSI",
+      "TemplateOrSpecialization": "null",
+      "getDescribedFunctionTemplate()": {"ptr": "null"},
+      "getExplicitSpecifierInternal()": "TODO",
+      "getInstantiatedFromMemberFunction()": {"ptr": "null"},
+      "getMemberSpecializationInfo()": {"ptr": "null"},
+      "getPrimaryTemplate()": {"ptr": "null"},
+      "getTemplateInstantiationPattern(false)": {"ptr": "null"},
+      "getTemplateInstantiationPattern(true)": {"ptr": "null"},
+      "getTemplateSpecializationInfo()": {"ptr": "null"},
+      "getTemplatedKind()": "TK_NonTemplate",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 17": {
+      "Access": "AS_none",
+      "Bits.IsCompleteDefinition": "true",
+      "BraceRange": "<in/src/ct-cont-ct-cspspec.cc:5:14, line:14:1>",
+      "CTD": {"ptr": "ClassTemplateDecl 14"},
+      "DC": {"ptr": "TranslationUnitDecl 1"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "DefinitionData 66"},
+      "FirstDecl": {"ptr": "CXXRecordDecl 18"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "TranslationUnitDecl 1"},
+      "LastDecl": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:5:8",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:5:1",
+      "LookupPtr": "StoredDeclsMap with 2 entries",
+      "Name": "\"Outer\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "38049550",
+      "RD::First": {"ptr": "CXXRecordDecl 17"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 17"},
+      "RecordDeclBits": "APK_CannotPassInRegs",
+      "TagDeclBits": "TTK_Struct IsCompleteDefinition IsFreeStanding MayHaveOutOfDateDef",
+      "TypeForDecl": {
+        "preview": "Outer<T>",
+        "ptr": "InjectedClassNameType 65"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "ClassTemplateDecl 14"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 18": {
+      "Access": "AS_public",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "CTD": {"ptr": "ClassTemplateDecl 14"},
+      "DC": {"ptr": "CXXRecordDecl 17"},
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "null"},
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "CXXRecordDecl 17"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:5:8",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:5:1",
+      "LookupPtr": "null",
+      "Name": "\"Outer\"",
+      "NextInContext": {"ptr": "ClassTemplateDecl 19"},
+      "ODRHash": "38049550",
+      "RD::First": {"ptr": "CXXRecordDecl 18"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 18"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "TagDeclBits": "TTK_Struct MayHaveOutOfDateDef",
+      "TypeForDecl": {
+        "preview": "Outer<T>",
+        "ptr": "InjectedClassNameType 65"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "ClassTemplateDecl 14"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 22": {
+      "Access": "AS_none",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "CTD": {"ptr": "ClassTemplateDecl 19"},
+      "DC": {"ptr": "CXXRecordDecl 17"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "null"},
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "CXXRecordDecl 17"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:7:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:7:3",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "7466073",
+      "RD::First": {"ptr": "CXXRecordDecl 22"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 22"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "TagDeclBits": "TTK_Struct IsFreeStanding MayHaveOutOfDateDef",
+      "TypeForDecl": {
+        "preview": "Inner<U>",
+        "ptr": "InjectedClassNameType 69"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "ClassTemplateDecl 19"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 27": {
+      "Access": "AS_public",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "DC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "null"},
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:10:3",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "FieldDecl 28"},
+      "ODRHash": "7466073",
+      "RD::First": {"ptr": "CXXRecordDecl 27"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 27"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "TagDeclBits": "TTK_Struct MayHaveOutOfDateDef",
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "Inner<type-parameter-1-0 *>",
+        "ptr": "InjectedClassNameType 70"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 31": {
+      "Access": "AS_public",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "null"},
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:5:8",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:5:1",
+      "LookupPtr": "null",
+      "Name": "\"Outer\"",
+      "NextInContext": {"ptr": "ClassTemplateDecl 32"},
+      "ODRHash": "38049550",
+      "RD::First": {"ptr": "CXXRecordDecl 31"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 31"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "TagDeclBits": "TTK_Struct MayHaveOutOfDateDef",
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "struct Outer<int>",
+        "ptr": "RecordType 73"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 35": {
+      "Access": "AS_none",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "CTD": {"ptr": "ClassTemplateDecl 32"},
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "null"},
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:7:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:7:3",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "7466073",
+      "RD::First": {"ptr": "CXXRecordDecl 35"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 35"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "TagDeclBits": "TTK_Struct MayHaveOutOfDateDef",
+      "TypeForDecl": {
+        "preview": "Inner<U>",
+        "ptr": "InjectedClassNameType 76"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "ClassTemplateDecl 32"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 37": {
+      "Access": "AS_public",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "Decl::Implicit": "true",
+      "Decl::flags": "Implicit",
+      "DeclContextBits": "",
+      "DeclKind": "CXXRecordDecl",
+      "DefinitionData": {"ptr": "null"},
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:10:3",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "FieldDecl 38"},
+      "ODRHash": "7466073",
+      "RD::First": {"ptr": "CXXRecordDecl 37"},
+      "RD::Prev": {"ptr": "CXXRecordDecl 37"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "TagDeclBits": "TTK_Struct MayHaveOutOfDateDef",
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CXXRecordDecl 61": {"skipping reserved": "\"__NSConstantString_tag\""},
+    "CXXRecordDecl 62": {"skipping reserved": "\"__va_list_tag\""},
+    "ClassTemplateDecl 14": {
+      "Access": "AS_none",
+      "Cmn": {"ptr": "ClassTemplateDecl::Common 63"},
+      "DC": {"ptr": "TranslationUnitDecl 1"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "TranslationUnitDecl 1"},
+      "Linkage": "ExternalLinkage",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:5:8",
+      "Name": "\"Outer\"",
+      "NextInContext": {"ptr": "VarDecl 55"},
+      "Param[0]": {"ptr": "TemplateTypeParmDecl 15"},
+      "RD::First": {"ptr": "ClassTemplateDecl 14"},
+      "RD::Prev": {"ptr": "ClassTemplateDecl 14"},
+      "TP": "\"template <class T>\"",
+      "TP->Flags": "",
+      "TP->LAngleLoc": "in/src/ct-cont-ct-cspspec.cc:4:10",
+      "TP->NumTParams": "1",
+      "TP->RAngleLoc": "in/src/ct-cont-ct-cspspec.cc:4:18",
+      "TP->Requires": {"ptr": "null"},
+      "TP->TemplateLoc": "in/src/ct-cont-ct-cspspec.cc:4:1",
+      "TdD": {"ptr": "CXXRecordDecl 17"},
+      "getInstantiatedFromMemberTemplate()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "ClassTemplateDecl 19": {
+      "Access": "AS_public",
+      "Cmn": {"ptr": "ClassTemplateDecl::Common 67"},
+      "DC": {"ptr": "CXXRecordDecl 17"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "CXXRecordDecl 17"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:7:10",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Param[0]": {"ptr": "TemplateTypeParmDecl 20"},
+      "RD::First": {"ptr": "ClassTemplateDecl 19"},
+      "RD::Prev": {"ptr": "ClassTemplateDecl 19"},
+      "TP": "\"template <class U>\"",
+      "TP->Flags": "",
+      "TP->LAngleLoc": "in/src/ct-cont-ct-cspspec.cc:6:12",
+      "TP->NumTParams": "1",
+      "TP->RAngleLoc": "in/src/ct-cont-ct-cspspec.cc:6:20",
+      "TP->Requires": {"ptr": "null"},
+      "TP->TemplateLoc": "in/src/ct-cont-ct-cspspec.cc:6:3",
+      "TdD": {"ptr": "CXXRecordDecl 22"},
+      "getInstantiatedFromMemberTemplate()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "ClassTemplateDecl 32": {
+      "Access": "AS_public",
+      "Cmn": {"ptr": "ClassTemplateDecl::Common 75"},
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Tag|IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Linkage": "ExternalLinkage",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:7:10",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "Param[0]": {"ptr": "TemplateTypeParmDecl 33"},
+      "RD::First": {"ptr": "ClassTemplateDecl 32"},
+      "RD::Prev": {"ptr": "ClassTemplateDecl 32"},
+      "TP": "\"template <class U>\"",
+      "TP->Flags": "",
+      "TP->LAngleLoc": "in/src/ct-cont-ct-cspspec.cc:6:12",
+      "TP->NumTParams": "1",
+      "TP->RAngleLoc": "in/src/ct-cont-ct-cspspec.cc:6:20",
+      "TP->Requires": {"ptr": "null"},
+      "TP->TemplateLoc": "in/src/ct-cont-ct-cspspec.cc:6:3",
+      "TdD": {"ptr": "CXXRecordDecl 35"},
+      "getInstantiatedFromMemberTemplate()": {"ptr": "ClassTemplateDecl 19"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "ClassTemplateDecl::Common 63": {
+      "InjectedArgs": "null",
+      "InjectedClassNameType": {
+        "preview": "Outer<T>",
+        "ptr": "TemplateSpecializationType 84"
+      },
+      "InstantiatedFromMember": {"ptr": "null"},
+      "LazySpecializations": "null",
+      "PartialSpecializations": "empty",
+      "Specializations[0]": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "associated decl": {"ptr": "ClassTemplateDecl 14"},
+      "explicitMemberSpec": "0"
+    },
+    "ClassTemplateDecl::Common 67": {
+      "InjectedArgs": "null",
+      "InjectedClassNameType": {
+        "preview": "Inner<U>",
+        "ptr": "TemplateSpecializationType 85"
+      },
+      "InstantiatedFromMember": {"ptr": "null"},
+      "LazySpecializations": "null",
+      "PartialSpecializations[0]": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Specializations": "empty",
+      "associated decl": {"ptr": "ClassTemplateDecl 19"},
+      "explicitMemberSpec": "0"
+    },
+    "ClassTemplateDecl::Common 75": {
+      "InjectedArgs": "null",
+      "InjectedClassNameType": {
+        "preview": "Inner<U>",
+        "ptr": "TemplateSpecializationType 87"
+      },
+      "InstantiatedFromMember": {"ptr": "ClassTemplateDecl 19"},
+      "LazySpecializations": "null",
+      "PartialSpecializations[0]": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "Specializations[0]": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "associated decl": {"ptr": "ClassTemplateDecl 32"},
+      "explicitMemberSpec": "0"
+    },
+    "ClassTemplatePartialSpecializationDecl 23": {
+      "Access": "AS_none",
+      "ArgsAsWritten": "TODO",
+      "Bits.IsCompleteDefinition": "true",
+      "BraceRange": "<in/src/ct-cont-ct-cspspec.cc:10:20, line:13:3>",
+      "DC": {"ptr": "CXXRecordDecl 17"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "ClassTemplatePartialSpecializationDecl",
+      "DefinitionData": {"ptr": "DefinitionData 71"},
+      "EI->ExternLoc": "<invalid loc>",
+      "EI->TemplateKeywordLoc": "in/src/ct-cont-ct-cspspec.cc:9:3",
+      "EI->TypeAsWritten": "TemplateSpecialization(\"Inner<V *>\", <in/src/ct-cont-ct-cspspec.cc:10:10, col:18>, NullTypeLoc)",
+      "FirstDecl": {"ptr": "CXXRecordDecl 27"},
+      "IdentifierNamespace": "0",
+      "InstantiatedFromMember": {"ptr": "null"},
+      "LDC": {"ptr": "CXXRecordDecl 17"},
+      "LastDecl": {"ptr": "FieldDecl 29"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:10:3",
+      "LookupPtr": "StoredDeclsMap with 3 entries",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "49673569",
+      "Param[0]": {"ptr": "TemplateTypeParmDecl 24"},
+      "PointOfInstantiation": "<invalid loc>",
+      "RD::First": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "RD::Prev": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "RecordDeclBits": "APK_CannotPassInRegs",
+      "ST.CTD": {"ptr": "ClassTemplateDecl 19"},
+      "SpecializationKind": "TSK_ExplicitSpecialization",
+      "TP": "\"template <class V>\"",
+      "TP->Flags": "",
+      "TP->LAngleLoc": "in/src/ct-cont-ct-cspspec.cc:9:12",
+      "TP->NumTParams": "1",
+      "TP->RAngleLoc": "in/src/ct-cont-ct-cspspec.cc:9:20",
+      "TP->Requires": {"ptr": "null"},
+      "TP->TemplateLoc": "in/src/ct-cont-ct-cspspec.cc:9:3",
+      "TagDeclBits": "TTK_Struct IsCompleteDefinition IsFreeStanding",
+      "TemplateArgs": "\"<type-parameter-1-0 *>\"",
+      "TemplateArgs[0].Kind": "Type",
+      "TemplateArgs[0].TOV.V": {
+        "preview": "type-parameter-1-0 *",
+        "ptr": "PointerType 72"
+      },
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "Inner<type-parameter-1-0 *>",
+        "ptr": "InjectedClassNameType 70"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFrom()": null,
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getSpecializedOrPartial().CTD": {"ptr": "ClassTemplateDecl 19"},
+      "getSpecializedTemplate()": {"ptr": "ClassTemplateDecl 19"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned",
+      "specdThisLevel": 0
+    },
+    "ClassTemplatePartialSpecializationDecl 78": {
+      "Access": "AS_none",
+      "ArgsAsWritten": "TODO",
+      "Bits.IsCompleteDefinition": "false",
+      "BraceRange": "<<invalid sloc>>",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "ClassTemplatePartialSpecializationDecl",
+      "DefinitionData": {"ptr": "null"},
+      "EI->ExternLoc": "<invalid loc>",
+      "EI->TemplateKeywordLoc": "<invalid loc>",
+      "EI->TypeAsWritten": "TemplateSpecialization(\"Inner<V *>\", <in/src/ct-cont-ct-cspspec.cc:10:10, col:18>, NullTypeLoc)",
+      "FirstDecl": {"ptr": "null"},
+      "IdentifierNamespace": "0",
+      "InstantiatedFromMember": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "LastDecl": {"ptr": "null"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:10:3",
+      "LookupPtr": "null",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "1861593",
+      "Param[0]": {"ptr": "TemplateTypeParmDecl 90"},
+      "PointOfInstantiation": "<invalid loc>",
+      "RD::First": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "RD::Prev": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "ST.CTD": {"ptr": "ClassTemplateDecl 32"},
+      "SpecializationKind": "TSK_ExplicitSpecialization",
+      "TP": "\"template <class V>\"",
+      "TP->Flags": "",
+      "TP->LAngleLoc": "in/src/ct-cont-ct-cspspec.cc:9:12",
+      "TP->NumTParams": "1",
+      "TP->RAngleLoc": "in/src/ct-cont-ct-cspspec.cc:9:20",
+      "TP->Requires": {"ptr": "null"},
+      "TP->TemplateLoc": "in/src/ct-cont-ct-cspspec.cc:9:3",
+      "TagDeclBits": "TTK_Struct",
+      "TemplateArgs": "\"<type-parameter-0-0 *>\"",
+      "TemplateArgs[0].Kind": "Type",
+      "TemplateArgs[0].TOV.V": {
+        "preview": "type-parameter-0-0 *",
+        "ptr": "PointerType 89"
+      },
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "Inner<type-parameter-0-0 *>",
+        "ptr": "InjectedClassNameType 88"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFrom()": null,
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getSpecializedOrPartial().CTD": {"ptr": "ClassTemplateDecl 32"},
+      "getSpecializedTemplate()": {"ptr": "ClassTemplateDecl 32"},
+      "getTemplateInstantiationPattern()": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned",
+      "specdThisLevel": 0
+    },
+    "ClassTemplateSpecializationDecl 30": {
+      "Access": "AS_none",
+      "Bits.IsCompleteDefinition": "true",
+      "BraceRange": "<in/src/ct-cont-ct-cspspec.cc:5:14, line:14:1>",
+      "DC": {"ptr": "TranslationUnitDecl 1"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "ClassTemplateSpecializationDecl",
+      "DefinitionData": {"ptr": "DefinitionData 74"},
+      "ExplicitInfo": "null",
+      "FirstDecl": {"ptr": "CXXRecordDecl 31"},
+      "IdentifierNamespace": "0",
+      "LDC": {"ptr": "TranslationUnitDecl 1"},
+      "LastDecl": {"ptr": "ClassTemplateDecl 32"},
+      "Linkage": "ExternalLinkage",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:5:8",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:5:1",
+      "LookupPtr": "StoredDeclsMap with 2 entries",
+      "Name": "\"Outer\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "21622129",
+      "PointOfInstantiation": "in/src/ct-cont-ct-cspspec.cc:16:1",
+      "RD::First": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "RD::Prev": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "ST.CTD": {"ptr": "ClassTemplateDecl 14"},
+      "SpecializationKind": "TSK_ImplicitInstantiation",
+      "TagDeclBits": "TTK_Struct IsCompleteDefinition IsCompleteDefinitionRequired",
+      "TemplateArgs": "\"<int>\"",
+      "TemplateArgs[0].Kind": "Type",
+      "TemplateArgs[0].TOV.V": {
+        "preview": "int",
+        "ptr": "BuiltinType 40"
+      },
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "struct Outer<int>",
+        "ptr": "RecordType 73"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFrom().CTD": {"ptr": "ClassTemplateDecl 14"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getSpecializedOrPartial().CTD": {"ptr": "ClassTemplateDecl 14"},
+      "getSpecializedTemplate()": {"ptr": "ClassTemplateDecl 14"},
+      "getTemplateInstantiationPattern()": {"ptr": "CXXRecordDecl 17"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "ClassTemplateSpecializationDecl 36": {
+      "Access": "AS_none",
+      "Bits.IsCompleteDefinition": "true",
+      "BraceRange": "<in/src/ct-cont-ct-cspspec.cc:10:20, line:13:3>",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "ClassTemplateSpecializationDecl",
+      "DefinitionData": {"ptr": "DefinitionData 77"},
+      "ExplicitInfo": "null",
+      "FirstDecl": {"ptr": "CXXRecordDecl 37"},
+      "IdentifierNamespace": "0",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "LastDecl": {"ptr": "CXXConstructorDecl 52"},
+      "Linkage": "ExternalLinkage",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:10:3",
+      "LookupPtr": "StoredDeclsMap with 4 entries",
+      "Name": "\"Inner\"",
+      "NextInContext": {"ptr": "null"},
+      "ODRHash": "20504916",
+      "PointOfInstantiation": "in/src/ct-cont-ct-cspspec.cc:16:27",
+      "RD::First": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "RD::Prev": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "RecordDeclBits": "APK_CanPassInRegs",
+      "ST.SPS->PartialSpecialization": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "ST.SPS->TemplateArgs": "\"<float>\"",
+      "SpecializationKind": "TSK_ImplicitInstantiation",
+      "TagDeclBits": "TTK_Struct IsCompleteDefinition IsCompleteDefinitionRequired",
+      "TemplateArgs": "\"<float *>\"",
+      "TemplateArgs[0].Kind": "Type",
+      "TemplateArgs[0].TOV.V": {
+        "preview": "float *",
+        "ptr": "PointerType 59"
+      },
+      "TemplateOrInstantiation": "null",
+      "TypeForDecl": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "TypedefNameDeclOrQualifier.name": {"ptr": "null"},
+      "getDependentLambdaCallOperator()": {"ptr": "null"},
+      "getDescribedClassTemplate()": {"ptr": "null"},
+      "getInstantiatedFrom().CTPSD": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "getInstantiatedFromMemberClass()": {"ptr": "null"},
+      "getSpecializedOrPartial().CTPSD": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "getSpecializedTemplate()": {"ptr": "ClassTemplateDecl 32"},
+      "getTemplateInstantiationPattern()": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "CompoundStmt 46": {},
+    "ConstantArrayType 12": {"syntax": "\"struct __va_list_tag[1]\""},
+    "DefinitionData 66": {
+      "Bases": "TODO",
+      "Conversions": "TODO",
+      "DeclaredNonTrivialSpecialMembers": "SMF_None",
+      "DeclaredNonTrivialSpecialMembersForCall": "SMF_None",
+      "DeclaredSpecialMembers": "SMF_None",
+      "Definition": {"ptr": "CXXRecordDecl 17"},
+      "FirstFriend": "TODO",
+      "HasTrivialSpecialMembers": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "HasTrivialSpecialMembersForCall": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "NumBases": "0",
+      "NumVBases": "0",
+      "ODRHash": "0",
+      "UserDeclaredSpecialMembers": "SMF_None",
+      "VBases": "TODO",
+      "VisibleConversions": "TODO",
+      "flags": [
+        "Aggregate",
+        "PlainOldData",
+        "Empty",
+        "IsStandardLayout",
+        "IsCXX11StandardLayout",
+        "HasIrrelevantDestructor",
+        "DefaultedDefaultConstructorIsConstexpr",
+        "DefaultedDestructorIsConstexpr",
+        "StructuralIfLiteral",
+        "ImplicitCopyConstructorCanHaveConstParamForVBase",
+        "ImplicitCopyConstructorCanHaveConstParamForNonVBase",
+        "ImplicitCopyAssignmentHasConstParam"
+      ]
+    },
+    "DefinitionData 71": {
+      "Bases": "TODO",
+      "Conversions": "TODO",
+      "DeclaredNonTrivialSpecialMembers": "SMF_None",
+      "DeclaredNonTrivialSpecialMembersForCall": "SMF_None",
+      "DeclaredSpecialMembers": "SMF_None",
+      "Definition": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "FirstFriend": "TODO",
+      "HasTrivialSpecialMembers": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "HasTrivialSpecialMembersForCall": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "NumBases": "0",
+      "NumVBases": "0",
+      "ODRHash": "0",
+      "UserDeclaredSpecialMembers": "SMF_None",
+      "VBases": "TODO",
+      "VisibleConversions": "TODO",
+      "flags": [
+        "Aggregate",
+        "IsStandardLayout",
+        "IsCXX11StandardLayout",
+        "HasPublicFields",
+        "HasOnlyCMembers",
+        "HasUninitializedFields",
+        "HasIrrelevantDestructor",
+        "DefaultedDestructorIsConstexpr",
+        "HasNonLiteralTypeFieldsOrBases",
+        "ImplicitCopyConstructorCanHaveConstParamForVBase",
+        "ImplicitCopyConstructorCanHaveConstParamForNonVBase",
+        "ImplicitCopyAssignmentHasConstParam"
+      ]
+    },
+    "DefinitionData 74": {
+      "Bases": "TODO",
+      "Conversions": "TODO",
+      "DeclaredNonTrivialSpecialMembers": "SMF_None",
+      "DeclaredNonTrivialSpecialMembersForCall": "SMF_None",
+      "DeclaredSpecialMembers": "SMF_None",
+      "Definition": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "FirstFriend": "TODO",
+      "HasTrivialSpecialMembers": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "HasTrivialSpecialMembersForCall": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "NumBases": "0",
+      "NumVBases": "0",
+      "ODRHash": "0",
+      "UserDeclaredSpecialMembers": "SMF_None",
+      "VBases": "TODO",
+      "VisibleConversions": "TODO",
+      "flags": [
+        "Aggregate",
+        "PlainOldData",
+        "Empty",
+        "IsStandardLayout",
+        "IsCXX11StandardLayout",
+        "HasIrrelevantDestructor",
+        "DefaultedDefaultConstructorIsConstexpr",
+        "DefaultedDestructorIsConstexpr",
+        "StructuralIfLiteral",
+        "ImplicitCopyConstructorCanHaveConstParamForVBase",
+        "ImplicitCopyConstructorCanHaveConstParamForNonVBase",
+        "ImplicitCopyAssignmentHasConstParam"
+      ]
+    },
+    "DefinitionData 77": {
+      "Bases": "TODO",
+      "Conversions": "TODO",
+      "DeclaredNonTrivialSpecialMembers": "SMF_None",
+      "DeclaredNonTrivialSpecialMembersForCall": "SMF_None",
+      "DeclaredSpecialMembers": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor",
+      "Definition": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "FirstFriend": "TODO",
+      "HasTrivialSpecialMembers": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "HasTrivialSpecialMembersForCall": "SMF_DefaultConstructor|SMF_CopyConstructor|SMF_MoveConstructor|SMF_CopyAssignment|SMF_MoveAssignment|SMF_Destructor",
+      "NumBases": "0",
+      "NumVBases": "0",
+      "ODRHash": "0",
+      "UserDeclaredSpecialMembers": "SMF_None",
+      "VBases": "TODO",
+      "VisibleConversions": "TODO",
+      "flags": [
+        "Aggregate",
+        "PlainOldData",
+        "IsStandardLayout",
+        "IsCXX11StandardLayout",
+        "HasPublicFields",
+        "HasOnlyCMembers",
+        "HasUninitializedFields",
+        "HasIrrelevantDestructor",
+        "HasConstexprNonCopyMoveConstructor",
+        "HasDefaultedDefaultConstructor",
+        "DefaultedDefaultConstructorIsConstexpr",
+        "HasConstexprDefaultConstructor",
+        "DefaultedDestructorIsConstexpr",
+        "StructuralIfLiteral",
+        "ImplicitCopyConstructorCanHaveConstParamForVBase",
+        "ImplicitCopyConstructorCanHaveConstParamForNonVBase",
+        "ImplicitCopyAssignmentHasConstParam",
+        "HasDeclaredCopyConstructorWithConstParam"
+      ]
+    },
+    "ElaboratedType 50": {
+      "Canon": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "Keyword": "ETK_None",
+      "NNS": "null",
+      "NamedType": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "getUnqualifiedDesugaredType()": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "syntax": "\"Inner<float *>\""
+    },
+    "ElaboratedType 56": {
+      "Canon": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "Keyword": "ETK_None",
+      "NNS": "\"Outer<int>::\"",
+      "NamedType": {
+        "preview": "Inner<float *>",
+        "ptr": "TemplateSpecializationType 58"
+      },
+      "getUnqualifiedDesugaredType()": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "syntax": "\"Outer<int>::Inner<float *>\""
+    },
+    "FieldDecl 28": {
+      "Access": "AS_public",
+      "CachedFieldIndex": "0",
+      "DC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "ExtInfo": "absent",
+      "FieldDecl flags": "",
+      "IdentifierNamespace": "IDNS_Member",
+      "InitStorageKind": "ICIS_NoInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:11:5",
+      "LDC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:11:7",
+      "Name": "\"t\"",
+      "NextInContext": {"ptr": "FieldDecl 29"},
+      "TInfo": "TemplateTypeParm(\"T\", <in/src/ct-cont-ct-cspspec.cc:11:5>, NullTypeLoc)",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "FieldDecl 29": {
+      "Access": "AS_public",
+      "CachedFieldIndex": "0",
+      "DC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "V *",
+        "ptr": "PointerType 26"
+      },
+      "ExtInfo": "absent",
+      "FieldDecl flags": "",
+      "IdentifierNamespace": "IDNS_Member",
+      "InitStorageKind": "ICIS_NoInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:12:5",
+      "LDC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:12:8",
+      "Name": "\"u\"",
+      "NextInContext": {"ptr": "null"},
+      "TInfo": "Pointer(\"V *\", <in/src/ct-cont-ct-cspspec.cc:12:5, col:7>, TemplateTypeParm(\"V\", <in/src/ct-cont-ct-cspspec.cc:12:5>, NullTypeLoc))",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "FieldDecl 38": {
+      "Access": "AS_public",
+      "CachedFieldIndex": "1",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "int",
+        "ptr": "SubstTemplateTypeParmType 39"
+      },
+      "ExtInfo": "absent",
+      "FieldDecl flags": "",
+      "IdentifierNamespace": "IDNS_Member",
+      "InitStorageKind": "ICIS_NoInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:11:5",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:11:7",
+      "Name": "\"t\"",
+      "NextInContext": {"ptr": "FieldDecl 41"},
+      "TInfo": "SubstTemplateTypeParm(\"int\", <in/src/ct-cont-ct-cspspec.cc:11:5>, NullTypeLoc)",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "FieldDecl 41": {
+      "Access": "AS_public",
+      "CachedFieldIndex": "2",
+      "DC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "float *",
+        "ptr": "PointerType 42"
+      },
+      "ExtInfo": "absent",
+      "FieldDecl flags": "",
+      "IdentifierNamespace": "IDNS_Member",
+      "InitStorageKind": "ICIS_NoInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:12:5",
+      "LDC": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:12:8",
+      "Name": "\"u\"",
+      "NextInContext": {"ptr": "CXXConstructorDecl 45"},
+      "TInfo": "Pointer(\"float *\", <in/src/ct-cont-ct-cspspec.cc:12:5, col:7>, SubstTemplateTypeParm(\"float\", <in/src/ct-cont-ct-cspspec.cc:12:5>, NullTypeLoc))",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "FunctionProtoType 79": {
+      "ResultType": {
+        "preview": "void",
+        "ptr": "BuiltinType 91"
+      },
+      "syntax": "\"void (void) noexcept\""
+    },
+    "FunctionProtoType 80": {
+      "Canon": {
+        "preview": "void (const struct Outer<int>::Inner<float *> &)",
+        "ptr": "FunctionProtoType 92"
+      },
+      "ResultType": {
+        "preview": "void",
+        "ptr": "BuiltinType 91"
+      },
+      "paramType[0]": {
+        "preview": "const Inner<float *> &",
+        "ptr": "LValueReferenceType 49"
+      },
+      "syntax": "\"void (const Inner<float *> &)\""
+    },
+    "FunctionProtoType 82": {
+      "Canon": {
+        "preview": "void (struct Outer<int>::Inner<float *> &&)",
+        "ptr": "FunctionProtoType 93"
+      },
+      "ResultType": {
+        "preview": "void",
+        "ptr": "BuiltinType 91"
+      },
+      "paramType[0]": {
+        "preview": "Inner<float *> &&",
+        "ptr": "RValueReferenceType 54"
+      },
+      "syntax": "\"void (Inner<float *> &&)\""
+    },
+    "FunctionProtoType 92": {
+      "ResultType": {
+        "preview": "void",
+        "ptr": "BuiltinType 91"
+      },
+      "paramType[0]": {
+        "preview": "const struct Outer<int>::Inner<float *> &",
+        "ptr": "LValueReferenceType 81"
+      },
+      "syntax": "\"void (const struct Outer<int>::Inner<float *> &)\""
+    },
+    "FunctionProtoType 93": {
+      "ResultType": {
+        "preview": "void",
+        "ptr": "BuiltinType 91"
+      },
+      "paramType[0]": {
+        "preview": "struct Outer<int>::Inner<float *> &&",
+        "ptr": "RValueReferenceType 83"
+      },
+      "syntax": "\"void (struct Outer<int>::Inner<float *> &&)\""
+    },
+    "InjectedClassNameType 65": {
+      "Decl": {"ptr": "CXXRecordDecl 17"},
+      "InjectedType": {
+        "preview": "Outer<T>",
+        "ptr": "TemplateSpecializationType 84"
+      },
+      "syntax": "\"Outer<T>\""
+    },
+    "InjectedClassNameType 69": {
+      "Decl": {"ptr": "CXXRecordDecl 22"},
+      "InjectedType": {
+        "preview": "Inner<U>",
+        "ptr": "TemplateSpecializationType 85"
+      },
+      "syntax": "\"Inner<U>\""
+    },
+    "InjectedClassNameType 70": {
+      "Decl": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "InjectedType": {
+        "preview": "Inner<type-parameter-1-0 *>",
+        "ptr": "TemplateSpecializationType 86"
+      },
+      "syntax": "\"Inner<type-parameter-1-0 *>\""
+    },
+    "InjectedClassNameType 76": {
+      "Decl": {"ptr": "CXXRecordDecl 35"},
+      "InjectedType": {
+        "preview": "Inner<U>",
+        "ptr": "TemplateSpecializationType 87"
+      },
+      "syntax": "\"Inner<U>\""
+    },
+    "InjectedClassNameType 88": {
+      "Decl": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "InjectedType": {
+        "preview": "Inner<type-parameter-0-0 *>",
+        "ptr": "TemplateSpecializationType 98"
+      },
+      "syntax": "\"Inner<type-parameter-0-0 *>\""
+    },
+    "LValueReferenceType 49": {
+      "Canon": {
+        "preview": "const struct Outer<int>::Inner<float *> &",
+        "ptr": "LValueReferenceType 81"
+      },
+      "PointeeType": {
+        "preview": "const Inner<float *>",
+        "ptr": "ElaboratedType 50"
+      },
+      "syntax": "\"const Inner<float *> &\""
+    },
+    "LValueReferenceType 81": {
+      "PointeeType": {
+        "preview": "const struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "syntax": "\"const struct Outer<int>::Inner<float *> &\""
+    },
+    "ParmVarDecl 48": {
+      "ARCPseudoStrong": "0",
+      "Access": "AS_none",
+      "DC": {"ptr": "CXXConstructorDecl 47"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "const Inner<float *> &",
+        "ptr": "LValueReferenceType 49"
+      },
+      "DefaultArgKind": "DAK_Normal",
+      "ExtInfo": "absent",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InitStmt": {"ptr": "null"},
+      "InitStyle": "CInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LDC": {"ptr": "CXXConstructorDecl 47"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "Name": "\"\"",
+      "NextInContext": {"ptr": "null"},
+      "ParameterIndex": "0",
+      "ParmVarDeclBits flags": "",
+      "SClass": "SC_None",
+      "ScopeDepthOrObjCQuals": "0",
+      "TInfo": "NullTSI",
+      "TSCSpec": "TSCS_unspecified",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "ParmVarDecl 53": {
+      "ARCPseudoStrong": "0",
+      "Access": "AS_none",
+      "DC": {"ptr": "CXXConstructorDecl 52"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "Inner<float *> &&",
+        "ptr": "RValueReferenceType 54"
+      },
+      "DefaultArgKind": "DAK_Normal",
+      "ExtInfo": "absent",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InitStmt": {"ptr": "null"},
+      "InitStyle": "CInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "LDC": {"ptr": "CXXConstructorDecl 52"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:10:10",
+      "Name": "\"\"",
+      "NextInContext": {"ptr": "null"},
+      "ParameterIndex": "0",
+      "ParmVarDeclBits flags": "",
+      "SClass": "SC_None",
+      "ScopeDepthOrObjCQuals": "0",
+      "TInfo": "NullTSI",
+      "TSCSpec": "TSCS_unspecified",
+      "moduleOwnershipKind": "Unowned"
+    },
+    "PointerType 26": {
+      "Canon": {
+        "preview": "type-parameter-1-0 *",
+        "ptr": "PointerType 72"
+      },
+      "PointeeType": {
+        "preview": "V",
+        "ptr": "TemplateTypeParmType 25"
+      },
+      "syntax": "\"V *\""
+    },
+    "PointerType 42": {
+      "Canon": {
+        "preview": "float *",
+        "ptr": "PointerType 59"
+      },
+      "PointeeType": {
+        "preview": "float",
+        "ptr": "SubstTemplateTypeParmType 43"
+      },
+      "syntax": "\"float *\""
+    },
+    "PointerType 59": {
+      "PointeeType": {
+        "preview": "float",
+        "ptr": "BuiltinType 44"
+      },
+      "syntax": "\"float *\""
+    },
+    "PointerType 72": {
+      "PointeeType": {
+        "preview": "type-parameter-1-0",
+        "ptr": "TemplateTypeParmType 68"
+      },
+      "syntax": "\"type-parameter-1-0 *\""
+    },
+    "PointerType 89": {
+      "PointeeType": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 64"
+      },
+      "syntax": "\"type-parameter-0-0 *\""
+    },
+    "PointerType 9": {
+      "PointeeType": {
+        "preview": "char",
+        "ptr": "BuiltinType 10"
+      },
+      "syntax": "\"char *\""
+    },
+    "RValueReferenceType 54": {
+      "Canon": {
+        "preview": "struct Outer<int>::Inner<float *> &&",
+        "ptr": "RValueReferenceType 83"
+      },
+      "PointeeType": {
+        "preview": "Inner<float *>",
+        "ptr": "ElaboratedType 50"
+      },
+      "syntax": "\"Inner<float *> &&\""
+    },
+    "RValueReferenceType 83": {
+      "PointeeType": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "syntax": "\"struct Outer<int>::Inner<float *> &&\""
+    },
+    "RecordType 13": {
+      "decl": {"ptr": "CXXRecordDecl 62"},
+      "syntax": "\"struct __va_list_tag\""
+    },
+    "RecordType 51": {
+      "decl": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "syntax": "\"struct Outer<int>::Inner<float *>\""
+    },
+    "RecordType 7": {
+      "decl": {"ptr": "CXXRecordDecl 61"},
+      "syntax": "\"struct __NSConstantString_tag\""
+    },
+    "RecordType 73": {
+      "decl": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "syntax": "\"struct Outer<int>\""
+    },
+    "SubstTemplateTypeParmType 39": {
+      "AssociatedDecl": {"ptr": "ClassTemplateSpecializationDecl 30"},
+      "Canon": {
+        "preview": "int",
+        "ptr": "BuiltinType 40"
+      },
+      "Index": "0",
+      "PackIndex": "none",
+      "getReplacementType()": {
+        "preview": "int",
+        "ptr": "BuiltinType 40"
+      },
+      "getUnqualifiedDesugaredType()": {
+        "preview": "int",
+        "ptr": "BuiltinType 40"
+      },
+      "syntax": "\"int\""
+    },
+    "SubstTemplateTypeParmType 43": {
+      "AssociatedDecl": {"ptr": "ClassTemplateSpecializationDecl 36"},
+      "Canon": {
+        "preview": "float",
+        "ptr": "BuiltinType 44"
+      },
+      "Index": "0",
+      "PackIndex": "none",
+      "getReplacementType()": {
+        "preview": "float",
+        "ptr": "BuiltinType 44"
+      },
+      "getUnqualifiedDesugaredType()": {
+        "preview": "float",
+        "ptr": "BuiltinType 44"
+      },
+      "syntax": "\"float\""
+    },
+    "TemplateSpecializationType 100": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 32"},
+      "args[0]": "\"type-parameter-0-0 *\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-0-0 *",
+        "ptr": "PointerType 89"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-0-0 *>",
+        "ptr": "TemplateSpecializationType 100"
+      },
+      "syntax": "\"Inner<type-parameter-0-0 *>\""
+    },
+    "TemplateSpecializationType 57": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "struct Outer<int>",
+        "ptr": "RecordType 73"
+      },
+      "Template": "Outer",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 14"},
+      "args[0]": "\"int\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "int",
+        "ptr": "BuiltinType 40"
+      },
+      "desugar()": {
+        "preview": "struct Outer<int>",
+        "ptr": "RecordType 73"
+      },
+      "getUnqualifiedDesugaredType()": {
+        "preview": "struct Outer<int>",
+        "ptr": "RecordType 73"
+      },
+      "syntax": "\"Outer<int>\""
+    },
+    "TemplateSpecializationType 58": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 32"},
+      "args[0]": "\"float *\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "float *",
+        "ptr": "PointerType 59"
+      },
+      "desugar()": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "getUnqualifiedDesugaredType()": {
+        "preview": "struct Outer<int>::Inner<float *>",
+        "ptr": "RecordType 51"
+      },
+      "syntax": "\"Inner<float *>\""
+    },
+    "TemplateSpecializationType 84": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "Outer<type-parameter-0-0>",
+        "ptr": "TemplateSpecializationType 94"
+      },
+      "Template": "Outer",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 14"},
+      "args[0]": "\"T\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "desugar()": {
+        "preview": "Outer<type-parameter-0-0>",
+        "ptr": "TemplateSpecializationType 94"
+      },
+      "syntax": "\"Outer<T>\""
+    },
+    "TemplateSpecializationType 85": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "Inner<type-parameter-1-0>",
+        "ptr": "TemplateSpecializationType 95"
+      },
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 19"},
+      "args[0]": "\"U\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "U",
+        "ptr": "TemplateTypeParmType 21"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-1-0>",
+        "ptr": "TemplateSpecializationType 95"
+      },
+      "syntax": "\"Inner<U>\""
+    },
+    "TemplateSpecializationType 86": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "Inner<type-parameter-1-0 *>",
+        "ptr": "TemplateSpecializationType 96"
+      },
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 19"},
+      "args[0]": "\"type-parameter-1-0 *\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-1-0 *",
+        "ptr": "PointerType 72"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-1-0 *>",
+        "ptr": "TemplateSpecializationType 96"
+      },
+      "syntax": "\"Inner<type-parameter-1-0 *>\""
+    },
+    "TemplateSpecializationType 87": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "Inner<type-parameter-0-0>",
+        "ptr": "TemplateSpecializationType 97"
+      },
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 32"},
+      "args[0]": "\"U\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "U",
+        "ptr": "TemplateTypeParmType 34"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-0-0>",
+        "ptr": "TemplateSpecializationType 97"
+      },
+      "syntax": "\"Inner<U>\""
+    },
+    "TemplateSpecializationType 94": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Template": "Outer",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 14"},
+      "args[0]": "\"type-parameter-0-0\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 64"
+      },
+      "desugar()": {
+        "preview": "Outer<type-parameter-0-0>",
+        "ptr": "TemplateSpecializationType 94"
+      },
+      "syntax": "\"Outer<type-parameter-0-0>\""
+    },
+    "TemplateSpecializationType 95": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 19"},
+      "args[0]": "\"type-parameter-1-0\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-1-0",
+        "ptr": "TemplateTypeParmType 68"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-1-0>",
+        "ptr": "TemplateSpecializationType 95"
+      },
+      "syntax": "\"Inner<type-parameter-1-0>\""
+    },
+    "TemplateSpecializationType 96": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 19"},
+      "args[0]": "\"type-parameter-1-0 *\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-1-0 *",
+        "ptr": "PointerType 72"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-1-0 *>",
+        "ptr": "TemplateSpecializationType 96"
+      },
+      "syntax": "\"Inner<type-parameter-1-0 *>\""
+    },
+    "TemplateSpecializationType 97": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 32"},
+      "args[0]": "\"type-parameter-0-0\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 64"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-0-0>",
+        "ptr": "TemplateSpecializationType 97"
+      },
+      "syntax": "\"Inner<type-parameter-0-0>\""
+    },
+    "TemplateSpecializationType 98": {
+      "Bits.NumArgs": "1",
+      "Bits.TypeAlias": "0",
+      "Canon": {
+        "preview": "Inner<type-parameter-0-0 *>",
+        "ptr": "TemplateSpecializationType 100"
+      },
+      "Template": "Inner",
+      "TemplateDecl": {"ptr": "ClassTemplateDecl 32"},
+      "args[0]": "\"type-parameter-0-0 *\" (ArgKind::Type)",
+      "args[0].Type": {
+        "preview": "type-parameter-0-0 *",
+        "ptr": "PointerType 89"
+      },
+      "desugar()": {
+        "preview": "Inner<type-parameter-0-0 *>",
+        "ptr": "TemplateSpecializationType 100"
+      },
+      "syntax": "\"Inner<type-parameter-0-0 *>\""
+    },
+    "TemplateTypeParmDecl 15": {
+      "Access": "AS_public",
+      "DC": {"ptr": "CXXRecordDecl 17"},
+      "Decl::flags": "Referenced",
+      "IdentifierNamespace": "IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "CXXRecordDecl 17"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:4:17",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:4:11",
+      "Name": "\"T\"",
+      "NextInContext": {"ptr": "null"},
+      "NumExpanded": "0",
+      "TemplateTypeParmDecl flags": "",
+      "TypeForDecl": {
+        "preview": "T",
+        "ptr": "TemplateTypeParmType 16"
+      },
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TemplateTypeParmDecl 20": {
+      "Access": "AS_public",
+      "DC": {"ptr": "CXXRecordDecl 22"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "CXXRecordDecl 22"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:6:19",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:6:13",
+      "Name": "\"U\"",
+      "NextInContext": {"ptr": "null"},
+      "NumExpanded": "0",
+      "TemplateTypeParmDecl flags": "",
+      "TypeForDecl": {
+        "preview": "U",
+        "ptr": "TemplateTypeParmType 21"
+      },
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TemplateTypeParmDecl 24": {
+      "Access": "AS_public",
+      "DC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Decl::flags": "Referenced",
+      "IdentifierNamespace": "IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "ClassTemplatePartialSpecializationDecl 23"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:9:19",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:9:13",
+      "Name": "\"V\"",
+      "NextInContext": {"ptr": "null"},
+      "NumExpanded": "0",
+      "TemplateTypeParmDecl flags": "",
+      "TypeForDecl": {
+        "preview": "V",
+        "ptr": "TemplateTypeParmType 25"
+      },
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TemplateTypeParmDecl 33": {
+      "Access": "AS_public",
+      "DC": {"ptr": "CXXRecordDecl 35"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "CXXRecordDecl 35"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:6:19",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:6:13",
+      "Name": "\"U\"",
+      "NextInContext": {"ptr": "null"},
+      "NumExpanded": "0",
+      "TemplateTypeParmDecl flags": "",
+      "TypeForDecl": {
+        "preview": "U",
+        "ptr": "TemplateTypeParmType 34"
+      },
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TemplateTypeParmDecl 90": {
+      "Access": "AS_public",
+      "DC": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "Decl::flags": "",
+      "IdentifierNamespace": "IDNS_Type|IDNS_Ordinary",
+      "LDC": {"ptr": "ClassTemplatePartialSpecializationDecl 78"},
+      "Linkage": "(not set)",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:9:19",
+      "LocStart": "in/src/ct-cont-ct-cspspec.cc:9:13",
+      "Name": "\"V\"",
+      "NextInContext": {"ptr": "null"},
+      "NumExpanded": "0",
+      "TemplateTypeParmDecl flags": "",
+      "TypeForDecl": {
+        "preview": "V",
+        "ptr": "TemplateTypeParmType 99"
+      },
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TemplateTypeParmType 16": {
+      "Canon": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 64"
+      },
+      "Depth": "0",
+      "Index": "0",
+      "TTPDecl": {"ptr": "TemplateTypeParmDecl 15"},
+      "isParameterPack": "0",
+      "syntax": "\"T\""
+    },
+    "TemplateTypeParmType 21": {
+      "Canon": {
+        "preview": "type-parameter-1-0",
+        "ptr": "TemplateTypeParmType 68"
+      },
+      "Depth": "1",
+      "Index": "0",
+      "TTPDecl": {"ptr": "TemplateTypeParmDecl 20"},
+      "isParameterPack": "0",
+      "syntax": "\"U\""
+    },
+    "TemplateTypeParmType 25": {
+      "Canon": {
+        "preview": "type-parameter-1-0",
+        "ptr": "TemplateTypeParmType 68"
+      },
+      "Depth": "1",
+      "Index": "0",
+      "TTPDecl": {"ptr": "TemplateTypeParmDecl 24"},
+      "isParameterPack": "0",
+      "syntax": "\"V\""
+    },
+    "TemplateTypeParmType 34": {
+      "Canon": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 64"
+      },
+      "Depth": "0",
+      "Index": "0",
+      "TTPDecl": {"ptr": "TemplateTypeParmDecl 33"},
+      "isParameterPack": "0",
+      "syntax": "\"U\""
+    },
+    "TemplateTypeParmType 64": {
+      "Depth": "0",
+      "Index": "0",
+      "TTPDecl": {"ptr": "null"},
+      "isParameterPack": "0",
+      "syntax": "\"type-parameter-0-0\""
+    },
+    "TemplateTypeParmType 68": {
+      "Depth": "1",
+      "Index": "0",
+      "TTPDecl": {"ptr": "null"},
+      "isParameterPack": "0",
+      "syntax": "\"type-parameter-1-0\""
+    },
+    "TemplateTypeParmType 99": {
+      "Canon": {
+        "preview": "type-parameter-0-0",
+        "ptr": "TemplateTypeParmType 64"
+      },
+      "Depth": "0",
+      "Index": "0",
+      "TTPDecl": {"ptr": "TemplateTypeParmDecl 90"},
+      "isParameterPack": "0",
+      "syntax": "\"V\""
+    },
+    "TranslationUnitDecl 1": {
+      "Access": "AS_none",
+      "DC": {"ptr": "null"},
+      "Decl::flags": "",
+      "DeclContextBits": "",
+      "DeclKind": "TranslationUnitDecl",
+      "FirstDecl": {"ptr": "TypedefDecl 2"},
+      "IdentifierNamespace": "0",
+      "LDC": {"ptr": "null"},
+      "LastDecl": {"ptr": "VarDecl 55"},
+      "Linkage": "(not set)",
+      "Loc": "<invalid loc>",
+      "LookupPtr": "StoredDeclsMap with 7 entries",
+      "NextInContext": {"ptr": "null"},
+      "moduleOwnershipKind": "Unowned"
+    },
+    "TypedefDecl 11": {"skipping reserved": "\"__builtin_va_list\""},
+    "TypedefDecl 2": {"skipping reserved": "\"__int128_t\""},
+    "TypedefDecl 4": {"skipping reserved": "\"__uint128_t\""},
+    "TypedefDecl 6": {"skipping reserved": "\"__NSConstantString\""},
+    "TypedefDecl 8": {"skipping reserved": "\"__builtin_ms_va_list\""},
+    "VarDecl 55": {
+      "ARCPseudoStrong": "0",
+      "Access": "AS_none",
+      "DC": {"ptr": "TranslationUnitDecl 1"},
+      "Decl::flags": "",
+      "DeclType": {
+        "preview": "Outer<int>::Inner<float *>",
+        "ptr": "ElaboratedType 56"
+      },
+      "Evaluated": "None",
+      "EvaluatedStmt flags": "",
+      "ExtInfo": "absent",
+      "IdentifierNamespace": "IDNS_Ordinary",
+      "InitStmt": {"ptr": "CXXConstructExpr 60"},
+      "InitStyle": "CallInit",
+      "InnerLocStart": "in/src/ct-cont-ct-cspspec.cc:16:1",
+      "LDC": {"ptr": "TranslationUnitDecl 1"},
+      "Linkage": "ExternalLinkage",
+      "Loc": "in/src/ct-cont-ct-cspspec.cc:16:27",
+      "Name": "\"i\"",
+      "NextInContext": {"ptr": "null"},
+      "SClass": "SC_None",
+      "TInfo": "Elaborated(\"Outer<int>::Inner<float *>\", <in/src/ct-cont-ct-cspspec.cc:16:1, col:25>, TemplateSpecialization(\"Inner<float *>\", <in/src/ct-cont-ct-cspspec.cc:16:13, col:25>, NullTypeLoc))",
+      "TSCSpec": "TSCS_unspecified",
+      "moduleOwnershipKind": "Unowned"
+    }
+  },
+  "objectGraphConfig": {
+    "newNodeAttributes": null,
+    "newNodeName": null,
+    "showFields": [
+      "syntax",
+      "Depth",
+      "Index",
+      "specKind",
+      "Name",
+      "TemplateArguments",
+      "TP",
+      "Specializations",
+      "Decl::Implicit",
+      "TemplParamLists[0]",
+      "TypeForDecl",
+      "DeclType",
+      "TemplatedDecl",
+      "TTPDecl",
+      "TemplateOrSpecialization",
+      "InstantiatedFromMember",
+      "Bits.IsCompleteDefinition",
+      "TemplateOrInstantiation",
+      "Body",
+      "ExplicitInfo",
+      "TemplateArgs",
+      "SpecializationKind",
+      "ST.SPS->TemplateArgs",
+      "TemplateSpecializationKind",
+      "q->NumTemplParamLists",
+      "q->TemplParamLists[0]",
+      "q->TemplParamLists[1]",
+      "args[0].Type",
+      "PartialSpecializations[0]",
+      "Specializations[0]",
+      "isMemberSpecialization",
+      "explicitMemberSpec",
+      "isFuncMemberSpec",
+      "specdThisLevel",
+      "Specializations[1]",
+      "ST.SPS->PartialSpecialization",
+      "ST.classTemplateDecl",
+      "Param[0]",
+      "PointeeType",
+      "CanonicalType",
+      "InjectedType",
+      "MSI",
+      "Member",
+      "ResultType",
+      "paramType[0]",
+      "paramType[1]",
+      "Function",
+      "CTD",
+      "FTD",
+      "Cmn",
+      "TdD",
+      "FTSI",
+      "DC",
+      "Base",
+      "MemberDecl",
+      "TR",
+      "TemplateArgumentLocs[0]::Argument",
+      "redecls_size()",
+      "TPL[0]",
+      "TPL[1]",
+      "getTemplateInstantiationPattern()",
+      "decl",
+      "ST.CTD",
+      "PartialSpecializations"
+    ]
+  },
+  "objectGraphSourceFile": "../../out/ct-cont-ct-cspspec.cc.abbrev.json",
+  "relations": [
+    {
+      "end": {"entityRef": 0},
+      "label": "DC",
+      "start": {"entityRef": 1}
+    },
+    {
+      "end": {"entityRef": 2},
+      "label": "TdD",
+      "start": {"entityRef": 1}
+    },
+    {
+      "end": {"entityRef": 1},
+      "label": "CTD",
+      "start": {"entityRef": 2}
+    },
+    {
+      "end": {"entityRef": 4},
+      "label": "DC",
+      "start": {"entityRef": 3}
+    },
+    {
+      "end": {"entityRef": 5},
+      "label": "TdD",
+      "start": {"entityRef": 3}
+    },
+    {
+      "end": {"entityRef": 3},
+      "label": "CTD",
+      "start": {"entityRef": 5}
+    },
+    {
+      "end": {"entityRef": 7},
+      "label": "Cmn",
+      "start": {"entityRef": 3}
+    },
+    {
+      "end": {"entityRef": 8},
+      "label": "Cmn",
+      "start": {"entityRef": 1}
+    },
+    {
+      "controlPts": [{
+        "x": 295,
+        "y": 120
+      }],
+      "end": {"entityRef": 9},
+      "label": "Specializations[0]",
+      "start": {"entityRef": 8}
+    },
+    {
+      "controlPts": [{
+        "x": 190,
+        "y": 10
+      }],
+      "end": {"entityRef": 1},
+      "label": "ST.CTD",
+      "routingAlg": "RA_MANHATTAN_VERT",
+      "start": {"entityRef": 9}
+    },
+    {
+      "end": {"entityRef": 11},
+      "label": "DC",
+      "start": {"entityRef": 10}
+    },
+    {
+      "controlPts": [{
+        "x": 730,
+        "y": 240
+      }],
+      "end": {"entityRef": 12},
+      "label": "Cmn",
+      "start": {"entityRef": 10}
+    },
+    {
+      "end": {"entityRef": 13},
+      "label": "TdD",
+      "start": {"entityRef": 10}
+    },
+    {
+      "end": {"entityRef": 10},
+      "label": "CTD",
+      "start": {"entityRef": 13}
+    },
+    {
+      "controlPts": [
+        {
+          "x": 805,
+          "y": 490
+        },
+        {
+          "x": 740,
+          "y": 500
+        }
+      ],
+      "end": {"entityRef": 14},
+      "label": "Specializations[0]",
+      "routingAlg": "RA_MANHATTAN_VERT",
+      "start": {"entityRef": 12}
+    },
+    {
+      "end": {"entityRef": 11},
+      "label": "DC",
+      "start": {"entityRef": 14}
+    },
+    {
+      "end": {"entityRef": 14},
+      "label": "DC",
+      "start": {"entityRef": 16}
+    },
+    {
+      "end": {"entityRef": 14},
+      "label": "DC",
+      "start": {"entityRef": 15}
+    },
+    {
+      "end": {"entityRef": 4},
+      "label": "DC",
+      "start": {"entityRef": 17}
+    },
+    {
+      "end": {"entityRef": 17},
+      "label": "PartialSpecializations[0]",
+      "routingAlg": "RA_MANHATTAN_VERT",
+      "start": {"entityRef": 7}
+    },
+    {
+      "controlPts": [
+        {
+          "x": 45,
+          "y": 345
+        },
+        {
+          "x": 80,
+          "y": 230
+        }
+      ],
+      "end": {"entityRef": 3},
+      "label": "ST.CTD",
+      "start": {"entityRef": 17}
+    },
+    {
+      "end": {"entityRef": 17},
+      "label": "DC",
+      "start": {"entityRef": 18}
+    },
+    {
+      "end": {"entityRef": 17},
+      "label": "DC",
+      "start": {"entityRef": 19}
+    },
+    {
+      "end": {"entityRef": 20},
+      "label": "PartialSpecializations[0]",
+      "start": {"entityRef": 12}
+    },
+    {
+      "controlPts": [{
+        "x": 710,
+        "y": 485
+      }],
+      "end": {"entityRef": 20},
+      "label": "ST.SPS->PartialSpecialization",
+      "start": {"entityRef": 14}
+    },
+    {
+      "controlPts": [{
+        "x": 310,
+        "y": 535
+      }],
+      "end": {"entityRef": 17},
+      "label": "getTemplateInstantiationPattern()",
+      "routingAlg": "RA_MANHATTAN_VERT",
+      "start": {"entityRef": 14}
+    },
+    {
+      "end": {"entityRef": 11},
+      "label": "DC",
+      "start": {"entityRef": 20}
+    },
+    {
+      "controlPts": [{
+        "x": 325,
+        "y": 325
+      }],
+      "end": {"entityRef": 17},
+      "label": "InstantiatedFromMember",
+      "routingAlg": "RA_MANHATTAN_VERT",
+      "start": {"entityRef": 20}
+    },
+    {
+      "controlPts": [
+        {
+          "x": 485,
+          "y": 350
+        },
+        {
+          "x": 520,
+          "y": 230
+        }
+      ],
+      "end": {"entityRef": 10},
+      "label": "ST.CTD",
+      "start": {"entityRef": 20}
+    },
+    {
+      "end": {"entityRef": 0},
+      "label": "DC",
+      "start": {"entityRef": 21}
+    },
+    {
+      "end": {"entityRef": 22},
+      "label": "DeclType",
+      "start": {"entityRef": 21}
+    },
+    {
+      "end": {"entityRef": 23},
+      "label": "NamedType",
+      "start": {"entityRef": 22}
+    },
+    {
+      "end": {"entityRef": 24},
+      "label": "Canon",
+      "start": {"entityRef": 23}
+    },
+    {
+      "end": {"entityRef": 14},
+      "label": "decl",
+      "start": {"entityRef": 24}
+    },
+    {
+      "controlPts": [
+        {
+          "x": 755,
+          "y": 170
+        },
+        {
+          "x": 485,
+          "y": 155
+        },
+        {
+          "x": 240,
+          "y": 135
+        }
+      ],
+      "end": {"entityRef": 3},
+      "label": "InstantiatedFromMember",
+      "labelSegmentNumber": 4,
+      "start": {"entityRef": 12}
+    }
+  ],
+  "type": "Diagram Editor Diagram",
+  "version": 30,
+  "windowSize": {
+    "h": 678,
+    "w": 938
+  }
+}
