@@ -51,7 +51,7 @@ def escape_description(str):
     # https://github.com/github/markup/issues/1168#issuecomment-494946168
     str = html.escape(str, False)
     # '@' followed by alphanum is a user name
-    str = re.sub("@(?=\w+)","@<!-- -->", str)
+    str = re.sub("@(?=\w+)", "@<!-- -->", str)
     # '#' followed by digits is considered an issue number
     str = re.sub("#(?=\d+\s)", "#<!-- -->", str)
     return str
@@ -60,6 +60,7 @@ def escape_description(str):
 def sanitize_markdown_code_block(str):
     # remove codeblocks terminators
     return re.sub("^\s*```\s*$", r"` ` `", str)
+
 
 class IssueSubscriber:
     @property
