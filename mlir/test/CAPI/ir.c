@@ -1283,8 +1283,12 @@ int printBuiltinAttributes(MlirContext ctx) {
       mlirStringRefCreateFromCString("resource_f64"), 2, doubles);
   MlirAttribute blobBlob = mlirUnmanagedDenseResourceElementsAttrGet(
       mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
-      mlirStringRefCreateFromCString("resource_i64_blob"), uints64,
-      sizeof(uints64), reportResourceDelete, (void *)&resourceI64BlobUserData);
+      mlirStringRefCreateFromCString("resource_i64_blob"), /*data=*/uints64,
+      /*dataLength=*/sizeof(uints64),
+      /*dataAlignment=*/_Alignof(uint64_t),
+      /*dataIsMutable=*/false,
+      /*deleter=*/reportResourceDelete,
+      /*userData=*/(void *)&resourceI64BlobUserData);
 
   mlirAttributeDump(uint8Blob);
   mlirAttributeDump(uint16Blob);

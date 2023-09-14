@@ -1033,6 +1033,7 @@ public:
 
   static PyDenseResourceElementsAttribute
   getFromBuffer(py::buffer buffer, std::string name, PyType type,
+                std::optional<size_t> alignment, bool isMutable,
                 DefaultingPyMlirContext contextWrapper) {
     if (!mlirTypeIsAShaped(type)) {
       throw std::invalid_argument(
@@ -1041,7 +1042,7 @@ public:
 
     // Do not request any conversions as we must ensure to use caller
     // managed memory.
-    int flags = 0;
+    int flags = PyBUF_STRIDES;
     std::unique_ptr<Py_buffer> view = std::make_unique<Py_buffer>();
     if (PyObject_GetBuffer(buffer.ptr(), view.get(), flags) != 0) {
       throw py::error_already_set();
@@ -1058,6 +1059,13 @@ public:
       throw std::invalid_argument("Contiguous buffer is required.");
     }
 
+    // Infer alignment to be the stride of one element if not explicit.
+    size_t inferredAlignment;
+    if (alignment)
+      inferredAlignment = *alignment;
+    else
+      inferredAlignment = view->strides[view->ndim - 1];
+
     // The userData is a Py_buffer* that the deleter owns.
     auto deleter = [](void *userData, const void *data, size_t size,
                       size_t align) {
@@ -1068,8 +1076,8 @@ public:
 
     size_t rawBufferSize = view->len;
     MlirAttribute attr = mlirUnmanagedDenseResourceElementsAttrGet(
-        type, toMlirStringRef(name), view->buf, rawBufferSize, deleter,
-        static_cast<void *>(view.get()));
+        type, toMlirStringRef(name), view->buf, rawBufferSize,
+        inferredAlignment, isMutable, deleter, static_cast<void *>(view.get()));
     if (mlirAttributeIsNull(attr)) {
       throw std::invalid_argument(
           "DenseResourceElementsAttr could not be constructed from the given "
@@ -1085,7 +1093,8 @@ public:
     c.def_static("get_from_buffer",
                  PyDenseResourceElementsAttribute::getFromBuffer,
                  py::arg("array"), py::arg("name"), py::arg("type"),
-                 py::arg("context") = py::none(),
+                 py::arg("alignment") = py::none(),
+                 py::arg("is_mutable") = false, py::arg("context") = py::none(),
                  kDenseResourceElementsAttrGetFromBufferDocstring);
   }
 };

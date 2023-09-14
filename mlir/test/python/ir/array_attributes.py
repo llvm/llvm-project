@@ -440,7 +440,7 @@ def testGetDenseResourceElementsAttr():
             module = Module.parse("module {}")
             module.operation.attributes["test.resource"] = resource
             # CHECK: test.resource = dense_resource<from_py> : tensor<2x3xi32>
-            # CHECK: from_py: "0x01000000010000000200000003000000040000000500000006000000"
+            # CHECK: from_py: "0x04000000010000000200000003000000040000000500000006000000"
             print(module)
 
             # Verifies type casting.

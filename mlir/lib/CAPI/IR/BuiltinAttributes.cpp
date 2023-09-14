@@ -775,24 +775,20 @@ bool mlirAttributeIsADenseResourceElements(MlirAttribute attr) {
 }
 
 MlirAttribute mlirUnmanagedDenseResourceElementsAttrGet(
-    MlirType shapedType, MlirStringRef name, const void *data,
-    size_t dataLength,
+    MlirType shapedType, MlirStringRef name, void *data, size_t dataLength,
+    size_t dataAlignment, bool dataIsMutable,
     void (*deleter)(void *userData, const void *data, size_t size,
                     size_t align),
     void *userData) {
-  AsmResourceBlob blob;
-  if (!deleter) {
-    // No deleter.
-    blob = UnmanagedAsmResourceBlob::allocateInferAlign(
-        llvm::ArrayRef(static_cast<const char *>(data), dataLength));
-  } else {
-    // With deleter.
-    blob = UnmanagedAsmResourceBlob::allocateInferAlign(
-        llvm::ArrayRef(static_cast<const char *>(data), dataLength),
-        [deleter, userData](void *data, size_t size, size_t align) {
-          deleter(userData, data, size, align);
-        });
+  AsmResourceBlob::DeleterFn cppDeleter = {};
+  if (deleter) {
+    cppDeleter = [deleter, userData](void *data, size_t size, size_t align) {
+      deleter(userData, data, size, align);
+    };
   }
+  AsmResourceBlob blob(
+      llvm::ArrayRef(static_cast<const char *>(data), dataLength),
+      dataAlignment, std::move(cppDeleter), dataIsMutable);
   return wrap(
       DenseResourceElementsAttr::get(llvm::cast<ShapedType>(unwrap(shapedType)),
                                      unwrap(name), std::move(blob)));

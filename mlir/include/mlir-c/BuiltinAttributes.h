@@ -563,11 +563,14 @@ mlirAttributeIsADenseResourceElements(MlirAttribute attr);
 
 /// Unlike the typed accessors below, constructs the attribute with a raw
 /// data buffer and no type/alignment checking. Use a more strongly typed
-/// accessor if possible. If the deleter is non NULL, then it will be called
-/// when the data buffer can no longer be accessed (passing userData to it).
+/// accessor if possible. If dataIsMutable is false, then an immutable
+/// AsmResourceBlob will be created and that passed data contents will be
+/// treated as const.
+/// If the deleter is non NULL, then it will be called when the data buffer
+/// can no longer be accessed (passing userData to it).
 MLIR_CAPI_EXPORTED MlirAttribute mlirUnmanagedDenseResourceElementsAttrGet(
-    MlirType shapedType, MlirStringRef name, const void *data,
-    size_t dataLength,
+    MlirType shapedType, MlirStringRef name, void *data, size_t dataLength,
+    size_t dataAlignment, bool dataIsMutable,
     void (*deleter)(void *userData, const void *data, size_t size,
                     size_t align),
     void *userData);
