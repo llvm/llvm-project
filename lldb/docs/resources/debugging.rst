@@ -580,3 +580,8 @@ reproduction steps.
 Finally, that "thing" is the ptrace calls you got from the ``lldb-server`` logs.
 Add those to the debugger function and you now have a reproducer that doesn't
 need any part of LLDB.
+
+Debugging Tests
+---------------
+
+See :doc:`/resources/test`.

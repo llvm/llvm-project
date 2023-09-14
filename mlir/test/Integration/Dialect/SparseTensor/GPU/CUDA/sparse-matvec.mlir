@@ -9,7 +9,7 @@
 // RUN:   --e main --entry-point-result=void \
 // RUN: | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 module {
   // Compute matrix vector y = Ax
