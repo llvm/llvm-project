@@ -7642,7 +7642,7 @@ static SDValue getMemmoveLoadsAndStores(
   if (!TLI.findOptimalMemOpLowering(
           MemOps, Limit,
           MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign,
-                      /*Vol*/ {true, true}),
+                      MemTransferVolatility().All()),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes()))
     return SDValue();

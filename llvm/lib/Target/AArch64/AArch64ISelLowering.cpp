@@ -4879,7 +4879,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Val = DAG.getAnyExtOrTrunc(Val, DL, MVT::i64);
     SDValue Size = Op.getOperand(4);
     auto Alignment = Node->getMemOperand()->getAlign();
-    MemTransferVolatility Vol = {Node->isVolatile(), false};
+    MemTransferVolatility Vol = MemTransferVolatility().Dst(Node->isVolatile());
     auto DstPtrInfo = Node->getPointerInfo();
 
     const auto &SDI =
@@ -7609,8 +7609,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getConstant(Outs[i].Flags.getByValSize(), DL, MVT::i64);
         SDValue Cpy = DAG.getMemcpy(
             Chain, DL, DstAddr, Arg, SizeNode,
-            Outs[i].Flags.getNonZeroByValAlign(),
-            /*Vol = */ {false, false}, /*AlwaysInline = */ false,
+            Outs[i].Flags.getNonZeroByValAlign(), MemTransferVolatility(),
+            /*AlwaysInline = */ false,
             /*isTailCall = */ false, DstInfo, MachinePointerInfo());
 
         MemOpChains.push_back(Cpy);
@@ -9655,7 +9655,7 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), /*Vol=*/{false, false}, false, false,
+                       Align(PtrSize), MemTransferVolatility(), false, false,
                        MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
 }
 

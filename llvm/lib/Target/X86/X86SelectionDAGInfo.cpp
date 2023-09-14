@@ -252,7 +252,8 @@ static SDValue emitConstantSizeRepmov(
       Chain, dl,
       DAG.getNode(ISD::ADD, dl, DstVT, Dst, DAG.getConstant(Offset, dl, DstVT)),
       DAG.getNode(ISD::ADD, dl, SrcVT, Src, DAG.getConstant(Offset, dl, SrcVT)),
-      DAG.getConstant(BytesLeft, dl, SizeVT), Alignment, {isVolatile, isVolatile},
+      DAG.getConstant(BytesLeft, dl, SizeVT), Alignment,
+      MemTransferVolatility().All(isVolatile),
       /*AlwaysInline*/ true, /*isTailCall*/ false,
       DstPtrInfo.getWithOffset(Offset), SrcPtrInfo.getWithOffset(Offset)));
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);

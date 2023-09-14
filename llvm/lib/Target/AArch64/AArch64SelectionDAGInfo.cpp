@@ -101,7 +101,8 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForMemset(
 
   if (STI.hasMOPS()) {
     return EmitMOPS(AArch64ISD::MOPS_MEMSET, DAG, dl, Chain, Dst, Src, Size,
-                    Alignment, {isVolatile, false}, DstPtrInfo, MachinePointerInfo{});
+                    Alignment, MemTransferVolatility().Dst(isVolatile),
+                    DstPtrInfo, MachinePointerInfo{});
   }
   return SDValue();
 }

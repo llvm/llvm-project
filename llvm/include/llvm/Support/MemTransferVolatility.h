@@ -24,19 +24,30 @@ class MemTransferVolatility {
 
 public:
   MemTransferVolatility() = default;
-  MemTransferVolatility(bool Dst, bool Src)
-      : Flags(unsigned(Dst) | unsigned(Src) << 1) {}
   MemTransferVolatility(const ConstantInt *Int)
       : Flags(unsigned(Int->getZExtValue())) {
     assert(!(Int->getZExtValue() >> 2) && "Invalid volatilities");
   }
 
+private:
+  MemTransferVolatility(unsigned F) : Flags(F) {}
+
+public:
+  auto Dst(bool F = true) {
+    assert(!(Flags & 1) && "Dst volatility already set");
+    return MemTransferVolatility(Flags | (int(F) << 0));
+  }
+  auto Src(bool F = true) {
+    assert(!(Flags & 2) && "Src volatility already set");
+    return MemTransferVolatility(Flags | (int(F) << 1));
+  }
+  auto All(bool F = true) { return Dst(F).Src(F); }
+
 public:
   // Compatibility layer -- make this type bool-like, but moan at you.
   LLVM_DEPRECATED("Specify separate Dst & Src volatilities instead",
-                  "MemTransferVolatility(Dst, Src)")
-  MemTransferVolatility(bool isVolatile)
-      : MemTransferVolatility(isVolatile, isVolatile) {}
+                  "MemTransferVolatility().(All|Dst|Src|All)(bool)")
+  MemTransferVolatility(bool isVolatile) { All(isVolatile); }
   LLVM_DEPRECATED(
       "Use isAnyVolatile, isDstVolatile or isSrcVolatile predicates instead",
       "is(Any|Dst|Src)Volatile()")

@@ -24790,7 +24790,7 @@ static SDValue LowerVACOPY(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getMemcpy(
       Chain, DL, DstPtr, SrcPtr,
       DAG.getIntPtrConstant(Subtarget.isTarget64BitLP64() ? 24 : 16, DL),
-      Align(Subtarget.isTarget64BitLP64() ? 8 : 4), /*Vol=*/{false, false},
+      Align(Subtarget.isTarget64BitLP64() ? 8 : 4), MemTransferVolatility(),
       false, false, MachinePointerInfo(DstSV), MachinePointerInfo(SrcSV));
 }
 

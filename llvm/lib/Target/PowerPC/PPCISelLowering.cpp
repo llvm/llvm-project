@@ -3790,7 +3790,7 @@ SDValue PPCTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   // 2*sizeof(char) + 2 Byte alignment + 2*sizeof(char*) = 12 Byte
   return DAG.getMemcpy(Op.getOperand(0), Op, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(12, SDLoc(Op), MVT::i32), Align(8),
-                       /*Vol=*/{false, false}, true, false,
+                       MemTransferVolatility(), true, false,
                        MachinePointerInfo(), MachinePointerInfo());
 }
 
@@ -5162,7 +5162,7 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
   return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode,
-                       Flags.getNonZeroByValAlign(), /*Vol=*/{false, false},
+                       Flags.getNonZeroByValAlign(), MemTransferVolatility(),
                        false, false, MachinePointerInfo(),
                        MachinePointerInfo());
 }

@@ -1274,11 +1274,11 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   }
 
   // Copy from a global.
-  auto *I =
-      Builder.CreateMemCpy(Loc,
-                           createUnnamedGlobalForMemcpyFrom(
-                               CGM, D, Builder, constant, Loc.getAlignment()),
-                           SizeVal, {isVolatile, false});
+  auto *I = Builder.CreateMemCpy(
+      Loc,
+      createUnnamedGlobalForMemcpyFrom(CGM, D, Builder, constant,
+                                       Loc.getAlignment()),
+      SizeVal, llvm::MemTransferVolatility().Dst(isVolatile));
   if (IsAutoInit)
     I->addAnnotationMetadata("auto-init");
 }
@@ -1842,11 +1842,11 @@ void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
     llvm::PHINode *Cur = Builder.CreatePHI(Begin.getType(), 2, "vla.cur");
     Cur->addIncoming(Begin.getPointer(), OriginBB);
     CharUnits CurAlign = Loc.getAlignment().alignmentOfArrayElement(EltSize);
-    auto *I =
-        Builder.CreateMemCpy(Address(Cur, Int8Ty, CurAlign),
-                             createUnnamedGlobalForMemcpyFrom(
-                                 CGM, D, Builder, Constant, ConstantAlign),
-                             BaseSizeInChars, {isVolatile, false});
+    auto *I = Builder.CreateMemCpy(
+        Address(Cur, Int8Ty, CurAlign),
+        createUnnamedGlobalForMemcpyFrom(CGM, D, Builder, Constant,
+                                         ConstantAlign),
+        BaseSizeInChars, llvm::MemTransferVolatility().Dst(isVolatile));
     I->addAnnotationMetadata("auto-init");
     llvm::Value *Next =
         Builder.CreateInBoundsGEP(Int8Ty, Cur, BaseSizeInChars, "vla.next");

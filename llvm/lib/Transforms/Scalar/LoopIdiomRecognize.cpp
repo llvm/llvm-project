@@ -1389,11 +1389,11 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
     if (UseMemMove)
       NewCall = Builder.CreateMemMove(
           StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign, NumBytes,
-          /*Vol=*/{false, false}, AATags.TBAA, AATags.Scope, AATags.NoAlias);
+          MemTransferVolatility(), AATags.TBAA, AATags.Scope, AATags.NoAlias);
     else
       NewCall =
           Builder.CreateMemCpy(StoreBasePtr, StoreAlign, LoadBasePtr, LoadAlign,
-                               NumBytes, /*Vol=*/{false, false}, AATags.TBAA,
+                               NumBytes, MemTransferVolatility(), AATags.TBAA,
                                AATags.TBAAStruct, AATags.Scope, AATags.NoAlias);
   } else {
     // For now don't support unordered atomic memmove.

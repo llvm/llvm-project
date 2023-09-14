@@ -8434,7 +8434,7 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // the copied memory.
   SDValue Root = getMemoryRoot();
   SDValue MC = DAG.getMemcpy(
-      Root, sdl, Dst, Src, Size, Alignment, {false, false}, false,
+      Root, sdl, Dst, Src, Size, Alignment, MemTransferVolatility(), false,
       /*isTailCall=*/false, MachinePointerInfo(I.getArgOperand(0)),
       MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata());
   assert(MC.getNode() != nullptr &&

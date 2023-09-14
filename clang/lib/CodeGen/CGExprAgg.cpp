@@ -2213,8 +2213,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  auto Inst =
-      Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, {isVolDst, isVolSrc});
+  auto Inst = Builder.CreateMemCpy(
+      DestPtr, SrcPtr, SizeVal,
+      llvm::MemTransferVolatility().Dst(isVolDst).Src(isVolSrc));
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

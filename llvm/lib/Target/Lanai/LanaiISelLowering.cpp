@@ -644,11 +644,10 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, MVT::i32);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
-                          /*Vol=*/{false, false},
-                          /*AlwaysInline=*/false,
-                          /*isTailCall=*/false, MachinePointerInfo(),
-                          MachinePointerInfo());
+    Chain = DAG.getMemcpy(
+        Chain, DL, FIPtr, Arg, SizeNode, Alignment, MemTransferVolatility(),
+        /*AlwaysInline=*/false,
+        /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
 

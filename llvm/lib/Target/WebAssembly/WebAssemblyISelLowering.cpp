@@ -1111,7 +1111,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
       Chain = DAG.getMemcpy(
           Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getNonZeroByValAlign(),
-          /*Vol=*/{false, false}, /*AlwaysInline=*/false,
+          MemTransferVolatility(), /*AlwaysInline=*/false,
           /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
       OutVal = FINode;
     }

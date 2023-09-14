@@ -7938,7 +7938,7 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   if (!findGISelOptimalMemOpLowering(
           MemOps, Limit,
           MemOp::Copy(KnownLen, DstAlignCanChange, Alignment, SrcAlign,
-                      /*Vol=*/{IsVolatile, IsVolatile}),
+                      MemTransferVolatility().All(IsVolatile)),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes(), TLI))
     return UnableToLegalize;
@@ -8046,7 +8046,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   if (!findGISelOptimalMemOpLowering(
           MemOps, Limit,
           MemOp::Copy(KnownLen, DstAlignCanChange, Alignment, SrcAlign,
-                      /*Vol*/ {true, true}),
+                      MemTransferVolatility().All()),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes(), TLI))
     return UnableToLegalize;
