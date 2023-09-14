@@ -57,7 +57,7 @@ subroutine test_unstructured2(a, b, c)
 ! CHECK: acc.parallel
 ! CHECK: acc.loop
 ! CHECK: fir.call @_FortranAStopStatementText
-! CHECK: fir.unreachable
+! CHECK: acc.yield
 ! CHECK: acc.yield
 ! CHECK: acc.yield
 
@@ -80,7 +80,7 @@ subroutine test_unstructured3(a, b, c)
 ! CHECK-LABEL: func.func @_QPtest_unstructured3
 ! CHECK: acc.parallel
 ! CHECK: fir.call @_FortranAStopStatementText
-! CHECK: fir.unreachable
+! CHECK: acc.yield
 ! CHECK: acc.yield
 
 end subroutine
