@@ -104,8 +104,7 @@ bool isStdin(SVal Val, const ASTContext &ACtx) {
   // variable named stdin with the proper type.
   if (const auto *D = dyn_cast_or_null<VarDecl>(DeclReg->getDecl())) {
     D = D->getCanonicalDecl();
-    // FIXME: This should look for an exact match.
-    if (D->getName().contains("stdin") && D->isExternC()) {
+    if (D->getName() == "stdin" && D->hasExternalStorage() && D->isExternC()) {
       const QualType FILETy = ACtx.getFILEType().getCanonicalType();
       const QualType Ty = D->getType().getCanonicalType();
 
@@ -622,12 +621,14 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"getlogin_r"}}, TR::Source({{0}})},
 
       // Props
+      {{{"accept"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"fgetc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"fgetln"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"fgets"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
+      {{{"fgetws"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
       {{{"fscanf"}}, TR::Prop({{0}}, {{}, 2})},
       {{{"fscanf_s"}}, TR::Prop({{0}}, {{}, {2}})},
       {{{"sscanf"}}, TR::Prop({{0}}, {{}, 2})},
@@ -695,6 +696,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"strndup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"wcslen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strnlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
@@ -730,6 +732,8 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{CDF_MaybeBuiltin, {{"stpcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strcat"}}},
+       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {{"wcsncat"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDF_MaybeBuiltin, {{"strdupa"}}},

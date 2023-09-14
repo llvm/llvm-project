@@ -19,6 +19,84 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
     deallocation operations for all buffers in the input program. This ensures
     that the resulting program does not have any memory leaks.
 
+
+    Input
+
+    ```mlir
+    #map0 = affine_map<(d0) -> (d0)>
+    module {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+        cf.cond_br %arg0, ^bb1, ^bb2
+      ^bb1:
+        cf.br ^bb3(%arg1 : memref<2xf32>)
+      ^bb2:
+        %0 = memref.alloc() : memref<2xf32>
+        linalg.generic {
+          args_in = 1 : i64,
+          args_out = 1 : i64,
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %0 {
+        ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
+          %tmp1 = exp %gen1_arg0 : f32
+          linalg.yield %tmp1 : f32
+        }: memref<2xf32>, memref<2xf32>
+        cf.br ^bb3(%0 : memref<2xf32>)
+      ^bb3(%1: memref<2xf32>):
+        "memref.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+        return
+      }
+    }
+
+    ```
+
+    Output
+
+    ```mlir
+    #map0 = affine_map<(d0) -> (d0)>
+    module {
+      func.func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
+        cf.cond_br %arg0, ^bb1, ^bb2
+      ^bb1:  // pred: ^bb0
+        %0 = memref.alloc() : memref<2xf32>
+        memref.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
+        cf.br ^bb3(%0 : memref<2xf32>)
+      ^bb2:  // pred: ^bb0
+        %1 = memref.alloc() : memref<2xf32>
+        linalg.generic {
+          args_in = 1 : i64,
+          args_out = 1 : i64,
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %1 {
+        ^bb0(%arg3: f32, %arg4: f32):
+          %4 = exp %arg3 : f32
+          linalg.yield %4 : f32
+        }: memref<2xf32>, memref<2xf32>
+        %2 = memref.alloc() : memref<2xf32>
+        memref.copy(%1, %2) : memref<2xf32>, memref<2xf32>
+        dealloc %1 : memref<2xf32>
+        cf.br ^bb3(%2 : memref<2xf32>)
+      ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
+        memref.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
+        dealloc %3 : memref<2xf32>
+        return
+      }
+
+    }
+    ```
+
+  }];
+  let constructor = "mlir::bufferization::createBufferDeallocationPass()";
+}
+
+def OwnershipBasedBufferDeallocation : Pass<
+    "ownership-based-buffer-deallocation", "func::FuncOp"> {
+  let summary = "Adds all required dealloc operations for all allocations in "
+                "the input program";
+  let description = [{
+    This pass implements an algorithm to automatically introduce all required
+    deallocation operations for all buffers in the input program. This ensures
+    that the resulting program does not have any memory leaks.
+
     The Buffer Deallocation pass operates on the level of operations
     implementing the FunctionOpInterface. Such operations can take MemRefs as
     arguments, but also return them. To ensure compatibility among all functions
@@ -146,7 +224,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
            "dynamically pass ownership of memrefs to callees. This can enable "
            "earlier deallocations.">,
   ];
-  let constructor = "mlir::bufferization::createBufferDeallocationPass()";
+  let constructor = "mlir::bufferization::createOwnershipBasedBufferDeallocationPass()";
 
   let dependentDialects = [
     "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
@@ -309,9 +387,15 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     example, `tensor.generate` is not in destination-passing style and always
     results in a new buffer allocation.
 
-    One-Shot Bufferize does not deallocate any buffers that it allocates. The
-    `-buffer-deallocation` pass should be run after One-Shot Bufferize to insert
-    the deallocation operations necessary to eliminate memory leaks.
+    One-Shot Bufferize deallocates all buffers that it allocates. Yielding newly
+    allocated buffers from a block can lead to bad performance because
+    additional buffer copies are often needed to make sure that every buffer
+    allocation is also deallocated again. By default, such IR is rejected by
+    One-Shot Bufferize. Such IR can be allowed with `allow-return-allocs`. In
+    that case, the `-buffer-deallocation` pass should be run after One-Shot
+    Bufferize. Note that new buffer allocations that are returned from a
+    function can currently not be deallocated by `-buffer-deallocation` and
+    leak.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
@@ -378,9 +462,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     `test-analysis-only`.
   }];
   let options = [
-    Option<"allowReturnAllocsFromLoops", "allow-return-allocs-from-loops",
-           "bool", /*default=*/"false",
-           "Allows returning/yielding new allocations from a loop.">,
+    Option<"allowReturnAllocs", "allow-return-allocs", "bool",
+            /*default=*/"false",
+           "Allows returning/yielding new allocations from a block.">,
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
@@ -395,6 +479,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
            "Bufferize function boundaries (experimental).">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
+    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
+           "Specify if buffers should be deallocated. For compatibility with "
+           "core bufferization passes.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",
                "Restrict bufferization to ops from these dialects.">,
     Option<"dumpAliasSets", "dump-alias-sets", "bool", /*default=*/"false",
@@ -426,6 +513,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let statistics = [
     Statistic<"numBufferAlloc", "num-buffer-alloc",
               "Number of buffer allocations">,
+    Statistic<"numBufferDealloc", "num-buffer-dealloc",
+              "Number of buffer deallocations">,
     Statistic<"numTensorInPlace", "num-tensor-in-place",
               "Number of in-place tensor OpOperands">,
     Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
@@ -457,11 +546,22 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
 def EmptyTensorElimination : Pass<"eliminate-empty-tensors"> {
   let summary = "Try to eliminate all tensor.empty ops.";
   let description = [{
-    This pass tries to eliminate all insert_slice op-anchored tensor.empty ops.
-    I.e., when a value that is equivalent to an tensor.empty op is inserted into
-    another tensor, this pass tries to rewrite the IR in such a way that the
-    destination tensor of the insert_slice op is used directly instead of the
-    tensor.empty result.
+    Try to eliminate "tensor.empty" ops inside `op`. This transformation looks
+    for subset ops that insert a tensor that originates from a "tensor.empty"
+    (as per the reverse use-def chain). Such "tensor.empty" ops are replaced
+    with the destination subset.
+
+    E.g.:
+    ```
+    %0 = tensor.empty() : tensor<10xf32>
+    %1 = linalg.fill ... outs(%0 : tensor<10xf32>)
+    %2 = tensor.insert_slice %0 into %t ...
+    ```
+
+    In the above example, the subset op is "tensor.insert_slice". When tracing
+    back the reverse use-def chain of a the source, we end up at a
+    "tensor.empty" op. The "tensor.empty" op is replaced with a
+    "tensor.extract_slice" op.
   }];
   let constructor = "mlir::bufferization::createEmptyTensorEliminationPass()";
 }

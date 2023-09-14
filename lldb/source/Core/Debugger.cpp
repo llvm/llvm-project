@@ -236,6 +236,13 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       // codes.
       SetPrompt(GetPrompt());
     } else if (property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiPrefix].name ||
+               property_path ==
+                   g_debugger_properties[ePropertyPromptAnsiSuffix].name) {
+      // Prompt colors changed. Ping the prompt so it can reset the ansi
+      // terminal codes.
+      SetPrompt(GetPrompt());
+    } else if (property_path ==
                g_debugger_properties[ePropertyUseSourceCache].name) {
       // use-source-cache changed. Wipe out the cache contents if it was
       // disabled.
@@ -297,6 +304,18 @@ bool Debugger::GetNotifyVoid() const {
 
 llvm::StringRef Debugger::GetPrompt() const {
   constexpr uint32_t idx = ePropertyPrompt;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiPrefix() const {
+  const uint32_t idx = ePropertyPromptAnsiPrefix;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+llvm::StringRef Debugger::GetPromptAnsiSuffix() const {
+  const uint32_t idx = ePropertyPromptAnsiSuffix;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_debugger_properties[idx].default_cstr_value);
 }
@@ -435,7 +454,7 @@ llvm::StringRef Debugger::GetAutosuggestionAnsiSuffix() const {
 }
 
 bool Debugger::GetShowDontUsePoHint() const {
-  const uint32_t idx = ePropertyShowDontUsePoHint;  
+  const uint32_t idx = ePropertyShowDontUsePoHint;
   return GetPropertyAtIndexAs<bool>(
       idx, g_debugger_properties[idx].default_uint_value != 0);
 }
@@ -1272,17 +1291,17 @@ bool Debugger::InterruptRequested() {
   return GetCommandInterpreter().WasInterrupted();
 }
 
-Debugger::InterruptionReport::InterruptionReport(std::string function_name, 
-    const llvm::formatv_object_base &payload) :  
-        m_function_name(std::move(function_name)), 
-        m_interrupt_time(std::chrono::system_clock::now()),
-        m_thread_id(llvm::get_threadid()) {
+Debugger::InterruptionReport::InterruptionReport(
+    std::string function_name, const llvm::formatv_object_base &payload)
+    : m_function_name(std::move(function_name)),
+      m_interrupt_time(std::chrono::system_clock::now()),
+      m_thread_id(llvm::get_threadid()) {
   llvm::raw_string_ostream desc(m_description);
   desc << payload << "\n";
 }
 
 void Debugger::ReportInterruption(const InterruptionReport &report) {
-    // For now, just log the description:
+  // For now, just log the description:
   Log *log = GetLog(LLDBLog::Host);
   LLDB_LOG(log, "Interruption: {0}", report.m_description);
 }

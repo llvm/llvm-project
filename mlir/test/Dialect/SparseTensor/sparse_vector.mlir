@@ -7,7 +7,7 @@
 // RUN: mlir-opt %s -sparsification -cse -sparse-vectorization="vl=4 enable-vla-vectorization=true" -cse -split-input-file | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC4-SVE
 
-#DenseVector = #sparse_tensor.encoding<{ lvlTypes = [ "dense" ] }>
+#DenseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
 
 #trait_scale_d = {
   indexing_maps = [
@@ -86,7 +86,7 @@ func.func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor
 // -----
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed" ],
+  map = (d0) -> (d0 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>
@@ -209,7 +209,7 @@ func.func @mul_s(%arga: tensor<1024xf32, #SparseVector>,
 
 // -----
 
-#DenseVector = #sparse_tensor.encoding<{ lvlTypes = [ "dense" ] }>
+#DenseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
 
 #trait_reduction_d = {
   indexing_maps = [

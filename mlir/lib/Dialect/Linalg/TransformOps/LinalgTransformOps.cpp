@@ -389,6 +389,7 @@ transform::EliminateLinalgOpAnchoredEmptyTensorsOp::apply(
     transform::TransformRewriter &rewriter, TransformResults &transformResults,
     TransformState &state) {
   bufferization::OneShotBufferizationOptions options;
+  options.allowReturnAllocs = true;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
     bufferization::OneShotAnalysisState state(target, options);
@@ -2531,6 +2532,15 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "only ops implementing TilingInterface are supported";
+      diag.attachNote(op->getLoc()) << "target op";
+      return diag;
+    }
+    if (tileSizes.size() > tilingInterface.getLoopIteratorTypes().size()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "too many tiles provided, expected at most "
+          << tilingInterface.getLoopIteratorTypes().size() << " found "
+          << tileSizes.size();
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }

@@ -1,13 +1,13 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 " -drop-equivalent-buffer-results -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 " -split-input-file | FileCheck %s --check-prefix=NO-DROP
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -split-input-file | FileCheck %s --check-prefix=NO-DROP
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map" -split-input-file -o /dev/null
 
 // Make sure that the returned buffer is not deallocated.
 // TODO: Such buffers currently leak. We need buffer hoisting / ref counting for

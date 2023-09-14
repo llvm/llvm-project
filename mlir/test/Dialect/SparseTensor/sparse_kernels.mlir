@@ -2,7 +2,7 @@
 // RUN: --linalg-generalize-named-ops --linalg-fuse-elementwise-ops \
 // RUN: --sparsification | FileCheck %s
 
-#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
 

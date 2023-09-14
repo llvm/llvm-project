@@ -248,17 +248,17 @@ public:
 
   Result GetLowerBound(const Symbol &symbol0, NamedEntity &&base) const {
     const Symbol &symbol{symbol0.GetUltimate()};
-    if (const auto *details{
+    if (const auto *object{
             symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-      int rank{details->shape().Rank()};
+      int rank{object->shape().Rank()};
       if (dimension_ < rank) {
-        const semantics::ShapeSpec &shapeSpec{details->shape()[dimension_]};
+        const semantics::ShapeSpec &shapeSpec{object->shape()[dimension_]};
         if (shapeSpec.lbound().isExplicit()) {
           if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
             if constexpr (LBOUND_SEMANTICS) {
               bool ok{false};
               auto lbValue{ToInt64(*lbound)};
-              if (dimension_ == rank - 1 && details->IsAssumedSize()) {
+              if (dimension_ == rank - 1 && object->IsAssumedSize()) {
                 // last dimension of assumed-size dummy array: don't worry
                 // about handling an empty dimension
                 ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound);
@@ -309,7 +309,10 @@ public:
       }
     } else if (const auto *assoc{
                    symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-      if (assoc->rank()) { // SELECT RANK case
+      if (assoc->IsAssumedSize()) { // RANK(*)
+        return Result{1};
+      } else if (assoc->IsAssumedRank()) { // RANK DEFAULT
+      } else if (assoc->rank()) { // RANK(n)
         const Symbol &resolved{ResolveAssociations(symbol)};
         if (IsDescriptor(resolved) && dimension_ < *assoc->rank()) {
           return ExtentExpr{DescriptorInquiry{std::move(base),
@@ -497,9 +500,11 @@ MaybeExtentExpr GetExtent(
     const NamedEntity &base, int dimension, bool invariantOnly) {
   CHECK(dimension >= 0);
   const Symbol &last{base.GetLastSymbol()};
-  const Symbol &symbol{ResolveAssociationsExceptSelectRank(last)};
+  const Symbol &symbol{ResolveAssociations(last)};
   if (const auto *assoc{last.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (assoc->rank()) { // SELECT RANK case
+    if (assoc->IsAssumedSize() || assoc->IsAssumedRank()) { // RANK(*)/DEFAULT
+      return std::nullopt;
+    } else if (assoc->rank()) { // RANK(n)
       if (semantics::IsDescriptor(symbol) && dimension < *assoc->rank()) {
         return ExtentExpr{DescriptorInquiry{
             NamedEntity{base}, DescriptorInquiry::Field::Extent, dimension}};
@@ -595,8 +600,7 @@ MaybeExtentExpr ComputeUpperBound(
 
 MaybeExtentExpr GetRawUpperBound(
     const NamedEntity &base, int dimension, bool invariantOnly) {
-  const Symbol &symbol{
-      ResolveAssociationsExceptSelectRank(base.GetLastSymbol())};
+  const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     int rank{details->shape().Rank()};
     if (dimension < rank) {
@@ -612,7 +616,11 @@ MaybeExtentExpr GetRawUpperBound(
     }
   } else if (const auto *assoc{
                  symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
+    if (assoc->IsAssumedSize() || assoc->IsAssumedRank()) {
+      return std::nullopt;
+    } else if (assoc->rank() && dimension >= *assoc->rank()) {
+      return std::nullopt;
+    } else if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
       return ComputeUpperBound(
           GetRawLowerBound(base, dimension), std::move(extent));
     }
@@ -645,8 +653,7 @@ static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
 
 static MaybeExtentExpr GetUBOUND(FoldingContext *context,
     const NamedEntity &base, int dimension, bool invariantOnly) {
-  const Symbol &symbol{
-      ResolveAssociationsExceptSelectRank(base.GetLastSymbol())};
+  const Symbol &symbol{ResolveAssociations(base.GetLastSymbol())};
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     int rank{details->shape().Rank()};
     if (dimension < rank) {
@@ -662,7 +669,9 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
     }
   } else if (const auto *assoc{
                  symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (assoc->rank()) { // SELECT RANK case
+    if (assoc->IsAssumedSize() || assoc->IsAssumedRank()) {
+      return std::nullopt;
+    } else if (assoc->rank()) { // RANK (n)
       const Symbol &resolved{ResolveAssociations(symbol)};
       if (IsDescriptor(resolved) && dimension < *assoc->rank()) {
         ExtentExpr lb{DescriptorInquiry{NamedEntity{base},

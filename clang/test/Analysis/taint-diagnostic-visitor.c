@@ -13,7 +13,7 @@ size_t strlen( const char* str );
 void *malloc(size_t size );
 void free( void *ptr );
 char *fgets(char *str, int n, FILE *stream);
-FILE *stdin;
+extern FILE *stdin;
 
 void taintDiagnostic(void)
 {

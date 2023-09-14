@@ -1,5 +1,3 @@
-// REQUIRES: host-supports-nvptx
-
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -test-lower-to-nvvm="cubin-chip=sm_70" \
 // RUN: | mlir-cpu-runner \

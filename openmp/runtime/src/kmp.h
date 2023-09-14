@@ -3620,6 +3620,9 @@ extern void __kmp_warn(char const *format, ...);
 
 extern void __kmp_set_num_threads(int new_nth, int gtid);
 
+extern bool __kmp_detect_shm();
+extern bool __kmp_detect_tmp();
+
 // Returns current thread (pointer to kmp_info_t). Current thread *must* be
 // registered.
 static inline kmp_info_t *__kmp_entry_thread() {

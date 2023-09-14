@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops allow-return-allocs-from-loops" -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops allow-return-allocs" -split-input-file -verify-diagnostics
 
 func.func @inconsistent_memory_space_scf_if(%c: i1) -> tensor<10xf32> {
   // Yielding tensors with different memory spaces. Such IR cannot be

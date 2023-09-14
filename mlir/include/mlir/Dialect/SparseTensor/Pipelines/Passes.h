@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassOptions.h"
 
@@ -93,7 +93,8 @@ struct SparseCompilerOptions
       desc("Specify if the temporary buffers created by the sparse "
            "compiler should be deallocated. For compatibility with core "
            "bufferization passes. "
-           "This option is only used when enable-runtime-library=false."),
+           "This option is only used when enable-runtime-library=false. "
+           "See also create-deallocs for BufferizationOption."),
       init(true)};
 
   PassOptions::Option<int32_t> vectorLength{

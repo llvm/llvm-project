@@ -17,7 +17,11 @@ namespace __llvm_libc::cpp {
 // it's convenient to have around.
 //
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2593r0.html#valid-workaround
+//
+// This will be fixed in C++23 according to [CWG
+// 2518](https://cplusplus.github.io/CWG/issues/2518.html).
 
+// Usage `static_assert(cpp::always_false<T>, "error message");`
 template <typename...> LIBC_INLINE_VAR constexpr bool always_false = false;
 
 } // namespace __llvm_libc::cpp

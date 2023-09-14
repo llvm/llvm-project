@@ -941,12 +941,10 @@ static unsigned getSectionRank(const OutputSection &osec) {
     // their coverage by a single signed 16-bit offset from the TOC base
     // pointer.
     StringRef name = osec.name;
-    if (name == ".branch_lt")
+    if (name == ".got")
       rank |= 1;
-    else if (name == ".got")
-      rank |= 2;
     else if (name == ".toc")
-      rank |= 4;
+      rank |= 2;
   }
 
   if (config->emachine == EM_MIPS) {

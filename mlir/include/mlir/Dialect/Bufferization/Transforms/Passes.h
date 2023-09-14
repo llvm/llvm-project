@@ -26,8 +26,11 @@ struct OneShotBufferizationOptions;
 
 /// Creates an instance of the BufferDeallocation pass to free all allocated
 /// buffers.
-std::unique_ptr<Pass>
-createBufferDeallocationPass(bool privateFuncDynamicOwnership = false);
+std::unique_ptr<Pass> createBufferDeallocationPass();
+
+/// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
+/// allocated buffers.
+std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass();
 
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using
@@ -127,8 +130,11 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
 /// Run buffer deallocation.
-LogicalResult deallocateBuffers(FunctionOpInterface op,
-                                bool privateFuncDynamicOwnership);
+LogicalResult deallocateBuffers(Operation *op);
+
+/// Run ownership basedbuffer deallocation.
+LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                              bool privateFuncDynamicOwnership);
 
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.

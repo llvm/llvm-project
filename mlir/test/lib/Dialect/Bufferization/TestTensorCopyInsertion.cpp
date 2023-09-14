@@ -42,21 +42,26 @@ struct TestTensorCopyInsertionPass
 
   void runOnOperation() override {
     bufferization::OneShotBufferizationOptions options;
-    options.allowReturnAllocsFromLoops = allowReturnAllocsFromLoops;
+    options.allowReturnAllocs = allowReturnAllocs;
     options.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
+    options.createDeallocs = createDeallocs;
     if (mustInferMemorySpace)
       options.defaultMemorySpace = std::nullopt;
     if (failed(bufferization::insertTensorCopies(getOperation(), options)))
       signalPassFailure();
   }
 
-  Option<bool> allowReturnAllocsFromLoops{
-      *this, "allow-return-allocs-from-loops",
-      llvm::cl::desc("Allows returning/yielding new allocations from a loop."),
+  Option<bool> allowReturnAllocs{
+      *this, "allow-return-allocs",
+      llvm::cl::desc("Allows returning/yielding new allocations from a block."),
       llvm::cl::init(false)};
   Option<bool> bufferizeFunctionBoundaries{
       *this, "bufferize-function-boundaries",
       llvm::cl::desc("Bufferize function boundaries."), llvm::cl::init(false)};
+  Option<bool> createDeallocs{
+      *this, "create-deallocs",
+      llvm::cl::desc("Specify if new allocations should be deallocated."),
+      llvm::cl::init(true)};
   Option<bool> mustInferMemorySpace{
       *this, "must-infer-memory-space",
       llvm::cl::desc(

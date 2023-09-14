@@ -224,6 +224,87 @@ dialect conversion-based bufferization.
 
 ## Buffer Deallocation
 
+**Important: this pass is deprecated, please use the ownership based buffer**
+**deallocation pass instead**
+
+One-Shot Bufferize deallocates all buffers that it allocates. This is in
+contrast to the dialect conversion-based bufferization that delegates this job
+to the
+[`-buffer-deallocation`](https://mlir.llvm.org/docs/Passes/#-buffer-deallocation-adds-all-required-dealloc-operations-for-all-allocations-in-the-input-program)
+pass. By default, One-Shot Bufferize rejects IR where a newly allocated buffer
+is returned from a block. Such IR will fail bufferization.
+
+A new buffer allocation is returned from a block when the result of an op that
+is not in destination-passing style is returned. E.g.:
+
+```mlir
+%0 = scf.if %c -> (tensor<?xf32>) {
+  %1 = tensor.generate ... -> tensor<?xf32>
+  scf.yield %1 : tensor<?xf32>
+} else {
+  scf.yield %another_tensor : tensor<?xf32>
+}
+```
+
+The `scf.yield` in the "else" branch is OK, but the `scf.yield` in the "then"
+branch will be rejected.
+
+Another case in which a buffer allocation may be returned is when a buffer copy
+must be inserted due to a RaW conflict. E.g.:
+
+```mlir
+%0 = scf.if %c -> (tensor<?xf32>) {
+  %1 = tensor.insert %cst into %another_tensor[%idx] : tensor<?xf32>
+  "my_dialect.reading_tensor_op"(%another_tensor) : (tensor<?xf32>) -> ()
+  ...
+  scf.yield %1 : tensor<?xf32>
+} else {
+  scf.yield %yet_another_tensor : tensor<?xf32>
+}
+```
+
+In the above example, a buffer copy of buffer(`%another_tensor`) (with `%cst`
+inserted) is yielded from the "then" branch.
+
+In both examples, a buffer is allocated inside of a block and then yielded from
+the block. Deallocation of such buffers is tricky and not currently implemented
+in an efficient way. For this reason, One-Shot Bufferize must be explicitly
+configured with `allow-return-allocs` to support such IR.
+
+When running with `allow-return-allocs`, One-Shot Bufferize may introduce
+allocations that cannot be deallocated by One-Shot Bufferize yet. For that
+reason, `-buffer-deallocation` must be run after One-Shot Bufferize. This buffer
+deallocation pass resolves yields of newly allocated buffers with copies. E.g.,
+the `scf.if` example above would bufferize to IR similar to the following:
+
+```mlir
+%0 = scf.if %c -> (memref<?xf32>) {
+  %1 = memref.alloc(...) : memref<?xf32>
+  ...
+  scf.yield %1 : memref<?xf32>
+} else {
+  %2 = memref.alloc(...) : memref<?xf32>
+  memref.copy %another_memref, %2
+  scf.yield %2 : memref<?xf32>
+}
+```
+
+In the bufferized IR, both branches return a newly allocated buffer, so it does
+not matter which if-branch was taken. In both cases, the resulting buffer `%0`
+must be deallocated at some point after the `scf.if` (unless the `%0` is
+returned/yielded from its block).
+
+Note: Buffer allocations that are returned from a function are not deallocated,
+not even with `-buffer-deallocation`. It is the caller's responsibility to
+deallocate the buffer. In the future, this could be automated with allocation
+hoisting (across function boundaries) or reference counting.
+
+One-Shot Bufferize can be configured to leak all memory and not generate any
+buffer deallocations with `create-deallocs=0`. This can be useful for
+compatibility with legacy code that has its own method of deallocating buffers.
+
+## Ownership-based Buffer Deallocation
+
 Recommended compilation pipeline:
 ```
 one-shot-bufferize
@@ -232,7 +313,7 @@ one-shot-bufferize
        V          manually
 expand-realloc
        V
-buffer-deallocation
+ownership-based-buffer-deallocation
        V
   canonicalize <- mostly for scf.if simplifications
        V
@@ -247,21 +328,21 @@ lower-deallocations
 
 One-Shot Bufferize does not deallocate any buffers that it allocates. This job
 is delegated to the
-[`-buffer-deallocation`](https://mlir.llvm.org/docs/Passes/#-buffer-deallocation-adds-all-required-dealloc-operations-for-all-allocations-in-the-input-program)
+[`-ownership-based-buffer-deallocation`](https://mlir.llvm.org/docs/Passes/#-ownership-based-buffer-deallocation)
 pass, i.e., after running One-Shot Bufferize, the result IR may have a number of
 `memref.alloc` ops, but no `memref.dealloc` ops. This pass processes operations
 implementing `FunctionOpInterface` one-by-one without analysing the call-graph.
-This means, that there have to be [some rules](#function-boundary-api) on how
+This means, that there have to be [some rules](#function-boundary-abi) on how
 MemRefs are handled when being passed from one function to another. The rest of
 the pass revolves heavily around the `bufferization.dealloc` operation which is
 inserted at the end of each basic block with appropriate operands and should be
 optimized using the Buffer Deallocation Simplification pass
 (`--buffer-deallocation-simplification`) and the regular canonicalizer
-(`--canonicalize`). Lowering the result of the `-buffer-deallocation` pass
-directly using `--convert-bufferization-to-memref` without beforehand
-optimization is not recommended as it will lead to very inefficient code (the
-runtime-cost of `bufferization.dealloc` is
-`O(|memrefs|^2+|memref|*|retained|)`).
+(`--canonicalize`). Lowering the result of the
+`-ownership-based-buffer-deallocation` pass directly using
+`--convert-bufferization-to-memref` without beforehand optimization is not
+recommended as it will lead to very inefficient code (the runtime-cost of
+`bufferization.dealloc` is `O(|memrefs|^2+|memref|*|retained|)`).
 
 ### Function boundary ABI
 
@@ -467,7 +548,7 @@ func.func @example(%memref: memref<?xi8>, %select_cond: i1, %br_cond: i1) {
 }
 ```
 
-After running `--buffer-deallocation`, it looks as follows:
+After running `--ownership-based-buffer-deallocation`, it looks as follows:
 
 ```mlir
 // Since this is not a private function, the signature will not be modified even
@@ -568,8 +649,8 @@ access to additional analyses such as an analysis that can determine whether two
 MemRef values must, may, or never originate from the same buffer allocation.
 These patterns are collected in the Buffer Deallocation Simplification pass,
 while patterns that don't need additional analyses are registered as part of the
-regular canonicalizer pass. This pass is best run after `--buffer-deallocation`
-followed by `--canonicalize`.
+regular canonicalizer pass. This pass is best run after
+`--ownership-based-buffer-deallocation` followed by `--canonicalize`.
 
 The pass applies patterns for the following simplifications:
 *   Remove MemRefs from retain list when guaranteed to not alias with any value
