@@ -1036,7 +1036,7 @@ public:
                 DefaultingPyMlirContext contextWrapper) {
     if (!mlirTypeIsAShaped(type)) {
       throw std::invalid_argument(
-          "Constructing a DenseResourceElementsAttr requires a ShapedType");
+          "Constructing a DenseResourceElementsAttr requires a ShapedType.");
     }
 
     // Do not request any conversions as we must ensure to use caller
@@ -1055,7 +1055,7 @@ public:
     });
 
     if (!PyBuffer_IsContiguous(view.get(), 'A')) {
-      throw std::invalid_argument("Contiguous buffer is required");
+      throw std::invalid_argument("Contiguous buffer is required.");
     }
 
     // The userData is a Py_buffer* that the deleter owns.
