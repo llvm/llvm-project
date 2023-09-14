@@ -347,7 +347,7 @@ unsigned CachedDiagnosticSerializer::convertFileID(FileID FID,
   if (Entry.isFile()) {
     const SrcMgr::FileInfo &FI = Entry.getFile();
     cached_diagnostics::SLocEntry::FileInfo CachedFI;
-    if (const FileEntry *FE = FI.getContentCache().ContentsEntry) {
+    if (OptionalFileEntryRef FE = FI.getContentCache().ContentsEntry) {
       CachedFI.Filename = FE->getName();
     } else {
       CachedFI.Filename = FI.getName();
