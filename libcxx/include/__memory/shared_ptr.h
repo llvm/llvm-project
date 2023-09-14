@@ -252,22 +252,17 @@ template <class _Tp, class _Alloc>
 struct __shared_ptr_emplace : __shared_weak_count {
   using __value_type = __remove_cv_t<_Tp>;
 
-  template <class... _Args,
-            class _Allocator                                                                         = _Alloc,
-            __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
+  template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&...) : __storage_(std::move(__a)) {
-    static_assert(
-        sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
-    ::new (static_cast<void*>(__get_elem())) __value_type;
-  }
-
-  template <class... _Args,
-            class _Allocator                                                                          = _Alloc,
-            __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace(_Alloc __a, _Args&&... __args) : __storage_(std::move(__a)) {
-    using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __value_type>::type;
-    _TpAlloc __tmp(*__get_alloc());
-    allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), std::forward<_Args>(__args)...);
+    if constexpr (is_same<typename _Alloc::value_type, __for_overwrite_tag>::value) {
+      static_assert(
+          sizeof...(_Args) == 0, "No argument should be provided to the control block when using _for_overwrite");
+      ::new (static_cast<void*>(__get_elem())) __value_type;
+    } else {
+      using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __value_type>::type;
+      _TpAlloc __tmp(*__get_alloc());
+      allocator_traits<_TpAlloc>::construct(__tmp, __get_elem(), std::forward<_Args>(__args)...);
+    }
   }
 
   _LIBCPP_HIDE_FROM_ABI _Alloc* __get_alloc() _NOEXCEPT { return __storage_.__get_alloc(); }
@@ -275,21 +270,15 @@ struct __shared_ptr_emplace : __shared_weak_count {
   _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
 
 private:
-  template <class _Allocator                                                                         = _Alloc,
-            __enable_if_t<is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
-    __get_elem()->~__value_type();
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
+    if constexpr (is_same<typename _Alloc::value_type, __for_overwrite_tag>::value) {
+      __get_elem()->~__value_type();
+    } else {
+      using _TpAlloc = typename __allocator_traits_rebind<_Alloc, __remove_cv_t<_Tp> >::type;
+      _TpAlloc __tmp(*__get_alloc());
+      allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
+    }
   }
-
-  template <class _Allocator                                                                          = _Alloc,
-            __enable_if_t<!is_same<typename _Allocator::value_type, __for_overwrite_tag>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __on_zero_shared_impl() _NOEXCEPT {
-    using _TpAlloc = typename __allocator_traits_rebind<_Allocator, __remove_cv_t<_Tp> >::type;
-    _TpAlloc __tmp(*__get_alloc());
-    allocator_traits<_TpAlloc>::destroy(__tmp, __get_elem());
-  }
-
-  _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override { __on_zero_shared_impl(); }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
     using _ControlBlockAlloc   = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
