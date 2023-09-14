@@ -126,6 +126,7 @@ class _LIBCPP_EXPORTED_FROM_ABI bad_weak_ptr
 public:
     _LIBCPP_HIDE_FROM_ABI bad_weak_ptr() _NOEXCEPT = default;
     _LIBCPP_HIDE_FROM_ABI bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT = default;
+    _LIBCPP_HIDE_FROM_ABI bad_weak_ptr& operator=(const bad_weak_ptr&) _NOEXCEPT = default;
     ~bad_weak_ptr() _NOEXCEPT override;
     const char* what() const  _NOEXCEPT override;
 };

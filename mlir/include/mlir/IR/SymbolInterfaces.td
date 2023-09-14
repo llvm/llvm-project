@@ -163,7 +163,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     // If this is an optional symbol, bail out early if possible.
     auto concreteOp = cast<ConcreteOp>($_op);
     if (concreteOp.isOptionalSymbol()) {
-      if(!concreteOp->getAttr(::mlir::SymbolTable::getSymbolAttrName()))
+      if(!concreteOp->getInherentAttr(::mlir::SymbolTable::getSymbolAttrName()).value_or(Attribute{}))
         return success();
     }
     if (::mlir::failed(::mlir::detail::verifySymbol($_op)))

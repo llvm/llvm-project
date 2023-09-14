@@ -32,6 +32,9 @@ set(BOLT_RT_FLAGS
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
   set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-sse")
 endif()
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+  set(BOLT_RT_FLAGS ${BOLT_RT_FLAGS} "-mno-outline-atomics")
+endif()
 
 # Don't let the compiler think it can create calls to standard libs
 target_compile_options(bolt_rt_instr PRIVATE ${BOLT_RT_FLAGS})

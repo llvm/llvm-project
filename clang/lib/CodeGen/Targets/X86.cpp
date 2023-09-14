@@ -1508,6 +1508,24 @@ static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
   return false;
 }
 
+static bool checkAVX512ParamFeature(DiagnosticsEngine &Diag,
+                                    SourceLocation CallLoc,
+                                    const llvm::StringMap<bool> &CallerMap,
+                                    const llvm::StringMap<bool> &CalleeMap,
+                                    QualType Ty, bool IsArgument) {
+  bool Caller256 = CallerMap.lookup("avx512f") && !CallerMap.lookup("evex512");
+  bool Callee256 = CalleeMap.lookup("avx512f") && !CalleeMap.lookup("evex512");
+
+  // Forbid 512-bit or larger vector pass or return when we disabled ZMM
+  // instructions.
+  if (Caller256 || Callee256)
+    return Diag.Report(CallLoc, diag::err_avx_calling_convention)
+           << IsArgument << Ty << "evex512";
+
+  return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
+                              "avx512f", IsArgument);
+}
+
 static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                           SourceLocation CallLoc,
                           const llvm::StringMap<bool> &CallerMap,
@@ -1515,8 +1533,8 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                           bool IsArgument) {
   uint64_t Size = Ctx.getTypeSize(Ty);
   if (Size > 256)
-    return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
-                                "avx512f", IsArgument);
+    return checkAVX512ParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
+                                   IsArgument);
 
   if (Size > 128)
     return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty, "avx",

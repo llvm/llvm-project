@@ -5315,7 +5315,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
     return UndefInt8;
 
   // Return Undef for zero-sized type.
-  if (!DL.getTypeStoreSize(V->getType()).isNonZero())
+  if (DL.getTypeStoreSize(V->getType()).isZero())
     return UndefInt8;
 
   Constant *C = dyn_cast<Constant>(V);

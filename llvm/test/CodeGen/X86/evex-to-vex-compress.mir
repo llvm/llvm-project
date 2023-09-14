@@ -23,16 +23,12 @@ body: |
   $ymm0 = VMOVAPDZ256rm                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVAPDYrr                  $ymm0
   $ymm0 = VMOVAPDZ256rr                        $ymm0                                          
-  ; CHECK: $ymm0 = VMOVAPDYrr_REV              $ymm0
-  $ymm0 = VMOVAPDZ256rr_REV                    $ymm0                                          
   ; CHECK: VMOVAPSYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVAPSZ256mr                                $rdi, 1, $noreg, 0, $noreg, $ymm0                        
   ; CHECK: $ymm0 = VMOVAPSYrm                  $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVAPSZ256rm                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVAPSYrr                  $ymm0
   $ymm0 = VMOVAPSZ256rr                        $ymm0                                          
-  ; CHECK: $ymm0 = VMOVAPSYrr_REV              $ymm0
-  $ymm0 = VMOVAPSZ256rr_REV                    $ymm0                                          
   ; CHECK: $ymm0 = VMOVDDUPYrm                 $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVDDUPZ256rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDDUPYrr                 $ymm0
@@ -43,48 +39,36 @@ body: |
   $ymm0 = VMOVDQA32Z256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDQAYrr                  $ymm0
   $ymm0 = VMOVDQA32Z256rr                      $ymm0                                          
-  ; CHECK: $ymm0 = VMOVDQAYrr_REV              $ymm0
-  $ymm0 = VMOVDQA32Z256rr_REV                  $ymm0                                          
   ; CHECK: VMOVDQAYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVDQA64Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm0                        
   ; CHECK: $ymm0 = VMOVDQAYrm                  $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVDQA64Z256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDQAYrr                  $ymm0
   $ymm0 = VMOVDQA64Z256rr                      $ymm0                                          
-  ; CHECK: $ymm0 = VMOVDQAYrr_REV              $ymm0
-  $ymm0 = VMOVDQA64Z256rr_REV                  $ymm0                                          
   ; CHECK: VMOVDQUYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVDQU16Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm0                        
   ; CHECK: $ymm0 = VMOVDQUYrm                  $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVDQU16Z256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDQUYrr                  $ymm0
   $ymm0 = VMOVDQU16Z256rr                      $ymm0                                          
-  ; CHECK: $ymm0 = VMOVDQUYrr_REV              $ymm0
-  $ymm0 = VMOVDQU16Z256rr_REV                  $ymm0                                          
   ; CHECK: VMOVDQUYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVDQU32Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm0                        
   ; CHECK: $ymm0 = VMOVDQUYrm                  $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVDQU32Z256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDQUYrr                  $ymm0
   $ymm0 = VMOVDQU32Z256rr                      $ymm0                                          
-  ; CHECK: $ymm0 = VMOVDQUYrr_REV              $ymm0
-  $ymm0 = VMOVDQU32Z256rr_REV                  $ymm0                                          
   ; CHECK: VMOVDQUYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVDQU64Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm0                        
   ; CHECK: $ymm0 = VMOVDQUYrm                  $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVDQU64Z256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDQUYrr                  $ymm0
   $ymm0 = VMOVDQU64Z256rr                      $ymm0                                          
-  ; CHECK: $ymm0 = VMOVDQUYrr_REV              $ymm0
-  $ymm0 = VMOVDQU64Z256rr_REV                  $ymm0                                          
   ; CHECK: VMOVDQUYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVDQU8Z256mr                               $rdi, 1, $noreg, 0, $noreg, $ymm0                        
   ; CHECK: $ymm0 = VMOVDQUYrm                  $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVDQU8Z256rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVDQUYrr                  $ymm0
   $ymm0 = VMOVDQU8Z256rr                       $ymm0                                          
-  ; CHECK: $ymm0 = VMOVDQUYrr_REV              $ymm0
-  $ymm0 = VMOVDQU8Z256rr_REV                   $ymm0                                          
   ; CHECK: $ymm0 = VMOVNTDQAYrm                $rip, 1, $noreg, 0, $noreg
   $ymm0 = VMOVNTDQAZ256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: VMOVNTDQYmr                         $rdi, 1, $noreg, 0, $noreg, $ymm0
@@ -107,8 +91,6 @@ body: |
   $ymm0 = VMOVUPDZ256rm                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VMOVUPDYrr                  $ymm0
   $ymm0 = VMOVUPDZ256rr                        $ymm0                                          
-  ; CHECK: $ymm0 = VMOVUPDYrr_REV              $ymm0
-  $ymm0 = VMOVUPDZ256rr_REV                    $ymm0                                          
   ; CHECK: VMOVUPSYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVUPSZ256mr                                $rdi, 1, $noreg, 0, $noreg, $ymm0                                              
   ; CHECK: $ymm0 = VPANDYrm                    $ymm0, $rip, 1, $noreg, 0, $noreg
@@ -863,8 +845,6 @@ body: |
   $ymm0 = VMOVUPSZ256rm                        $rdi, 1, $noreg, 0, $noreg                               
   ; CHECK: $ymm0 = VMOVUPSYrr                  $ymm0
   $ymm0 = VMOVUPSZ256rr                        $ymm0                                          
-  ; CHECK: $ymm0 = VMOVUPSYrr_REV              $ymm0                                      
-  $ymm0 = VMOVUPSZ256rr_REV                    $ymm0                                                
   ; CHECK: $ymm0 = VPSHUFBYrm                  $ymm0, $rdi, 1, $noreg, 0, $noreg
   $ymm0 = VPSHUFBZ256rm                        $ymm0, $rdi, 1, $noreg, 0, $noreg
   ; CHECK: $ymm0 = VPSHUFBYrr                  $ymm0, $ymm1
@@ -971,8 +951,6 @@ body: |
   $xmm0 = VMOVDQU8Z128rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm0 = VMOVDQUrr                   $xmm0
   $xmm0 = VMOVDQU8Z128rr                       $xmm0                                               
-  ; CHECK: $xmm0 = VMOVDQUrr_REV               $xmm0
-  $xmm0 = VMOVDQU8Z128rr_REV                   $xmm0                                               
   ; CHECK: $xmm0 = VMOVNTDQArm                 $rip, 1, $noreg, 0, $noreg
   $xmm0 = VMOVNTDQAZ128rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: VMOVUPDmr                           $rdi, 1, $noreg, 0, $noreg, $xmm0
@@ -981,36 +959,18 @@ body: |
   $xmm0 = VMOVUPDZ128rm                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm0 = VMOVUPDrr                   $xmm0
   $xmm0 = VMOVUPDZ128rr                        $xmm0                                               
-  ; CHECK: $xmm0 = VMOVUPDrr_REV               $xmm0
-  $xmm0 = VMOVUPDZ128rr_REV                    $xmm0                                               
   ; CHECK: VMOVUPSmr                           $rdi, 1, $noreg, 0, $noreg, $xmm0
   VMOVUPSZ128mr                                $rdi, 1, $noreg, 0, $noreg, $xmm0                             
   ; CHECK: $xmm0 = VMOVUPSrm                   $rip, 1, $noreg, 0, $noreg
   $xmm0 = VMOVUPSZ128rm                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm0 = VMOVUPSrr                   $xmm0
   $xmm0 = VMOVUPSZ128rr                        $xmm0                                               
-  ; CHECK: $xmm0 = VMOVUPSrr_REV               $xmm0
-  $xmm0 = VMOVUPSZ128rr_REV                    $xmm0                                               
   ; CHECK: VMOVNTDQmr                          $rdi, 1, $noreg, 0, $noreg, $xmm0
   VMOVNTDQZ128mr                               $rdi, 1, $noreg, 0, $noreg, $xmm0                             
   ; CHECK: VMOVNTPDmr                          $rdi, 1, $noreg, 0, $noreg, $xmm0
   VMOVNTPDZ128mr                               $rdi, 1, $noreg, 0, $noreg, $xmm0                             
   ; CHECK: VMOVNTPSmr                          $rdi, 1, $noreg, 0, $noreg, $xmm0
   VMOVNTPSZ128mr                               $rdi, 1, $noreg, 0, $noreg, $xmm0                             
-  ; CHECK: $xmm0 = VMOVAPDrr_REV               $xmm0
-  $xmm0 = VMOVAPDZ128rr_REV                    $xmm0                                               
-  ; CHECK: $xmm0 = VMOVAPSrr_REV               $xmm0
-  $xmm0 = VMOVAPSZ128rr_REV                    $xmm0                                               
-  ; CHECK: $xmm0 = VMOVDQArr_REV               $xmm0
-  $xmm0 = VMOVDQA32Z128rr_REV                  $xmm0                                               
-  ; CHECK: $xmm0 = VMOVDQArr_REV               $xmm0
-  $xmm0 = VMOVDQA64Z128rr_REV                  $xmm0                                               
-  ; CHECK: $xmm0 = VMOVDQUrr_REV               $xmm0
-  $xmm0 = VMOVDQU16Z128rr_REV                  $xmm0                                               
-  ; CHECK: $xmm0 = VMOVDQUrr_REV               $xmm0
-  $xmm0 = VMOVDQU32Z128rr_REV                  $xmm0                                               
-  ; CHECK: $xmm0 = VMOVDQUrr_REV               $xmm0  
-  $xmm0 = VMOVDQU64Z128rr_REV                  $xmm0                                               
   ; CHECK: $xmm0 = VPMOVSXBDrm                 $rip, 1, $noreg, 0, $noreg
   $xmm0 = VPMOVSXBDZ128rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm0 = VPMOVSXBDrr                 $xmm0
@@ -2130,8 +2090,6 @@ body: |
   VPEXTRWZmr                                   $rdi, 1, $noreg, 0, $noreg,  $xmm0, 3                             
   ; CHECK: $eax = VPEXTRWrr                    $xmm0, 1                                                     
   $eax = VPEXTRWZrr                            $xmm0, 1                                                    
-  ; CHECK: $eax = VPEXTRWrr_REV                $xmm0, 1      
-  $eax = VPEXTRWZrr_REV                        $xmm0, 1                                                     
   ; CHECK: $xmm0 = VPINSRBrm                   $xmm0, $rsi, 1, $noreg, 0, $noreg, 3      
   $xmm0 = VPINSRBZrm                           $xmm0, $rsi, 1, $noreg, 0, $noreg, 3                              
   ; CHECK: $xmm0 = VPINSRBrr                   $xmm0, $edi, 5      
@@ -2268,8 +2226,6 @@ body: |
   $xmm0 = VMOVSDZrm_alt                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm0 = VMOVSDrr                    $xmm0, $xmm1
   $xmm0 = VMOVSDZrr                            $xmm0, $xmm1
-  ; CHECK: $xmm0 = VMOVSDrr_REV                $xmm0, $xmm1
-  $xmm0 = VMOVSDZrr_REV                        $xmm0, $xmm1
   ; CHECK: $rax = VMOVSDto64rr                 $xmm0
   $rax = VMOVSDto64Zrr                         $xmm0
   ; CHECK: VMOVSSmr                            $rdi, 1, $noreg, 0, $noreg, $xmm0
@@ -2280,8 +2236,6 @@ body: |
   $xmm0 = VMOVSSZrm_alt                        $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm0 = VMOVSSrr                    $xmm0, $xmm1
   $xmm0 = VMOVSSZrr                            $xmm0, $xmm1
-  ; CHECK: $xmm0 = VMOVSSrr_REV                $xmm0, $xmm1
-  $xmm0 = VMOVSSZrr_REV                        $xmm0, $xmm1
   ; CHECK: $eax = VMOVSS2DIrr                  $xmm0
   $eax = VMOVSS2DIZrr                          $xmm0
   ; CHECK: $xmm0 = VMOV64toPQIrr               $rdi
@@ -2386,16 +2340,12 @@ body: |
   $ymm16 = VMOVAPDZ256rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVAPDZ256rr              $ymm16
   $ymm16 = VMOVAPDZ256rr                       $ymm16                                        
-  ; CHECK: $ymm16 = VMOVAPDZ256rr_REV          $ymm16
-  $ymm16 = VMOVAPDZ256rr_REV                   $ymm16                                        
   ; CHECK: VMOVAPSZ256mr                       $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVAPSZ256mr                                $rdi, 1, $noreg, 0, $noreg, $ymm16                      
   ; CHECK: $ymm16 = VMOVAPSZ256rm              $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVAPSZ256rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVAPSZ256rr              $ymm16
   $ymm16 = VMOVAPSZ256rr                       $ymm16                                        
-  ; CHECK: $ymm16 = VMOVAPSZ256rr_REV          $ymm16
-  $ymm16 = VMOVAPSZ256rr_REV                   $ymm16                                        
   ; CHECK: $ymm16 = VMOVDDUPZ256rm             $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVDDUPZ256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVDDUPZ256rr             $ymm16
@@ -2406,48 +2356,36 @@ body: |
   $ymm16 = VMOVDQA32Z256rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVDQA32Z256rr            $ymm16
   $ymm16 = VMOVDQA32Z256rr                     $ymm16                                        
-  ; CHECK: $ymm16 = VMOVDQA32Z256rr_REV        $ymm16
-  $ymm16 = VMOVDQA32Z256rr_REV                 $ymm16                                        
   ; CHECK: VMOVDQA64Z256mr                     $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVDQA64Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm16                      
   ; CHECK: $ymm16 = VMOVDQA64Z256rm            $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVDQA64Z256rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVDQA64Z256rr            $ymm16
   $ymm16 = VMOVDQA64Z256rr                     $ymm16                                        
-  ; CHECK: $ymm16 = VMOVDQA64Z256rr_REV        $ymm16
-  $ymm16 = VMOVDQA64Z256rr_REV                 $ymm16                                        
   ; CHECK: VMOVDQU16Z256mr                     $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVDQU16Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm16                      
   ; CHECK: $ymm16 = VMOVDQU16Z256rm            $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVDQU16Z256rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVDQU16Z256rr            $ymm16
   $ymm16 = VMOVDQU16Z256rr                     $ymm16                                        
-  ; CHECK: $ymm16 = VMOVDQU16Z256rr_REV        $ymm16
-  $ymm16 = VMOVDQU16Z256rr_REV                 $ymm16                                        
   ; CHECK: VMOVDQU32Z256mr                     $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVDQU32Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm16                      
   ; CHECK: $ymm16 = VMOVDQU32Z256rm            $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVDQU32Z256rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVDQU32Z256rr            $ymm16
   $ymm16 = VMOVDQU32Z256rr                     $ymm16                                        
-  ; CHECK: $ymm16 = VMOVDQU32Z256rr_REV        $ymm16
-  $ymm16 = VMOVDQU32Z256rr_REV                 $ymm16                                        
   ; CHECK: VMOVDQU64Z256mr                     $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVDQU64Z256mr                              $rdi, 1, $noreg, 0, $noreg, $ymm16                      
   ; CHECK: $ymm16 = VMOVDQU64Z256rm            $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVDQU64Z256rm                     $rip, 1, $noreg, 0, $noreg                           
   ; CHECK: $ymm16 = VMOVDQU64Z256rr            $ymm16
   $ymm16 = VMOVDQU64Z256rr                     $ymm16                                        
-  ; CHECK: $ymm16 = VMOVDQU64Z256rr_REV        $ymm16
-  $ymm16 = VMOVDQU64Z256rr_REV                 $ymm16                                        
   ; CHECK: VMOVDQU8Z256mr                      $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVDQU8Z256mr                               $rdi, 1, $noreg, 0, $noreg, $ymm16                      
   ; CHECK: $ymm16 = VMOVDQU8Z256rm             $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVDQU8Z256rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVDQU8Z256rr             $ymm16
   $ymm16 = VMOVDQU8Z256rr                      $ymm16                                        
-  ; CHECK: $ymm16 = VMOVDQU8Z256rr_REV         $ymm16
-  $ymm16 = VMOVDQU8Z256rr_REV                  $ymm16                                        
   ; CHECK: $ymm16 = VMOVNTDQAZ256rm            $rip, 1, $noreg, 0, $noreg
   $ymm16 = VMOVNTDQAZ256rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: VMOVNTDQZ256mr                      $rdi, 1, $noreg, 0, $noreg, $ymm16
@@ -2470,8 +2408,6 @@ body: |
   $ymm16 = VMOVUPDZ256rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VMOVUPDZ256rr              $ymm16
   $ymm16 = VMOVUPDZ256rr                       $ymm16                                        
-  ; CHECK: $ymm16 = VMOVUPDZ256rr_REV          $ymm16
-  $ymm16 = VMOVUPDZ256rr_REV                   $ymm16                                        
   ; CHECK: VMOVUPSZ256mr                       $rdi, 1, $noreg, 0, $noreg, $ymm16  
   VMOVUPSZ256mr                                $rdi, 1, $noreg, 0, $noreg, $ymm16                                               
   ; CHECK: $ymm16 = VPANDDZ256rm               $ymm16, $rip, 1, $noreg, 0, $noreg
@@ -3226,8 +3162,6 @@ body: |
   $ymm16 = VMOVUPSZ256rm                       $rdi, 1, $noreg, 0, $noreg                              
   ; CHECK: $ymm16 = VMOVUPSZ256rr              $ymm16
   $ymm16 = VMOVUPSZ256rr                       $ymm16                                        
-  ; CHECK: $ymm16 = VMOVUPSZ256rr_REV          $ymm16   
-  $ymm16 = VMOVUPSZ256rr_REV                   $ymm16                                                
   ; CHECK: $ymm16 = VPSHUFBZ256rm              $ymm16, $rdi, 1, $noreg, 0, $noreg
   $ymm16 = VPSHUFBZ256rm                       $ymm16, $rdi, 1, $noreg, 0, $noreg
   ; CHECK: $ymm16 = VPSHUFBZ256rr              $ymm16, $ymm1
@@ -3342,8 +3276,6 @@ body: |
   $xmm16 = VMOVDQU8Z128rm                      $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm16 = VMOVDQU8Z128rr             $xmm16
   $xmm16 = VMOVDQU8Z128rr                      $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVDQU8Z128rr_REV         $xmm16
-  $xmm16 = VMOVDQU8Z128rr_REV                  $xmm16                                                    
   ; CHECK: $xmm16 = VMOVNTDQAZ128rm            $rip, 1, $noreg, 0, $noreg
   $xmm16 = VMOVNTDQAZ128rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: VMOVUPDZ128mr                       $rdi, 1, $noreg, 0, $noreg, $xmm16
@@ -3352,36 +3284,18 @@ body: |
   $xmm16 = VMOVUPDZ128rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm16 = VMOVUPDZ128rr              $xmm16
   $xmm16 = VMOVUPDZ128rr                       $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVUPDZ128rr_REV          $xmm16
-  $xmm16 = VMOVUPDZ128rr_REV                   $xmm16                                                    
   ; CHECK: VMOVUPSZ128mr                       $rdi, 1, $noreg, 0, $noreg, $xmm16
   VMOVUPSZ128mr                                $rdi, 1, $noreg, 0, $noreg, $xmm16                                  
   ; CHECK: $xmm16 = VMOVUPSZ128rm              $rip, 1, $noreg, 0, $noreg
   $xmm16 = VMOVUPSZ128rm                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm16 = VMOVUPSZ128rr              $xmm16
   $xmm16 = VMOVUPSZ128rr                       $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVUPSZ128rr_REV          $xmm16
-  $xmm16 = VMOVUPSZ128rr_REV                   $xmm16                                                    
   ; CHECK: VMOVNTDQZ128mr                      $rdi, 1, $noreg, 0, $noreg, $xmm16
   VMOVNTDQZ128mr                               $rdi, 1, $noreg, 0, $noreg, $xmm16                                  
   ; CHECK: VMOVNTPDZ128mr                      $rdi, 1, $noreg, 0, $noreg, $xmm16
   VMOVNTPDZ128mr                               $rdi, 1, $noreg, 0, $noreg, $xmm16                                  
   ; CHECK: VMOVNTPSZ128mr                      $rdi, 1, $noreg, 0, $noreg, $xmm16
   VMOVNTPSZ128mr                               $rdi, 1, $noreg, 0, $noreg, $xmm16                                  
-  ; CHECK: $xmm16 = VMOVAPDZ128rr_REV          $xmm16
-  $xmm16 = VMOVAPDZ128rr_REV                   $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVAPSZ128rr_REV          $xmm16
-  $xmm16 = VMOVAPSZ128rr_REV                   $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVDQA32Z128rr_REV        $xmm16
-  $xmm16 = VMOVDQA32Z128rr_REV                 $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVDQA64Z128rr_REV        $xmm16
-  $xmm16 = VMOVDQA64Z128rr_REV                 $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVDQU16Z128rr_REV        $xmm16
-  $xmm16 = VMOVDQU16Z128rr_REV                 $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVDQU32Z128rr_REV        $xmm16
-  $xmm16 = VMOVDQU32Z128rr_REV                 $xmm16                                                    
-  ; CHECK: $xmm16 = VMOVDQU64Z128rr_REV        $xmm16
-  $xmm16 = VMOVDQU64Z128rr_REV                 $xmm16                                                    
   ; CHECK: $xmm16 = VPMOVSXBDZ128rm            $rip, 1, $noreg, 0, $noreg
   $xmm16 = VPMOVSXBDZ128rm                     $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm16 = VPMOVSXBDZ128rr            $xmm16
@@ -4508,8 +4422,6 @@ body: |
   VPEXTRWZmr                                   $rdi, 1, $noreg, 0, $noreg,  $xmm16, 3                               
   ; CHECK: $eax = VPEXTRWZrr                   $xmm16, 1      
   $eax = VPEXTRWZrr                            $xmm16, 1                                                     
-  ; CHECK: $eax = VPEXTRWZrr_REV               $xmm16, 1      
-  $eax = VPEXTRWZrr_REV                        $xmm16, 1                                                     
   ; CHECK: $xmm16 = VPINSRBZrm                 $xmm16, $rsi, 1, $noreg, 0, $noreg, 3      
   $xmm16 = VPINSRBZrm                          $xmm16, $rsi, 1, $noreg, 0, $noreg, 3                                
   ; CHECK: $xmm16 = VPINSRBZrr                 $xmm16, $edi, 5      
@@ -4650,8 +4562,6 @@ body: |
   $xmm16 = VMOVSDZrm_alt                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm16 = VMOVSDZrr                  $xmm16, $xmm1
   $xmm16 = VMOVSDZrr                           $xmm16, $xmm1                                                  
-  ; CHECK: $xmm16 = VMOVSDZrr_REV              $xmm16, $xmm1
-  $xmm16 = VMOVSDZrr_REV                       $xmm16, $xmm1                                                
   ; CHECK: $rax = VMOVSDto64Zrr                $xmm16
   $rax = VMOVSDto64Zrr                         $xmm16
   ; CHECK: VMOVSSZmr                           $rdi, 1, $noreg, 0, $noreg, $xmm16
@@ -4662,8 +4572,6 @@ body: |
   $xmm16 = VMOVSSZrm_alt                       $rip, 1, $noreg, 0, $noreg
   ; CHECK: $xmm16 = VMOVSSZrr                  $xmm16, $xmm1
   $xmm16 = VMOVSSZrr                           $xmm16, $xmm1                                                  
-  ; CHECK: $xmm16 = VMOVSSZrr_REV              $xmm16, $xmm1
-  $xmm16 = VMOVSSZrr_REV                       $xmm16, $xmm1                                                  
   ; CHECK: $eax = VMOVSS2DIZrr                 $xmm16
   $eax = VMOVSS2DIZrr                          $xmm16
   ; CHECK: $xmm16 = VMOV64toPQIZrr             $rdi

@@ -481,11 +481,10 @@ for.body:                                         ; preds = %for.body, %entry
 define void @even_load_dynamic_tc(ptr noalias nocapture readonly %A, ptr noalias nocapture %B, i64 %N) {
 ; CHECK-LABEL: @even_load_dynamic_tc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 2)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], 9
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 9
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3

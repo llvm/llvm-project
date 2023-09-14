@@ -1655,4 +1655,15 @@ std::string GetModuleOrSubmoduleName(const Symbol &symbol) {
   return result;
 }
 
+std::string GetCommonBlockObjectName(const Symbol &common, bool underscoring) {
+  if (const std::string * bind{common.GetBindName()}) {
+    return *bind;
+  }
+  if (common.name().empty()) {
+    return Fortran::common::blankCommonObjectName;
+  }
+  return underscoring ? common.name().ToString() + "_"s
+                      : common.name().ToString();
+}
+
 } // namespace Fortran::semantics

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck -check-prefix=GFX908 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck -check-prefix=GFX908 %s
 
 v_accvgpr_read_b32 v2, acc0
 // GFX908: v_accvgpr_read_b32 v2, a0       ; encoding: [0x02,0x40,0xd8,0xd3,0x00,0x01,0x00,0x18]

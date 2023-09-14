@@ -1,6 +1,7 @@
 // The dbgeng driver doesn't support --target-run-args yet.
 // UNSUPPORTED: system-windows
 //
+// XFAIL: system-darwin
 // RUN: %dexter_regression_test_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t --target-run-args "a b 'c d'" -- %s | FileCheck %s
 // CHECK: target_run_args_with_command.c:

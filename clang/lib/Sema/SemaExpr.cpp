@@ -19136,6 +19136,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                                : diag::note_cuda_host_var);
       }
     } else if (VarTarget == Sema::CVT_Device &&
+               !Var->hasAttr<CUDASharedAttr>() &&
                (UserTarget == Sema::CFT_Host ||
                 UserTarget == Sema::CFT_HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used

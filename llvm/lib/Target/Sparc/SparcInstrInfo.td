@@ -1703,41 +1703,7 @@ let Predicates = [HasV9], rd = 15, rs1 = 0b00000 in
                 (ins simm13Op:$simm13),
                  "sir $simm13", []>;
 
-// The CAS instruction, unlike other instructions, only comes in a
-// form which requires an ASI be provided.
-let Predicates = [HasV9], Constraints = "$swap = $rd" in {
-  // The ASI value hardcoded here is ASI_PRIMARY, the default
-  // unprivileged ASI for SparcV9.
-  let asi = 0b10000000 in
-    def CASrr: F3_1_asi<3, 0b111100,
-                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
-                                     IntRegs:$swap),
-                 "cas [$rs1], $rs2, $rd",
-                 [(set i32:$rd,
-                     (atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap))]>;
-
-  // SparcV9 also specifies a CASL alias, which uses ASI_PRIMARY_LITTLE.
-  let asi = 0b10001000 in
-    def CASLrr: F3_1_asi<3, 0b111100,
-                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
-                                     IntRegs:$swap),
-                 "casl [$rs1], $rs2, $rd",
-                 []>;
-}
-
-// CASA is supported as an instruction on some LEON3 and all LEON4 processors.
-// This version can be automatically lowered from C code, selecting ASI 10
-let Predicates = [HasLeonCASA], Constraints = "$swap = $rd", asi = 0b00001010 in
-  def CASAasi10: F3_1_asi<3, 0b111100,
-                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
-                                     IntRegs:$swap),
-                 "casa [$rs1] 10, $rs2, $rd",
-                 [(set i32:$rd,
-                     (atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap))]>;
-
 // CASA supported on all V9, some LEON3 and all LEON4 processors.
-// Same pattern as CASrr above, but with a different ASI.
-// This version is supported for inline assembly lowering only.
 let Predicates = [HasCASA], Constraints = "$swap = $rd" in
   def CASArr: F3_1_asi<3, 0b111100,
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
@@ -1937,6 +1903,15 @@ def : Pat<(atomic_store_16 i32:$val, ADDRrr:$dst), (STHrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_16 i32:$val, ADDRri:$dst), (STHri ADDRri:$dst, $val)>;
 def : Pat<(atomic_store_32 i32:$val, ADDRrr:$dst), (STrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_32 i32:$val, ADDRri:$dst), (STri ADDRri:$dst, $val)>;
+
+let Predicates = [HasV9] in
+def : Pat<(atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap),
+          (CASArr $rs1, $rs2, $swap, 0x80)>;
+
+// Same pattern as CASArr above, but with a different ASI.
+let Predicates = [HasLeonCASA] in
+def : Pat<(atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap),
+          (CASArr $rs1, $rs2, $swap, 0x0A)>;
 
 // A register pair with zero upper half.
 // The upper part is done with ORrr instead of `COPY G0`

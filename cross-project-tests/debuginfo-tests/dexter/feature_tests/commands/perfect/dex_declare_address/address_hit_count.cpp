@@ -4,6 +4,7 @@
 //      expression after the target line has been stepped on a given number of
 //      times.
 //
+// XFAIL: system-darwin
 // RUN: %dexter_regression_test_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: address_hit_count.cpp

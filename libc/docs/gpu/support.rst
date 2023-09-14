@@ -96,6 +96,9 @@ llabs          |check|
 div            |check|
 ldiv           |check|
 lldiv          |check|
+bsearch        |check|
+qsort          |check|
+qsort_r        |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|
@@ -106,7 +109,7 @@ strtoull       |check|
 =============  =========  ============
 
 inttypes.h
---------
+----------
 
 =============  =========  ============
 Function Name  Available  RPC Required
@@ -118,20 +121,24 @@ strtoumax      |check|
 =============  =========  ============
 
 stdio.h
---------
+-------
 
 =============  =========  ============
 Function Name  Available  RPC Required
 =============  =========  ============
 puts           |check|    |check|
 fputs          |check|    |check|
+fputc          |check|    |check|
+fwrite         |check|    |check|
+putc           |check|    |check|
+putchar        |check|    |check|
 fclose         |check|    |check|
 fopen          |check|    |check|
 fread          |check|    |check|
 =============  =========  ============
 
 time.h
---------
+------
 
 =============  =========  ============
 Function Name  Available  RPC Required

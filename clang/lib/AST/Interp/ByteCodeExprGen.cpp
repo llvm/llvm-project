@@ -167,8 +167,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
-      if (DiscardResult)
-        return this->discard(SubExpr);
+    if (DiscardResult)
+      return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
@@ -222,13 +222,8 @@ bool ByteCodeExprGen<Emitter>::VisitFloatingLiteral(const FloatingLiteral *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *PE) {
-  const Expr *SubExpr = PE->getSubExpr();
-
-  if (DiscardResult)
-    return this->discard(SubExpr);
-
-  return this->visit(SubExpr);
+bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *E) {
+  return this->delegate(E->getSubExpr());
 }
 
 template <class Emitter>
@@ -1458,6 +1453,41 @@ bool ByteCodeExprGen<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
+  unsigned N = E->getNumComponents();
+  if (N == 0)
+    return false;
+
+  for (unsigned I = 0; I != N; ++I) {
+    const OffsetOfNode &Node = E->getComponent(I);
+    if (Node.getKind() == OffsetOfNode::Array) {
+      const Expr *ArrayIndexExpr = E->getIndexExpr(Node.getArrayExprIndex());
+      PrimType IndexT = classifyPrim(ArrayIndexExpr->getType());
+
+      if (DiscardResult) {
+        if (!this->discard(ArrayIndexExpr))
+          return false;
+        continue;
+      }
+
+      if (!this->visit(ArrayIndexExpr))
+        return false;
+      // Cast to Sint64.
+      if (IndexT != PT_Sint64) {
+        if (!this->emitCast(IndexT, PT_Sint64, E))
+          return false;
+      }
+    }
+  }
+
+  if (DiscardResult)
+    return true;
+
+  PrimType T = classifyPrim(E->getType());
+  return this->emitOffsetOf(T, E, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -2152,12 +2182,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     const CXXDefaultInitExpr *E) {
-
+  SourceLocScope<Emitter> SLS(this, E);
   if (Initializing)
     return this->visitInitializer(E->getExpr());
 
   assert(classify(E->getType()));
-  SourceLocScope<Emitter> SLS(this, E);
   return this->visit(E->getExpr());
 }
 
@@ -2365,9 +2394,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_Real:   // __real x
   case UO_Imag:   // __imag x
   case UO_Extension:
-    if (DiscardResult)
-      return this->discard(SubExpr);
-    return this->visit(SubExpr);
+    return this->delegate(SubExpr);
   case UO_Coawait:
     assert(false && "Unhandled opcode");
   }

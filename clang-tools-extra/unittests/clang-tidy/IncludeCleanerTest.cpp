@@ -47,9 +47,10 @@ TEST(IncludeCleanerCheckTest, BasicUnusedIncludes) {
   const char *PostCode = "\n";
 
   std::vector<ClangTidyError> Errors;
-  EXPECT_EQ(PostCode, runCheckOnCode<IncludeCleanerCheck>(
-                          PreCode, &Errors, "file.cpp", std::nullopt,
-                          ClangTidyOptions(), {{"bar.h", ""}, {"vector", ""}}));
+  EXPECT_EQ(PostCode,
+            runCheckOnCode<IncludeCleanerCheck>(
+                PreCode, &Errors, "file.cpp", std::nullopt, ClangTidyOptions(),
+                {{"bar.h", "#pragma once"}, {"vector", "#pragma once"}}));
 }
 
 TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
@@ -76,10 +77,11 @@ TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
       PostCode,
       runCheckOnCode<IncludeCleanerCheck>(
           PreCode, &Errors, "file.cpp", std::nullopt, Opts,
-          {{"bar.h", ""},
-           {"vector", ""},
-           {appendPathFileSystemIndependent({"foo", "qux.h"}), ""},
-           {appendPathFileSystemIndependent({"baz", "qux", "qux.h"}), ""}}));
+          {{"bar.h", "#pragma once"},
+           {"vector", "#pragma once"},
+           {appendPathFileSystemIndependent({"foo", "qux.h"}), "#pragma once"},
+           {appendPathFileSystemIndependent({"baz", "qux", "qux.h"}),
+            "#pragma once"}}));
 }
 
 TEST(IncludeCleanerCheckTest, BasicMissingIncludes) {

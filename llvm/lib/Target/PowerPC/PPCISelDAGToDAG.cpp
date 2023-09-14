@@ -387,18 +387,19 @@ namespace {
     /// register can be improved, but it is wrong to substitute Reg+Reg for
     /// Reg in an asm, because the load or store opcode would have to change.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                      unsigned ConstraintID,
+                                      InlineAsm::ConstraintCode ConstraintID,
                                       std::vector<SDValue> &OutOps) override {
       switch(ConstraintID) {
       default:
-        errs() << "ConstraintID: " << ConstraintID << "\n";
+        errs() << "ConstraintID: "
+               << InlineAsm::getMemConstraintName(ConstraintID) << "\n";
         llvm_unreachable("Unexpected asm memory constraint");
-      case InlineAsm::Constraint_es:
-      case InlineAsm::Constraint_m:
-      case InlineAsm::Constraint_o:
-      case InlineAsm::Constraint_Q:
-      case InlineAsm::Constraint_Z:
-      case InlineAsm::Constraint_Zy:
+      case InlineAsm::ConstraintCode::es:
+      case InlineAsm::ConstraintCode::m:
+      case InlineAsm::ConstraintCode::o:
+      case InlineAsm::ConstraintCode::Q:
+      case InlineAsm::ConstraintCode::Z:
+      case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
         const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -7654,13 +7655,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       // is already in place on the operand, so copying the operand
       // is sufficient.
       ReplaceFlags = false;
-      // For these cases, the immediate may not be divisible by 4, in
-      // which case the fold is illegal for DS-form instructions.  (The
-      // other cases provide aligned addresses and are always safe.)
-      if (RequiresMod4Offset &&
-          (!isa<ConstantSDNode>(Base.getOperand(1)) ||
-           Base.getConstantOperandVal(1) % 4 != 0))
-        continue;
       break;
     case PPC::ADDIdtprelL:
       Flags = PPCII::MO_DTPREL_LO;
@@ -7712,6 +7706,18 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         UpdateHBase = true;
       }
     } else {
+      // Global addresses can be folded, but only if they are sufficiently
+      // aligned.
+      if (RequiresMod4Offset) {
+        if (GlobalAddressSDNode *GA =
+                dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
+          const GlobalValue *GV = GA->getGlobal();
+          Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
+          if (Alignment < 4)
+            continue;
+        }
+      }
+
       // If we're directly folding the addend from an addi instruction, then:
       //  1. In general, the offset on the memory access must be zero.
       //  2. If the addend is a constant, then it can be combined with a

@@ -121,6 +121,14 @@ static cl::opt<bool> SROAStrictInbounds("sroa-strict-inbounds", cl::init(false),
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+
+/// The maximum number of alloca slices allowed when splitting.
+static cl::opt<int>
+    SROAMaxAllocaSlices("sroa-max-alloca-slices", cl::init(1024),
+                        cl::desc("Maximum number of alloca slices allowed "
+                                 "after which splitting is not attempted"),
+                        cl::Hidden);
+
 namespace {
 
 /// Calculate the fragment of a variable to use when slicing a store
@@ -3430,7 +3438,8 @@ private:
     // dominate the PHI.
     IRBuilderBase::InsertPointGuard Guard(IRB);
     if (isa<PHINode>(OldPtr))
-      IRB.SetInsertPoint(&*OldPtr->getParent()->getFirstInsertionPt());
+      IRB.SetInsertPoint(OldPtr->getParent(),
+                         OldPtr->getParent()->getFirstInsertionPt());
     else
       IRB.SetInsertPoint(OldPtr);
     IRB.SetCurrentDebugLocation(OldPtr->getDebugLoc());
@@ -3819,7 +3828,7 @@ private:
 
     SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
-    IRB.SetInsertPoint(GEPI.getParent()->getFirstNonPHI());
+    IRB.SetInsertPoint(GEPI.getParent(), GEPI.getParent()->getFirstNonPHIIt());
     PHINode *NewPN = IRB.CreatePHI(GEPI.getType(), PHI->getNumIncomingValues(),
                                    PHI->getName() + ".sroa.phi");
     for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
@@ -4959,6 +4968,9 @@ SROAPass::runOnAlloca(AllocaInst &AI) {
   AllocaSlices AS(DL, AI);
   LLVM_DEBUG(AS.print(dbgs()));
   if (AS.isEscaped())
+    return {Changed, CFGChanged};
+
+  if (std::distance(AS.begin(), AS.end()) > SROAMaxAllocaSlices)
     return {Changed, CFGChanged};
 
   // Delete all the dead users of this alloca before splitting and rewriting it.

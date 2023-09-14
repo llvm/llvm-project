@@ -191,3 +191,20 @@ llvm.func @alloca_dce() {
   %0 = llvm.alloca %c1_i64 x i32 : (i64) -> !llvm.ptr
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: func @volatile_load
+llvm.func @volatile_load(%x : !llvm.ptr) {
+  // A volatile load may have side-effects such as a write operation to arbitrary memory.
+  // Make sure it is not removed.
+  // CHECK: llvm.load volatile
+  %0 = llvm.load volatile %x : !llvm.ptr -> i8
+  // Same with monotonic atomics and any stricter modes.
+  // CHECK: llvm.load %{{.*}} atomic monotonic
+  %2 = llvm.load %x atomic monotonic { alignment = 1 } : !llvm.ptr -> i8
+  // But not unordered!
+  // CHECK-NOT: llvm.load %{{.*}} atomic unordered
+  %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
+  llvm.return
+}

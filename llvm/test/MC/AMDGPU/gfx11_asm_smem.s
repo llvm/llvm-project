@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_SMEM.

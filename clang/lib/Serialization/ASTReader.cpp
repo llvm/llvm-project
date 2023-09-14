@@ -2428,6 +2428,16 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // For standard C++ modules, we don't need to check the inputs.
   bool SkipChecks = F.StandardCXXModule;
 
+  const HeaderSearchOptions &HSOpts =
+      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
+  // The option ForceCheckCXX20ModulesInputFiles is only meaningful for C++20
+  // modules.
+  if (F.StandardCXXModule && HSOpts.ForceCheckCXX20ModulesInputFiles) {
+    SkipChecks = false;
+    Overridden = false;
+  }
+
   OptionalFileEntryRefDegradesToFileEntryPtr File = OptionalFileEntryRef(
       expectedToOptional(FileMgr.getFileRef(Filename, /*OpenFile=*/false)));
 
@@ -4086,13 +4096,13 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     // Check any additional module map files (e.g. module.private.modulemap)
     // that are not in the pcm.
     if (auto *AdditionalModuleMaps = Map.getAdditionalModuleMapFiles(M)) {
-      for (const FileEntry *ModMap : *AdditionalModuleMaps) {
+      for (FileEntryRef ModMap : *AdditionalModuleMaps) {
         // Remove files that match
         // Note: SmallPtrSet::erase is really remove
         if (!AdditionalStoredMaps.erase(ModMap)) {
           if (!canRecoverFromOutOfDate(F.FileName, ClientLoadCapabilities))
             Diag(diag::err_module_different_modmap)
-              << F.ModuleName << /*new*/0 << ModMap->getName();
+              << F.ModuleName << /*new*/0 << ModMap.getName();
           return OutOfDate;
         }
       }
@@ -5679,7 +5689,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
                                        "too many submodules");
 
       if (!ParentModule) {
-        if (const FileEntry *CurFile = CurrentModule->getASTFile()) {
+        if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
                     DisableValidationForModuleKind::Module) &&

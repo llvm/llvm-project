@@ -3,6 +3,7 @@
 /// the program file and DWO have been moved and/or we're executing from
 /// another directory. Specifically when the DWO has been moved to another
 /// directory but is still at it's name. Here, %t.compdir/c/d/main-main.dwo.
+// UNSUPPORTED: system-darwin
 // RUN: rm -rf %t.compdir/ %t.e/
 // RUN: mkdir -p %t.compdir/a/b/c/d/
 // RUN: cp %s %t.compdir/a/b/c/d/main.c

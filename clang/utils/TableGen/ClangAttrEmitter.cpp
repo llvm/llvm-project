@@ -3208,6 +3208,36 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the enumeration list for attributes.
+void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
+                            raw_ostream &OS) {
+  emitSourceFileHeader(
+      "List of attributes that can be print on the left side of a decl", OS);
+
+  AttrClassHierarchy Hierarchy(Records);
+
+  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
+  std::vector<Record *> PragmaAttrs;
+  bool first = false;
+
+  for (auto *Attr : Attrs) {
+    if (!Attr->getValueAsBit("ASTNode"))
+      continue;
+
+    if (!Attr->getValueAsBit(FieldName))
+      continue;
+
+    if (!first) {
+      first = true;
+      OS << "#define CLANG_ATTR_LIST_" << FieldName;
+    }
+
+    OS << " \\\n case attr::" << Attr->getName() << ":";
+  }
+
+  OS << '\n';
+}
+
+// Emits the enumeration list for attributes.
 void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader(
       "List of all attribute subject matching rules that Clang recognizes", OS);

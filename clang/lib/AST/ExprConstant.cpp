@@ -3711,7 +3711,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
          !isValidIndeterminateAccess(handler.AccessKind))) {
       if (!Info.checkingPotentialConstantExpression())
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
-            << handler.AccessKind << O->isIndeterminate();
+            << handler.AccessKind << O->isIndeterminate()
+            << E->getSourceRange();
       return handler.failed();
     }
 
@@ -4443,7 +4444,8 @@ struct CompoundAssignSubobjectHandler {
       return foundVector(Subobj, SubobjType);
     case APValue::Indeterminate:
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
-          << /*read of=*/0 << /*uninitialized object=*/1;
+          << /*read of=*/0 << /*uninitialized object=*/1
+          << E->getLHS()->getSourceRange();
       return false;
     default:
       // FIXME: can this happen?

@@ -2093,7 +2093,15 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(sameArg);
       if (std::optional<DynamicType> aType{sameArg->GetType()}) {
         if (result.categorySet.test(aType->category())) {
-          resultType = *aType;
+          if (const auto *sameChar{UnwrapExpr<Expr<SomeCharacter>>(*sameArg)}) {
+            if (auto len{ToInt64(Fold(context, sameChar->LEN()))}) {
+              resultType = DynamicType{aType->kind(), *len};
+            } else {
+              resultType = *aType;
+            }
+          } else {
+            resultType = *aType;
+          }
         } else {
           resultType = DynamicType{*category, aType->kind()};
         }

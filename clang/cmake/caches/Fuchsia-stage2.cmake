@@ -132,7 +132,7 @@ if(WIN32 OR LLVM_WINSYSROOT)
   set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
 endif()
 
-foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;x86_64-unknown-linux-gnu)
+foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;riscv64-unknown-linux-gnu;x86_64-unknown-linux-gnu)
   if(LINUX_${target}_SYSROOT)
     # Set the per-target builtins options.
     list(APPEND BUILTIN_TARGETS "${target}")

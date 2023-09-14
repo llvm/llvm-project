@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVParsingUtils.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "llvm/ADT/STLExtras.h"
@@ -19,75 +20,43 @@
 using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
-//===----------------------------------------------------------------------===//
-// spirv.KHR.CooperativeMatrixLength
-//===----------------------------------------------------------------------===//
 
-LogicalResult KHRCooperativeMatrixLengthOp::verify() {
-  if (!isa<CooperativeMatrixType>(getCooperativeMatrixType())) {
-    return emitOpError(
-               "type attribute must be a '!spirv.coopmatrix' type, found ")
-           << getCooperativeMatrixType() << " instead";
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.KHR.CooperativeMatrixLoad
-//===----------------------------------------------------------------------===//
-
-ParseResult KHRCooperativeMatrixLoadOp::parse(OpAsmParser &parser,
-                                              OperationState &result) {
-  std::array<OpAsmParser::UnresolvedOperand, 2> operandInfo = {};
-  if (parser.parseOperand(operandInfo[0]) || parser.parseComma())
-    return failure();
-  if (parser.parseOperand(operandInfo[1]) || parser.parseComma())
-    return failure();
-
-  CooperativeMatrixLayoutKHR layout;
-  if (parseEnumKeywordAttr<CooperativeMatrixLayoutKHRAttr>(
-          layout, parser, result, kKhrCooperativeMatrixLayoutAttrName)) {
-    return failure();
-  }
-
-  if (parseMemoryAccessAttributes(parser, result, kMemoryOperandAttrName))
-    return failure();
-
-  Type ptrType;
-  Type elementType;
-  if (parser.parseColon() || parser.parseType(ptrType) ||
-      parser.parseKeywordType("as", elementType)) {
-    return failure();
-  }
-  result.addTypes(elementType);
-
-  Type strideType = parser.getBuilder().getIntegerType(32);
-  if (parser.resolveOperands(operandInfo, {ptrType, strideType},
-                             parser.getNameLoc(), result.operands)) {
-    return failure();
-  }
-
-  return success();
-}
-
-void KHRCooperativeMatrixLoadOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPointer() << ", " << getStride() << ", "
-          << getMatrixLayout();
-  // Print optional memory operand attribute.
-  if (auto memOperand = getMemoryOperand())
-    printer << " [\"" << memOperand << "\"]";
-  printer << " : " << getPointer().getType() << " as " << getType();
-}
-
-static LogicalResult verifyPointerAndCoopMatrixType(Operation *op, Type pointer,
-                                                    Type coopMatrix) {
+static LogicalResult
+verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
+                       spirv::MemoryAccessAttr memoryOperand) {
   auto pointerType = cast<PointerType>(pointer);
   Type pointeeType = pointerType.getPointeeType();
   if (!isa<ScalarType, VectorType>(pointeeType)) {
-    return op->emitError(
+    return op->emitOpError(
                "Pointer must point to a scalar or vector type but provided ")
            << pointeeType;
+  }
+
+  if (memoryOperand) {
+    spirv::MemoryAccess operandSet = memoryOperand.getValue();
+
+    if (isa<spirv::KHRCooperativeMatrixLoadOp>(op) &&
+        spirv::bitEnumContainsAll(operandSet,
+                                  spirv::MemoryAccess::MakePointerAvailable)) {
+      return op->emitOpError(
+          "not compatible with memory operand 'MakePointerAvailable'");
+    }
+
+    if (isa<spirv::KHRCooperativeMatrixStoreOp>(op) &&
+        spirv::bitEnumContainsAll(operandSet,
+                                  spirv::MemoryAccess::MakePointerVisible)) {
+      return op->emitOpError(
+          "not compatible with memory operand 'MakePointerVisible'");
+    }
+
+    // The 'Aligned' memory operand requires an alignment literal to follow,
+    // which needs to be implemented on the level of op parsing and
+    // (de-)serialization.
+    // TODO: Consider adding support for this attribute value.
+    if (spirv::bitEnumContainsAll(memoryOperand.getValue(),
+                                  spirv::MemoryAccess::Aligned)) {
+      return op->emitOpError("has unhandled memory operand 'Aligned'");
+    }
   }
 
   // TODO: Verify the memory object behind the pointer:
@@ -97,61 +66,22 @@ static LogicalResult verifyPointerAndCoopMatrixType(Operation *op, Type pointer,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spirv.KHR.CooperativeMatrixLoad
+//===----------------------------------------------------------------------===//
+
 LogicalResult KHRCooperativeMatrixLoadOp::verify() {
-  return verifyPointerAndCoopMatrixType(*this, getPointer().getType(),
-                                        getResult().getType());
+  return verifyCoopMatrixAccess(*this, getPointer().getType(),
+                                getResult().getType(), getMemoryOperandAttr());
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.KHR.CooperativeMatrixStore
 //===----------------------------------------------------------------------===//
 
-ParseResult KHRCooperativeMatrixStoreOp::parse(OpAsmParser &parser,
-                                               OperationState &result) {
-  std::array<OpAsmParser::UnresolvedOperand, 3> operandInfo = {};
-  for (auto &op : operandInfo) {
-    if (parser.parseOperand(op) || parser.parseComma())
-      return failure();
-  }
-
-  CooperativeMatrixLayoutKHR layout;
-  if (parseEnumKeywordAttr<CooperativeMatrixLayoutKHRAttr>(
-          layout, parser, result, kKhrCooperativeMatrixLayoutAttrName)) {
-    return failure();
-  }
-
-  if (parseMemoryAccessAttributes(parser, result, kMemoryOperandAttrName))
-    return failure();
-
-  Type ptrType;
-  Type objectType;
-  if (parser.parseColon() || parser.parseType(ptrType) || parser.parseComma() ||
-      parser.parseType(objectType)) {
-    return failure();
-  }
-
-  Type strideType = parser.getBuilder().getIntegerType(32);
-  if (parser.resolveOperands(operandInfo, {ptrType, objectType, strideType},
-                             parser.getNameLoc(), result.operands)) {
-    return failure();
-  }
-
-  return success();
-}
-
-void KHRCooperativeMatrixStoreOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPointer() << ", " << getObject() << ", " << getStride()
-          << ", " << getMatrixLayout();
-
-  // Print optional memory operand attribute.
-  if (auto memOperand = getMemoryOperand())
-    printer << " [\"" << *memOperand << "\"]";
-  printer << " : " << getPointer().getType() << ", " << getObject().getType();
-}
-
 LogicalResult KHRCooperativeMatrixStoreOp::verify() {
-  return verifyPointerAndCoopMatrixType(*this, getPointer().getType(),
-                                        getObject().getType());
+  return verifyCoopMatrixAccess(*this, getPointer().getType(),
+                                getObject().getType(), getMemoryOperandAttr());
 }
 
 //===----------------------------------------------------------------------===//

@@ -12,11 +12,6 @@
 
 include "NVPTXInstrFormats.td"
 
-// A NOP instruction
-let hasSideEffects = false in {
-  def NOP : NVPTXInst<(outs), (ins), "", []>;
-}
-
 let OperandType = "OPERAND_IMMEDIATE" in {
   def f16imm : Operand<f16>;
   def bf16imm : Operand<bf16>;
@@ -2943,15 +2938,13 @@ def BITCONVERT_32_F2I : F_BITCONVERT<"32", f32, i32>;
 def BITCONVERT_64_I2F : F_BITCONVERT<"64", i64, f64>;
 def BITCONVERT_64_F2I : F_BITCONVERT<"64", f64, i64>;
 
-foreach vt = [v2f16, v2bf16] in {
+foreach vt = [v2f16, v2bf16, v2i16] in {
 def: Pat<(vt (bitconvert (i32 UInt32Const:$a))),
          (IMOVB32ri UInt32Const:$a)>;
-def: Pat<(vt (bitconvert (i32 Int32Regs:$a))),
-         (ProxyRegI32 Int32Regs:$a)>;
-def: Pat<(i32 (bitconvert (vt Int32Regs:$a))),
-         (ProxyRegI32 Int32Regs:$a)>;
 def: Pat<(vt (bitconvert (f32 Float32Regs:$a))),
          (BITCONVERT_32_F2I Float32Regs:$a)>;
+def: Pat<(f32 (bitconvert (vt Int32Regs:$a))),
+         (BITCONVERT_32_I2F Int32Regs:$a)>;
 }
 foreach vt = [f16, bf16] in {
 def: Pat<(vt (bitconvert (i16 UInt16Const:$a))),
@@ -2962,10 +2955,14 @@ def: Pat<(i16 (bitconvert (vt Int16Regs:$a))),
          (ProxyRegI16 Int16Regs:$a)>;
 }
 
-def: Pat<(v2i16 (bitconvert (i32 Int32Regs:$a))),
-         (ProxyRegI32 Int32Regs:$a)>;
-def: Pat<(i32 (bitconvert (v2i16 Int32Regs:$a))),
-         (ProxyRegI32 Int32Regs:$a)>;
+foreach ta = [v2f16, v2bf16, v2i16, i32] in {
+  foreach tb = [v2f16, v2bf16, v2i16, i32] in {
+    if !ne(ta, tb) then {
+      def: Pat<(ta (bitconvert (tb Int32Regs:$a))),
+             (ProxyRegI32 Int32Regs:$a)>;
+    }
+  }
+}
 
 // NOTE: pred->fp are currently sub-optimal due to an issue in TableGen where
 // we cannot specify floating-point literals in isel patterns.  Therefore, we

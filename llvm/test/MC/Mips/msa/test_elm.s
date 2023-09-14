@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 
 copy_s.b $13, $w8[2]   # CHECK: copy_s.b $13, $w8[2]   # encoding: [0x78,0x82,0x43,0x59]
 copy_s.h $1, $w25[0]   # CHECK: copy_s.h $1, $w25[0]   # encoding: [0x78,0xa0,0xc8,0x59]

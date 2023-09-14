@@ -32,7 +32,7 @@
 
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{

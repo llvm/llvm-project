@@ -175,6 +175,10 @@ private:
   void setIncludeLocation(const Symbol &S, SourceLocation,
                           const include_cleaner::Symbol &Sym);
 
+  // Providers for Symbol.IncludeHeaders.
+  // The final spelling is calculated in finish().
+  llvm::DenseMap<SymbolID, std::optional<include_cleaner::Header>>
+      SymbolProviders;
   // Files which contain ObjC symbols.
   // This is finalized and used in finish().
   llvm::DenseSet<FileID> FilesWithObjCConstructs;

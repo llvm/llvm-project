@@ -118,8 +118,6 @@ func.func @sum1dfixed(%arg0: !fir.ref<!fir.array<?xf64>> {fir.bindc_name = "a"},
 
 // -----
 
-// RUN: fir-opt --loop-versioning %s | FileCheck %s
-
 // Check that "no result" from a versioned loop works correctly
 // This code was the basis for this, but `read` is replaced with a function called Func
 // subroutine test3(x, y)
@@ -1266,4 +1264,174 @@ func.func @test_optional_arg(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name 
 // CHECK:           fir.store %[[VAL_166:.*]]#1 to %[[VAL_18]] : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
+
+// ! Verify that neither of the loops is versioned
+// ! due to the array section in the inner loop:
+// subroutine test_slice(x)
+//   real :: x(:,:)
+//   do i=10,100
+//      x(i,7) = 1.0
+//      x(i,3:5) = 2.0
+//   end do
+// end subroutine test_slice
+func.func @_QPtest_slice(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
+  %c10 = arith.constant 10 : index
+  %c100 = arith.constant 100 : index
+  %c6_i64 = arith.constant 6 : i64
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c5 = arith.constant 5 : index
+  %cst = arith.constant 2.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1_i64 = arith.constant 1 : i64
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_sliceEi"}
+  %1 = fir.convert %c10 : (index) -> i32
+  %2:2 = fir.do_loop %arg1 = %c10 to %c100 step %c1 iter_args(%arg2 = %1) -> (index, i32) {
+    fir.store %arg2 to %0 : !fir.ref<i32>
+    %3 = fir.load %0 : !fir.ref<i32>
+    %4 = fir.convert %3 : (i32) -> i64
+    %5 = arith.subi %4, %c1_i64 : i64
+    %6 = fir.coordinate_of %arg0, %5, %c6_i64 : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
+    fir.store %cst_0 to %6 : !fir.ref<f32>
+    %7 = fir.load %0 : !fir.ref<i32>
+    %8 = fir.convert %7 : (i32) -> i64
+    %9 = fir.undefined index
+    %10 = fir.convert %7 : (i32) -> index
+    %11 = fir.slice %8, %9, %9, %c3, %c5, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %12 = fir.undefined !fir.array<?x?xf32>
+    %13 = fir.do_loop %arg3 = %c0 to %c2 step %c1 unordered iter_args(%arg4 = %12) -> (!fir.array<?x?xf32>) {
+      %18 = arith.addi %arg3, %c1 : index
+      %19 = fir.array_coor %arg0 [%11] %10, %18 : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>, index, index) -> !fir.ref<f32>
+      fir.store %cst to %19 : !fir.ref<f32>
+      fir.result %12 : !fir.array<?x?xf32>
+    }
+    %14 = arith.addi %arg1, %c1 : index
+    %15 = fir.convert %c1 : (index) -> i32
+    %16 = fir.load %0 : !fir.ref<i32>
+    %17 = arith.addi %16, %15 : i32
+    fir.result %14, %17 : index, i32
+  }
+  fir.store %2#1 to %0 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_slice(
+// CHECK-NOT: fir.if
+
+// ! Verify versioning for argument 'x' but not for 'y':
+// subroutine test_independent_args(x, y)
+//   real :: x(:,:), y(:,:)
+//   do i=10,100
+//      x(i,7) = 1.0
+//      y(i,3:5) = 2.0
+//   end do
+// end subroutine test_independent_args
+func.func @_QPtest_independent_args(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
+  %c10 = arith.constant 10 : index
+  %c100 = arith.constant 100 : index
+  %c6_i64 = arith.constant 6 : i64
+  %c3 = arith.constant 3 : index
+  %c2 = arith.constant 2 : index
+  %c5 = arith.constant 5 : index
+  %cst = arith.constant 2.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1_i64 = arith.constant 1 : i64
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_independent_argsEi"}
+  %1 = fir.convert %c10 : (index) -> i32
+  %2:2 = fir.do_loop %arg2 = %c10 to %c100 step %c1 iter_args(%arg3 = %1) -> (index, i32) {
+    fir.store %arg3 to %0 : !fir.ref<i32>
+    %3 = fir.load %0 : !fir.ref<i32>
+    %4 = fir.convert %3 : (i32) -> i64
+    %5 = arith.subi %4, %c1_i64 : i64
+    %6 = fir.coordinate_of %arg0, %5, %c6_i64 : (!fir.box<!fir.array<?x?xf32>>, i64, i64) -> !fir.ref<f32>
+    fir.store %cst_0 to %6 : !fir.ref<f32>
+    %7 = fir.load %0 : !fir.ref<i32>
+    %8 = fir.convert %7 : (i32) -> i64
+    %9 = fir.undefined index
+    %10 = fir.convert %7 : (i32) -> index
+    %11 = fir.slice %8, %9, %9, %c3, %c5, %c1 : (i64, index, index, index, index, index) -> !fir.slice<2>
+    %12 = fir.undefined !fir.array<?x?xf32>
+    %13 = fir.do_loop %arg4 = %c0 to %c2 step %c1 unordered iter_args(%arg5 = %12) -> (!fir.array<?x?xf32>) {
+      %18 = arith.addi %arg4, %c1 : index
+      %19 = fir.array_coor %arg1 [%11] %10, %18 : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>, index, index) -> !fir.ref<f32>
+      fir.store %cst to %19 : !fir.ref<f32>
+      fir.result %12 : !fir.array<?x?xf32>
+    }
+    %14 = arith.addi %arg2, %c1 : index
+    %15 = fir.convert %c1 : (index) -> i32
+    %16 = fir.load %0 : !fir.ref<i32>
+    %17 = arith.addi %16, %15 : i32
+    fir.result %14, %17 : index, i32
+  }
+  fir.store %2#1 to %0 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_independent_args(
+// CHECK-SAME:        %[[VAL_0:.*]]: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
+// CHECK-SAME:        %[[VAL_1:.*]]: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "y"}) {
+// CHECK:           %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %{{.*}} : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+// CHECK:           %[[VAL_19:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_16]]#2, %[[VAL_19]] : index
+// CHECK:           %[[VAL_21:.*]]:2 = fir.if %[[VAL_20]] -> (index, i32) {
+// CHECK-NOT: fir.if
+
+
+// ! Verify that the whole loop nest is versioned
+// ! without additional contiguity check for the inner loop:
+// subroutine test_loop_nest(x)
+//   real :: x(:)
+//   do i=10,100
+//      x(i) = 1.0
+//      do j=10,100
+//         x(j) = 2.0
+//      end do
+//   end do
+// end subroutine test_loop_nest
+func.func @_QPtest_loop_nest(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %c10 = arith.constant 10 : index
+  %c100 = arith.constant 100 : index
+  %cst = arith.constant 2.000000e+00 : f32
+  %c1_i64 = arith.constant 1 : i64
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_loop_nestEi"}
+  %1 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFtest_loop_nestEj"}
+  %2 = fir.convert %c10 : (index) -> i32
+  %3:2 = fir.do_loop %arg1 = %c10 to %c100 step %c1 iter_args(%arg2 = %2) -> (index, i32) {
+    fir.store %arg2 to %0 : !fir.ref<i32>
+    %4 = fir.load %0 : !fir.ref<i32>
+    %5 = fir.convert %4 : (i32) -> i64
+    %6 = arith.subi %5, %c1_i64 : i64
+    %7 = fir.coordinate_of %arg0, %6 : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+    fir.store %cst_0 to %7 : !fir.ref<f32>
+    %8:2 = fir.do_loop %arg3 = %c10 to %c100 step %c1 iter_args(%arg4 = %2) -> (index, i32) {
+      fir.store %arg4 to %1 : !fir.ref<i32>
+      %13 = fir.load %1 : !fir.ref<i32>
+      %14 = fir.convert %13 : (i32) -> i64
+      %15 = arith.subi %14, %c1_i64 : i64
+      %16 = fir.coordinate_of %arg0, %15 : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>
+      fir.store %cst to %16 : !fir.ref<f32>
+      %17 = arith.addi %arg3, %c1 : index
+      %18 = fir.convert %c1 : (index) -> i32
+      %19 = fir.load %1 : !fir.ref<i32>
+      %20 = arith.addi %19, %18 : i32
+      fir.result %17, %20 : index, i32
+    }
+    fir.store %8#1 to %1 : !fir.ref<i32>
+    %9 = arith.addi %arg1, %c1 : index
+    %10 = fir.convert %c1 : (index) -> i32
+    %11 = fir.load %0 : !fir.ref<i32>
+    %12 = arith.addi %11, %10 : i32
+    fir.result %9, %12 : index, i32
+  }
+  fir.store %3#1 to %0 : !fir.ref<i32>
+  return
+}
+// CHECK-LABEL:   func.func @_QPtest_loop_nest(
+// CHECK: fir.if
+// CHECK-NOT: fir.if
+
 } // End module

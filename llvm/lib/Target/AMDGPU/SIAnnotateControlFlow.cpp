@@ -268,7 +268,8 @@ bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
     return false;
 
   BasicBlock *Target = Term->getSuccessor(1);
-  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken", &Target->front());
+  PHINode *Broken = PHINode::Create(IntMask, 0, "phi.broken");
+  Broken->insertBefore(Target->begin());
 
   Value *Cond = Term->getCondition();
   Term->setCondition(BoolTrue);

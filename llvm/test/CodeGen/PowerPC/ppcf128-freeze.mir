@@ -18,11 +18,11 @@
   ; CHECK-LABEL: freeze_select
   ; CHECK:       # %bb.0:
   ; CHECK-NEXT:    xxlxor 0, 0, 0
-  ; CHECK-NEXT:    fcmpu 5, 2, 2
-  ; CHECK-NEXT:    fcmpu 1, 1, 1
-  ; CHECK-NEXT:    fcmpu 6, 2, 0
+  ; CHECK-NEXT:    fcmpu 1, 2, 2
+  ; CHECK-NEXT:    fcmpu 0, 2, 0
+  ; CHECK-NEXT:    crnor 20, 7, 2
   ; CHECK-NEXT:    fcmpu 0, 1, 0
-  ; CHECK-NEXT:    crnor 20, 23, 26
+  ; CHECK-NEXT:    fcmpu 1, 1, 1
   ; CHECK-NEXT:    crand 20, 2, 20
   ; CHECK-NEXT:    bclr 12, 20, 0
   ; CHECK-NEXT:  # %bb.1:

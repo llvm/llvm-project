@@ -2496,6 +2496,17 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    if (TypeIdx == 0) {
+      Observer.changingInstr(MI);
+      const LLT WideEltTy = WideTy.getElementType();
+
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+      widenScalarSrc(MI, WideEltTy, 2, TargetOpcode::G_ANYEXT);
+      widenScalarDst(MI, WideTy, 0);
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
+
     if (TypeIdx == 1) {
       Observer.changingInstr(MI);
 

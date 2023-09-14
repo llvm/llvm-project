@@ -76,12 +76,13 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
 
   // Verify that each function got annotated with expected attributes.
   for (func::FuncOp func : module->getOps<func::FuncOp>()) {
-    ASSERT_TRUE(isa<BoolAttr>(func->getAttr("isFunc")));
-    EXPECT_TRUE(cast<BoolAttr>(func->getAttr("isFunc")).getValue());
+    ASSERT_TRUE(isa<BoolAttr>(func->getDiscardableAttr("isFunc")));
+    EXPECT_TRUE(cast<BoolAttr>(func->getDiscardableAttr("isFunc")).getValue());
 
     bool isSecret = func.getName() == "secret";
-    ASSERT_TRUE(isa<BoolAttr>(func->getAttr("isSecret")));
-    EXPECT_EQ(cast<BoolAttr>(func->getAttr("isSecret")).getValue(), isSecret);
+    ASSERT_TRUE(isa<BoolAttr>(func->getDiscardableAttr("isSecret")));
+    EXPECT_EQ(cast<BoolAttr>(func->getDiscardableAttr("isSecret")).getValue(),
+              isSecret);
   }
 }
 

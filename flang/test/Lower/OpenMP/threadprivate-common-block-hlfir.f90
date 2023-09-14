@@ -5,7 +5,7 @@
 !RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 
-!CHECK: %[[CBLK_ADDR:.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<4xi8>>
+!CHECK: %[[CBLK_ADDR:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<4xi8>>
 !CHECK: {{.*}} = omp.threadprivate %[[CBLK_ADDR]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>
 !CHECK: omp.parallel   {
 !CHECK:   %[[TP_PARALLEL:.*]] = omp.threadprivate %[[CBLK_ADDR]] : !fir.ref<!fir.array<4xi8>> -> !fir.ref<!fir.array<4xi8>>

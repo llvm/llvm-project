@@ -311,9 +311,16 @@ extern char &AMDGPURemoveIncompatibleFunctionsID;
 void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareID;
 
-FunctionPass *createAMDGPURewriteUndefForPHIPass();
-void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
-extern char &AMDGPURewriteUndefForPHIPassID;
+FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
+void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
+extern char &AMDGPURewriteUndefForPHILegacyPassID;
+
+class AMDGPURewriteUndefForPHIPass
+    : public PassInfoMixin<AMDGPURewriteUndefForPHIPass> {
+public:
+  AMDGPURewriteUndefForPHIPass() = default;
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;

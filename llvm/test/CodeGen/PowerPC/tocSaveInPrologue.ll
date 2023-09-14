@@ -14,11 +14,11 @@ define dso_local void @test(ptr nocapture %fp, i32 signext %Arg, i32 signext %Le
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    cmpwi r5, 1
-; CHECK-NEXT:    mr r29, r3
+; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    std r2, 24(r1)
 ; CHECK-NEXT:    std r0, 80(r1)
+; CHECK-NEXT:    mr r29, r3
 ; CHECK-NEXT:    bc 12, lt, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    cmpwi r30, 11

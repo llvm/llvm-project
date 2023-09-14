@@ -1596,6 +1596,28 @@ TEST_F(FormatTestJS, StringLiteralConcatenation) {
                "var literal = `xxxxxx ${xxxxxxxxxxxxxxxxxxxxxx + "
                "xxxxxxxxxxxxxxxxxxxxxx} xxxxxx`;",
                getGoogleJSStyleWithColumns(14));
+
+  // Strings in a TypeScript type declaration can't be broken.
+  verifyFormat("type x =\n"
+               "    'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';",
+               getGoogleJSStyleWithColumns(20));
+  verifyFormat("/* type */ type x =\n"
+               "    'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';",
+               getGoogleJSStyleWithColumns(20));
+  // Dictionary keys can't be broken. Values can be broken.
+  verifyFormat("var w = {\n"
+               "  'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx':\n"
+               "      'xxxxxxxxxx' +\n"
+               "      'xxxxxxxxxx' +\n"
+               "      'xxxxxxxxxx' +\n"
+               "      'xxxxxxxxxx' +\n"
+               "      'xxx',\n"
+               "};",
+               "var w = {\n"
+               "  'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx':\n"
+               "      'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',\n"
+               "};",
+               getGoogleJSStyleWithColumns(20));
 }
 
 TEST_F(FormatTestJS, RegexLiteralClassification) {

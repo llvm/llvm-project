@@ -2263,7 +2263,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
-  Builder.SetInsertPoint(&EndBlock->front());
+  Builder.SetInsertPoint(EndBlock, EndBlock->begin());
   PHINode *PN = Builder.CreatePHI(Ty, 2, "ctz");
   replaceAllUsesWith(CountZeros, PN, FreshBBs, IsHugeFunc);
   Value *BitWidth = Builder.getInt(APInt(SizeInBits, SizeInBits));
@@ -7097,7 +7097,8 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // to get the PHI operand.
   for (SelectInst *SI : llvm::reverse(ASI)) {
     // The select itself is replaced with a PHI Node.
-    PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());
+    PHINode *PN = PHINode::Create(SI->getType(), 2, "");
+    PN->insertBefore(EndBlock->begin());
     PN->takeName(SI);
     PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
     PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);

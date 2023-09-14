@@ -39,7 +39,8 @@ recommended.
 
 Creating Pull Requests
 ----------------------
-Keep in mind that each pull request should generally only contain one commit.
+Keep in mind that when creating a pull request, it should generally only contain one
+self-contained commit initially.
 This makes it easier for reviewers to understand the introduced changes and
 provide feedback. It also helps maintain a clear and organized commit history
 for the project. If you have multiple changes you want to introduce, it's
@@ -130,11 +131,45 @@ You can also merge via the CLI by switching to your branch locally and run:
 
   gh pr merge --squash --delete-branch
 
+If you observe an error message from the above informing you that your pull
+request is not mergeable, then that is likely because upstream has been
+modified since your pull request was authored in a way that now results in a
+merge conflict. You must first resolve this merge conflict in order to merge
+your pull request. In order to do that:
+
+::
+
+  git fetch upstream
+  git rebase upstream/main
+
+Then fix the source files causing merge conflicts and make sure to rebuild and
+retest the result. Then:
+
+::
+
+  git add <files with resolved merge conflicts>
+  git rebase --continue
+
+Finally, you'll need to force push to your branch one more time before you can
+merge:
+
+::
+
+  git push -f
+  gh pr merge --squash --delete branch
+
+This force push may ask if you intend to push hundreds, or potentially
+thousands of patches (depending on how long it's been since your pull request
+was initially authored vs. when you intended to merge it). Since you're pushing
+to a branch in your fork, this is ok and expected. Github's UI for the pull
+request will understand that you're rebasing just your patches, and display
+this result correctly with a note that a force push did occur.
+
 
 Checking out another PR locally
 -------------------------------
 Sometimes you want to review another person's PR on your local machine to run
-tests or inspect code in your prefered editor. This is easily done with the
+tests or inspect code in your preferred editor. This is easily done with the
 CLI:
 
 ::
@@ -142,7 +177,7 @@ CLI:
   gh pr checkout <PR Number>
 
 This is also possible with the web interface and the normal git command line
-tools, but the process is a bit more complicated. See GitHubs
+tools, but the process is a bit more complicated. See GitHub's
 `documentation <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally?platform=linux&tool=webui#modifying-an-inactive-pull-request-locally>`_
 on the topic.
 
@@ -183,20 +218,34 @@ Here is an example for creating a Pull Request with the GitHub CLI:
   # Commit your changes
   git commit file.cpp -m "Code Review adjustments"
 
+  # Format changes
+  git clang-format HEAD~
+
+  # Recommit if any formatting changes
+  git commit -a --amend
+
   # Push your changes to your fork branch, be mindful of
   # your remotes here, if you don't remember what points to your
   # fork, use git remote -v to see. Usually origin points to your
   # fork and upstream to llvm/llvm-project
   git push origin my_change
 
-  # When your PR is accepted, you can now rebase it and make sure
-  # you have all the latest changes.
-  git rebase -i origin/main
+Before merging the PR, it is recommended that you rebase locally and re-run test
+checks:
 
-  # If this PR is older and you get a lot of new commits with the
-  # rebase, you might want to re-run tests and make sure nothing
-  # broke.
-  ninja check-llvm
+::
+
+  # Add upstream as a remote (if you don't have it already)
+  git remote add upstream https://github.com/llvm/llvm-project.git
+
+  # Make sure you have all the latest changes
+  git fetch upstream && git rebase -i upstream/main
+
+  # Make sure tests pass with latest changes and your change
+  ninja check
+
+  # Push the rebased changes to your fork.
+  git push origin my_change -f
 
   # Now merge it
   gh pr merge --squash --delete
@@ -281,7 +330,7 @@ checks:
 
 ::
 
-  # Add upstream as a remote
+  # Add upstream as a remote (if you don't have it already)
   git remote add upstream https://github.com/llvm/llvm-project.git
 
   # Make sure you have all the latest changes
@@ -295,6 +344,11 @@ checks:
 
 Once your PR is approved, rebased, and tests are passing, click `Squash and
 Merge` on your PR in the GitHub web interface.
+
+See more in-depth information about how to contribute in the following documentation:
+
+* :doc:`Contributing`
+* :doc:`MyFirstTypoFix`
 
 Releases
 ========

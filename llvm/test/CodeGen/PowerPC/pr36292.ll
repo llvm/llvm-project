@@ -30,8 +30,8 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    xxlxor 1, 1, 1
 ; CHECK-NEXT:    bl fmodf
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 30, 30, 1
 ; CHECK-NEXT:    stfs 1, 0(3)
+; CHECK-NEXT:    addi 30, 30, 1
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %bounds.fail
 ; CHECK-NEXT:    std 30, 32(1)

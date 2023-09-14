@@ -706,6 +706,11 @@ def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
+def err_drv_hlsl_bad_shader_required_in_target : Error<
+  "shader %select{model|stage}0 is required in target '%1' for HLSL code generation">;
+
+def err_drv_hlsl_bad_shader_unsupported : Error<
+  "shader %select{model|stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "
     "Resulting DXIL will not be validated or signed for use in release environments.">,
     InGroup<DXILValidation>;

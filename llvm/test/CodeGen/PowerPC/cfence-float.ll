@@ -10,9 +10,9 @@ define float @bar(ptr %fp) {
 ; CHECK-LE-NEXT:    lwz 3, 0(3)
 ; CHECK-LE-NEXT:    mtfprd 0, 3
 ; CHECK-LE-NEXT:    cmpd 7, 3, 3
-; CHECK-LE-NEXT:    xxsldwi 0, 0, 0, 1
 ; CHECK-LE-NEXT:    bne- 7, .+4
 ; CHECK-LE-NEXT:    isync
+; CHECK-LE-NEXT:    xxsldwi 0, 0, 0, 1
 ; CHECK-LE-NEXT:    xscvspdpn 1, 0
 ; CHECK-LE-NEXT:    blr
 ;

@@ -65,8 +65,15 @@ define amdgpu_kernel void @unsafe_f32_denormals_rcp_pat_f32(ptr addrspace(1) %ou
 }
 
 ; FUNC-LABEL: {{^}}safe_rsq_rcp_pat_f32:
-; SI: v_sqrt_f32_e32
-; SI: v_rcp_f32_e32
+; SI: v_mul_f32
+; SI: v_rsq_f32
+; SI: v_mul_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_fma_f32
+; SI: v_rcp_f32
 define amdgpu_kernel void @safe_rsq_rcp_pat_f32(ptr addrspace(1) %out, float %src) #1 {
   %sqrt = call contract float @llvm.sqrt.f32(float %src)
   %rcp = call contract float @llvm.amdgcn.rcp.f32(float %sqrt)

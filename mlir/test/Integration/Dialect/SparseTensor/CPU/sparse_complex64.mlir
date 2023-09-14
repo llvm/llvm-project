@@ -27,7 +27,7 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait_op = {
   indexing_maps = [
