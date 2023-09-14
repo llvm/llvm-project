@@ -8,9 +8,10 @@
 
 # Implementation of `Intrinsic` types in f18
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 Intrinsic types are integer, real, complex, character, and logical.

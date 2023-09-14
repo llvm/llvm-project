@@ -21,16 +21,16 @@ from datetime import date
 # needs_sphinx = '1.0'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
+extensions = ["myst_parser",
+              "sphinx.ext.todo",
+              "sphinx.ext.mathjax",
+              "sphinx.ext.intersphinx",
+              "sphinx.ext.autodoc"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
 import sphinx
-
-if sphinx.version_info >= (3, 0):
-    extensions.append("myst_parser")
-extensions.append("sphinx_markdown_tables")
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'

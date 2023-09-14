@@ -1,7 +1,7 @@
 # Complex Operations
 
-```eval_rst
-.. contents::
+```{eval-rst}
+.. toctree::
    :local:
 ```
 
