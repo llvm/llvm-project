@@ -211,6 +211,14 @@ public:
     m_fix_indentation_callback_chars = indent_chars;
   }
 
+  void SetPromptAnsiPrefix(std::string prefix) {
+    m_prompt_ansi_prefix = std::move(prefix);
+  }
+
+  void SetPromptAnsiSuffix(std::string suffix) {
+    m_prompt_ansi_suffix = std::move(suffix);
+  }
+
   void SetSuggestionAnsiPrefix(std::string prefix) {
     m_suggestion_ansi_prefix = std::move(prefix);
   }
@@ -398,6 +406,8 @@ private:
   CompleteCallbackType m_completion_callback;
   SuggestionCallbackType m_suggestion_callback;
 
+  std::string m_prompt_ansi_prefix;
+  std::string m_prompt_ansi_suffix;
   std::string m_suggestion_ansi_prefix;
   std::string m_suggestion_ansi_suffix;
 
