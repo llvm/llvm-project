@@ -175,9 +175,7 @@ const char *WinSymbolizerTool::Demangle(const char *name) {
     return name;
 }
 
-const char *Symbolizer::PlatformDemangle(const char *name) {
-  return name;
-}
+const char *Symbolizer::PlatformDemangle(const char *name) { return nullptr; }
 
 namespace {
 struct ScopedHandle {

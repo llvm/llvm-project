@@ -74,16 +74,16 @@ cleanup:                                          ; preds = %loop
   unreachable
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(i8*, i1)
-declare i8* @llvm.coro.prepare.retcon(i8*)
+declare i1 @llvm.coro.end(ptr, i1)
+declare ptr @llvm.coro.prepare.retcon(ptr)
 
-declare i8* @prototype(i8*, i1 zeroext)
-declare {i8*,i8*} @g_prototype(i8*, i1 zeroext)
+declare ptr @prototype(ptr, i1 zeroext)
+declare {ptr,ptr} @g_prototype(ptr, i1 zeroext)
 
-declare noalias i8* @allocate(i32 %size)
-declare void @deallocate(i8* %ptr)
+declare noalias ptr @allocate(i32 %size)
+declare void @deallocate(ptr %ptr)
 
 declare void @print(i32)

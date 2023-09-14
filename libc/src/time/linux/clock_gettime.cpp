@@ -11,6 +11,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
+#include "src/time/linux/clockGetTimeImpl.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 #include <time.h>
@@ -19,26 +20,15 @@ namespace __llvm_libc {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, clock_gettime,
-                   (clockid_t clockid, struct timespec *tp)) {
-#if SYS_clock_gettime
-  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime,
-                                           static_cast<long>(clockid),
-                                           reinterpret_cast<long>(tp));
-#elif defined(SYS_clock_gettime64)
-  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
-                                           static_cast<long>(clockid),
-                                           reinterpret_cast<long>(tp));
-#else
-#error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
-#endif
+                   (clockid_t clockid, struct timespec *ts)) {
+  auto result = internal::clock_gettimeimpl(clockid, ts);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
-  if (ret < 0) {
-    libc_errno = -ret;
+  if (!result.has_value()) {
+    libc_errno = result.error();
     return -1;
   }
-
   return 0;
 }
 

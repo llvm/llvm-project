@@ -782,6 +782,8 @@ static Triple::SubArchType parseSubArch(StringRef SubArchName) {
 }
 
 static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
+  if (T.isOSDarwin())
+    return Triple::MachO;
   switch (T.getArch()) {
   case Triple::UnknownArch:
   case Triple::aarch64:
@@ -790,9 +792,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::thumb:
   case Triple::x86:
   case Triple::x86_64:
-    if (T.isOSDarwin())
-      return Triple::MachO;
-    else if (T.isOSWindows())
+    if (T.isOSWindows())
       return Triple::COFF;
     return Triple::ELF;
 

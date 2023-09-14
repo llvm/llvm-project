@@ -82,6 +82,14 @@ bool explicitCompare(EStatus value) {
   return value == SUCCESS;
 }
 
+bool explicitBitUsage1(EStatus value) {
+  return (value & SUCCESS);
+}
+
+bool explicitBitUsage2(EStatus value) {
+  return (value | SUCCESS);
+}
+
 bool testEnumeratorCompare() {
   return SUCCESS;
 }
@@ -102,6 +110,18 @@ bool testIgnored(IgnoredEnum value) {
 
 bool testIgnored(IgnoredSecondEnum value) {
   return value;
+}
+
+enum CustomOperatorEnum {
+    E0 = 0x1,
+    E1 = 0x2,
+    E2 = 0x4
+};
+
+CustomOperatorEnum operator&(CustomOperatorEnum a, CustomOperatorEnum b) { return static_cast<CustomOperatorEnum>(a & b); }
+
+void testCustomOperator(CustomOperatorEnum e) {
+    if (e & E1) {}
 }
 
 }

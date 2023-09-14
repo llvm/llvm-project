@@ -152,7 +152,7 @@ function(create_header_library fq_target_name)
     "ADD_HEADER"
     "" # Optional arguments
     "" # Single value arguments
-    "HDRS;DEPENDS;FLAGS" # Multi-value arguments
+    "HDRS;DEPENDS;FLAGS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -187,6 +187,9 @@ function(create_header_library fq_target_name)
     PROPERTIES
       INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
   )
+  if(ADD_HEADER_COMPILE_OPTIONS)
+    target_compile_options(${interface_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})
+  endif()
 
   add_custom_target(${fq_target_name})
   add_dependencies(${fq_target_name} ${interface_target_name})

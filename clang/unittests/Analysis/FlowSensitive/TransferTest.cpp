@@ -5855,7 +5855,7 @@ TEST(TransferTest, AnonymousStructWithReferenceField) {
 
 TEST(TransferTest, EvaluateBlockWithUnreachablePreds) {
   // This is a crash repro.
-  // `false` block may not have been processed when we try to evalute the `||`
+  // `false` block may not have been processed when we try to evaluate the `||`
   // after visiting `true`, because it is not necessary (and therefore the edge
   // is marked unreachable). Trying to get the analysis state via
   // `getEnvironment` for the subexpression still should not crash.

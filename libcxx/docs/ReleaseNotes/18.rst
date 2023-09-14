@@ -35,6 +35,15 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 18.0.0?
 ==============================
 
+- The "safe" mode is replaced by the hardened mode in this release. The
+  ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable is deprecated and setting it will
+  trigger an error; use ``LIBCXX_HARDENING_MODE`` instead. Similarly, the
+  ``_LIBCPP_ENABLE_ASSERTIONS`` macro is deprecated and setting it to ``1`` now
+  enables the hardened mode. See ``libcxx/docs/Hardening.rst`` for more details.
+
+- A new debug mode has been added, replacing the legacy debug mode that was
+  removed in the LLVM 17 release. See ``libcxx/docs/Hardening.rst`` for more
+  details.
 
 Implemented Papers
 ------------------

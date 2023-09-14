@@ -1086,7 +1086,7 @@ void GetShapeHelper::AccumulateExtent(
   result = std::move(result) + std::move(n);
   if (context_) {
     // Fold during expression creation to avoid creating an expression so
-    // large we can't evalute it without overflowing the stack.
+    // large we can't evaluate it without overflowing the stack.
     result = Fold(*context_, std::move(result));
   }
 }

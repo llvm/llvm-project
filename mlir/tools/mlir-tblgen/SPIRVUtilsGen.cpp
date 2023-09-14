@@ -929,9 +929,9 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
     if (auto *valueArg = llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
-          PrintFatalError(loc, "SPIR-V ops can have Variadic<..> or "
-                               "std::optional<...> arguments only if "
-                               "it's the last argument");
+          PrintFatalError(
+              loc, "SPIR-V ops can have Variadic<..> or "
+                   "Optional<...> arguments only if it's the last argument");
         }
         os << tabs
            << formatv("for (; {0} < {1}.size(); ++{0})", wordIndex, words);

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512bw -target-feature -evex512 -emit-llvm -verify -DFEATURE_TEST=1
-// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512bw -target-feature -evex512 -emit-llvm -verify -DFEATURE_TEST=2
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512bw -target-feature -evex512 -emit-llvm -o /dev/null -verify -DFEATURE_TEST=1
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +avx512bw -target-feature -evex512 -emit-llvm -o /dev/null -verify -DFEATURE_TEST=2
 
 #include <immintrin.h>
 
