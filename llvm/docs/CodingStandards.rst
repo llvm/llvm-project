@@ -140,6 +140,16 @@ details:
     $ darker -r HEAD^ test.py          # also format changes from last commit
     $ black test.py                    # format entire file
 
+Instead of individual file names, you can specify directories to
+darker, and it will find the changed files. However, if a directory is
+large, like a clone of the LLVM repository, darker can be painfully
+slow. In that case, you might wish to use git to list changed files.
+For example:
+
+.. code-block:: bash
+
+   $ darker -r HEAD^ $(git diff --name-only HEAD^)
+
 Mechanical Source Issues
 ========================
 
