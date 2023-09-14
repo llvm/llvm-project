@@ -474,8 +474,15 @@ bool IOHandlerEditline::SetPrompt(llvm::StringRef prompt) {
   m_prompt = std::string(prompt);
 
 #if LLDB_ENABLE_LIBEDIT
-  if (m_editline_up)
+  if (m_editline_up) {
     m_editline_up->SetPrompt(m_prompt.empty() ? nullptr : m_prompt.c_str());
+    if (m_debugger.GetUseColor()) {
+      m_editline_up->SetPromptAnsiPrefix(
+          ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiPrefix()));
+      m_editline_up->SetPromptAnsiSuffix(
+          ansi::FormatAnsiTerminalCodes(m_debugger.GetPromptAnsiSuffix()));
+    }
+  }
 #endif
   return true;
 }
