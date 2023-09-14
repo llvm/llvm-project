@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   LowerDeallocations.cpp
   OneShotAnalysis.cpp
   OneShotModuleBufferize.cpp
+  OwnershipBasedBufferDeallocation.cpp
   TensorCopyInsertion.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -34,6 +35,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRPass
   MLIRTensorDialect
   MLIRSCFDialect
+  MLIRControlFlowDialect
   MLIRSideEffectInterfaces
   MLIRTransforms
   MLIRViewLikeInterface

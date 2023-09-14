@@ -149,7 +149,7 @@ struct StridedMemRefType {
     return data[curOffset];
   }
 
-  StridedMemrefIterator<T, N> begin() { return {*this}; }
+  StridedMemrefIterator<T, N> begin() { return {*this, offset}; }
   StridedMemrefIterator<T, N> end() { return {*this, -1}; }
 
   // This operator[] is extremely slow and only for sugaring purposes.
@@ -181,7 +181,7 @@ struct StridedMemRefType<T, 1> {
     return (*this)[*indices.begin()];
   }
 
-  StridedMemrefIterator<T, 1> begin() { return {*this}; }
+  StridedMemrefIterator<T, 1> begin() { return {*this, offset}; }
   StridedMemrefIterator<T, 1> end() { return {*this, -1}; }
 
   T &operator[](int64_t idx) { return *(data + offset + idx * strides[0]); }
@@ -202,8 +202,8 @@ struct StridedMemRefType<T, 0> {
     return data[offset];
   }
 
-  StridedMemrefIterator<T, 0> begin() { return {*this}; }
-  StridedMemrefIterator<T, 0> end() { return {*this, 1}; }
+  StridedMemrefIterator<T, 0> begin() { return {*this, offset}; }
+  StridedMemrefIterator<T, 0> end() { return {*this, offset + 1}; }
 };
 
 /// Iterate over all elements in a strided memref.
@@ -364,7 +364,7 @@ public:
     return data[curOffset];
   }
 
-  DynamicMemRefIterator<T> begin() { return {*this}; }
+  DynamicMemRefIterator<T> begin() { return {*this, offset}; }
   DynamicMemRefIterator<T> end() { return {*this, -1}; }
 
   // This operator[] is extremely slow and only for sugaring purposes.

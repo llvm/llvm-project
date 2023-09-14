@@ -243,12 +243,6 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> T = classify(BO->getType());
 
-  auto Discard = [this, T, BO](bool Result) {
-    if (!Result)
-      return false;
-    return DiscardResult ? this->emitPop(*T, BO) : true;
-  };
-
   // Deal with operations which have composite or void types.
   if (BO->isCommaOp()) {
     if (!this->discard(LHS))
@@ -256,9 +250,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     if (RHS->getType()->isVoidType())
       return this->discard(RHS);
 
-    // Otherwise, visit RHS and optionally discard its value.
-    return Discard(Initializing ? this->visitInitializer(RHS)
-                                : this->visit(RHS));
+    return this->delegate(RHS);
   }
 
   if (!LT || !RT || !T)
@@ -283,6 +275,12 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     if (T != PT_Bool)
       return this->emitCast(PT_Bool, *T, BO);
     return true;
+  };
+
+  auto Discard = [this, T, BO](bool Result) {
+    if (!Result)
+      return false;
+    return DiscardResult ? this->emitPop(*T, BO) : true;
   };
 
   switch (BO->getOpcode()) {
