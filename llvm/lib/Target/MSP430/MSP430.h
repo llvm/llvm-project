@@ -39,7 +39,7 @@ class MSP430TargetMachine;
 class PassRegistry;
 
 FunctionPass *createMSP430ISelDag(MSP430TargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+                                  CodeGenOptLevel OptLevel);
 
 FunctionPass *createMSP430BranchSelectionPass();
 

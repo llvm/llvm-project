@@ -763,7 +763,7 @@ bool PPCInstrInfo::getMachineCombinerPatterns(
     bool DoRegPressureReduce) const {
   // Using the machine combiner in this way is potentially expensive, so
   // restrict to when aggressive optimizations are desired.
-  if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOpt::Aggressive)
+  if (Subtarget.getTargetMachine().getOptLevel() != CodeGenOptLevel::Aggressive)
     return false;
 
   if (getFMAPatterns(Root, Patterns, DoRegPressureReduce))
