@@ -86,7 +86,7 @@ function(add_gen_header target_name)
   get_fq_target_name(${target_name} fq_target_name)
   if(NOT LLVM_LIBC_FULL_BUILD)
     # We don't want to use generated headers if we are doing a non-full-build.
-    add_custom_target(${fq_target_name})
+    add_library(${fq_target_name} INTERFACE)
     return()
   endif()
   if(NOT ADD_GEN_HDR_DEF_FILE)
