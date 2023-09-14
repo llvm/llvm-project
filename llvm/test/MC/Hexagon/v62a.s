@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj -o - %s | llvm-objdump --arch=hexagon --arch=hexagon --mcpu=hexagonv62 -d - | FileCheck %s
+# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv62 -filetype=obj -o - %s | llvm-objdump --triple=hexagon --triple=hexagon --mcpu=hexagonv62 -d - | FileCheck %s
 
   r31:30=vabsdiffb(r29:28, r27:26)
 # CHECK: e8fadc1e { r31:30 = vabsdiffb(r29:28,r27:26)

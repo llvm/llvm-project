@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 %s | FileCheck --check-prefix=GFX11 %s
 
 // Check opcode promotions and forced suffices.
 // 1. When a suffix is optional, check that it may be omitted.

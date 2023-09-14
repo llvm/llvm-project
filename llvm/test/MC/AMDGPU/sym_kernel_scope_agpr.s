@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck -check-prefixes=GFX90A %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck -check-prefixes=GFX908 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck -check-prefixes=GFX90A %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck -check-prefixes=GFX908 %s
 // Based on sym_kernel_scope.s
 
 .byte .kernel.agpr_count

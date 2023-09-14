@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s
 
 s_load_dword s5, s[2:3], s2
 // CHECK: [0x41,0x01,0x00,0xc0,0x02,0x00,0x00,0x00]
