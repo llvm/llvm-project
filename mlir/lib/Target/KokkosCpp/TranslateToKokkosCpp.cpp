@@ -1789,7 +1789,6 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
     return failure();
   os << ") {\n";
   os.indent();
-  os << "std::cout << \"Hello from MLIR-Kokkos function " << functionOpName << "!\\n\";\n";
 
   //Convert any StridedMemRefType parameters to Kokkos::View
   for(BlockArgument arg : stridedMemrefParams)
