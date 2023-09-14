@@ -544,6 +544,10 @@ void testFread(const char *fname, int *buffer, size_t size, size_t count) {
 }
 
 ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+int accept(int fd, struct sockaddr *addr, socklen_t *addrlen);
+int bind(int fd, const struct sockaddr *addr, socklen_t addrlen);
+int listen(int fd, int backlog);
+
 void testRecv(int *buf, size_t len, int flags) {
   int fd;
   scanf("%d", &fd); // fake a tainted a file descriptor
@@ -1106,4 +1110,11 @@ void testProctitle2(char *real_argv[]) {
   char *argv[] = {app, "--foobar"};
   setproctitle_init(1, argv, 0);         // expected-warning {{Untrusted data is passed to a user-defined sink}}
   setproctitle_init(1, real_argv, argv); // expected-warning {{Untrusted data is passed to a user-defined sink}}
+}
+
+void testAcceptPropagates() {
+  int listenSocket = socket(2, 1, 6);
+  clang_analyzer_isTainted_int(listenSocket); // expected-warning {{YES}}
+  int acceptSocket = accept(listenSocket, 0, 0);
+  clang_analyzer_isTainted_int(acceptSocket); // expected-warning {{YES}}
 }

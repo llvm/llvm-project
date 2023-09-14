@@ -621,6 +621,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"getlogin_r"}}, TR::Source({{0}})},
 
       // Props
+      {{{"accept"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
