@@ -13505,19 +13505,20 @@ static bool legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
     DAG.getMachineFunction().getSubtarget<RISCVSubtarget>().getXLenVT();
 
   const EVT IndexVT = Index.getValueType();
-  const bool IsIndexSigned = isIndexTypeSigned(IndexType);
 
   // RISC-V indexed loads only support the "unsigned unscaled" addressing
   // mode, so anything else must be manually legalized.
-  if (!IsIndexSigned || !IndexVT.getVectorElementType().bitsLT(XLenVT))
+  if (!isIndexTypeSigned(IndexType))
     return false;
 
-  // Any index legalization should first promote to XLenVT, so we don't lose
-  // bits when scaling. This may create an illegal index type so we let
-  // LLVM's legalization take care of the splitting.
-  // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
-  Index = DAG.getNode(ISD::SIGN_EXTEND, DL,
-                      IndexVT.changeVectorElementType(XLenVT), Index);
+  if (IndexVT.getVectorElementType().bitsLT(XLenVT)) {
+    // Any index legalization should first promote to XLenVT, so we don't lose
+    // bits when scaling. This may create an illegal index type so we let
+    // LLVM's legalization take care of the splitting.
+    // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
+    Index = DAG.getNode(ISD::SIGN_EXTEND, DL,
+                        IndexVT.changeVectorElementType(XLenVT), Index);
+  }
   IndexType = ISD::UNSIGNED_SCALED;
   return true;
 }
