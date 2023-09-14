@@ -4,21 +4,19 @@
 // spirv.CompositeConstruct
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: func @composite_construct_vector
 func.func @composite_construct_vector(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<3xf32> {
   // CHECK: spirv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : (f32, f32, f32) -> vector<3xf32>
   %0 = spirv.CompositeConstruct %arg0, %arg1, %arg2 : (f32, f32, f32) -> vector<3xf32>
   return %0: vector<3xf32>
 }
 
-// -----
-
+// CHECK-LABEL: func @composite_construct_struct
 func.func @composite_construct_struct(%arg0: vector<3xf32>, %arg1: !spirv.array<4xf32>, %arg2 : !spirv.struct<(f32)>) -> !spirv.struct<(vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>)> {
   // CHECK: spirv.CompositeConstruct
   %0 = spirv.CompositeConstruct %arg0, %arg1, %arg2 : (vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>) -> !spirv.struct<(vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>)>
   return %0: !spirv.struct<(vector<3xf32>, !spirv.array<4xf32>, !spirv.struct<(f32)>)>
 }
-
-// -----
 
 // CHECK-LABEL: func @composite_construct_mixed_scalar_vector
 func.func @composite_construct_mixed_scalar_vector(%arg0: f32, %arg1: f32, %arg2 : vector<2xf32>) -> vector<4xf32> {
@@ -27,9 +25,15 @@ func.func @composite_construct_mixed_scalar_vector(%arg0: f32, %arg1: f32, %arg2
   return %0: vector<4xf32>
 }
 
-// -----
+// CHECK-LABEL: func @composite_construct_coopmatrix_khr
+func.func @composite_construct_coopmatrix_khr(%arg0 : f32) -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> {
+  // CHECK: spirv.CompositeConstruct {{%.*}} : (f32) -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>
+  %0 = spirv.CompositeConstruct %arg0 : (f32) -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>
+  return %0: !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>
+}
 
-func.func @composite_construct_NV.coopmatrix(%arg0 : f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup> {
+// CHECK-LABEL: func @composite_construct_coopmatrix_nv
+func.func @composite_construct_coopmatrix_nv(%arg0 : f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup> {
   // CHECK: spirv.CompositeConstruct {{%.*}} : (f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup>
   %0 = spirv.CompositeConstruct %arg0 : (f32) -> !spirv.NV.coopmatrix<8x16xf32, Subgroup>
   return %0: !spirv.NV.coopmatrix<8x16xf32, Subgroup>
@@ -49,6 +53,24 @@ func.func @composite_construct_invalid_operand_type(%arg0: f32, %arg1: f32, %arg
   // expected-error @+1 {{operand type mismatch: expected operand type 'i32', but provided 'f32'}}
   %0 = spirv.CompositeConstruct %arg0, %arg1, %arg2 : (f32, f32, f32) -> vector<3xi32>
   return %0: vector<3xi32>
+}
+
+// -----
+
+func.func @composite_construct_khr_coopmatrix_incorrect_operand_count(%arg0 : f32, %arg1 : f32) ->
+  !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> {
+  // expected-error @+1 {{has incorrect number of operands: expected 1, but provided 2}}
+  %0 = spirv.CompositeConstruct %arg0, %arg1 : (f32, f32) -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>
+  return %0: !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>
+}
+
+// -----
+
+func.func @composite_construct_khr_coopmatrix_incorrect_element_type(%arg0 : i32) ->
+  !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB> {
+  // expected-error @+1 {{operand type mismatch: expected operand type 'f32', but provided 'i32'}}
+  %0 = spirv.CompositeConstruct %arg0 : (i32) -> !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB>
+  return %0: !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB>
 }
 
 // -----
