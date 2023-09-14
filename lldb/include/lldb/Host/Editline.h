@@ -250,9 +250,8 @@ private:
   void SetCurrentLine(int line_index);
 
   /// Determines the width of the prompt in characters.  The width is guaranteed
-  /// to be the same for
-  /// all lines of the current multi-line session.
-  int GetPromptWidth();
+  /// to be the same for all lines of the current multi-line session.
+  size_t GetPromptWidth();
 
   /// Returns true if the underlying EditLine session's keybindings are
   /// Emacs-based, or false if
