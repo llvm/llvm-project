@@ -209,22 +209,33 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 }
 
 //===----------------------------------------------------------------------===//
-// CopyTensorOp
+// MaterializeInDestinationOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
-    [BufferizableOpInterface, SameOperandsAndResultType,
-     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+def Bufferization_MaterializeInDestinationOp
+    : Bufferization_Op<"materialize_in_destination",
+        [BufferizableOpInterface, SameOperandsAndResultType,
+         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
   let summary = "copy a tensor";
 
   let description = [{
-    Copy the contents of the source tensor into the destination tensor. This
-    operation is guaranteed to bufferize to a memory copy.
+    This op indicates that the data of the `source` tensor should materialize
+    in the future buffer of the `dest` tensors. Both tensors must have the same
+    shape and element type at runtime.
+
+    By default, this op bufferizes to a memcpy from the future buffer of the
+    `source` tensor to the future buffer of the `dest` tensor. However,
+    transformations such as "empty tensor elimination" may rewrite IR such that
+    a computation is performed directly in the future buffer of the `dest`
+    tensor and no memcpy is needed.
+
+    Note: "tensor.insert_slice" could be used for the same purpose, but since
+    tensor dialect ops only indicate *what* should be computed but not *where*,
+    it could fold away, causing the computation to materialize in a different
+    buffer.
   }];
 
-  let arguments = (ins AnyTensor:$source,
-                       AnyTensor:$dest);
-
+  let arguments = (ins AnyTensor:$source, AnyTensor:$dest);
   let results = (outs AnyTensor:$result);
 
   let extraClassDeclaration = [{
@@ -245,7 +256,7 @@ def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
     }
   }];
 
-  let assemblyFormat = "$source `,` $dest attr-dict `:` type($source)";
+  let assemblyFormat = "$source `in` $dest attr-dict `:` type($source)";
 }
 
 //===----------------------------------------------------------------------===//

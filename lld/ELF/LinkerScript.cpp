@@ -247,8 +247,13 @@ static void declareSymbol(SymbolAssignment *cmd) {
   Defined newSym(nullptr, cmd->name, STB_GLOBAL, visibility, STT_NOTYPE, 0, 0,
                  nullptr);
 
-  // We can't calculate final value right now.
+  // If the symbol is already defined, its order is 0 (with absence indicating
+  // 0); otherwise it's assigned the order of the SymbolAssignment.
   Symbol *sym = symtab.insert(cmd->name);
+  if (!sym->isDefined())
+    ctx.scriptSymOrder.insert({sym, cmd->symOrder});
+
+  // We can't calculate final value right now.
   sym->mergeProperties(newSym);
   newSym.overwrite(*sym);
 

@@ -1683,9 +1683,10 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
     options.packPaddings = packPaddings;
-    if (getCopyBackOp() == bufferization::CopyTensorOp::getOperationName()) {
-      options.copyBackOp =
-          LinalgPaddingOptions::CopyBackOp::BufferizationCopyTensor;
+    if (getCopyBackOp() ==
+        bufferization::MaterializeInDestinationOp::getOperationName()) {
+      options.copyBackOp = LinalgPaddingOptions::CopyBackOp::
+          BufferizationMaterializeInDestination;
     } else if (getCopyBackOp() == linalg::CopyOp::getOperationName()) {
       options.copyBackOp = LinalgPaddingOptions::CopyBackOp::LinalgCopy;
     } else if (getCopyBackOp() == kCopyOpNone) {
@@ -1761,7 +1762,8 @@ LogicalResult transform::PadOp::verify() {
              << attr;
     }
   }
-  if (getCopyBackOp() != bufferization::CopyTensorOp::getOperationName() &&
+  if (getCopyBackOp() !=
+          bufferization::MaterializeInDestinationOp::getOperationName() &&
       getCopyBackOp() != linalg::CopyOp::getOperationName() &&
       getCopyBackOp() != kCopyOpNone)
     return emitOpError() << "invalid copy_back_op";
@@ -2530,6 +2532,15 @@ transform::TileOp::apply(transform::TransformRewriter &rewriter,
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
           << "only ops implementing TilingInterface are supported";
+      diag.attachNote(op->getLoc()) << "target op";
+      return diag;
+    }
+    if (tileSizes.size() > tilingInterface.getLoopIteratorTypes().size()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "too many tiles provided, expected at most "
+          << tilingInterface.getLoopIteratorTypes().size() << " found "
+          << tileSizes.size();
       diag.attachNote(op->getLoc()) << "target op";
       return diag;
     }

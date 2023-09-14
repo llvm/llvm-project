@@ -319,6 +319,132 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
 
+  T = Triple("spirv-unknown-shadermodel-pixel");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Pixel, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-vertex");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Vertex, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-geometry");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Geometry, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-library");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Library, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-raygeneration");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::RayGeneration, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-intersection");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Intersection, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-anyhit");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::AnyHit, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-closesthit");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::ClosestHit, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-miss");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Miss, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-callable");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Callable, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-mesh");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Mesh, T.getEnvironment());
+
+  T = Triple("spirv-unknown-shadermodel-amplification");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::NoSubArch, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Amplification, T.getEnvironment());
+
+  T = Triple("spirv1.0-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v10, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
+  T = Triple("spirv1.1-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v11, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
+  T = Triple("spirv1.2-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v12, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
+  T = Triple("spirv1.3-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v13, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
+  T = Triple("spirv1.4-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v14, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
+  T = Triple("spirv1.5-unknown-shadermodel-compute");
+  EXPECT_EQ(Triple::spirv, T.getArch());
+  EXPECT_EQ(Triple::SPIRVSubArch_v15, T.getSubArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Compute, T.getEnvironment());
+
   T = Triple("x86_64-unknown-fuchsia");
   EXPECT_EQ(Triple::x86_64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1155,6 +1281,12 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
 
+  T.setArch(Triple::spirv);
+  EXPECT_FALSE(T.isArch16Bit());
+  EXPECT_FALSE(T.isArch32Bit());
+  EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_TRUE(T.isSPIRV());
+
   T.setArch(Triple::spirv32);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
@@ -1358,6 +1490,10 @@ TEST(TripleTest, BitWidthArchVariants) {
   T.setArch(Triple::spir64);
   EXPECT_EQ(Triple::spir, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::spir64, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::spirv);
+  EXPECT_EQ(Triple::spirv32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::spirv64, T.get64BitArchVariant().getArch());
 
   T.setArch(Triple::spirv32);
   EXPECT_EQ(Triple::spirv32, T.get32BitArchVariant().getArch());
@@ -1845,6 +1981,7 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::ELF, Triple("csky-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("csky-unknown-linux").getObjectFormat());
 
+  EXPECT_EQ(Triple::SPIRV, Triple("spirv-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-unknown-unknown").getObjectFormat());
 

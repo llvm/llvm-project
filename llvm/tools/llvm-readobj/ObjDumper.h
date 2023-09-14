@@ -77,13 +77,15 @@ public:
   virtual void printFileHeaders() = 0;
   virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
-  virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) {
+  virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols,
+                            bool ExtraSymInfo) {
     if (PrintSymbols)
-      printSymbols();
+      printSymbols(ExtraSymInfo);
     if (PrintDynamicSymbols)
       printDynamicSymbols();
   }
   virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols,
+                            bool ExtraSymInfo,
                             std::optional<SymbolComparator> SymComp) {
     if (SymComp) {
       if (PrintSymbols)
@@ -91,7 +93,7 @@ public:
       if (PrintDynamicSymbols)
         printDynamicSymbols(SymComp);
     } else {
-      printSymbols(PrintSymbols, PrintDynamicSymbols);
+      printSymbols(PrintSymbols, PrintDynamicSymbols, ExtraSymInfo);
     }
   }
   virtual void printProgramHeaders(bool PrintProgramHeaders,
@@ -187,7 +189,7 @@ protected:
   ScopedPrinter &W;
 
 private:
-  virtual void printSymbols() {}
+  virtual void printSymbols(bool ExtraSymInfo) {}
   virtual void printSymbols(std::optional<SymbolComparator> Comp) {}
   virtual void printDynamicSymbols() {}
   virtual void printDynamicSymbols(std::optional<SymbolComparator> Comp) {}

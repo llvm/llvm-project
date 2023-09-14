@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32r2 -mattr=+fp64 -show-encoding -show-inst %s | \
+# RUN: llvm-mc -triple=mips -mcpu=mips32r2 -mattr=+fp64 -show-encoding -show-inst %s | \
 # RUN: FileCheck %s
 
 abs.d  $f0, $f12      # CHECK: abs.d  $f0, $f12      # encoding: [0x46,0x20,0x60,0x05]

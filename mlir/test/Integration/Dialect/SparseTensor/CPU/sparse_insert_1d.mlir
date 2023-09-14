@@ -32,7 +32,7 @@
 
 // Insertion example using pure codegen (no sparse runtime support lib).
 
-#SparseVector = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #trait_mul_s = {
   indexing_maps = [

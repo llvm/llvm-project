@@ -166,7 +166,6 @@ libcxx/include/experimental/memory_resource
 libcxx/include/experimental/propagate_const
 libcxx/include/experimental/regex
 libcxx/include/experimental/set
-libcxx/include/experimental/simd
 libcxx/include/experimental/string
 libcxx/include/experimental/type_traits
 libcxx/include/experimental/unordered_map

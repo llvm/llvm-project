@@ -125,18 +125,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   Value *MergedVal = nullptr;
   if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
-    [[maybe_unused]] auto *RecordVal2 = cast<RecordValue>(&Val2);
+    auto *RecordVal2 = cast<RecordValue>(&Val2);
 
-    // Values to be merged are always associated with the same location in
-    // `LocToVal`. The location stored in `RecordVal` should therefore also
-    // be the same.
-    assert(&RecordVal1->getLoc() == &RecordVal2->getLoc());
-
-    // `RecordVal1` and `RecordVal2` may have different properties associated
-    // with them. Create a new `RecordValue` without any properties so that we
-    // soundly approximate both values. If a particular analysis needs to merge
-    // properties, it should do so in `DataflowAnalysis::merge()`.
-    MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    if (&RecordVal1->getLoc() == &RecordVal2->getLoc())
+      // `RecordVal1` and `RecordVal2` may have different properties associated
+      // with them. Create a new `RecordValue` with the same location but
+      // without any properties so that we soundly approximate both values. If a
+      // particular analysis needs to merge properties, it should do so in
+      // `DataflowAnalysis::merge()`.
+      MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    else
+      // If the locations for the two records are different, need to create a
+      // completely new value.
+      MergedVal = MergedEnv.createValue(Type);
   } else {
     MergedVal = MergedEnv.createValue(Type);
   }

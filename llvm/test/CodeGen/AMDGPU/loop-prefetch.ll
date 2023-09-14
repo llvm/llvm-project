@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs -asm-verbose=0 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10-ASM %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s -filetype=obj | llvm-objdump -d --arch-name=amdgcn --mcpu=gfx1030 --symbolize-operands - | FileCheck --check-prefixes=GCN,GFX10,GFX10-DIS %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=GFX8 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs -asm-verbose=0 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10-ASM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s -filetype=obj | llvm-objdump -d --arch-name=amdgcn --mcpu=gfx1030 --symbolize-operands - | FileCheck --check-prefixes=GCN,GFX10,GFX10-DIS %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=GFX8 %s
 
 ; GFX8-NOT: s_inst_prefetch
 ; GFX8-NOT: .palign 6

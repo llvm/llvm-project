@@ -11,6 +11,19 @@
 
 include "mlir/Pass/PassBase.td"
 
+def LLVMAddComdats : Pass<"llvm-add-comdats", "::mlir::ModuleOp"> {
+  let summary = "Add comdats to linkonce and linkonce_odr functions";
+  let description = [{
+    Add an any COMDAT to every linkonce and linkonce_odr function.
+    This is necessary on Windows to link these functions as the system
+    linker won't link weak symbols without a COMDAT. It also provides better
+    behavior than standard weak symbols on ELF-based platforms.
+    This pass will still add COMDATs on platforms that do not support them,
+    for example macOS, so should only be run when the target platform supports
+    COMDATs.
+  }];
+}
+
 def LLVMLegalizeForExport : Pass<"llvm-legalize-for-export"> {
   let summary = "Legalize LLVM dialect to be convertible to LLVM IR";
   let constructor = "::mlir::LLVM::createLegalizeForExportPass()";

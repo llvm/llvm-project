@@ -66,6 +66,11 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+Code actions
+^^^^^^^^^^^^
+
+- The extract variable tweak gained support for extracting lambda expressions to a variable.
+
 Signature help
 ^^^^^^^^^^^^^^
 

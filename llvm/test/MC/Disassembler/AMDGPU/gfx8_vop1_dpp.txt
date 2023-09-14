@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: v_mov_b32_dpp v5, v1 quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x02,0x0a,0x7e,0x01,0xe4,0x00,0x00]
 0xfa,0x02,0x0a,0x7e,0x01,0xe4,0x00,0x00

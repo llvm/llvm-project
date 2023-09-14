@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -show-encoding 2>&1 | \
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -show-encoding 2>&1 | \
 # RUN:     FileCheck %s --check-prefix=ALL
 
     .text

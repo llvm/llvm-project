@@ -709,13 +709,13 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   case Instruction::Mul: {
     assert(!isLeftShift && "Unexpected shift direction!");
     auto *Neg = BinaryOperator::CreateNeg(I->getOperand(0));
-    IC.InsertNewInstWith(Neg, *I);
+    IC.InsertNewInstWith(Neg, I->getIterator());
     unsigned TypeWidth = I->getType()->getScalarSizeInBits();
     APInt Mask = APInt::getLowBitsSet(TypeWidth, TypeWidth - NumBits);
     auto *And = BinaryOperator::CreateAnd(Neg,
                                           ConstantInt::get(I->getType(), Mask));
     And->takeName(I);
-    return IC.InsertNewInstWith(And, *I);
+    return IC.InsertNewInstWith(And, I->getIterator());
   }
   }
 }

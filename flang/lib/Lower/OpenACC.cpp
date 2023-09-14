@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/OpenACC.h"
+#include "DirectivesCommon.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
@@ -1356,8 +1357,8 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value gangNum;
   mlir::Value gangDim;
   mlir::Value gangStatic;
-  llvm::SmallVector<mlir::Value, 2> tileOperands, privateOperands,
-      reductionOperands;
+  llvm::SmallVector<mlir::Value> tileOperands, privateOperands,
+      reductionOperands, cacheOperands;
   llvm::SmallVector<mlir::Attribute> privatizations, reductionRecipes;
   bool hasGang = false, hasVector = false, hasWorker = false;
 
@@ -1451,6 +1452,7 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, tileOperands);
   addOperands(operands, operandSegments, privateOperands);
   addOperands(operands, operandSegments, reductionOperands);
+  addOperands(operands, operandSegments, cacheOperands);
 
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       builder, currentLocation, operands, operandSegments);
@@ -3095,6 +3097,69 @@ void Fortran::lower::finalizeOpenACCRoutineAttachment(
   accRoutineInfos.clear();
 }
 
+static void
+genACC(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
+  std::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::parser::AccAtomicRead &atomicRead) {
+            Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
+                                                void>(converter, atomicRead);
+          },
+          [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
+            Fortran::lower::genOmpAccAtomicWrite<
+                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite);
+          },
+          [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
+            Fortran::lower::genOmpAccAtomicUpdate<
+                Fortran::parser::AccAtomicUpdate, void>(converter,
+                                                        atomicUpdate);
+          },
+          [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
+            Fortran::lower::genOmpAccAtomicCapture<
+                Fortran::parser::AccAtomicCapture, void>(converter,
+                                                         atomicCapture);
+          },
+      },
+      atomicConstruct.u);
+}
+
+static void
+genACC(Fortran::lower::AbstractConverter &converter,
+       Fortran::semantics::SemanticsContext &semanticsContext,
+       const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto loopOp = builder.getRegion().getParentOfType<mlir::acc::LoopOp>();
+  auto crtPos = builder.saveInsertionPoint();
+  if (loopOp) {
+    builder.setInsertionPoint(loopOp);
+    Fortran::lower::StatementContext stmtCtx;
+    llvm::SmallVector<mlir::Value> cacheOperands;
+    const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+        std::get<Fortran::parser::AccObjectListWithModifier>(cacheConstruct.t);
+    const auto &accObjectList =
+        std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+    const auto &modifier =
+        std::get<std::optional<Fortran::parser::AccDataModifier>>(
+            listWithModifier.t);
+
+    mlir::acc::DataClause dataClause = mlir::acc::DataClause::acc_cache;
+    if (modifier &&
+        (*modifier).v == Fortran::parser::AccDataModifier::Modifier::ReadOnly)
+      dataClause = mlir::acc::DataClause::acc_cache_readonly;
+    genDataOperandOperations<mlir::acc::CacheOp>(
+        accObjectList, converter, semanticsContext, stmtCtx, cacheOperands,
+        dataClause,
+        /*structured=*/true, /*implicit=*/false, /*setDeclareAttr*/ false);
+    loopOp.getCacheOperandsMutable().append(cacheOperands);
+  } else {
+    llvm::report_fatal_error(
+        "could not find loop to attach OpenACC cache information.");
+  }
+  builder.restoreInsertionPoint(crtPos);
+}
+
 void Fortran::lower::genOpenACCConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
@@ -3118,15 +3183,13 @@ void Fortran::lower::genOpenACCConstruct(
             genACC(converter, semanticsContext, standaloneConstruct);
           },
           [&](const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-            TODO(converter.genLocation(cacheConstruct.source),
-                 "OpenACC Cache construct not lowered yet!");
+            genACC(converter, semanticsContext, cacheConstruct);
           },
           [&](const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
             genACC(converter, waitConstruct);
           },
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
-            TODO(converter.genLocation(atomicConstruct.source),
-                 "OpenACC Atomic construct not lowered yet!");
+            genACC(converter, eval, atomicConstruct);
           },
       },
       accConstruct.u);

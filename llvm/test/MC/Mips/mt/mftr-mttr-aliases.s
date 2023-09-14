@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32r2 -mattr=+mt -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=mips -mcpu=mips32r2 -mattr=+mt -show-encoding < %s | FileCheck %s
 
 # Check the various aliases of the m[ft]tr instruction.
 

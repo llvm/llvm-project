@@ -928,6 +928,7 @@ namespace DiscardExprs {
     (short)5;
     (bool)1;
     __null;
+    __builtin_offsetof(A, a);
 
     return 0;
   }

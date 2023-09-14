@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch r600 %s 2>&1 | FileCheck --check-prefix=R600 %s
+// RUN: not llvm-mc -triple=r600 %s 2>&1 | FileCheck --check-prefix=R600 %s
 
 // R600: :[[@LINE+1]]:{{[0-9]+}}: error: .amd_amdgpu_isa directive is not available on non-amdgcn architectures
 .amd_amdgpu_isa "r600"

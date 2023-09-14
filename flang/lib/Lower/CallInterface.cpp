@@ -702,7 +702,7 @@ public:
               [&](const Fortran::evaluate::characteristics::DummyDataObject
                       &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
-                if (dummy.CanBePassedViaImplicitInterface())
+                if (!isBindC && dummy.CanBePassedViaImplicitInterface())
                   handleImplicitDummy(&argCharacteristics, dummy, entity);
                 else
                   handleExplicitDummy(&argCharacteristics, dummy, entity,
@@ -871,7 +871,8 @@ private:
 
   // Define when an explicit argument must be passed in a fir.box.
   bool dummyRequiresBox(
-      const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+      const Fortran::evaluate::characteristics::DummyDataObject &obj,
+      bool isBindC) {
     using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
     using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attrs;
     constexpr ShapeAttrs shapeRequiringBox = {
@@ -888,6 +889,8 @@ private:
       if (const Fortran::semantics::Scope *scope = derived->scope())
         // Need to pass length type parameters in fir.box if any.
         return scope->IsDerivedTypeWithLengthParameter();
+    if (isBindC && obj.type.type().IsAssumedLengthCharacter())
+      return true; // Fortran 2018 18.3.6 point 2 (5)
     return false;
   }
 
@@ -973,7 +976,7 @@ private:
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
-    } else if (dummyRequiresBox(obj)) {
+    } else if (dummyRequiresBox(obj, isBindC)) {
       // Pass as fir.box or fir.class
       if (isValueAttr)
         TODO(loc, "assumed shape dummy argument with VALUE attribute");

@@ -7,8 +7,8 @@
 # RUN:   | FileCheck %s --check-prefix=GOTDATA
 
 # GOT:     Sections:
-# GOT:       9 .got         00000008 00000000000001b0 DATA
-# GOT:      10 .got.plt     00000020 00000000000001b8 DATA
+# GOT:       .got         00000008 00000000000001b0 DATA
+# GOT:       .got.plt     00000020 00000000000001b8 DATA
 # GOTDATA:      Contents of section .got:
 # GOTDATA-NEXT:  01b0 00000000 00000000
 # GOTDATA-NEXT: Contents of section .got.plt:

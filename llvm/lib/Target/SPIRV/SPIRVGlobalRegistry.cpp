@@ -81,7 +81,15 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(uint32_t Width,
                                              MachineIRBuilder &MIRBuilder,
                                              bool IsSigned) {
   assert(Width <= 64 && "Unsupported integer width!");
-  if (Width <= 8)
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
+    MIRBuilder.buildInstr(SPIRV::OpExtension)
+        .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
+    MIRBuilder.buildInstr(SPIRV::OpCapability)
+        .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
+  } else if (Width <= 8)
     Width = 8;
   else if (Width <= 16)
     Width = 16;

@@ -309,6 +309,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/is_lvalue_reference.h",
         "src/__support/CPP/type_traits/is_member_pointer.h",
         "src/__support/CPP/type_traits/is_null_pointer.h",
+        "src/__support/CPP/type_traits/is_object.h",
         "src/__support/CPP/type_traits/is_pointer.h",
         "src/__support/CPP/type_traits/is_reference.h",
         "src/__support/CPP/type_traits/is_rvalue_reference.h",

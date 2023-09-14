@@ -76,7 +76,7 @@ public:
   const_iterator end() const { return m_variables.end(); }
 
   llvm::ArrayRef<lldb::VariableSP> toArrayRef() {
-    return llvm::makeArrayRef(m_variables);
+    return llvm::ArrayRef(m_variables);
   }
 
 protected:
