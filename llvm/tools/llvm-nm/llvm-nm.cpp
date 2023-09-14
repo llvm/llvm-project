@@ -237,10 +237,8 @@ struct NMSymbol {
   std::string IndirectName;
 
   bool isDefined() const {
-    if (Sym.getRawDataRefImpl().p) {
-      uint32_t Flags = cantFail(Sym.getFlags());
-      return !(Flags & SymbolRef::SF_Undefined);
-    }
+    if (Sym.getRawDataRefImpl().p)
+      return !(SymFlags & SymbolRef::SF_Undefined);
     return TypeChar != 'U';
   }
 

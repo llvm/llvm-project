@@ -126,7 +126,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(oslist=no_match(["linux"]))
     def test_aarch64_dynamic_regset_config_sme(self):
         """Test AArch64 Dynamic Register sets configuration, but only SME
-           registers."""
+        registers."""
         if not self.isAArch64SME():
             self.skipTest("SME must be present.")
 
@@ -151,6 +151,7 @@ class RegisterCommandsTestCase(TestBase):
         register_sets = self.thread().GetSelectedFrame().GetRegisters()
 
         ssve_registers = register_sets.GetFirstValueByName(
-            "Scalable Vector Extension Registers")
+            "Scalable Vector Extension Registers"
+        )
         self.assertTrue(ssve_registers.IsValid())
         self.sve_regs_read_dynamic(ssve_registers)

@@ -146,10 +146,6 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
     Ident_AbnormalTermination = nullptr;
   }
 
-  // Default incremental processing to -fincremental-extensions, clients can
-  // override with `enableIncrementalProcessing` if desired.
-  IncrementalProcessing = LangOpts.IncrementalExtensions;
-
   // If using a PCH where a #pragma hdrstop is expected, start skipping tokens.
   if (usingPCHWithPragmaHdrStop())
     SkippingUntilPragmaHdrStop = true;

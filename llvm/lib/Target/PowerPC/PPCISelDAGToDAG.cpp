@@ -387,18 +387,19 @@ namespace {
     /// register can be improved, but it is wrong to substitute Reg+Reg for
     /// Reg in an asm, because the load or store opcode would have to change.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                      unsigned ConstraintID,
+                                      InlineAsm::ConstraintCode ConstraintID,
                                       std::vector<SDValue> &OutOps) override {
       switch(ConstraintID) {
       default:
-        errs() << "ConstraintID: " << ConstraintID << "\n";
+        errs() << "ConstraintID: "
+               << InlineAsm::getMemConstraintName(ConstraintID) << "\n";
         llvm_unreachable("Unexpected asm memory constraint");
-      case InlineAsm::Constraint_es:
-      case InlineAsm::Constraint_m:
-      case InlineAsm::Constraint_o:
-      case InlineAsm::Constraint_Q:
-      case InlineAsm::Constraint_Z:
-      case InlineAsm::Constraint_Zy:
+      case InlineAsm::ConstraintCode::es:
+      case InlineAsm::ConstraintCode::m:
+      case InlineAsm::ConstraintCode::o:
+      case InlineAsm::ConstraintCode::Q:
+      case InlineAsm::ConstraintCode::Z:
+      case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
         const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();

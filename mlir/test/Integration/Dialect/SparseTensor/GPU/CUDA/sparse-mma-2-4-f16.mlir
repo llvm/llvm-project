@@ -1,5 +1,3 @@
-// REQUIRES: host-supports-nvptx
-
 //
 // NOTE: this test requires gpu-sm80
 //
