@@ -308,8 +308,11 @@ add_entrypoint_object(
 
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
+add_stdio_entrypoint_object(feof_unlocked)
 add_stdio_entrypoint_object(ferror)
+add_stdio_entrypoint_object(ferror_unlocked)
 add_stdio_entrypoint_object(clearerr)
+add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
 add_stdio_entrypoint_object(fclose)
 add_stdio_entrypoint_object(fread_unlocked)
