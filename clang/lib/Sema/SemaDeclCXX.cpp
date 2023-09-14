@@ -6602,6 +6602,13 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
     if (!VD && !MD)
       continue;
 
+    if ((TSK == TSK_ExplicitInstantiationDeclaration ||
+         TSK == TSK_ExplicitInstantiationDefinition) &&
+        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>()) {
+      // Skip members excluded from instantiation.
+      continue;
+    }
+
     if (MD) {
       // Don't process deleted methods.
       if (MD->isDeleted())
