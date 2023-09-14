@@ -707,7 +707,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     // Round-to-integer need custom lowering for fp16, as Promote doesn't work
     // because the result type is integer.
-    for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT,
+    for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LRINT, ISD::LLRINT,
+                    ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT,
                     ISD::STRICT_LLRINT})
       setOperationAction(Op, MVT::f16, Custom);
 
@@ -1013,6 +1014,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECREDUCE_OR);
   setTargetDAGCombine(ISD::VECREDUCE_XOR);
 
+  setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
+
   // In case of strict alignment, avoid an excessive number of byte wide stores.
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemset =
@@ -1273,7 +1276,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget->hasSVE()) {
+  if (Subtarget->hasSVEorSME()) {
     for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
       setOperationAction(ISD::BITREVERSE, VT, Custom);
       setOperationAction(ISD::BSWAP, VT, Custom);
@@ -6183,6 +6186,16 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_DEINTERLEAVE(Op, DAG);
   case ISD::VECTOR_INTERLEAVE:
     return LowerVECTOR_INTERLEAVE(Op, DAG);
+  case ISD::LROUND:
+  case ISD::LLROUND:
+  case ISD::LRINT:
+  case ISD::LLRINT: {
+    assert(Op.getOperand(0).getValueType() == MVT::f16 &&
+           "Expected custom lowering of rounding operations only for f16");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0));
+    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), Ext);
+  }
   case ISD::STRICT_LROUND:
   case ISD::STRICT_LLROUND:
   case ISD::STRICT_LRINT:
@@ -6243,9 +6256,9 @@ bool AArch64TargetLowering::useSVEForFixedLengthVectorVT(
     break;
   }
 
-  // All SVE implementations support NEON sized vectors.
+  // NEON-sized vectors can be emulated using SVE instructions.
   if (OverrideNEON && (VT.is128BitVector() || VT.is64BitVector()))
-    return Subtarget->hasSVE();
+    return Subtarget->hasSVEorSME();
 
   // Ensure NEON MVTs only belong to a single register class.
   if (VT.getFixedSizeInBits() <= 128)
@@ -23121,6 +23134,55 @@ static SDValue performMULLCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue
+performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                             SelectionDAG &DAG) {
+  // Let's do below transform.
+  //
+  //         t34: v4i32 = AArch64ISD::UADDLV t2
+  //       t35: i32 = extract_vector_elt t34, Constant:i64<0>
+  //     t7: i64 = zero_extend t35
+  //   t20: v1i64 = scalar_to_vector t7
+  // ==>
+  //      t34: v4i32 = AArch64ISD::UADDLV t2
+  //    t39: v2i32 = extract_subvector t34, Constant:i64<0>
+  //  t40: v1i64 = AArch64ISD::NVCAST t39
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v1i64)
+    return SDValue();
+
+  SDValue ZEXT = N->getOperand(0);
+  if (ZEXT.getOpcode() != ISD::ZERO_EXTEND || ZEXT.getValueType() != MVT::i64)
+    return SDValue();
+
+  SDValue EXTRACT_VEC_ELT = ZEXT.getOperand(0);
+  if (EXTRACT_VEC_ELT.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      EXTRACT_VEC_ELT.getValueType() != MVT::i32)
+    return SDValue();
+
+  if (!isNullConstant(EXTRACT_VEC_ELT.getOperand(1)))
+    return SDValue();
+
+  SDValue UADDLV = EXTRACT_VEC_ELT.getOperand(0);
+  if (UADDLV.getOpcode() != AArch64ISD::UADDLV ||
+      UADDLV.getValueType() != MVT::v4i32 ||
+      UADDLV.getOperand(0).getValueType() != MVT::v8i8)
+    return SDValue();
+
+  // Let's generate new sequence with AArch64ISD::NVCAST.
+  SDLoc DL(N);
+  SDValue EXTRACT_SUBVEC =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, UADDLV,
+                  DAG.getConstant(0, DL, MVT::i64));
+  SDValue NVCAST =
+      DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, EXTRACT_SUBVEC);
+
+  return NVCAST;
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -23436,6 +23498,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performGlobalAddressCombine(N, DAG, Subtarget, getTargetMachine());
   case ISD::CTLZ:
     return performCTLZCombine(N, DAG, Subtarget);
+  case ISD::SCALAR_TO_VECTOR:
+    return performScalarToVectorCombine(N, DCI, DAG);
   }
   return SDValue();
 }
@@ -26163,7 +26227,7 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
 
     return B.CreateIntrinsic(IdMap[(int)Rotation], Ty,
-                             {Accumulator, InputB, InputA});
+                             {Accumulator, InputA, InputB});
   }
 
   if (OperationType == ComplexDeinterleavingOperation::CAdd) {

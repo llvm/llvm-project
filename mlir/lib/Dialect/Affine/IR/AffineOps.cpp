@@ -3135,17 +3135,11 @@ static LogicalResult
 verifyMemoryOpIndexing(Operation *op, AffineMapAttr mapAttr,
                        Operation::operand_range mapOperands,
                        MemRefType memrefType, unsigned numIndexOperands) {
-  if (mapAttr) {
     AffineMap map = mapAttr.getValue();
     if (map.getNumResults() != memrefType.getRank())
       return op->emitOpError("affine map num results must equal memref rank");
     if (map.getNumInputs() != numIndexOperands)
       return op->emitOpError("expects as many subscripts as affine map inputs");
-  } else {
-    if (memrefType.getRank() != numIndexOperands)
-      return op->emitOpError(
-          "expects the number of subscripts to be equal to memref rank");
-  }
 
   Region *scope = getAffineScope(op);
   for (auto idx : mapOperands) {
@@ -3224,7 +3218,7 @@ void AffineStoreOp::build(OpBuilder &builder, OperationState &result,
   result.addOperands(valueToStore);
   result.addOperands(memref);
   result.addOperands(mapOperands);
-  result.addAttribute(getMapAttrStrName(), AffineMapAttr::get(map));
+  result.getOrAddProperties<Properties>().map = AffineMapAttr::get(map);
 }
 
 // Use identity map.

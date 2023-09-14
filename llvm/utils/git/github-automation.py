@@ -10,6 +10,7 @@
 
 import argparse
 from git import Repo  # type: ignore
+import html
 import github
 import os
 import re
@@ -39,6 +40,13 @@ If you have any further questions about this issue, don't hesitate to ask via a 
 """
 
 
+def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+    for team in teams:
+        if team_name == team.name.lower():
+            return team
+    return None
+
+
 class IssueSubscriber:
     @property
     def team_name(self) -> str:
@@ -51,18 +59,23 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        for team in self.org.get_teams():
-            if self.team_name != team.name.lower():
-                continue
+        team = _get_curent_team(self.team_name, self.org.get_teams())
+        if not team:
+            print(f"couldn't find team named {self.team_name}")
+            return False
+        comment = ""
+        if team.slug == "issue-subscribers-good-first-issue":
+            comment = "{}\n".format(beginner_comment)
 
-            comment = ""
-            if team.slug == "issue-subscribers-good-first-issue":
-                comment = "{}\n".format(beginner_comment)
+        comment = (
+            f"@llvm/{team.slug}"
+            + "\n\n<details>\n"
+            + f"{self.issue.body}\n"
+            + "</details>"
+        )
 
-            comment += "@llvm/{}".format(team.slug)
-            self.issue.create_comment(comment)
-            return True
-        return False
+        self.issue.create_comment(comment)
+        return True
 
 
 def human_readable_size(size, decimal_places=2):
@@ -82,11 +95,20 @@ class PRSubscriber:
         self.repo = github.Github(token).get_repo(repo)
         self.org = github.Github(token).get_organization(self.repo.organization.login)
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
-        self._team_name = "pr-subscribers-{}".format(label_name).lower()
+        self._team_name = "pr-subscribers-{}".format(
+            label_name.replace("+", "x")
+        ).lower()
+        self.COMMENT_TAG = "<!--LLVM PR SUMMARY COMMENT-->\n"
+
+    def get_summary_comment(self) -> github.IssueComment.IssueComment:
+        for comment in self.pr.as_issue().get_comments():
+            if self.COMMENT_TAG in comment.body:
+                return comment
+        return None
 
     def run(self) -> bool:
         patch = None
-        team = self._get_curent_team()
+        team = _get_curent_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -107,10 +129,10 @@ class PRSubscriber:
 
         # Get the diff
         try:
-            patch = requests.get(self.pr.diff_url).text
+            patch = html.escape(requests.get(self.pr.diff_url).text)
         except:
             patch = ""
-        diff_stats += "\n<pre>\n" + patch
+        diff_stats += "\n<pre>\n" + html.escape(patch)
 
         # GitHub limits comments to 65,536 characters, let's limit the diff to 20kB.
         DIFF_LIMIT = 20 * 1024
@@ -119,20 +141,33 @@ class PRSubscriber:
             patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
             diff_stats = diff_stats[0:DIFF_LIMIT] + "...\n<truncated>\n"
         diff_stats += "</pre>"
+        team_mention = "@llvm/{}".format(team.slug)
 
         body = self.pr.body
-        comment = (
-            "@llvm/{}".format(team.slug)
-            + "\n\n<details>\n"
-            + f"<summary>Changes</summary>\n\n"
-            + f"{body}\n--\n"
-            + patch_link
-            + "\n"
-            + f"{diff_stats}\n\n"
-            + "</details>"
-        )
+        comment = f"""
+{self.COMMENT_TAG}
+{team_mention}
+            
+<details>
+<summary>Changes</summary>
+{body}
+--
+{patch_link}
+{diff_stats}
+</details>
+"""
 
-        self.pr.as_issue().create_comment(comment)
+        summary_comment = self.get_summary_comment()
+        if not summary_comment:
+            self.pr.as_issue().create_comment(comment)
+        elif team_mention + "\n" in summary_comment.body:
+            print("Team {} already mentioned.".format(team.slug))
+        else:
+            summary_comment.edit(
+                summary_comment.body.replace(
+                    self.COMMENT_TAG, self.COMMENT_TAG + team_mention + "\n"
+                )
+            )
         return True
 
     def _get_curent_team(self) -> Optional[github.Team.Team]:

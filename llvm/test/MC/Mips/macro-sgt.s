@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=mips -show-encoding -mcpu=mips1 < %s | FileCheck %s
-# RUN: llvm-mc -arch=mips -show-encoding -mcpu=mips64 < %s | FileCheck %s
+# RUN: llvm-mc -triple=mips -show-encoding -mcpu=mips1 < %s | FileCheck %s
+# RUN: llvm-mc -triple=mips -show-encoding -mcpu=mips64 < %s | FileCheck %s
 
 sgt   $4, $5
 # CHECK: slt $4, $5, $4         # encoding: [0x00,0xa4,0x20,0x2a]

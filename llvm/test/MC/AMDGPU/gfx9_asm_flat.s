@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s
 
 flat_load_ubyte v5, v[1:2] offset:4095
 // CHECK: [0xff,0x0f,0x40,0xdc,0x01,0x00,0x00,0x05]

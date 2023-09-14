@@ -34,6 +34,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <cassert>
 #include <numeric>
 #include <optional>
@@ -1604,19 +1605,19 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::MatrixTimesScalarOp::verify() {
-  if (auto inputCoopmat = llvm::dyn_cast<spirv::CooperativeMatrixNVType>(
-          getMatrix().getType())) {
-    if (inputCoopmat.getElementType() != getScalar().getType())
-      return emitError("input matrix components' type and scaling value must "
-                       "have the same type");
-    return success();
-  }
+  Type elementType =
+      llvm::TypeSwitch<Type, Type>(getMatrix().getType())
+          .Case<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType,
+                spirv::MatrixType>(
+              [](auto matrixType) { return matrixType.getElementType(); })
+          .Default([](Type) { return nullptr; });
+
+  assert(elementType && "Unhandled type");
 
   // Check that the scalar type is the same as the matrix element type.
-  auto inputMatrix = llvm::cast<spirv::MatrixType>(getMatrix().getType());
-  if (getScalar().getType() != inputMatrix.getElementType())
-    return emitError("input matrix components' type and scaling value must "
-                     "have the same type");
+  if (getScalar().getType() != elementType)
+    return emitOpError("input matrix components' type and scaling value must "
+                       "have the same type");
 
   return success();
 }

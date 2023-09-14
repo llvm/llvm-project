@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips32 2>&1 | FileCheck %s
+# RUN: not llvm-mc %s -triple=mips -mcpu=mips32 2>&1 | FileCheck %s
 
 # Check for errors when using conditional branch pseudos after .set noat.
   .set noat

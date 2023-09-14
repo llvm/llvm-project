@@ -583,7 +583,7 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   void *TargetPtr = nullptr;
   OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
                     RegionInterface.getCallbacks<ompt_target_data_alloc>(),
-                    RTLDeviceID, HstPtr, &TargetPtr, Size,
+                    DeviceID, HstPtr, &TargetPtr, Size,
                     /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
@@ -594,7 +594,7 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   /// RAII to establish tool anchors before and after data deletion
   OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
                     RegionInterface.getCallbacks<ompt_target_data_delete>(),
-                    RTLDeviceID, TgtAllocBegin,
+                    DeviceID, TgtAllocBegin,
                     /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
@@ -632,7 +632,7 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
-          RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          DeviceID, TgtPtrBegin, HstPtrBegin, Size,
           /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
@@ -660,7 +660,7 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
   OMPT_IF_BUILT(
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
-          RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+          DeviceID, HstPtrBegin, TgtPtrBegin, Size,
           /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   if (!RTL->data_retrieve_async || !RTL->synchronize)

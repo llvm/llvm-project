@@ -55,12 +55,14 @@ def SPIRV_KHRCooperativeMatrixLengthOp :
   ];
 
   let arguments = (ins
-    TypeAttr:$cooperative_matrix_type
+    TypeAttrOf<SPIRV_AnyCooperativeMatrix>:$cooperative_matrix_type
   );
 
   let results = (outs
     SPIRV_Int32:$result
   );
+
+  let hasVerifier = false;
 }
 
 // -----

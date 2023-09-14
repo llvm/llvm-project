@@ -486,11 +486,11 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %13 = tosa.select %10, %0, %1 : (tensor<1xi1>, tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.maxf
+  // CHECK: arith.maximumf
   %14 = tosa.maximum %0, %1 : (tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.minf
+  // CHECK: arith.minimumf
   %15 = tosa.minimum %0, %1 : (tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
@@ -502,8 +502,8 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %17 = tosa.floor %0 : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.minf
-  // CHECK: arith.maxf
+  // CHECK: arith.minimumf
+  // CHECK: arith.maximumf
   %18 = tosa.clamp %0 {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
@@ -517,8 +517,8 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: arith.constant -2.14748365E+9
   // CHECK: arith.constant 2.14748365E+9
   // CHECK: math.roundeven
-  // CHECK: arith.minf
-  // CHECK: arith.maxf
+  // CHECK: arith.minimumf
+  // CHECK: arith.maximumf
   // CHECK: arith.fptosi
   %20 = tosa.cast %0 : (tensor<1xf32>) -> tensor<1xi32>
 
@@ -555,8 +555,8 @@ func.func @test_simple_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: arith.constant -1.280000e+02
   // CHECK: arith.constant 1.270000e+02
   // CHECK: math.roundeven
-  // CHECK: arith.minf
-  // CHECK: arith.maxf
+  // CHECK: arith.minimumf
+  // CHECK: arith.maximumf
   // CHECK: arith.fptosi
   %1 = "tosa.cast"(%arg0) : (tensor<1xf16>) -> tensor<1xi8>
   return
@@ -757,8 +757,8 @@ func.func @test_clamp_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: ^bb0(%[[ARG1:.+]]: f16,
   // CHECK-DAG: %[[C0:.+]] = arith.constant 0.0
   // CHECK-DAG: %[[C6:.+]] = arith.constant 6.0
-  // CHECK-DAG: %[[MIN:.+]] = arith.minf %[[ARG1]], %[[C6]]
-  // CHECK-DAG: %[[MAX:.+]] = arith.maxf %[[MIN]], %[[C0]]
+  // CHECK-DAG: %[[MIN:.+]] = arith.minimumf %[[ARG1]], %[[C6]]
+  // CHECK-DAG: %[[MAX:.+]] = arith.maximumf %[[MIN]], %[[C0]]
   %0 = tosa.clamp %arg0 {min_int = 0 : i64, max_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 6.0 : f32} : (tensor<1xf16>) -> tensor<1xf16>
 
   return
@@ -932,13 +932,13 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK: arith.constant 3.40282347E+38 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
-  // CHECK: arith.minf
+  // CHECK: arith.minimumf
   %3 = tosa.reduce_min %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: arith.constant -3.40282347E+38 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
-  // CHECK: arith.maxf
+  // CHECK: arith.maximumf
   %4 = tosa.reduce_max %arg0 {axis = 0 : i32} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
@@ -1022,7 +1022,7 @@ func.func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
   // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CMIN]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%[[ARG0]] : tensor<?x?xf32>) outs(%[[FILL]] : tensor<?xf32>)
   // CHECK: ^bb0(%[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32)
-  // CHECK:   %[[MAX:.+]] = arith.maxf %[[ARG1]], %[[ARG2]] : f32
+  // CHECK:   %[[MAX:.+]] = arith.maximumf %[[ARG1]], %[[ARG2]] : f32
   // CHECK:   linalg.yield %[[MAX]] : f32
   // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}[0, 1]] : tensor<?xf32> into tensor<?x1xf32>
   %0 = tosa.reduce_max %arg0 {axis = 1 : i32} : (tensor<?x?xf32>) -> tensor<?x1xf32>
