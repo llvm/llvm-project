@@ -222,6 +222,11 @@ mlir:scf:
 
 mlir:spirv:
   - mlir/**/SPIRV/**
+  - mlir/**/SPIRVTo*/**
+  - mlir/**/*ToSPIRV/**
+  - mlir/tools/mlir-spirv-cpu-runner/**
+  - mlir/tools/mlir-vulkan-runner/**
+  - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
 
 mlir:shape:
   - mlir/**/Shape/**
