@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
-
 // <memory>
 
 // shared_ptr
@@ -15,16 +13,19 @@
 // template<class T, class A, class... Args>
 // shared_ptr<T> allocate_shared(const A& a, Args&&... args);
 
-// This test checks that allocator_traits::construct is used in allocate_shared
-// as requested in C++20 (via P0674R1).
-
-#include "test_macros.h"
+// This test checks that allocator_traits::construct and allocator_traits::destroy
+// are used in allocate_shared as requested for the resolution of LWG2070. Note
+// that LWG2070 was resolved by P0674R1 (which is a C++20 paper), but we implement
+// LWG issue resolutions as DRs per our policy.
 
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <new>
 #include <utility>
+
+#include "test_macros.h"
 
 static bool construct_called = false;
 static bool destroy_called = false;
@@ -118,10 +119,6 @@ struct Foo {
   Foo(Foo a, Foo b) : val(a.val + b.val) {}
 };
 
-struct Bar {
-  std::max_align_t y;
-};
-
 void test_aligned(void* p, std::size_t align) {
   assert(reinterpret_cast<std::uintptr_t>(p) % align == 0);
 }
@@ -170,10 +167,16 @@ int main(int, char**) {
     assert(p->id == 42);
   }
 
+#if TEST_STD_VER >= 11
   {
+    struct Bar {
+      std::max_align_t y;
+    };
+
     std::shared_ptr<Bar> p;
     test_aligned(p.get(), alignof(Bar));
   }
+#endif
 
   return 0;
 }
