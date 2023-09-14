@@ -14,7 +14,6 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
-  reinterpret_cast<__llvm_libc::File *>(stream)->clearerr();
   rpc::Client::Port port = rpc::client.open<RPC_FERROR>();
   port.send_and_recv(
       [=](rpc::Buffer *buffer) {
@@ -22,7 +21,6 @@ LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
       },
       [&](rpc::Buffer *) {});
   port.close();
-  return ret;
 }
 
 } // namespace __llvm_libc
