@@ -157,7 +157,7 @@ protected:
   bool ParseChildMembers(
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
-      std::vector<DWARFDIE> &member_function_dies,
+      std::vector<DWARFDIE> &member_function_and_type_dies,
       DelayedPropertyList &delayed_properties,
       const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);

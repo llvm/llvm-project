@@ -2150,14 +2150,14 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
 
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
     // Parse members and base classes first
-    std::vector<DWARFDIE> member_function_dies;
+    std::vector<DWARFDIE> member_function_and_type_dies;
 
     DelayedPropertyList delayed_properties;
-    ParseChildMembers(die, clang_type, bases, member_function_dies,
+    ParseChildMembers(die, clang_type, bases, member_function_and_type_dies,
                       delayed_properties, default_accessibility, layout_info);
 
-    // Now parse any methods if there were any...
-    for (const DWARFDIE &die : member_function_dies)
+    // Now parse any methods or nested types if there were any...
+    for (const DWARFDIE &die : member_function_and_type_dies)
       dwarf->ResolveType(die);
 
     if (type_is_objc_object_or_interface) {
@@ -3153,7 +3153,7 @@ void DWARFASTParserClang::ParseSingleMember(
 bool DWARFASTParserClang::ParseChildMembers(
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
-    std::vector<DWARFDIE> &member_function_dies,
+    std::vector<DWARFDIE> &member_function_and_type_dies,
     DelayedPropertyList &delayed_properties,
     const AccessType default_accessibility,
     ClangASTImporter::LayoutInfo &layout_info) {
@@ -3189,8 +3189,11 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     case DW_TAG_subprogram:
+    case DW_TAG_enumeration_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
       // Let the type parsing code handle this one for us.
-      member_function_dies.push_back(die);
+      member_function_and_type_dies.push_back(die);
       break;
 
     case DW_TAG_inheritance:
