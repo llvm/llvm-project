@@ -2773,22 +2773,19 @@ void RewriteInstance::selectFunctionsToProcess() {
           return true;
 
       // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      std::optional<StringRef> Match =
-          Function.forEachName([&ForceFunctionsNR](StringRef Name) {
-            return ForceFunctionsNR.count(Name.str());
-          });
-      return Match.has_value();
+      for (const StringRef Name : Function.getNames())
+        if (ForceFunctionsNR.count(Name.str()))
+          return true;
+
+      return false;
     }
 
     if (opts::Lite) {
       // Forcibly include functions specified in the -function-order file.
       if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
-        std::optional<StringRef> Match =
-            Function.forEachName([&](StringRef Name) {
-              return ReorderFunctionsUserSet.contains(Name);
-            });
-        if (Match.has_value())
-          return true;
+        for (const StringRef Name : Function.getNames())
+          if (ReorderFunctionsUserSet.contains(Name))
+            return true;
         for (const StringRef Name : Function.getNames())
           if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
             if (ReorderFunctionsLTOCommonSet.contains(*LTOCommonName))
