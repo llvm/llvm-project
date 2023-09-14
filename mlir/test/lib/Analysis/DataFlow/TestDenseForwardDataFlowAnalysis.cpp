@@ -17,6 +17,8 @@
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
 using namespace mlir;
@@ -133,15 +135,19 @@ void LastModifiedAnalysis::visitRegionBranchControlFlowTransfer(
     RegionBranchOpInterface branch, std::optional<unsigned> regionFrom,
     std::optional<unsigned> regionTo, const LastModification &before,
     LastModification *after) {
-  auto testStoreWithARegion =
-      dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
-  if (testStoreWithARegion &&
-      ((!regionTo && !testStoreWithARegion.getStoreBeforeRegion()) ||
-       (!regionFrom && testStoreWithARegion.getStoreBeforeRegion()))) {
-    return visitOperation(branch, before, after);
-  }
-  AbstractDenseForwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
-      branch, regionFrom, regionTo, before, after);
+  auto defaultHandling = [&]() {
+    AbstractDenseForwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
+        branch, regionFrom, regionTo, before, after);
+  };
+  TypeSwitch<Operation *>(branch.getOperation())
+      .Case<::test::TestStoreWithARegion, ::test::TestStoreWithALoopRegion>(
+          [=](auto storeWithRegion) {
+            if ((!regionTo && !storeWithRegion.getStoreBeforeRegion()) ||
+                (!regionFrom && storeWithRegion.getStoreBeforeRegion()))
+              visitOperation(branch, before, after);
+            defaultHandling();
+          })
+      .Default([=](auto) { defaultHandling(); });
 }
 
 namespace {
