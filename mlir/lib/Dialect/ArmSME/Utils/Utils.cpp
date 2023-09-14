@@ -17,8 +17,6 @@
 using namespace mlir;
 using namespace mlir::arm_sme;
 
-static constexpr unsigned MinStreamingVectorLengthInBits = 128;
-
 unsigned mlir::arm_sme::getSMETileSliceMinNumElts(Type type) {
   assert(isValidSMETileElementType(type) && "invalid tile type!");
   return MinStreamingVectorLengthInBits / type.getIntOrFloatBitWidth();
