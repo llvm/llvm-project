@@ -431,6 +431,11 @@ TEST(ToolChainTest, GetTargetAndMode) {
   EXPECT_TRUE(Res.TargetIsValid);
 
   Res = ToolChain::getTargetAndModeFromProgramName(
+      "x86_64-unknown-freebsd13.2-clang-c++");
+  EXPECT_TRUE(Res.TargetPrefix == "x86_64-unknown-freebsd13.2");
+  EXPECT_TRUE(Res.TargetIsValid);
+
+  Res = ToolChain::getTargetAndModeFromProgramName(
       "x86_64-linux-gnu-clang-c++-tot");
   EXPECT_TRUE(Res.TargetPrefix == "x86_64-linux-gnu");
   EXPECT_TRUE(Res.ModeSuffix == "clang-c++");

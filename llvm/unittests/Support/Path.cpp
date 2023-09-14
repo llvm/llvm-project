@@ -1696,6 +1696,40 @@ TEST(Support, ReplacePathPrefix) {
   EXPECT_EQ(Path, "C:\\old/foo\\bar");
 }
 
+TEST(Support, FindProgramName) {
+  StringRef WindowsProgName =
+      path::program_name("C:\\Test\\foo.exe", path::Style::windows);
+  EXPECT_EQ(WindowsProgName, "foo");
+
+  StringRef WindowsProgNameManyDots = path::program_name(
+      "C:\\Test.7\\x86_64-freebsd14.0-clang.exe", path::Style::windows);
+  EXPECT_EQ(WindowsProgNameManyDots, "x86_64-freebsd14.0-clang");
+
+  StringRef PosixProgName =
+      path::program_name("/var/empty/clang.exe", path::Style::posix);
+  EXPECT_EQ(PosixProgName, "clang");
+
+  StringRef PosixProgNameManyDotsExe = path::program_name(
+      "/llvm-test16.4/x86_64-portbld-freebsd13.2-llvm-ar.exe",
+      path::Style::posix);
+  EXPECT_EQ(PosixProgNameManyDotsExe, "x86_64-portbld-freebsd13.2-llvm-ar");
+
+  StringRef PosixProgNameManyDots = path::program_name(
+      "/llvm-test16.4/x86_64-portbld-freebsd13.2-llvm-ar", path::Style::posix);
+  EXPECT_EQ(PosixProgNameManyDots, "x86_64-portbld-freebsd13.2-llvm-ar");
+
+  StringRef PosixProgNameSh =
+      path::program_name("/llvm-test16.4/x86_64-portbld-freebsd13.2-llvm-ar.sh",
+                         path::Style::posix);
+  EXPECT_EQ(PosixProgNameSh, "x86_64-portbld-freebsd13.2-llvm-ar.sh");
+
+  // TODO: determine if this is correct. What happens on windows with an executable
+  // named ".exe"?
+  StringRef OnlyExe =
+      path::program_name("/var/empty/.exe", path::Style::posix);
+  EXPECT_EQ(OnlyExe, "");
+}
+
 TEST_F(FileSystemTest, OpenFileForRead) {
   // Create a temp file.
   int FileDescriptor;

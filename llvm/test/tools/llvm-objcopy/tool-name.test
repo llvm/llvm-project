@@ -5,11 +5,11 @@
 # RUN: mkdir %t
 
 # RUN: ln -s llvm-objcopy %t/llvm-objcopy-11.exe
-# RUN: ln -s llvm-objcopy %t/powerpc64-unknown-freebsd13-objcopy
+# RUN: ln -s llvm-objcopy %t/powerpc64-unknown-freebsd13.0-objcopy
 
 # RUN: llvm-objcopy --help | FileCheck --check-prefix=OBJCOPY %s
 # RUN: %t/llvm-objcopy-11.exe --help | FileCheck --check-prefix=OBJCOPY %s
-# RUN: %t/powerpc64-unknown-freebsd13-objcopy --help | FileCheck --check-prefix=OBJCOPY %s
+# RUN: %t/powerpc64-unknown-freebsd13.0-objcopy --help | FileCheck --check-prefix=OBJCOPY %s
 
 # OBJCOPY: OVERVIEW: llvm-objcopy tool
 
