@@ -4725,7 +4725,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
   // aren't modeled as reading it.
-  if (Mode.FP32Denormals != DenormalMode::getIEEE())
+  if (Mode.FP32Denormals == DenormalMode::getPreserveSign())
     toggleSPDenormMode(true, B, ST, Mode);
 
   auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
@@ -4737,7 +4737,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   // FIXME: This mishandles dynamic denormal mode. We need to query the
   // current mode and restore the original.
-  if (Mode.FP32Denormals != DenormalMode::getIEEE())
+  if (Mode.FP32Denormals == DenormalMode::getPreserveSign())
     toggleSPDenormMode(false, B, ST, Mode);
 
   auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32})
