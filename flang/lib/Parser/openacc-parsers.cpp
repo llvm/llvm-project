@@ -255,8 +255,7 @@ TYPE_PARSER(startAccLine >>
 
 TYPE_PARSER(construct<OpenACCCombinedConstruct>(
     sourced(Parser<AccBeginCombinedDirective>{} / endAccLine),
-    withMessage("A DO loop must follow the combined construct"_err_en_US,
-        Parser<DoConstruct>{}),
+    maybe(Parser<DoConstruct>{}),
     maybe(Parser<AccEndCombinedDirective>{} / endAccLine)))
 
 } // namespace Fortran::parser

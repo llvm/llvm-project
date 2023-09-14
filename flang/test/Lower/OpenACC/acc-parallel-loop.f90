@@ -803,4 +803,11 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
+  !$acc parallel loop
+  do 10 i=0, n
+  10 continue
+! CHECK: acc.parallel
+! CHECK: acc.loop
+! CHECK: fir.do_loop
+
 end subroutine acc_parallel_loop
