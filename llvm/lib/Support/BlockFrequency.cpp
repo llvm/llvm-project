@@ -12,6 +12,7 @@
 
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -35,4 +36,12 @@ BlockFrequency BlockFrequency::operator/(BranchProbability Prob) const {
   BlockFrequency Freq(Frequency);
   Freq /= Prob;
   return Freq;
+}
+
+std::optional<BlockFrequency> BlockFrequency::mul(uint64_t Factor) const {
+  bool Overflow;
+  uint64_t ResultFrequency = SaturatingMultiply(Frequency, Factor, &Overflow);
+  if (Overflow)
+    return {};
+  return BlockFrequency(ResultFrequency);
 }
