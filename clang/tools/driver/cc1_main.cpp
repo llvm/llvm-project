@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -52,6 +53,9 @@
 
 using namespace clang;
 using namespace llvm::opt;
+
+// Initialize MC Target option flags (for -mllvm)
+static llvm::mc::RegisterMCTargetOptionsFlags MOF;
 
 //===----------------------------------------------------------------------===//
 // Main driver
