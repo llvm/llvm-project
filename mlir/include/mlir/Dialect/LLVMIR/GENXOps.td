@@ -410,6 +410,32 @@ def GENX_MatrixLoadOp : GENX_Op<"matrix.load">,
   let hasVerifier = 1;
 }
 
+def GENX_MatrixStoreOp : GENX_Op<"matrix.store">,
+  Arguments<(ins Arg<LLVM_AnyPointer,"", [MemWrite]>:$ptr, GENX_AnyJointMatrix:$val, 
+             Index:$stride, MatrixLayoutAttr:$layout, ScopeAttr:$scope,
+             OptionalAttr<MemoryAccessAttr>:$memory_access)> {
+  let summary = "Store a matrix through a pointer";
+
+  string baseDescription = [{
+    The `genx.matrix.store` operation stores the joint matrix value $val at the memory
+    location specified by the pointer argument $ptr. The $stride argument specifies 
+    the number of elements in memory between consecutive rows (for the row major layout) 
+    and columns (for the column major layout) in the result. The matrix elements stored
+    to memory are arranged according to the specified $layout. The $scope indicates the 
+    synchronization scope for operations on the matrix.
+  }];
+
+  string llvmBuilder = [{
+    createMatrixStore(builder, $ptr, $val, $stride, $layout, $scope, $memory_access);
+  }];
+
+  let assemblyFormat = [{
+    $scope $layout operands attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = 1;  
+}
+
 def GENX_MatrixInitOp : GENX_Op<"matrix.init">,
   Arguments<(ins GENX_AnyJointMatrix:$mat, IntegerOrFloatType:$val, ScopeAttr:$scope)> {
   let summary = "Initialize a joint matrix";
