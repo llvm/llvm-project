@@ -39,6 +39,16 @@ cc_test(
 )
 
 cc_test(
+    name = "expected_test",
+    srcs = ["expected_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_expected",
+        "//libc:libc_root",
+        "//libc/test/UnitTest:LibcUnitTest",
+    ],
+)
+
+cc_test(
     name = "integer_sequence_test",
     srcs = ["integer_sequence_test.cpp"],
     deps = [
