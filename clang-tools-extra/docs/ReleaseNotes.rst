@@ -48,6 +48,9 @@ Major New Features
 Improvements to clangd
 ----------------------
 
+- Introduced exmperimental support for C++20 Modules. The experimental support can
+  be enabled by `-experimental-modules-support` option.
+
 Inlay hints
 ^^^^^^^^^^^
 
