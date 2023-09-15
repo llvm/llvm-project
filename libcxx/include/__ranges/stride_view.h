@@ -25,7 +25,6 @@
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
-#include <__iterator/reverse_iterator.h>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
@@ -69,8 +68,6 @@ class stride_view : public view_interface<stride_view<_View>> {
 
   template <bool _Const>
   class __iterator;
-  template <bool _Const>
-  class __sentinel;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit stride_view(_View __base, range_difference_t<_View> __stride)
@@ -84,16 +81,16 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto stride() { return __stride_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_View> stride() const noexcept { return __stride_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size()
-    requires ranges::sized_range<_View>
+    requires sized_range<_View>
   {
     return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
-    requires ranges::sized_range<const _View>
+    requires sized_range<const _View>
   {
     return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
   }
@@ -105,7 +102,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
-    requires ranges::range<const _View>
+    requires range<const _View>
   {
     return __iterator<true>{*this, ranges::begin(__base_)};
   }
@@ -203,8 +200,8 @@ public:
   = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
-    requires _Const && std::convertible_to<ranges::iterator_t<_View>, ranges::iterator_t<_Base>> &&
-                 std::convertible_to<ranges::sentinel_t<_View>, ranges::sentinel_t<_Base>>
+    requires _Const && std::convertible_to<ranges::iterator_t<_View>, iterator_t<_Base>> &&
+                 std::convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
       : __current_(std::move(__i.__current_)),
         __end_(std::move(__i.__end_)),
         __stride_(__i.__stride_),
@@ -380,25 +377,6 @@ public:
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
 }; // class stride_view::__iterator
-
-template <input_range _View>
-  requires view<_View>
-template <bool _Const>
-class stride_view<_View>::__sentinel {
-public:
-  sentinel_t<_View> __end_ = sentinel_t<_View>();
-
-  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(stride_view<_View>& __parent)
-      : __end_(ranges::end(__parent.__base_)) {}
-
-  _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_View> base() const { return __end_; }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(__iterator<true> const& __x, __sentinel const& __y) {
-    return __x.__current_ == __y.__end_;
-  }
-}; // class stride_view::__sentinel
 
 template <class _Range>
 stride_view(_Range&&) -> stride_view<views::all_t<_Range>>;
