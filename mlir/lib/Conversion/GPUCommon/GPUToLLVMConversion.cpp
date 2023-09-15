@@ -791,13 +791,18 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   MemRefType memRefType = allocOp.getType();
 
   if (failed(areAllLLVMTypes(allocOp, adaptor.getOperands(), rewriter)) ||
-      !isConvertibleAndHasIdentityMaps(memRefType) ||
-      failed(isAsyncWithOneDependency(rewriter, allocOp)))
+      !isConvertibleAndHasIdentityMaps(memRefType))
     return failure();
 
   auto loc = allocOp.getLoc();
 
   bool isShared = allocOp.getHostShared();
+
+  if (isShared && allocOp.getAsyncToken())
+    return rewriter.notifyMatchFailure(
+        allocOp, "Host Shared allocation cannot be done async");
+  else if (!isShared && failed(isAsyncWithOneDependency(rewriter, allocOp)))
+    return failure();
 
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
