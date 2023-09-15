@@ -33,9 +33,9 @@ static constexpr OptionEnumValueElement g_watch_type[] = {
         "Watch for modifications",
     },
     {
-        OptionGroupWatchpoint::eWatchReadModify,
+        OptionGroupWatchpoint::eWatchReadWrite,
         "read_write",
-        "Watch for read/modify",
+        "Watch for read/write",
     },
 };
 

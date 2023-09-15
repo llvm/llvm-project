@@ -194,7 +194,7 @@ bool Watchpoint::IsWatchVariable() const { return m_is_watch_variable; }
 void Watchpoint::SetWatchVariable(bool val) { m_is_watch_variable = val; }
 
 bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
-  ConstString watch_name("$__lldb__watch_value");
+  ConstString g_watch_name("$__lldb__watch_value");
   m_old_value_sp = m_new_value_sp;
   Address watch_address(GetLoadAddress());
   if (!m_type.IsValid()) {
@@ -206,29 +206,35 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
     return false;
   }
   m_new_value_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), watch_name.GetStringRef(),
+      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
       watch_address, m_type);
-  m_new_value_sp = m_new_value_sp->CreateConstantValue(watch_name);
+  m_new_value_sp = m_new_value_sp->CreateConstantValue(g_watch_name);
   return (m_new_value_sp && m_new_value_sp->GetError().Success());
 }
 
 bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
-  if (!m_watch_modify)
+  if (!m_watch_modify || m_watch_read)
     return true;
   if (!m_type.IsValid())
     return true;
 
-  ConstString watch_name("$__lldb__watch_value");
+  ConstString g_watch_name("$__lldb__watch_value");
   Address watch_address(GetLoadAddress());
   ValueObjectSP newest_valueobj_sp = ValueObjectMemory::Create(
-      exe_ctx.GetBestExecutionContextScope(), watch_name.GetStringRef(),
+      exe_ctx.GetBestExecutionContextScope(), g_watch_name.GetStringRef(),
       watch_address, m_type);
-  newest_valueobj_sp = newest_valueobj_sp->CreateConstantValue(watch_name);
+  newest_valueobj_sp = newest_valueobj_sp->CreateConstantValue(g_watch_name);
+  Status error;
+
   DataExtractor new_data;
   DataExtractor old_data;
-  Status error;
+
   newest_valueobj_sp->GetData(new_data, error);
+  if (error.Fail())
+    return true;
   m_new_value_sp->GetData(old_data, error);
+  if (error.Fail())
+    return true;
 
   if (new_data.GetByteSize() != old_data.GetByteSize() ||
       new_data.GetByteSize() == 0)
@@ -237,8 +243,8 @@ bool Watchpoint::WatchedValueReportable(const ExecutionContext &exe_ctx) {
   if (memcmp(new_data.GetDataStart(), old_data.GetDataStart(),
              old_data.GetByteSize()) == 0)
     return false; // Value has not changed, user requested modify watchpoint
-  else
-    return true;
+
+  return true;
 }
 
 // RETURNS - true if we should stop at this breakpoint, false if we

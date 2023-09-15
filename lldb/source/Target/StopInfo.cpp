@@ -985,9 +985,8 @@ protected:
 
         // Don't stop if the watched region value is unmodified, and
         // this is a Modify-type watchpoint.
-        if (m_should_stop && !wp_sp->WatchedValueReportable(exe_ctx)) {
+        if (m_should_stop && !wp_sp->WatchedValueReportable(exe_ctx))
           m_should_stop = false;
-        }
 
         // Finally, if we are going to stop, print out the new & old values:
         if (m_should_stop) {

@@ -1326,23 +1326,35 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
                                           SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, size, read, write, error);
 
+  SBWatchpointOptions options;
+  options.SetWatchpointTypeRead(read);
+  options.SetWatchpointTypeModify(write);
+  return WatchpointCreateByAddress(addr, size, options, error);
+}
+
+lldb::SBWatchpoint
+SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
+                                    SBWatchpointOptions options,
+                                    SBError &error) {
+  LLDB_INSTRUMENT_VA(this, addr, size, options, error);
+
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
   TargetSP target_sp(GetSP());
-  if (target_sp && (read || write) && addr != LLDB_INVALID_ADDRESS &&
-      size > 0) {
+  uint32_t watch_type = 0;
+  if (options.GetWatchpointTypeRead())
+    watch_type |= LLDB_WATCH_TYPE_READ;
+  if (options.GetWatchpointTypeWrite())
+    watch_type |= LLDB_WATCH_TYPE_WRITE;
+  if (options.GetWatchpointTypeModify())
+    watch_type |= LLDB_WATCH_TYPE_MODIFY;
+  if (watch_type == 0) {
+    error.SetErrorString("Can't create a watchpoint that is neither read nor "
+                         "write nor modify.");
+    return sb_watchpoint;
+  }
+  if (target_sp && addr != LLDB_INVALID_ADDRESS && size > 0) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    uint32_t watch_type = 0;
-    if (read)
-      watch_type |= LLDB_WATCH_TYPE_READ;
-    if (write)
-      watch_type |= LLDB_WATCH_TYPE_MODIFY;
-    if (watch_type == 0) {
-      error.SetErrorString(
-          "Can't create a watchpoint that is neither read nor write.");
-      return sb_watchpoint;
-    }
-
     // Target::CreateWatchpoint() is thread safe.
     Status cw_error;
     // This API doesn't take in a type, so we can't figure out what it is.

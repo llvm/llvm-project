@@ -955,8 +955,8 @@ protected:
     case OptionGroupWatchpoint::eWatchRead:
       watch_type |= LLDB_WATCH_TYPE_READ;
       break;
-    case OptionGroupWatchpoint::eWatchReadModify:
-      watch_type |= LLDB_WATCH_TYPE_READ | LLDB_WATCH_TYPE_MODIFY;
+    case OptionGroupWatchpoint::eWatchReadWrite:
+      watch_type |= LLDB_WATCH_TYPE_READ | LLDB_WATCH_TYPE_WRITE;
       break;
     case OptionGroupWatchpoint::eWatchWrite:
       watch_type |= LLDB_WATCH_TYPE_WRITE;

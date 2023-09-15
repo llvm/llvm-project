@@ -25,3 +25,15 @@ class ModifyWatchpointTestCase(TestBase):
         process.Continue()
         frame = process.GetSelectedThread().GetFrameAtIndex(0)
         self.assertEqual(frame.locals["value"][0].GetValueAsUnsigned(), 10)
+
+        process.Continue()
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertEqual(frame.locals["value"][0].GetValueAsUnsigned(), 5)
+
+        process.Continue()
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertEqual(frame.locals["value"][0].GetValueAsUnsigned(), 7)
+
+        process.Continue()
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertEqual(frame.locals["value"][0].GetValueAsUnsigned(), 9)
