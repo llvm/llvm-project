@@ -3394,7 +3394,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 /// "target-features" that determine the TargetMachine are per-function and can
 /// be overrided using __attribute__((target("OPTIONS"))).
 static std::unique_ptr<TargetMachine>
-createTargetMachine(Function *F, CodeGenOpt::Level OptLevel) {
+createTargetMachine(Function *F, CodeGenOptLevel OptLevel) {
   Module *M = F->getParent();
 
   StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
@@ -3420,7 +3420,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
 
   // Assume the user requests the most aggressive unrolling, even if the rest of
   // the code is optimized using a lower setting.
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Aggressive;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::Aggressive;
   std::unique_ptr<TargetMachine> TM = createTargetMachine(F, OptLevel);
 
   FunctionAnalysisManager FAM;
@@ -3453,7 +3453,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   TargetTransformInfo::UnrollingPreferences UP =
       gatherUnrollingPreferences(L, SE, TTI,
                                  /*BlockFrequencyInfo=*/nullptr,
-                                 /*ProfileSummaryInfo=*/nullptr, ORE, OptLevel,
+                                 /*ProfileSummaryInfo=*/nullptr, ORE, static_cast<int>(OptLevel),
                                  /*UserThreshold=*/std::nullopt,
                                  /*UserCount=*/std::nullopt,
                                  /*UserAllowPartial=*/true,

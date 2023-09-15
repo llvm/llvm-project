@@ -222,6 +222,11 @@ mlir:scf:
 
 mlir:spirv:
   - mlir/**/SPIRV/**
+  - mlir/**/SPIRVTo*/**
+  - mlir/**/*ToSPIRV/**
+  - mlir/tools/mlir-spirv-cpu-runner/**
+  - mlir/tools/mlir-vulkan-runner/**
+  - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
 
 mlir:shape:
   - mlir/**/Shape/**
@@ -542,12 +547,12 @@ llvm:SelectionDAG:
   - llvm/include/llvm/CodeGen/ISDOpcodes.h
 
 backend:DirectX:
-  - llvm/lib/Target/DirectX/**
-  - llvm/test/CodeGen/DirectX/**
-  - llvm/tools/dxil-dis
-  - llvm/test/tools/dxil-dis
-  - clang/lib/Basic/Targets/DirectX*
-  - llvm/include/llvm/IR/IntrinsicsDirectX.td
+  - '**/*DirectX*'
+  - '**/*DXIL*'
+  - '**/*dxil*'
+  - '**/*DirectX*/**'
+  - '**/*DXIL*/**'
+  - '**/*dxil*/**'
 
 mlgo:
   - llvm/lib/Analysis/ML*

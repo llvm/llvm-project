@@ -206,8 +206,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Doubly compressed sparse column storage with specific bitwidths.
     #DCSC = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed", "compressed" ],
-      dimToLvl = affine_map<(i, j) -> (j, i)>,
+      map = (d0, d1) -> (d1 : compressed, d0 : compressed),
       posWidth = 32,
       crdWidth = 8
     }>

@@ -31,9 +31,19 @@ void populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                 RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert WMMA ops from GPU dialect to SPIRV,
+/// using the KHR Cooperative Matrix extension.
+void populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
+    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
+
+/// Collect a set of patterns to convert WMMA ops from GPU dialect to SPIRV,
 /// using the NV Cooperative Matrix extension.
 void populateGpuWMMAToSPIRVCoopMatrixNVConversionPatterns(
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
+
+/// Returns a KHR cooperative matrix type corresponding to the MMAMatrixType
+/// `type`.
+spirv::CooperativeMatrixType
+convertMMAToSPIRVCoopMatrixType(gpu::MMAMatrixType type);
 
 /// Returns an NV cooperative matrix type corresponding to the MMAMatrixType
 /// `type`.

@@ -20,7 +20,7 @@ namespace llvm {
 class MipsSEDAGToDAGISel : public MipsDAGToDAGISel {
 
 public:
-  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOptLevel OL)
       : MipsDAGToDAGISel(TM, OL) {}
 
 private:
@@ -140,7 +140,7 @@ private:
 };
 
 FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+                                  CodeGenOptLevel OptLevel);
 }
 
 #endif

@@ -1959,7 +1959,8 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                 Attribute target, StringAttr object) {
+                                 Attribute target, CompilationTarget format,
+                                 StringAttr object, DictionaryAttr properties) {
   if (!target)
     return emitError() << "the target attribute cannot be null";
   if (target.hasPromiseOrImplementsInterface<TargetAttrInterface>())
@@ -1967,6 +1968,40 @@ LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return emitError() << "the target attribute must implement or promise the "
                         "`gpu::TargetAttrInterface`";
 }
+
+namespace {
+LogicalResult parseObject(AsmParser &odsParser, CompilationTarget &format,
+                          StringAttr &object) {
+  std::optional<CompilationTarget> formatResult;
+  StringRef enumKeyword;
+  auto loc = odsParser.getCurrentLocation();
+  if (failed(odsParser.parseOptionalKeyword(&enumKeyword)))
+    formatResult = CompilationTarget::Fatbin;
+  if (!formatResult &&
+      (formatResult =
+           gpu::symbolizeEnum<gpu::CompilationTarget>(enumKeyword)) &&
+      odsParser.parseEqual())
+    return odsParser.emitError(loc, "expected an equal sign");
+  if (!formatResult)
+    return odsParser.emitError(loc, "expected keyword for GPU object format");
+  FailureOr<StringAttr> objectResult =
+      FieldParser<StringAttr>::parse(odsParser);
+  if (failed(objectResult))
+    return odsParser.emitError(odsParser.getCurrentLocation(),
+                               "failed to parse GPU_ObjectAttr parameter "
+                               "'object' which is to be a `StringAttr`");
+  format = *formatResult;
+  object = *objectResult;
+  return success();
+}
+
+void printObject(AsmPrinter &odsParser, CompilationTarget format,
+                 StringAttr object) {
+  if (format != CompilationTarget::Fatbin)
+    odsParser << stringifyEnum(format) << " = ";
+  odsParser << object;
+}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // GPU select object attribute
@@ -2020,6 +2055,14 @@ SymbolTable *TargetOptions::getSymbolTable() const {
   return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
 }
 
+CompilationTarget TargetOptions::getCompilationTarget() const {
+  return compilationTarget;
+}
+
+CompilationTarget TargetOptions::getDefaultCompilationTarget() {
+  return CompilationTarget::Fatbin;
+}
+
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
 TargetOptions::tokenizeCmdOptions() const {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
@@ -2041,10 +2084,6 @@ TargetOptions::tokenizeCmdOptions() const {
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
-}
-
-TargetOptions::CompilationTarget TargetOptions::getCompilationTarget() const {
-  return compilationTarget;
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

@@ -127,6 +127,16 @@ module attributes {gpu.container_module} {
 
   gpu.binary @binary_3 <#gpu.select_object<1>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
 
+  gpu.binary @binary_4 [#gpu.object<#nvvm.target, bin = "">,
+                        #gpu.object<#nvvm.target, assembly = "">,
+                        #gpu.object<#nvvm.target, offload = "">,
+                        #gpu.object<#nvvm.target, properties = { O = 3 : i32 }, offload = "">
+                        ]
+
+  // Check that fatbin gets ellided as it's the default format.
+  // CHECK: gpu.binary @binary_5 [#gpu.object<#nvvm.target, properties = {O = 3 : i32}, "">]
+  gpu.binary @binary_5 [#gpu.object<#nvvm.target, properties = {O = 3 : i32}, fatbin = "">]
+
   func.func private @two_value_generator() -> (f32, memref<?xf32, 1>)
 
   func.func @foo() {

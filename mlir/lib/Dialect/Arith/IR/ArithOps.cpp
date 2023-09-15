@@ -927,11 +927,11 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::MaximumFOp::fold(FoldAdaptor adaptor) {
-  // maxf(x,x) -> x
+  // maximumf(x,x) -> x
   if (getLhs() == getRhs())
     return getRhs();
 
-  // maxf(x, -inf) -> x
+  // maximumf(x, -inf) -> x
   if (matchPattern(adaptor.getRhs(), m_NegInfFloat()))
     return getLhs();
 
@@ -939,6 +939,25 @@ OpFoldResult arith::MaximumFOp::fold(FoldAdaptor adaptor) {
       adaptor.getOperands(),
       [](const APFloat &a, const APFloat &b) { return llvm::maximum(a, b); });
 }
+
+//===----------------------------------------------------------------------===//
+// MaxNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MaxNumFOp::fold(FoldAdaptor adaptor) {
+  // maxnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // maxnumf(x, -inf) -> x
+  if (matchPattern(adaptor.getRhs(), m_NegInfFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(
+      adaptor.getOperands(),
+      [](const APFloat &a, const APFloat &b) { return llvm::maximum(a, b); });
+}
+
 
 //===----------------------------------------------------------------------===//
 // MaxSIOp
@@ -995,17 +1014,35 @@ OpFoldResult MaxUIOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::MinimumFOp::fold(FoldAdaptor adaptor) {
-  // minf(x,x) -> x
+  // minimumf(x,x) -> x
   if (getLhs() == getRhs())
     return getRhs();
 
-  // minf(x, +inf) -> x
+  // minimumf(x, +inf) -> x
   if (matchPattern(adaptor.getRhs(), m_PosInfFloat()))
     return getLhs();
 
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
       [](const APFloat &a, const APFloat &b) { return llvm::minimum(a, b); });
+}
+
+//===----------------------------------------------------------------------===//
+// MinNumFOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::MinNumFOp::fold(FoldAdaptor adaptor) {
+  // minnumf(x,x) -> x
+  if (getLhs() == getRhs())
+    return getRhs();
+
+  // minnumf(x, +inf) -> x
+  if (matchPattern(adaptor.getRhs(), m_PosInfFloat()))
+    return getLhs();
+
+  return constFoldBinaryOp<FloatAttr>(
+      adaptor.getOperands(),
+      [](const APFloat &a, const APFloat &b) { return llvm::minnum(a, b); });
 }
 
 //===----------------------------------------------------------------------===//
