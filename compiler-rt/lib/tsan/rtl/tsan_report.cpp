@@ -106,10 +106,10 @@ void PrintStack(const ReportStack *ent) {
   SymbolizedStack *frame = ent->frames;
   for (int i = 0; frame && frame->info.address; frame = frame->next, i++) {
     InternalScopedString res;
-    StackTracePrinter::GetOrInit()->RenderFrame(
-        &res, common_flags()->stack_trace_format, i, frame->info.address,
-        &frame->info, common_flags()->symbolize_vs_style,
-        common_flags()->strip_path_prefix);
+    RenderFrame(&res, common_flags()->stack_trace_format, i,
+                frame->info.address, &frame->info,
+                common_flags()->symbolize_vs_style,
+                common_flags()->strip_path_prefix);
     Printf("%s\n", res.data());
   }
   Printf("\n");
