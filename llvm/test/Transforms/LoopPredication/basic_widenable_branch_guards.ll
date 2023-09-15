@@ -2149,8 +2149,12 @@ exit:                                             ; preds = %guarded, %entry
 define i32 @wc_deep_in_expression_tree(i1 %cond0, i1 %cond1, i32 %limit) {
 ; CHECK-LABEL: @wc_deep_in_expression_tree(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LIMIT:%.*]], i32 101)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 101, [[UMIN]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[TMP0]]
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[AND0:%.*]] = and i1 [[WC]], [[COND0:%.*]]
+; CHECK-NEXT:    [[WIDE_CHECK:%.*]] = and i1 [[TMP1]], [[WC]]
+; CHECK-NEXT:    [[AND0:%.*]] = and i1 [[WIDE_CHECK]], [[COND0:%.*]]
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[AND0]], [[COND1:%.*]]
 ; CHECK-NEXT:    br i1 [[AND1]], label [[LOOP_PREHEADER:%.*]], label [[DEOPT:%.*]]
 ; CHECK:       loop.preheader:
@@ -2158,10 +2162,10 @@ define i32 @wc_deep_in_expression_tree(i1 %cond0, i1 %cond1, i32 %limit) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[GUARD_COND:%.*]] = icmp sgt i32 [[IV]], 100
-; CHECK-NEXT:    br i1 [[GUARD_COND]], label [[DEOPT_LOOPEXIT:%.*]], label [[GUARDED]]
+; CHECK-NEXT:    br i1 false, label [[DEOPT_LOOPEXIT:%.*]], label [[GUARDED]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ult i32 [[IV]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ult i32 [[IV]], [[LIMIT]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       deopt.loopexit:
 ; CHECK-NEXT:    br label [[DEOPT]]

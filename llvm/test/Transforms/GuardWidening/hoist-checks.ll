@@ -11,14 +11,16 @@ declare i1 @llvm.experimental.widenable.condition()
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  bb0:
+; CHECK-NEXT:    [[GW_FREEZE:%.*]] = freeze i1 poison
 ; CHECK-NEXT:    [[CALL0:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[AND0:%.*]] = and i1 false, [[CALL0]]
+; CHECK-NEXT:    [[WIDE_CHECK:%.*]] = and i1 [[GW_FREEZE]], [[CALL0]]
+; CHECK-NEXT:    [[AND0:%.*]] = and i1 false, [[WIDE_CHECK]]
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 false, [[AND0]]
 ; CHECK-NEXT:    br i1 [[AND1]], label [[BB1:%.*]], label [[DEOPT:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[AND2:%.*]] = and i1 poison, [[CALL1]]
-; CHECK-NEXT:    br i1 [[AND2]], label [[UNREACH:%.*]], label [[DEOPT]]
+; CHECK-NEXT:    br i1 true, label [[UNREACH:%.*]], label [[DEOPT]]
 ; CHECK:       unreach:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       deopt:

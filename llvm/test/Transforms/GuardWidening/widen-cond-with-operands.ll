@@ -12,9 +12,9 @@ define void @foo() {
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[WC2:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[ZERO]], 0
+; CHECK-NEXT:    [[C1:%.*]] = and i1 [[CHECK]], [[WC1]]
 ; CHECK-NEXT:    [[C2:%.*]] = and i1 [[CHECK]], [[WC2]]
-; CHECK-NEXT:    [[C1:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
-; CHECK-NEXT:    br i1 [[C1]], label [[BB6:%.*]], label [[BB9:%.*]]
+; CHECK-NEXT:    br i1 [[WIDE_CHK]], label [[BB6:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    br i1 true, label [[BB7:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb7:
