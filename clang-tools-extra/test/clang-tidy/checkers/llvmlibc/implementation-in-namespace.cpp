@@ -3,18 +3,18 @@
 #define MACRO_A "defining macros outside namespace is valid"
 
 class ClassB;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be declared within the '__llvm_libc' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be declared within a namespace starting with '__llvm_libc'
 struct StructC {};
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration must be declared within the '__llvm_libc' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration must be declared within a namespace starting with '__llvm_libc'
 char *VarD = MACRO_A;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be declared within the '__llvm_libc' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be declared within a namespace starting with '__llvm_libc'
 typedef int typeE;
-// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: declaration must be declared within the '__llvm_libc' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: declaration must be declared within a namespace starting with '__llvm_libc'
 void funcF() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: declaration must be declared within the '__llvm_libc' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: declaration must be declared within a namespace starting with '__llvm_libc'
 
 namespace namespaceG {
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: '__llvm_libc' needs to be the outermost namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the outermost namespace should be the 'LIBC_NAMESPACE' macro
 namespace __llvm_libc{
 namespace namespaceH {
 class ClassB;
@@ -26,9 +26,20 @@ typedef int typeE;
 void funcF() {}
 } // namespace namespaceG
 
-// Wrapped in correct namespace.
-namespace __llvm_libc {
-// Namespaces within __llvim_libc namespace allowed.
+// Wrapped in macro namespace but with an incorrect name
+#define LIBC_NAMESPACE custom_namespace
+namespace LIBC_NAMESPACE {
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the outermost namespace should start with '__llvm_libc'
+namespace namespaceH {
+class ClassB;
+} // namespace namespaceH
+} // namespace LIBC_NAMESPACE
+
+
+// Wrapped in macro namespace with a valid name, LIBC_NAMESPACE starts with '__llvm_libc'
+#undef LIBC_NAMESPACE
+#define LIBC_NAMESPACE __llvm_libc_xyz
+namespace LIBC_NAMESPACE {
 namespace namespaceI {
 class ClassB;
 } // namespace namespaceI
@@ -37,4 +48,4 @@ char *VarD = MACRO_A;
 typedef int typeE;
 void funcF() {}
 extern "C" void extern_funcJ() {}
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
