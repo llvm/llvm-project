@@ -2074,7 +2074,7 @@ struct FormatStyle {
   ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
   ///
-  /// C# and JavaScript interpolated strings are not broken.
+  /// C# interpolated strings are not broken.
   ///
   /// In Verilog:
   /// \code

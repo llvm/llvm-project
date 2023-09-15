@@ -2237,7 +2237,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                            LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
-    // Strings in JSON can not be broken. Breaking strings in JavaScript is
+    // Strings in JSON cannot be broken. Breaking strings in JavaScript is
     // disabled for now.
     if (Style.isJson() || Style.isJavaScript() || !Style.BreakStringLiterals ||
         !AllowBreak) {
