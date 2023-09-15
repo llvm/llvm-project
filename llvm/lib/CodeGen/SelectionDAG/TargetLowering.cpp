@@ -2990,8 +2990,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue NewOp1 = SimplifyMultipleUseDemandedVectorElts(Op1, DemandedElts,
                                                            TLO.DAG, Depth + 1);
     if (NewOp0 || NewOp1) {
-      SDValue NewOp = TLO.DAG.getNode(
-          Opcode, SDLoc(Op), VT, NewOp0 ? NewOp0 : Op0, NewOp1 ? NewOp1 : Op1);
+      SDValue NewOp =
+          TLO.DAG.getNode(Opcode, SDLoc(Op), VT, NewOp0 ? NewOp0 : Op0,
+                          NewOp1 ? NewOp1 : Op1, Op->getFlags());
       return TLO.CombineTo(Op, NewOp);
     }
     return false;
