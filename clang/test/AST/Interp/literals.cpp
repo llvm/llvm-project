@@ -509,36 +509,72 @@ namespace IncDec {
   }
   static_assert(incBool(), "");
 
-  template<typename T, bool Inc>
+  /// FIXME: The diagnostics for pre-inc/dec of pointers doesn't match the
+  /// current interpreter. But they are stil OK.
+  template<typename T, bool Inc, bool Pre>
   constexpr int uninit() {
     T a;
-    if constexpr (Inc)
-      ++a; // ref-note 2{{increment of uninitialized}} \
-           // expected-note 2{{increment of uninitialized}}
-    else
-      --a; // ref-note 2{{decrement of uninitialized}} \
-           // expected-note 2{{decrement of uninitialized}}
+    if constexpr (Inc) {
+      if (Pre)
+        ++a; // ref-note 3{{increment of uninitialized}} \
+             // expected-note 2{{increment of uninitialized}} \
+             // expected-note {{read of uninitialized}}
+      else
+        a++; // ref-note 2{{increment of uninitialized}} \
+             // expected-note 2{{increment of uninitialized}}
+    } else {
+      if (Pre)
+        --a; // ref-note 3{{decrement of uninitialized}} \
+             // expected-note 2{{decrement of uninitialized}} \
+             // expected-note {{read of uninitialized}}
+      else
+        a--; // ref-note 2{{decrement of uninitialized}} \
+             // expected-note 2{{decrement of uninitialized}}
+    }
     return 1;
   }
-  static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to 'uninit<int, true>()'}} \
-                                          // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int, true, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                // ref-note {{in call to 'uninit<int, true, true>()'}} \
+                                                // expected-error {{not an integral constant expression}} \
+                                                // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int, false, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                 // ref-note {{in call to 'uninit<int, false, true>()'}} \
+                                                 // expected-error {{not an integral constant expression}} \
+                                                 // expected-note {{in call to 'uninit()'}}
 
-  static_assert(uninit<int, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                           // ref-note {{in call to 'uninit<int, false>()'}} \
-                                           // expected-error {{not an integral constant expression}} \
-                                           // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, true, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                  // ref-note {{in call to 'uninit<float, true, true>()'}} \
+                                                  // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, false, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                   // ref-note {{in call to 'uninit<float, false, true>()'}} \
+                                                   // expected-error {{not an integral constant expression}} \
+                                                   // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, true, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                   // ref-note {{in call to 'uninit<float, true, false>()'}} \
+                                                   // expected-error {{not an integral constant expression}} \
+                                                   // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<float, false, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                    // ref-note {{in call to 'uninit<float, false, false>()'}} \
+                                                    // expected-error {{not an integral constant expression}} \
+                                                    // expected-note {{in call to 'uninit()'}}
 
-  static_assert(uninit<float, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                            // ref-note {{in call to 'uninit<float, true>()'}} \
-                                            // expected-error {{not an integral constant expression}} \
-                                            // expected-note {{in call to 'uninit()'}}
-
-  static_assert(uninit<float, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                             // ref-note {{in call to 'uninit<float, false>()'}} \
-                                             // expected-error {{not an integral constant expression}} \
-                                             // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, true, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                 // ref-note {{in call to 'uninit<int *, true, true>()'}} \
+                                                 // expected-error {{not an integral constant expression}} \
+                                                 // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, false, true>(), ""); // ref-error {{not an integral constant expression}} \
+                                                  // ref-note {{in call to 'uninit<int *, false, true>()'}} \
+                                                  // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, true, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                  // ref-note {{in call to 'uninit<int *, true, false>()'}} \
+                                                  // expected-error {{not an integral constant expression}} \
+                                                  // expected-note {{in call to 'uninit()'}}
+  static_assert(uninit<int*, false, false>(), ""); // ref-error {{not an integral constant expression}} \
+                                                   // ref-note {{in call to 'uninit<int *, false, false>()'}} \
+                                                   // expected-error {{not an integral constant expression}} \
+                                                   // expected-note {{in call to 'uninit()'}}
 
   constexpr int OverFlow() { // ref-error {{never produces a constant expression}} \
                              // expected-error {{never produces a constant expression}}
@@ -1051,4 +1087,32 @@ namespace PointerCasts {
 
   int array[(intptr_t)(char*)0]; // ref-warning {{variable length array folded to constant array}} \
                                  // expected-warning {{variable length array folded to constant array}}
+}
+
+namespace InvalidDeclRefs {
+  bool b00; // ref-note {{declared here}} \
+            // expected-note {{declared here}}
+  static_assert(b00, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-const variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-const variable}}
+
+  float b01; // ref-note {{declared here}} \
+             // expected-note {{declared here}}
+  static_assert(b01, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-constexpr variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-constexpr variable}}
+
+  extern const int b02; // ref-note {{declared here}} \
+                        // expected-note {{declared here}}
+  static_assert(b02, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{initializer of 'b02' is unknown}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{initializer of 'b02' is unknown}}
+
+  /// FIXME: This should also be diagnosed in the new interpreter.
+  int b03 = 3; // ref-note {{declared here}}
+  static_assert(b03, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-const variable}}
 }

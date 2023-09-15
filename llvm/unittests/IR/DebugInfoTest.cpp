@@ -439,6 +439,19 @@ TEST(IsHeterogeneousDebugTest, V4Module) {
   EXPECT_TRUE(isHeterogeneousDebug(*M));
 }
 
+TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
+  LLVMContext C;
+  std::unique_ptr<BasicBlock> BB(BasicBlock::Create(C, "start"));
+  Module *M = new Module("module", C);
+  IRBuilder<> Builder(BB.get());
+  Function *DbgDeclare = Intrinsic::getDeclaration(M, Intrinsic::dbg_declare);
+  Value *DIV = MetadataAsValue::get(C, (Metadata *)nullptr);
+  SmallVector<Value *, 3> Args = {DIV, DIV, DIV};
+  Builder.CreateCall(DbgDeclare, Args);
+  auto IP = BB->getFirstInsertionPt();
+  Builder.SetInsertPoint(BB.get(), IP);
+}
+
 TEST(AssignmentTrackingTest, InstrMethods) {
   // Test the assignment tracking Instruction methods.
   // This includes:

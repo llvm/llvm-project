@@ -31,7 +31,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Row = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : dense)
 }>
 
 #CSR = #sparse_tensor.encoding<{
@@ -39,8 +39,7 @@
 }>
 
 #DCSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed)
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{

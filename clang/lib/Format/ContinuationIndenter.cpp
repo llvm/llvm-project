@@ -2237,15 +2237,10 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                            LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
-    // Strings in JSON can not be broken.
-    if (Style.isJson() || !Style.BreakStringLiterals || !AllowBreak)
-      return nullptr;
-
-    // Strings in TypeScript types and dictionary keys can not be broken.
-    if (Style.isJavaScript() &&
-        (Current.is(TT_SelectorName) ||
-         State.Line->startsWith(Keywords.kw_type) ||
-         State.Line->startsWith(tok::kw_export, Keywords.kw_type))) {
+    // Strings in JSON cannot be broken. Breaking strings in JavaScript is
+    // disabled for now.
+    if (Style.isJson() || Style.isJavaScript() || !Style.BreakStringLiterals ||
+        !AllowBreak) {
       return nullptr;
     }
 

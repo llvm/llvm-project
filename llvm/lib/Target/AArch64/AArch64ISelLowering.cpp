@@ -15969,7 +15969,7 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     return performVecReduceAddCombineWithUADDLP(N, DAG);
 
   SDValue Op0 = N->getOperand(0);
-  if (N->getValueType(0) != MVT::i32 ||
+  if (N->getValueType(0) != MVT::i32 || Op0.getValueType().isScalableVT() ||
       Op0.getValueType().getVectorElementType() != MVT::i32)
     return SDValue();
 

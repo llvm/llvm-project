@@ -30,7 +30,8 @@ std::unique_ptr<Pass> createBufferDeallocationPass();
 
 /// Creates an instance of the OwnershipBasedBufferDeallocation pass to free all
 /// allocated buffers.
-std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass();
+std::unique_ptr<Pass> createOwnershipBasedBufferDeallocationPass(
+    bool privateFuncDynamicOwnership = false);
 
 /// Creates a pass that optimizes `bufferization.dealloc` operations. For
 /// example, it reduces the number of alias checks needed at runtime using

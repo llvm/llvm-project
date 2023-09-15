@@ -431,6 +431,33 @@ def hlfir_MaxvalOp : hlfir_Op<"maxval", [AttrSizedOperandSegments,
   let hasVerifier = 1;
 }
 
+def hlfir_MinvalOp : hlfir_Op<"minval", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<ArithFastMathInterface>,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "MINVAL transformational intrinsic";
+  let description = [{
+    Minimum value(s) of an array.
+    If DIM is absent, the result is a scalar.
+    If DIM is present, the result is an array of rank n-1, where n is the rank of ARRAY.
+  }];
+
+  let arguments = (ins
+    AnyFortranArrayObject:$array,
+    Optional<AnyIntegerType>:$dim,
+    Optional<AnyFortranLogicalOrI1ArrayObject>:$mask,
+    DefaultValuedAttr<Arith_FastMathAttr,
+                      "::mlir::arith::FastMathFlags::none">:$fastmath
+  );
+
+  let results = (outs AnyFortranValue);
+
+  let assemblyFormat = [{
+    $array (`dim` $dim^)? (`mask` $mask^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ProductOp : hlfir_Op<"product", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {

@@ -510,6 +510,12 @@ llvm:analysis:
   - llvm/test/Analysis/**
   - llvm/unittests/Analysis/**
 
+llvm:adt:
+  - llvm/**/ADT/*
+
+llvm:support:
+  - llvm/**/Support/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
@@ -553,6 +559,13 @@ backend:DirectX:
   - '**/*DirectX*/**'
   - '**/*DXIL*/**'
   - '**/*dxil*/**'
+
+backend:SPIR-V:
+  - clang/lib/Driver/ToolChains/SPIRV.*
+  - llvm/lib/Target/SPIRV/**
+  - llvm/test/CodeGen/SPIRV/**
+  - llvm/test/Frontend/HLSL/**
+  - llvm/docs/SPIRVUsage.rst
 
 mlgo:
   - llvm/lib/Analysis/ML*
