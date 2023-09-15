@@ -218,8 +218,8 @@ function(add_properties_for_swift_modules target reldir)
       set_property(TARGET ${target} APPEND_STRING PROPERTY
                    LINK_FLAGS " -lobjc ")
 
-    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
-    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
+      set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
+      set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
     elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
       string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
       target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
