@@ -50,6 +50,42 @@ namespace i128 {
                                          // ref-note {{outside the range}}
   constexpr int128_t Two = (int128_t)1 << 1ul;
   static_assert(Two == 2, "");
+
+#if __cplusplus >= 201402L
+  template <typename T>
+  constexpr T CastFrom(__int128_t A) {
+    T B = (T)A;
+    return B;
+  }
+  static_assert(CastFrom<char>(12) == 12, "");
+  static_assert(CastFrom<unsigned char>(12) == 12, "");
+  static_assert(CastFrom<long>(12) == 12, "");
+  static_assert(CastFrom<unsigned short>(12) == 12, "");
+  static_assert(CastFrom<int128_t>(12) == 12, "");
+  static_assert(CastFrom<float>(12) == 12, "");
+  static_assert(CastFrom<double>(12) == 12, "");
+  static_assert(CastFrom<long double>(12) == 12, "");
+
+  template <typename T>
+  constexpr __int128 CastTo(T A) {
+    int128_t B = (int128_t)A;
+    return B;
+  }
+  static_assert(CastTo<char>(12) == 12, "");
+  static_assert(CastTo<unsigned char>(12) == 12, "");
+  static_assert(CastTo<long>(12) == 12, "");
+  static_assert(CastTo<unsigned long long>(12) == 12, "");
+  static_assert(CastTo<float>(12) == 12, "");
+  static_assert(CastTo<double>(12) == 12, "");
+  static_assert(CastTo<long double>(12) == 12, "");
+#endif
+
+constexpr int128_t Error = __LDBL_MAX__; // ref-warning {{implicit conversion of out of range value}} \
+                                         // ref-error {{must be initialized by a constant expression}} \
+                                         // ref-note {{is outside the range of representable values of type}} \
+                                         // expected-warning {{implicit conversion of out of range value}} \
+                                         // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{is outside the range of representable values of type}}
 }
 
 constexpr bool b = number;

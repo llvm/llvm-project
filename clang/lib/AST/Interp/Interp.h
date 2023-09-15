@@ -1554,7 +1554,7 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(T(F.isNonZero()));
     return true;
   } else {
-    APSInt Result(std::max(8u, T::bitWidth() + 1),
+    APSInt Result(std::max(8u, T::bitWidth()),
                   /*IsUnsigned=*/!T::isSigned());
     auto Status = F.convertToInteger(Result);
 
