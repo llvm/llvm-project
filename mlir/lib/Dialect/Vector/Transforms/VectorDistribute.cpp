@@ -1582,7 +1582,7 @@ private:
 ///   %1 = "some_def"() : () -> (vector<32xf32>)
 ///   vector_ext.yield %1 : vector<32xf32>
 /// }
-/// %a = vector.extract %0[0] : vector<1xf32>
+/// %a = vector.extract %0[0] : f32 from vector<1xf32>
 /// %r = ("warp.reduction %a")
 /// ```
 struct WarpOpReduction : public OpRewritePattern<WarpExecuteOnLane0Op> {
