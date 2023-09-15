@@ -110,14 +110,12 @@ static void forEachIJPairInXs(
   Value cstep = constantIndex(builder, loc, xPerm.getNumResults() + ny);
   Value iOffset = builder.create<arith::MulIOp>(loc, args[0], cstep);
   Value jOffset = builder.create<arith::MulIOp>(loc, args[1], cstep);
-  for (AffineExpr e : xPerm.getResults()) {
-    unsigned k = e.cast<AffineDimExpr>().getPosition();
-    scf::IfOp ifOp;
-    Value i, j, buffer;
-    Value ck = constantIndex(builder, loc, k);
-    i = builder.create<arith::AddIOp>(loc, ck, iOffset);
-    j = builder.create<arith::AddIOp>(loc, ck, jOffset);
-    buffer = args[xStartIdx];
+  for (unsigned k = 0, e = xPerm.getNumResults(); k < e; k++) {
+    unsigned actualK = xPerm.getResult(k).cast<AffineDimExpr>().getPosition();
+    Value ak = constantIndex(builder, loc, actualK);
+    Value i = builder.create<arith::AddIOp>(loc, ak, iOffset);
+    Value j = builder.create<arith::AddIOp>(loc, ak, jOffset);
+    Value buffer = args[xStartIdx];
 
     bodyBuilder(k, i, j, buffer);
   }
