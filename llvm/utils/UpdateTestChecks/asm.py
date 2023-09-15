@@ -208,7 +208,7 @@ ASM_FUNCTION_WASM_RE = re.compile(
 # ; -- End function
 # If these change in the future, we need to change the regex.
 ASM_FUNCTION_SPIRV_RE = re.compile(
-    r'[ \t]+; \-\- Begin function (?P<func>[^\n]+)\n'
+    r"[ \t]+; \-\- Begin function (?P<func>[^\n]+)\n"
     r"(?P<body>.*?)\n"
     r"[ \t]+; \-\- End function",
     flags=(re.M | re.S),
