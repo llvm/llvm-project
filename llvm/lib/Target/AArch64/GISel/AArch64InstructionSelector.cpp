@@ -143,6 +143,12 @@ private:
                                    const TargetRegisterClass *DstRC,
                                    Register Scalar,
                                    MachineIRBuilder &MIRBuilder) const;
+  /// Helper to narrow vector that was widened by emitScalarToVector.
+  /// Copy lowest part of 128-bit or 64-bit vector to 64-bit or 32-bit
+  /// vector, correspondingly.
+  MachineInstr *emitNarrowVector(Register DstReg, Register SrcReg,
+                                 MachineIRBuilder &MIRBuilder,
+                                 MachineRegisterInfo &MRI) const;
 
   /// Emit a lane insert into \p DstReg, or a new vector register if
   /// std::nullopt is provided.
@@ -186,6 +192,8 @@ private:
   /// \p I is the original G_INTRINSIC_W_SIDE_EFFECTS instruction.
   bool selectVectorLoadIntrinsic(unsigned Opc, unsigned NumVecs,
                                  MachineInstr &I);
+  bool selectVectorLoadLaneIntrinsic(unsigned Opc, unsigned NumVecs,
+                                     MachineInstr &I);
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineRegisterInfo &MRI);
   bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -3897,6 +3905,31 @@ MachineInstr *AArch64InstructionSelector::emitScalarToVector(
   }
 }
 
+MachineInstr *
+AArch64InstructionSelector::emitNarrowVector(Register DstReg, Register SrcReg,
+                                             MachineIRBuilder &MIB,
+                                             MachineRegisterInfo &MRI) const {
+  LLT DstTy = MRI.getType(DstReg);
+  const TargetRegisterClass *RC =
+      getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(SrcReg, MRI, TRI));
+  if (RC != &AArch64::FPR32RegClass && RC != &AArch64::FPR64RegClass) {
+    LLVM_DEBUG(dbgs() << "Unsupported register class!\n");
+    return nullptr;
+  }
+  unsigned SubReg = 0;
+  if (!getSubRegForClass(RC, TRI, SubReg))
+    return nullptr;
+  if (SubReg != AArch64::ssub && SubReg != AArch64::dsub) {
+    LLVM_DEBUG(dbgs() << "Unsupported destination size! ("
+                      << DstTy.getSizeInBits() << "\n");
+    return nullptr;
+  }
+  auto Copy = MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+                  .addReg(SrcReg, 0, SubReg);
+  RBI.constrainGenericRegister(DstReg, *RC, MRI);
+  return Copy;
+}
+
 bool AArch64InstructionSelector::selectMergeValues(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   assert(I.getOpcode() == TargetOpcode::G_MERGE_VALUES && "unexpected opcode");
@@ -5384,24 +5417,8 @@ bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,
   if (VecSize < 128) {
     // If we had to widen to perform the insert, then we have to demote back to
     // the original size to get the result we want.
-    Register DemoteVec = InsMI->getOperand(0).getReg();
-    const TargetRegisterClass *RC =
-        getRegClassForTypeOnBank(DstTy, *RBI.getRegBank(DemoteVec, MRI, TRI));
-    if (RC != &AArch64::FPR32RegClass && RC != &AArch64::FPR64RegClass) {
-      LLVM_DEBUG(dbgs() << "Unsupported register class!\n");
+    if (!emitNarrowVector(DstReg, InsMI->getOperand(0).getReg(), MIB, MRI))
       return false;
-    }
-    unsigned SubReg = 0;
-    if (!getSubRegForClass(RC, TRI, SubReg))
-      return false;
-    if (SubReg != AArch64::ssub && SubReg != AArch64::dsub) {
-      LLVM_DEBUG(dbgs() << "Unsupported destination size! (" << VecSize
-                        << "\n");
-      return false;
-    }
-    MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
-        .addReg(DemoteVec, 0, SubReg);
-    RBI.constrainGenericRegister(DstReg, *RC, MRI);
   } else {
     // No widening needed.
     InsMI->getOperand(0).setReg(DstReg);
@@ -5630,6 +5647,60 @@ bool AArch64InstructionSelector::selectVectorLoadIntrinsic(unsigned Opc,
   return true;
 }
 
+bool AArch64InstructionSelector::selectVectorLoadLaneIntrinsic(
+    unsigned Opc, unsigned NumVecs, MachineInstr &I) {
+  assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
+  assert(Opc && "Expected an opcode?");
+  assert(NumVecs > 1 && NumVecs < 5 && "Only support 2, 3, or 4 vectors");
+  auto &MRI = *MIB.getMRI();
+  LLT Ty = MRI.getType(I.getOperand(0).getReg());
+  bool Narrow = Ty.getSizeInBits() == 64;
+
+  auto FirstSrcRegIt = I.operands_begin() + NumVecs + 1;
+  SmallVector<Register, 4> Regs(NumVecs);
+  std::transform(FirstSrcRegIt, FirstSrcRegIt + NumVecs, Regs.begin(),
+                 [](auto MO) { return MO.getReg(); });
+
+  if (Narrow) {
+    transform(Regs, Regs.begin(), [this](Register Reg) {
+      return emitScalarToVector(64, &AArch64::FPR128RegClass, Reg, MIB)
+          ->getOperand(0)
+          .getReg();
+    });
+    Ty = Ty.multiplyElements(2);
+  }
+
+  Register Tuple = createQTuple(Regs, MIB);
+  auto LaneNo = getIConstantVRegVal((FirstSrcRegIt + NumVecs)->getReg(), MRI);
+  if (!LaneNo)
+    return false;
+
+  Register Ptr = (FirstSrcRegIt + NumVecs + 1)->getReg();
+  auto Load = MIB.buildInstr(Opc, {Ty}, {})
+                  .addReg(Tuple)
+                  .addImm(LaneNo->getZExtValue())
+                  .addReg(Ptr);
+  Load.cloneMemRefs(I);
+  constrainSelectedInstRegOperands(*Load, TII, TRI, RBI);
+  Register SelectedLoadDst = Load->getOperand(0).getReg();
+  unsigned SubReg = AArch64::qsub0;
+  for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
+    auto Vec = MIB.buildInstr(TargetOpcode::COPY,
+                              {Narrow ? DstOp(&AArch64::FPR128RegClass)
+                                      : DstOp(I.getOperand(Idx).getReg())},
+                              {})
+                   .addReg(SelectedLoadDst, 0, SubReg + Idx);
+    Register WideReg = Vec.getReg(0);
+    // Emit the subreg copies and immediately select them.
+    selectCopy(*Vec, TII, MRI, TRI, RBI);
+    if (Narrow &&
+        !emitNarrowVector(I.getOperand(Idx).getReg(), WideReg, MIB, MRI))
+      return false;
+  }
+
+  return true;
+}
+
 bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   // Find the intrinsic ID.
@@ -5664,6 +5735,78 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     MIB.buildInstr(AArch64::BRK, {}, {})
         .addImm(I.getOperand(1).getImm() | ('U' << 8));
     break;
+  case Intrinsic::aarch64_neon_ld1x2: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD1Twov8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD1Twov16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD1Twov4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD1Twov8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD1Twov2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD1Twov4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD1Twov2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD1Twov1d;
+    else
+      llvm_unreachable("Unexpected type for ld1x2!");
+    selectVectorLoadIntrinsic(Opc, 2, I);
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld1x3: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD1Threev8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD1Threev16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD1Threev4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD1Threev8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD1Threev2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD1Threev4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD1Threev2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD1Threev1d;
+    else
+      llvm_unreachable("Unexpected type for ld1x3!");
+    selectVectorLoadIntrinsic(Opc, 3, I);
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld1x4: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD1Fourv8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD1Fourv16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD1Fourv4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD1Fourv8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD1Fourv2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD1Fourv4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD1Fourv2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD1Fourv1d;
+    else
+      llvm_unreachable("Unexpected type for ld1x4!");
+    selectVectorLoadIntrinsic(Opc, 4, I);
+    break;
+  }
   case Intrinsic::aarch64_neon_ld2: {
     LLT Ty = MRI.getType(I.getOperand(0).getReg());
     unsigned Opc = 0;
@@ -5688,6 +5831,114 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     selectVectorLoadIntrinsic(Opc, 2, I);
     break;
   }
+  case Intrinsic::aarch64_neon_ld2lane: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc;
+    if (Ty == LLT::fixed_vector(8, S8) || Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD2i8;
+    else if (Ty == LLT::fixed_vector(4, S16) || Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD2i16;
+    else if (Ty == LLT::fixed_vector(2, S32) || Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD2i32;
+    else if (Ty == LLT::fixed_vector(2, S64) ||
+             Ty == LLT::fixed_vector(2, P0) || Ty == S64 || Ty == P0)
+      Opc = AArch64::LD2i64;
+    else
+      llvm_unreachable("Unexpected type for st2lane!");
+    if (!selectVectorLoadLaneIntrinsic(Opc, 2, I))
+      return false;
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld2r: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD2Rv8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD2Rv16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD2Rv4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD2Rv8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD2Rv2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD2Rv4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD2Rv2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD2Rv1d;
+    else
+      llvm_unreachable("Unexpected type for ld2r!");
+    selectVectorLoadIntrinsic(Opc, 2, I);
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld3: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD3Threev8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD3Threev16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD3Threev4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD3Threev8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD3Threev2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD3Threev4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD3Threev2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD1Threev1d;
+    else
+      llvm_unreachable("Unexpected type for ld3!");
+    selectVectorLoadIntrinsic(Opc, 3, I);
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld3lane: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc;
+    if (Ty == LLT::fixed_vector(8, S8) || Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD3i8;
+    else if (Ty == LLT::fixed_vector(4, S16) || Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD3i16;
+    else if (Ty == LLT::fixed_vector(2, S32) || Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD3i32;
+    else if (Ty == LLT::fixed_vector(2, S64) ||
+             Ty == LLT::fixed_vector(2, P0) || Ty == S64 || Ty == P0)
+      Opc = AArch64::LD3i64;
+    else
+      llvm_unreachable("Unexpected type for st3lane!");
+    if (!selectVectorLoadLaneIntrinsic(Opc, 3, I))
+      return false;
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld3r: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD3Rv8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD3Rv16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD3Rv4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD3Rv8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD3Rv2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD3Rv4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD3Rv2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD3Rv1d;
+    else
+      llvm_unreachable("Unexpected type for ld3r!");
+    selectVectorLoadIntrinsic(Opc, 3, I);
+    break;
+  }
   case Intrinsic::aarch64_neon_ld4: {
     LLT Ty = MRI.getType(I.getOperand(0).getReg());
     unsigned Opc = 0;
@@ -5709,6 +5960,48 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
       Opc = AArch64::LD1Fourv1d;
     else
       llvm_unreachable("Unexpected type for ld4!");
+    selectVectorLoadIntrinsic(Opc, 4, I);
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld4lane: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc;
+    if (Ty == LLT::fixed_vector(8, S8) || Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD4i8;
+    else if (Ty == LLT::fixed_vector(4, S16) || Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD4i16;
+    else if (Ty == LLT::fixed_vector(2, S32) || Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD4i32;
+    else if (Ty == LLT::fixed_vector(2, S64) ||
+             Ty == LLT::fixed_vector(2, P0) || Ty == S64 || Ty == P0)
+      Opc = AArch64::LD4i64;
+    else
+      llvm_unreachable("Unexpected type for st4lane!");
+    if (!selectVectorLoadLaneIntrinsic(Opc, 4, I))
+      return false;
+    break;
+  }
+  case Intrinsic::aarch64_neon_ld4r: {
+    LLT Ty = MRI.getType(I.getOperand(0).getReg());
+    unsigned Opc = 0;
+    if (Ty == LLT::fixed_vector(8, S8))
+      Opc = AArch64::LD4Rv8b;
+    else if (Ty == LLT::fixed_vector(16, S8))
+      Opc = AArch64::LD4Rv16b;
+    else if (Ty == LLT::fixed_vector(4, S16))
+      Opc = AArch64::LD4Rv4h;
+    else if (Ty == LLT::fixed_vector(8, S16))
+      Opc = AArch64::LD4Rv8h;
+    else if (Ty == LLT::fixed_vector(2, S32))
+      Opc = AArch64::LD4Rv2s;
+    else if (Ty == LLT::fixed_vector(4, S32))
+      Opc = AArch64::LD4Rv4s;
+    else if (Ty == LLT::fixed_vector(2, S64) || Ty == LLT::fixed_vector(2, P0))
+      Opc = AArch64::LD4Rv2d;
+    else if (Ty == S64 || Ty == P0)
+      Opc = AArch64::LD4Rv1d;
+    else
+      llvm_unreachable("Unexpected type for ld4r!");
     selectVectorLoadIntrinsic(Opc, 4, I);
     break;
   }
