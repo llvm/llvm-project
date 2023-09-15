@@ -50,13 +50,10 @@ LIBC_INLINE int ilogbf(float x) { return __ocml_ilogb_f32(x); }
 LIBC_INLINE double ldexp(double x, int i) { return __builtin_ldexp(x, i); }
 LIBC_INLINE float ldexpf(float x, int i) { return __builtin_ldexpf(x, i); }
 LIBC_INLINE double log10(double x) { return __ocml_log10_f64(x); }
-LIBC_INLINE float log10f(float x) { return __ocml_log10_f32(x); }
 LIBC_INLINE double log1p(double x) { return __ocml_log1p_f64(x); }
 LIBC_INLINE float log1pf(float x) { return __ocml_log1p_f32(x); }
 LIBC_INLINE double log2(double x) { return __ocml_log2_f64(x); }
-LIBC_INLINE float log2f(float x) { return __ocml_log2_f32(x); }
 LIBC_INLINE double log(double x) { return __ocml_log_f64(x); }
-LIBC_INLINE float logf(float x) { return __ocml_log_f32(x); }
 LIBC_INLINE double nextafter(double x, double y) {
   return __ocml_nextafter_f64(x, y);
 }

@@ -1,5 +1,4 @@
-//===-- Implementation of the GPU log10f function
-//---------------------------===//
+//===-- Implementation of the GPU log10f function -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,10 +9,8 @@
 #include "src/math/log10f.h"
 #include "src/__support/common.h"
 
-#include "common.h"
-
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(float, log10f, (float x)) { return internal::log10f(x); }
+LLVM_LIBC_FUNCTION(float, log10f, (float x)) { return __builtin_log10f(x); }
 
 } // namespace __llvm_libc
