@@ -84,40 +84,40 @@ struct InputIterBase {
   friend constexpr bool operator==(const InputIterBase&, const InputIterBase&) { return true; }
 };
 
-struct NotSimpleViewIterB : ForwardIterBase<NotSimpleViewIterB> {
-  bool moved = false;
-
-  constexpr NotSimpleViewIterB()                          = default;
-  constexpr NotSimpleViewIterB(const NotSimpleViewIterB&) = default;
-  constexpr NotSimpleViewIterB(NotSimpleViewIterB&&) : moved{true} {}
-  constexpr NotSimpleViewIterB& operator=(NotSimpleViewIterB&&)      = default;
-  constexpr NotSimpleViewIterB& operator=(const NotSimpleViewIterB&) = default;
+struct NotSimpleViewIter : ForwardIterBase<NotSimpleViewIter> {
+  constexpr NotSimpleViewIter()                                    = default;
+  constexpr NotSimpleViewIter(const NotSimpleViewIter&)            = default;
+  constexpr NotSimpleViewIter(NotSimpleViewIter&&)                 = default;
+  constexpr NotSimpleViewIter& operator=(NotSimpleViewIter&&)      = default;
+  constexpr NotSimpleViewIter& operator=(const NotSimpleViewIter&) = default;
 };
 
-struct NotSimpleViewIterA : ForwardIterBase<NotSimpleViewIterA> {
-  bool moved         = false;
-  bool moved_from_a  = false;
-  bool copied_from_a = false;
-
-  constexpr NotSimpleViewIterA()                          = default;
-  constexpr NotSimpleViewIterA(const NotSimpleViewIterA&) = default;
-  constexpr NotSimpleViewIterA(const NotSimpleViewIterB&) : copied_from_a{true} {}
-  constexpr NotSimpleViewIterA(NotSimpleViewIterA&&) : moved{true} {}
-  constexpr NotSimpleViewIterA(NotSimpleViewIterB&&) : moved_from_a{true} {}
-  constexpr NotSimpleViewIterA& operator=(NotSimpleViewIterA&&)      = default;
-  constexpr NotSimpleViewIterA& operator=(const NotSimpleViewIterA&) = default;
+struct NotSimpleViewIterEnd : ForwardIterBase<NotSimpleViewIter> {
+  constexpr NotSimpleViewIterEnd()                                       = default;
+  constexpr NotSimpleViewIterEnd(const NotSimpleViewIterEnd&)            = default;
+  constexpr NotSimpleViewIterEnd(NotSimpleViewIterEnd&&)                 = default;
+  constexpr NotSimpleViewIterEnd& operator=(NotSimpleViewIterEnd&&)      = default;
+  constexpr NotSimpleViewIterEnd& operator=(const NotSimpleViewIterEnd&) = default;
 };
 
-struct InstrumentedNotSimpleView : std::ranges::view_base {
-  constexpr NotSimpleViewIterA begin() const { return {}; }
-  constexpr NotSimpleViewIterB begin() { return {}; }
-  constexpr NotSimpleViewIterA end() const { return {}; }
-  constexpr NotSimpleViewIterB end() { return {}; }
+struct ConstNotSimpleViewIter : ForwardIterBase<ConstNotSimpleViewIter> {
+  constexpr ConstNotSimpleViewIter()                              = default;
+  constexpr ConstNotSimpleViewIter(const ConstNotSimpleViewIter&) = default;
+  constexpr ConstNotSimpleViewIter(const NotSimpleViewIter&) {}
+  constexpr ConstNotSimpleViewIter(ConstNotSimpleViewIter&&) = default;
 
-  int* begin_;
-  int* end_;
-  bool wasCopyInitialized = false;
-  bool wasMoveInitialized = false;
+  constexpr ConstNotSimpleViewIter(NotSimpleViewIter&&) {}
+  constexpr ConstNotSimpleViewIter(NotSimpleViewIterEnd&&) = delete;
+
+  constexpr ConstNotSimpleViewIter& operator=(ConstNotSimpleViewIter&&)      = default;
+  constexpr ConstNotSimpleViewIter& operator=(const ConstNotSimpleViewIter&) = default;
+};
+
+struct NotSimpleView : std::ranges::view_base {
+  constexpr ConstNotSimpleViewIter begin() const { return {}; }
+  constexpr NotSimpleViewIter begin() { return {}; }
+  constexpr ConstNotSimpleViewIter end() const { return {}; }
+  constexpr NotSimpleViewIterEnd end() { return {}; }
 };
 
 struct ForwardTracedMoveIter : ForwardIterBase<ForwardTracedMoveIter> {
