@@ -450,3 +450,48 @@ def : Pat<(i32 (int_aarch64_neon_uminv (v2i32 V64:$Rn))),
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
               (UMINPv2i32 V64:$Rn, V64:$Rn), dsub),
             ssub))>;
+
+// Match stores from lane 0 to the appropriate subreg's store.
+multiclass VecStoreLane64_0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop,
+                            ValueType VTy, ValueType STy,
+                            SubRegIndex SubRegIdx, Operand IndexType,
+                            Instruction STR> {
+  def : Pat<(storeop (STy (vector_extract (VTy VecListOne64:$Vt), (i64 0))),
+                     (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
+            (STR (EXTRACT_SUBREG VecListOne64:$Vt, SubRegIdx),
+                 GPR64sp:$Rn, IndexType:$offset)>;
+}
+multiclass VecStoreULane64_0Pat<SDPatternOperator StoreOp,
+                             ValueType VTy, ValueType STy,
+                             SubRegIndex SubRegIdx, Instruction STR> {
+  defm : VecStoreLane64_0Pat<am_unscaled64, StoreOp, VTy, STy, SubRegIdx, simm9, STR>;
+}
+
+multiclass VecROStoreLane64_0Pat<ROAddrMode ro, SDPatternOperator storeop,
+                              ValueType VecTy, ValueType STy,
+                              SubRegIndex SubRegIdx,
+                              Instruction STRW, Instruction STRX> {
+
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne64:$Vt), (i64 0))),
+                     (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
+            (STRW (EXTRACT_SUBREG VecListOne64:$Vt, SubRegIdx),
+                  GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
+
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne64:$Vt), (i64 0))),
+                     (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
+            (STRX (EXTRACT_SUBREG VecListOne64:$Vt, SubRegIdx),
+                  GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+}
+
+let AddedComplexity = 19 in {
+  def : St1Lane128Pat<store, VectorIndexB, v16i8, i8,  ST1i8>;
+  def : St1Lane64Pat<store, VectorIndexB, v8i8,  i8,  ST1i8>;
+
+  defm : VecStoreLane64_0Pat<am_indexed16, store, v4i16, i16, hsub, uimm12s2, STRHui>;
+  defm : VecStoreLane64_0Pat<am_indexed32, store, v2i32, i32, ssub, uimm12s4, STRSui>;
+
+  defm : VecStoreULane64_0Pat<store, v4i16, i16, hsub, STURHi>;
+  defm : VecStoreULane64_0Pat<store, v2i32, i32, ssub, STURSi>;
+  defm : VecROStoreLane64_0Pat<ro16, store, v4i16, i16, hsub, STRHroW, STRHroX>;
+  defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
+}
