@@ -13,11 +13,13 @@
 
 ; Function Attrs: nounwind optnone noinline
 define spir_func void @_Z3foov() #0 {
-; CHECK-EXTENSION:         %5 = OpLabel
+; CHECK-EXTENSION:         %4 = OpFunction %2 DontInline %3
+; CHECK-EXTENSION-NEXT:    %5 = OpLabel
 ; CHECK-EXTENSION-NEXT:    OpReturn
 ; CHECK-EXTENSION-NEXT:    OpFunctionEnd
 ;
-; CHECK-NO-EXTENSION:         %5 = OpLabel
+; CHECK-NO-EXTENSION:         %4 = OpFunction %2 DontInline %3
+; CHECK-NO-EXTENSION-NEXT:    %5 = OpLabel
 ; CHECK-NO-EXTENSION-NEXT:    OpReturn
 ; CHECK-NO-EXTENSION-NEXT:    OpFunctionEnd
 entry:
