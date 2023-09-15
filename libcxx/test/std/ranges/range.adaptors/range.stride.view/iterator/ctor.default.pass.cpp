@@ -15,16 +15,19 @@
 #include "../test.h"
 #include <cassert>
 #include <ranges>
+#include <type_traits>
 
-bool non_simple_view_iter_ctor_test() {
-  using StrideView             = std::ranges::stride_view<InstrumentedNotSimpleView>;
+constexpr bool non_simple_view_iter_ctor_test() {
+  using StrideView             = std::ranges::stride_view<NotSimpleView>;
   using StrideViewIterNonConst = std::ranges::iterator_t<StrideView>;
   using StrideViewIterConst    = std::ranges::iterator_t<const StrideView>;
 
-  StrideView sv{InstrumentedNotSimpleView{}, 1};
+  StrideView sv{NotSimpleView{}, 1};
   StrideViewIterNonConst iter = {sv, sv.base().begin(), 0};
-  StrideViewIterConst iterb   = {iter};
-  assert(iterb.__end_.moved_from_a == true);
+  // StrideViewIterNonConst constructs its new __current_ and __end_ by
+  // moving the same members from the given iterator. When that is not possible
+  // for either of those two values, it should fail.
+  static_assert(!std::is_constructible_v<StrideViewIterConst, decltype(iter)>);
   return true;
 }
 
