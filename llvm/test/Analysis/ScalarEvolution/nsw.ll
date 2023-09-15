@@ -439,6 +439,40 @@ return:
   ret void
 }
 
+; FIXME: {-128,+,-128} should not be <nsw>.
+define void @pr66066() {
+; CHECK-LABEL: 'pr66066'
+; CHECK-NEXT:  Classifying expressions for: @pr66066
+; CHECK-NEXT:    %iv = phi i8 [ 1, %entry ], [ %iv.dec, %loop ]
+; CHECK-NEXT:    --> {1,+,-1}<nsw><%loop> U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.dec = add i8 %iv, -1
+; CHECK-NEXT:    --> {0,+,-1}<nsw><%loop> U: [-1,1) S: [-1,1) Exits: -1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %shl = shl i8 %iv, 7
+; CHECK-NEXT:    --> {-128,+,-128}<nsw><%loop> U: [-128,-127) S: [-128,-127) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @pr66066
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 1, %entry ], [ %iv.dec, %loop ]
+  %iv.dec = add i8 %iv, -1
+  %shl = shl i8 %iv, 7
+  %cmp1 = icmp eq i8 %shl, 0
+  br i1 %cmp1, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+declare void @print(i32)
+
 declare void @foo(i32)
 
 declare i1 @cond()
