@@ -2346,7 +2346,7 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
 
   // Everything live out of a block is spilled with fast regalloc, so it's
   // almost certain that spilling will be required.
-  if (TM.getOptLevel() == CodeGenOpt::None)
+  if (TM.getOptLevel() == CodeGenOptLevel::None)
     HasStackObjects = true;
 
   // For now assume stack access is needed in any callee functions, so we need
@@ -8498,7 +8498,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
   case Intrinsic::amdgcn_s_barrier: {
-    if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
+    if (getTargetMachine().getOptLevel() > CodeGenOptLevel::None) {
       const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
       unsigned WGSize = ST.getFlatWorkGroupSizes(MF.getFunction()).second;
       if (WGSize <= ST.getWavefrontSize())
@@ -12994,7 +12994,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+  if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return SDValue();
   switch (N->getOpcode()) {
   case ISD::ADD:

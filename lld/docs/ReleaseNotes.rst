@@ -44,7 +44,7 @@ ELF Improvements
   (`D148859 <https://reviews.llvm.org/D148859>`_)
 * ``--lto=`` is now available to support ``clang -funified-lto``
   (`D123805 <https://reviews.llvm.org/D123805>`_)
-* ``--lto-CGO[0-3]`` is now available to control ``CodeGenOpt::Level`` independent of the LTO optimization level.
+* ``--lto-CGO[0-3]`` is now available to control ``CodeGenOptLevel`` independent of the LTO optimization level.
   (`D141970 <https://reviews.llvm.org/D141970>`_)
 * ``--check-dynamic-relocations=`` is now correct 32-bit targets when the addend is larger than 0x80000000.
   (`D149347 <https://reviews.llvm.org/D149347>`_)

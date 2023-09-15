@@ -242,7 +242,7 @@ class SelectionDAG {
   MachineFunction *MF;
   Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
-  CodeGenOpt::Level OptLevel;
+  CodeGenOptLevel OptLevel;
 
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
@@ -458,7 +458,7 @@ public:
   // Maximum depth for recursive analysis such as computeKnownBits, etc.
   static constexpr unsigned MaxRecursionDepth = 6;
 
-  explicit SelectionDAG(const TargetMachine &TM, CodeGenOpt::Level);
+  explicit SelectionDAG(const TargetMachine &TM, CodeGenOptLevel);
   SelectionDAG(const SelectionDAG &) = delete;
   SelectionDAG &operator=(const SelectionDAG &) = delete;
   ~SelectionDAG();
@@ -587,8 +587,7 @@ public:
   /// certain types of nodes together, or eliminating superfluous nodes.  The
   /// Level argument controls whether Combine is allowed to produce nodes and
   /// types that are illegal on the target.
-  void Combine(CombineLevel Level, AAResults *AA,
-               CodeGenOpt::Level OptLevel);
+  void Combine(CombineLevel Level, AAResults *AA, CodeGenOptLevel OptLevel);
 
   /// This transforms the SelectionDAG into a SelectionDAG that
   /// only uses types natively supported by the target.

@@ -95,7 +95,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   LiveVariables *LV = nullptr;
   LiveIntervals *LIS = nullptr;
   AliasAnalysis *AA = nullptr;
-  CodeGenOpt::Level OptLevel = CodeGenOpt::None;
+  CodeGenOptLevel OptLevel = CodeGenOptLevel::None;
 
   // The current basic block being processed.
   MachineBasicBlock *MBB = nullptr;
@@ -551,7 +551,7 @@ bool TwoAddressInstructionPass::isProfitableToCommute(Register RegA,
                                                       Register RegC,
                                                       MachineInstr *MI,
                                                       unsigned Dist) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   // Determine if it's profitable to commute this two address instruction. In
@@ -1231,7 +1231,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
                         MachineBasicBlock::iterator &nmi,
                         unsigned SrcIdx, unsigned DstIdx,
                         unsigned &Dist, bool shouldOnlyCommute) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   MachineInstr &MI = *mi;
@@ -1757,7 +1757,7 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   // Disable optimizations if requested. We cannot skip the whole pass as some
   // fixups are necessary for correctness.
   if (skipFunction(Func.getFunction()))
-    OptLevel = CodeGenOpt::None;
+    OptLevel = CodeGenOptLevel::None;
 
   bool MadeChange = false;
 

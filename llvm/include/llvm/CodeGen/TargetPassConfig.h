@@ -155,7 +155,7 @@ public:
   //
   void setInitialized() { Initialized = true; }
 
-  CodeGenOpt::Level getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const;
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.

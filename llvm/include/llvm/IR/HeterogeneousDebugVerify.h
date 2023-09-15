@@ -23,17 +23,17 @@ class ModulePass;
 /// Create and return a pass for the legacy pass manager that strips
 /// heterogeneous debug info from modules compiled above -O0.
 ModulePass *
-createHeterogeneousDebugVerifyLegacyPass(CodeGenOpt::Level OptLevel);
+createHeterogeneousDebugVerifyLegacyPass(CodeGenOptLevel OptLevel);
 
 /// Pass for the new pass manager that strips
 /// heterogeneous debug info from modules compiled above -O0. It should be added
 /// to pipelines when compiling above -O0.
 class HeterogeneousDebugVerify
     : public PassInfoMixin<HeterogeneousDebugVerify> {
-  const CodeGenOpt::Level OptLevel;
+  const CodeGenOptLevel OptLevel;
 
 public:
-  HeterogeneousDebugVerify(CodeGenOpt::Level OptLevel);
+  HeterogeneousDebugVerify(CodeGenOptLevel OptLevel);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

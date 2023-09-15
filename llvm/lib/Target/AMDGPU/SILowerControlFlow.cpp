@@ -848,8 +848,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  EnableOptimizeEndCf =
-      RemoveRedundantEndcf && MF.getTarget().getOptLevel() > CodeGenOpt::None;
+  EnableOptimizeEndCf = RemoveRedundantEndcf &&
+                        MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();

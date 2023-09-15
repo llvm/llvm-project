@@ -77,11 +77,11 @@ static void moveGlobalLifetimesIntoGlobalExpressions(Module &M) {
   M.eraseNamedMetadata(NMD);
 }
 
-static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
+static bool maybeStrip(Module &M, CodeGenOptLevel OptLevel,
                        bool IsNPM = false) {
   if (DisableHeterogeneousDebugVerify || !isHeterogeneousDebug(M))
     return false;
-  if (OptLevel == CodeGenOpt::None && !IsNPM)
+  if (OptLevel == CodeGenOptLevel::None && !IsNPM)
     return false;
 
   moveGlobalLifetimesIntoGlobalExpressions(M);
@@ -109,11 +109,11 @@ static bool maybeStrip(Module &M, CodeGenOpt::Level OptLevel,
 }
 
 class HeterogeneousDebugVerifyLegacy : public ModulePass {
-  const CodeGenOpt::Level OptLevel;
+  const CodeGenOptLevel OptLevel;
 
 public:
   static char ID;
-  HeterogeneousDebugVerifyLegacy(CodeGenOpt::Level OptLevel)
+  HeterogeneousDebugVerifyLegacy(CodeGenOptLevel OptLevel)
       : ModulePass(ID), OptLevel(OptLevel) {}
 
   bool doInitialization(Module &M) override { return maybeStrip(M, OptLevel); }
@@ -136,13 +136,13 @@ INITIALIZE_PASS(HeterogeneousDebugVerifyLegacy,
                 "Verify heterogeneous debug preconditions", false, true)
 
 ModulePass *
-llvm::createHeterogeneousDebugVerifyLegacyPass(CodeGenOpt::Level OptLevel) {
+llvm::createHeterogeneousDebugVerifyLegacyPass(CodeGenOptLevel OptLevel) {
   return new HeterogeneousDebugVerifyLegacy(OptLevel);
 }
 
 namespace llvm {
 
-HeterogeneousDebugVerify::HeterogeneousDebugVerify(CodeGenOpt::Level OptLevel)
+HeterogeneousDebugVerify::HeterogeneousDebugVerify(CodeGenOptLevel OptLevel)
     : OptLevel(OptLevel) {}
 PreservedAnalyses HeterogeneousDebugVerify::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
