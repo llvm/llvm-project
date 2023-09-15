@@ -149,9 +149,10 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
     if (SLoc.isInvalid())
       Buffer->append("<unknown>");
     else
-      RenderSourceLocation(Buffer, SLoc.getFilename(), SLoc.getLine(),
-                           SLoc.getColumn(), common_flags()->symbolize_vs_style,
-                           common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderSourceLocation(
+          Buffer, SLoc.getFilename(), SLoc.getLine(), SLoc.getColumn(),
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
     return;
   }
   case Location::LK_Memory:
@@ -160,12 +161,14 @@ static void RenderLocation(InternalScopedString *Buffer, Location Loc) {
   case Location::LK_Symbolized: {
     const AddressInfo &Info = Loc.getSymbolizedStack()->info;
     if (Info.file)
-      RenderSourceLocation(Buffer, Info.file, Info.line, Info.column,
-                           common_flags()->symbolize_vs_style,
-                           common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderSourceLocation(
+          Buffer, Info.file, Info.line, Info.column,
+          common_flags()->symbolize_vs_style,
+          common_flags()->strip_path_prefix);
     else if (Info.module)
-      RenderModuleLocation(Buffer, Info.module, Info.module_offset,
-                           Info.module_arch, common_flags()->strip_path_prefix);
+      StackTracePrinter::GetOrInit()->RenderModuleLocation(
+          Buffer, Info.module, Info.module_offset, Info.module_arch,
+          common_flags()->strip_path_prefix);
     else
       Buffer->append("%p", reinterpret_cast<void *>(Info.address));
     return;
