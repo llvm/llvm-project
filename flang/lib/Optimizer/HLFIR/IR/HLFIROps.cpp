@@ -846,6 +846,31 @@ void hlfir::MaxvalOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// MinvalOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::MinvalOp::verify() {
+  mlir::Operation *op = getOperation();
+
+  auto results = op->getResultTypes();
+  assert(results.size() == 1);
+
+  auto resultExpr = mlir::dyn_cast<hlfir::ExprType>(results[0]);
+  if (resultExpr && mlir::isa<fir::CharacterType>(resultExpr.getEleTy())) {
+    return verifyCharacterReductionOp<hlfir::MinvalOp *>(this);
+  } else {
+    return verifyNumericalReductionOp<hlfir::MinvalOp *>(this);
+  }
+}
+
+void hlfir::MinvalOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  getIntrinsicEffects(getOperation(), effects);
+}
+
+//===----------------------------------------------------------------------===//
 // SetLengthOp
 //===----------------------------------------------------------------------===//
 
