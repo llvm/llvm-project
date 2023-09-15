@@ -81,24 +81,17 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
 }
 
 // We ignore the format argument to __sanitizer_symbolize_global.
-void FormattedStackTracePrinter::RenderData(InternalScopedString *buffer,
-                                            const char *format,
-                                            const DataInfo *DI,
-                                            const char *strip_path_prefix) {
+void RenderData(InternalScopedString *buffer, const char *format,
+                const DataInfo *DI, const char *strip_path_prefix) {
   buffer->append(kFormatData, DI->start);
 }
 
-bool FormattedStackTracePrinter::RenderNeedsSymbolization(const char *format) {
-  return false;
-}
+bool RenderNeedsSymbolization(const char *format) { return false; }
 
 // We don't support the stack_trace_format flag at all.
-void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
-                                             const char *format, int frame_no,
-                                             uptr address,
-                                             const AddressInfo *info,
-                                             bool vs_style,
-                                             const char *strip_path_prefix) {
+void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
+                 uptr address, const AddressInfo *info, bool vs_style,
+                 const char *strip_path_prefix) {
   CHECK(!RenderNeedsSymbolization(format));
   buffer->append(kFormatFrame, frame_no, address);
 }
