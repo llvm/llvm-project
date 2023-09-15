@@ -246,6 +246,7 @@ cc_test(
         "Dialect/Utils/*.h",
     ]),
     deps = [
+        "//llvm:Support",
         "//llvm:TestingSupport",
         "//mlir:DialectUtils",
         "//mlir:IR",
