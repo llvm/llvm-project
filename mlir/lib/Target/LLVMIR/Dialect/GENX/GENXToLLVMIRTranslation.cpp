@@ -221,6 +221,13 @@ static void createMatrixStore(llvm::IRBuilderBase &builder, llvm::Value *ptr,
   assert(false && "TODO");
 }
 
+static llvm::Value *createMatrixMad(llvm::IRBuilderBase &builder,
+                                    llvm::Value *a, llvm::Value *b,
+                                    llvm::Value *c, GENX::Scope scope) {
+  assert(false && "TODO");
+  return nullptr;
+}
+
 static void createMatrixInit(llvm::IRBuilderBase &builder, llvm::Value *mat,
                              llvm::Value *val, GENX::Scope scope) {
   assert(false && "TODO");

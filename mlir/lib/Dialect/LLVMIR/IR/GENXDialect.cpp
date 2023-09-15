@@ -83,15 +83,16 @@ Type parseJointMatrixElemType(GENXDialect const &dialect,
   if (auto t = type.dyn_cast<FloatType>()) {
     // TODO: add check for TF32 once available.
     if (!t.isF16() && !t.isBF16() && !t.isF32() /*&& !t.isTF32()*/) {
-      parser.emitError(typeLoc, "only fp16, bf16, f32, and tf32 floating "
-                                "point types allowed but found ")
+      parser.emitError(
+          typeLoc,
+          "only fp16, bf16, f32 floating point types allowed but found ")
           << t;
       return Type();
     }
   } else if (auto t = type.dyn_cast<IntegerType>()) {
-    if (!llvm::is_contained({8u, 16u, 32u}, t.getWidth())) {
+    if (!llvm::is_contained({8u, 32u}, t.getWidth())) {
       parser.emitError(typeLoc,
-                       "only 8/16/32-bit integer types allowed but found ")
+                       "only 8/32-bit integer types allowed but found ")
           << t;
       return Type();
     }
