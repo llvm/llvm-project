@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected %s
-// RUN: %clang_cc1 -verify=ref %s
-// RUN: %clang_cc1 -pedantic -verify=pedantic-ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify -std=c11 %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -pedantic -verify=pedantic-expected -std=c11 %s
+// RUN: %clang_cc1 -verify=ref -std=c11 %s
+// RUN: %clang_cc1 -pedantic -verify=pedantic-ref -std=c11 %s
 
 /// expected-no-diagnostics
 
