@@ -26,29 +26,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iterator, class _DifferenceType, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator __simd_walk_1(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
-  _PSTL_OMP_MAP_TO(__first,__n);
+  _PSTL_OMP_MAP_TO(__first, __n);
   _PSTL_PRAGMA_SIMD(__n)
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first[__i]);
-  _PSTL_OMP_MAP_FROM(__first,__n);
+  _PSTL_OMP_MAP_FROM(__first, __n);
   return __first + __n;
 }
 
 /**
  * Specialization for std::vector where the base pointer must be extrated to map
  * the data to and from the GPU.
-*/
+ */
 
 template <typename T, class _DifferenceType, class _Function>
-_LIBCPP_HIDE_FROM_ABI std::__wrap_iter<T*> __simd_walk_1(std::__wrap_iter<T*> __first, _DifferenceType __n, _Function __f) noexcept {
-  _PSTL_OMP_MAP_TO(__first,__n);
-  // For std::vector the base pointer of the data buffer needs to be extracted 
+_LIBCPP_HIDE_FROM_ABI std::__wrap_iter<T*>
+__simd_walk_1(std::__wrap_iter<T*> __first, _DifferenceType __n, _Function __f) noexcept {
+  _PSTL_OMP_MAP_TO(__first, __n);
+  // For std::vector the base pointer of the data buffer needs to be extracted
   std::pointer_traits<std::__wrap_iter<T*>> PT;
   T* data = PT.to_address(__first);
   _PSTL_PRAGMA_SIMD(__n)
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(data[__i]);
-  _PSTL_OMP_MAP_FROM(__first,__n);
+  _PSTL_OMP_MAP_FROM(__first, __n);
   return __first + __n;
 }
 
