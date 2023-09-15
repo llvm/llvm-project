@@ -27,7 +27,7 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
   // CHECK-SAME:              outs(%[[T2]] : tensor<4x5xf32>)
 
   //      CHECK: %[[T6:.*]] = tensor.extract_slice %[[T5]]
-  //      CHECK: %[[T7:.*]] = bufferization.copy_tensor %[[T6]], %[[T2]]
+  //      CHECK: %[[T7:.*]] = bufferization.materialize_in_destination %[[T6]] in %[[T2]]
   %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
   %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
   func.return %5 : tensor<24x25xf32>
@@ -40,9 +40,9 @@ transform.sequence failures(propagate) {
     padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 0]
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.copy_tensor">)
+  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
   // expected-remark @below {{1}}
-  test_print_number_of_associated_payload_ir_ops %copy_back : !transform.op<"bufferization.copy_tensor">
+  test_print_number_of_associated_payload_ir_ops %copy_back : !transform.op<"bufferization.materialize_in_destination">
 }
 
 // -----
@@ -272,7 +272,7 @@ func.func @pack_everything(%arg0: tensor<24x12xf32>,
   //      CHECK: %[[T6:.*]] = tensor.extract_slice %[[T5]]
   // Copy back result to the original buffer, so that the destination of the
   // computation does not change.
-  //      CHECK: %[[T7:.*]] = bufferization.copy_tensor %[[T6]], %[[T2]]
+  //      CHECK: %[[T7:.*]] = bufferization.materialize_in_destination %[[T6]] in %[[T2]]
   %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
 
   //      CHECK: %[[T8:.*]] = tensor.insert_slice %[[T7]] into %{{.*}}

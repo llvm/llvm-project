@@ -140,7 +140,8 @@ createContractArithOp(Location loc, Value x, Value y, Value acc,
   Value mul;
 
   if (isInt) {
-    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF)
+    if (kind == CombiningKind::MINF || kind == CombiningKind::MAXF ||
+        kind == CombiningKind::MINIMUMF || kind == CombiningKind::MAXIMUMF)
       // Only valid for floating point types.
       return std::nullopt;
     mul = rewriter.create<arith::MulIOp>(loc, x, y);

@@ -852,7 +852,7 @@ void OperationName::UnregisteredOpModel::populateDefaultProperties(
     OperationName opName, OpaqueProperties properties) {}
 LogicalResult OperationName::UnregisteredOpModel::setPropertiesFromAttr(
     OperationName opName, OpaqueProperties properties, Attribute attr,
-    InFlightDiagnostic *diag) {
+    function_ref<InFlightDiagnostic &()> getDiag) {
   *properties.as<Attribute *>() = attr;
   return success();
 }

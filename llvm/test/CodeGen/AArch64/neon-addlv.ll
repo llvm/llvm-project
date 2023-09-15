@@ -178,8 +178,8 @@ entry:
   ret i32 %0
 }
 
-define dso_local <8 x i8> @bar(<8 x i8> noundef %a) local_unnamed_addr #0 {
-; CHECK-LABEL: bar:
+define dso_local <8 x i8> @uaddlv_v8i8_dup(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_v8i8_dup:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uaddlv h0, v0.8b
 ; CHECK-NEXT:    dup v0.8h, v0.h[0]
@@ -195,3 +195,23 @@ entry:
 }
 
 declare <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16>, i32)
+
+declare i64 @llvm.aarch64.neon.urshl.i64(i64, i64)
+
+define <8 x i8> @uaddlv_v8i8_urshr(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_v8i8_urshr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    urshr d0, d0, #3
+; CHECK-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %0 = and i32 %vaddlv.i, 65535
+  %conv = zext i32 %0 to i64
+  %vrshr_n = tail call i64 @llvm.aarch64.neon.urshl.i64(i64 %conv, i64 -3)
+  %conv1 = trunc i64 %vrshr_n to i8
+  %vecinit.i = insertelement <8 x i8> undef, i8 %conv1, i64 0
+  %vecinit7.i = shufflevector <8 x i8> %vecinit.i, <8 x i8> poison, <8 x i32> zeroinitializer
+  ret <8 x i8> %vecinit7.i
+}

@@ -13,13 +13,18 @@
 # RUN: yaml2obj %s -DBITS=64 -DTYPE=ET_REL -o %t64
 # RUN: llvm-readobj --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
+# RUN: llvm-readelf -s --extra-sym-info %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64X
 # RUN: yaml2obj %s -DBITS=32 -DTYPE=ET_REL -o %t32
 # RUN: llvm-readobj --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
+# RUN: llvm-readelf -s -X %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32X
 ## b) Check dynamic objects.
 # RUN: yaml2obj %s -DBITS=64 -DTYPE=ET_DYN -o %t64.so
-# RUN: llvm-readobj --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readobj --symbols %t64.so > %t64llvm.txt
+# RUN: FileCheck --input-file=%t64llvm.txt %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
+## --extra-sym-info is a no-op for llvm-readobj.
+# RUN: llvm-readobj --symbols --extra-sym-info %t64.so | diff %t64llvm.txt -
 # RUN: yaml2obj %s -DBITS=32 -DTYPE=ET_DYN -o %t32.so
 # RUN: llvm-readobj --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
@@ -41,7 +46,7 @@
 # SYMBOLS-LLVM-NEXT:    Binding: Local (0x0)
 # SYMBOLS-LLVM-NEXT:    Type: None (0x0)
 # SYMBOLS-LLVM-NEXT:    Other: 0
-# SYMBOLS-LLVM-NEXT:    Section: Undefined (0x0)
+# SYMBOLS-LLVM-NEXT:    Section: .text (0x1)
 # SYMBOLS-LLVM-NEXT:  }
 # SYMBOLS-LLVM-NEXT:  Symbol {
 # SYMBOLS-LLVM-NEXT:    Name: bar (1)
@@ -52,19 +57,44 @@
 # SYMBOLS-LLVM-NEXT:    Other: 0
 # SYMBOLS-LLVM-NEXT:    Section: Undefined (0x0)
 # SYMBOLS-LLVM-NEXT:  }
+# SYMBOLS-LLVM-NEXT:  Symbol {
+# SYMBOLS-LLVM-NEXT:    Name: data (9)
+# SYMBOLS-LLVM-NEXT:    Value: 0x3
+# SYMBOLS-LLVM-NEXT:    Size: 0
+# SYMBOLS-LLVM-NEXT:    Binding: Global (0x1)
+# SYMBOLS-LLVM-NEXT:    Type: None (0x0)
+# SYMBOLS-LLVM-NEXT:    Other: 0
+# SYMBOLS-LLVM-NEXT:    Section: .data (0x2)
+# SYMBOLS-LLVM-NEXT:  }
 # SYMBOLS-LLVM-NEXT:]
 
-#      SYMBOLS-GNU64:Symbol table '.symtab' contains 3 entries:
+#      SYMBOLS-GNU64:Symbol table '.symtab' contains 4 entries:
 # SYMBOLS-GNU64-NEXT:   Num:    Value          Size Type    Bind   Vis       Ndx Name
 # SYMBOLS-GNU64-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
-# SYMBOLS-GNU64-NEXT:     1: 0000000000000001     0 NOTYPE  LOCAL  DEFAULT   UND foo
+# SYMBOLS-GNU64-NEXT:     1: 0000000000000001     0 NOTYPE  LOCAL  DEFAULT     1 foo
 # SYMBOLS-GNU64-NEXT:     2: 0000000000000002     0 NOTYPE  LOCAL  DEFAULT   UND bar
+# SYMBOLS-GNU64-NEXT:     3: 0000000000000003     0 NOTYPE  GLOBAL DEFAULT     2 data
 
-#      SYMBOLS-GNU32:Symbol table '.symtab' contains 3 entries:
+#     SYMBOLS-GNU64X:Symbol table '.symtab' contains 4 entries:
+#SYMBOLS-GNU64X-NEXT:   Num:    Value          Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+#SYMBOLS-GNU64X-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND          
+#SYMBOLS-GNU64X-NEXT:     1: 0000000000000001     0 NOTYPE  LOCAL  DEFAULT     1 (.text)  foo
+#SYMBOLS-GNU64X-NEXT:     2: 0000000000000002     0 NOTYPE  LOCAL  DEFAULT   UND          bar
+#SYMBOLS-GNU64X-NEXT:     3: 0000000000000003     0 NOTYPE  GLOBAL DEFAULT     2 (.data)  data
+
+#      SYMBOLS-GNU32:Symbol table '.symtab' contains 4 entries:
 # SYMBOLS-GNU32-NEXT:   Num:    Value  Size Type    Bind   Vis       Ndx Name
 # SYMBOLS-GNU32-NEXT:     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND 
-# SYMBOLS-GNU32-NEXT:     1: 00000001     0 NOTYPE  LOCAL  DEFAULT   UND foo
+# SYMBOLS-GNU32-NEXT:     1: 00000001     0 NOTYPE  LOCAL  DEFAULT     1 foo
 # SYMBOLS-GNU32-NEXT:     2: 00000002     0 NOTYPE  LOCAL  DEFAULT   UND bar
+# SYMBOLS-GNU32-NEXT:     3: 00000003     0 NOTYPE  GLOBAL DEFAULT     2 data
+
+#     SYMBOLS-GNU32X:Symbol table '.symtab' contains 4 entries:
+#SYMBOLS-GNU32X-NEXT:   Num:    Value  Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+#SYMBOLS-GNU32X-NEXT:     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND          
+#SYMBOLS-GNU32X-NEXT:     1: 00000001     0 NOTYPE  LOCAL  DEFAULT     1 (.text)  foo
+#SYMBOLS-GNU32X-NEXT:     2: 00000002     0 NOTYPE  LOCAL  DEFAULT   UND          bar
+#SYMBOLS-GNU32X-NEXT:     3: 00000003     0 NOTYPE  GLOBAL DEFAULT     2 (.data)  data
 
 ## Case 2: Check flag aliases produce identical output
 # RUN: llvm-readobj --symbols %t64 > %t.symbols
@@ -100,10 +130,10 @@
 ## Case 6: Test that the Num index starts from zero at every new symbol table.
 # RUN: llvm-readelf --symbols %t64 %t64 | FileCheck %s --check-prefix=NUM-INDEX
 
-# NUM-INDEX:      Symbol table '.symtab' contains 3 entries:
+# NUM-INDEX:      Symbol table '.symtab' contains 4 entries:
 # NUM-INDEX-NEXT:    Num: {{.*}}
 # NUM-INDEX-NEXT:      0: {{.*}}
-# NUM-INDEX:      Symbol table '.symtab' contains 3 entries:
+# NUM-INDEX:      Symbol table '.symtab' contains 4 entries:
 # NUM-INDEX-NEXT:    Num: {{.*}}
 # NUM-INDEX-NEXT:      0: {{.*}}
 
@@ -112,11 +142,21 @@ FileHeader:
   Class: ELFCLASS[[BITS]]
   Data:  ELFDATA2LSB
   Type:  [[TYPE]]
+Sections:
+  - Name:  .text
+    Type: SHT_PROGBITS
+  - Name:  .data
+    Type: SHT_PROGBITS
 Symbols:
-  - Name:  foo
-    Value: 0x1
-  - Name:  bar
-    Value: 0x2
+  - Name:    foo
+    Value:   0x1
+    Section: .text
+  - Name:    bar
+    Value:   0x2
+  - Name:    data
+    Value:   0x3
+    Binding: STB_GLOBAL
+    Section: .data
 DynamicSymbols:
   - Name:  zed
 
@@ -232,6 +272,13 @@ Symbols:
 ## Test a symbol defined relative to a section with an invalid name.
 # RUN: yaml2obj --docnum=3 %s -o %t64.err4
 # RUN: llvm-readelf -s %t64.err4 2>&1 | FileCheck /dev/null --implicit-check-not=warning:
+# RUN: llvm-readelf -s -X %t64.err4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t64.err4 --check-prefix=INVALID-SECNAME-GNU --implicit-check-not=warning:
+
+# INVALID-SECNAME-GNU:      Num:    Value  Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+# INVALID-SECNAME-GNU-NEXT:   0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND          
+# INVALID-SECNAME-GNU-NEXT: warning: '[[FILE]]': a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# INVALID-SECNAME-GNU-NEXT:   1: 00000000     0 NOTYPE  LOCAL  DEFAULT     1          foo
 
 --- !ELF
 FileHeader:
