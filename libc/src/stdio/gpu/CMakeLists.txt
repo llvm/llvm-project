@@ -3,10 +3,44 @@ add_header_library(
   HDRS
     file.h
   DEPENDS
+    libc.src.__support.RPC.rpc_client
     libc.src.__support.common
     .stdin
     .stdout
     .stderr
+)
+
+add_entrypoint_object(
+  feof
+  SRCS
+    feof.cpp
+  HDRS
+    ../feof.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.RPC.rpc_client
+)
+
+add_entrypoint_object(
+  ferror
+  SRCS
+    ferror.cpp
+  HDRS
+    ../ferror.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.RPC.rpc_client
+)
+
+add_entrypoint_object(
+  clearerr
+  SRCS
+    clearerr.cpp
+  HDRS
+    ../clearerr.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.RPC.rpc_client
 )
 
 add_entrypoint_object(
@@ -103,6 +137,85 @@ add_entrypoint_object(
   DEPENDS
     libc.include.stdio
     .gpu_file
+)
+
+add_entrypoint_object(
+  fgetc
+  SRCS
+    fgetc.cpp
+  HDRS
+    ../fgetc.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  fgetc_unlocked
+  SRCS
+    fgetc_unlocked.cpp
+  HDRS
+    ../fgetc_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  getc
+  SRCS
+    getc.cpp
+  HDRS
+    ../getc.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  getc_unlocked
+  SRCS
+    getc_unlocked.cpp
+  HDRS
+    ../getc_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  getchar
+  SRCS
+    getchar.cpp
+  HDRS
+    ../getchar.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  getchar_unlocked
+  SRCS
+    getc_unlocked.cpp
+  HDRS
+    ../getc_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+)
+
+add_entrypoint_object(
+  fgets
+  SRCS
+    fgets.cpp
+  HDRS
+    ../fgets.h
+  DEPENDS
+    libc.include.stdio
+    .gpu_file
+    .feof
+    .ferror
 )
 
 add_entrypoint_object(
