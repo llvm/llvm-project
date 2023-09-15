@@ -1,0 +1,14 @@
+name: Ensure there are no trailing whitespace
+
+on:
+  pull_request:
+    paths:
+    - 'clang/**'
+
+jobs:
+  example:
+    name: Find Trailing Whitespace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: harupy/find-trailing-whitespace@master

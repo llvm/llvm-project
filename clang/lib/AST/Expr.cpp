@@ -63,7 +63,7 @@ const Expr *Expr::getBestDynamicClassTypeExpr() const {
   }
 
   return E;
-}
+}   
 
 const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   const Expr *E = getBestDynamicClassTypeExpr();

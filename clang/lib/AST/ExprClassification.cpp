@@ -79,6 +79,12 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   return Classification(kind, modifiable);
 }
 
+static int not_well_formatted_code(int i)
+{
+   int hi = i ;
+    return hi;
+}
+
 /// Classify an expression which creates a temporary, based on its type.
 static Cl::Kinds ClassifyTemporary(QualType T) {
   if (T->isRecordType())

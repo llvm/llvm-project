@@ -69,9 +69,6 @@ cmake --version
 ninja --version
 
 case "${BUILDER}" in
-check-format)
-    ! grep -rnI '[[:blank:]]$' clang/lib clang/include clang/docs
-;;
 build-clang)
     mkdir install
     # We use Release here to avoid including debug information. Otherwise, the
