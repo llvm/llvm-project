@@ -5,8 +5,10 @@
 // but an acyclic iteration graph using sparse constraints only.
 
 #SparseTensor = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "dense", "compressed",
-                   "compressed", "dense", "dense", "dense" ]
+  map = (d0, d1, d2, d3,
+         d4, d5, d6, d7) -> (d0 : dense, d1 : dense, d2 : dense,
+                             d3 : compressed, d4 : compressed, d5 : dense,
+                             d6 : dense, d7 : dense)
 }>
 
 #trait_mul = {

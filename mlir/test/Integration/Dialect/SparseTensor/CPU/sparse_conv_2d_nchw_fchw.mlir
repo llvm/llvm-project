@@ -35,12 +35,12 @@
 
 
 #CDCD = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense", "compressed", "dense" ]
+  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : dense, d2 : compressed, d3 : dense)
 }>
 
 
 #CCCC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ]
+  map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : compressed)
 }>
 
 // Creates and returns 4-D buffer of size (%s1, %s2, %s3, %s4) filled with the value %f

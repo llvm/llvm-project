@@ -31,15 +31,15 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #CCC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed)
 }>
 
 #CDC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : dense, d2 : compressed)
 }>
 
 #DDC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : compressed)
 }>
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f

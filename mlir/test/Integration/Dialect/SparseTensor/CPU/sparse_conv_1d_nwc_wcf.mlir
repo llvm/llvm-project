@@ -31,10 +31,11 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #CCC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed" ] }>
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed) }>
 
 #CDC = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : dense, d2 : compressed)
+
   // FIXME: Still inadmissible might need investigation
   // dimToLvl = affine_map<(i,j,k) -> (j,k,i)>
 }>

@@ -30,7 +30,7 @@
 // Do the same run, but now with  VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#ST = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed", "compressed"]}>
+#ST = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed)}>
 
 //
 // Trait for 3-d tensor element wise multiplication.

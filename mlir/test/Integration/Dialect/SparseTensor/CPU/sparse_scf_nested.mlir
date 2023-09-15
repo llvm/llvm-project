@@ -31,7 +31,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-#SparseMatrix = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>
+#SparseMatrix = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed) }>
 
 module @func_sparse.2 {
   // Do elementwise x+1 when true, x-1 when false
