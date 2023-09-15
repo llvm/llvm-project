@@ -56,9 +56,9 @@ struct __debug_three_way_comp {
   }
 };
 
-// Pass the comparator by lvalue reference. Or in debug mode, using a
+// Pass the comparator by lvalue reference. Or in debug/safe mode, using a
 // debugging wrapper that stores a reference.
-#  if _LIBCPP_ENABLE_DEBUG_MODE
+#  if _LIBCPP_ENABLE_DEBUG_MODE || _LIBCPP_ENABLE_SAFE_MODE
 template <class _Comp>
 using __three_way_comp_ref_type = __debug_three_way_comp<_Comp>;
 #  else
