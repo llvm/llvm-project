@@ -12,9 +12,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
-#include "Program.h"
-#include "State.h"
-#include "clang/Basic/LLVM.h"
 
 using namespace clang;
 using namespace clang::interp;
