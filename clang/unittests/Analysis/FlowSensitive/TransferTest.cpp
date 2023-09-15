@@ -5481,6 +5481,41 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
 
+TEST(TransferTest, ContextSensitiveSelfReferentialClass) {
+  // Test that the `this` pointer seen in the constructor has the same value
+  // as the address of the variable the object is constructed into.
+  std::string Code = R"(
+    class MyClass {
+    public:
+      MyClass() : Self(this) {}
+      MyClass *Self;
+    };
+
+    void target() {
+      MyClass MyObj;
+      MyClass *SelfPtr = MyObj.Self;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+
+        const ValueDecl *MyObjDecl = findValueDecl(ASTCtx, "MyObj");
+        ASSERT_THAT(MyObjDecl, NotNull());
+
+        const ValueDecl *SelfDecl = findValueDecl(ASTCtx, "SelfPtr");
+        ASSERT_THAT(SelfDecl, NotNull());
+
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &SelfVal = *cast<PointerValue>(Env.getValue(*SelfDecl));
+        EXPECT_EQ(Env.getStorageLocation(*MyObjDecl), &SelfVal.getPointeeLoc());
+      },
+      {BuiltinOptions{ContextSensitiveOptions{}}});
+}
+
 TEST(TransferTest, UnnamedBitfieldInitializer) {
   std::string Code = R"(
     struct B {};
