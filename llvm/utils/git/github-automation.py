@@ -174,8 +174,9 @@ class PRSubscriber:
 
 <details>
 <summary>Changes</summary>
+
 {body}
---
+---
 {patch_link}
 
 {diff_stats}
