@@ -97,14 +97,45 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
             F.getParent()->getModuleFlag("branch-target-enforcement")))
       BranchTargetEnforcement = BTE->getZExtValue();
-    return;
+  } else {
+    const StringRef BTIEnable =
+        F.getFnAttribute("branch-target-enforcement").getValueAsString();
+    assert(BTIEnable.equals_insensitive("true") ||
+           BTIEnable.equals_insensitive("false"));
+    BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
   }
 
-  const StringRef BTIEnable =
-      F.getFnAttribute("branch-target-enforcement").getValueAsString();
-  assert(BTIEnable.equals_insensitive("true") ||
-         BTIEnable.equals_insensitive("false"));
-  BranchTargetEnforcement = BTIEnable.equals_insensitive("true");
+  // The default stack probe size is 4096 if the function has no
+  // stack-probe-size attribute. This is a safe default because it is the
+  // smallest possible guard page size.
+  uint64_t ProbeSize = 4096;
+  if (F.hasFnAttribute("stack-probe-size"))
+    ProbeSize = F.getFnAttributeAsParsedInteger("stack-probe-size");
+  else if (const auto *PS = mdconst::extract_or_null<ConstantInt>(
+               F.getParent()->getModuleFlag("stack-probe-size")))
+    ProbeSize = PS->getZExtValue();
+  assert(int64_t(ProbeSize) > 0 && "Invalid stack probe size");
+
+  if (STI->isTargetWindows()) {
+    if (!F.hasFnAttribute("no-stack-arg-probe"))
+      StackProbeSize = ProbeSize;
+  } else {
+    // Round down to the stack alignment.
+    uint64_t StackAlign =
+        STI->getFrameLowering()->getTransientStackAlign().value();
+    ProbeSize = std::max(StackAlign, ProbeSize & ~(StackAlign - 1U));
+    StringRef ProbeKind;
+    if (F.hasFnAttribute("probe-stack"))
+      ProbeKind = F.getFnAttribute("probe-stack").getValueAsString();
+    else if (const auto *PS = dyn_cast_or_null<MDString>(
+                 F.getParent()->getModuleFlag("probe-stack")))
+      ProbeKind = PS->getString();
+    if (ProbeKind.size()) {
+      if (ProbeKind != "inline-asm")
+        report_fatal_error("Unsupported stack probing method");
+      StackProbeSize = ProbeSize;
+    }
+  }
 }
 
 MachineFunctionInfo *AArch64FunctionInfo::clone(

@@ -152,13 +152,32 @@ private:
                                   MachineBasicBlock::iterator MBBI) const;
   void allocateStackSpace(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI,
-                          bool NeedsRealignment, StackOffset AllocSize,
-                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
-                          StackOffset InitialOffset) const;
+                          int64_t RealignmentPadding, StackOffset AllocSize,
+                          bool NeedsWinCFI, bool *HasWinCFI,
+                          bool EmitCFI, StackOffset InitialOffset) const;
 
   /// Emit target zero call-used regs.
   void emitZeroCallUsedRegs(BitVector RegsToZero,
                             MachineBasicBlock &MBB) const override;
+
+  /// Replace a StackProbe stub (if any) with the actual probe code inline
+  void inlineStackProbe(MachineFunction &MF,
+                        MachineBasicBlock &PrologueMBB) const override;
+
+  MachineBasicBlock::iterator
+  inlineStackProbeFixed(MachineBasicBlock::iterator MBBI, Register ScratchReg,
+                        int64_t FrameSize, StackOffset CFAOffset) const;
+
+  MachineBasicBlock::iterator
+  inlineStackProbeFixed(MachineBasicBlock::iterator MBBI) const;
+
+  MachineBasicBlock::iterator
+  inlineStackProbeVar(MachineBasicBlock::iterator MBBI) const;
+
+  MachineBasicBlock::iterator
+  inlineStackProbeLoopExactMultiple(MachineBasicBlock::iterator MBBI,
+                                    int64_t NegProbeSize,
+                                    Register TargetReg) const;
 };
 
 } // End llvm namespace

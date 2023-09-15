@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64ExpandImm.h"
 #include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PointerAuth.h"
@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -9459,6 +9460,94 @@ bool AArch64InstrInfo::isReallyTriviallyReMaterializable(
   }
 
   return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+}
+
+MachineBasicBlock::iterator
+AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
+                                   Register TargetReg, bool FrameSetup) const {
+  assert(TargetReg != AArch64::SP && "New top of stack cannot aleady be in SP");
+
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const AArch64InstrInfo *TII =
+      MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
+  int64_t ProbeSize = MF.getInfo<AArch64FunctionInfo>()->getStackProbeSize();
+  DebugLoc DL = MBB.findDebugLoc(MBBI);
+
+  MachineFunction::iterator MBBInsertPoint = std::next(MBB.getIterator());
+  MachineBasicBlock *LoopTestMBB =
+      MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+  MF.insert(MBBInsertPoint, LoopTestMBB);
+  MachineBasicBlock *LoopBodyMBB =
+      MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+  MF.insert(MBBInsertPoint, LoopBodyMBB);
+  MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+  MF.insert(MBBInsertPoint, ExitMBB);
+  MachineInstr::MIFlag Flags =
+      FrameSetup ? MachineInstr::FrameSetup : MachineInstr::NoFlags;
+
+  // LoopTest:
+  //   SUB SP, SP, #ProbeSize
+  emitFrameOffset(*LoopTestMBB, LoopTestMBB->end(), DL, AArch64::SP,
+                  AArch64::SP, StackOffset::getFixed(-ProbeSize), TII, Flags);
+
+  //   CMP SP, TargetReg
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(AArch64::SUBSXrx64),
+          AArch64::XZR)
+      .addReg(AArch64::SP)
+      .addReg(TargetReg)
+      .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0))
+      .setMIFlags(Flags);
+
+  //   B.<Cond> LoopExit
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::LE)
+      .addMBB(ExitMBB)
+      .setMIFlags(Flags);
+
+  //   STR XZR, [SP]
+  BuildMI(*LoopBodyMBB, LoopBodyMBB->end(), DL, TII->get(AArch64::STRXui))
+      .addReg(AArch64::XZR)
+      .addReg(AArch64::SP)
+      .addImm(0)
+      .setMIFlags(Flags);
+
+  //   B loop
+  BuildMI(*LoopBodyMBB, LoopBodyMBB->end(), DL, TII->get(AArch64::B))
+      .addMBB(LoopTestMBB)
+      .setMIFlags(Flags);
+
+  // LoopExit:
+  //   MOV SP, TargetReg
+  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(AArch64::ADDXri), AArch64::SP)
+      .addReg(TargetReg)
+      .addImm(0)
+      .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
+      .setMIFlags(Flags);
+
+  //   STR XZR, [SP]
+  BuildMI(*ExitMBB, ExitMBB->end(), DL, TII->get(AArch64::STRXui))
+      .addReg(AArch64::XZR)
+      .addReg(AArch64::SP)
+      .addImm(0)
+      .setMIFlags(Flags);
+
+  ExitMBB->splice(ExitMBB->end(), &MBB, std::next(MBBI), MBB.end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+  LoopTestMBB->addSuccessor(ExitMBB);
+  LoopTestMBB->addSuccessor(LoopBodyMBB);
+  LoopBodyMBB->addSuccessor(LoopTestMBB);
+  MBB.addSuccessor(LoopTestMBB);
+
+  // Update liveins.
+  if (MF.getRegInfo().reservedRegsFrozen()) {
+    recomputeLiveIns(*LoopTestMBB);
+    recomputeLiveIns(*LoopBodyMBB);
+    recomputeLiveIns(*ExitMBB);
+  }
+
+  return ExitMBB->begin();
 }
 
 #define GET_INSTRINFO_HELPERS
