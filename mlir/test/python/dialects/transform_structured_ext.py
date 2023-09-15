@@ -1,10 +1,12 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import functools
+from typing import Callable
+
 from mlir.ir import *
 from mlir.dialects import transform
 from mlir.dialects import pdl
 from mlir.dialects.transform import structured
-from typing import Callable
 from mlir.dialects.transform import pdl as transform_pdl
 
 
@@ -20,6 +22,7 @@ def run(f):
 
 
 def create_sequence(func: Callable) -> Callable:
+    @functools.wraps(func)
     def decorated() -> None:
         sequence = transform.SequenceOp(
             transform.FailurePropagationMode.Propagate,
@@ -30,7 +33,6 @@ def create_sequence(func: Callable) -> Callable:
             func(sequence.bodyTarget)
             transform.YieldOp()
 
-    decorated.__name__ = func.__name__
     return decorated
 
 
