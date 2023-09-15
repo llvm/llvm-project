@@ -13527,12 +13527,12 @@ static bool matchIndexAsShuffle(EVT VT, SDValue Index, SDValue Mask,
   // Create the shuffle mask and check all bits active
   assert(ShuffleMask.empty());
   BitVector ActiveLanes(NumElems);
-  for (const auto Idx : enumerate(Index->ops())) {
+  for (unsigned i = 0; i < Index->getNumOperands(); i++) {
     // TODO: We've found an active bit of UB, and could be
     // more aggressive here if desired.
-    if (Index->getOperand(Idx.index())->isUndef())
+    if (Index->getOperand(i)->isUndef())
       return false;
-    uint64_t C = Index->getConstantOperandVal(Idx.index());
+    uint64_t C = Index->getConstantOperandVal(i);
     if (C % ElementSize != 0)
       return false;
     C = C / ElementSize;
