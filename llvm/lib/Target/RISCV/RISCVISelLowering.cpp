@@ -13646,19 +13646,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // n-levels TRUNCATE_VECTOR_VL to satisfy RVV's SEW*2->SEW truncate
     // restriction, such pattern would be expanded into a series of "vsetvli"
     // and "vnsrl" instructions later to reach this point.
-
     auto IsTruncNode = [](SDValue V) {
       if (V.getOpcode() != RISCVISD::TRUNCATE_VECTOR_VL)
         return false;
-
       SDValue VL = V.getOperand(2);
       auto *C = dyn_cast<ConstantSDNode>(VL);
-
       // Assume all TRUNCATE_VECTOR_VL nodes use VLMAX for VMSET_VL operand
       bool IsVLMAXForVMSET = (C && C->isAllOnes()) ||
                              (isa<RegisterSDNode>(VL) &&
                               cast<RegisterSDNode>(VL)->getReg() == RISCV::X0);
-
       return V.getOperand(1).getOpcode() == RISCVISD::VMSET_VL &&
              IsVLMAXForVMSET;
     };
@@ -13676,21 +13672,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (Op.getOpcode() == ISD::SRA && Op.hasOneUse()) {
       SDValue N0 = Op.getOperand(0);
       SDValue N1 = Op.getOperand(1);
-
       if (N0.getOpcode() == ISD::SIGN_EXTEND && N0.hasOneUse() &&
           N1.getOpcode() == ISD::ZERO_EXTEND && N1.hasOneUse()) {
         SDValue N00 = N0.getOperand(0);
         SDValue N10 = N1.getOperand(0);
-
         if (N00.getValueType().isVector() &&
-            N00.getValueType() == N10.getValueType() && N->hasOneUse() &&
+            N00.getValueType() == N10.getValueType() &&
             N->getValueType(0) == N10.getValueType()) {
           unsigned MaxShAmt = N10.getValueType().getScalarSizeInBits() - 1;
-
           SDValue SMin = DAG.getNode(
               ISD::SMIN, SDLoc(N1), N->getValueType(0), N10,
               DAG.getConstant(MaxShAmt, SDLoc(N1), N->getValueType(0)));
-
           return DAG.getNode(ISD::SRA, SDLoc(N), N->getValueType(0), N00, SMin);
         }
       }
