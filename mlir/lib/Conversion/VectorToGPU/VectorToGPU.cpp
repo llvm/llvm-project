@@ -119,10 +119,9 @@ static bool isTransposeMatrixLoadMap(AffineMap permutationMap) {
          permutationMap == AffineMap::get(nDim, 0, {innerDim, zero}, ctx);
 }
 
-// Return the stide for the dimension 0 of |type| if it is a memref and has a
-// constant stride.
-static std::optional<int64_t>
-getMemrefConstantHorizontalStride(ShapedType type) {
+// Return the stide for the second-to-last dimension of |type| if it is a memref
+// and has a constant stride.
+static std::optional<int64_t> getStaticallyKnownRowStride(ShapedType type) {
   auto memrefType = dyn_cast<MemRefType>(type);
   if (!memrefType)
     return false;
@@ -141,35 +140,27 @@ getMemrefConstantHorizontalStride(ShapedType type) {
 }
 
 // Return true if the transfer op can be converted to a MMA matrix load.
-static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp,
-                                              bool useNvGpu) {
+static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
   if (readOp.getMask() || readOp.hasOutOfBoundsDim() ||
       readOp.getVectorType().getRank() != 2)
     return false;
-  if (!getMemrefConstantHorizontalStride(readOp.getShapedType()))
+  if (!getStaticallyKnownRowStride(readOp.getShapedType()))
     return false;
 
   // Only allow integer types if the signedness can be inferred.
-  if (!useNvGpu && readOp.getVectorType().getElementType().isInteger(8))
+  if (readOp.getVectorType().getElementType().isInteger(8))
     if (!readOp->hasOneUse() || (!isa<arith::ExtSIOp>(*readOp->user_begin()) &&
                                  !isa<arith::ExtUIOp>(*readOp->user_begin())))
       return false;
 
   AffineMap map = readOp.getPermutationMap();
-
   MLIRContext *ctx = readOp.getContext();
   AffineExpr innerDim = getAffineDimExpr(map.getNumDims() - 1, ctx);
   AffineExpr zero = getAffineConstantExpr(0, ctx);
   auto broadcastInnerDim =
       AffineMap::get(map.getNumDims(), 0, {zero, innerDim}, ctx);
-
-  if (!useNvGpu) {
-    bool result = map.isMinorIdentity() || map == broadcastInnerDim ||
-                  isTransposeMatrixLoadMap(map);
-    return result;
-  }
-
-  return true;
+  return map.isMinorIdentity() || map == broadcastInnerDim ||
+         isTransposeMatrixLoadMap(map);
 }
 
 // Return true if the transfer op can be converted to a MMA matrix store.
@@ -182,7 +173,7 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
   if (writeOp.getMask() || writeOp.hasOutOfBoundsDim() ||
       writeOp.getVectorType().getRank() != 2)
     return false;
-  if (!getMemrefConstantHorizontalStride(writeOp.getShapedType()))
+  if (!getStaticallyKnownRowStride(writeOp.getShapedType()))
     return false;
   // TODO: Support transpose once it is added to GPU dialect ops.
   if (!writeOp.getPermutationMap().isMinorIdentity())
@@ -285,9 +276,11 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
   if (isa<scf::ForOp, scf::YieldOp>(op))
     return true;
   if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
-    return transferReadSupportsMMAMatrixType(transferRead, useNvGpu);
+    return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferRead)
+                    : transferReadSupportsMMAMatrixType(transferRead);
   if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(op))
-    return transferWriteSupportsMMAMatrixType(transferWrite);
+    return useNvGpu ? nvgpu::canLowerToWarpMatrixOperation(transferWrite)
+                    : transferWriteSupportsMMAMatrixType(transferWrite);
   if (auto extractStridedSlice = dyn_cast<vector::ExtractStridedSliceOp>(op))
     return useNvGpu &&
            extractStridedSliceSupportsMMAMatrixType(extractStridedSlice);
@@ -372,9 +365,14 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
     // chain. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
     if (llvm::any_of(dependentOps, [useNvGpu](Operation *op) {
-          return !supportsMMaMatrixType(op, useNvGpu);
+          if (!supportsMMaMatrixType(op, useNvGpu)) {
+            LLVM_DEBUG(DBGS() << "cannot convert op: " << *op << "\n");
+            return true;
+          }
+          return false;
         }))
       return;
+
     opToConvert.insert(dependentOps.begin(), dependentOps.end());
   });
   // Sort the operations so that we can convert them in topological order.
@@ -537,10 +535,11 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   rewriter.setInsertionPoint(op);
 
   assert(op.getTransferRank() > 0 && "unexpected 0-d transfer");
-  assert(transferReadSupportsMMAMatrixType(op, /*useNvGpu=*/false));
+  assert(transferReadSupportsMMAMatrixType(op) &&
+         "expected convertible operation");
 
   std::optional<int64_t> stride =
-      getMemrefConstantHorizontalStride(op.getShapedType());
+      getStaticallyKnownRowStride(op.getShapedType());
   if (!stride.has_value()) {
     LLVM_DEBUG(DBGS() << "no stride\n");
     return rewriter.notifyMatchFailure(op, "no stride");
@@ -591,7 +590,7 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
 
   assert(transferWriteSupportsMMAMatrixType(op));
   std::optional<int64_t> stride =
-      getMemrefConstantHorizontalStride(op.getShapedType());
+      getStaticallyKnownRowStride(op.getShapedType());
   if (!stride.has_value()) {
     LLVM_DEBUG(DBGS() << "no stride\n");
     return rewriter.notifyMatchFailure(op, "no stride");
@@ -1303,7 +1302,8 @@ LogicalResult mlir::convertVectorToNVVMCompatibleMMASync(RewriterBase &rewriter,
               return op->emitError() << "unhandled vector to mma type: " << *op;
             })
             .failed()) {
-      return op->emitError() << "Failed to convert op " << *op;
+      return op->emitOpError()
+             << "failed to convert op during vector-to-nvgpu conversion";
     }
   }
   return success();
@@ -1326,10 +1326,11 @@ struct ConvertVectorToGPUPass
       return signalPassFailure();
 
     IRRewriter rewriter(&getContext());
-    if (useNvGpu.getValue()) {
+    if (useNvGpu) {
       if (failed(
               convertVectorToNVVMCompatibleMMASync(rewriter, getOperation())))
         return signalPassFailure();
+      return;
     }
     (void)convertVectorToMMAOps(rewriter, getOperation());
   }
