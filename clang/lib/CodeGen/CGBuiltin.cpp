@@ -2351,6 +2351,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // There's a special case with the fma builtins where they are always const
   // if the target environment is GNU or the target is OS is Windows and we're
   // targeting the MSVCRT.dll environment.
+  // FIXME: This list can be become outdated. Need to find a way to get it some
+  // other way.
   switch (BuiltinID) {
   case Builtin::BI__builtin_fma:
   case Builtin::BI__builtin_fmaf:
