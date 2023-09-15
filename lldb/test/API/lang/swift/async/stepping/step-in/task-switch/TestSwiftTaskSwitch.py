@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestCase(lldbtest.TestBase):
     @swiftTest
     @skipIf(oslist=["windows", "linux"])
+    @expectedFailureAll(bugnumber='rdar://115576769')
     def test(self):
         """Test conditions for async step-in."""
         self.build()
