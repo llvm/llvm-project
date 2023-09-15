@@ -39,7 +39,7 @@ const char *InstrProfCorrelator::FunctionNameAttributeName = "Function Name";
 const char *InstrProfCorrelator::CFGHashAttributeName = "CFG Hash";
 const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
 const char *InstrProfCorrelator::CovFunctionNameAttributeName =
-    "Cov Function Name";
+    "Coverage Function Name";
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
