@@ -136,7 +136,7 @@ DiagnosedSilenceableFailure
 mlir::test::TestProduceValueHandleToSelfOperand::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  results.setValues(llvm::cast<OpResult>(getOut()), getIn());
+  results.setValues(llvm::cast<OpResult>(getOut()), {getIn()});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -265,8 +265,7 @@ void mlir::test::TestPrintRemarkAtOperandOp::getEffects(
 DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandValue::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  ArrayRef<Value> values = state.getPayloadValues(getIn());
-  for (Value value : values) {
+  for (Value value : state.getPayloadValues(getIn())) {
     std::string note;
     llvm::raw_string_ostream os(note);
     if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
@@ -712,7 +711,7 @@ void mlir::test::TestProduceNullValueOp::getEffects(
 DiagnosedSilenceableFailure mlir::test::TestProduceNullValueOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  results.setValues(llvm::cast<OpResult>(getOut()), Value());
+  results.setValues(llvm::cast<OpResult>(getOut()), {Value()});
   return DiagnosedSilenceableFailure::success();
 }
 
