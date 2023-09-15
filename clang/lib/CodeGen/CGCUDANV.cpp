@@ -1234,7 +1234,10 @@ llvm::GlobalValue *CGNVCUDARuntime::getKernelHandle(llvm::Function *F,
   Var->setAlignment(CGM.getPointerAlign().getAsAlign());
   Var->setDSOLocal(F->isDSOLocal());
   Var->setVisibility(F->getVisibility());
-  CGM.maybeSetTrivialComdat(*GD.getDecl(), *Var);
+  auto *FD = cast<FunctionDecl>(GD.getDecl());
+  auto *FT = FD->getPrimaryTemplate();
+  if (!FT || FT->isThisDeclarationADefinition())
+    CGM.maybeSetTrivialComdat(*FD, *Var);
   KernelHandles[F->getName()] = Var;
   KernelStubs[Var] = F;
   return Var;
