@@ -8249,6 +8249,7 @@ cc_library(
         ":AsyncToLLVM",
         ":AsyncTransforms",
         ":BufferizationDialect",
+        ":BufferizationPipelines",
         ":BufferizationTransformOps",
         ":BufferizationTransforms",
         ":CastInterfaces",
@@ -12210,6 +12211,21 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":Support",
+        ":Transforms",
+    ],
+)
+
+cc_library(
+    name = "BufferizationPipelines",
+    srcs = glob(["lib/Dialect/Bufferization/Pipelines/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/Bufferization/Pipelines/Passes.h"],
+    includes = ["include"],
+    deps = [
+        ":BufferizationToMemRef",
+        ":BufferizationTransforms",
+        ":FuncDialect",
+        ":MemRefTransforms",
+        ":Pass",
         ":Transforms",
     ],
 )
