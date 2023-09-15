@@ -4224,14 +4224,14 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 
   if (Pred == FCmpInst::FCMP_UEQ) {
     FPClassTest Class = RHSClass | fcNan;
-    return {Src, Class, ~Class};
+    return {Src, Class, ~fcNan};
   }
 
   if (Pred == FCmpInst::FCMP_ONE)
     return {Src, ~fcNan, RHSClass};
 
   if (Pred == FCmpInst::FCMP_UNE)
-    return {Src, fcAllFlags, RHSClass | fcNan};
+    return {Src, fcAllFlags, RHSClass};
 
   assert((RHSClass == fcPosNormal || RHSClass == fcNegNormal || RHSClass == fcNormal ||
           RHSClass == fcPosSubnormal || RHSClass == fcNegSubnormal || RHSClass == fcSubnormal) &&
@@ -4298,8 +4298,8 @@ llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
 
     FPClassTest FalseClasses = RHSClass;
     if (IsFabs) {
-      ClassesGE = llvm::fabs(ClassesGE);
-      ClassesLE = llvm::fabs(ClassesLE);
+      ClassesGE = llvm::inverse_fabs(ClassesGE);
+      ClassesLE = llvm::inverse_fabs(ClassesLE);
     }
 
     switch (Pred) {
