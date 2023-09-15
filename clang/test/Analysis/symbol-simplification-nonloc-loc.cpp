@@ -1,6 +1,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core %s \
 // RUN:    -triple x86_64-pc-linux-gnu -verify
 
+void clang_analyzer_eval(int);
+
 #define BINOP(OP) [](auto x, auto y) { return x OP y; }
 
 template <typename BinOp>
@@ -72,4 +74,28 @@ void zoo1backwards() {
   // expected-warning@+1 {{Dereference of null pointer [core.NullDereference]}}
   *(0 + p) = nullptr;  // warn
   **(0 + p) = 'a';     // no-warning: this should be unreachable
+}
+
+void test_simplified_before_cast_add(long t1) {
+  long long t2 = t1 + 3;
+  if (!t2) {
+    int *p = (int *) t2;
+    clang_analyzer_eval(p == 0); // expected-warning{{TRUE}}
+  }
+}
+
+void test_simplified_before_cast_sub(long t1) {
+  long long t2 = t1 - 3;
+  if (!t2) {
+    int *p = (int *) t2;
+    clang_analyzer_eval(p == 0); // expected-warning{{TRUE}}
+  }
+}
+
+void test_simplified_before_cast_mul(long t1) {
+  long long t2 = t1 * 3;
+  if (!t2) {
+    int *p = (int *) t2;
+    clang_analyzer_eval(p == 0); // expected-warning{{TRUE}}
+  }
 }
