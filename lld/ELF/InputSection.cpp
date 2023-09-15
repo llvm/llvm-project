@@ -850,6 +850,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return sym.getSize() + a;
   case R_TLSDESC:
     return in.got->getTlsDescAddr(sym) + a;
+  case R_RISCV_TLSDESC_HI:
   case R_TLSDESC_PC:
     return in.got->getTlsDescAddr(sym) + a - p;
   case R_TLSDESC_GOTPLT:

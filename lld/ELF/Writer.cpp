@@ -1943,7 +1943,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       }
     }
 
-    if (config->emachine == EM_386 || config->emachine == EM_X86_64) {
+    if (config->emachine == EM_386 || config->emachine == EM_X86_64 ||
+        config->emachine == EM_RISCV) {
       // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
       // way that:
       //

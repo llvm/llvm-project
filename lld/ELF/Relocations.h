@@ -103,6 +103,10 @@ enum RelExpr {
   R_RISCV_ADD,
   R_RISCV_LEB128,
   R_RISCV_PC_INDIRECT,
+  R_RISCV_TLSDESC_HI,
+  R_RISCV_TLSDESC_LOAD_LO,
+  R_RISCV_TLSDESC_ADD_LO,
+  R_RISCV_TLSDESC_CALLER,
   // Same as R_PC but with page-aligned semantics.
   R_LOONGARCH_PAGE_PC,
   // Same as R_PLT_PC but with page-aligned semantics.
