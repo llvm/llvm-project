@@ -48,6 +48,8 @@ namespace i128 {
                                          // expected-note {{outside the range}} \
                                          // ref-error {{must be initialized by a constant expression}} \
                                          // ref-note {{outside the range}}
+  constexpr int128_t Two = (int128_t)1 << 1ul;
+  static_assert(Two == 2, "");
 }
 
 constexpr bool b = number;

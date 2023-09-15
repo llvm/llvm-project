@@ -82,8 +82,7 @@ public:
 
   template <unsigned Bits, bool InputSigned>
   static IntegralAP from(Integral<Bits, InputSigned> I) {
-    assert(InputSigned);
-    /// FIXME: Take bits parameter.
+    // FIXME: Take bits parameter.
     APSInt Copy =
         APSInt(APInt(128, static_cast<int64_t>(I), InputSigned), !Signed);
     Copy.setIsSigned(Signed);
