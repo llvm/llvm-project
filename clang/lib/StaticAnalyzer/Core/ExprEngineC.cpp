@@ -264,8 +264,7 @@ ProgramStateRef ExprEngine::handleLValueBitCast(
   }
   // Delegate to SValBuilder to process.
   SVal OrigV = state->getSVal(Ex, LCtx);
-  SVal SimplifiedOrigV = svalBuilder.simplifySVal(state, OrigV);
-  SVal V = svalBuilder.evalCast(SimplifiedOrigV, T, ExTy);
+  SVal V = svalBuilder.evalCast(OrigV, T, ExTy);
   // Negate the result if we're treating the boolean as a signed i1
   if (CastE->getCastKind() == CK_BooleanToSignedIntegral && V.isValid())
     V = svalBuilder.evalMinus(V.castAs<NonLoc>());
