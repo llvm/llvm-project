@@ -478,20 +478,17 @@ Expected<uint64_t> materializeAbbrevFromTagImpl(MCCASReader &Reader,
   return Size + *MaybePaddingSize;
 }
 
-static Expected<uint64_t>
-materializeDebugInfoFromTagImpl(MCCASReader &Reader,
-                                DebugInfoSectionRef SectionRef) {
-  SmallVector<cas::ObjectRef> Refs = loadReferences(SectionRef);
-  auto MaybeTopRefs = findRefs<DIETopLevelRef>(Reader, Refs);
-  SmallVector<char, 0> SectionContents;
-  raw_svector_ostream SectionStream(SectionContents);
+static Error materializeDebugInfoOpt(MCCASReader &Reader,
+                                     ArrayRef<cas::ObjectRef> Refs,
+                                     raw_ostream *SectionStream) {
 
+  auto MaybeTopRefs = findRefs<DIETopLevelRef>(Reader, Refs);
   auto HeaderCallback = [&](StringRef HeaderData) {
-    SectionStream << HeaderData;
+    *SectionStream << HeaderData;
   };
 
   auto StartTagCallback = [&](dwarf::Tag, uint64_t AbbrevIdx) {
-    encodeULEB128(decodeAbbrevIndexAsDwarfAbbrevIdx(AbbrevIdx), SectionStream);
+    encodeULEB128(decodeAbbrevIndexAsDwarfAbbrevIdx(AbbrevIdx), *SectionStream);
   };
 
   auto AttrCallback = [&](dwarf::Attribute, dwarf::Form Form,
@@ -504,13 +501,13 @@ materializeDebugInfoFromTagImpl(MCCASReader &Reader,
         handleAllErrors(std::move(Err));
       uint32_t Data32 = Data64;
       assert(Data32 == Data64 && Reader.empty());
-      SectionStream.write(reinterpret_cast<char *>(&Data32), sizeof(Data32));
+      SectionStream->write(reinterpret_cast<char *>(&Data32), sizeof(Data32));
     } else
-      SectionStream << FormData;
+      *SectionStream << FormData;
   };
 
   auto EndTagCallback = [&](bool HadChildren) {
-    SectionStream.write_zeros(HadChildren);
+    SectionStream->write_zeros(HadChildren);
   };
 
   if (!MaybeTopRefs)
@@ -522,6 +519,54 @@ materializeDebugInfoFromTagImpl(MCCASReader &Reader,
     if (auto E = visitDebugInfo(TotAbbrevEntries, std::move(MaybeTopRef),
                                 HeaderCallback, StartTagCallback, AttrCallback,
                                 EndTagCallback))
+      return E;
+  }
+  return Error::success();
+}
+
+static Error materializeDebugInfoUnopt(MCCASReader &Reader,
+                                       ArrayRef<cas::ObjectRef> Refs,
+                                       SmallVectorImpl<char> &SectionContents) {
+
+  for (auto Ref : Refs) {
+    auto Node = Reader.getObjectProxy(Ref);
+    if (!Node)
+      return Node.takeError();
+    if (auto F = DebugInfoUnoptRef::Cast(*Node)) {
+      append_range(SectionContents, F->getData());
+      continue;
+    }
+    if (auto F = PaddingRef::Cast(*Node)) {
+      raw_svector_ostream OS(SectionContents);
+      auto Size = F->materialize(OS);
+      if (!Size)
+        return Size.takeError();
+      continue;
+    }
+    llvm_unreachable("Incorrect CAS Object in SectionContents");
+  }
+  return Error::success();
+}
+
+static Expected<uint64_t>
+materializeDebugInfoFromTagImpl(MCCASReader &Reader,
+                                DebugInfoSectionRef SectionRef) {
+  SmallVector<cas::ObjectRef> Refs = loadReferences(SectionRef);
+  SmallVector<char, 0> SectionContents;
+  raw_svector_ostream SectionStream(SectionContents);
+  auto Node = Reader.getObjectProxy(Refs[0]);
+  if (!Node)
+    return Node.takeError();
+  if (auto UnoptRef = DebugInfoUnoptRef::Cast(*Node)) {
+    if (Refs.size() > 2)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "If a DebugInfoUnoptRef is seen, there should be no more than 2 "
+          "CAS objects under the DebugInfoSectionRef!");
+    if (Error E = materializeDebugInfoUnopt(Reader, Refs, SectionContents))
+      return std::move(E);
+  } else {
+    if (Error E = materializeDebugInfoOpt(Reader, Refs, &SectionStream))
       return std::move(E);
   }
   Reader.Relocations.emplace_back();
@@ -1754,8 +1799,20 @@ MCCASBuilder::splitDebugInfoSectionData(MutableArrayRef<char> DebugInfoData) {
 Error MCCASBuilder::createDebugInfoSection() {
   startSection(DwarfSections.DebugInfo);
 
-  if (auto E = splitDebugInfoAndAbbrevSections())
-    return E;
+  if (DebugInfoUnopt) {
+    Expected<SmallVector<char, 0>> DebugInfoData = mergeMCFragmentContents(
+        DwarfSections.DebugInfo->getFragmentList(), true);
+    if (!DebugInfoData)
+      return DebugInfoData.takeError();
+    auto DbgInfoUnoptRef =
+        DebugInfoUnoptRef::create(*this, toStringRef(*DebugInfoData));
+    if (!DbgInfoUnoptRef)
+      return DbgInfoUnoptRef.takeError();
+    addNode(*DbgInfoUnoptRef);
+  } else {
+    if (auto E = splitDebugInfoAndAbbrevSections())
+      return E;
+  }
 
   if (auto E = createPaddingRef(DwarfSections.DebugInfo))
     return E;
