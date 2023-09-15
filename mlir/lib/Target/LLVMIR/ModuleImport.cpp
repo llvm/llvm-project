@@ -990,6 +990,11 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<NullOp>(loc, type).getResult();
   }
 
+  // Convert none token constants.
+  if (auto *noneToken = dyn_cast<llvm::ConstantTokenNone>(constant)) {
+    return builder.create<NoneTokenOp>(loc).getResult();
+  }
+
   // Convert poison.
   if (auto *poisonVal = dyn_cast<llvm::PoisonValue>(constant)) {
     Type type = convertType(poisonVal->getType());
