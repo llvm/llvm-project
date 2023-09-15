@@ -200,7 +200,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Sorted Coordinate Scheme.
     #SortedCOO = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed_nu", "singleton" ]
+      map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
     }>
     ... tensor<?x?xf64, #SortedCOO> ...
 
@@ -214,8 +214,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Block sparse row storage (2x3 blocks).
     #BCSR = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed", "compressed", "dense", "dense" ],
-      dimToLvl = affine_map<(i, j) -> (i floordiv 2, j floordiv 3, i mod 2, j mod 3)>
+      map = ( i, j ) ->
+      ( i floordiv 2 : compressed,
+        j floordiv 3 : compressed,
+        i mod 2      : dense,
+        j mod 3      : dense
+      )
     }>
     ... tensor<20x30xf32, #BCSR> ...
 

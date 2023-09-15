@@ -1050,7 +1050,7 @@ func.func @cmp_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #T
 }
 
 #BatchedVector = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_hi" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed(high))
 }>
 // CHECK-LABEL:   func.func @sub_ss_batched(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<2x3xf64, #{{.*}}>>,
