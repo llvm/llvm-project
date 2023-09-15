@@ -510,6 +510,12 @@ llvm:analysis:
   - llvm/test/Analysis/**
   - llvm/unittests/Analysis/**
 
+llvm:adt:
+  - llvm/**/ADT/*
+
+llvm:support:
+  - llvm/**/Support/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
