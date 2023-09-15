@@ -414,7 +414,7 @@ define <32 x double> @strided_vpload_v32f64(ptr %ptr, i32 signext %stride, <32 x
 ; CHECK-LABEL: strided_vpload_v32f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a4, 16
-; CHECK-NEXT:    vmv1r.v v8, v0
+; CHECK-NEXT:    vmv1r.v v9, v0
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:    bltu a2, a4, .LBB33_2
 ; CHECK-NEXT:  # %bb.1:
@@ -427,11 +427,12 @@ define <32 x double> @strided_vpload_v32f64(ptr %ptr, i32 signext %stride, <32 x
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a5
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v8, 2
+; CHECK-NEXT:    vslidedown.vi v8, v9, 2
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vlse64.v v16, (a4), a1, v0.t
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv1r.v v0, v9
 ; CHECK-NEXT:    vlse64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
   %load = call <32 x double> @llvm.experimental.vp.strided.load.v32f64.p0.i32(ptr %ptr, i32 %stride, <32 x i1> %m, i32 %evl)
