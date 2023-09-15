@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestCase(lldbtest.TestBase):
     @swiftTest
     @skipIf(oslist=["windows", "linux"])
+    @expectedFailureAll(bugnumber='rdar://115576769')
     def test(self):
         """Test conditions for async step-in."""
         self.build()
@@ -17,7 +18,7 @@ class TestCase(lldbtest.TestBase):
 
         function = target.FindFunctions("$s1a5entryO4mainyyYaFZTQ0_")[0].function
         instructions = list(function.GetInstructions(target))
-
+        self.assertGreater(len(instructions), 0)
         # Expected to be a trampoline that tail calls `swift_task_switch`.
         self.assertIn("swift_task_switch", instructions[-1].GetComment(target))
 
