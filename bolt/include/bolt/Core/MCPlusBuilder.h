@@ -626,6 +626,11 @@ public:
     return Info->get(Inst.getOpcode()).mayStore();
   }
 
+  virtual bool isAArch64Exclusive(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isCleanRegXOR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
