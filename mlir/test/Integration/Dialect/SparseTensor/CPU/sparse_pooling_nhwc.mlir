@@ -27,7 +27,7 @@
 #CCCC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ], posWidth = 32, crdWidth = 32 }>
 
 func.func @pooling_nhwc_sum_CCCC(%input: tensor<1x4x4x1xf32, #CCCC>, %filter: tensor<2x2xf32>) -> tensor<1x3x3x1xf32, #CCCC> {
-  %init = bufferization.alloc_tensor() : tensor<1x3x3x1xf32, #CCCC>
+  %init = tensor.empty() : tensor<1x3x3x1xf32, #CCCC>
   %0 = linalg.pooling_nhwc_sum {dilations = dense<1> : tensor<2xi64>,
                                 strides = dense<1> : tensor<2xi64>}
      ins (%input, %filter: tensor<1x4x4x1xf32, #CCCC>, tensor<2x2xf32>)
