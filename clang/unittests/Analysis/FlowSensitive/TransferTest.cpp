@@ -1449,27 +1449,30 @@ TEST(TransferTest, BaseClassInitializer) {
 TEST(TransferTest, StructModeledFieldsWithAccessor) {
   std::string Code = R"(
     class S {
-      int *P;
-      int *Q;
-      int X;
-      int Y;
-      int Z;
+      int *Ptr;
+      int *PtrNonConst;
+      int Int;
+      int IntWithInc;
+      int IntNotAccessed;
+      int IntRef;
     public:
-      int *getPtr() const { return P; }
-      int *getPtrNonConst() { return Q; }
-      int getInt(int i) const { return X; }
-      int getWithOtherWork(int i) { Y += i; return Y; }
-      int getIntNotCalled() const { return Z; }
+      int *getPtr() const { return Ptr; }
+      int *getPtrNonConst() { return PtrNonConst; }
+      int getInt(int i) const { return Int; }
+      int getWithInc(int i) { IntWithInc += i; return IntWithInc; }
+      int getIntNotAccessed() const { return IntNotAccessed; }
       int getIntNoDefinition() const;
+      int &getIntRef() { return IntRef; }
     };
 
     void target() {
       S s;
-      int *p = s.getPtr();
-      int *q = s.getPtrNonConst();
-      int x = s.getInt(1);
-      int y = s.getWithOtherWork(1);
-      int w = s.getIntNoDefinition();
+      int *p1 = s.getPtr();
+      int *p2 = s.getPtrNonConst();
+      int i1 = s.getInt(1);
+      int i2 = s.getWithInc(1);
+      int i3 = s.getIntNoDefinition();
+      int &iref = s.getIntRef();
       // [[p]]
     }
   )";
@@ -1484,10 +1487,11 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
         for (auto [Field, _] : SLoc.children())
           Fields.push_back(Field);
         // Only the fields that have simple accessor methods (that have a
-        // single statement body that returns the member variable) should be modeled.
+        // single statement body that returns the member variable) should be
+        // modeled.
         ASSERT_THAT(Fields, UnorderedElementsAre(
-            findValueDecl(ASTCtx, "P"), findValueDecl(ASTCtx, "Q"),
-            findValueDecl(ASTCtx, "X")));
+            findValueDecl(ASTCtx, "Ptr"), findValueDecl(ASTCtx, "PtrNonConst"),
+            findValueDecl(ASTCtx, "Int"), findValueDecl(ASTCtx, "IntRef")));
       });
 }
 

@@ -288,15 +288,12 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
-static Expr *getRetValueFromSingleReturnStmtMethod(const CXXMemberCallExpr &C) {
-  auto *D = cast_or_null<CXXMethodDecl>(C.getMethodDecl()->getDefinition());
-  if (!D)
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  if (!Body || Body->size() != 1)
     return nullptr;
-  auto *S = cast<CompoundStmt>(D->getBody());
-  if (S->size() != 1)
-    return nullptr;
-  if (auto *RS = dyn_cast<ReturnStmt>(*S->body_begin()))
-    return RS->getRetValue()->IgnoreParenImpCasts();
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    return dyn_cast<MemberExpr>(RS->getRetValue()->IgnoreParenImpCasts());
   return nullptr;
 }
 
@@ -339,9 +336,9 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
     // If this is a method that returns a member variable but does nothing else,
     // model the field of the return value.
-    if (MemberExpr *E = dyn_cast_or_null<MemberExpr>(
-        getRetValueFromSingleReturnStmtMethod(*C)))
-      getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
