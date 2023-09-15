@@ -876,15 +876,15 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                  FormatStyle::BCIS_AfterColon) {
     CurrentState.Indent = State.Column;
     CurrentState.LastSpace = State.Column;
-  } else if ((Previous.isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
-                               TT_CtorInitializerColon)) &&
+  } else if (Previous.isOneOf(TT_ConditionalExpr, TT_CtorInitializerColon)) {
+    CurrentState.LastSpace = State.Column;
+  } else if (Previous.is(TT_BinaryOperator) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
                 Previous.NextOperator)) ||
               Current.StartsBinaryExpression)) {
     // Indent relative to the RHS of the expression unless this is a simple
-    // assignment without binary expression on the RHS. Also indent relative to
-    // unary operators and the colons of constructor initializers.
+    // assignment without binary expression on the RHS.
     if (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None)
       CurrentState.LastSpace = State.Column;
   } else if (Previous.is(TT_InheritanceColon)) {
