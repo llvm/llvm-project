@@ -57,11 +57,6 @@ def escape_description(str):
     return str
 
 
-def sanitize_markdown_code_block(str):
-    # remove codeblocks terminators
-    return re.sub("^\s*```\s*$", r"` ` `", str)
-
-
 class IssueSubscriber:
     @property
     def team_name(self) -> str:
@@ -157,8 +152,6 @@ class PRSubscriber:
         except:
             patch = ""
 
-        patch = sanitize_markdown_code_block(patch)
-
         patch_link = f"Full diff: {self.pr.diff_url}\n"
         if len(patch) > DIFF_LIMIT:
             patch_link = f"\nPatch is {human_readable_size(len(patch))}, truncated to {human_readable_size(DIFF_LIMIT)} below, full version: {self.pr.diff_url}\n"
@@ -181,9 +174,9 @@ class PRSubscriber:
 
 {diff_stats}
 
-```diff
+``````````diff
 {patch}
-```
+``````````
 
 </details>
 """
