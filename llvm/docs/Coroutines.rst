@@ -303,7 +303,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 false)
+    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -630,7 +630,7 @@ store the current value produced by a coroutine.
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 false)
+    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -1326,7 +1326,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, ...)
+  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
 
 Overview:
 """""""""
@@ -1347,20 +1347,11 @@ The second argument should be `true` if this coro.end is in the block that is
 part of the unwind sequence leaving the coroutine body due to an exception and
 `false` otherwise.
 
-Other arguments can only be specified for unique-suspend returned-continuation
-coroutines where they will be normal returns of a coroutine continuation
-function. The number of arguments must match the return type of the continuation
-function:
+Non-trivial (non-none) token argument can only be specified for unique-suspend
+returned-continuation coroutines where it must be a token value produced by
+'``llvm.coro.end.results``' intrinsic.
 
-- if the return type of the continuation function is ``void`` there must be no
-  extra argumets
-
-- if the return type of the continuation function is a ``struct``, the arguments
-  will be element types of that ``struct`` in order;
-
-- otherwise, it is just the return value of the continuation function.
-
-No extra arguments are allowed for coro.end calls in unwind sections
+Only none token is allowed for coro.end calls in unwind sections
 
 Semantics:
 """"""""""
@@ -1393,7 +1384,7 @@ For landingpad based exception model, it is expected that frontend uses the
 .. code-block:: llvm
 
     ehcleanup:
-      %InResumePart = call i1 (ptr, i1, ...) @llvm.coro.end(ptr null, i1 true)
+      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true, token none)
       br i1 %InResumePart, label %eh.resume, label %cleanup.cont
 
     cleanup.cont:
@@ -1418,7 +1409,7 @@ referring to an enclosing cleanuppad as follows:
 
     ehcleanup:
       %tok = cleanuppad within none []
-      %unused = call i1 (ptr, i1, ...) @llvm.coro.end(ptr null, i1 true) [ "funclet"(token %tok) ]
+      %unused = call i1 @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
       cleanupret from %tok unwind label %RestOfTheCleanup
 
 The `CoroSplit` pass, if the funclet bundle is present, will insert
@@ -1443,6 +1434,53 @@ The following table summarizes the handling of `coro.end`_ intrinsic.
 |            | Landingpad  | mark coroutine as done | mark coroutine done             |
 +------------+-------------+------------------------+---------------------------------+
 
+.. _coro.end.results:
+
+'llvm.coro.end.results' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare token @llvm.coro.end.results(...)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.end.results``' intrinsic captures values to be returned from
+unique-suspend returned-continuation coroutines.
+
+Arguments:
+""""""""""
+
+The number of arguments must match the return type of the continuation function:
+
+- if the return type of the continuation function is ``void`` there must be no
+  arguments
+
+- if the return type of the continuation function is a ``struct``, the arguments
+  will be of element types of that ``struct`` in order;
+
+- otherwise, it is just the return value of the continuation function.
+
+.. code-block:: llvm
+
+  define {ptr, ptr} @g(ptr %buffer, ptr %ptr, i8 %val) presplitcoroutine {
+  entry:
+    %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer,
+                                               ptr @prototype,
+                                               ptr @allocate, ptr @deallocate)
+    %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+
+  ...
+
+  cleanup:
+    %tok = call token (...) @llvm.coro.end.results(i8 %val)
+    call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+    unreachable
+
+  ...
+
+  declare i8 @prototype(ptr, i1 zeroext)
+  
 
 'llvm.coro.end.async' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

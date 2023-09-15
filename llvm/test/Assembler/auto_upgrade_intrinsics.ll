@@ -50,7 +50,7 @@ entry:
 declare i1 @llvm.coro.end(ptr, i1)
 define void @test.coro.end(ptr %ptr) {
 ; CHECK-LABEL: @test.coro.end(
-; CHECK: call i1 (ptr, i1, ...) @llvm.coro.end(ptr %ptr, i1 false)
+; CHECK: call i1 @llvm.coro.end(ptr %ptr, i1 false, token none)
   call i1 @llvm.coro.end(ptr %ptr, i1 false)
   ret void
 }

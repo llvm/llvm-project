@@ -19,7 +19,7 @@ cont:
   br label %cleanup
 
 cleanup:
-  call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
   unreachable
 }
 
@@ -40,8 +40,8 @@ cont:
   br label %cleanup
 
 cleanup:
-  %newval = add i8 %val, 42
-  call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 0, i8 %newval)
+  %tok = call token (...) @llvm.coro.end.results(i8 %val)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
   unreachable
 }
 
@@ -62,7 +62,8 @@ cont:
   br label %cleanup
 
 cleanup:
-  call i1 (ptr, i1, ...) @llvm.coro.end(ptr %hdl, i1 0, ptr null, i32 123, ptr @deallocate)
+  %tok = call token (...) @llvm.coro.end.results(ptr null, i32 123, ptr @deallocate)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
   unreachable
 }
 
@@ -70,7 +71,8 @@ cleanup:
 declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
-declare i1 @llvm.coro.end(ptr, i1, ...)
+declare i1 @llvm.coro.end(ptr, i1, token)
+declare token @llvm.coro.end.results(...)
 
 declare void @prototype(ptr, i1 zeroext)
 declare i8 @prototype2(ptr, i1 zeroext)
@@ -134,9 +136,8 @@ declare void @print(i32)
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[VAL_RELOAD_ADDR:%.*]] = getelementptr inbounds [[G_FRAME]], ptr [[TMP2]], i32 0, i32 2
 ; CHECK-NEXT:    [[VAL_RELOAD:%.*]] = load i8, ptr [[VAL_RELOAD_ADDR]], align 1
-; CHECK-NEXT:    [[NEWVAL:%.*]] = add i8 [[VAL_RELOAD]], 42
 ; CHECK-NEXT:    call fastcc void @deallocate(ptr [[TMP2]])
-; CHECK-NEXT:    ret i8 [[NEWVAL]]
+; CHECK-NEXT:    ret i8 [[VAL_RELOAD]]
 ;
 ;
 ; CHECK-LABEL: @h(

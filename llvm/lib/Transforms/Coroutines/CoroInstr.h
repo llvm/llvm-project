@@ -611,30 +611,11 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY AnyCoroEndInst : public IntrinsicInst {
-  enum { FrameArg, UnwindArg };
-
+/// This represents the llvm.end.results instruction.
+class LLVM_LIBRARY_VISIBILITY CoroEndResults : public IntrinsicInst {
 public:
-  bool isFallthrough() const { return !isUnwind(); }
-  bool isUnwind() const {
-    return cast<Constant>(getArgOperand(UnwindArg))->isOneValue();
-  }
-
-  // Methods to support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const IntrinsicInst *I) {
-    auto ID = I->getIntrinsicID();
-    return ID == Intrinsic::coro_end || ID == Intrinsic::coro_end_async;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-};
-
-/// This represents the llvm.coro.end instruction.
-class LLVM_LIBRARY_VISIBILITY CoroEndInst : public AnyCoroEndInst {
-public:
-  op_iterator retval_begin() { return std::next(arg_begin(), 2); }
-  const_op_iterator retval_begin() const { return std::next(arg_begin(), 2); }
+  op_iterator retval_begin() { return arg_begin(); }
+  const_op_iterator retval_begin() const { return arg_begin(); }
 
   op_iterator retval_end() { return arg_end(); }
   const_op_iterator retval_end() const { return arg_end(); }
@@ -650,6 +631,46 @@ public:
     return std::distance(retval_begin(), retval_end());
   }
 
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_end_results;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+class LLVM_LIBRARY_VISIBILITY AnyCoroEndInst : public IntrinsicInst {
+  enum { FrameArg, UnwindArg, TokenArg };
+
+public:
+  bool isFallthrough() const { return !isUnwind(); }
+  bool isUnwind() const {
+    return cast<Constant>(getArgOperand(UnwindArg))->isOneValue();
+  }
+
+  bool hasResults() const {
+    return !isa<ConstantTokenNone>(getArgOperand(TokenArg));
+  }
+
+  CoroEndResults *getResults() const {
+    assert(hasResults());
+    return cast<CoroEndResults>(getArgOperand(TokenArg));
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    auto ID = I->getIntrinsicID();
+    return ID == Intrinsic::coro_end || ID == Intrinsic::coro_end_async;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.end instruction.
+class LLVM_LIBRARY_VISIBILITY CoroEndInst : public AnyCoroEndInst {
+public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_end;

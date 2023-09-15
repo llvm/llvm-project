@@ -234,7 +234,7 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
   switch (Shape.ABI) {
   // The cloned functions in switch-lowering always return void.
   case coro::ABI::Switch:
-    assert(cast<CoroEndInst>(End)->numReturns() == 0 &&
+    assert(!cast<CoroEndInst>(End)->hasResults() &&
            "switch coroutine should not return any values");
     // coro.end doesn't immediately end the coroutine in the main function
     // in this lowering, because we need to deallocate the coroutine.
@@ -257,14 +257,22 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     auto *CoroEnd = cast<CoroEndInst>(End);
     auto *RetTy = Shape.getResumeFunctionType()->getReturnType();
-    unsigned NumReturns = CoroEnd->numReturns();
+
+    if (!CoroEnd->hasResults()) {
+      assert(RetTy->isVoidTy());
+      Builder.CreateRetVoid();
+      break;
+    }
+
+    auto *CoroResults = CoroEnd->getResults();
+    unsigned NumReturns = CoroResults->numReturns();
 
     if (auto *RetStructTy = dyn_cast<StructType>(RetTy)) {
       assert(RetStructTy->getNumElements() == NumReturns &&
            "numbers of returns should match resume function singature");
       Value *ReturnValue = UndefValue::get(RetStructTy);
       unsigned Idx = 0;
-      for (Value *RetValEl : CoroEnd->return_values())
+      for (Value *RetValEl : CoroResults->return_values())
         ReturnValue = Builder.CreateInsertValue(ReturnValue, RetValEl, Idx++);
       Builder.CreateRet(ReturnValue);
     } else if (NumReturns == 0) {
@@ -272,15 +280,17 @@ static void replaceFallthroughCoroEnd(AnyCoroEndInst *End,
       Builder.CreateRetVoid();
     } else {
       assert(NumReturns == 1);
-      Builder.CreateRet(*CoroEnd->retval_begin());
+      Builder.CreateRet(*CoroResults->retval_begin());
     }
+    CoroResults->replaceAllUsesWith(ConstantTokenNone::get(CoroResults->getContext()));
+    CoroResults->eraseFromParent();
     break;
   }
 
   // In non-unique continuation lowering, we signal completion by returning
   // a null continuation.
   case coro::ABI::Retcon: {
-    assert(cast<CoroEndInst>(End)->numReturns() == 0 &&
+    assert(!cast<CoroEndInst>(End)->hasResults() &&
            "retcon coroutine should not return any values");
     maybeFreeRetconStorage(Builder, Shape, FramePtr, CG);
     auto RetTy = Shape.getResumeFunctionType()->getReturnType();
