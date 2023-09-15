@@ -66,7 +66,7 @@ module {
 
   func.func @cmp_lhs_sparse(%arga: tensor<4x4xf64, #DCSR>,
                             %argb: tensor<4x4xf64>) -> tensor<4x4xi8, #DCSR> {
-    %argx = bufferization.alloc_tensor() : tensor<4x4xi8, #DCSR>
+    %argx = tensor.empty() : tensor<4x4xi8, #DCSR>
     %0 = linalg.generic #trait
        ins(%arga, %argb: tensor<4x4xf64, #DCSR>, tensor<4x4xf64>)
       outs(%argx: tensor<4x4xi8, #DCSR>) {
@@ -80,7 +80,7 @@ module {
 
   func.func @cmp_all_sparse(%arga: tensor<4x4xf64, #DCSR>,
                             %argb: tensor<4x4xf64, #DCSR>) -> tensor<4x4xi8, #DCSR> {
-    %argx = bufferization.alloc_tensor() : tensor<4x4xi8, #DCSR>
+    %argx = tensor.empty() : tensor<4x4xi8, #DCSR>
     %0 = linalg.generic #trait
        ins(%arga, %argb: tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>)
       outs(%argx: tensor<4x4xi8, #DCSR>) {

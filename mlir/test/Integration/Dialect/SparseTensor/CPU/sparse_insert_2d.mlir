@@ -149,7 +149,7 @@ module {
     //
     // CHECK: ( 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 4 )
     //
-    %densea = bufferization.alloc_tensor() : tensor<4x3xf64, #Dense>
+    %densea = tensor.empty() : tensor<4x3xf64, #Dense>
     %dense1 = sparse_tensor.insert %f1 into %densea[%c0, %c0] : tensor<4x3xf64, #Dense>
     %dense2 = sparse_tensor.insert %f2 into %dense1[%c2, %c2] : tensor<4x3xf64, #Dense>
     %dense3 = sparse_tensor.insert %f3 into %dense2[%c3, %c0] : tensor<4x3xf64, #Dense>
@@ -165,7 +165,7 @@ module {
     // CHECK-NEXT: ( 0, 2, 0, 2 )
     // CHECK-NEXT: ( 1, 2, 3, 4 )
     //
-    %cooa = bufferization.alloc_tensor() : tensor<4x3xf64, #SortedCOO>
+    %cooa = tensor.empty() : tensor<4x3xf64, #SortedCOO>
     %coo1 = sparse_tensor.insert %f1 into %cooa[%c0, %c0] : tensor<4x3xf64, #SortedCOO>
     %coo2 = sparse_tensor.insert %f2 into %coo1[%c2, %c2] : tensor<4x3xf64, #SortedCOO>
     %coo3 = sparse_tensor.insert %f3 into %coo2[%c3, %c0] : tensor<4x3xf64, #SortedCOO>
@@ -180,7 +180,7 @@ module {
     // CHECK-NEXT: ( 0, 2, 0, 2 )
     // CHECK-NEXT: ( 1, 2, 3, 4 )
     //
-    %csra = bufferization.alloc_tensor() : tensor<4x3xf64, #CSR>
+    %csra = tensor.empty() : tensor<4x3xf64, #CSR>
     %csr1 = sparse_tensor.insert %f1 into %csra[%c0, %c0] : tensor<4x3xf64, #CSR>
     %csr2 = sparse_tensor.insert %f2 into %csr1[%c2, %c2] : tensor<4x3xf64, #CSR>
     %csr3 = sparse_tensor.insert %f3 into %csr2[%c3, %c0] : tensor<4x3xf64, #CSR>
@@ -197,7 +197,7 @@ module {
     // CHECK-NEXT: ( 0, 2, 0, 2 )
     // CHECK-NEXT: ( 1, 2, 3, 4 )
     //
-    %dcsra = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %dcsra = tensor.empty() : tensor<4x3xf64, #DCSR>
     %dcsr1 = sparse_tensor.insert %f1 into %dcsra[%c0, %c0] : tensor<4x3xf64, #DCSR>
     %dcsr2 = sparse_tensor.insert %f2 into %dcsr1[%c2, %c2] : tensor<4x3xf64, #DCSR>
     %dcsr3 = sparse_tensor.insert %f3 into %dcsr2[%c3, %c0] : tensor<4x3xf64, #DCSR>
@@ -212,7 +212,7 @@ module {
     // CHECK-NEXT: ( 0, 2, 3 )
     // CHECK-NEXT: ( 1, 0, 0, 0, 0, 2, 3, 0, 4 )
     //
-    %rowa = bufferization.alloc_tensor() : tensor<4x3xf64, #Row>
+    %rowa = tensor.empty() : tensor<4x3xf64, #Row>
     %row1 = sparse_tensor.insert %f1 into %rowa[%c0, %c0] : tensor<4x3xf64, #Row>
     %row2 = sparse_tensor.insert %f2 into %row1[%c2, %c2] : tensor<4x3xf64, #Row>
     %row3 = sparse_tensor.insert %f3 into %row2[%c3, %c0] : tensor<4x3xf64, #Row>
