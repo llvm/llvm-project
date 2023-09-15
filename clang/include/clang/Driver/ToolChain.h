@@ -154,7 +154,6 @@ private:
   mutable std::unique_ptr<Tool> FlangFrontend;
   mutable std::unique_ptr<Tool> Clang;
   mutable std::unique_ptr<Tool> Flang;
-  mutable std::unique_ptr<Tool> AMDFlang;
   mutable std::unique_ptr<Tool> Assemble;
   mutable std::unique_ptr<Tool> Link;
   mutable std::unique_ptr<Tool> StaticLibTool;
