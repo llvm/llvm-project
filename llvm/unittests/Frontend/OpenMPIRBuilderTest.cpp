@@ -5397,19 +5397,29 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
   ConstantInt *DataSize =
       dyn_cast<ConstantInt>(TaskAllocCall->getArgOperand(3));
   ASSERT_NE(DataSize, nullptr);
-  EXPECT_EQ(DataSize->getSExtValue(), 24); // 64-bit pointer + 128-bit integer
+  EXPECT_EQ(DataSize->getSExtValue(), 40);
 
-  // TODO: Verify size of shared clause variables
+  ConstantInt *SharedsSize =
+      dyn_cast<ConstantInt>(TaskAllocCall->getOperand(4));
+  EXPECT_EQ(SharedsSize->getSExtValue(),
+            24); // 64-bit pointer + 128-bit integer
 
   // Verify Wrapper function
   Function *WrapperFunc =
       dyn_cast<Function>(TaskAllocCall->getArgOperand(5)->stripPointerCasts());
   ASSERT_NE(WrapperFunc, nullptr);
+
+  LoadInst *SharedsLoad = dyn_cast<LoadInst>(WrapperFunc->begin()->begin());
+  ASSERT_NE(SharedsLoad, nullptr);
+  EXPECT_EQ(SharedsLoad->getPointerOperand(), WrapperFunc->getArg(1));
+
   EXPECT_FALSE(WrapperFunc->isDeclaration());
-  CallInst *OutlinedFnCall = dyn_cast<CallInst>(WrapperFunc->begin()->begin());
+  CallInst *OutlinedFnCall =
+      dyn_cast<CallInst>(++WrapperFunc->begin()->begin());
   ASSERT_NE(OutlinedFnCall, nullptr);
   EXPECT_EQ(WrapperFunc->getArg(0)->getType(), Builder.getInt32Ty());
-  EXPECT_EQ(OutlinedFnCall->getArgOperand(0), WrapperFunc->getArg(1));
+  EXPECT_EQ(OutlinedFnCall->getArgOperand(0),
+            WrapperFunc->getArg(1)->uses().begin()->getUser());
 
   // Verify the presence of `trunc` and `icmp` instructions in Outlined function
   Function *OutlinedFn = OutlinedFnCall->getCalledFunction();
