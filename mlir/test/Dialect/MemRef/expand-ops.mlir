@@ -3,9 +3,11 @@
 // CHECK-LABEL: func @atomic_rmw_to_generic
 // CHECK-SAME: ([[F:%.*]]: memref<10xf32>, [[f:%.*]]: f32, [[i:%.*]]: index)
 func.func @atomic_rmw_to_generic(%F: memref<10xf32>, %f: f32, %i: index) -> f32 {
-  %x = memref.atomic_rmw maximumf %f, %F[%i] : (f32, memref<10xf32>) -> f32
-  %y = memref.atomic_rmw minimumf %f, %F[%i] : (f32, memref<10xf32>) -> f32
-  return %x : f32
+  %a = memref.atomic_rmw maximumf %f, %F[%i] : (f32, memref<10xf32>) -> f32
+  %b = memref.atomic_rmw minimumf %f, %F[%i] : (f32, memref<10xf32>) -> f32
+  %c = memref.atomic_rmw maxnumf %f, %F[%i] : (f32, memref<10xf32>) -> f32
+  %d = memref.atomic_rmw minnumf %f, %F[%i] : (f32, memref<10xf32>) -> f32
+  return %a : f32
 }
 // CHECK: [[RESULT:%.*]] = memref.generic_atomic_rmw %arg0[%arg2] : memref<10xf32> {
 // CHECK: ^bb0([[CUR_VAL:%.*]]: f32):
@@ -16,6 +18,16 @@ func.func @atomic_rmw_to_generic(%F: memref<10xf32>, %f: f32, %i: index) -> f32 
 // CHECK: ^bb0([[CUR_VAL:%.*]]: f32):
 // CHECK:   [[MINIMUM:%.*]] = arith.minimumf [[CUR_VAL]], [[f]] : f32
 // CHECK:   memref.atomic_yield [[MINIMUM]] : f32
+// CHECK: }
+// CHECK: memref.generic_atomic_rmw %arg0[%arg2] : memref<10xf32> {
+// CHECK: ^bb0([[CUR_VAL:%.*]]: f32):
+// CHECK:   [[MAXNUM:%.*]] = arith.maxnumf [[CUR_VAL]], [[f]] : f32
+// CHECK:   memref.atomic_yield [[MAXNUM]] : f32
+// CHECK: }
+// CHECK: memref.generic_atomic_rmw %arg0[%arg2] : memref<10xf32> {
+// CHECK: ^bb0([[CUR_VAL:%.*]]: f32):
+// CHECK:   [[MINNUM:%.*]] = arith.minnumf [[CUR_VAL]], [[f]] : f32
+// CHECK:   memref.atomic_yield [[MINNUM]] : f32
 // CHECK: }
 // CHECK: return [[RESULT]] : f32
 
