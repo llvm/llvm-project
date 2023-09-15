@@ -202,6 +202,9 @@ inline void createDefaultFIROptimizerPassPipeline(
   if (pc.LoopVersioning)
     pm.addPass(fir::createLoopVersioningPass());
 
+  if (pc.VScaleMin != 0)
+    pm.addPass(fir::createVScaleAttrPass({pc.VScaleMin,pc.VScaleMax}));
+
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
