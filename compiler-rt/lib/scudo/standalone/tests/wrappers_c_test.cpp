@@ -398,7 +398,7 @@ void MallInfoTest() {
   EXPECT_NE(P, nullptr);
   MI = mallinfo();
   EXPECT_GE(MI.uordblks, Allocated + BypassQuarantineSize);
-  EXPECT_GT(MI.hblkhd, 0U);
+  EXPECT_GT(MI.hblkhd, static_cast<FieldType>(0));
   FieldType Free = MI.fordblks;
   free(P);
   MI = mallinfo();
