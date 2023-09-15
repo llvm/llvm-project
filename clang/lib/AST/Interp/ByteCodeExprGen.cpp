@@ -1525,7 +1525,7 @@ template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
   }
 
   //  Otherwise,we have a primitive return value, produce the value directly
-  //  and puish it on the stack.
+  //  and push it on the stack.
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/false);
   return this->Visit(E);
