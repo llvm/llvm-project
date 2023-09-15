@@ -2796,7 +2796,7 @@ the configuration (without a prefix: ``Auto``).
      string x =
          "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
-  C# and JavaScript interpolated strings are not broken.
+  C# interpolated strings are not broken.
 
   In Verilog:
 
