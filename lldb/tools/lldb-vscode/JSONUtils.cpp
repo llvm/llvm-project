@@ -203,10 +203,9 @@ static bool ShouldBeDereferencedForSummary(lldb::SBValue &v) {
   if (!v.GetType().IsPointerType() && !v.GetType().IsReferenceType())
     return false;
 
-  // If it's a pointer to a pointer, we don't dereference to avoid confusing
+  // If we are referencing a pointer, we don't dereference to avoid confusing
   // the user with the addresses that could shown in the summary.
-  if (v.GetType().IsPointerType() &&
-      v.GetType().GetDereferencedType().IsPointerType())
+  if (v.Dereference().GetType().IsPointerType())
     return false;
 
   // If it's synthetic or a pointer to a basic type that provides a summary, we
