@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
@@ -116,6 +117,8 @@ std::optional<tooling::stdlib::Header>
 headerForAmbiguousStdSymbol(const NamedDecl *ND) {
   if (!ND->isInStdNamespace())
     return {};
+  if (auto* USD = llvm::dyn_cast<UsingShadowDecl>(ND))
+    ND = USD->getTargetDecl();
   const auto *FD = ND->getAsFunction();
   if (!FD)
     return std::nullopt;
