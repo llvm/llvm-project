@@ -184,6 +184,86 @@ add_math_entrypoint_gpu_object(
 )
 
 add_math_entrypoint_gpu_object(
+  lrint
+  SRCS
+    lrint.cpp
+  HDRS
+    ../lrint.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  lrintf
+  SRCS
+    lrintf.cpp
+  HDRS
+    ../lrintf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  lround
+  SRCS
+    lround.cpp
+  HDRS
+    ../lround.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  lroundf
+  SRCS
+    lroundf.cpp
+  HDRS
+    ../lroundf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  llrint
+  SRCS
+    llrint.cpp
+  HDRS
+    ../llrint.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  llrintf
+  SRCS
+    llrintf.cpp
+  HDRS
+    ../llrintf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  llround
+  SRCS
+    llround.cpp
+  HDRS
+    ../llround.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  llroundf
+  SRCS
+    llroundf.cpp
+  HDRS
+    ../llroundf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
   modf
   SRCS
     modf.cpp

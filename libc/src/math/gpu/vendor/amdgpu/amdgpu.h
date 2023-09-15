@@ -49,18 +49,6 @@ LIBC_INLINE int ilogb(double x) { return __ocml_ilogb_f64(x); }
 LIBC_INLINE int ilogbf(float x) { return __ocml_ilogb_f32(x); }
 LIBC_INLINE double ldexp(double x, int i) { return __builtin_ldexp(x, i); }
 LIBC_INLINE float ldexpf(float x, int i) { return __builtin_ldexpf(x, i); }
-LIBC_INLINE long long llrint(double x) {
-  return static_cast<long long>(__builtin_rint(x));
-}
-LIBC_INLINE long long llrintf(float x) {
-  return static_cast<long long>(__builtin_rintf(x));
-}
-LIBC_INLINE long long llround(double x) {
-  return static_cast<long long>(__builtin_round(x));
-}
-LIBC_INLINE long long llroundf(float x) {
-  return static_cast<long long>(__builtin_roundf(x));
-}
 LIBC_INLINE double log10(double x) { return __ocml_log10_f64(x); }
 LIBC_INLINE float log10f(float x) { return __ocml_log10_f32(x); }
 LIBC_INLINE double log1p(double x) { return __ocml_log1p_f64(x); }
@@ -69,10 +57,6 @@ LIBC_INLINE double log2(double x) { return __ocml_log2_f64(x); }
 LIBC_INLINE float log2f(float x) { return __ocml_log2_f32(x); }
 LIBC_INLINE double log(double x) { return __ocml_log_f64(x); }
 LIBC_INLINE float logf(float x) { return __ocml_log_f32(x); }
-LIBC_INLINE long lrint(double x) { return (long)__ocml_rint_f64(x); }
-LIBC_INLINE long lrintf(float x) { return (long)__ocml_rint_f32(x); }
-LIBC_INLINE long lround(double x) { return (long)__ocml_round_f64(x); }
-LIBC_INLINE long lroundf(float x) { return (long)__ocml_round_f32(x); }
 LIBC_INLINE double nextafter(double x, double y) {
   return __ocml_nextafter_f64(x, y);
 }

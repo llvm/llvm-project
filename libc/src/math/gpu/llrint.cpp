@@ -1,4 +1,4 @@
-//===-- Implementation of the llroundf function for GPU -------------------===//
+//===-- Implementation of the GPU llrint function -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/llroundf.h"
+#include "src/math/llrint.h"
 #include "src/__support/common.h"
-
-#include "common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(long long, llroundf, (float x)) {
-  return internal::llroundf(x);
+LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
+  return __builtin_llrint(x);
 }
 
 } // namespace __llvm_libc

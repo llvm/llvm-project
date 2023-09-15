@@ -393,28 +393,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  llrint
-  SRCS
-    llrint.cpp
-  HDRS
-    ../../llrint.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-)
-
-add_entrypoint_object(
-  llrintf
-  SRCS
-    llrintf.cpp
-  HDRS
-    ../../llrintf.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-)
-
-add_entrypoint_object(
   remquo
   SRCS
     remquo.cpp
@@ -431,29 +409,6 @@ add_entrypoint_object(
     remquof.cpp
   HDRS
     ../../remquof.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-)
-
-
-add_entrypoint_object(
-  llround
-  SRCS
-    llround.cpp
-  HDRS
-    ../../llround.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-)
-
-add_entrypoint_object(
-  llroundf
-  SRCS
-    llroundf.cpp
-  HDRS
-    ../../llroundf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2

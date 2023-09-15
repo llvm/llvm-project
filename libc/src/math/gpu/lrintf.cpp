@@ -1,4 +1,4 @@
-//===-- Implementation of the GPU lrint function --------------------------===//
+//===-- Implementation of the GPU lrintf function -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/lrint.h"
+#include "src/math/lrintf.h"
 #include "src/__support/common.h"
-
-#include "common.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(long, lrint, (double x)) { return internal::lrint(x); }
+LLVM_LIBC_FUNCTION(long, lrintf, (float x)) { return __builtin_lrintf(x); }
 
 } // namespace __llvm_libc
