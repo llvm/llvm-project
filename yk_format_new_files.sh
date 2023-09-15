@@ -13,7 +13,7 @@
 
 set -e
 
-YK_DIRS="./clang/test/Yk ./llvm/lib/Transforms/Yk ./llvm/include/llvm/Transforms/Yk"
+YK_DIRS="./clang/test/Yk ./llvm/lib/Transforms/Yk ./llvm/include/llvm/Transforms/Yk llvm/lib/YkIR"
 
 for dir in ${YK_DIRS}; do
     find ${dir} -type f -iname '*.cpp' -or -iname '*.h' -or -iname '*.c' | \

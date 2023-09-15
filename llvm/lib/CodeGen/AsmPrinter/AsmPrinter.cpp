@@ -114,6 +114,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/YkIR/YkIRWriter.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -137,6 +138,7 @@ static cl::opt<bool>
 extern bool YkAllocLLVMBBAddrMapSection;
 extern bool YkExtendedLLVMBBAddrMapSection;
 extern bool YkStackMapOffsetFix;
+extern bool YkEmbedIR;
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -2382,17 +2384,23 @@ bool AsmPrinter::doFinalization(Module &M) {
     OutStreamer->popSection();
   }
 
-  // The `embed-bitcode` flag serialises the IR after only architecture
+  // The `embed-bitcode` flag serialises the LLVM IR after only architecture
   // agnostic optimisations have been run, but then proceeds to apply other
   // optimisations and transformations afterwards. Sometimes this final version
-  // is precisely what we are interested in. The `embed-bitcode-final` flag
-  // waits until all optimisations/transformations have been run before
-  // embedding the IR.
+  // is precisely what we are interested in. The `embed-bitcode-final` and
+  // `yk-embed-ir` flags wait until all LLVM IR optimisations/transformations
+  // have been run before embedding their respective IR. Note that at the time
+  // of embedding, the MIR pipeline hasn't yet run, and this may do some more
+  // optimisation.
   if (EmbedBitcodeFinal)
     llvm::embedBitcodeInModule(M, llvm::MemoryBufferRef(),
                                /*EmbedBitcode*/ true,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
+
+  if (YkEmbedIR) {
+    llvm::embedYkIR(OutContext, *OutStreamer, M);
+  }
 
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that

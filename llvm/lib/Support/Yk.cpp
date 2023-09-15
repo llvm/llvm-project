@@ -111,6 +111,20 @@ struct CreateYkOptNoneAfterIRPassesParser {
 static ManagedStatic<cl::opt<bool, true>,
   CreateYkOptNoneAfterIRPassesParser> YkOptNoneAfterIRPassesParser;
 
+bool YkEmbedIR;
+namespace {
+struct CreateYkEmbedIRParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-embed-ir",
+        cl::desc(
+            "Embed Yk IR into the binary."),
+        cl::NotHidden, cl::location(YkEmbedIR));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>, CreateYkEmbedIRParser> YkEmbedIRParser;
+
 void llvm::initYkOptions() {
   *YkAllocLLVMBCSectionParser;
   *YkAllocLLVMBBAddrMapSectionParser;
@@ -119,4 +133,5 @@ void llvm::initYkOptions() {
   *YkStackMapAdditionalLocsParser;
   *YkStackmapsSpillFixParser;
   *YkOptNoneAfterIRPassesParser;
+  *YkEmbedIRParser;
 }

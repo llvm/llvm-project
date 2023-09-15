@@ -45,4 +45,5 @@ add_llvm_component_library(LLVMAsmPrinter
   Support
   Target
   TargetParser
+  YkIR
   )
