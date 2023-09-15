@@ -34,6 +34,12 @@ HLSL:
   - clang/**/*HLSL*
   - llvm/**/Frontend/HLSL/**/*
 
+bolt:
+  - bolt/**/*
+
+llvm:
+  - llvm/**/*
+
 lld:
   - lld/**/*
 
