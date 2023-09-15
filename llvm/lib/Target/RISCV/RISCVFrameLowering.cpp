@@ -226,8 +226,8 @@ getRestoreLibCallName(const MachineFunction &MF,
   return RestoreLibCalls[LibCallID];
 }
 
-// Return encoded value for PUSH/POP instruction, representing
-// registers to store/load.
+// Return encoded value and register count for PUSH/POP instruction,
+// representing registers to store/load.
 static std::pair<unsigned, unsigned>
 getPushPopEncodingAndNum(const Register MaxReg) {
   switch (MaxReg) {
