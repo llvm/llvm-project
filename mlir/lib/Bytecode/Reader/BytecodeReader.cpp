@@ -11,10 +11,8 @@
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Bytecode/Encoding.h"
-#include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
@@ -25,19 +23,14 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 
-#include <cassert>
 #include <cstddef>
-#include <cstdint>
-#include <cstring>
 #include <list>
 #include <memory>
 #include <numeric>
 #include <optional>
-#include <string>
 
 #define DEBUG_TYPE "mlir-bytecode-reader"
 
