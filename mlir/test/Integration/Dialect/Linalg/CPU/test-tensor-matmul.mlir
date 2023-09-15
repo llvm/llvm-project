@@ -1,7 +1,7 @@
 // UNSUPPORTED: asan
 // RUN: mlir-opt %s -test-transform-dialect-erase-schedule -linalg-bufferize -arith-bufferize \
-// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize -buffer-deallocation -convert-linalg-to-loops -convert-scf-to-cf \
-// RUN:  -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: -tensor-bufferize -func-bufferize -finalizing-bufferize -buffer-deallocation-pipeline -convert-linalg-to-loops -convert-scf-to-cf \
+// RUN: -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-scf-to-cf --finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
