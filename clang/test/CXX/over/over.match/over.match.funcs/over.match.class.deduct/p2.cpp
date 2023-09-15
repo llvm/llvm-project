@@ -85,3 +85,13 @@ int main() {
 
 
 }
+
+namespace deduceTemplatedConstructor{
+template <class T> struct A {
+  A(T, T, int);
+  template<class U>
+    A(int, T, U);
+};
+
+A x(1, 2, 3);       // no-error
+}

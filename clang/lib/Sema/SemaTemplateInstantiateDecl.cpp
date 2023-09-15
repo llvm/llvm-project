@@ -2129,7 +2129,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function = CXXDeductionGuideDecl::Create(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
-        D->getSourceRange().getEnd(), /*Ctor=*/nullptr,
+        D->getSourceRange().getEnd(), DGuide->getCorrespondingConstructor(),
         DGuide->getDeductionCandidateKind());
     Function->setAccess(D->getAccess());
   } else {
