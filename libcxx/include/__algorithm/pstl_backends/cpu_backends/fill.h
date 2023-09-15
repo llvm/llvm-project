@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Index, class _DifferenceType, class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept {
   _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-  _PSTL_PRAGMA_SIMD
+  _PSTL_PRAGMA_SIMD()
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __first[__i] = __value;
   return __first + __n;

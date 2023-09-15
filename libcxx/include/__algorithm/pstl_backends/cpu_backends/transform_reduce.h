@@ -57,7 +57,7 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
     _Tp* __lane = reinterpret_cast<_Tp*>(__lane_buffer);
 
     // initializer
-    _PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD()
     for (_Size __i = 0; __i < __block_size; ++__i) {
       ::new (__lane + __i) _Tp(__binary_op(__f(__i), __f(__block_size + __i)));
     }
@@ -65,13 +65,13 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
     _Size __i                    = 2 * __block_size;
     const _Size __last_iteration = __block_size * (__n / __block_size);
     for (; __i < __last_iteration; __i += __block_size) {
-      _PSTL_PRAGMA_SIMD
+      _PSTL_PRAGMA_SIMD()
       for (_Size __j = 0; __j < __block_size; ++__j) {
         __lane[__j] = __binary_op(std::move(__lane[__j]), __f(__i + __j));
       }
     }
     // remainder
-    _PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD()
     for (_Size __j = 0; __j < __n - __last_iteration; ++__j) {
       __lane[__j] = __binary_op(std::move(__lane[__j]), __f(__last_iteration + __j));
     }
@@ -80,7 +80,7 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
       __init = __binary_op(std::move(__init), std::move(__lane[__j]));
     }
     // destroyer
-    _PSTL_PRAGMA_SIMD
+    _PSTL_PRAGMA_SIMD()
     for (_Size __j = 0; __j < __block_size; ++__j) {
       __lane[__j].~_Tp();
     }

@@ -1414,8 +1414,118 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 // Enable SIMD for compilers that support OpenMP 4.0
 #  if (defined(_OPENMP) && _OPENMP >= 201307)
 
+#    ifdef _LIBCPP_ENABLE_OPENMP_OFFLOAD
+#      ifndef _LIBCPP_ENABLE_OPENMP_OFFLOAD_MIN_BYTES
+#        define _LIBCPP_ENABLE_OPENMP_OFFLOAD_MIN_BYTES 32768
+#      endif
+#include <omp.h>
+#include <__iterator/wrap_iter.h>
+#      define _PSTL_PRAGMA_DATA_MAP_TO(NAME,LEN) _PSTL_PRAGMA(omp target enter data map(to:NAME[:LEN]))
+#      define _PSTL_PRAGMA_DATA_MAP_ALLOC(NAME,LEN) _PSTL_PRAGMA(omp target enter data map(alloc:NAME[:LEN]))
+#      define _PSTL_PRAGMA_DATA_MAP_FROM(NAME,LEN) _PSTL_PRAGMA(omp target update from(NAME[:LEN]))
+
+template <typename N>
+bool constexpr OMPIsOffloadable(N size)
+{
+      return size >= _LIBCPP_ENABLE_OPENMP_OFFLOAD_MIN_BYTES;
+}
+
+bool constexpr OMPIsOffloadable(void)
+{
+      return false;
+}
+
+template <typename T, typename N>
+void inline OMPMapToIf(T data,N length,int device = omp_get_default_device())
+{
+      // If the data is already present on the device, there is no need
+      // transfer the data again.
+      if (omp_target_is_present(data,device)){
+            return;
+      }
+      // If it is a small amount of data it does not make sense to offload to a
+      // device
+      if (!OMPIsOffloadable(length)){
+            return;
+      }
+      _PSTL_PRAGMA_DATA_MAP_TO(data,length);
+}
+
+template <typename T, typename N>
+void inline OMPMapAllocIf(T data,N length,int device = omp_get_default_device())
+{
+      // If the data is already present on the device, there is no need
+      // transfer the data again.
+      if (omp_target_is_present(data,device)){
+            return;
+      }
+      // If it is a small amount of data it does not make sense to offload to a
+      // device
+      if (!OMPIsOffloadable(length)){
+            return;
+      }
+      _PSTL_PRAGMA_DATA_MAP_ALLOC(data,length);
+}
+
+template <typename T, typename N>
+void inline OMPMapTo(T data,N length) {
+  OMPMapToIf(data,length);
+}
+
+/**
+ * Specialization for std::vector
+*/
+
+template <typename T,typename N>
+void inline OMPMapTo(std::__wrap_iter<T*> w,N length) {
+  std::pointer_traits<std::__wrap_iter<T*>> PT;
+  T* data = PT.to_address(w);
+  OMPMapToIf(data,length);
+}
+
+template <typename T, typename N>
+void inline OMPMapAlloc(T data,N length) {
+  OMPMapAllocIf(data,length);
+}
+
+/**
+ * Specialization for std::vector
+*/
+
+template <typename T,typename N>
+void inline OMPMapAlloc(std::__wrap_iter<T*> w,N length) {
+  std::pointer_traits<std::__wrap_iter<T*>> PT;
+  T* data = PT.to_address(w);
+  OMPMapAllocIf(data,length);
+}
+
+template <typename T,typename N>
+void inline OMPMapFrom(T data,N length) {
+  _PSTL_PRAGMA_DATA_MAP_FROM(data,length);
+}
+
+/**
+ * Specialization for std::vector
+*/
+
+template <typename T,typename N>
+void inline OMPMapFrom(std::__wrap_iter<T*> w,N length) {
+  std::pointer_traits<std::__wrap_iter<T*>> PT;
+  T* data = PT.to_address(w);
+  _PSTL_PRAGMA_DATA_MAP_FROM(data,length);
+}
+#      define _PSTL_OMP_MAP_TO(DATA,LEN) OMPMapTo(DATA,LEN)
+#      define _PSTL_OMP_MAP_ALLOC(DATA,LEN) OMPMapAlloc(DATA,LEN)
+#      define _PSTL_OMP_MAP_FROM(DATA,LEN) OMPMapFrom(DATA,LEN)
+#      define _PSTL_PRAGMA_SIMD(...) _PSTL_PRAGMA(omp target teams distribute parallel for simd if(OMPIsOffloadable(__VA_ARGS__)))
+#    else
+#      define _PSTL_PRAGMA_SIMD(...) _PSTL_PRAGMA(omp simd)
+#      define _PSTL_OMP_MAP_TO(DATA,LEN)
+#      define _PSTL_OMP_MAP_ALLOC(DATA,LEN)
+#      define _PSTL_OMP_MAP_FROM(DATA,LEN)
+#    endif
+
 #    define _PSTL_UDR_PRESENT
-#    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
 #    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
 #    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
@@ -1434,7 +1544,7 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 
 #  elif defined(_LIBCPP_COMPILER_CLANG_BASED)
 
-#    define _PSTL_PRAGMA_SIMD _Pragma("clang loop vectorize(enable) interleave(enable)")
+#    define _PSTL_PRAGMA_SIMD(...) _Pragma("clang loop vectorize(enable) interleave(enable)")
 #    define _PSTL_PRAGMA_DECLARE_SIMD
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _Pragma("clang loop vectorize(enable) interleave(enable)")
 #    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _Pragma("clang loop vectorize(enable) interleave(enable)")
@@ -1444,7 +1554,7 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 
 #  else // (defined(_OPENMP) && _OPENMP >= 201307)
 
-#    define _PSTL_PRAGMA_SIMD
+#    define _PSTL_PRAGMA_SIMD(...)
 #    define _PSTL_PRAGMA_DECLARE_SIMD
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
 #    define _PSTL_PRAGMA_SIMD_SCAN(PRM)
@@ -1453,6 +1563,11 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)
 
 #  endif // (defined(_OPENMP) && _OPENMP >= 201307)
+
+#  ifndef _LIBCPP_ENABLE_OPENMP_OFFLOAD
+#  define _PSTL_OMP_MAP_TO(...)
+#  define _PSTL_OMP_MAP_FROM(...)
+#  endif 
 
 #  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
 

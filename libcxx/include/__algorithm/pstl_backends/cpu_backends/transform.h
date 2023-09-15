@@ -30,9 +30,33 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator2
 __simd_walk_2(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept {
-  _PSTL_PRAGMA_SIMD
+  _PSTL_OMP_MAP_TO(__first1,__n);
+  _PSTL_OMP_MAP_ALLOC(__first2,__n);
+  _PSTL_PRAGMA_SIMD(__n)
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first1[__i], __first2[__i]);
+  _PSTL_OMP_MAP_FROM(__first2,__n);
+  return __first2 + __n;
+}
+
+/**
+ * Specialization for std::vector where the base pointer must be extrated to map
+ * the data to and from the GPU.
+*/
+
+template <typename T1, class _DifferenceType, typename T2, class _Function>
+_LIBCPP_HIDE_FROM_ABI std::__wrap_iter<T1*>
+__simd_walk_2(std::__wrap_iter<T1*> __first1, _DifferenceType __n, std::__wrap_iter<T2*> __first2, _Function __f) noexcept {
+  _PSTL_OMP_MAP_TO(__first1,__n);
+  _PSTL_OMP_MAP_ALLOC(__first2,__n);
+  std::pointer_traits<std::__wrap_iter<T1*>> PT1;
+  std::pointer_traits<std::__wrap_iter<T2*>> PT2;
+  T1* __data1 = PT1.to_address(__first1);
+  T2* __data2 = PT2.to_address(__first2);
+  _PSTL_PRAGMA_SIMD(__n)
+  for (_DifferenceType __i = 0; __i < __n; ++__i)
+    __f(__data1[__i], __data2[__i]);
+  _PSTL_OMP_MAP_FROM(__first2,__n);
   return __first2 + __n;
 }
 
@@ -72,7 +96,7 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator __pstl_transform(
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Iterator3, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator3 __simd_walk_3(
     _Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Iterator3 __first3, _Function __f) noexcept {
-  _PSTL_PRAGMA_SIMD
+  _PSTL_PRAGMA_SIMD()
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first1[__i], __first2[__i], __first3[__i]);
   return __first3 + __n;
