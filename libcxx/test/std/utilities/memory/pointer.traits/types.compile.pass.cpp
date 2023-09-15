@@ -26,7 +26,6 @@
 // };
 
 #include <memory>
-#include <cassert>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -84,12 +83,6 @@ int global_int;
 template <class T, class Arg>
 struct TemplatedPtr;
 
-#if TEST_STD_VER >= 11
-#  define CONSTEXPR_IF_SUPPORTED constexpr
-#else
-#  define CONSTEXPR_IF_SUPPORTED
-#endif
-
 struct PtrWithElementType {
   using element_type = int;
   template <class U>
@@ -100,8 +93,7 @@ struct PtrWithElementType {
     using other = TemplatedPtr<U, Irrelevant>;
   };
 #endif
-  static CONSTEXPR_IF_SUPPORTED PtrWithElementType pointer_to(element_type&) { return {&global_int}; }
-
+  static TEST_CONSTEXPR_CXX14 PtrWithElementType pointer_to(element_type&) { return {&global_int}; }
   int* ptr;
 };
 
@@ -115,7 +107,7 @@ struct TemplatedPtr {
     using other = LongPtr;
   };
 #endif
-  static CONSTEXPR_IF_SUPPORTED TemplatedPtr pointer_to(T&) { return {&global_int}; }
+  static TEST_CONSTEXPR_CXX14 TemplatedPtr pointer_to(T&) { return {&global_int}; }
 
   T* ptr;
 };
@@ -132,135 +124,121 @@ struct TemplatedPtrWithElementType {
     using other = LongPtr;
   };
 #endif
-  static CONSTEXPR_IF_SUPPORTED TemplatedPtrWithElementType pointer_to(element_type&) { return {&global_int}; }
+  static TEST_CONSTEXPR_CXX14 TemplatedPtrWithElementType pointer_to(element_type&) { return {&global_int}; }
 
   element_type* ptr;
 };
 
-#if TEST_STD_VER >= 14
-constexpr
-#endif
-    bool
-    test() {
+int main() {
   {
     using Ptr = NotAPtr;
-    assert(!HasElementType<Ptr>::value);
-    assert(!HasPointerType<Ptr>::value);
-    assert(!HasDifferenceType<Ptr>::value);
-    assert((!HasRebind<Ptr, long>::value));
-    assert(!HasPointerTo<Ptr>::value);
+    static_assert(!HasElementType<Ptr>::value, "");
+    static_assert(!HasPointerType<Ptr>::value, "");
+    static_assert(!HasDifferenceType<Ptr>::value, "");
+    static_assert(!HasRebind<Ptr, long>::value, "");
+    static_assert(!HasPointerTo<Ptr>::value, "");
   }
 
   {
     using Ptr = int*;
 
-    assert(HasElementType<Ptr>::value);
+    static_assert(HasElementType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, int);
 
-    assert(HasPointerType<Ptr>::value);
+    static_assert(HasPointerType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
 
-    assert(HasDifferenceType<Ptr>::value);
+    static_assert(HasDifferenceType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
-    assert((HasRebind<Ptr, long>::value));
+    static_assert(HasRebind<Ptr, long>::value, "");
 #if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
 #else
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, long*);
 #endif
 
-    assert(HasPointerTo<Ptr>::value);
+    static_assert(HasPointerTo<Ptr>::value, "");
     int variable = 0;
     ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), Ptr);
-#if TEST_STD_VER >= 17
-    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
-      assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
-    }
+#if TEST_STD_VER >= 20
+    static_assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable, "");
 #endif
   }
 
   {
     using Ptr = const int*;
 
-    assert(HasElementType<Ptr>::value);
+    static_assert(HasElementType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, const int);
 
-    assert(HasPointerType<Ptr>::value);
+    static_assert(HasPointerType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
 
-    assert(HasDifferenceType<Ptr>::value);
+    static_assert(HasDifferenceType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
-    assert((HasRebind<Ptr, long>::value));
+    static_assert(HasRebind<Ptr, long>::value, "");
 #if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, long*);
 #else
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, long*);
 #endif
 
-    assert(HasPointerTo<Ptr>::value);
+    static_assert(HasPointerTo<Ptr>::value, "");
     const int const_variable = 0;
     ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(const_variable)), Ptr);
-#if TEST_STD_VER >= 17
-    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
-      assert(std::pointer_traits<Ptr>::pointer_to(const_variable) == &const_variable);
-    }
+#if TEST_STD_VER >= 20
+    static_assert(std::pointer_traits<Ptr>::pointer_to(const_variable) == &const_variable, "");
 #endif
     int variable = 0;
     ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(variable)), Ptr);
-#if TEST_STD_VER >= 17
-    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
-      assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable);
-    }
+#if TEST_STD_VER >= 20
+    static_assert(std::pointer_traits<Ptr>::pointer_to(variable) == &variable, "");
 #endif
   }
 
   {
     using Ptr = PtrWithElementType;
 
-    assert(HasElementType<Ptr>::value);
+    static_assert(HasElementType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, int);
 
-    assert(HasPointerType<Ptr>::value);
+    static_assert(HasPointerType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
 
-    assert(HasDifferenceType<Ptr>::value);
+    static_assert(HasDifferenceType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
-    // TODO: Maybe support SFINAE testing of std::pointer_traits<Ptr>::rebind
-    // and std::pointer_traits<Ptr>::pointer_to.
-    assert((HasRebind<Ptr, long>::value));
+    static_assert(HasRebind<Ptr, long>::value, "");
 #if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, TemplatedPtr<long, Irrelevant>);
 #else
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>::other, TemplatedPtr<long, Irrelevant>);
 #endif
 
-    assert(HasPointerTo<Ptr>::value);
+    static_assert(HasPointerTo<Ptr>::value, "");
     int ignored = 0;
     ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(ignored)), Ptr);
-#if TEST_STD_VER >= 17
-    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
-      assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
-    }
+#if TEST_STD_VER >= 20
+    static_assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int, "");
 #endif
   }
 
   {
     using Ptr = TemplatedPtr<int, Irrelevant>;
 
-    assert(HasElementType<Ptr>::value);
+    static_assert(HasElementType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, int);
 
-    assert(HasPointerType<Ptr>::value);
+    static_assert(HasPointerType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
 
-    assert(HasDifferenceType<Ptr>::value);
+    static_assert(HasDifferenceType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
-    assert((HasRebind<Ptr, long>::value));
-    assert((HasRebind<Ptr, long long>::value));
+    static_assert(HasRebind<Ptr, long>::value, "");
+    static_assert(HasRebind<Ptr, long long>::value, "");
 #if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, LongPtr);
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long long>, TemplatedPtr<long long, Irrelevant>);
@@ -269,30 +247,28 @@ constexpr
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long long>::other, TemplatedPtr<long long, Irrelevant>);
 #endif
 
-    assert(HasPointerTo<Ptr>::value);
+    static_assert(HasPointerTo<Ptr>::value, "");
     int ignored = 0;
     ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(ignored)), Ptr);
-#if TEST_STD_VER >= 17
-    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
-      assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
-    }
+#if TEST_STD_VER >= 20
+    static_assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int, "");
 #endif
   }
 
   {
     using Ptr = TemplatedPtrWithElementType<Irrelevant, Irrelevant>;
 
-    assert(HasElementType<Ptr>::value);
+    static_assert(HasElementType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::element_type, int);
 
-    assert(HasPointerType<Ptr>::value);
+    static_assert(HasPointerType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::pointer, Ptr);
 
-    assert(HasDifferenceType<Ptr>::value);
+    static_assert(HasDifferenceType<Ptr>::value, "");
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::difference_type, ptrdiff_t);
 
-    assert((HasRebind<Ptr, long>::value));
-    assert((HasRebind<Ptr, long long>::value));
+    static_assert(HasRebind<Ptr, long>::value, "");
+    static_assert(HasRebind<Ptr, long long>::value, "");
 #if TEST_STD_VER >= 11
     ASSERT_SAME_TYPE(typename std::pointer_traits<Ptr>::rebind<long>, LongPtr);
     ASSERT_SAME_TYPE(
@@ -303,23 +279,11 @@ constexpr
                      TemplatedPtrWithElementType<long long, Irrelevant>);
 #endif
 
-    assert(HasPointerTo<Ptr>::value);
+    static_assert(HasPointerTo<Ptr>::value, "");
     int ignored = 0;
     ASSERT_SAME_TYPE(decltype(std::pointer_traits<Ptr>::pointer_to(ignored)), Ptr);
-#if TEST_STD_VER >= 17
-    if constexpr (std::__libcpp_is_constant_evaluated() && TEST_STD_VER >= 20) {
-      assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int);
-    }
+#if TEST_STD_VER >= 20
+    static_assert(std::pointer_traits<Ptr>::pointer_to(ignored).ptr == &global_int, "");
 #endif
   }
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 14
-  static_assert(test(), "");
-#endif
-  return 0;
 }
