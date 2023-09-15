@@ -202,6 +202,17 @@ static llvm::Value *createAtomicRMW(llvm::IRBuilderBase &builder,
                                   {ptr->getType(), val->getType()}, {ptr, val});
 }
 
+// Create a call to SPIR function for loading a joint matrix.
+static llvm::Value *
+createMatrixLoad(llvm::IRBuilderBase &builder, llvm::Value *res,
+                 llvm::Value *ptr, llvm::Value *stride,
+                 GENX::MatrixLayout layout, GENX::Scope scope,
+                 std::optional<GENX::MemoryAccess> memoryAccess) {
+  assert(isa<llvm::PointerType>(ptr->getType()) && "Expecting a pointer type");
+  assert(false && "TODO");
+  return nullptr;
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the GENX dialect to LLVM IR.

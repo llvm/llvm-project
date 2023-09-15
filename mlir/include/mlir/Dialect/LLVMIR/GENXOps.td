@@ -36,13 +36,22 @@ def IntegerOrFloatType : AnyTypeOf<[AnyInteger, AnyFloat]>;
 
 def GENX_Dialect : Dialect {
   let name = "genx";
+  let summary = "The GENX dialect in MLIR.";
+  let description = [{
+    GENX is a dialect for representing operations on Intel GPUs and extensions 
+    to the LLVM type system.
+  }];
   let cppNamespace = "::mlir::GENX";
   let dependentDialects = ["LLVM::LLVMDialect"];
   let hasOperationAttrVerify = 1;
+  let useDefaultTypePrinterParser = 1;
+  let useDefaultAttributePrinterParser = 1;  
 
   let extraClassDeclaration = [{
-    /// Get the name of the attribute used to annotate external kernel
-    /// functions.
+    void registerAttributes();    
+    void registerTypes();
+
+    /// Get the name of the attribute used to annotate external kernel functions.
     static StringRef getKernelFuncAttrName() { return "genx.kernel"; }
     /// Get the name of the attribute used to annotate max work group size
     /// required for kernel functions.
@@ -67,8 +76,6 @@ def GENX_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 0;
   }];
-
-  let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -324,6 +331,83 @@ def GENX_AtomicRMWOp : GENX_Op<"atomic.rmw", [
   let assemblyFormat = [{
     $bin_op $ptr `,` $val attr-dict `:` functional-type(operands, results)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Joint Matrix operations
+//===----------------------------------------------------------------------===//
+
+def GENX_IsJointMatrixType :
+  CPred<"$_self.isa<::mlir::GENX::JointMatrixType>()">;
+
+def GENX_AnyJointMatrix : DialectType<GENX_Dialect, GENX_IsJointMatrixType,
+                                "any GENX joint matrix type">;
+
+def ScopeKind : I32EnumAttr<"Scope", "GENX Scope", 
+  [
+    I32EnumAttrCase<"Device", 0>,
+    I32EnumAttrCase<"Workgroup", 1>,
+    I32EnumAttrCase<"Subgroup", 2>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def ScopeAttr : EnumAttr<GENX_Dialect, ScopeKind, "scope"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def MatrixLayoutKind : I32EnumAttr<"MatrixLayout", "GENX Matrix Layout", 
+  [
+    I32EnumAttrCase<"RowMajor", 0>,    
+    I32EnumAttrCase<"ColumnMajor", 1>,
+    I32EnumAttrCase<"Packed", 2>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def MatrixLayoutAttr : EnumAttr<GENX_Dialect, MatrixLayoutKind, "layout"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def MemoryAccessKind : I32BitEnumAttr<"MemoryAccess", "GENX Memory Access", 
+  [
+    I32BitEnumAttrCaseBit<"None", 0>,
+    I32BitEnumAttrCaseBit<"Volatile", 1>,
+    I32BitEnumAttrCaseBit<"Aligned", 2>,
+    I32BitEnumAttrCaseBit<"NonTemporal", 3>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::GENX";
+}
+def MemoryAccessAttr : EnumAttr<GENX_Dialect, MemoryAccessKind, "memory_access"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def GENX_MatrixLoadOp : GENX_Op<"matrix.load">,
+  Results<(outs GENX_AnyJointMatrix:$res)>,
+  Arguments<(ins Arg<LLVM_AnyPointer,"", [MemRead]>:$ptr,
+             Index:$stride, MatrixLayoutAttr:$layout, ScopeAttr:$scope,
+             OptionalAttr<MemoryAccessAttr>:$memory_access)> {
+  let summary = "Load a joint matrix through a pointer";
+
+  string baseDescription = [{
+    The `genx.matrix.load` operation performs a load of the matrix at the memory 
+    location specified by the pointer argument $ptr. The $stride argument specifies 
+    the number of elements in memory between consecutive rows (for the row major layout) 
+    and columns (for the column major layout) in the result. The matrix elements loaded 
+    from memory are arranged according to the specified $layout. The $scope indicates 
+    the synchronization scope for operations on the matrix.
+  }];
+
+  string llvmBuilder = [{
+    createMatrixLoad(builder, $res, $ptr, $stride, $layout, $scope, $memory_access);
+  }];
+
+  let assemblyFormat = [{
+    $scope $layout operands attr-dict `:` `(` type(operands) `)` `->` type($res)
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // GENXIR_OPS
