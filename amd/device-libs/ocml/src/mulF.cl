@@ -10,7 +10,7 @@
 CONSTATTR float
 MATH_MANGLE(mul_rte)(float x, float y)
 {
-    return x + y;
+    return x * y;
 }
 
 #pragma STDC FENV_ACCESS ON
