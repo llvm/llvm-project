@@ -1897,9 +1897,9 @@ transform.sequence failures(propagate) {
 // expected-note @below {{target op}}
 module {
   transform.sequence  failures(propagate) {
-  ^bb0(%arg0: !pdl.operation):
+  ^bb0(%arg0: !transform.any_op):
     // expected-error @below{{could not find a parent op that matches all requirements}}
-    %3 = get_parent_op %arg0 {op_name = "builtin.module"} : (!pdl.operation) -> !transform.any_op
+    %3 = get_parent_op %arg0 {op_name = "builtin.module"} : (!transform.any_op) -> !transform.any_op
   }
 }
 
