@@ -21,6 +21,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
 #include <variant>
 
 namespace llvm {
@@ -132,9 +133,9 @@ class PSVRuntimeInfo {
   SigElementArray SigOutputElements;
   SigElementArray SigPatchOrPrimElements;
 
-  ViewArray<uint32_t> OutputVectorMasks[4];
+  std::array<ViewArray<uint32_t>, 4> OutputVectorMasks;
   ViewArray<uint32_t> PatchOrPrimMasks;
-  ViewArray<uint32_t> InputOutputMap[4];
+  std::array<ViewArray<uint32_t>, 4> InputOutputMap;
   ViewArray<uint32_t> InputPatchMap;
   ViewArray<uint32_t> PatchOutputMap;
 

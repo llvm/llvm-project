@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -114,9 +115,9 @@ struct PSVInfo {
   SmallVector<SignatureElement> SigPatchOrPrimElements;
 
   using MaskVector = SmallVector<llvm::yaml::Hex32>;
-  MaskVector OutputVectorMasks[4];
+  std::array<MaskVector, 4> OutputVectorMasks;
   MaskVector PatchOrPrimMasks;
-  MaskVector InputOutputMap[4];
+  std::array<MaskVector, 4> InputOutputMap;
   MaskVector InputPatchMap;
   MaskVector PatchOutputMap;
 

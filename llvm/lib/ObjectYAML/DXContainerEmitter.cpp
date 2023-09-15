@@ -219,7 +219,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
             El.Stream});
 
-      for (int I = 0; I < 4; ++I) {
+      static_assert(PSV.OutputVectorMasks.size() == PSV.InputOutputMap.size());
+      for (unsigned I = 0; I < PSV.OutputVectorMasks.size(); ++I) {
         PSV.OutputVectorMasks[I].insert(PSV.OutputVectorMasks[I].begin(),
                                         P.Info->OutputVectorMasks[I].begin(),
                                         P.Info->OutputVectorMasks[I].end());

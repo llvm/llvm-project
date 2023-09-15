@@ -334,7 +334,7 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   };
 
   if (usesViewID()) {
-    for (uint32_t I = 0; I < 4; ++I) {
+    for (uint32_t I = 0; I < OutputVectorCounts.size(); ++I) {
       // The vector mask is one bit per component and 4 components per vector.
       // We can compute the number of dwords required by rounding up to the next
       // multiple of 8.
@@ -354,7 +354,7 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   }
 
   // Input/Output mapping table
-  for (uint32_t I = 0; I < 4; ++I) {
+  for (uint32_t I = 0; I < OutputVectorCounts.size(); ++I) {
     if (InputVectorCount == 0 || OutputVectorCounts[I] == 0)
       continue;
     uint32_t NumDwords = mapTableSize(InputVectorCount, OutputVectorCounts[I]);
