@@ -14,6 +14,7 @@
 #include "combined.h"
 #include "mem_map.h"
 
+#include <algorithm>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
