@@ -886,8 +886,15 @@ Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
 }
 
 const DebugLoc &Instruction::getStableDebugLoc() const {
-  if (isa<DbgInfoIntrinsic>(this))
-    return getNextNonDebugInstruction()->getDebugLoc();
+  if (isa<DbgInfoIntrinsic>(this)) {
+    if (const Instruction* Next = getNextNonDebugInstruction()) {
+      return Next->getDebugLoc();
+    }
+
+    // FIXME: remove, just to demonstrate the test causes Next above to be null.
+    llvm::errs() << "error: getStableDebugLoc:getNextNonDebugInstruction is NULL\n";
+    exit(1);
+  }
   return getDebugLoc();
 }
 
