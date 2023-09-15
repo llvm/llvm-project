@@ -48,7 +48,7 @@ module {
   func.func @sparse_select(%cond: tensor<5x5xi1>,
                            %arga: tensor<5x5xf64, #DCSR>,
                            %argb: tensor<5x5xf64, #DCSR>) -> tensor<5x5xf64, #DCSR> {
-    %xv = bufferization.alloc_tensor() : tensor<5x5xf64, #DCSR>
+    %xv = tensor.empty() : tensor<5x5xf64, #DCSR>
     %0 = linalg.generic #sel_trait
        ins(%cond, %arga, %argb: tensor<5x5xi1>, tensor<5x5xf64, #DCSR>, tensor<5x5xf64, #DCSR>)
         outs(%xv: tensor<5x5xf64, #DCSR>) {

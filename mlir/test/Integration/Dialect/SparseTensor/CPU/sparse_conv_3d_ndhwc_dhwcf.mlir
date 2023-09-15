@@ -40,7 +40,7 @@
 
 // Creates and returns 5-D buffer of size (%s1, %s2, %s3, %s4, %s5) filled with the value %f
 func.func @alloc_5d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %s4 : index, %s5 : index, %f : f32) -> tensor<?x?x?x?x?xf32> {
-  %buf = bufferization.alloc_tensor(%s1, %s2, %s3, %s4, %s5) : tensor<?x?x?x?x?xf32>
+  %buf = tensor.empty(%s1, %s2, %s3, %s4, %s5) : tensor<?x?x?x?x?xf32>
   %ret = linalg.fill ins(%f : f32) outs(%buf : tensor<?x?x?x?x?xf32>) -> tensor<?x?x?x?x?xf32>
   return %ret : tensor<?x?x?x?x?xf32>
 }
@@ -60,7 +60,7 @@ func.func @conv_3d_ndhwc_dhwcf_CCCCC(%arg0: tensor<?x?x?x?x?xf32, #CCCCC>,
                                      -> tensor<?x?x?x?x?xf32, #CCCCC> {
   %c1 = arith.constant 1 : index
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c1, %c6, %c6, %c6, %c1)
+  %s = tensor.empty(%c1, %c6, %c6, %c6, %c1)
     : tensor<?x?x?x?x?xf32, #CCCCC>
   %ret = linalg.conv_3d_ndhwc_dhwcf {dilations = dense<1> : tensor<3xi64>,
                                        strides = dense<1> : tensor<3xi64>}
@@ -74,7 +74,7 @@ func.func @conv_3d_ndhwc_dhwcf_CDCDC(%arg0: tensor<?x?x?x?x?xf32, #CDCDC>,
                                      -> tensor<?x?x?x?x?xf32, #CDCDC> {
   %c1 = arith.constant 1 : index
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c1, %c6, %c6, %c6, %c1)
+  %s = tensor.empty(%c1, %c6, %c6, %c6, %c1)
     : tensor<?x?x?x?x?xf32, #CDCDC>
   %ret = linalg.conv_3d_ndhwc_dhwcf {dilations = dense<1> : tensor<3xi64>,
                                        strides = dense<1> : tensor<3xi64>}

@@ -55,7 +55,7 @@ module {
     %c0 = arith.constant 0 : index
     %cf1 = arith.constant 1.0 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSR>
-    %xv = bufferization.alloc_tensor(%d0): tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d0): tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_mat_reduce_rowwise
       ins(%arga: tensor<?x?xf64, #CSR>)
       outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -74,7 +74,7 @@ module {
     %c0 = arith.constant 0 : index
     %cf1 = arith.constant 1.0 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSC>
-    %xv = bufferization.alloc_tensor(%d0): tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d0): tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_mat_reduce_rowwise
       ins(%arga: tensor<?x?xf64, #CSC>)
       outs(%xv: tensor<?xf64, #SparseVector>) {

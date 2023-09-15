@@ -51,7 +51,7 @@ module {
 
   func.func @conv2d_sparse_out(%input:  tensor<8x8xi32>,
                %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR> {
-    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>
+    %s = tensor.empty() : tensor<6x6xi32, #DCSR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
@@ -60,7 +60,7 @@ module {
 
   func.func @conv2d_all_sparse_DCSR(%input:  tensor<8x8xi32, #DCSR>,
                %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #DCSR> {
-    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #DCSR>
+    %s = tensor.empty() : tensor<6x6xi32, #DCSR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #DCSR>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #DCSR>) -> tensor<6x6xi32, #DCSR>
@@ -69,7 +69,7 @@ module {
 
   func.func @conv2d_all_sparse_CSR(%input:  tensor<8x8xi32, #CSR>,
                %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #CSR> {
-    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #CSR>
+    %s = tensor.empty() : tensor<6x6xi32, #CSR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #CSR>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #CSR>) -> tensor<6x6xi32, #CSR>
@@ -78,7 +78,7 @@ module {
 
   func.func @conv2d_all_sparse_CD(%input:  tensor<8x8xi32, #CDR>,
                %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #CDR> {
-    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #CDR>
+    %s = tensor.empty() : tensor<6x6xi32, #CDR>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #CDR>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #CDR>) -> tensor<6x6xi32, #CDR>
@@ -87,7 +87,7 @@ module {
 
   func.func @conv2d_all_sparse_CSC(%input:  tensor<8x8xi32, #CSC>,
                %filter: tensor<3x3xi32>) -> tensor<6x6xi32, #CSC> {
-    %s = bufferization.alloc_tensor() : tensor<6x6xi32, #CSC>
+    %s = tensor.empty() : tensor<6x6xi32, #CSC>
     %0 = linalg.conv_2d
       ins  (%input, %filter: tensor<8x8xi32, #CSC>, tensor<3x3xi32>)
       outs (%s: tensor<6x6xi32, #CSC>) -> tensor<6x6xi32, #CSC>

@@ -55,7 +55,7 @@ module {
     %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xf64, #ST>
     %d1 = tensor.dim %arga, %c1 : tensor<?x?x?xf64, #ST>
     %d2 = tensor.dim %arga, %c2 : tensor<?x?x?xf64, #ST>
-    %xt = bufferization.alloc_tensor(%d0, %d1, %d2) : tensor<?x?x?xf64, #ST>
+    %xt = tensor.empty(%d0, %d1, %d2) : tensor<?x?x?xf64, #ST>
     %0 = linalg.generic #trait_mul
        ins(%arga, %argb: tensor<?x?x?xf64, #ST>, tensor<?x?x?xf64, #ST>)
         outs(%xt: tensor<?x?x?xf64, #ST>) {
