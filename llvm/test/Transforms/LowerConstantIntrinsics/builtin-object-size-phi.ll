@@ -62,7 +62,7 @@ if.end:
   ret i64 %size
 }
 
-define dso_local i64 @pick_max_same(i32 noundef %n) local_unnamed_addr {
+define i64 @pick_max_same(i32 %n) {
 ; CHECK-LABEL: @pick_max_same(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUFFER:%.*]] = alloca i8, i64 20, align 1
@@ -90,7 +90,7 @@ if.end:
   ret i64 %size
 }
 
-define dso_local i64 @pick_min_same(i32 noundef %n) local_unnamed_addr {
+define i64 @pick_min_same(i32 %n) {
 ; CHECK-LABEL: @pick_min_same(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUFFER:%.*]] = alloca i8, i64 20, align 1
