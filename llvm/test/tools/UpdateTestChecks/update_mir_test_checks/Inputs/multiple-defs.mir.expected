@@ -8,9 +8,9 @@ body: |
     ; CHECK-LABEL: name: test
     ; CHECK: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:gr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:gr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:gr32 = IMPLICIT_DEF
-    ; CHECK-NEXT: KILL [[DEF2]], [[DEF2]]
+    ; CHECK-NEXT: KILL [[DEF]], [[DEF2]]
     %0:gr32 = IMPLICIT_DEF
     %1:gr32 = IMPLICIT_DEF
     %0:gr32 = IMPLICIT_DEF
