@@ -506,7 +506,7 @@ void SPIRV::RequirementHandler::checkSatisfiable(
   for (auto Ext : AllExtensions) {
     if (ST.canUseExtension(Ext))
       continue;
-    LLVM_DEBUG(dbgs() << "Extension not suported: "
+    LLVM_DEBUG(dbgs() << "Extension not supported: "
                       << getSymbolicOperandMnemonic(
                              OperandCategory::ExtensionOperand, Ext)
                       << "\n");
@@ -745,7 +745,12 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpBitFieldInsert:
   case SPIRV::OpBitFieldSExtract:
   case SPIRV::OpBitFieldUExtract:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions)) {
+      Reqs.addCapability(SPIRV::Capability::Shader);
+      break;
+    }
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_bit_instructions);
+    Reqs.addCapability(SPIRV::Capability::BitInstructions);
     break;
   case SPIRV::OpTypeRuntimeArray:
     Reqs.addCapability(SPIRV::Capability::Shader);
