@@ -119,3 +119,10 @@ func.func @genx.matrix.load(%ptr : !llvm.ptr<vector<4xi32>>, %stride : index) {
   %0 = genx.matrix.load <Subgroup> <RowMajor> %ptr, %stride {memory_access = #genx.memory_access<Volatile>} : (!llvm.ptr<vector<4xi32>>, index) -> !genx.jointmatrix<8x16xi32, RowMajor>
   llvm.return  
 }
+
+func.func @genx.matrix.init(%mat : !genx.jointmatrix<8x32xi32, RowMajor>, %val : i32) {
+  // CHECK-LABEL: genx.matrix.init
+  // CHECK: genx.matrix.init <Subgroup> %arg0, %arg1 : (!genx.jointmatrix<8x32xi32, RowMajor>, i32)
+  genx.matrix.init <Subgroup> %mat, %val : (!genx.jointmatrix<8x32xi32, RowMajor>, i32)
+  llvm.return  
+}

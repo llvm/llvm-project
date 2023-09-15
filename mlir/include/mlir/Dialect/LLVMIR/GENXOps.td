@@ -410,4 +410,25 @@ def GENX_MatrixLoadOp : GENX_Op<"matrix.load">,
   let hasVerifier = 1;
 }
 
+def GENX_MatrixInitOp : GENX_Op<"matrix.init">,
+  Arguments<(ins GENX_AnyJointMatrix:$mat, IntegerOrFloatType:$val, ScopeAttr:$scope)> {
+  let summary = "Initialize a joint matrix";
+
+  string baseDescription = [{
+    The `genx.matrix.init` operation initializes the matrix $mat by filling it with 
+    the value $val. The scope operand indicates the synchronization scope for operations 
+    on the matrix.
+  }];
+
+  string llvmBuilder = [{
+    createMatrixInit(builder, $mat, $val, $scope);
+  }];
+
+  let assemblyFormat = [{
+    $scope operands attr-dict`:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // GENXIR_OPS

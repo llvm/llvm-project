@@ -30,3 +30,19 @@ LogicalResult GENX::MatrixLoadOp::verify() {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// genx.matrix.init
+//===----------------------------------------------------------------------===//
+
+LogicalResult GENX::MatrixInitOp::verify() {
+  // The scope attribute must be 'Subgroup' currently.
+  if (getScope() != GENX::Scope::Subgroup)
+    return this->emitOpError("scope attribute must have value 'Subgroup'");
+
+  auto matType = getMat().getType().cast<GENX::JointMatrixType>();
+  if (matType.getElementType() != getVal().getType())
+    return this->emitOpError("initializer type must match matrix element type");
+
+  return success();
+}
