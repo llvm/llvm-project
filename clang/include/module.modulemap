@@ -42,8 +42,6 @@ module Clang_Basic {
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
   textual header "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
   textual header "clang/Basic/BuiltinsARM.def"
-  textual header "clang/Basic/BuiltinsBPF.def"
-  textual header "clang/Basic/Builtins.def"
   textual header "clang/Basic/BuiltinHeaders.def"
   textual header "clang/Basic/BuiltinsHexagon.def"
   textual header "clang/Basic/BuiltinsHexagonDep.def"

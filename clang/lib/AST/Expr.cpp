@@ -4923,6 +4923,7 @@ AtomicExpr::AtomicExpr(SourceLocation BLoc, ArrayRef<Expr *> args, QualType t,
                        AtomicOp op, SourceLocation RP)
     : Expr(AtomicExprClass, t, VK_PRValue, OK_Ordinary),
       NumSubExprs(args.size()), BuiltinLoc(BLoc), RParenLoc(RP), Op(op) {
+  assert(op != AO__opencl_atomic_init || args.size() == 3);
   assert(args.size() == getNumSubExprs(op) && "wrong number of subexpressions");
   for (unsigned i = 0; i != args.size(); i++)
     SubExprs[i] = args[i];

@@ -1833,7 +1833,7 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \
     break;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
   }
   OS << Name;
 

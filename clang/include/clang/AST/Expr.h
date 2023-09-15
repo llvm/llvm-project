@@ -6420,7 +6420,7 @@ public:
   enum AtomicOp {
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) AO ## ID,
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     // Avoid trailing comma
     BI_First = 0
   };
@@ -6486,7 +6486,7 @@ public:
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
   case AO##ID:                                                                 \
     return #ID;
-#include "clang/Basic/Builtins.def"
+#include "clang/Basic/Builtins.inc"
     }
     llvm_unreachable("not an atomic operator?");
   }
@@ -6513,8 +6513,8 @@ public:
   }
 
   bool isOpenCL() const {
-    return getOp() >= AO__opencl_atomic_init &&
-           getOp() <= AO__opencl_atomic_fetch_max;
+    return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
+           getOp() <= AO__opencl_atomic_store;
   }
 
   SourceLocation getBuiltinLoc() const { return BuiltinLoc; }
@@ -6539,12 +6539,13 @@ public:
   /// \return empty atomic scope model if the atomic op code does not have
   ///   scope operand.
   static std::unique_ptr<AtomicScopeModel> getScopeModel(AtomicOp Op) {
-    auto Kind =
-        (Op >= AO__opencl_atomic_load && Op <= AO__opencl_atomic_fetch_max)
-            ? AtomicScopeModelKind::OpenCL
-        : (Op >= AO__hip_atomic_load && Op <= AO__hip_atomic_fetch_max)
-            ? AtomicScopeModelKind::HIP
-            : AtomicScopeModelKind::None;
+    auto Kind = (Op >= AO__opencl_atomic_compare_exchange_strong &&
+                 Op <= AO__opencl_atomic_store)
+                    ? AtomicScopeModelKind::OpenCL
+                : (Op >= AO__hip_atomic_compare_exchange_strong &&
+                   Op <= AO__hip_atomic_store)
+                    ? AtomicScopeModelKind::HIP
+                    : AtomicScopeModelKind::None;
     return AtomicScopeModel::create(Kind);
   }
 
