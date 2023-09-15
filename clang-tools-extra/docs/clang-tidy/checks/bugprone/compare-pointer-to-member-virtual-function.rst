@@ -7,6 +7,7 @@ Detects unspecified behavior about equality comparison between pointer to member
 virtual function and anything other than null-pointer-constant.
 
 .. code-block:: c++
+
     struct A {
       void f1();
       void f2();
