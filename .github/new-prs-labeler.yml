@@ -110,16 +110,26 @@ mlir:
   - mlir/**
 
 mlir:core:
-  - mlir/**/Support/**
-  - mlir/**/Parser/**
-  - mlir/**/IR/**
-  - mlir/**/Bytecode/**
-  - mlir/**/AsmParser/**
-  - mlir/**/Pass/**
-  - mlir/**/tools/**
-  - mlir/**/Reducer/**
-  - mlir/**/Transforms/**
-  - mlir/**/Debug/**
+  - mlir/include/mlir/Support/**
+  - mlir/lib/Support/**
+  - mlir/include/mlir/Parser/**
+  - mlir/lib/Parser/**
+  - mlir/include/mlir/IR/**
+  - mlir/lib/IR/**
+  - mlir/include/mlir/Bytecode/**
+  - mlir/lib/Bytecode/**
+  - mlir/include/mlir/AsmParser/**
+  - mlir/lib/AsmParser/**
+  - mlir/include/mlir/Pass/**
+  - mlir/lib/Pass/**
+  - mlir/include/mlir/Tools/**
+  - mlir/lib/Tools/**
+  - mlir/include/mlir/Reducer/**
+  - mlir/lib/Reducer/**
+  - mlir/include/mlir/Transforms/**
+  - mlir/lib/Transforms/**
+  - mlir/include/mlir/Debug/**
+  - mlir/lib/Debug/**
   - mlir/tools/**
 
 mlir:ods:
