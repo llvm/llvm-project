@@ -131,7 +131,7 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
   case llvm::Triple::riscv64:
     ArchName = "riscv64";
     // RV64GC
-    FeaturesStr = "+m,+a,+f,+d,+zicsr,+zifencei,+c";
+    FeaturesStr = "+m,+a,+f,+d,+zicsr,+zifencei,+c,+relax";
     break;
   default:
     return createStringError(std::errc::not_supported,
