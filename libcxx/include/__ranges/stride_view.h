@@ -184,15 +184,17 @@ class stride_view<_View>::__iterator : public __stride_iterator_category<_View> 
   using _Parent = __maybe_const<_Const, stride_view<_View>>;
   using _Base   = __maybe_const<_Const, _View>;
 
+  _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_     = iterator_t<_Base>();
+  _LIBCPP_NO_UNIQUE_ADDRESS ranges::sentinel_t<_Base> __end_ = ranges::sentinel_t<_Base>();
+  range_difference_t<_Base> __stride_                        = 0;
+  range_difference_t<_Base> __missing_                       = 0;
+
+  friend stride_view;
+
 public:
   using difference_type  = range_difference_t<_Base>;
   using value_type       = range_value_t<_Base>;
   using iterator_concept = typename __stride_view_iterator_concept<_View>::type;
-
-  _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_     = iterator_t<_Base>();
-  _LIBCPP_NO_UNIQUE_ADDRESS ranges::sentinel_t<_Base> __end_ = ranges::sentinel_t<_Base>();
-  difference_type __stride_                                  = 0;
-  difference_type __missing_                                 = 0;
 
   // using iterator_category = inherited;
   _LIBCPP_HIDE_FROM_ABI __iterator()
