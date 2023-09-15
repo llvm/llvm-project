@@ -1353,34 +1353,6 @@ LogicalResult SelectOp::verify() {
   return success();
 }
 
-LogicalResult SortOp::verify() {
-  if (getXs().empty())
-    return emitError("need at least one xs buffer.");
-
-  std::optional<int64_t> n = getConstantIntValue(getN());
-
-  Type xtp = getMemRefType(getXs().front()).getElementType();
-  auto checkTypes = [&](ValueRange operands,
-                        bool checkEleType = true) -> LogicalResult {
-    for (Value opnd : operands) {
-      auto mtp = getMemRefType(opnd);
-      const DynSize sh = mtp.getShape()[0];
-      // We can't check the size of dynamic dimension at compile-time, but all
-      // xs and ys should have a dimension not less than n at runtime.
-      if (n && !ShapedType::isDynamic(sh) && sh < n.value())
-        return emitError(llvm::formatv("xs and ys need to have a dimension >= n"
-                                       ": {0} < {1}",
-                                       sh, n.value()));
-
-      if (checkEleType && xtp != mtp.getElementType())
-        return emitError("mismatch xs element types");
-    }
-    return success();
-  };
-  RETURN_FAILURE_IF_FAILED(checkTypes(getXs()))
-  return n ? checkTypes(getYs(), false) : success();
-}
-
 LogicalResult SortCooOp::verify() {
   std::optional<int64_t> cn = getConstantIntValue(getN());
   // We can't check the size of the buffers when n or buffer dimensions aren't
@@ -1391,7 +1363,7 @@ LogicalResult SortCooOp::verify() {
   uint64_t n = cn.value();
   uint64_t nx = 1;
   if (auto nxAttr = getNxAttr()) {
-    nx = nxAttr.getInt();
+    nx = nxAttr.getAffineMap().getNumResults();
     if (nx < 1)
       emitError(llvm::formatv("Expected nx > 1, got {0}", nx));
   }
