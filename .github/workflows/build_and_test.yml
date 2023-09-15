@@ -1,0 +1,26 @@
+name: LLVM Pre Commit
+
+on:
+  pull_request:
+    branches:
+    - genx
+
+jobs:
+  build:
+    name: Build + LIT
+    runs-on: ubuntu-latest
+    timeout-minutes: 150 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja llvm -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="mlir" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="SPIRV"
+      - name: mlir-opt
+        run: |
+          ninja -C build mlir-opt
+      - name: check-mlir
+        run: |
+          ninja -C build check-mlir
