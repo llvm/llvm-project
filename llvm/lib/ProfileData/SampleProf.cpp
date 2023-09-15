@@ -121,7 +121,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
   for (const auto &I : Other.getCallTargets()) {
-    MergeResult(Result, addCalledTarget(I.first(), I.second, Weight));
+    MergeResult(Result, addCalledTarget(I.first, I.second, Weight));
   }
   return Result;
 }
@@ -234,9 +234,9 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
   }
 }
 
-uint64_t FunctionSamples::getCallSiteHash(StringRef CalleeName,
+uint64_t FunctionSamples::getCallSiteHash(ProfileFuncRef CalleeName,
                                           const LineLocation &Callsite) {
-  uint64_t NameHash = std::hash<std::string>{}(CalleeName.str());
+  uint64_t NameHash = CalleeName.getHashCode();
   uint64_t LocId =
       (((uint64_t)Callsite.LineOffset) << 32) | Callsite.Discriminator;
   return NameHash + (LocId << 5) + LocId;
@@ -268,11 +268,11 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
   return FS;
 }
 
-void FunctionSamples::findAllNames(DenseSet<StringRef> &NameSet) const {
+void FunctionSamples::findAllNames(DenseSet<ProfileFuncRef> &NameSet) const {
   NameSet.insert(getName());
   for (const auto &BS : BodySamples)
     for (const auto &TS : BS.second.getCallTargets())
-      NameSet.insert(TS.getKey());
+      NameSet.insert(TS.first);
 
   for (const auto &CS : CallsiteSamples) {
     for (const auto &NameFS : CS.second) {
@@ -287,18 +287,15 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     SampleProfileReaderItaniumRemapper *Remapper) const {
   CalleeName = getCanonicalFnName(CalleeName);
 
-  std::string CalleeGUID;
-  CalleeName = getRepInFormat(CalleeName, UseMD5, CalleeGUID);
-
   auto iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
   if (iter == CallsiteSamples.end())
     return nullptr;
-  auto FS = iter->second.find(CalleeName);
+  auto FS = iter->second.find(getRepInFormat(CalleeName));
   if (FS != iter->second.end())
     return &FS->second;
   if (Remapper) {
     if (auto NameInProfile = Remapper->lookUpNameInProfile(CalleeName)) {
-      auto FS = iter->second.find(*NameInProfile);
+      auto FS = iter->second.find(getRepInFormat(*NameInProfile));
       if (FS != iter->second.end())
         return &FS->second;
     }
@@ -422,7 +419,7 @@ void ProfileSymbolList::dump(raw_ostream &OS) const {
 
 ProfileConverter::FrameNode *
 ProfileConverter::FrameNode::getOrCreateChildFrame(const LineLocation &CallSite,
-                                                   StringRef CalleeName) {
+                                                   ProfileFuncRef CalleeName) {
   uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
   auto It = AllChildFrames.find(Hash);
   if (It != AllChildFrames.end()) {
@@ -468,7 +465,7 @@ void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
     if (!ChildProfile)
       continue;
     SampleContext OrigChildContext = ChildProfile->getContext();
-    hash_code OrigChildContextHash = OrigChildContext.getHashCode();
+    uint64_t OrigChildContextHash = OrigChildContext.getHashCode();
     // Reset the child context to be contextless.
     ChildProfile->getContext().setName(OrigChildContext.getName());
     if (NodeProfile) {
@@ -484,7 +481,7 @@ void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
       NodeProfile->removeTotalSamples(Count);
     }
 
-    hash_code NewChildProfileHash(0);
+    uint64_t NewChildProfileHash = 0;
     // Separate child profile to be a standalone profile, if the current parent
     // profile doesn't exist. This is a duplicating operation when the child
     // profile is already incorporated into the parent which is still useful and
@@ -498,7 +495,7 @@ void ProfileConverter::convertCSProfiles(ProfileConverter::FrameNode &Node) {
       ProfileMap[ChildProfile->getContext()].merge(*ChildProfile);
       NewChildProfileHash = ChildProfile->getContext().getHashCode();
       auto &SamplesMap = NodeProfile->functionSamplesAt(ChildNode.CallSiteLoc);
-      SamplesMap[ChildProfile->getName().str()].getContext().setAttribute(
+      SamplesMap[ChildProfile->getName()].getContext().setAttribute(
           ContextDuplicatedIntoBase);
     }
 

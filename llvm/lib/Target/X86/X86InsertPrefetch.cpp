@@ -125,7 +125,8 @@ bool X86InsertPrefetch::findPrefetchInfo(const FunctionSamples *TopSamples,
   // Convert serialized prefetch hints into PrefetchInfo objects, and populate
   // the Prefetches vector.
   for (const auto &S_V : *T) {
-    StringRef Name = S_V.getKey();
+    std::string Buffer;
+    StringRef Name = S_V.first.stringRef(Buffer);
     if (Name.consume_front(SerializedPrefetchPrefix)) {
       int64_t D = static_cast<int64_t>(S_V.second);
       unsigned IID = 0;

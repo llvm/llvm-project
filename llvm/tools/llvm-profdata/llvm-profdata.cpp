@@ -199,6 +199,12 @@ public:
     StringRef New = RemappingTable.lookup(Name);
     return New.empty() ? Name : New;
   }
+
+  ProfileFuncRef operator()(ProfileFuncRef Name) {
+    std::string Buffer;
+    StringRef New = RemappingTable.lookup(Name.stringRef(Buffer));
+    return New.empty() ? Name : ProfileFuncRef(New);
+  }
 };
 }
 
@@ -716,7 +722,8 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     auto BuildMaxSampleMapImpl = [&](const FunctionSamples &FS,
                                      const StringRef &RootName,
                                      auto &BuildImpl) -> void {
-      const StringRef &Name = FS.getName();
+      std::string Buffer;
+      const StringRef &Name = FS.getName().stringRef(Buffer);
       const StringRef *NewRootName = &RootName;
       uint64_t EntrySample = FS.getHeadSamplesEstimate();
       uint64_t MaxBodySample = FS.getMaxCountInside(/* SkipCallSite*/ true);
@@ -770,7 +777,8 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   for (auto &PD : Reader->getProfiles()) {
     sampleprof::FunctionSamples &FS = PD.second;
-    BuildMaxSampleMap(FS, FS.getName());
+    std::string Buffer;
+    BuildMaxSampleMap(FS, FS.getName().stringRef(Buffer));
   }
 
   ProfileSummary InstrPS = *IPBuilder.getSummary();
@@ -896,7 +904,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
                                     MaskedDiscriminator,
-                                    Remapper(Target.first()), Target.second);
+                                    Remapper(Target.first), Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -906,7 +914,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
       MergeResult(Error,
-                  Target[std::string(Remapped.getName())].merge(Remapped));
+                  Target[Remapped.getName()].merge(Remapped));
     }
   }
   return Result;

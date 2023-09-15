@@ -145,7 +145,7 @@ struct SampleProfTest : ::testing::Test {
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
-    FooSamples.setName(FooName);
+    FooSamples.setName(ProfileFuncRef(FooName));
     FooSamples.addTotalSamples(7711);
     FooSamples.addHeadSamples(610);
     FooSamples.addBodySamples(1, 0, 610);
@@ -155,43 +155,43 @@ struct SampleProfTest : ::testing::Test {
     FooSamples.addBodySamples(10, 0, 605);
 
     // Add inline instance with name "_Z3gooi".
-    StringRef GooName("_Z3gooi");
+    ProfileFuncRef GooName(StringRef("_Z3gooi"));
     auto &GooSamples =
-        FooSamples.functionSamplesAt(LineLocation(7, 0))[GooName.str()];
+        FooSamples.functionSamplesAt(LineLocation(7, 0))[GooName];
     GooSamples.setName(GooName);
     GooSamples.addTotalSamples(502);
     GooSamples.addBodySamples(3, 0, 502);
 
     // Add inline instance with name "_Z3hooi".
-    StringRef HooName("_Z3hooi");
+    ProfileFuncRef HooName(StringRef("_Z3hooi"));
     auto &HooSamples =
-        GooSamples.functionSamplesAt(LineLocation(9, 0))[HooName.str()];
+        GooSamples.functionSamplesAt(LineLocation(9, 0))[HooName];
     HooSamples.setName(HooName);
     HooSamples.addTotalSamples(317);
     HooSamples.addBodySamples(4, 0, 317);
 
     StringRef BarName("_Z3bari");
     FunctionSamples BarSamples;
-    BarSamples.setName(BarName);
+    BarSamples.setName(ProfileFuncRef(BarName));
     BarSamples.addTotalSamples(20301);
     BarSamples.addHeadSamples(1437);
     BarSamples.addBodySamples(1, 0, 1437);
     // Test how reader/writer handles unmangled names.
     StringRef MconstructName("_M_construct<char *>");
     StringRef StringviewName("string_view<std::allocator<char> >");
-    BarSamples.addCalledTargetSamples(1, 0, MconstructName, 1000);
-    BarSamples.addCalledTargetSamples(1, 0, StringviewName, 437);
+    BarSamples.addCalledTargetSamples(1, 0, ProfileFuncRef(MconstructName), 1000);
+    BarSamples.addCalledTargetSamples(1, 0, ProfileFuncRef(StringviewName), 437);
 
     StringRef BazName("_Z3bazi");
     FunctionSamples BazSamples;
-    BazSamples.setName(BazName);
+    BazSamples.setName(ProfileFuncRef(BazName));
     BazSamples.addTotalSamples(12557);
     BazSamples.addHeadSamples(1257);
     BazSamples.addBodySamples(1, 0, 12557);
 
     StringRef BooName("_Z3booi");
     FunctionSamples BooSamples;
-    BooSamples.setName(BooName);
+    BooSamples.setName(ProfileFuncRef(BooName));
     BooSamples.addTotalSamples(1232);
     BooSamples.addHeadSamples(1);
     BooSamples.addBodySamples(1, 0, 1232);
@@ -210,8 +210,8 @@ struct SampleProfTest : ::testing::Test {
     if (Remap) {
       FooName = "_Z4fauxi";
       BarName = "_Z3barl";
-      GooName = "_Z3gool";
-      HooName = "_Z3hool";
+      GooName = ProfileFuncRef(StringRef("_Z3gool"));
+      HooName = ProfileFuncRef(StringRef("_Z3hool"));
     }
 
     M.getOrInsertFunction(FooName, fn_type);
@@ -245,16 +245,17 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples *ReadFooSamples = Reader->getSamplesFor(FooName);
     ASSERT_TRUE(ReadFooSamples != nullptr);
     if (!UseMD5) {
-      ASSERT_EQ("_Z3fooi", ReadFooSamples->getName());
+      ASSERT_EQ("_Z3fooi", ReadFooSamples->getName().str());
     }
     ASSERT_EQ(7711u, ReadFooSamples->getTotalSamples());
     ASSERT_EQ(610u, ReadFooSamples->getHeadSamples());
 
+    std::string Buffer;
     // Try to find a FunctionSamples with GooName at given callsites containing
     // inline instance for GooName. Test the correct FunctionSamples can be
     // found with Remapper support.
     const FunctionSamples *ReadGooSamples =
-        ReadFooSamples->findFunctionSamplesAt(LineLocation(7, 0), GooName,
+        ReadFooSamples->findFunctionSamplesAt(LineLocation(7, 0), GooName.stringRef(Buffer),
                                               Reader->getRemapper());
     ASSERT_TRUE(ReadGooSamples != nullptr);
     ASSERT_EQ(502u, ReadGooSamples->getTotalSamples());
@@ -263,7 +264,7 @@ struct SampleProfTest : ::testing::Test {
     // no inline instance for GooName. Test no FunctionSamples will be
     // found with Remapper support.
     const FunctionSamples *ReadGooSamplesAgain =
-        ReadFooSamples->findFunctionSamplesAt(LineLocation(9, 0), GooName,
+        ReadFooSamples->findFunctionSamplesAt(LineLocation(9, 0), GooName.stringRef(Buffer),
                                               Reader->getRemapper());
     ASSERT_TRUE(ReadGooSamplesAgain == nullptr);
 
@@ -272,7 +273,7 @@ struct SampleProfTest : ::testing::Test {
     // inline instance for HooName. Test the correct FunctionSamples can be
     // found with Remapper support.
     const FunctionSamples *ReadHooSamples =
-        ReadGooSamples->findFunctionSamplesAt(LineLocation(9, 0), HooName,
+        ReadGooSamples->findFunctionSamplesAt(LineLocation(9, 0), HooName.stringRef(Buffer),
                                               Reader->getRemapper());
     ASSERT_TRUE(ReadHooSamples != nullptr);
     ASSERT_EQ(317u, ReadHooSamples->getTotalSamples());
@@ -280,7 +281,7 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples *ReadBarSamples = Reader->getSamplesFor(BarName);
     ASSERT_TRUE(ReadBarSamples != nullptr);
     if (!UseMD5) {
-      ASSERT_EQ("_Z3bari", ReadBarSamples->getName());
+      ASSERT_EQ("_Z3bari", ReadBarSamples->getName().str());
     }
     ASSERT_EQ(20301u, ReadBarSamples->getTotalSamples());
     ASSERT_EQ(1437u, ReadBarSamples->getHeadSamples());
@@ -305,12 +306,8 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(ReadBooSamples != nullptr);
     ASSERT_EQ(1232u, ReadBooSamples->getTotalSamples());
 
-    std::string MconstructGUID;
-    StringRef MconstructRep =
-        getRepInFormat(MconstructName, UseMD5, MconstructGUID);
-    std::string StringviewGUID;
-    StringRef StringviewRep =
-        getRepInFormat(StringviewName, UseMD5, StringviewGUID);
+    ProfileFuncRef MconstructRep = getRepInFormat(MconstructName, UseMD5);
+    ProfileFuncRef StringviewRep = getRepInFormat(StringviewName, UseMD5);
     ASSERT_EQ(1000u, CTMap.get()[MconstructRep]);
     ASSERT_EQ(437u, CTMap.get()[StringviewRep]);
 
@@ -333,7 +330,7 @@ struct SampleProfTest : ::testing::Test {
                           uint64_t TotalSamples, uint64_t HeadSamples) {
     StringRef Name(Fname);
     FunctionSamples FcnSamples;
-    FcnSamples.setName(Name);
+    FcnSamples.setName(ProfileFuncRef(Name));
     FcnSamples.addTotalSamples(TotalSamples);
     FcnSamples.addHeadSamples(HeadSamples);
     FcnSamples.addBodySamples(1, 0, HeadSamples);

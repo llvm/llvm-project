@@ -57,8 +57,7 @@ struct ProfiledCandidateComparer {
     // Tie breaker using GUID so we have stable/deterministic inlining order
     assert(LHS.CalleeSamples && RHS.CalleeSamples &&
            "Expect non-null FunctionSamples");
-    return LHS.CalleeSamples->getGUID(LHS.CalleeSamples->getName()) <
-           RHS.CalleeSamples->getGUID(RHS.CalleeSamples->getName());
+    return LHS.CalleeSamples->getGUID() < RHS.CalleeSamples->getGUID();
   }
 };
 
@@ -81,8 +80,8 @@ public:
 private:
   bool getInlineCandidates(ProfiledCandidateQueue &CQueue,
                            const FunctionSamples *FCallerContextSamples);
-  std::vector<StringRef> buildTopDownOrder();
-  void processFunction(StringRef Name);
+  std::vector<ProfileFuncRef> buildTopDownOrder();
+  void processFunction(ProfileFuncRef Name);
   bool shouldInline(ProfiledInlineCandidate &Candidate);
   uint32_t getFuncSize(const ContextTrieNode *ContextNode);
   bool UseContextCost;

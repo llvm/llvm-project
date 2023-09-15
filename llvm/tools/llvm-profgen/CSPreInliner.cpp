@@ -80,8 +80,8 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
     ProfileInlineLimitMax = 50000;
 }
 
-std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
-  std::vector<StringRef> Order;
+std::vector<ProfileFuncRef> CSPreInliner::buildTopDownOrder() {
+  std::vector<ProfileFuncRef> Order;
   // Trim cold edges to get a more stable call graph. This allows for a more
   // stable top-down order which in turns helps the stablity of the generated
   // profile from run to run.
@@ -202,7 +202,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   return (Candidate.SizeCost < SampleThreshold);
 }
 
-void CSPreInliner::processFunction(const StringRef Name) {
+void CSPreInliner::processFunction(const ProfileFuncRef Name) {
   FunctionSamples *FSamples = ContextTracker.getBaseSamplesFor(Name);
   if (!FSamples)
     return;
@@ -303,7 +303,7 @@ void CSPreInliner::run() {
   // It also helps better compress context profile to control profile
   // size, as we now only need context profile for functions going to
   // be inlined.
-  for (StringRef FuncName : buildTopDownOrder()) {
+  for (ProfileFuncRef FuncName : buildTopDownOrder()) {
     processFunction(FuncName);
   }
 

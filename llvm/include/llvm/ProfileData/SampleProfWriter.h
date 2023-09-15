@@ -196,20 +196,20 @@ public:
   std::error_code writeSample(const FunctionSamples &S) override;
 
 protected:
-  virtual MapVector<StringRef, uint32_t> &getNameTable() { return NameTable; }
+  virtual MapVector<ProfileFuncRef, uint32_t> &getNameTable() { return NameTable; }
   virtual std::error_code writeMagicIdent(SampleProfileFormat Format);
   virtual std::error_code writeNameTable();
   std::error_code writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
-  std::error_code writeNameIdx(StringRef FName);
+  std::error_code writeNameIdx(ProfileFuncRef FName);
   std::error_code writeBody(const FunctionSamples &S);
-  inline void stablizeNameTable(MapVector<StringRef, uint32_t> &NameTable,
-                                std::set<StringRef> &V);
+  inline void stablizeNameTable(MapVector<ProfileFuncRef, uint32_t> &NameTable,
+                                std::set<ProfileFuncRef> &V);
 
-  MapVector<StringRef, uint32_t> NameTable;
+  MapVector<ProfileFuncRef, uint32_t> NameTable;
 
-  void addName(StringRef FName);
+  void addName(ProfileFuncRef FName);
   virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
 

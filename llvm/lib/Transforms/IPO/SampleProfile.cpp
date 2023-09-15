@@ -424,7 +424,7 @@ struct CandidateComparer {
       return LCS->getBodySamples().size() > RCS->getBodySamples().size();
 
     // Tie breaker using GUID so we have stable/deterministic inlining order
-    return LCS->getGUID(LCS->getName()) < RCS->getGUID(RCS->getName());
+    return LCS->getGUID() < RCS->getGUID();
   }
 };
 
@@ -467,7 +467,7 @@ public:
 private:
   FunctionSamples *getFlattenedSamplesFor(const Function &F) {
     StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
-    auto It = FlattenedProfiles.find(CanonFName);
+    auto It = FlattenedProfiles.find(ProfileFuncRef(CanonFName));
     if (It != FlattenedProfiles.end())
       return &It->second;
     return nullptr;
@@ -475,18 +475,21 @@ private:
   void runOnFunction(const Function &F);
   void findIRAnchors(const Function &F,
                      std::map<LineLocation, StringRef> &IRAnchors);
-  void findProfileAnchors(const FunctionSamples &FS,
-                          std::map<LineLocation, StringSet<>> &ProfileAnchors);
+  void findProfileAnchors(
+      const FunctionSamples &FS,
+      std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+          &ProfileAnchors);
   void countMismatchedSamples(const FunctionSamples &FS);
   void countProfileMismatches(
       const Function &F, const FunctionSamples &FS,
       const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, StringSet<>> &ProfileAnchors);
+      const std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+          &ProfileAnchors);
   void countProfileCallsiteMismatches(
       const FunctionSamples &FS,
       const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, StringSet<>> &ProfileAnchors,
-
+      const std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+          &ProfileAnchors,
       uint64_t &FuncMismatchedCallsites, uint64_t &FuncProfiledCallsites);
   LocToLocMap &getIRToProfileLocationMap(const Function &F) {
     auto Ret = FuncMappings.try_emplace(
@@ -497,7 +500,8 @@ private:
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
   void runStaleProfileMatching(
       const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, StringSet<>> &ProfileAnchors,
+      const std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+          &ProfileAnchors,
       LocToLocMap &IRToProfileLocationMap);
 };
 
@@ -615,7 +619,7 @@ protected:
 
   // All the Names used in FunctionSamples including outline function
   // names, inline instance names and call target names.
-  StringSet<> NamesInProfile;
+  std::unordered_set<ProfileFuncRef> NamesInProfile;
 
   // For symbol in profile symbol list, whether to regard their profiles
   // to be accurate. It is mainly decided by existance of profile symbol
@@ -760,8 +764,7 @@ SampleProfileLoader::findIndirectCallFunctionSamples(
     assert(L && R && "Expect non-null FunctionSamples");
     if (L->getHeadSamplesEstimate() != R->getHeadSamplesEstimate())
       return L->getHeadSamplesEstimate() > R->getHeadSamplesEstimate();
-    return FunctionSamples::getGUID(L->getName()) <
-           FunctionSamples::getGUID(R->getName());
+    return L->getGUID() < R->getGUID();
   };
 
   if (FunctionSamples::ProfileIsCS) {
@@ -1081,7 +1084,7 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // just add the direct GUID and move on
     if (!Samples) {
       InlinedGUIDs.insert(
-          FunctionSamples::getGUID(CB->getCalledFunction()->getName()));
+          Function::getGUID(CB->getCalledFunction()->getName()));
       return;
     }
     // Otherwise, drop the threshold to import everything that we can
@@ -1127,17 +1130,17 @@ void SampleProfileLoader::findExternalInlineCandidate(
     Function *Func = SymbolMap.lookup(Name);
     // Add to the import list only when it's defined out of module.
     if (!Func || Func->isDeclaration())
-      InlinedGUIDs.insert(FunctionSamples::getGUID(CalleeSample->getName()));
+      InlinedGUIDs.insert(CalleeSample->getGUID());
 
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : CalleeSample->getBodySamples())
       for (const auto &TS : BS.second.getCallTargets())
-        if (TS.getValue() > Threshold) {
-          StringRef CalleeName = CalleeSample->getFuncName(TS.getKey());
+        if (TS.second > Threshold) {
+          StringRef CalleeName = CalleeSample->getFuncName(TS.first);
           const Function *Callee = SymbolMap.lookup(CalleeName);
           if (!Callee || Callee->isDeclaration())
-            InlinedGUIDs.insert(FunctionSamples::getGUID(TS.getKey()));
+            InlinedGUIDs.insert(TS.first.getHashCode());
         }
 
     // Import hot child context profile associted with callees. Note that this
@@ -1644,7 +1647,7 @@ GetSortedValueDataFromCallTargets(const SampleRecord::CallTargetMap &M) {
   SmallVector<InstrProfValueData, 2> R;
   for (const auto &I : SampleRecord::SortCallTargets(M)) {
     R.emplace_back(
-        InstrProfValueData{FunctionSamples::getGUID(I.first), I.second});
+        InstrProfValueData{I.first.getHashCode(), I.second});
   }
   return R;
 }
@@ -1871,7 +1874,8 @@ SampleProfileLoader::buildProfiledCallGraph(Module &M) {
   for (Function &F : M) {
     if (F.isDeclaration() || !F.hasFnAttribute("use-sample-profile"))
       continue;
-    ProfiledCG->addProfiledFunction(FunctionSamples::getCanonicalFnName(F));
+    ProfiledCG->addProfiledFunction(
+          getRepInFormat(FunctionSamples::getCanonicalFnName(F)));
   }
 
   return ProfiledCG;
@@ -1962,7 +1966,10 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
         Range = *SI;
       }
       for (auto *Node : Range) {
-        Function *F = SymbolMap.lookup(Node->Name);
+        Function *F = SymbolMap.lookup(
+            FunctionSamples::UseMD5
+                ? GUIDToFuncNameMap.lookup(Node->Name.getHashCode())
+                : reinterpret_cast<StringRef &>(Node->Name));
         if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
           FunctionOrderList.push_back(F);
       }
@@ -2177,7 +2184,7 @@ void SampleProfileMatcher::findIRAnchors(
 }
 
 void SampleProfileMatcher::countMismatchedSamples(const FunctionSamples &FS) {
-  const auto *FuncDesc = ProbeManager->getDesc(FS.getName());
+  const auto *FuncDesc = ProbeManager->getDesc(FS.getGUID());
   // Skip the function that is external or renamed.
   if (!FuncDesc)
     return;
@@ -2194,7 +2201,8 @@ void SampleProfileMatcher::countMismatchedSamples(const FunctionSamples &FS) {
 void SampleProfileMatcher::countProfileMismatches(
     const Function &F, const FunctionSamples &FS,
     const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, StringSet<>> &ProfileAnchors) {
+    const std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+        &ProfileAnchors) {
   [[maybe_unused]] bool IsFuncHashMismatch = false;
   if (FunctionSamples::ProfileIsProbeBased) {
     TotalFuncHashSamples += FS.getTotalSamples();
@@ -2228,7 +2236,8 @@ void SampleProfileMatcher::countProfileMismatches(
 void SampleProfileMatcher::countProfileCallsiteMismatches(
     const FunctionSamples &FS,
     const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, StringSet<>> &ProfileAnchors,
+    const std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+        &ProfileAnchors,
     uint64_t &FuncMismatchedCallsites, uint64_t &FuncProfiledCallsites) {
 
   // Check if there are any callsites in the profile that does not match to any
@@ -2263,7 +2272,7 @@ void SampleProfileMatcher::countProfileCallsiteMismatches(
     // reported as mismatching.
     if (IRCalleeName == UnknownIndirectCallee)
       CallsiteIsMatched = true;
-    else if (Callees.size() == 1 && Callees.count(IRCalleeName))
+    else if (Callees.size() == 1 && Callees.count(getRepInFormat(IRCalleeName)))
       CallsiteIsMatched = true;
 
     FuncProfiledCallsites++;
@@ -2275,9 +2284,8 @@ void SampleProfileMatcher::countProfileCallsiteMismatches(
   }
 }
 
-void SampleProfileMatcher::findProfileAnchors(
-    const FunctionSamples &FS,
-    std::map<LineLocation, StringSet<>> &ProfileAnchors) {
+void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
+    std::map<LineLocation, std::unordered_set<ProfileFuncRef>> &ProfileAnchors) {
   auto isInvalidLineOffset = [](uint32_t LineOffset) {
     return LineOffset & 0x8000;
   };
@@ -2287,8 +2295,9 @@ void SampleProfileMatcher::findProfileAnchors(
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
     for (const auto &I : I.second.getCallTargets()) {
-      auto Ret = ProfileAnchors.try_emplace(Loc, StringSet<>());
-      Ret.first->second.insert(I.first());
+      auto Ret = ProfileAnchors.try_emplace(Loc,
+          std::unordered_set<ProfileFuncRef>());
+      Ret.first->second.insert(I.first);
     }
   }
 
@@ -2298,7 +2307,8 @@ void SampleProfileMatcher::findProfileAnchors(
       continue;
     const auto &CalleeMap = I.second;
     for (const auto &I : CalleeMap) {
-      auto Ret = ProfileAnchors.try_emplace(Loc, StringSet<>());
+      auto Ret = ProfileAnchors.try_emplace(Loc,
+          std::unordered_set<ProfileFuncRef>());
       Ret.first->second.insert(I.first);
     }
   }
@@ -2322,21 +2332,24 @@ void SampleProfileMatcher::findProfileAnchors(
 //   [1, 2, 3(foo), 4,  7,  8(bar), 9]
 // The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
 void SampleProfileMatcher::runStaleProfileMatching(
-    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, StringSet<>> &ProfileAnchors,
+    const Function &F,
+    const std::map<LineLocation, StringRef> &IRAnchors,
+    const std::map<LineLocation, std::unordered_set<ProfileFuncRef>>
+        &ProfileAnchors,
     LocToLocMap &IRToProfileLocationMap) {
   LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
                     << "\n");
   assert(IRToProfileLocationMap.empty() &&
          "Run stale profile matching only once per function");
 
-  StringMap<std::set<LineLocation>> CalleeToCallsitesMap;
+  std::unordered_map<ProfileFuncRef, std::set<LineLocation>>
+      CalleeToCallsitesMap;
   for (const auto &I : ProfileAnchors) {
     const auto &Loc = I.first;
     const auto &Callees = I.second;
     // Filter out possible indirect calls, use direct callee name as anchor.
     if (Callees.size() == 1) {
-      StringRef CalleeName = Callees.begin()->first();
+      ProfileFuncRef CalleeName = *Callees.begin();
       const auto &Candidates = CalleeToCallsitesMap.try_emplace(
           CalleeName, std::set<LineLocation>());
       Candidates.first->second.insert(Loc);
@@ -2355,11 +2368,12 @@ void SampleProfileMatcher::runStaleProfileMatching(
 
   for (const auto &IR : IRAnchors) {
     const auto &Loc = IR.first;
-    StringRef CalleeName = IR.second;
+    auto CalleeName = IR.second;
     bool IsMatchedAnchor = false;
     // Match the anchor location in lexical order.
     if (!CalleeName.empty()) {
-      auto CandidateAnchors = CalleeToCallsitesMap.find(CalleeName);
+      auto CandidateAnchors = CalleeToCallsitesMap.find(
+          getRepInFormat(CalleeName));
       if (CandidateAnchors != CalleeToCallsitesMap.end() &&
           !CandidateAnchors->second.empty()) {
         auto CI = CandidateAnchors->second.begin();
@@ -2420,7 +2434,7 @@ void SampleProfileMatcher::runOnFunction(const Function &F) {
   findIRAnchors(F, IRAnchors);
   // Anchors for profile. It's a map from callsite location to a set of callee
   // name.
-  std::map<LineLocation, StringSet<>> ProfileAnchors;
+  std::map<LineLocation, std::unordered_set<ProfileFuncRef>> ProfileAnchors;
   findProfileAnchors(*FSFlattened, ProfileAnchors);
 
   // Detect profile mismatch for profile staleness metrics report.
@@ -2499,7 +2513,7 @@ void SampleProfileMatcher::runOnModule() {
 
 void SampleProfileMatcher::distributeIRToProfileLocationMap(
     FunctionSamples &FS) {
-  const auto ProfileMappings = FuncMappings.find(FS.getName());
+  const auto ProfileMappings = FuncMappings.find(FS.getFuncName());
   if (ProfileMappings != FuncMappings.end()) {
     FS.setIRToProfileLocationMap(&(ProfileMappings->second));
   }
@@ -2625,7 +2639,7 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
     // but not cold accumulatively...), so the outline function showing up as
     // cold in sampled binary will actually not be cold after current build.
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    if (NamesInProfile.count(CanonName))
+    if (NamesInProfile.count(getRepInFormat(CanonName)))
       initialEntryCount = -1;
   }
 

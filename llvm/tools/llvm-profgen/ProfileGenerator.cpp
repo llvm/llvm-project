@@ -586,20 +586,21 @@ void ProfileGenerator::populateBoundarySamplesWithProbesForAllFunctions(
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
           FrameVec.back().Location.Discriminator,
-          CalleeName, Count);
+          ProfileFuncRef(CalleeName), Count);
     }
   }
 }
 
 FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
     const SampleContextFrameVector &FrameVec, uint64_t Count) {
+  std::string Buffer;
   // Get top level profile
   FunctionSamples *FunctionProfile =
-      &getTopLevelFunctionProfile(FrameVec[0].FuncName);
+      &getTopLevelFunctionProfile(FrameVec[0].FuncName.stringRef(Buffer));
   FunctionProfile->addTotalSamples(Count);
   if (Binary->usePseudoProbes()) {
     const auto *FuncDesc = Binary->getFuncDescForGUID(
-        Function::getGUID(FunctionProfile->getName()));
+          FunctionProfile->getName().getHashCode());
     FunctionProfile->setFunctionHash(FuncDesc->FuncHash);
   }
 
@@ -619,7 +620,7 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
     FunctionProfile->addTotalSamples(Count);
     if (Binary->usePseudoProbes()) {
       const auto *FuncDesc = Binary->getFuncDescForGUID(
-          Function::getGUID(FunctionProfile->getName()));
+          FunctionProfile->getName().getHashCode());
       FunctionProfile->setFunctionHash(FuncDesc->FuncHash);
     }
   }
@@ -716,7 +717,7 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
       FunctionProfile.addCalledTargetSamples(
           FrameVec.back().Location.LineOffset,
           getBaseDiscriminator(FrameVec.back().Location.Discriminator),
-          CalleeName, Count);
+          ProfileFuncRef(CalleeName), Count);
     }
     // Add head samples for callee.
     FunctionSamples &CalleeProfile = getTopLevelFunctionProfile(CalleeName);
@@ -899,7 +900,8 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
       if (LeafLoc) {
         CallerNode->getFunctionSamples()->addCalledTargetSamples(
             LeafLoc->Location.LineOffset,
-            getBaseDiscriminator(LeafLoc->Location.Discriminator), CalleeName,
+            getBaseDiscriminator(LeafLoc->Location.Discriminator),
+            ProfileFuncRef(CalleeName),
             Count);
         // Record head sample for called target(callee)
         CalleeCallSite = LeafLoc->Location;
@@ -907,7 +909,8 @@ void CSProfileGenerator::populateBoundarySamplesForFunction(
     }
 
     ContextTrieNode *CalleeNode =
-        CallerNode->getOrCreateChildContext(CalleeCallSite, CalleeName);
+        CallerNode->getOrCreateChildContext(CalleeCallSite,
+                                            ProfileFuncRef(CalleeName));
     FunctionSamples *CalleeProfile = getOrCreateFunctionSamples(CalleeNode);
     CalleeProfile->addHeadSamples(Count);
   }
@@ -1212,7 +1215,7 @@ void CSProfileGenerator::populateBoundarySamplesWithProbes(
       continue;
     FunctionProfile.addCalledTargetSamples(CallProbe->getIndex(),
                                            CallProbe->getDiscriminator(),
-                                           CalleeName, Count);
+                                           ProfileFuncRef(CalleeName), Count);
   }
 }
 

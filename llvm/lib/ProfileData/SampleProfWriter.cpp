@@ -348,7 +348,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
     return SampleProfileWriterBinary::writeNameTable();
 
   auto &OS = *OutputStream;
-  std::set<StringRef> V;
+  std::set<ProfileFuncRef> V;
   stablizeNameTable(NameTable, V);
 
   // Write out the MD5 name table. We wrote unencoded MD5 so reader can
@@ -357,7 +357,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
   encodeULEB128(NameTable.size(), OS);
   support::endian::Writer Writer(OS, support::little);
   for (auto N : V)
-    Writer.write(hashFuncName(N));
+    Writer.write(N.getHashCode());
   return sampleprof_error::success;
 }
 
@@ -371,10 +371,14 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   // If NameTable contains ".__uniq." suffix, set SecFlagUniqSuffix flag
   // so compiler won't strip the suffix during profile matching after
   // seeing the flag in the profile.
-  for (const auto &I : NameTable) {
-    if (I.first.contains(FunctionSamples::UniqSuffix)) {
-      addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagUniqSuffix);
-      break;
+  // Original names are unavailable if using MD5, so this option has no use.
+  if (!UseMD5) {
+    std::string Dummy;
+    for (const auto &I : NameTable) {
+      if (I.first.stringRef(Dummy).contains(FunctionSamples::UniqSuffix)) {
+        addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagUniqSuffix);
+        break;
+      }
     }
   }
 
@@ -632,7 +636,7 @@ SampleProfileWriterBinary::writeContextIdx(const SampleContext &Context) {
   return writeNameIdx(Context.getName());
 }
 
-std::error_code SampleProfileWriterBinary::writeNameIdx(StringRef FName) {
+std::error_code SampleProfileWriterBinary::writeNameIdx(ProfileFuncRef FName) {
   auto &NTable = getNameTable();
   const auto &Ret = NTable.find(FName);
   if (Ret == NTable.end())
@@ -641,7 +645,7 @@ std::error_code SampleProfileWriterBinary::writeNameIdx(StringRef FName) {
   return sampleprof_error::success;
 }
 
-void SampleProfileWriterBinary::addName(StringRef FName) {
+void SampleProfileWriterBinary::addName(ProfileFuncRef FName) {
   auto &NTable = getNameTable();
   NTable.insert(std::make_pair(FName, 0));
 }
@@ -655,7 +659,7 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
   for (const auto &I : S.getBodySamples()) {
     const SampleRecord &Sample = I.second;
     for (const auto &J : Sample.getCallTargets())
-      addName(J.first());
+      addName(J.first);
   }
 
   // Recursively add all the names for inlined callsites.
@@ -679,18 +683,18 @@ void SampleProfileWriterExtBinaryBase::addContext(
 }
 
 void SampleProfileWriterBinary::stablizeNameTable(
-    MapVector<StringRef, uint32_t> &NameTable, std::set<StringRef> &V) {
+    MapVector<ProfileFuncRef, uint32_t> &NameTable, std::set<ProfileFuncRef> &V) {
   // Sort the names to make NameTable deterministic.
   for (const auto &I : NameTable)
     V.insert(I.first);
   int i = 0;
-  for (const StringRef &N : V)
+  for (const ProfileFuncRef &N : V)
     NameTable[N] = i++;
 }
 
 std::error_code SampleProfileWriterBinary::writeNameTable() {
   auto &OS = *OutputStream;
-  std::set<StringRef> V;
+  std::set<ProfileFuncRef> V;
   stablizeNameTable(NameTable, V);
 
   // Write out the name table.
@@ -836,7 +840,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
     encodeULEB128(Sample.getSamples(), OS);
     encodeULEB128(Sample.getCallTargets().size(), OS);
     for (const auto &J : Sample.getSortedCallTargets()) {
-      StringRef Callee = J.first;
+      auto Callee = J.first;
       uint64_t CalleeSamples = J.second;
       if (std::error_code EC = writeNameIdx(Callee))
         return EC;
