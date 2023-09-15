@@ -20,7 +20,7 @@ class TestCase(lldbtest.TestBase):
         function = sym_ctx_list[0].function
         self.assertIsNotNone(function)
         instructions = list(function.GetInstructions(target))
-
+        self.assertGreater(len(instructions), 0)
         # Expected to be a trampoline that tail calls `swift_task_switch`.
         self.assertIn("swift_task_switch", instructions[-1].GetComment(target))
 
