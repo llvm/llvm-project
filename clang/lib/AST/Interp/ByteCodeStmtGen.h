@@ -16,11 +16,7 @@
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
 #include "EvalEmitter.h"
-#include "Pointer.h"
 #include "PrimType.h"
-#include "Record.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 
 namespace clang {
