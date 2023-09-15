@@ -15,8 +15,8 @@
 }
 
 #VEC = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed), posWidth = 32, crdWidth = 32 }>
-#COO = #sparse_tensor.encoding<{ lvlTypes = [ "compressed_nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
-#CCC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ], posWidth = 32, crdWidth = 32 }>
+#COO = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth = 32, crdWidth = 32 }>
+#CCC = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed), posWidth = 32, crdWidth = 32 }>
 
 //
 // This kernel can be sparsified as all unsparsifiable operations'
