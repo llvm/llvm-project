@@ -5,7 +5,7 @@
 
 // RUN: mlir-opt %s \
 // RUN:     -one-shot-bufferize="allow-unknown-ops create-deallocs=0" \
-// RUN:     -buffer-deallocation-pipeline | \
+// RUN:     -buffer-deallocation | \
 // RUN: FileCheck %s --check-prefix=CHECK-BUFFERDEALLOC
 
 // CHECK-NODEALLOC-LABEL: func @out_of_place_bufferization
