@@ -2780,8 +2780,10 @@ bool GVNPass::processBlock(BasicBlock *BB) {
   // identical phis, and the second or later passes can eliminate them.
   SmallPtrSet<PHINode *, 8> PHINodesToRemove;
   ChangedFunction |= EliminateDuplicatePHINodes(BB, PHINodesToRemove);
-  for (PHINode *PN : PHINodesToRemove)
+  for (PHINode *PN : PHINodesToRemove) {
+    VN.erase(PN);
     removeInstruction(PN);
+  }
 
   for (BasicBlock::iterator BI = BB->begin(), BE = BB->end();
        BI != BE;) {
