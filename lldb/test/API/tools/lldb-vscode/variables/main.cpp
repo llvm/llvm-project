@@ -12,8 +12,14 @@ int test_indexedVariables();
 int main(int argc, char const *argv[]) {
   static float s_local = 2.25;
   PointType pt = { 11,22, {0}};
+  PointType *pt_ptr = new PointType{11, 22, {0}};
+  PointType *another_pt_ptr = nullptr;
   for (int i=0; i<BUFFER_SIZE; ++i)
     pt.buffer[i] = i;
+
+  int some_int = 10;
+  int *some_int_ptr = new int{20};
+  int *another_int_ptr = nullptr;
   int x = s_global - g_global - pt.y; // breakpoint 1
   {
     int x = 42;

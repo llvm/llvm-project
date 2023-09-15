@@ -43,6 +43,6 @@ int main(int argc, char const *argv[]) {
   my_bool_vec.push_back(true);
   my_bool_vec.push_back(false); // breakpoint 6
   my_bool_vec.push_back(true); // breakpoint 7
-  
+
   return 0;
 }

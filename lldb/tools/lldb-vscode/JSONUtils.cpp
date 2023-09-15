@@ -200,7 +200,7 @@ static bool ShouldBeDereferencedForSummary(lldb::SBValue &v) {
   if (!g_vsc.enable_auto_variable_summaries)
     return false;
 
-  if (!v.GetType().IsPointerType() && !v.GetType().IsReferenceType())
+  if (!v.GetType().IsPointerOrReferenceType())
     return false;
 
   // If we are referencing a pointer, we don't dereference to avoid confusing
@@ -228,7 +228,24 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
     strm << "<error: " << error.GetCString() << ">";
   } else {
     auto tryDumpSummaryAndValue = [&strm](lldb::SBValue value) {
-      llvm::StringRef val = value.GetValue();
+      std::string val;
+      // Whenever the value is a non-synthetic address, we format it ourselves
+      // to use as few chars as possible because the variables pane on VS Code
+      // is by default narrow.
+      if (!value.IsSynthetic() && value.GetType().IsPointerOrReferenceType()) {
+        lldb::addr_t address = value.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+        if (address == LLDB_INVALID_ADDRESS) {
+          val = "<invalid address>";
+        } else if (address == 0) {
+          val = "<null>";
+        } else {
+          llvm::raw_string_ostream os(val);
+          os << llvm::format_hex(address, 0);
+        }
+      } else {
+        val = llvm::StringRef(value.GetValue()).str();
+      }
+
       llvm::StringRef summary = value.GetSummary();
       if (!val.empty()) {
         strm << val;

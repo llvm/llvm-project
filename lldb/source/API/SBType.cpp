@@ -127,6 +127,10 @@ uint64_t SBType::GetByteSize() {
   return 0;
 }
 
+bool SBType::IsPointerOrReferenceType() {
+  return IsPointerType() || IsReferenceType();
+}
+
 bool SBType::IsPointerType() {
   LLDB_INSTRUMENT_VA(this);
 

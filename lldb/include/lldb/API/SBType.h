@@ -121,6 +121,10 @@ public:
 
   uint64_t GetByteSize();
 
+  /// \return
+  ///    Whether the type is a pointer or a reference.
+  bool IsPointerOrReferenceType();
+
   bool IsPointerType();
 
   bool IsReferenceType();

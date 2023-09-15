@@ -42,6 +42,17 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                     ('"%s" value "%s" doesn\'t start with' ' "%s")')
                     % (key, actual_value, verify_value),
                 )
+        if "notstartswith" in verify_dict:
+            verify = verify_dict["notstartswith"]
+            for key in verify:
+                verify_value = verify[key]
+                actual_value = actual[key]
+                startswith = actual_value.startswith(verify_value)
+                self.assertFalse(
+                    startswith,
+                    ('"%s" value "%s" starts with' ' "%s")')
+                    % (key, actual_value, verify_value),
+                )
         if "contains" in verify_dict:
             verify = verify_dict["contains"]
             for key in verify:
@@ -155,6 +166,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "argv": {
                 "equals": {"type": "const char **"},
                 "startswith": {"value": "0x"},
+                "notstartswith": {"value": "0x0"},
                 "hasVariablesReference": True,
             },
             "pt": {
@@ -166,8 +178,53 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                     "buffer": {"children": buffer_children},
                 },
             },
+            "pt_ptr": {
+                "equals": {"type": "PointType *"},
+                "startswith": {"value": "0x"},
+                "notstartswith": {"value": "0x0"},
+                "hasVariablesReference": True,
+            },
+            "another_pt_ptr": {
+                "equals": {"type": "PointType *"},
+                "startswith": {"value": "<null>"},
+                "hasVariablesReference": True,
+            },
             "x": {"equals": {"type": "int"}},
+            "some_int": {
+                "equals": {
+                    "type": "int",
+                    "value": "10",
+                },
+            },
+            "some_int_ptr": {
+                "equals": {"type": "int *"},
+                "startswith": {"value": "0x"},
+                "notstartswith": {"value": "0x0"},
+            },
+            "another_int_ptr": {
+                "equals": {
+                    "type": "int *",
+                    "value": "<null>",
+                },
+            },
         }
+        if enableAutoVariableSummaries:
+            verify_locals["pt_ptr"] = {
+                "equals": {"type": "PointType *"},
+                "hasVariablesReference": True,
+                "children": {
+                    "x": {"equals": {"type": "int", "value": "11"}},
+                    "y": {"equals": {"type": "int", "value": "22"}},
+                    "buffer": {"children": buffer_children},
+                },
+            }
+            verify_locals["some_int_ptr"] = {
+                "equals": {
+                    "type": "int *",
+                    "value": "20",
+                },
+            }
+
         verify_globals = {
             "s_local": {"equals": {"type": "float", "value": "2.25"}},
             "::g_global": {"equals": {"type": "int", "value": "123"}},
@@ -297,9 +354,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
 
         verify_locals["argc"]["equals"]["value"] = "123"
         verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:17"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:19"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:21"] = {"equals": {"type": "int", "value": "72"}}
+        verify_locals["x @ main.cpp:23"] = {"equals": {"type": "int", "value": "89"}}
+        verify_locals["x @ main.cpp:25"] = {"equals": {"type": "int", "value": "42"}}
+        verify_locals["x @ main.cpp:27"] = {"equals": {"type": "int", "value": "72"}}
 
         self.verify_variables(verify_locals, self.vscode.get_local_variables())
 
@@ -310,29 +367,29 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         )
 
         self.assertTrue(
-            self.vscode.request_setVariable(1, "x @ main.cpp:17", 17)["success"]
+            self.vscode.request_setVariable(1, "x @ main.cpp:23", 17)["success"]
         )
         self.assertTrue(
-            self.vscode.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
+            self.vscode.request_setVariable(1, "x @ main.cpp:25", 19)["success"]
         )
         self.assertTrue(
-            self.vscode.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
+            self.vscode.request_setVariable(1, "x @ main.cpp:27", 21)["success"]
         )
 
         # The following should have no effect
         self.assertFalse(
-            self.vscode.request_setVariable(1, "x @ main.cpp:21", "invalid")["success"]
+            self.vscode.request_setVariable(1, "x @ main.cpp:27", "invalid")["success"]
         )
 
-        verify_locals["x @ main.cpp:17"]["equals"]["value"] = "17"
-        verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
-        verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
+        verify_locals["x @ main.cpp:23"]["equals"]["value"] = "17"
+        verify_locals["x @ main.cpp:25"]["equals"]["value"] = "19"
+        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "21"
 
         self.verify_variables(verify_locals, self.vscode.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
         self.assertTrue(self.vscode.request_setVariable(1, "x", 22)["success"])
-        verify_locals["x @ main.cpp:21"]["equals"]["value"] = "22"
+        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.vscode.get_local_variables())
 
@@ -349,9 +406,9 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
         verify_locals["x"] = {"equals": {"type": "int", "value": "17"}}
-        self.assertNotIn("x @ main.cpp:17", names)
-        self.assertNotIn("x @ main.cpp:19", names)
-        self.assertNotIn("x @ main.cpp:21", names)
+        self.assertNotIn("x @ main.cpp:23", names)
+        self.assertNotIn("x @ main.cpp:25", names)
+        self.assertNotIn("x @ main.cpp:27", names)
 
         self.verify_variables(verify_locals, locals)
 
@@ -421,8 +478,30 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                     },
                 },
             },
+            "pt_ptr": {
+                "equals": {"type": "PointType *"},
+                "hasVariablesReference": True,
+                "missing": ["indexedVariables"],
+            },
+            "another_pt_ptr": {
+                "equals": {"type": "PointType *"},
+                "hasVariablesReference": True,
+                "missing": ["indexedVariables"],
+            },
             "x": {
                 "equals": {"type": "int"},
+                "missing": ["indexedVariables"],
+            },
+            "some_int": {
+                "equals": {"type": "int"},
+                "missing": ["indexedVariables"],
+            },
+            "some_int_ptr": {
+                "equals": {"type": "int *"},
+                "missing": ["indexedVariables"],
+            },
+            "another_int_ptr": {
+                "equals": {"type": "int *"},
                 "missing": ["indexedVariables"],
             },
         }
