@@ -81,7 +81,7 @@ public:
     TargetOptions Options;
     Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
         Triple::normalize("x86_64--"), "", "", Options, std::nullopt,
-        std::nullopt, CodeGenOpt::Aggressive));
+        std::nullopt, CodeGenOptLevel::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
     auto F =

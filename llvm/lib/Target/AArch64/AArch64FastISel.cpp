@@ -5040,7 +5040,7 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
 }
 
 bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
-  assert(TM.getOptLevel() == CodeGenOpt::None &&
+  assert(TM.getOptLevel() == CodeGenOptLevel::None &&
          "cmpxchg survived AtomicExpand at optlevel > -O0");
 
   auto *RetPairTy = cast<StructType>(I->getType());

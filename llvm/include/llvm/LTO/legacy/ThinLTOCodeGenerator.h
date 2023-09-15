@@ -42,7 +42,7 @@ struct TargetMachineBuilder {
   std::string MAttr;
   TargetOptions Options;
   std::optional<Reloc::Model> RelocModel;
-  CodeGenOpt::Level CGOptLevel = CodeGenOpt::Aggressive;
+  CodeGenOptLevel CGOptLevel = CodeGenOptLevel::Aggressive;
 
   std::unique_ptr<TargetMachine> create() const;
 };
@@ -264,7 +264,7 @@ public:
   }
 
   /// CodeGen optimization level
-  void setCodeGenOptLevel(CodeGenOpt::Level CGOptLevel) {
+  void setCodeGenOptLevel(CodeGenOptLevel CGOptLevel) {
     TMBuilder.CGOptLevel = CGOptLevel;
   }
 

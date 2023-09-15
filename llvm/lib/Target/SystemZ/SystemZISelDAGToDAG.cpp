@@ -350,7 +350,7 @@ public:
 
   SystemZDAGToDAGISel() = delete;
 
-  SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOpt::Level OptLevel)
+  SystemZDAGToDAGISel(SystemZTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -384,7 +384,7 @@ char SystemZDAGToDAGISel::ID = 0;
 INITIALIZE_PASS(SystemZDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 FunctionPass *llvm::createSystemZISelDag(SystemZTargetMachine &TM,
-                                         CodeGenOpt::Level OptLevel) {
+                                         CodeGenOptLevel OptLevel) {
   return new SystemZDAGToDAGISel(TM, OptLevel);
 }
 
