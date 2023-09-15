@@ -1,4 +1,5 @@
-// RUN: mlir-opt --convert-gpu-to-spirv --split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --convert-gpu-to-spirv="use-coop-matrix-nv=true" \
+// RUN:   --split-input-file --verify-diagnostics %s | FileCheck %s
 
 module attributes {
   gpu.container_module,
