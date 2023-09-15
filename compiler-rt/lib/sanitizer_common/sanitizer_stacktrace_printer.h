@@ -54,10 +54,6 @@ class StackTracePrinter {
 
  protected:
   ~StackTracePrinter() {}
-
- private:
-  static StackTracePrinter *stacktrace_printer_;
-  static StaticSpinMutex init_mu_;
 };
 
 class FormattedStackTracePrinter : public StackTracePrinter {

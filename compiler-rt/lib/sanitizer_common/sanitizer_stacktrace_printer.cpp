@@ -19,17 +19,19 @@
 
 namespace __sanitizer {
 
-StackTracePrinter *StackTracePrinter::stacktrace_printer_;
-StaticSpinMutex StackTracePrinter::init_mu_;
 
 StackTracePrinter *StackTracePrinter::GetOrInit() {
-  SpinMutexLock l(&init_mu_);
-  if (stacktrace_printer_)
-    return stacktrace_printer_;
-  stacktrace_printer_ =
+  static StackTracePrinter *stacktrace_printer;
+  static StaticSpinMutex init_mu;
+  SpinMutexLock l(&init_mu);
+  if (stacktrace_printer)
+    return stacktrace_printer;
+
+  stacktrace_printer =
       new (GetGlobalLowLevelAllocator()) FormattedStackTracePrinter();
-  CHECK(stacktrace_printer_);
-  return stacktrace_printer_;
+
+  CHECK(stacktrace_printer);
+  return stacktrace_printer;
 }
 
 const char *FormattedStackTracePrinter::StripFunctionName(
