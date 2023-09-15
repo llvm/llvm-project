@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 ## Check that update_mir_test_checks handles multiple definitions of the same
 ## virtual register (after coming out of SSA form).
 
