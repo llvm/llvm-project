@@ -3456,10 +3456,18 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       (Sequence.size() * EltBitSize) <= 64) {
     unsigned SeqLen = Sequence.size();
     MVT ViaIntVT = MVT::getIntegerVT(EltBitSize * SeqLen);
-    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, NumElts / SeqLen);
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32 ||
             ViaIntVT == MVT::i64) &&
            "Unexpected sequence type");
+
+    // If we can use the original VL with the modified element type, this
+    // means we only have a VTYPE toggle, not a VL toggle.  TODO: Should this
+    // be moved into InsertVSETVLI?
+    const unsigned RequiredVL = NumElts / SeqLen;
+    const unsigned ViaVecLen =
+      (Subtarget.getRealMinVLen() >= ViaIntVT.getSizeInBits() * NumElts) ?
+      NumElts : RequiredVL;
+    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, ViaVecLen);
 
     unsigned EltIdx = 0;
     uint64_t EltMask = maskTrailingOnes<uint64_t>(EltBitSize);
@@ -3494,6 +3502,10 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
                       DAG.getUNDEF(ViaContainerVT),
                       DAG.getConstant(SplatValue, DL, XLenVT), ViaVL);
       Splat = convertFromScalableVector(ViaVecVT, Splat, DAG, Subtarget);
+      if (ViaVecLen != RequiredVL)
+        Splat = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
+                            MVT::getVectorVT(ViaIntVT, RequiredVL), Splat,
+                            DAG.getConstant(0, DL, XLenVT));
       return DAG.getBitcast(VT, Splat);
     }
   }
