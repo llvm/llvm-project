@@ -20,6 +20,7 @@
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace memref {
@@ -126,8 +127,10 @@ struct ExpandOpsPass : public memref::impl::ExpandOpsBase<ExpandOpsPass> {
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect>();
     target.addDynamicallyLegalOp<memref::AtomicRMWOp>(
         [](memref::AtomicRMWOp op) {
-          return op.getKind() != arith::AtomicRMWKind::maximumf &&
-                 op.getKind() != arith::AtomicRMWKind::minimumf;
+          constexpr std::array shouldBeExpandedKinds = {
+              arith::AtomicRMWKind::maximumf, arith::AtomicRMWKind::minimumf,
+              arith::AtomicRMWKind::minnumf, arith::AtomicRMWKind::maxnumf};
+          return !llvm::is_contained(shouldBeExpandedKinds, op.getKind());
         });
     target.addDynamicallyLegalOp<memref::ReshapeOp>([](memref::ReshapeOp op) {
       return !cast<MemRefType>(op.getShape().getType()).hasStaticShape();
