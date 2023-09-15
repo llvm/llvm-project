@@ -288,12 +288,14 @@ export namespace std {
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
+#if _LIBCPP_STD_VER >= 23
     // [range.stride], stride view
     using std::ranges::stride_view;
 
     namespace views {
       using std::ranges::views::stride;
     }
+#endif // _LIBCPP_STD_VER >= 23
 
 #if 0
     // [range.zip.transform], zip transform view
