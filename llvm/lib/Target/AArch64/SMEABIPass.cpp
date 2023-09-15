@@ -116,7 +116,7 @@ bool SMEABI::updateNewZAFunctions(Module *M, Function *F,
   Function *ZeroIntr =
       Intrinsic::getDeclaration(M, Intrinsic::aarch64_sme_zero);
   Builder.CreateCall(ZeroIntr->getFunctionType(), ZeroIntr,
-                     Builder.getInt32(0b11111111));
+                     Builder.getInt32(0xff));
 
   // Before returning, disable pstate.za
   for (BasicBlock &BB : *F) {
