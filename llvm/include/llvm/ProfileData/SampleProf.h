@@ -1303,9 +1303,12 @@ raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 /// collision is silently ignored). Given such feature this class should only be
 /// used where it does not affect compilation correctness, for example, when
 /// loading a sample profile.
-/// Assuming the hashing algorithm is uniform, the probability of hash collision
-/// with 1,000,000 entries is
+/// Assuming the hashing algorithm is uniform, we use the formula
+/// 1 - Permute(n, k) / n ^ k where n is the universe size and k is number of
+/// elements chosen at random to calculate the probability of collision. With
+/// 1,000,000 entries the probability is negligible:
 /// 1 - (2^64)!/((2^64-1000000)!*(2^64)^1000000) ~= 3*10^-8.
+/// Source: https://en.wikipedia.org/wiki/Birthday_problem
 template <template <typename, typename, typename...> typename MapT,
           typename KeyT, typename ValueT, typename... MapTArgs>
 class HashKeyMap : public MapT<hash_code, ValueT, MapTArgs...> {
