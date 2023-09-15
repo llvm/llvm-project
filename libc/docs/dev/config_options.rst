@@ -24,8 +24,8 @@ description about it listed against each option. For example:
    }
 
 The above config indicates that the option ``LIBC_CONF_PRINTF_DISABLE_FLOAT``
-has a value of false. A platform, say the baremetal platform, can choose to
-override this value in its ``config.json`` file in the ``config/baremetal``
+has a value of ``false``. A platform, say the baremetal platform, can choose
+to override this value in its ``config.json`` file in the ``config/baremetal``
 directory with the following contents:
 
 .. code-block::
@@ -38,9 +38,8 @@ directory with the following contents:
      }
    }
 
-As you can see, the config for the baremetal platform overrides the common
-``false`` value of the ``LIBC_CONF_PRINTF_DISABLE_FLOAT`` with the ``true``
-value.
+Here, the config for the baremetal platform overrides the common ``false``
+value of the ``LIBC_CONF_PRINTF_DISABLE_FLOAT`` with the ``true`` value.
 
 Config JSON format
 ==================
@@ -136,3 +135,12 @@ follows:
 
 Note that the above scheme is only an example and not a prescription.
 Developers should employ a scheme appropriate to the option being added.
+
+Automatic doc update
+====================
+
+The CMake configure step automatically generates the user document
+``doc/configure.rst``, which contains user information about the libc configure
+options, using the information in the main ``config/config.json`` file.
+An update to ``config/config.json`` will trigger reconfiguration by CMake, which
+in turn will regenerate the documentation in ``doc/configure.rst``.
