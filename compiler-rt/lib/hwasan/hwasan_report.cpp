@@ -243,8 +243,8 @@ static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
       break;
     uptr pc_mask = (1ULL << 48) - 1;
     uptr pc = record & pc_mask;
-    frame_desc.append("  record_addr:0x%zx record:0x%zx",
-                      reinterpret_cast<uptr>(record_addr), record);
+    frame_desc.AppendF("  record_addr:0x%zx record:0x%zx",
+                       reinterpret_cast<uptr>(record_addr), record);
     if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
       RenderFrame(&frame_desc, " %F %L", 0, frame->info.address, &frame->info,
                   common_flags()->symbolize_vs_style,
@@ -528,14 +528,14 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
   tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
   InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
-    s.append("%s", row == center_row_beg ? "=>" : "  ");
-    s.append("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
+    s.AppendF("%s", row == center_row_beg ? "=>" : "  ");
+    s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
     for (uptr i = 0; i < row_len; i++) {
-      s.append("%s", row + i == tag_ptr ? "[" : " ");
+      s.AppendF("%s", row + i == tag_ptr ? "[" : " ");
       print_tag(s, &row[i]);
-      s.append("%s", row + i == tag_ptr ? "]" : " ");
+      s.AppendF("%s", row + i == tag_ptr ? "]" : " ");
     }
-    s.append("\n");
+    s.AppendF("\n");
   }
   Printf("%s", s.data());
 }
@@ -545,7 +545,7 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n", kShadowAlignment);
   PrintTagInfoAroundAddr(tag_ptr, 17, [](InternalScopedString &s, tag_t *tag) {
-    s.append("%02x", *tag);
+    s.AppendF("%02x", *tag);
   });
 
   Printf(
@@ -555,10 +555,10 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
   PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
     if (*tag >= 1 && *tag <= kShadowAlignment) {
       uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
-      s.append("%02x",
-               *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
+      s.AppendF("%02x",
+                *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
     } else {
-      s.append("..");
+      s.AppendF("..");
     }
   });
   Printf(
@@ -654,31 +654,29 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   CHECK_GT(tail_size, 0U);
   CHECK_LT(tail_size, kShadowAlignment);
   u8 *tail = reinterpret_cast<u8*>(untagged_addr + orig_size);
-  s.append("Tail contains: ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++)
-    s.append(".. ");
+  s.AppendF("Tail contains: ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
+  for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", tail[i]);
+  s.AppendF("\n");
+  s.AppendF("Expected:      ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
+  for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", actual_expected[i]);
+  s.AppendF("\n");
+  s.AppendF("               ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF("   ");
   for (uptr i = 0; i < tail_size; i++)
-    s.append("%02x ", tail[i]);
-  s.append("\n");
-  s.append("Expected:      ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++)
-    s.append(".. ");
-  for (uptr i = 0; i < tail_size; i++) s.append("%02x ", actual_expected[i]);
-  s.append("\n");
-  s.append("               ");
-  for (uptr i = 0; i < kShadowAlignment - tail_size; i++)
-    s.append("   ");
-  for (uptr i = 0; i < tail_size; i++)
-    s.append("%s ", actual_expected[i] != tail[i] ? "^^" : "  ");
+    s.AppendF("%s ", actual_expected[i] != tail[i] ? "^^" : "  ");
 
-  s.append("\nThis error occurs when a buffer overflow overwrites memory\n"
-    "after a heap object, but within the %zd-byte granule, e.g.\n"
-    "   char *x = new char[20];\n"
-    "   x[25] = 42;\n"
-    "%s does not detect such bugs in uninstrumented code at the time of write,"
-    "\nbut can detect them at the time of free/delete.\n"
-    "To disable this feature set HWASAN_OPTIONS=free_checks_tail_magic=0\n",
-    kShadowAlignment, SanitizerToolName);
+  s.AppendF(
+      "\nThis error occurs when a buffer overflow overwrites memory\n"
+      "after a heap object, but within the %zd-byte granule, e.g.\n"
+      "   char *x = new char[20];\n"
+      "   x[25] = 42;\n"
+      "%s does not detect such bugs in uninstrumented code at the time of "
+      "write,"
+      "\nbut can detect them at the time of free/delete.\n"
+      "To disable this feature set HWASAN_OPTIONS=free_checks_tail_magic=0\n",
+      kShadowAlignment, SanitizerToolName);
   Printf("%s", s.data());
   GetCurrentThread()->Announce();
 
