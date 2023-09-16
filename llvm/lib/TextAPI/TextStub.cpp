@@ -663,10 +663,10 @@ template <> struct MappingTraits<const InterfaceFile *> {
         }
         for (auto &Symbol : Section.WeakDefSymbols)
           File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets,
-                          SymbolFlags::WeakDefined);
+                          SymbolFlags::WeakDefined | Flags);
         for (auto &Symbol : Section.TLVSymbols)
           File->addSymbol(SymbolKind::GlobalSymbol, Symbol, Targets,
-                          SymbolFlags::ThreadLocalValue);
+                          SymbolFlags::ThreadLocalValue | Flags);
       }
 
       for (const auto &Section : Undefineds) {
