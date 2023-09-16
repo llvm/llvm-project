@@ -310,7 +310,10 @@ vectorizers:
   - llvm/include/llvm/Transforms/Vectorize/**
 
 clang:
-  - clang/**
+  any:
+    - clang/**
+    - '!clang/**/Format/**'
+    - '!clang/tools/clang-format/**'
 
 testing-tools:
   - llvm/include/llvm/FileCheck/**
