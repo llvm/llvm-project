@@ -497,15 +497,15 @@ def testTileToForallMapping(target):
 
 @run
 @create_sequence
-def testVectorizeAllAttrs(target):
-    structured.VectorizeOp(
+def testVectorizeChildrenAllAttrs(target):
+    structured.VectorizeChildrenOp(
         target,
         disable_multi_reduction_to_contract_patterns=True,
         disable_transfer_permutation_map_lowering_patterns=True,
         vectorize_nd_extract=True,
         vectorize_padding=True,
     )
-    # CHECK-LABEL: TEST: testVectorizeAllAttrs
+    # CHECK-LABEL: TEST: testVectorizeChildrenAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
@@ -516,15 +516,15 @@ def testVectorizeAllAttrs(target):
 
 @run
 @create_sequence
-def testVectorizeNoAttrs(target):
-    structured.VectorizeOp(
+def testVectorizeChildrenNoAttrs(target):
+    structured.VectorizeChildrenOp(
         target,
         disable_multi_reduction_to_contract_patterns=False,
         disable_transfer_permutation_map_lowering_patterns=False,
         vectorize_nd_extract=False,
         vectorize_padding=False,
     )
-    # CHECK-LABEL: TEST: testVectorizeNoAttrs
+    # CHECK-LABEL: TEST: testVectorizeChildrenNoAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-NOT: disable_multi_reduction_to_contract_patterns

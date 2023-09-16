@@ -730,8 +730,8 @@ class TileToForallOp:
         )
 
 
-class VectorizeOp:
-    """Specialization for VectorizeOp class."""
+class VectorizeChildrenOp:
+    """Specialization for VectorizeChildrenOp class."""
 
     def __init__(
         self,

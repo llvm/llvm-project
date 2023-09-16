@@ -31,7 +31,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.vectorize_children %1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -104,7 +104,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
 }
 
  // -----
@@ -156,7 +156,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -204,7 +204,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
 }
 // -----
 
@@ -248,7 +248,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -290,7 +290,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -332,7 +332,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -376,7 +376,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -416,7 +416,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -456,7 +456,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -495,7 +495,7 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
 
 // -----
@@ -522,5 +522,5 @@ transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-   %2 = transform.structured.vectorize %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
+   %2 = transform.structured.vectorize_children %1 { vectorize_nd_extract } : (!transform.any_op) -> !transform.any_op
  }
