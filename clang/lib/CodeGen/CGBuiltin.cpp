@@ -2312,8 +2312,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   const unsigned BuiltinIDIfNoAsmLabel =
       FD->hasAttr<AsmLabelAttr>() ? 0 : BuiltinID;
 
-  bool ErrnoOverriden = false;
-  bool ErrnoOverrideValue = false;
+  std::optional<bool> ErrnoOverriden;
   // ErrnoOverriden is true if math-errno is overriden via the
   // '#pragma float_control(precise, on)'. This pragma disables fast-math,
   // which implies math-errno.
@@ -2321,10 +2320,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // precise on and false otherwise).
   if (E->hasStoredFPFeatures()) {
     FPOptionsOverride OP = E->getFPFeatures();
-    if (OP.hasMathErrnoOverride()) {
-      ErrnoOverriden = true;
-      ErrnoOverrideValue = OP.getMathErrnoOverride();
-    }
+    if (OP.hasMathErrnoOverride())
+      ErrnoOverriden = OP.getMathErrnoOverride();
   }
 
   // True if 'atttibute__((optnone)) is used. This attibute overrides
@@ -2335,7 +2332,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // using the '#pragma float_control(precise, off)', and
   // attribute opt-none hasn't been seen.
   bool ErrnoOverridenToFalseWithOpt =
-       ErrnoOverriden && !ErrnoOverrideValue && !OptNone &&
+       ErrnoOverriden.has_value() && !ErrnoOverriden.value() && !OptNone &&
        CGM.getCodeGenOpts().OptimizationLevel != 0;
 
   // There are LLVM math intrinsics/instructions corresponding to math library
@@ -2392,17 +2389,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   bool ConstWithoutErrnoOrExceptions =
       ConstWithoutErrnoAndExceptions || ConstWithoutExceptions;
   bool GenerateIntrinsics =
-       (ConstAlways && !OptNone) ||
-       (!getLangOpts().MathErrno && !(ErrnoOverriden && ErrnoOverrideValue) &&
-       !OptNone);
+      (ConstAlways && !OptNone) ||
+      (!getLangOpts().MathErrno &&
+       !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
   if (!GenerateIntrinsics) {
     GenerateIntrinsics =
         ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions &&
-	  (!getLangOpts().MathErrno &&
-           !(ErrnoOverriden && ErrnoOverrideValue) && !OptNone);
+          (!getLangOpts().MathErrno &&
+           !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
