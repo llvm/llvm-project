@@ -82,13 +82,14 @@ class ScopedReport {
   InternalMmapVector<char> error_message_;
   bool fatal;
 
-  static InternalMmapVector<char> *error_message_ptr_;
   static Mutex error_message_lock_;
+  static InternalMmapVector<char> *error_message_ptr_
+      SANITIZER_GUARDED_BY(error_message_lock_);
   static void (*error_report_callback_)(const char *);
 };
 
-InternalMmapVector<char> *ScopedReport::error_message_ptr_;
 Mutex ScopedReport::error_message_lock_;
+InternalMmapVector<char> *ScopedReport::error_message_ptr_;
 void (*ScopedReport::error_report_callback_)(const char *);
 
 // If there is an active ScopedReport, append to its error message.
