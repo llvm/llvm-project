@@ -3156,6 +3156,10 @@ void BinaryFunction::dumpGraphToFile(std::string Filename) const {
 }
 
 bool BinaryFunction::validateCFG() const {
+  // Skip the validation of CFG after it is finalized
+  if (CurrentState == State::CFG_Finalized)
+    return true;
+
   bool Valid = true;
   for (BinaryBasicBlock *BB : BasicBlocks)
     Valid &= BB->validateSuccessorInvariants();
