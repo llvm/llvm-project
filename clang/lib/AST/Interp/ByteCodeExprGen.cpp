@@ -2378,10 +2378,18 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return this->emitStore(*T, E);
   }
   case UO_LNot: // !x
-    if (!this->visit(SubExpr))
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
+    if (!this->visitBool(SubExpr))
       return false;
-    // The Inv doesn't change anything, so skip it if we don't need the result.
-    return DiscardResult ? this->emitPop(*T, E) : this->emitInvBool(E);
+
+    if (!this->emitInvBool(E))
+      return false;
+
+    if (PrimType ET = classifyPrim(E->getType()); ET != PT_Bool)
+      return this->emitCast(PT_Bool, ET, E);
+    return true;
   case UO_Minus: // -x
     if (!this->visit(SubExpr))
       return false;
