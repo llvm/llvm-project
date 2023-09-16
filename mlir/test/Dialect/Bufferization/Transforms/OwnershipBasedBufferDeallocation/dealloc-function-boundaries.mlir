@@ -3,6 +3,9 @@
 // RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s --check-prefix=CHECK-DYNAMIC
 
+// RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file > /dev/null
+// RUN: mlir-opt %s -buffer-deallocation-pipeline=private-function-dynamic-ownership --split-input-file > /dev/null
+
 // Test Case: Existing AllocOp with no users.
 // BufferDeallocation expected behavior: It should insert a DeallocOp right
 // before ReturnOp.
