@@ -15,6 +15,8 @@
 #include <iterator>
 #include <type_traits>
 
+#include "test_macros.h"
+
 struct Deref {
     int operator()(int*) const;
 };
@@ -48,3 +50,11 @@ void is_subsumed(F);
 
 static_assert(subsumes(std::less<int>()));
 static_assert(is_subsumed(std::less<int>()));
+
+// Test ADL-proofing (P2538R1)
+#if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(std::indirectly_comparable<Holder<Incomplete>**, Holder<Incomplete>**, std::less<Holder<Incomplete>*>>);
+static_assert(!std::indirectly_comparable<Holder<Incomplete>**, Holder<Incomplete>**, Holder<Incomplete>*>);
+#endif
