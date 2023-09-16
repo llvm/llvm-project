@@ -46,7 +46,7 @@ class StackTraceTextPrinter {
                   common_flags()->strip_path_prefix);
 
       if (prev_len != output_->length())
-        output_->append("%c", frame_delimiter_);
+        output_->AppendF("%c", frame_delimiter_);
 
       ExtendDedupToken(cur);
     }
@@ -62,9 +62,9 @@ class StackTraceTextPrinter {
 
     if (dedup_frames_-- > 0) {
       if (dedup_token_->length())
-        dedup_token_->append("--");
+        dedup_token_->AppendF("--");
       if (stack->info.function != nullptr)
-        dedup_token_->append("%s", stack->info.function);
+        dedup_token_->AppendF("%s", stack->info.function);
     }
   }
 
@@ -98,7 +98,7 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
                                 output, &dedup_token);
 
   if (trace == nullptr || size == 0) {
-    output->append("    <empty stack>\n\n");
+    output->AppendF("    <empty stack>\n\n");
     return;
   }
 
@@ -110,11 +110,11 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
   }
 
   // Always add a trailing empty line after stack trace.
-  output->append("\n");
+  output->AppendF("\n");
 
   // Append deduplication token, if non-empty.
   if (dedup_token.length())
-    output->append("DEDUP_TOKEN: %s\n", dedup_token.data());
+    output->AppendF("DEDUP_TOKEN: %s\n", dedup_token.data());
 }
 
 uptr StackTrace::PrintTo(char *out_buf, uptr out_buf_size) const {
@@ -197,7 +197,7 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
   StackTraceTextPrinter printer(fmt, '\0', &output, nullptr);
   if (!printer.ProcessAddressFrames(pc)) {
     output.clear();
-    output.append("<can't symbolize>");
+    output.AppendF("<can't symbolize>");
   }
   CopyStringToBuffer(output, out_buf, out_buf_size);
 }
