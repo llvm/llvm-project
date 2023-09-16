@@ -8,7 +8,7 @@ consteval int f1(int i) {
   return i;
 }
 
-consteval constexpr int f2(int i) { 
+consteval constexpr int f2(int i) {
   //expected-error@-1 {{cannot combine}}
   return i;
 }
@@ -195,7 +195,7 @@ auto ptr = ret1(0);
 struct A {
   consteval int f(int) {
     // expected-note@-1+ {{declared here}}
-    return 0;    
+    return 0;
   }
 };
 
@@ -239,7 +239,7 @@ constexpr int f_c(int i) {
   int t = f(i);
 // expected-error@-1 {{is not a constant expression}}
 // expected-note@-2 {{function parameter}}
-  return f(0);  
+  return f(0);
 }
 
 consteval int f_eval(int i) {
@@ -675,7 +675,7 @@ Bar<derp> a; // expected-note {{in instantiation of member function 'issue_55601
 
 struct constantDerp {
   // Can be used in a constant expression.
-  consteval constantDerp(int) {} 
+  consteval constantDerp(int) {}
   consteval operator int() const { return 5; }
 };
 Bar<constantDerp> b;
@@ -1159,6 +1159,20 @@ struct C {
     static const int f = g(); // expected-error {{call to consteval function 'GH65985::g' is not a constant expression}} \
                               // expected-error {{in-class initializer for static data member is not a constant expression}} \
                               // expected-note  {{undefined function 'g' cannot be used in a constant expression}}
+};
+
+}
+
+namespace GH66562 {
+
+namespace ns
+{
+    consteval int foo(int x) { return 1; } // expected-note {{declared here}}
+}
+
+template <class A>
+struct T {
+    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}}
 };
 
 }
