@@ -3394,17 +3394,41 @@ Floating-Point Environment
 The default LLVM floating-point environment assumes that traps are disabled and
 status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
-round-to-nearest rounding mode.
+round-to-nearest rounding mode, and subnormals are assumed to be preserved.
+Running default LLVM code in an environment where these assumptions are not met
+can lead to undefined behavior.
+
+The representation bits of a floating-point value do not mutate arbitrarily; if
+there is no floating-point operation being performed, the NaN payload (if any)
+is preserved.
+
+When a floating-point math operation produces a NaN value, the result has a
+non-deterministic sign. The payload is non-deterministically chosen from the
+following set:
+
+- The payload that is all-zero except that the ``quiet`` bit is set.
+  ("Preferred NaN" case)
+- The payload of any input operand that is a NaN, bit-wise ORed with a payload that has
+  the ``quiet`` bit set. ("Quieting NaN propagation" case)
+- The payload of any input operand that is a NaN. ("Unchanged NaN propagation" case)
+- A target-specific set of further NaN payloads, that definitely all have their
+  ``quiet`` bit set. The set can depend on the payloads of the input NaNs.
+  This set is empty on x86 and ARM, but can be non-empty on other architectures.
+  (For instance, on wasm, if any input NaN is not the preferred NaN, then
+  this set contains all quiet NaNs; otherwise, it is empty.
+  On SPARC, this set consists of the all-one payload.)
+
+In particular, if all input NaNs are quiet, then the output NaN is definitely
+quiet. Signaling NaN outputs can only occur if they are provided as an input
+value. For example, "fmul SNaN, 1.0" may be simplified to SNaN rather than QNaN.
 
 Floating-point math operations are allowed to treat all NaNs as if they were
-quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0. This also
-means that SNaN may be passed through a math operation without quieting. For
-example, "fmul SNaN, 1.0" may be simplified to SNaN rather than QNaN. However,
-SNaN values are never created by math operations. They may only occur when
-provided as a program input value.
+quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0.
 
 Code that requires different behavior than this should use the
 :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+In particular, constrained intrinsics rule out the "Unchanged NaN propagation" case;
+they are guaranteed to return a QNaN.
 
 .. _fastmath:
 
