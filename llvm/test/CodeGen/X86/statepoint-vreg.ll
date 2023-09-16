@@ -244,31 +244,30 @@ define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
+; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %esi, %r14d
+; CHECK-NEXT:    movl %esi, %ebp
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp7:
-; CHECK-NEXT:    testb $1, %r14b
+; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %left
-; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    callq consume@PLT
-; CHECK-NEXT:    movl %ebp, %eax
+; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    jmp .LBB7_3
 ; CHECK-NEXT:  .LBB7_2: # %right
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:  .LBB7_3: # %right
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
