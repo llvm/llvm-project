@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- -- -fexceptions
+// RUN: %check_clang_tidy %s bugprone-unused-return-value %t -- \
+// RUN:   --config="{CheckOptions: {bugprone-unused-return-value.AllowCastToVoid: true}}" -- -fexceptions
 
 namespace std {
 

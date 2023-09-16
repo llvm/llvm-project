@@ -31,6 +31,7 @@ public:
 private:
   std::string CheckedFunctions;
   const std::vector<StringRef> CheckedReturnTypes;
+  const bool AllowCastToVoid;
 };
 
 } // namespace clang::tidy::bugprone

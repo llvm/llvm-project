@@ -235,6 +235,8 @@ Changes in existing checks
 - Improved :doc:`bugprone-unused-return-value
   <clang-tidy/checks/bugprone/unused-return-value>` check diagnostic message,
   added support for detection of unused results when cast to non-``void`` type.
+  Casting to ``void`` no longer suppresses issues by default, control this
+  behavior with the new `AllowCastToVoid` option.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check

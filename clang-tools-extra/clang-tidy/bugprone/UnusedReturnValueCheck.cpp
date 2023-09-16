@@ -130,12 +130,14 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                             "::std::error_condition;"
                                             "::std::errc;"
                                             "::std::expected;"
-                                            "::boost::system::error_code"))) {}
+                                            "::boost::system::error_code"))),
+      AllowCastToVoid(Options.get("AllowCastToVoid", false)) {}
 
 void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CheckedFunctions", CheckedFunctions);
   Options.store(Opts, "CheckedReturnTypes",
                 utils::options::serializeStringList(CheckedReturnTypes));
+  Options.store(Opts, "AllowCastToVoid", AllowCastToVoid);
 }
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
@@ -151,11 +153,12 @@ void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
                                       CheckedReturnTypes)))))))))
                .bind("match"));
 
-  auto MatchedCallExpr =
-      expr(anyOf(MatchedDirectCallExpr,
-                 explicitCastExpr(unless(cxxFunctionalCastExpr()),
-                                  unless(hasCastKind(CK_ToVoid)),
-                                  hasSourceExpression(MatchedDirectCallExpr))));
+  auto CheckCastToVoid =
+      AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();
+  auto MatchedCallExpr = expr(
+      anyOf(MatchedDirectCallExpr,
+            explicitCastExpr(unless(cxxFunctionalCastExpr()), CheckCastToVoid,
+                             hasSourceExpression(MatchedDirectCallExpr))));
 
   auto UnusedInCompoundStmt =
       compoundStmt(forEach(MatchedCallExpr),
@@ -187,6 +190,10 @@ void UnusedReturnValueCheck::check(const MatchFinder::MatchResult &Result) {
          "the value returned by this function should not be disregarded; "
          "neglecting it may lead to errors")
         << Matched->getSourceRange();
+
+    if (!AllowCastToVoid)
+      return;
+
     diag(Matched->getBeginLoc(),
          "cast the expression to void to silence this warning",
          DiagnosticIDs::Note);
