@@ -1709,14 +1709,10 @@ static void setConfigs(opt::InputArgList &args) {
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !config->isRela;
   // Validation of dynamic relocation addends is on by default for assertions
-  // builds (for supported targets) and disabled otherwise. Ideally we would
-  // enable the debug checks for all targets, but currently not all targets
-  // have support for reading Elf_Rel addends, so we only enable for a subset.
+  // builds and disabled otherwise. This check is enabled when writeAddends is
+  // true.
 #ifndef NDEBUG
-  bool checkDynamicRelocsDefault = m == EM_AARCH64 || m == EM_ARM ||
-                                   m == EM_386 || m == EM_LOONGARCH ||
-                                   m == EM_MIPS || m == EM_RISCV ||
-                                   m == EM_X86_64;
+  bool checkDynamicRelocsDefault = true;
 #else
   bool checkDynamicRelocsDefault = false;
 #endif

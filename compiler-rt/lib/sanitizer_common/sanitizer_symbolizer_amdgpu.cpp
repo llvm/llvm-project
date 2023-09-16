@@ -18,7 +18,7 @@ static COMgrFunctions comgr = {false};
 
 void getSourceLocation(const char *Result, void *ScopedString) {
   InternalScopedString *ScopedStringObj = (InternalScopedString *)ScopedString;
-  ScopedStringObj->append(Result);
+  ScopedStringObj->Append(Result);
 }
 
 void AMDGPUCodeObjectSymbolizer::InitCOMgr() {
