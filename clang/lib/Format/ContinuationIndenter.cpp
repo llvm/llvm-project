@@ -1204,12 +1204,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
                     CurrentState.Indent + Style.ContinuationIndentWidth);
   }
 
-  // After a goto label. Usually labels are on separate lines. However
-  // for Verilog the labels may be only recognized by the annotator and
-  // thus are on the same line as the current token.
-  if ((Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous)) ||
-      (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
-       State.Line->First->is(tok::kw_enum))) {
+  // Indentation of the statement following a Verilog case label is taken care
+  // of in moveStateToNextToken.
+  if (Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous))
+    return State.FirstIndent;
+
+  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+      State.Line->First->is(tok::kw_enum)) {
     return (Style.IndentWidth * State.Line->First->IndentLevel) +
            Style.IndentWidth;
   }
@@ -1599,6 +1600,15 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
+  // Verilog case labels are on the same unwrapped lines as the statements that
+  // follow. TokenAnnotator identifies them and sets MustBreakBefore.
+  // Indentation is taken care of here. A case label can only have 1 statement
+  // in Verilog, so we don't have to worry about lines that follow.
+  if (Style.isVerilog() && State.NextToken &&
+      State.NextToken->MustBreakBefore &&
+      Keywords.isVerilogEndOfLabel(Current)) {
+    State.FirstIndent += Style.IndentWidth;
+  }
 
   unsigned Penalty =
       handleEndOfLine(Current, State, DryRun, AllowBreak, Newline);
