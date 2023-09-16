@@ -376,7 +376,33 @@ TEST(SanitizerCommon, RemoveANSIEscapeSequencesFromString) {
   }
 }
 
-TEST(SanitizerCommon, InternalScopedString) {
+TEST(SanitizerCommon, InternalScopedStringAppend) {
+  InternalScopedString str;
+  EXPECT_EQ(0U, str.length());
+  EXPECT_STREQ("", str.data());
+
+  str.Append(nullptr);
+  EXPECT_EQ(0U, str.length());
+  EXPECT_STREQ("", str.data());
+
+  str.Append("");
+  EXPECT_EQ(0U, str.length());
+  EXPECT_STREQ("", str.data());
+
+  str.Append("foo");
+  EXPECT_EQ(3U, str.length());
+  EXPECT_STREQ("foo", str.data());
+
+  str.Append("");
+  EXPECT_EQ(3U, str.length());
+  EXPECT_STREQ("foo", str.data());
+
+  str.Append("123\000456");
+  EXPECT_EQ(6U, str.length());
+  EXPECT_STREQ("foo123", str.data());
+}
+
+TEST(SanitizerCommon, InternalScopedStringAppendF) {
   InternalScopedString str;
   EXPECT_EQ(0U, str.length());
   EXPECT_STREQ("", str.data());
