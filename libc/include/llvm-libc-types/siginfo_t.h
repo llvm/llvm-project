@@ -14,12 +14,16 @@
 #include <llvm-libc-types/uid_t.h>
 #include <llvm-libc-types/union_sigval.h>
 
+#define SI_MAX_SIZE 128
+
 typedef struct {
   int si_signo; /* Signal number.  */
   int si_errno; /* If non-zero, an errno value associated with
                    this signal, as defined in <errno.h>.  */
   int si_code;  /* Signal code.  */
   union {
+    int _si_pad[SI_MAX_SIZE / sizeof(int)];
+
     /* kill() */
     struct {
       pid_t si_pid; /* sender's pid */
