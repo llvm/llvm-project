@@ -178,7 +178,8 @@ void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
 void UnusedReturnValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Matched = Result.Nodes.getNodeAs<CallExpr>("match")) {
     diag(Matched->getBeginLoc(),
-         "the value returned by this function should be used")
+         "the value returned by this function should not be disregarded; "
+         "neglecting it may lead to errors")
         << Matched->getSourceRange();
     diag(Matched->getBeginLoc(),
          "cast the expression to void to silence this warning",

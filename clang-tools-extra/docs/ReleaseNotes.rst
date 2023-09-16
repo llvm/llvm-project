@@ -232,6 +232,9 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/undefined-memory-manipulation>` check to support
   fixed-size arrays of non-trivial types.
 
+- Improved :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check diagnostic message.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   to ignore ``static`` variables declared within the scope of
