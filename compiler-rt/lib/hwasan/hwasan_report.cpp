@@ -528,12 +528,12 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
   tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
   InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
-    s.AppendF("%s", row == center_row_beg ? "=>" : "  ");
+    s.Append(row == center_row_beg ? "=>" : "  ");
     s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
     for (uptr i = 0; i < row_len; i++) {
-      s.AppendF("%s", row + i == tag_ptr ? "[" : " ");
+      s.Append(row + i == tag_ptr ? "[" : " ");
       print_tag(s, &row[i]);
-      s.AppendF("%s", row + i == tag_ptr ? "]" : " ");
+      s.Append(row + i == tag_ptr ? "]" : " ");
     }
     s.AppendF("\n");
   }
