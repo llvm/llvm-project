@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -mtriple=amdgcn-- -o - %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-- -o - %s | FileCheck %s
 
 declare float @llvm.fma.f32(float, float, float)
 

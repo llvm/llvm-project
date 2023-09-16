@@ -238,9 +238,9 @@ if [[ "${linux_projects}" != "" ]]; then
   cat <<EOF
 - label: ':linux: Linux x64'
   artifact_paths:
-  - artifacts/**/*
+  - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/monolithic-linux/test-results.xml'
+  - 'build/test-results.xml'
   agents: ${LINUX_AGENTS}
   retry:
     automatic:
@@ -261,9 +261,9 @@ if [[ "${windows_projects}" != "" ]]; then
   cat <<EOF
 - label: ':windows: Windows x64'
   artifact_paths:
-  - artifacts/**/*
+  - 'artifacts/**/*'
   - '*_result.json'
-  - 'build/monolithic-windows/test-results.xml'
+  - 'build/test-results.xml'
   agents: ${WINDOWS_AGENTS}
   retry:
     automatic:
@@ -290,7 +290,7 @@ if [[ -n "${ph_target_phid:-}" ]]; then
 - label: ':phabricator: update build status on Phabricator'
   agents: ${SERVICE_AGENTS}
   artifact_paths:
-  - artifacts/**/*
+  - 'artifacts/**/*'
   commands:
   - export SRC=\$\${BUILDKITE_BUILD_PATH}/llvm-premerge-checks
   - rm -rf \$\${SRC}

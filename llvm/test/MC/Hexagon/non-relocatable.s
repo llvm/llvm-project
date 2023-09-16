@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=obj %s 2>%t; FileCheck %s <%t
+# RUN: not llvm-mc -triple=hexagon -filetype=obj %s 2>%t; FileCheck %s <%t
 
 # Don't allow a symbolic operand for an insn that cannot take a
 # relocation.

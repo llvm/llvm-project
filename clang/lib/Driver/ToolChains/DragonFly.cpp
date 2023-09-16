@@ -117,13 +117,15 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.AddAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_e});
+                  {options::OPT_L, options::OPT_T_Group});
 
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
-    CmdArgs.push_back("-L/usr/lib/gcc80");
+    SmallString<128> Dir(D.SysRoot);
+    llvm::sys::path::append(Dir, "/usr/lib/gcc80");
+    CmdArgs.push_back(Args.MakeArgString("-L" + Dir));
 
     if (!Args.hasArg(options::OPT_static)) {
       CmdArgs.push_back("-rpath");
@@ -192,8 +194,8 @@ DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,
     getProgramPaths().push_back(getDriver().Dir);
 
   getFilePaths().push_back(getDriver().Dir + "/../lib");
-  getFilePaths().push_back("/usr/lib");
-  getFilePaths().push_back("/usr/lib/gcc80");
+  getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
+  getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/gcc80"));
 }
 
 void DragonFly::AddClangSystemIncludeArgs(

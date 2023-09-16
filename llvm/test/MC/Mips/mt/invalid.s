@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=mips -mcpu=mips32 -mattr=+mt < %s 2>%t1
+# RUN: not llvm-mc -triple=mips -mcpu=mips32 -mattr=+mt < %s 2>%t1
 # RUN: FileCheck %s < %t1
   dmt 4                   # CHECK: error: invalid operand for instruction
   dmt $4, $5              # CHECK: error: invalid operand for instruction

@@ -22,3 +22,8 @@ target_link_libraries(ClangReplInterpreterExceptionTests PUBLIC
   clangFrontend
   )
 add_dependencies(ClangReplInterpreterExceptionTests clang-resource-headers)
+
+# export_executable_symbols triggers Lsan report.
+if (NOT LLVM_USE_SANITIZER MATCHES ".*Address.*")
+  export_executable_symbols(ClangReplInterpreterExceptionTests)
+endif()

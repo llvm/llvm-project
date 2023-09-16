@@ -1586,6 +1586,16 @@ void RewriteInstance::adjustFunctionBoundaries() {
       if (!Function.isSymbolValidInScope(Symbol, SymbolSize))
         break;
 
+      // Skip basic block labels. This happens on RISC-V with linker relaxation
+      // enabled because every branch needs a relocation and corresponding
+      // symbol. We don't want to add such symbols as entry points.
+      const auto PrivateLabelPrefix = BC->AsmInfo->getPrivateLabelPrefix();
+      if (!PrivateLabelPrefix.empty() &&
+          cantFail(Symbol.getName()).starts_with(PrivateLabelPrefix)) {
+        ++NextSymRefI;
+        continue;
+      }
+
       // This is potentially another entry point into the function.
       uint64_t EntryOffset = NextSymRefI->first - Function.getAddress();
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: adding entry point to function "
@@ -2763,22 +2773,19 @@ void RewriteInstance::selectFunctionsToProcess() {
           return true;
 
       // Non-regex check (-funcs-no-regex and -funcs-file-no-regex).
-      std::optional<StringRef> Match =
-          Function.forEachName([&ForceFunctionsNR](StringRef Name) {
-            return ForceFunctionsNR.count(Name.str());
-          });
-      return Match.has_value();
+      for (const StringRef Name : Function.getNames())
+        if (ForceFunctionsNR.count(Name.str()))
+          return true;
+
+      return false;
     }
 
     if (opts::Lite) {
       // Forcibly include functions specified in the -function-order file.
       if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
-        std::optional<StringRef> Match =
-            Function.forEachName([&](StringRef Name) {
-              return ReorderFunctionsUserSet.contains(Name);
-            });
-        if (Match.has_value())
-          return true;
+        for (const StringRef Name : Function.getNames())
+          if (ReorderFunctionsUserSet.contains(Name))
+            return true;
         for (const StringRef Name : Function.getNames())
           if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
             if (ReorderFunctionsLTOCommonSet.contains(*LTOCommonName))

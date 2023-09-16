@@ -514,7 +514,8 @@ static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
 static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
                               bool Before = true) {
   if (auto *PHI = dyn_cast<PHINode>(V)) {
-    Builder.SetInsertPoint(&*PHI->getParent()->getFirstInsertionPt());
+    BasicBlock *Parent = PHI->getParent();
+    Builder.SetInsertPoint(Parent, Parent->getFirstInsertionPt());
     return;
   }
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -526,7 +527,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
   if (auto *A = dyn_cast<Argument>(V)) {
     // Set the insertion point in the entry block.
     BasicBlock &Entry = A->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&*Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
     return;
   }
   // Otherwise, this is a constant and we don't need to set a new
@@ -4426,6 +4427,30 @@ static Instruction *foldICmpXNegX(ICmpInst &I,
   return nullptr;
 }
 
+static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
+                                  InstCombinerImpl &IC) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
+  // Normalize and operand as operand 0.
+  CmpInst::Predicate Pred = I.getPredicate();
+  if (match(Op1, m_c_And(m_Specific(Op0), m_Value()))) {
+    std::swap(Op0, Op1);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  if (!match(Op0, m_c_And(m_Specific(Op1), m_Value(A))))
+    return nullptr;
+
+  // (icmp (X & Y) u< X --> (X & Y) != X
+  if (Pred == ICmpInst::ICMP_ULT)
+    return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+
+  // (icmp (X & Y) u>= X --> (X & Y) == X
+  if (Pred == ICmpInst::ICMP_UGE)
+    return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
+
+  return nullptr;
+}
+
 static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
                                  InstCombinerImpl &IC) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
@@ -4955,6 +4980,9 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  if (Instruction *R = foldICmpAndXX(I, Q, *this))
+    return R;
+
   if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
     return replaceInstUsesWith(I, V);
 
@@ -5026,14 +5054,10 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
   case ICmpInst::ICMP_UGT:
   case ICmpInst::ICMP_SGE:
   case ICmpInst::ICMP_UGE: {
-    auto FoldIntoConstant = [&](bool Value) {
-      return replaceInstUsesWith(
-          I, Constant::getIntegerValue(
-                 I.getType(), APInt(1U, static_cast<uint64_t>(Value))));
-    };
     auto FoldIntoCmpYZ = [&]() -> Instruction * {
       if (CmpYZ.has_value())
-        return FoldIntoConstant(*CmpYZ);
+        return replaceInstUsesWith(I,
+                                   ConstantInt::getBool(I.getType(), *CmpYZ));
       return ICmpInst::Create(Instruction::ICmp, Pred, Y, Z);
     };
 
@@ -5045,7 +5069,7 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
         // min(X, Y) <= Z   X <= Z  true
         // max(X, Y) > Z    X > Z   true
         // max(X, Y) >= Z   X >= Z  true
-        return FoldIntoConstant(true);
+        return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
       } else {
         //      Expr        Fact    Result
         // max(X, Y) < Z    X < Z   Y < Z
@@ -5068,7 +5092,7 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
         // max(X, Y) <= Z   X > Z   false
         // min(X, Y) > Z    X <= Z  false
         // min(X, Y) >= Z   X < Z   false
-        return FoldIntoConstant(false);
+        return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
       }
     }
     break;

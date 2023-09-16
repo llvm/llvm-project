@@ -3684,12 +3684,12 @@ multiclass VecROStoreLane0Pat<ROAddrMode ro, SDPatternOperator storeop,
                               SubRegIndex SubRegIdx,
                               Instruction STRW, Instruction STRX> {
 
-  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), (i64 0))),
                      (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
             (STRW (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
-  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), (i64 0))),
                      (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
             (STRX (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
@@ -3823,7 +3823,7 @@ multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop
                             ValueType SubRegTy,
                             SubRegIndex SubRegIdx, Operand IndexType,
                             Instruction STR> {
-  def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), (i64 0))),
                      (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
             (STR (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                  GPR64sp:$Rn, IndexType:$offset)>;
@@ -4446,6 +4446,16 @@ let Predicates = [HasFRInt3264] in {
   defm FRINT32X : FRIntNNT<0b01, "frint32x", int_aarch64_frint32x>;
   defm FRINT64X : FRIntNNT<0b11, "frint64x", int_aarch64_frint64x>;
 } // HasFRInt3264
+
+// Pattern to convert 1x64 vector intrinsics to equivalent scalar instructions
+def : Pat<(v1f64 (int_aarch64_neon_frint32z (v1f64 FPR64:$Rn))),
+          (FRINT32ZDr FPR64:$Rn)>;
+def : Pat<(v1f64 (int_aarch64_neon_frint64z (v1f64 FPR64:$Rn))),
+          (FRINT64ZDr FPR64:$Rn)>;
+def : Pat<(v1f64 (int_aarch64_neon_frint32x (v1f64 FPR64:$Rn))),
+          (FRINT32XDr FPR64:$Rn)>;
+def : Pat<(v1f64 (int_aarch64_neon_frint64x (v1f64 FPR64:$Rn))),
+          (FRINT64XDr FPR64:$Rn)>;
 
 // Emitting strict_lrint as two instructions is valid as any exceptions that
 // occur will happen in exactly one of the instructions (e.g. if the input is

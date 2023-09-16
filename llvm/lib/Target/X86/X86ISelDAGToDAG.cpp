@@ -173,7 +173,7 @@ namespace {
 
     X86DAGToDAGISel() = delete;
 
-    explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
+    explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOptLevel OptLevel)
         : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
@@ -259,7 +259,7 @@ namespace {
 
     /// Implement addressing mode selection for inline asm expressions.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                      unsigned ConstraintID,
+                                      InlineAsm::ConstraintCode ConstraintID,
                                       std::vector<SDValue> &OutOps) override;
 
     void emitSpecialCodeForMain();
@@ -624,7 +624,8 @@ bool X86DAGToDAGISel::isMaskZeroExtended(SDNode *N) const {
 
 bool
 X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
-  if (OptLevel == CodeGenOpt::None) return false;
+  if (OptLevel == CodeGenOptLevel::None)
+    return false;
 
   if (!N.hasOneUse())
     return false;
@@ -1242,7 +1243,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     }
     }
 
-    if (OptLevel != CodeGenOpt::None &&
+    if (OptLevel != CodeGenOptLevel::None &&
         // Only do this when the target can fold the load into the call or
         // jmp.
         !Subtarget->useIndirectThunkCalls() &&
@@ -1481,7 +1482,7 @@ bool X86DAGToDAGISel::tryOptimizeRem8Extend(SDNode *N) {
 
 void X86DAGToDAGISel::PostprocessISelDAG() {
   // Skip peepholes at -O0.
-  if (TM.getOptLevel() == CodeGenOpt::None)
+  if (TM.getOptLevel() == CodeGenOptLevel::None)
     return;
 
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
@@ -2269,6 +2270,35 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
           SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
           SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
           SDValue ExtAdd = CurDAG->getNode(ISD::ADD, DL, VT, ExtSrc, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtSrc);
+          insertDAGNode(*CurDAG, N, ExtVal);
+          insertDAGNode(*CurDAG, N, ExtAdd);
+          CurDAG->ReplaceAllUsesWith(N, ExtAdd);
+          CurDAG->RemoveDeadNode(N.getNode());
+          return ExtSrc;
+        }
+      }
+    }
+  }
+
+  // index: zext(add_nuw(x,c)) -> index: zext(x), disp + zext(c)
+  // index: zext(addlike(x,c)) -> index: zext(x), disp + zext(c)
+  // TODO: call matchIndexRecursively(AddSrc) if we won't corrupt sext?
+  if (Opc == ISD::ZERO_EXTEND && !VT.isVector() && N.hasOneUse()) {
+    SDValue Src = N.getOperand(0);
+    unsigned SrcOpc = Src.getOpcode();
+    if (((SrcOpc == ISD::ADD && Src->getFlags().hasNoUnsignedWrap()) ||
+         CurDAG->isADDLike(Src)) &&
+        Src.hasOneUse()) {
+      if (CurDAG->isBaseWithConstantOffset(Src)) {
+        SDValue AddSrc = Src.getOperand(0);
+        auto *AddVal = cast<ConstantSDNode>(Src.getOperand(1));
+        uint64_t Offset = (uint64_t)AddVal->getZExtValue();
+        if (!foldOffsetIntoAddress(Offset * AM.Scale, AM)) {
+          SDLoc DL(N);
+          SDValue ExtSrc = CurDAG->getNode(Opc, DL, VT, AddSrc);
+          SDValue ExtVal = CurDAG->getConstant(Offset, DL, VT);
+          SDValue ExtAdd = CurDAG->getNode(SrcOpc, DL, VT, ExtSrc, ExtVal);
           insertDAGNode(*CurDAG, N, ExtSrc);
           insertDAGNode(*CurDAG, N, ExtVal);
           insertDAGNode(*CurDAG, N, ExtAdd);
@@ -6294,18 +6324,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   SelectCode(Node);
 }
 
-bool X86DAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool X86DAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   SDValue Op0, Op1, Op2, Op3, Op4;
   switch (ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_o: // offsetable        ??
-  case InlineAsm::Constraint_v: // not offsetable    ??
-  case InlineAsm::Constraint_m: // memory
-  case InlineAsm::Constraint_X:
-  case InlineAsm::Constraint_p: // address
+  case InlineAsm::ConstraintCode::o: // offsetable        ??
+  case InlineAsm::ConstraintCode::v: // not offsetable    ??
+  case InlineAsm::ConstraintCode::m: // memory
+  case InlineAsm::ConstraintCode::X:
+  case InlineAsm::ConstraintCode::p: // address
     if (!selectAddr(nullptr, Op, Op0, Op1, Op2, Op3, Op4))
       return true;
     break;
@@ -6322,6 +6352,6 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
 /// This pass converts a legalized DAG into a X86-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createX86ISelDag(X86TargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel) {
+                                     CodeGenOptLevel OptLevel) {
   return new X86DAGToDAGISel(TM, OptLevel);
 }

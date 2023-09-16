@@ -1096,6 +1096,62 @@ define float @clamp_fabs_is_is_ole_smallest_normal_to_0(float %arg) {
   ret float %select
 }
 
+define float @clamp_fabs_oeq_smallest_normal_to_zero(float %arg) {
+; CHECK-LABEL: define float @clamp_fabs_oeq_smallest_normal_to_zero(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_OEQ_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
+; CHECK-NEXT:    ret float [[SELECT]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.oeq.smallest.normal = fcmp oeq float %fabs.arg, 0x3810000000000000
+  %select = select i1 %is.oeq.smallest.normal, float 0.0, float %arg
+  ret float %select
+}
+
+define float @clamp_fabs_one_smallest_normal_to_zero(float %arg) {
+; CHECK-LABEL: define float @clamp_fabs_one_smallest_normal_to_zero(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ONE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
+; CHECK-NEXT:    ret float [[SELECT]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.one.smallest.normal = fcmp one float %fabs.arg, 0x3810000000000000
+  %select = select i1 %is.one.smallest.normal, float 0.0, float %arg
+  ret float %select
+}
+
+define float @clamp_fabs_ueq_smallest_normal_to_zero(float %arg) {
+; CHECK-LABEL: define float @clamp_fabs_ueq_smallest_normal_to_zero(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UEQ_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
+; CHECK-NEXT:    ret float [[SELECT]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.ueq.smallest.normal = fcmp ueq float %fabs.arg, 0x3810000000000000
+  %select = select i1 %is.ueq.smallest.normal, float 0.0, float %arg
+  ret float %select
+}
+
+define float @clamp_fabs_une_smallest_normal_to_zero(float %arg) {
+; CHECK-LABEL: define float @clamp_fabs_une_smallest_normal_to_zero(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_UNE_SMALLEST_NORMAL]], float 0.000000e+00, float [[ARG]]
+; CHECK-NEXT:    ret float [[SELECT]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.une.smallest.normal = fcmp une float %fabs.arg, 0x3810000000000000
+  %select = select i1 %is.une.smallest.normal, float 0.0, float %arg
+  ret float %select
+}
+
 ;---------------------------------------------------------------------
 ; compare fabs to negative normal
 ;---------------------------------------------------------------------
@@ -2164,6 +2220,178 @@ define float @ret_assumed_uge_known_negative(float %arg, float %unknown) {
   %known.negative = fneg float %known.positive
   %uge.known.negative = fcmp uge float %arg, %known.negative
   call void @llvm.assume(i1 %uge.known.negative)
+  ret float %arg
+}
+
+;---------------------------------------------------------------------
+; assume compare to smallest normal
+;---------------------------------------------------------------------
+
+define float @assume_oeq_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_oeq_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.oeq.smallest.normal = fcmp oeq float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.oeq.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_one_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_one_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ONE_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.one.smallest.normal = fcmp one float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.one.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_ueq_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_ueq_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.ueq.smallest.normal = fcmp ueq float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.ueq.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_une_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_une_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNE_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.une.smallest.normal = fcmp une float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.une.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_ord_smallest_normal(float %arg) {
+; CHECK-LABEL: define nofpclass(nan) float @assume_ord_smallest_normal(
+; CHECK-SAME: float returned nofpclass(nan) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.ord.smallest.normal = fcmp ord float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.ord.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_uno_smallest_normal(float %arg) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @assume_uno_smallest_normal(
+; CHECK-SAME: float returned nofpclass(inf zero sub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNO_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.uno.smallest.normal = fcmp uno float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.uno.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_fabs_oeq_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_fabs_oeq_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.oeq.smallest.normal = fcmp oeq float %fabs.arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.oeq.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_fabs_one_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_fabs_one_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_ONE_SMALLEST_NORMAL:%.*]] = fcmp one float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ONE_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.one.smallest.normal = fcmp one float %fabs.arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.one.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_fabs_ueq_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_fabs_ueq_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_UEQ_SMALLEST_NORMAL:%.*]] = fcmp ueq float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.ueq.smallest.normal = fcmp ueq float %fabs.arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.ueq.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_fabs_une_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_fabs_une_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_UNE_SMALLEST_NORMAL:%.*]] = fcmp une float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNE_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.une.smallest.normal = fcmp une float %fabs.arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.une.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_fabs_ord_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_fabs_ord_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_ORD_SMALLEST_NORMAL:%.*]] = fcmp ord float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.ord.smallest.normal = fcmp ord float %fabs.arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.ord.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_fabs_uno_smallest_normal(float %arg) {
+; CHECK-LABEL: define float @assume_fabs_uno_smallest_normal(
+; CHECK-SAME: float returned [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[FABS_ARG:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR4]]
+; CHECK-NEXT:    [[IS_UNO_SMALLEST_NORMAL:%.*]] = fcmp uno float [[FABS_ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_UNO_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %fabs.arg = call float @llvm.fabs.f32(float %arg)
+  %is.uno.smallest.normal = fcmp uno float %fabs.arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.uno.smallest.normal)
+  ret float %arg
+}
+
+define float @assume_oeq_smallest_normal_known_pos(float nofpclass(ninf nsub nnorm nzero) %arg) {
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @assume_oeq_smallest_normal_known_pos(
+; CHECK-SAME: float returned nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[IS_OEQ_SMALLEST_NORMAL:%.*]] = fcmp oeq float [[ARG]], 0x3810000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_OEQ_SMALLEST_NORMAL]]) #[[ATTR5]]
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %is.oeq.smallest.normal = fcmp oeq float %arg, 0x3810000000000000
+  call void @llvm.assume(i1 %is.oeq.smallest.normal)
   ret float %arg
 }
 
