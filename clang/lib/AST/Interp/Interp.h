@@ -175,6 +175,9 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status);
 
+/// Checks why the given DeclRefExpr is invalid.
+bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
+
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
 
@@ -1852,6 +1855,12 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
       << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
   return false;
+}
+
+inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
+                           const DeclRefExpr *DR) {
+  assert(DR);
+  return CheckDeclRef(S, OpPC, DR);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>

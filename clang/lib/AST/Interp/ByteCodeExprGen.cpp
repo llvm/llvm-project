@@ -2492,7 +2492,8 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       return this->VisitDeclRefExpr(E);
     }
   }
-  return false;
+
+  return this->emitInvalidDeclRef(E, E);
 }
 
 template <class Emitter>
