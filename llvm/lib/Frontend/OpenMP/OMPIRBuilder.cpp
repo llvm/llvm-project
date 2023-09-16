@@ -1555,9 +1555,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
-    // HasTaskData is true if any variables are captured in the outlined region,
+    // HasShareds is true if any variables are captured in the outlined region,
     // false otherwise.
-    bool HasTaskData = StaleCI->arg_size() > 0;
+    bool HasShareds = StaleCI->arg_size() > 0;
     Builder.SetInsertPoint(StaleCI);
 
     // Gather the arguments for emitting the runtime call for
@@ -1585,8 +1585,15 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     // Argument - `sizeof_kmp_task_t` (TaskSize)
     // Tasksize refers to the size in bytes of kmp_task_t data structure
     // including private vars accessed in task.
-    Value *TaskSize = Builder.getInt64(0);
-    if (HasTaskData) {
+    // TODO: add kmp_task_t_with_privates (privates)
+    Value *TaskSize = Builder.getInt64(
+        divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
+
+    // Argument - `sizeof_shareds` (SharedsSize)
+    // SharedsSize refers to the shareds array size in the kmp_task_t data
+    // structure.
+    Value *SharedsSize = Builder.getInt64(0);
+    if (HasShareds) {
       AllocaInst *ArgStructAlloca =
           dyn_cast<AllocaInst>(StaleCI->getArgOperand(0));
       assert(ArgStructAlloca &&
@@ -1596,19 +1603,17 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
       assert(ArgStructType && "Unable to find struct type corresponding to "
                               "arguments for extracted function");
-      TaskSize =
+      SharedsSize =
           Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
     }
 
-    // TODO: Argument - sizeof_shareds
-
     // Argument - task_entry (the wrapper function)
-    // If the outlined function has some captured variables (i.e. HasTaskData is
+    // If the outlined function has some captured variables (i.e. HasShareds is
     // true), then the wrapper function will have an additional argument (the
     // struct containing captured variables). Otherwise, no such argument will
     // be present.
     SmallVector<Type *> WrapperArgTys{Builder.getInt32Ty()};
-    if (HasTaskData)
+    if (HasShareds)
       WrapperArgTys.push_back(OutlinedFn.getArg(0)->getType());
     FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
         (Twine(OutlinedFn.getName()) + ".wrapper").str(),
@@ -1617,19 +1622,19 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
 
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
-    // variables must be copied before the task is run (NewTaskData)
-    CallInst *NewTaskData = Builder.CreateCall(
-        TaskAllocFn,
-        {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
-         /*sizeof_task=*/TaskSize, /*sizeof_shared=*/Builder.getInt64(0),
-         /*task_func=*/WrapperFunc});
+    // variables must be copied before the task is run (TaskData)
+    CallInst *TaskData = Builder.CreateCall(
+        TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
+                      /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
+                      /*task_func=*/WrapperFunc});
 
     // Copy the arguments for outlined function
-    if (HasTaskData) {
-      Value *TaskData = StaleCI->getArgOperand(0);
+    if (HasShareds) {
+      Value *Shareds = StaleCI->getArgOperand(0);
       Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
-      Builder.CreateMemCpy(NewTaskData, Alignment, TaskData, Alignment,
-                           TaskSize);
+      Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
+      Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
+                           SharedsSize);
     }
 
     Value *DepArrayPtr = nullptr;
@@ -1705,12 +1710,12 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
       Function *TaskCompleteFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
-      Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, NewTaskData});
-      if (HasTaskData)
-        Builder.CreateCall(WrapperFunc, {ThreadID, NewTaskData});
+      Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, TaskData});
+      if (HasShareds)
+        Builder.CreateCall(WrapperFunc, {ThreadID, TaskData});
       else
         Builder.CreateCall(WrapperFunc, {ThreadID});
-      Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, NewTaskData});
+      Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
       Builder.SetInsertPoint(ThenTI);
     }
 
@@ -1719,14 +1724,14 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
       Builder.CreateCall(
           TaskFn,
-          {Ident, ThreadID, NewTaskData, Builder.getInt32(Dependencies.size()),
+          {Ident, ThreadID, TaskData, Builder.getInt32(Dependencies.size()),
            DepArrayPtr, ConstantInt::get(Builder.getInt32Ty(), 0),
            ConstantPointerNull::get(Type::getInt8PtrTy(M.getContext()))});
 
     } else {
       // Emit the @__kmpc_omp_task runtime call to spawn the task
       Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
-      Builder.CreateCall(TaskFn, {Ident, ThreadID, NewTaskData});
+      Builder.CreateCall(TaskFn, {Ident, ThreadID, TaskData});
     }
 
     StaleCI->eraseFromParent();
@@ -1735,10 +1740,13 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     BasicBlock *WrapperEntryBB =
         BasicBlock::Create(M.getContext(), "", WrapperFunc);
     Builder.SetInsertPoint(WrapperEntryBB);
-    if (HasTaskData)
-      Builder.CreateCall(&OutlinedFn, {WrapperFunc->getArg(1)});
-    else
+    if (HasShareds) {
+      llvm::Value *Shareds =
+          Builder.CreateLoad(VoidPtr, WrapperFunc->getArg(1));
+      Builder.CreateCall(&OutlinedFn, {Shareds});
+    } else {
       Builder.CreateCall(&OutlinedFn);
+    }
     Builder.CreateRet(Builder.getInt32(0));
   };
 
