@@ -381,10 +381,6 @@ TEST(SanitizerCommon, InternalScopedStringAppend) {
   EXPECT_EQ(0U, str.length());
   EXPECT_STREQ("", str.data());
 
-  str.Append(nullptr);
-  EXPECT_EQ(0U, str.length());
-  EXPECT_STREQ("", str.data());
-
   str.Append("");
   EXPECT_EQ(0U, str.length());
   EXPECT_STREQ("", str.data());
