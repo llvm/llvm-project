@@ -37,7 +37,7 @@ namespace __hwasan {
 
 class ScopedReport {
  public:
-  ScopedReport(bool fatal = false) : error_message_(1), fatal(fatal) {
+  ScopedReport(bool fatal = false) : fatal(fatal) {
     Lock lock(&error_message_lock_);
     error_message_ptr_ = fatal ? &error_message_ : nullptr;
     ++hwasan_report_count;
@@ -65,11 +65,7 @@ class ScopedReport {
     Lock lock(&error_message_lock_);
     if (!error_message_ptr_)
       return;
-    uptr len = internal_strlen(msg);
-    uptr old_size = error_message_ptr_->size();
-    error_message_ptr_->resize(old_size + len);
-    // overwrite old trailing '\0', keep new trailing '\0' untouched.
-    internal_memcpy(&(*error_message_ptr_)[old_size - 1], msg, len);
+    error_message_ptr_->Append(msg);
   }
 
   static void SetErrorReportCallback(void (*callback)(const char *)) {
@@ -78,17 +74,17 @@ class ScopedReport {
   }
 
  private:
-  InternalMmapVector<char> error_message_;
+  InternalScopedString error_message_;
   bool fatal;
 
   static Mutex error_message_lock_;
-  static InternalMmapVector<char> *error_message_ptr_
+  static InternalScopedString *error_message_ptr_
       SANITIZER_GUARDED_BY(error_message_lock_);
   static void (*error_report_callback_)(const char *);
 };
 
 Mutex ScopedReport::error_message_lock_;
-InternalMmapVector<char> *ScopedReport::error_message_ptr_;
+InternalScopedString *ScopedReport::error_message_ptr_;
 void (*ScopedReport::error_report_callback_)(const char *);
 
 // If there is an active ScopedReport, append to its error message.
