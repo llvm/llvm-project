@@ -312,6 +312,53 @@ TEST_F(FormatTestVerilog, Case) {
   verifyFormat("default:\n"
                "  x = '{x: x, default: 9};\n",
                Style);
+  // When the line following the case label needs to be broken, the continuation
+  // should be indented correctly.
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result = //\n"
+               "        10'b0111111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0, //\n"
+               "      16'd1:\n"
+               "    result = //\n"
+               "        10'b0111111111;\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result = (10'b0111111111 + //\n"
+               "              10'b0111111111 + //\n"
+               "              10'b0111111111);\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result =              //\n"
+               "        (10'b0111111111 + //\n"
+               "         10'b0111111111 + //\n"
+               "         10'b0111111111);\n"
+               "endcase");
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result =          //\n"
+               "        longfunction( //\n"
+               "            arg);\n"
+               "endcase");
+  Style = getDefaultStyle();
+  Style.ContinuationIndentWidth = 1;
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result = //\n"
+               "     10'b0111111111;\n"
+               "endcase",
+               Style);
+  verifyFormat("case (data)\n"
+               "  16'd0:\n"
+               "    result =       //\n"
+               "     longfunction( //\n"
+               "      arg);\n"
+               "endcase",
+               Style);
 }
 
 TEST_F(FormatTestVerilog, Coverage) {
