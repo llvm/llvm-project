@@ -1713,8 +1713,7 @@ static void setConfigs(opt::InputArgList &args) {
   // enable the debug checks for all targets, but currently not all targets
   // have support for reading Elf_Rel addends, so we only enable for a subset.
 #ifndef NDEBUG
-  bool checkDynamicRelocsDefault =
-      !llvm::is_contained({EM_AMDGPU, EM_HEXAGON}, m);
+  bool checkDynamicRelocsDefault = m != EM_HEXAGON;
 #else
   bool checkDynamicRelocsDefault = false;
 #endif
