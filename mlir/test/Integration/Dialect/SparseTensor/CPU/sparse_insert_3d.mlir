@@ -28,19 +28,19 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #TensorCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : dense, d2 : compressed)
 }>
 
 #TensorRow = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "dense" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : dense)
 }>
 
 #CCoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed(nonunique), d2 : singleton)
 }>
 
 #DCoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique), d2 : singleton)
 }>
 
 
