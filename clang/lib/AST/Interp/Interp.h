@@ -1441,9 +1441,9 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
 }
 
 template <ArithOp Op>
-static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC) {
+static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
+                                   const Pointer &Ptr) {
   using OneT = Integral<8, false>;
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   // Get the current value on the stack.
   S.Stk.push<Pointer>(Ptr.deref<Pointer>());
@@ -1460,11 +1460,21 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC) {
 }
 
 static inline bool IncPtr(InterpState &S, CodePtr OpPC) {
-  return IncDecPtrHelper<ArithOp::Add>(S, OpPC);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecPtrHelper<ArithOp::Add>(S, OpPC, Ptr);
 }
 
 static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
-  return IncDecPtrHelper<ArithOp::Sub>(S, OpPC);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecPtrHelper<ArithOp::Sub>(S, OpPC, Ptr);
 }
 
 /// 1) Pops a Pointer from the stack.
