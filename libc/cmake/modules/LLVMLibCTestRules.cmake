@@ -561,8 +561,9 @@ function(add_integration_test test_name)
   # to expand the list (by including the option COMMAND_EXPAND_LISTS). This
   # makes `add_custom_target` construct the correct command and execute it.
   set(test_cmd
-      ${CMAKE_CROSSCOMPILING_EMULATOR} ${INTEGRATION_TEST_ENV}
+      ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}>
+      ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
   add_custom_target(
@@ -727,8 +728,8 @@ function(add_libc_hermetic_test test_name)
   endif()
 
   set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}> ${HERMETIC_TEST_LOADER_ARGS}
-      ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+      $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
   add_custom_target(
     ${fq_target_name}
     COMMAND ${test_cmd}
