@@ -23,7 +23,7 @@ UndefinedBehaviorReport::UndefinedBehaviorReport(const char *IssueKind,
   RegisterUndefinedBehaviorReport(this);
 
   // Make a copy of the diagnostic.
-  Buffer.append("%s", Msg.data());
+  Buffer.AppendF("%s", Msg.data());
 
   // Let the monitor know that a report is available.
   __ubsan_on_report();
