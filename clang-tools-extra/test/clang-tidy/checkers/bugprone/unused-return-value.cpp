@@ -115,6 +115,10 @@ void warning() {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
   // CHECK-MESSAGES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
 
+  (int)Str.empty();
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
+  // CHECK-MESSAGES: [[@LINE-2]]:8: note: cast the expression to void to silence this warning
+
   std::vector<Foo> Vec;
   Vec.empty();
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors

@@ -141,15 +141,21 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
   auto FunVec = utils::options::parseStringList(CheckedFunctions);
 
-  auto MatchedCallExpr = expr(ignoringImplicit(ignoringParenImpCasts(
-      callExpr(callee(functionDecl(
-                   // Don't match void overloads of checked functions.
-                   unless(returns(voidType())),
-                   anyOf(isInstantiatedFrom(hasAnyName(FunVec)),
-                         returns(hasCanonicalType(hasDeclaration(
-                             namedDecl(matchers::matchesAnyListedName(
-                                 CheckedReturnTypes)))))))))
-          .bind("match"))));
+  auto MatchedDirectCallExpr =
+      expr(callExpr(callee(functionDecl(
+                        // Don't match void overloads of checked functions.
+                        unless(returns(voidType())),
+                        anyOf(isInstantiatedFrom(hasAnyName(FunVec)),
+                              returns(hasCanonicalType(hasDeclaration(
+                                  namedDecl(matchers::matchesAnyListedName(
+                                      CheckedReturnTypes)))))))))
+               .bind("match"));
+
+  auto MatchedCallExpr =
+      expr(anyOf(MatchedDirectCallExpr,
+                 explicitCastExpr(unless(cxxFunctionalCastExpr()),
+                                  unless(hasCastKind(CK_ToVoid)),
+                                  hasSourceExpression(MatchedDirectCallExpr))));
 
   auto UnusedInCompoundStmt =
       compoundStmt(forEach(MatchedCallExpr),

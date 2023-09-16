@@ -233,7 +233,8 @@ Changes in existing checks
   fixed-size arrays of non-trivial types.
 
 - Improved :doc:`bugprone-unused-return-value
-  <clang-tidy/checks/bugprone/unused-return-value>` check diagnostic message.
+  <clang-tidy/checks/bugprone/unused-return-value>` check diagnostic message,
+  added support for detection of unused results when cast to non-``void`` type.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
