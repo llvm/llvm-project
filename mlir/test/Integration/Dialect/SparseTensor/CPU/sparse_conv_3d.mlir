@@ -44,7 +44,7 @@
 
 // Creates and returns 3-D buffer of size (%s1, %s2, %s3) filled with the value %f
 func.func @alloc_3d_filled_f32(%s1 : index, %s2 : index, %s3 : index, %f : f32) -> tensor<?x?x?xf32> {
-  %buf = bufferization.alloc_tensor(%s1, %s2, %s3) : tensor<?x?x?xf32>
+  %buf = tensor.empty(%s1, %s2, %s3) : tensor<?x?x?xf32>
   %ret = linalg.fill ins(%f : f32) outs(%buf : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
   return %ret : tensor<?x?x?xf32>
 }
@@ -58,7 +58,7 @@ func.func @conv_3d(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>, %arg2: te
 
 func.func @conv_3d_CCC(%arg0: tensor<?x?x?xf32, #CCC>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32, #CCC> {
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c6, %c6, %c6) : tensor<?x?x?xf32, #CCC>
+  %s = tensor.empty(%c6, %c6, %c6) : tensor<?x?x?xf32, #CCC>
   %ret = linalg.conv_3d
      ins (%arg0, %arg1: tensor<?x?x?xf32, #CCC>, tensor<?x?x?xf32>)
     outs (%s: tensor<?x?x?xf32, #CCC>) -> tensor<?x?x?xf32, #CCC>
@@ -67,7 +67,7 @@ func.func @conv_3d_CCC(%arg0: tensor<?x?x?xf32, #CCC>, %arg1: tensor<?x?x?xf32>)
 
 func.func @conv_3d_CDC(%arg0: tensor<?x?x?xf32, #CDC>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32, #CDC> {
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c6, %c6, %c6) : tensor<?x?x?xf32, #CDC>
+  %s = tensor.empty(%c6, %c6, %c6) : tensor<?x?x?xf32, #CDC>
   %ret = linalg.conv_3d
      ins (%arg0, %arg1: tensor<?x?x?xf32, #CDC>, tensor<?x?x?xf32>)
     outs (%s: tensor<?x?x?xf32, #CDC>) -> tensor<?x?x?xf32, #CDC>
@@ -76,7 +76,7 @@ func.func @conv_3d_CDC(%arg0: tensor<?x?x?xf32, #CDC>, %arg1: tensor<?x?x?xf32>)
 
 func.func @conv_3d_DDC(%arg0: tensor<?x?x?xf32, #DDC>, %arg1: tensor<?x?x?xf32>) -> tensor<?x?x?xf32, #DDC> {
   %c6 = arith.constant 6 : index
-  %s = bufferization.alloc_tensor(%c6, %c6, %c6) : tensor<?x?x?xf32, #DDC>
+  %s = tensor.empty(%c6, %c6, %c6) : tensor<?x?x?xf32, #DDC>
   %ret = linalg.conv_3d
      ins (%arg0, %arg1: tensor<?x?x?xf32, #DDC>, tensor<?x?x?xf32>)
     outs (%s: tensor<?x?x?xf32, #DDC>) -> tensor<?x?x?xf32, #DDC>

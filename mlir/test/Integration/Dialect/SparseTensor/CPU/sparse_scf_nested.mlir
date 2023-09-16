@@ -39,7 +39,7 @@ module @func_sparse.2 {
     %1 = scf.if %cond -> (tensor<2x3x4xf64, #SparseMatrix>) {
       %cst_2 = arith.constant dense<1.000000e+00> : tensor<f64>
       %cst_3 = arith.constant dense<1.000000e+00> : tensor<2x3x4xf64>
-      %2 = bufferization.alloc_tensor() : tensor<2x3x4xf64, #SparseMatrix>
+      %2 = tensor.empty() : tensor<2x3x4xf64, #SparseMatrix>
       %3 = linalg.generic {
         indexing_maps = [#map, #map, #map],
         iterator_types = ["parallel", "parallel", "parallel"]}
@@ -53,7 +53,7 @@ module @func_sparse.2 {
     } else {
       %cst_2 = arith.constant dense<1.000000e+00> : tensor<f64>
       %cst_3 = arith.constant dense<1.000000e+00> : tensor<2x3x4xf64>
-      %2 = bufferization.alloc_tensor() : tensor<2x3x4xf64, #SparseMatrix>
+      %2 = tensor.empty() : tensor<2x3x4xf64, #SparseMatrix>
       %3 = linalg.generic {
         indexing_maps = [#map, #map, #map],
         iterator_types = ["parallel", "parallel", "parallel"]}

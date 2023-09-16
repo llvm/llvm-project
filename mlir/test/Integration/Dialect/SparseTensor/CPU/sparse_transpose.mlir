@@ -60,7 +60,7 @@ module {
     %t = sparse_tensor.convert %arga
       : tensor<3x4xf64, #DCSR> to tensor<3x4xf64, #DCSC>
 
-    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %i = tensor.empty() : tensor<4x3xf64, #DCSR>
     %0 = linalg.generic #transpose_trait
        ins(%t: tensor<3x4xf64, #DCSC>)
        outs(%i: tensor<4x3xf64, #DCSR>) {
@@ -79,7 +79,7 @@ module {
   //
   func.func @sparse_transpose_auto(%arga: tensor<3x4xf64, #DCSR>)
                                        -> tensor<4x3xf64, #DCSR> {
-    %i = bufferization.alloc_tensor() : tensor<4x3xf64, #DCSR>
+    %i = tensor.empty() : tensor<4x3xf64, #DCSR>
     %0 = linalg.generic #transpose_trait
        ins(%arga: tensor<3x4xf64, #DCSR>)
        outs(%i: tensor<4x3xf64, #DCSR>) {
