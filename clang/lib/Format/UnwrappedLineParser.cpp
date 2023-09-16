@@ -364,10 +364,10 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
     else if (FormatTok->getType() == TT_MacroBlockEnd)
       kind = tok::r_brace;
 
-    auto ParseDefault = [this, OpeningBrace, InRequiresExpression, IfKind,
-                         &IfLBrace, &HasDoWhile, &HasLabel, &StatementCount] {
-      parseStructuralElement(OpeningBrace, InRequiresExpression, IfKind,
-                             &IfLBrace, HasDoWhile ? nullptr : &HasDoWhile,
+    auto ParseDefault = [this, OpeningBrace, IfKind, &IfLBrace, &HasDoWhile,
+                         &HasLabel, &StatementCount] {
+      parseStructuralElement(OpeningBrace, IfKind, &IfLBrace,
+                             HasDoWhile ? nullptr : &HasDoWhile,
                              HasLabel ? nullptr : &HasLabel);
       ++StatementCount;
       assert(StatementCount > 0 && "StatementCount overflow!");
@@ -1380,9 +1380,8 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
 }
 
 void UnwrappedLineParser::parseStructuralElement(
-    const FormatToken *OpeningBrace, bool InRequiresExpression,
-    IfStmtKind *IfKind, FormatToken **IfLeftBrace, bool *HasDoWhile,
-    bool *HasLabel) {
+    const FormatToken *OpeningBrace, IfStmtKind *IfKind,
+    FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
   if (Style.Language == FormatStyle::LK_TableGen &&
       FormatTok->is(tok::pp_include)) {
     nextToken();
@@ -1647,6 +1646,9 @@ void UnwrappedLineParser::parseStructuralElement(
   default:
     break;
   }
+
+  const bool InRequiresExpression =
+      OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
   do {
     const FormatToken *Previous = FormatTok->Previous;
     switch (FormatTok->Tok.getKind()) {

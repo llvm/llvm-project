@@ -143,7 +143,6 @@ private:
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
   void parseStructuralElement(const FormatToken *OpeningBrace = nullptr,
-                              bool InRequiresExpression = false,
                               IfStmtKind *IfKind = nullptr,
                               FormatToken **IfLeftBrace = nullptr,
                               bool *HasDoWhile = nullptr,
