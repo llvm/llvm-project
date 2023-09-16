@@ -78,7 +78,6 @@ class ScopedReport {
   }
 
  private:
-  ScopedErrorReportLock error_report_lock_;
   InternalMmapVector<char> error_message_;
   bool fatal;
 
