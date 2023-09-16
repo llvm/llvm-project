@@ -575,7 +575,7 @@ public:
   // Emit code to generate this result as a Value *.
   std::string asValue() override {
     if (AddressType)
-      return "(" + varname() + ".getPointer())";
+      return "(" + varname() + ".getRawPointer(*this))";
     return Result::asValue();
   }
   bool hasIntegerValue() const override { return Immediate; }

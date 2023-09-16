@@ -2291,7 +2291,7 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
 
   Address Addr = InputValue.getAddress(*this);
   ConstraintStr += '*';
-  return {Addr.getPointer(), Addr.getElementType()};
+  return {InputValue.getPointer(*this), Addr.getElementType()};
 }
 
 std::pair<llvm::Value *, llvm::Type *>
@@ -2698,7 +2698,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
       ArgTypes.push_back(DestAddr.getType());
       ArgElemTypes.push_back(DestAddr.getElementType());
-      Args.push_back(DestAddr.getPointer());
+      Args.push_back(DestAddr.getRawPointer(*this));
       Constraints += "=*";
       Constraints += OutputConstraint;
       ReadOnly = ReadNone = false;
@@ -3073,8 +3073,8 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
   CapturedStmtInfo->setContextValue(Builder.CreateLoad(DeclPtr));
 
   // Initialize variable-length arrays.
-  LValue Base = MakeNaturalAlignAddrLValue(CapturedStmtInfo->getContextValue(),
-                                           Ctx.getTagDeclType(RD));
+  LValue Base = MakeNaturalAlignRawAddrLValue(
+      CapturedStmtInfo->getContextValue(), Ctx.getTagDeclType(RD));
   for (auto *FD : RD->fields()) {
     if (FD->hasCapturedVLAType()) {
       auto *ExprArg =

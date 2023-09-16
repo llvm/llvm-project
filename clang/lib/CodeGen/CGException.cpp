@@ -397,27 +397,27 @@ namespace {
 void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
   // Make sure the exception object is cleaned up if there's an
   // exception during initialization.
-  pushFullExprCleanup<FreeException>(EHCleanup, addr.getPointer());
-  EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
+    pushFullExprCleanup<FreeException>(EHCleanup, addr.getRawPointer(*this));
+    EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
 
-  // __cxa_allocate_exception returns a void*;  we need to cast this
-  // to the appropriate type for the object.
-  llvm::Type *ty = ConvertTypeForMem(e->getType());
-  Address typedAddr = addr.withElementType(ty);
+    // __cxa_allocate_exception returns a void*;  we need to cast this
+    // to the appropriate type for the object.
+    llvm::Type *ty = ConvertTypeForMem(e->getType());
+    Address typedAddr = addr.withElementType(ty);
 
-  // FIXME: this isn't quite right!  If there's a final unelided call
-  // to a copy constructor, then according to [except.terminate]p1 we
-  // must call std::terminate() if that constructor throws, because
-  // technically that copy occurs after the exception expression is
-  // evaluated but before the exception is caught.  But the best way
-  // to handle that is to teach EmitAggExpr to do the final copy
-  // differently if it can't be elided.
-  EmitAnyExprToMem(e, typedAddr, e->getType().getQualifiers(),
-                   /*IsInit*/ true);
+    // FIXME: this isn't quite right!  If there's a final unelided call
+    // to a copy constructor, then according to [except.terminate]p1 we
+    // must call std::terminate() if that constructor throws, because
+    // technically that copy occurs after the exception expression is
+    // evaluated but before the exception is caught.  But the best way
+    // to handle that is to teach EmitAggExpr to do the final copy
+    // differently if it can't be elided.
+    EmitAnyExprToMem(e, typedAddr, e->getType().getQualifiers(),
+                     /*IsInit*/ true);
 
-  // Deactivate the cleanup block.
-  DeactivateCleanupBlock(cleanup,
-                         cast<llvm::Instruction>(typedAddr.getPointer()));
+    // Deactivate the cleanup block.
+    DeactivateCleanupBlock(
+        cleanup, cast<llvm::Instruction>(typedAddr.getRawPointer(*this)));
 }
 
 Address CodeGenFunction::getExceptionSlot() {
@@ -1834,7 +1834,8 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
                                                    llvm::Value *ParentFP) {
   llvm::CallInst *RecoverCall = nullptr;
   CGBuilderTy Builder(*this, AllocaInsertPt);
-  if (auto *ParentAlloca = dyn_cast<llvm::AllocaInst>(ParentVar.getPointer())) {
+  if (auto *ParentAlloca =
+          dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer())) {
     // Mark the variable escaped if nobody else referenced it and compute the
     // localescape index.
     auto InsertPair = ParentCGF.EscapedLocals.insert(
@@ -1851,8 +1852,8 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
     // If the parent didn't have an alloca, we're doing some nested outlining.
     // Just clone the existing localrecover call, but tweak the FP argument to
     // use our FP value. All other arguments are constants.
-    auto *ParentRecover =
-        cast<llvm::IntrinsicInst>(ParentVar.getPointer()->stripPointerCasts());
+    auto *ParentRecover = cast<llvm::IntrinsicInst>(
+        ParentVar.getRawPointer(*this)->stripPointerCasts());
     assert(ParentRecover->getIntrinsicID() == llvm::Intrinsic::localrecover &&
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
@@ -1925,7 +1926,8 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         if (isa<ImplicitParamDecl>(D) &&
             D->getType() == getContext().VoidPtrTy) {
           assert(D->getName().starts_with("frame_pointer"));
-          FramePtrAddrAlloca = cast<llvm::AllocaInst>(I.second.getPointer());
+          FramePtrAddrAlloca =
+              cast<llvm::AllocaInst>(I.second.getBasePointer());
           break;
         }
       }
@@ -1986,7 +1988,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         LValue ThisFieldLValue =
             EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
-          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
+          CXXThisValue = ThisFieldLValue.getAddress(*this).getRawPointer(*this);
         } else {
           CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
                              .getScalarVal();
