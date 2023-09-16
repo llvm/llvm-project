@@ -61,6 +61,8 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
 #define CLONE_RESULT_REGISTER "t0"
 #elif defined(LIBC_TARGET_ARCH_IS_X86_64)
 #define CLONE_RESULT_REGISTER "rax"
+#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON)
+#define CLONE_RESULT_REGISTER "r0"
 #else
 #error "CLONE_RESULT_REGISTER not defined for your target architecture"
 #endif
@@ -297,7 +299,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // Also, we want the result of the syscall to be in a register as the child
   // thread gets a completely different stack after it is created. The stack
   // variables from this function will not be availalbe to the child thread.
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) || defined(LIBC_TARGET_ARCH_IS_HEXAGON)
   long register clone_result asm(CLONE_RESULT_REGISTER);
   clone_result = LIBC_NAMESPACE::syscall_impl<long>(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,

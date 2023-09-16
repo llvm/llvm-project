@@ -43,6 +43,8 @@ union ThreadReturnValue {
      defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                    \
      defined(LIBC_TARGET_ARCH_IS_ANY_RISCV))
 constexpr unsigned int STACK_ALIGNMENT = 16;
+#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON)
+constexpr unsigned int STACK_ALIGNMENT = 8;
 #endif
 // TODO: Provide stack alignment requirements for other architectures.
 

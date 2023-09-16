@@ -32,6 +32,9 @@ typedef struct {
 #elif defined(__riscv_float_abi_single)
 #error "__jmp_buf not available for your target architecture."
 #endif
+#elif defined(__hexagon__)
+  /* Callee-saved registers.  */
+  long int __regs[16];
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif

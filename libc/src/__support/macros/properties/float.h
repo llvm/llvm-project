@@ -18,11 +18,12 @@
 // https://developer.arm.com/documentation/dui0491/i/C-and-C---Implementation-Details/Basic-data-types
 // https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms
 // https://docs.amd.com/bundle/HIP-Programming-Guide-v5.1/page/Programming_with_HIP.html
+// https://lists.llvm.org/pipermail/llvm-dev/attachments/20190916/21516a52/attachment-0001.pdf
 #if defined(LIBC_TARGET_OS_IS_WINDOWS) ||                                      \
     (defined(LIBC_TARGET_OS_IS_MACOS) &&                                       \
      defined(LIBC_TARGET_ARCH_IS_AARCH64)) ||                                  \
     defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_NVPTX) ||  \
-    defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+    defined(LIBC_TARGET_ARCH_IS_AMDGPU) || defined(LIBC_TARGET_ARCH_IS_HEXAGON)
 #define LONG_DOUBLE_IS_DOUBLE
 #endif
 

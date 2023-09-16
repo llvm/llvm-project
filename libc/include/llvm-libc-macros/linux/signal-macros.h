@@ -82,7 +82,7 @@
 #elif defined(__aarch64__)
 #define MINSIGSTKSZ 5120
 #define SIGSTKSZ 16384
-#elif defined(__riscv)
+#elif defined(__riscv) || defined(__hexagon__)
 #define MINSIGSTKSZ 2048
 #define SIGSTKSZ 8192
 #else
