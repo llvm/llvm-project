@@ -584,74 +584,6 @@ bool Sema::addInstantiatedCapturesToScope(
   return false;
 }
 
-static FunctionDecl *getPatternFunctionDecl(FunctionDecl *FD) {
-  if (FD->getTemplatedKind() == FunctionDecl::TK_MemberSpecialization) {
-    while (FD->getInstantiatedFromMemberFunction())
-      FD = FD->getInstantiatedFromMemberFunction();
-    return FD;
-  }
-
-  FunctionTemplateDecl *FTD = FD->getPrimaryTemplate();
-  while (FTD->getInstantiatedFromMemberTemplate())
-    FTD = FTD->getInstantiatedFromMemberTemplate();
-
-  return FTD->getTemplatedDecl();
-}
-
-static void addDeclsFromParentScope(Sema &S, FunctionDecl *FD,
-                                    LocalInstantiationScope &Scope) {
-  assert(isLambdaCallOperator(FD) && "FD must be a lambda call operator");
-
-  LambdaScopeInfo *LSI = cast<LambdaScopeInfo>(S.getFunctionScopes().back());
-
-  auto captureVar = [&](VarDecl *VD) {
-    LSI->addCapture(VD, /*isBlock=*/false, /*isByref=*/false,
-                    /*isNested=*/false, VD->getBeginLoc(), SourceLocation(),
-                    VD->getType(), /*Invalid=*/false);
-  };
-
-  while (true) {
-    FD = dyn_cast_or_null<FunctionDecl>(FD->getParent()->getParent());
-    if (!FD || !FD->isTemplateInstantiation())
-      return;
-
-    FunctionDecl *Pattern = getPatternFunctionDecl(FD);
-
-    for (unsigned I = 0; I < Pattern->getNumParams(); ++I) {
-      ParmVarDecl *PVD = Pattern->getParamDecl(I);
-      if (!PVD->isParameterPack()) {
-        Scope.InstantiatedLocal(PVD, FD->getParamDecl(I));
-        captureVar(FD->getParamDecl(I));
-        continue;
-      }
-
-      Scope.MakeInstantiatedLocalArgPack(PVD);
-
-      for (ParmVarDecl *Inst : FD->parameters().drop_front(I)) {
-        Scope.InstantiatedLocalPackArg(PVD, Inst);
-        captureVar(Inst);
-      }
-    }
-
-    for (auto *decl : Pattern->decls()) {
-      if (!isa<VarDecl>(decl) || isa<ParmVarDecl>(decl))
-        continue;
-
-      IdentifierInfo *II = cast<NamedDecl>(decl)->getIdentifier();
-      auto it = llvm::find_if(FD->decls(), [&](Decl *inst) {
-        VarDecl *VD = dyn_cast<VarDecl>(inst);
-        return VD && VD->isLocalVarDecl() && VD->getIdentifier() == II;
-      });
-
-      if (it == FD->decls().end())
-        continue;
-
-      Scope.InstantiatedLocal(decl, *it);
-      captureVar(cast<VarDecl>(*it));
-    }
-  }
-}
-
 bool Sema::SetupConstraintScope(
     FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
     MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope) {
@@ -787,10 +719,8 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
 
   LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      *this, const_cast<FunctionDecl *>(FD), *MLTAL, Scope);
-
-  if (isLambdaCallOperator(FD) && ForOverloadResolution)
-    addDeclsFromParentScope(*this, const_cast<FunctionDecl *>(FD), Scope);
+      *this, const_cast<FunctionDecl *>(FD), *MLTAL, Scope,
+      ForOverloadResolution);
 
   return CheckConstraintSatisfaction(
       FD, {FD->getTrailingRequiresClause()}, *MLTAL,
@@ -982,9 +912,6 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
   LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
       *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
-
-  if (isLambdaCallOperator(Decl))
-    addDeclsFromParentScope(*this, Decl, Scope);
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,
