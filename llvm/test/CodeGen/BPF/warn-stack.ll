@@ -2,11 +2,11 @@
 
 ;; CHECK-NOT: nowarn
 define void @nowarn() local_unnamed_addr #0 !dbg !6 {
-  %1 = alloca [504 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 504, ptr nonnull %1) #4, !dbg !15
+  %1 = alloca [511 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 511, ptr nonnull %1) #4, !dbg !15
   tail call void @llvm.dbg.declare(metadata ptr %1, metadata !10, metadata !16), !dbg !17
   call void @doit(ptr nonnull %1) #4, !dbg !18
-  call void @llvm.lifetime.end.p0(i64 504, ptr nonnull %1) #4, !dbg !19
+  call void @llvm.lifetime.end.p0(i64 511, ptr nonnull %1) #4, !dbg !19
   ret void, !dbg !19
 }
 
