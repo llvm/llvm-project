@@ -2616,20 +2616,33 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   if (!TrueIfSigned)
     std::swap(TrueVal, FalseVal);
 
-  // We are matching a quite specific pattern here:
+  auto FoldToBitwiseAnd = [&](Value *Remainder) -> Instruction * {
+    Value *Add = Builder.CreateAdd(
+        Remainder, Constant::getAllOnesValue(RemRes->getType()));
+    return BinaryOperator::CreateAnd(Op, Add);
+  };
+
+  // Match the general case:
   // %rem = srem i32 %x, %n
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (!(match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
-        match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
-        IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
-        FalseVal == RemRes))
-    return nullptr;
+  if (match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
+      match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
+      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(Remainder);
 
-  Value *Add = Builder.CreateAdd(Remainder,
-                                 Constant::getAllOnesValue(RemRes->getType()));
-  return BinaryOperator::CreateAnd(Op, Add);
+  // Match the case where the one arm has been replaced by constant 1:
+  // %rem = srem i32 %n, 2
+  // %cnd = icmp slt i32 %rem, 0
+  // %sel = select i1 %cnd, i32 1, i32 %rem
+  if (match(TrueVal, m_One()) &&
+      match(RemRes, m_SRem(m_Value(Op), m_SpecificInt(2))) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(ConstantInt::get(RemRes->getType(), 2));
+
+  return nullptr;
 }
 
 static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
