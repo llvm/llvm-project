@@ -51,7 +51,7 @@ void DescribeThread(AsanThreadContext *context) {
   InternalScopedString str;
   str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
   if (context->parent_tid == kInvalidTid) {
-    str.AppendF(" created by unknown thread\n");
+    str.Append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
   }
@@ -126,7 +126,7 @@ static void GetAccessToHeapChunkInformation(ChunkAccess *descr,
 static void PrintHeapChunkAccess(uptr addr, const ChunkAccess &descr) {
   Decorator d;
   InternalScopedString str;
-  str.AppendF("%s", d.Location());
+  str.Append(d.Location());
   switch (descr.access_type) {
     case kAccessTypeLeft:
       str.AppendF("%p is located %zd bytes before", (void *)descr.bad_addr,
@@ -148,7 +148,7 @@ static void PrintHeapChunkAccess(uptr addr, const ChunkAccess &descr) {
   str.AppendF(" %zu-byte region [%p,%p)\n", descr.chunk_size,
               (void *)descr.chunk_begin,
               (void *)(descr.chunk_begin + descr.chunk_size));
-  str.AppendF("%s", d.Default());
+  str.Append(d.Default());
   Printf("%s", str.data());
 }
 
@@ -277,7 +277,7 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
                                             const __asan_global &g) {
   InternalScopedString str;
   Decorator d;
-  str.AppendF("%s", d.Location());
+  str.Append(d.Location());
   if (addr < g.beg) {
     str.AppendF("%p is located %zd bytes before", (void *)addr, g.beg - addr);
   } else if (addr + access_size > g.beg + g.size) {
@@ -293,7 +293,7 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
               MaybeDemangleGlobalName(g.name));
   PrintGlobalLocation(&str, g);
   str.AppendF("' (0x%zx) of size %zu\n", g.beg, g.size);
-  str.AppendF("%s", d.Default());
+  str.Append(d.Default());
   PrintGlobalNameIfASCII(&str, g);
   Printf("%s", str.data());
 }

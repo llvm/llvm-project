@@ -160,7 +160,7 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
     p++;
     switch (*p) {
     case '%':
-      buffer->AppendF("%%");
+      buffer->Append("%");
       break;
     // Frame number and all fields of AddressInfo structure.
     case 'n':
@@ -283,7 +283,7 @@ void RenderData(InternalScopedString *buffer, const char *format,
     p++;
     switch (*p) {
       case '%':
-        buffer->AppendF("%%");
+        buffer->Append("%");
         break;
       case 's':
         buffer->AppendF("%s", StripPathPrefix(DI->file, strip_path_prefix));
