@@ -338,8 +338,6 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
 }
 
 void InternalScopedString::Append(const char *str) {
-  if (!str)  // For consistency with AppendF("%s", str) which accepts nullptr.
-    return;
   uptr prev_len = length();
   uptr str_len = internal_strlen(str);
   buffer_.resize(prev_len + str_len + 1);
