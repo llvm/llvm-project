@@ -2768,7 +2768,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       // Update register live in.
       if (!MRI.isReserved(RPI.Reg1))
         MBB.addLiveIn(RPI.Reg1);
-      if (!MRI.isReserved(RPI.Reg2))
+      if (RPI.isPaired() && !MRI.isReserved(RPI.Reg2))
         MBB.addLiveIn(RPI.Reg2);
     }
     return true;
@@ -3018,6 +3018,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
                                 : (unsigned)AArch64::NoRegister;
 
   unsigned ExtraCSSpill = 0;
+  bool HasUnpairedGPR64 = false;
   // Figure out which callee-saved registers to save/restore.
   for (unsigned i = 0; CSRegs[i]; ++i) {
     const unsigned Reg = CSRegs[i];
@@ -3028,10 +3029,29 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
     bool RegUsed = SavedRegs.test(Reg);
     unsigned PairedReg = AArch64::NoRegister;
-    if (AArch64::GPR64RegClass.contains(Reg) ||
-        AArch64::FPR64RegClass.contains(Reg) ||
-        AArch64::FPR128RegClass.contains(Reg))
-      PairedReg = CSRegs[i ^ 1];
+    const bool RegIsGPR64 = AArch64::GPR64RegClass.contains(Reg);
+    if (RegIsGPR64 || AArch64::FPR64RegClass.contains(Reg) ||
+        AArch64::FPR128RegClass.contains(Reg)) {
+      // Compensate for odd numbers of GP CSRs.
+      // For now, all the known cases of odd number of CSRs are of GPRs.
+      if (HasUnpairedGPR64)
+        PairedReg = CSRegs[i % 2 == 0 ? i - 1 : i + 1];
+      else
+        PairedReg = CSRegs[i ^ 1];
+    }
+
+    // If the function requires all the GP registers to save (SavedRegs),
+    // and there are an odd number of GP CSRs at the same time (CSRegs),
+    // PairedReg could be in a different register class from Reg, which would
+    // lead to an FPR (usually D8) accidentally being marked saved.
+    if (RegIsGPR64 && !AArch64::GPR64RegClass.contains(PairedReg)) {
+      PairedReg = AArch64::NoRegister;
+      HasUnpairedGPR64 = true;
+    }
+    assert(PairedReg == AArch64::NoRegister ||
+           AArch64::GPR64RegClass.contains(Reg, PairedReg) ||
+           AArch64::FPR64RegClass.contains(Reg, PairedReg) ||
+           AArch64::FPR128RegClass.contains(Reg, PairedReg));
 
     if (!RegUsed) {
       if (AArch64::GPR64RegClass.contains(Reg) &&
@@ -3130,12 +3150,21 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Spilling " << printReg(UnspilledCSGPR, RegInfo)
                         << " to get a scratch register.\n");
       SavedRegs.set(UnspilledCSGPR);
+      ExtraCSSpill = UnspilledCSGPR;
+
       // MachO's compact unwind format relies on all registers being stored in
       // pairs, so if we need to spill one extra for BigStack, then we need to
       // store the pair.
-      if (producePairRegisters(MF))
-        SavedRegs.set(UnspilledCSGPRPaired);
-      ExtraCSSpill = UnspilledCSGPR;
+      if (producePairRegisters(MF)) {
+        if (UnspilledCSGPRPaired == AArch64::NoRegister) {
+          // Failed to make a pair for compact unwind format, revert spilling.
+          if (produceCompactUnwindFrame(MF)) {
+            SavedRegs.reset(UnspilledCSGPR);
+            ExtraCSSpill = AArch64::NoRegister;
+          }
+        } else
+          SavedRegs.set(UnspilledCSGPRPaired);
+      }
     }
 
     // If we didn't find an extra callee-saved register to spill, create

@@ -146,8 +146,11 @@ static std::string getFrameHelperName(SmallVectorImpl<unsigned> &Regs,
     break;
   }
 
-  for (auto Reg : Regs)
+  for (auto Reg : Regs) {
+    if (Reg == AArch64::NoRegister)
+      continue;
     RegStream << AArch64InstPrinter::getRegisterName(Reg);
+  }
 
   return RegStream.str();
 }
@@ -195,10 +198,18 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
 }
 
 /// Emit a store-pair instruction for frame-setup.
+/// If Reg2 is AArch64::NoRegister, emit a gap to respect the alignment
+/// for unpaired registers.
 static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator Pos,
                       const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
                       int Offset, bool IsPreDec) {
+  assert(Reg1 != AArch64::NoRegister);
+  if (Reg2 == AArch64::NoRegister) {
+    assert(AArch64::GPR64RegClass.contains(Reg1));
+    Reg2 = Reg1;
+    Reg1 = AArch64::XZR;
+  }
   bool IsFloat = AArch64::FPR64RegClass.contains(Reg1);
   assert(!(IsFloat ^ AArch64::FPR64RegClass.contains(Reg2)));
   unsigned Opc;
@@ -218,10 +229,18 @@ static void emitStore(MachineFunction &MF, MachineBasicBlock &MBB,
 }
 
 /// Emit a load-pair instruction for frame-destroy.
+/// If Reg2 is AArch64::NoRegister, respect the alignment for unpaired
+/// registers by reading the gap into XZR.
 static void emitLoad(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator Pos,
                      const TargetInstrInfo &TII, unsigned Reg1, unsigned Reg2,
                      int Offset, bool IsPostDec) {
+  assert(Reg1 != AArch64::NoRegister);
+  if (Reg2 == AArch64::NoRegister) {
+    assert(AArch64::GPR64RegClass.contains(Reg1));
+    Reg2 = Reg1;
+    Reg1 = AArch64::XZR;
+  }
   bool IsFloat = AArch64::FPR64RegClass.contains(Reg1);
   assert(!(IsFloat ^ AArch64::FPR64RegClass.contains(Reg2)));
   unsigned Opc;
@@ -433,9 +452,18 @@ bool AArch64LowerHomogeneousPE::lowerEpilog(
 
   DebugLoc DL = MI.getDebugLoc();
   SmallVector<unsigned, 8> Regs;
+  bool HasUnpairedReg = false;
   for (auto &MO : MI.operands())
-    if (MO.isReg())
+    if (MO.isReg()) {
+      if (!MO.getReg().isValid()) {
+        // For now we are only expecting unpaired GP registers which should
+        // occur exactly once.
+        assert(!HasUnpairedReg);
+        HasUnpairedReg = true;
+      }
       Regs.push_back(MO.getReg());
+    }
+  (void)HasUnpairedReg;
   int Size = (int)Regs.size();
   if (Size == 0)
     return false;
@@ -507,17 +535,26 @@ bool AArch64LowerHomogeneousPE::lowerProlog(
 
   DebugLoc DL = MI.getDebugLoc();
   SmallVector<unsigned, 8> Regs;
+  bool HasUnpairedReg = false;
   int LRIdx = 0;
   std::optional<int> FpOffset;
   for (auto &MO : MI.operands()) {
     if (MO.isReg()) {
-      if (MO.getReg() == AArch64::LR)
-        LRIdx = Regs.size();
+      if (MO.getReg().isValid()) {
+        if (MO.getReg() == AArch64::LR)
+          LRIdx = Regs.size();
+      } else {
+        // For now we are only expecting unpaired GP registers which should
+        // occur exactly once.
+        assert(!HasUnpairedReg);
+        HasUnpairedReg = true;
+      }
       Regs.push_back(MO.getReg());
     } else if (MO.isImm()) {
       FpOffset = MO.getImm();
     }
   }
+  (void)HasUnpairedReg;
   int Size = (int)Regs.size();
   if (Size == 0)
     return false;
