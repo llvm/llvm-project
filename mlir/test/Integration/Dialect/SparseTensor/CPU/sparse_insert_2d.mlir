@@ -28,7 +28,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #Dense = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "dense"]
+  map = (d0, d1) -> (d0 : dense, d1 : dense)
 }>
 
 #SortedCOO = #sparse_tensor.encoding<{
@@ -40,11 +40,11 @@
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #Row = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : dense)
 }>
 
 module {

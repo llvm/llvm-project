@@ -283,7 +283,7 @@ func.func @sparse_noe(%arg0: tensor<128xf64, #SparseVector>) -> index {
 
 // -----
 
-#DenseMatrix = #sparse_tensor.encoding<{lvlTypes = ["dense","dense"]}>
+#DenseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : dense)}>
 
 // CHECK-LABEL: func @sparse_load(
 //  CHECK-SAME: %[[A:.*]]: tensor<16x32xf64, #{{.*}}>)
@@ -296,7 +296,7 @@ func.func @sparse_load(%arg0: tensor<16x32xf64, #DenseMatrix>) -> tensor<16x32xf
 
 // -----
 
-#DenseMatrix = #sparse_tensor.encoding<{lvlTypes = ["dense","dense"]}>
+#DenseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : dense)}>
 
 // CHECK-LABEL: func @sparse_load_ins(
 //  CHECK-SAME: %[[A:.*]]: tensor<16x32xf64, #{{.*}}>)
@@ -364,7 +364,7 @@ func.func @sparse_push_back_n(%arg0: index, %arg1: memref<?xf64>, %arg2: f64, %a
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_expansion(
 //  CHECK-SAME: %[[A:.*]]: tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>>)
@@ -378,7 +378,7 @@ func.func @sparse_expansion(%tensor: tensor<8x8xf64, #SparseMatrix>) -> index {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_compression(
 //  CHECK-SAME: %[[A0:.*0]]: memref<?xf64>,
@@ -402,7 +402,7 @@ func.func @sparse_compression(%values: memref<?xf64>,
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_out(
 //  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #sparse_tensor.encoding<{{.*}}>>,
@@ -416,7 +416,7 @@ func.func @sparse_out(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr<i8
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_binary(
 //  CHECK-SAME:   %[[A:.*]]: f64, %[[B:.*]]: i64) -> f64 {
@@ -450,7 +450,7 @@ func.func @sparse_binary(%arg0: f64, %arg1: i64) -> f64 {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_unary(
 //  CHECK-SAME:   %[[A:.*]]: f64) -> f64 {
@@ -480,7 +480,7 @@ func.func @sparse_unary(%arg0: f64) -> f64 {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_unary(
 //  CHECK-SAME:   %[[A:.*]]: f64) -> i64 {
@@ -507,7 +507,7 @@ func.func @sparse_unary(%arg0: f64) -> i64 {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_reduce_2d_to_1d(
 //  CHECK-SAME:   %[[A:.*]]: f64, %[[B:.*]]: f64) -> f64 {
@@ -529,7 +529,7 @@ func.func @sparse_reduce_2d_to_1d(%arg0: f64, %arg1: f64) -> f64 {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_select(
 //  CHECK-SAME:   %[[A:.*]]: f64) -> f64 {
@@ -553,7 +553,7 @@ func.func @sparse_select(%arg0: f64) -> f64 {
 
 // -----
 
-#SparseMatrix = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#SparseMatrix = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @concat_sparse_sparse(
 //  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64
@@ -577,7 +577,7 @@ func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_tensor_foreach(
 //  CHECK-SAME: %[[A0:.*]]: tensor<2x4xf64
@@ -592,7 +592,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 // CHECK-LABEL: func @sparse_tensor_foreach(
 //  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>>,
