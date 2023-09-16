@@ -746,7 +746,7 @@ void OutputSection::checkDynRelAddends(const uint8_t *bufStart) {
       assert(relOsec != nullptr && "missing output section for relocation");
       // Some targets have NOBITS synthetic sections with dynamic relocations
       // with non-zero addends. Skip such sections.
-      if (config->emachine == EM_PPC64 &&
+      if (is_contained({EM_PPC, EM_PPC64}, config->emachine) &&
           (rel.inputSec == in.ppc64LongBranchTarget.get() ||
            rel.inputSec == in.igotPlt.get()))
         continue;

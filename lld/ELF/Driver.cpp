@@ -1714,7 +1714,7 @@ static void setConfigs(opt::InputArgList &args) {
   // have support for reading Elf_Rel addends, so we only enable for a subset.
 #ifndef NDEBUG
   bool checkDynamicRelocsDefault =
-      !llvm::is_contained({EM_AMDGPU, EM_HEXAGON, EM_PPC}, m);
+      !llvm::is_contained({EM_AMDGPU, EM_HEXAGON}, m);
 #else
   bool checkDynamicRelocsDefault = false;
 #endif
