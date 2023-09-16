@@ -45,6 +45,7 @@ int main(int, char**) {
     const std::jthread jt{[&done] { done.wait(false); }};
     std::same_as<bool> decltype(auto) result = jt.joinable();
     done                                     = true;
+    done.notify_all();
     assert(result);
   }
 
