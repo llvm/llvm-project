@@ -17,8 +17,8 @@
 ; CHECK-SAME: annotations: ![[ANNOTATIONS:[0-9]+]]
 ; CHECK: ![[SCOPE]] = {{.*}} !DICompileUnit(
 ; CHECK: ![[ANNOTATIONS]] = !{![[FUNC_NAME1:[0-9]+]], ![[FUNC_NAME2:[0-9]+]]}
-; CHECK: ![[FUNC_NAME1]] = !{!"Cov Function Name", !"bar"}
-; CHECK: ![[FUNC_NAME2]] = !{!"Cov Function Name", !"baz"}
+; CHECK: ![[FUNC_NAME1]] = !{!"Coverage Function Name", !"bar"}
+; CHECK: ![[FUNC_NAME2]] = !{!"Coverage Function Name", !"baz"}
 
 define void @_Z3foov() !dbg !12 {
   call void @llvm.instrprof.increment(ptr @__profn_foo, i64 12345678, i32 2, i32 0)
@@ -54,10 +54,10 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; CHECK-DWARF:     DW_AT_name	("__llvm_coverage_names")
 ; CHECK-DWARF:     DW_AT_type	({{.*}} "Coverage Type")
 ; CHECK-DWARF:     DW_TAG_LLVM_annotation
-; CHECK-DWARF:       DW_AT_name	("Cov Function Name")
+; CHECK-DWARF:       DW_AT_name	("Coverage Function Name")
 ; CHECK-DWARF:       DW_AT_const_value	("bar")
 ; CHECK-DWARF:     DW_TAG_LLVM_annotation
-; CHECK-DWARF:       DW_AT_name	("Cov Function Name")
+; CHECK-DWARF:       DW_AT_name	("Coverage Function Name")
 ; CHECK-DWARF:       DW_AT_const_value	("baz")
 ; CHECK-DWARF:   DW_TAG_unspecified_type
 ; CHECK-DWARF:     DW_AT_name ("Coverage Type")
