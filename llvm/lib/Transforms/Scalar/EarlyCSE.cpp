@@ -143,11 +143,11 @@ struct SimpleValue {
              !CI->getFunction()->isPresplitCoroutine();
     }
     return isa<CastInst>(Inst) || isa<UnaryOperator>(Inst) ||
-           isa<BinaryOperator>(Inst) || isa<GetElementPtrInst>(Inst) ||
-           isa<CmpInst>(Inst) || isa<SelectInst>(Inst) ||
-           isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
-           isa<ShuffleVectorInst>(Inst) || isa<ExtractValueInst>(Inst) ||
-           isa<InsertValueInst>(Inst) || isa<FreezeInst>(Inst);
+           isa<BinaryOperator>(Inst) || isa<CmpInst>(Inst) ||
+           isa<SelectInst>(Inst) || isa<ExtractElementInst>(Inst) ||
+           isa<InsertElementInst>(Inst) || isa<ShuffleVectorInst>(Inst) ||
+           isa<ExtractValueInst>(Inst) || isa<InsertValueInst>(Inst) ||
+           isa<FreezeInst>(Inst);
   }
 };
 
@@ -307,10 +307,9 @@ static unsigned getHashValueImpl(SimpleValue Val) {
                         IVI->getOperand(1),
                         hash_combine_range(IVI->idx_begin(), IVI->idx_end()));
 
-  assert((isa<CallInst>(Inst) || isa<GetElementPtrInst>(Inst) ||
-          isa<ExtractElementInst>(Inst) || isa<InsertElementInst>(Inst) ||
-          isa<ShuffleVectorInst>(Inst) || isa<UnaryOperator>(Inst) ||
-          isa<FreezeInst>(Inst)) &&
+  assert((isa<CallInst>(Inst) || isa<ExtractElementInst>(Inst) ||
+          isa<InsertElementInst>(Inst) || isa<ShuffleVectorInst>(Inst) ||
+          isa<UnaryOperator>(Inst) || isa<FreezeInst>(Inst)) &&
          "Invalid/unknown instruction");
 
   // Handle intrinsics with commutative operands.
@@ -554,6 +553,77 @@ bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
 }
 
 //===----------------------------------------------------------------------===//
+// GEPValue
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+struct GEPValue {
+  Instruction *Inst;
+  APInt ConstantOffset;
+  bool HasConstantOffset;
+
+  GEPValue(Instruction *I) : Inst(I), HasConstantOffset(false) {
+      assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
+  }
+  GEPValue(Instruction *I, APInt ConstantOffset, bool HasConstantOffset)
+      : Inst(I), ConstantOffset(ConstantOffset),
+        HasConstantOffset(HasConstantOffset) {
+      assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
+  }
+
+  bool isSentinel() const {
+      return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
+             Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+  }
+
+  static bool canHandle(Instruction *Inst) {
+      return isa<GetElementPtrInst>(Inst);
+  }
+};
+
+} // namespace
+
+namespace llvm {
+
+template <> struct DenseMapInfo<GEPValue> {
+  static inline GEPValue getEmptyKey() {
+      return DenseMapInfo<Instruction *>::getEmptyKey();
+  }
+
+  static inline GEPValue getTombstoneKey() {
+      return DenseMapInfo<Instruction *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(GEPValue Val);
+  static bool isEqual(GEPValue LHS, GEPValue RHS);
+};
+
+} // end namespace llvm
+
+unsigned DenseMapInfo<GEPValue>::getHashValue(GEPValue Val) {
+  GetElementPtrInst *GEP = cast<GetElementPtrInst>(Val.Inst);
+  if (Val.HasConstantOffset)
+      return hash_combine(GEP->getOpcode(), GEP->getPointerOperand(),
+                          Val.ConstantOffset);
+  return hash_combine(
+      GEP->getOpcode(),
+      hash_combine_range(GEP->value_op_begin(), GEP->value_op_end()));
+}
+
+bool DenseMapInfo<GEPValue>::isEqual(GEPValue LHS, GEPValue RHS) {
+  if (LHS.isSentinel() || RHS.isSentinel())
+      return LHS.Inst == RHS.Inst;
+  GetElementPtrInst *LGEP = cast<GetElementPtrInst>(LHS.Inst);
+  GetElementPtrInst *RGEP = cast<GetElementPtrInst>(RHS.Inst);
+  if (LGEP->getPointerOperand() != RGEP->getPointerOperand())
+      return false;
+  if (LHS.HasConstantOffset && RHS.HasConstantOffset)
+      return LHS.ConstantOffset == RHS.ConstantOffset;
+  return LGEP->isIdenticalToWhenDefined(RGEP);
+}
+
+//===----------------------------------------------------------------------===//
 // EarlyCSE implementation
 //===----------------------------------------------------------------------===//
 
@@ -647,6 +717,13 @@ public:
       ScopedHashTable<CallValue, std::pair<Instruction *, unsigned>>;
   CallHTType AvailableCalls;
 
+  using GEPMapAllocatorTy =
+      RecyclingAllocator<BumpPtrAllocator,
+                         ScopedHashTableVal<GEPValue, Value *>>;
+  using GEPHTType = ScopedHashTable<GEPValue, Value *, DenseMapInfo<GEPValue>,
+                                    GEPMapAllocatorTy>;
+  GEPHTType AvailableGEPs;
+
   /// This is the current generation of the memory value.
   unsigned CurrentGeneration = 0;
 
@@ -667,9 +744,11 @@ private:
   class NodeScope {
   public:
     NodeScope(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,
-              InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls)
-      : Scope(AvailableValues), LoadScope(AvailableLoads),
-        InvariantScope(AvailableInvariants), CallScope(AvailableCalls) {}
+              InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls,
+              GEPHTType &AvailableGEPs)
+        : Scope(AvailableValues), LoadScope(AvailableLoads),
+          InvariantScope(AvailableInvariants), CallScope(AvailableCalls),
+          GEPScope(AvailableGEPs) {}
     NodeScope(const NodeScope &) = delete;
     NodeScope &operator=(const NodeScope &) = delete;
 
@@ -678,6 +757,7 @@ private:
     LoadHTType::ScopeTy LoadScope;
     InvariantHTType::ScopeTy InvariantScope;
     CallHTType::ScopeTy CallScope;
+    GEPHTType::ScopeTy GEPScope;
   };
 
   // Contains all the needed information to create a stack for doing a depth
@@ -688,13 +768,13 @@ private:
   public:
     StackNode(ScopedHTType &AvailableValues, LoadHTType &AvailableLoads,
               InvariantHTType &AvailableInvariants, CallHTType &AvailableCalls,
-              unsigned cg, DomTreeNode *n, DomTreeNode::const_iterator child,
+              GEPHTType &AvailableGEPs, unsigned cg, DomTreeNode *n,
+              DomTreeNode::const_iterator child,
               DomTreeNode::const_iterator end)
         : CurrentGeneration(cg), ChildGeneration(cg), Node(n), ChildIter(child),
           EndIter(end),
           Scopes(AvailableValues, AvailableLoads, AvailableInvariants,
-                 AvailableCalls)
-          {}
+                 AvailableCalls, AvailableGEPs) {}
     StackNode(const StackNode &) = delete;
     StackNode &operator=(const StackNode &) = delete;
 
@@ -1561,6 +1641,39 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
+    if (GEPValue::canHandle(&Inst)) {
+      GetElementPtrInst *GEP = cast<GetElementPtrInst>(&Inst);
+      APInt Offset(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      bool HasConstantOffset = GEP->accumulateConstantOffset(SQ.DL, Offset);
+      GEPValue GEPVal(GEP, Offset, HasConstantOffset);
+      if (Value *V = AvailableGEPs.lookup(GEPVal)) {
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
+                          << '\n');
+        if (auto *I = dyn_cast<Instruction>(V)) {
+          // If I being poison triggers UB, there is no need to drop those
+          // flags. Otherwise, only retain flags present on both I and Inst.
+          // TODO: Currently some fast-math flags are not treated as
+          // poison-generating even though they should. Until this is fixed,
+          // always retain flags present on both I and Inst for floating point
+          // instructions.
+          if (isa<FPMathOperator>(I) ||
+              (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
+            I->andIRFlags(&Inst);
+        }
+        Inst.replaceAllUsesWith(V);
+        salvageKnowledge(&Inst, &AC);
+        removeMSSA(Inst);
+        Inst.eraseFromParent();
+        Changed = true;
+        ++NumCSE;
+        continue;
+      }
+
+      // Otherwise, just remember that this value is available.
+      AvailableGEPs.insert(GEPVal, &Inst);
+      continue;
+    }
+
     // A release fence requires that all stores complete before it, but does
     // not prevent the reordering of following loads 'before' the fence.  As a
     // result, we don't need to consider it as writing to memory and don't need
@@ -1675,7 +1788,7 @@ bool EarlyCSE::run() {
   // Process the root node.
   nodesToProcess.push_back(new StackNode(
       AvailableValues, AvailableLoads, AvailableInvariants, AvailableCalls,
-      CurrentGeneration, DT.getRootNode(),
+      AvailableGEPs, CurrentGeneration, DT.getRootNode(),
       DT.getRootNode()->begin(), DT.getRootNode()->end()));
 
   assert(!CurrentGeneration && "Create a new EarlyCSE instance to rerun it.");
@@ -1698,10 +1811,10 @@ bool EarlyCSE::run() {
     } else if (NodeToProcess->childIter() != NodeToProcess->end()) {
       // Push the next child onto the stack.
       DomTreeNode *child = NodeToProcess->nextChild();
-      nodesToProcess.push_back(
-          new StackNode(AvailableValues, AvailableLoads, AvailableInvariants,
-                        AvailableCalls, NodeToProcess->childGeneration(),
-                        child, child->begin(), child->end()));
+      nodesToProcess.push_back(new StackNode(
+          AvailableValues, AvailableLoads, AvailableInvariants, AvailableCalls,
+          AvailableGEPs, NodeToProcess->childGeneration(), child,
+          child->begin(), child->end()));
     } else {
       // It has been processed, and there are no more children to process,
       // so delete it and pop it off the stack.

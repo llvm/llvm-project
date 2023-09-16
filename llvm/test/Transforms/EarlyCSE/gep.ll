@@ -10,10 +10,7 @@ define void @foo(ptr %a, <4 x i64> %b, i64 %i) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ptr [[A:%.*]], <4 x i64> [[B:%.*]], i64 [[I:%.*]]) {
 ; CHECK-NEXT:    [[S1A:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    [[S1C:%.*]] = getelementptr [[T1:%.*]], ptr [[A]], i64 0, i32 1
 ; CHECK-NEXT:    [[N1D:%.*]] = getelementptr i8, ptr [[A]], i64 7
-; CHECK-NEXT:    [[S1E:%.*]] = getelementptr i64, ptr [[A]], i64 1
-; CHECK-NEXT:    [[S1F:%.*]] = getelementptr i32, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[N1G:%.*]] = getelementptr i32, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[N1H:%.*]] = getelementptr i8, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = getelementptr i64, ptr [[A]], <4 x i64> <i64 1, i64 1, i64 1, i64 1>
