@@ -312,8 +312,8 @@ TEST_F(FormatTestVerilog, Case) {
   verifyFormat("default:\n"
                "  x = '{x: x, default: 9};\n",
                Style);
-  // When the line following the case label needs to be indented, the
-  // continuation should be indented correctly.
+  // When the line following the case label needs to be broken, the continuation
+  // should be indented correctly.
   verifyFormat("case (data)\n"
                "  16'd0:\n"
                "    result = //\n"
