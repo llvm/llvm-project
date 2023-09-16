@@ -76,12 +76,16 @@ HalfWords encodeImmBT4BlT1BlxT2_J1J2(int64_t Value);
 uint32_t encodeImmBA1BlA1BlxA2(int64_t Value);
 HalfWords encodeImmMovtT1MovwT3(uint16_t Value);
 HalfWords encodeRegMovtT1MovwT3(int64_t Value);
+uint32_t encodeImmMovtA1MovwA2(uint16_t Value);
+uint32_t encodeRegMovtA1MovwA2(int64_t Value);
 
 int64_t decodeImmBT4BlT1BlxT2(uint32_t Hi, uint32_t Lo);
 int64_t decodeImmBT4BlT1BlxT2_J1J2(uint32_t Hi, uint32_t Lo);
 int64_t decodeImmBA1BlA1BlxA2(int64_t Value);
 uint16_t decodeImmMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
 int64_t decodeRegMovtT1MovwT3(uint32_t Hi, uint32_t Lo);
+uint16_t decodeImmMovtA1MovwA2(uint64_t Value);
+int64_t decodeRegMovtA1MovwA2(uint64_t Value);
 
 } // namespace aarch32
 } // namespace jitlink
@@ -238,6 +242,44 @@ TEST(AArch32_Relocations, Thumb_MovtAbs) {
       EXPECT_EQ(decodeRegMovtT1MovwT3(Mem.Hi, Mem.Lo), Reg);
       EXPECT_TRUE(UnaffectedBits.Hi == (Mem.Hi & ~(ImmMask.Hi | RegMask.Hi)) &&
                   UnaffectedBits.Lo == (Mem.Lo & ~(ImmMask.Lo | RegMask.Lo)))
+          << "Diff outside immediate/register field";
+    }
+  }
+}
+
+/// Write immediate value to the top halfword of the destination register
+TEST(AArch32_Relocations, Arm_MovtAbs) {
+  static_assert(isUInt<16>(65535), "Max value");
+  static_assert(!isUInt<16>(65536), "First overflow");
+
+  constexpr uint32_t ImmMask = FixupInfo<Arm_MovtAbs>::ImmMask;
+  constexpr uint32_t RegMask = FixupInfo<Arm_MovtAbs>::RegMask;
+
+  static std::array<uint8_t, 3> Registers{0, 5, 12};
+  static std::array<uint32_t, 3> MemPresets{
+      0xfeeffff7, // common
+      0x00000000, // zeros
+      0xffffffff, // ones
+  };
+
+  auto EncodeDecode = [=](uint64_t In, MutableWord &Mem) {
+    Mem.patch(encodeImmMovtA1MovwA2(In), ImmMask);
+    return decodeImmMovtA1MovwA2(Mem.Wd);
+  };
+
+  for (MutableWord Mem : MemPresets) {
+    for (uint8_t Reg : Registers) {
+      MutableWord UnaffectedBits(Mem.Wd & ~(ImmMask | RegMask));
+
+      Mem.patch(encodeRegMovtA1MovwA2(Reg), RegMask);
+      EXPECT_EQ(EncodeDecode(0x76bb, Mem), 0x76bb);   // Common value
+      EXPECT_EQ(EncodeDecode(0, Mem), 0);             // Minimum value
+      EXPECT_EQ(EncodeDecode(0xffff, Mem), 0xffff);   // Maximum value
+      EXPECT_NE(EncodeDecode(0x10000, Mem), 0x10000); // First overflow
+
+      // Destination register as well as unaffected bits should be intact
+      EXPECT_EQ(decodeRegMovtA1MovwA2(Mem.Wd), Reg);
+      EXPECT_TRUE(UnaffectedBits.Wd == (Mem.Wd & ~(ImmMask | RegMask)))
           << "Diff outside immediate/register field";
     }
   }
