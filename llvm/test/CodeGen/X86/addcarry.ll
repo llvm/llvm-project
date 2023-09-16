@@ -392,13 +392,10 @@ define i128 @addcarry1_not(i128 %n) nounwind {
 define { i128, i1 } @saddo_not_1(i128 %x) nounwind {
 ; CHECK-LABEL: saddo_not_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rdx
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    negq %rax
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    addb $-1, %cl
-; CHECK-NEXT:    adcq $0, %rdx
+; CHECK-NEXT:    sbbq %rsi, %rdx
 ; CHECK-NEXT:    seto %cl
 ; CHECK-NEXT:    retq
   %not = xor i128 %x, -1
@@ -409,13 +406,10 @@ define { i128, i1 } @saddo_not_1(i128 %x) nounwind {
 define { i128, i1 } @saddo_carry_not_1(i128 %x) nounwind {
 ; CHECK-LABEL: saddo_carry_not_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    notq %rdx
 ; CHECK-NEXT:    negq %rax
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    addb $-1, %cl
-; CHECK-NEXT:    adcq $1, %rdx
+; CHECK-NEXT:    movl $1, %edx
+; CHECK-NEXT:    sbbq %rsi, %rdx
 ; CHECK-NEXT:    seto %cl
 ; CHECK-NEXT:    retq
   %not = xor i128 %x, -1
