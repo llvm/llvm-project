@@ -3456,10 +3456,18 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
       (Sequence.size() * EltBitSize) <= 64) {
     unsigned SeqLen = Sequence.size();
     MVT ViaIntVT = MVT::getIntegerVT(EltBitSize * SeqLen);
-    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, NumElts / SeqLen);
     assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32 ||
             ViaIntVT == MVT::i64) &&
            "Unexpected sequence type");
+
+    // If we can use the original VL with the modified element type, this
+    // means we only have a VTYPE toggle, not a VL toggle.  TODO: Should this
+    // be moved into InsertVSETVLI?
+    const unsigned RequiredVL = NumElts / SeqLen;
+    const unsigned ViaVecLen =
+      (Subtarget.getRealMinVLen() >= ViaIntVT.getSizeInBits() * NumElts) ?
+      NumElts : RequiredVL;
+    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, ViaVecLen);
 
     unsigned EltIdx = 0;
     uint64_t EltMask = maskTrailingOnes<uint64_t>(EltBitSize);
@@ -3494,6 +3502,10 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
                       DAG.getUNDEF(ViaContainerVT),
                       DAG.getConstant(SplatValue, DL, XLenVT), ViaVL);
       Splat = convertFromScalableVector(ViaVecVT, Splat, DAG, Subtarget);
+      if (ViaVecLen != RequiredVL)
+        Splat = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
+                            MVT::getVectorVT(ViaIntVT, RequiredVL), Splat,
+                            DAG.getConstant(0, DL, XLenVT));
       return DAG.getBitcast(VT, Splat);
     }
   }
@@ -11620,21 +11632,24 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
 // zero-extended their indices, \p narrowIndex tries to narrow the type of index
 // operand if it is matched to pattern (shl (zext x to ty), C) and bits(x) + C <
 // bits(ty).
-static SDValue narrowIndex(SDValue N, SelectionDAG &DAG) {
+static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &DAG) {
+  if (isIndexTypeSigned(IndexType))
+    return false;
+
   if (N.getOpcode() != ISD::SHL || !N->hasOneUse())
-    return SDValue();
+    return false;
 
   SDValue N0 = N.getOperand(0);
   if (N0.getOpcode() != ISD::ZERO_EXTEND &&
       N0.getOpcode() != RISCVISD::VZEXT_VL)
-    return SDValue();
+    return false;;
   if (!N0->hasOneUse())
-    return SDValue();
+    return false;;
 
   APInt ShAmt;
   SDValue N1 = N.getOperand(1);
   if (!ISD::isConstantSplatVector(N1.getNode(), ShAmt))
-    return SDValue();
+    return false;;
 
   SDLoc DL(N);
   SDValue Src = N0.getOperand(0);
@@ -11646,14 +11661,15 @@ static SDValue narrowIndex(SDValue N, SelectionDAG &DAG) {
 
   // Skip if NewElen is not narrower than the original extended type.
   if (NewElen >= N0.getValueType().getScalarSizeInBits())
-    return SDValue();
+    return false;
 
   EVT NewEltVT = EVT::getIntegerVT(*DAG.getContext(), NewElen);
   EVT NewVT = SrcVT.changeVectorElementType(NewEltVT);
 
   SDValue NewExt = DAG.getNode(N0->getOpcode(), DL, NewVT, N0->ops());
   SDValue NewShAmtVec = DAG.getConstant(ShAmtV, DL, NewVT);
-  return DAG.getNode(ISD::SHL, DL, NewVT, NewExt, NewShAmtVec);
+  N = DAG.getNode(ISD::SHL, DL, NewVT, NewExt, NewShAmtVec);
+  return true;
 }
 
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
@@ -13493,19 +13509,20 @@ static bool legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
     DAG.getMachineFunction().getSubtarget<RISCVSubtarget>().getXLenVT();
 
   const EVT IndexVT = Index.getValueType();
-  const bool IsIndexSigned = isIndexTypeSigned(IndexType);
 
   // RISC-V indexed loads only support the "unsigned unscaled" addressing
   // mode, so anything else must be manually legalized.
-  if (!IsIndexSigned || !IndexVT.getVectorElementType().bitsLT(XLenVT))
+  if (!isIndexTypeSigned(IndexType))
     return false;
 
-  // Any index legalization should first promote to XLenVT, so we don't lose
-  // bits when scaling. This may create an illegal index type so we let
-  // LLVM's legalization take care of the splitting.
-  // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
-  Index = DAG.getNode(ISD::SIGN_EXTEND, DL,
-                      IndexVT.changeVectorElementType(XLenVT), Index);
+  if (IndexVT.getVectorElementType().bitsLT(XLenVT)) {
+    // Any index legalization should first promote to XLenVT, so we don't lose
+    // bits when scaling. This may create an illegal index type so we let
+    // LLVM's legalization take care of the splitting.
+    // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
+    Index = DAG.getNode(ISD::SIGN_EXTEND, DL,
+                        IndexVT.changeVectorElementType(XLenVT), Index);
+  }
   IndexType = ISD::UNSIGNED_SCALED;
   return true;
 }
@@ -13870,6 +13887,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           {MGN->getChain(), MGN->getPassThru(), MGN->getMask(),
            MGN->getBasePtr(), Index, ScaleOp},
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
+
+    if (narrowIndex(Index, IndexType, DAG))
+      return DAG.getMaskedGather(
+          N->getVTList(), MGN->getMemoryVT(), DL,
+          {MGN->getChain(), MGN->getPassThru(), MGN->getMask(),
+           MGN->getBasePtr(), Index, ScaleOp},
+          MGN->getMemOperand(), IndexType, MGN->getExtensionType());
     break;
   }
   case ISD::MSCATTER:{
@@ -13882,6 +13906,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     SDLoc DL(N);
     if (legalizeScatterGatherIndexType(DL, Index, IndexType, DCI))
+      return DAG.getMaskedScatter(
+          N->getVTList(), MSN->getMemoryVT(), DL,
+          {MSN->getChain(), MSN->getValue(), MSN->getMask(), MSN->getBasePtr(),
+           Index, ScaleOp},
+          MSN->getMemOperand(), IndexType, MSN->isTruncatingStore());
+
+    if (narrowIndex(Index, IndexType, DAG))
       return DAG.getMaskedScatter(
           N->getVTList(), MSN->getMemoryVT(), DL,
           {MSN->getChain(), MSN->getValue(), MSN->getMask(), MSN->getBasePtr(),
@@ -13904,6 +13935,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                               ScaleOp, VPGN->getMask(),
                               VPGN->getVectorLength()},
                              VPGN->getMemOperand(), IndexType);
+
+    if (narrowIndex(Index, IndexType, DAG))
+      return DAG.getGatherVP(N->getVTList(), VPGN->getMemoryVT(), DL,
+                             {VPGN->getChain(), VPGN->getBasePtr(), Index,
+                              ScaleOp, VPGN->getMask(),
+                              VPGN->getVectorLength()},
+                             VPGN->getMemOperand(), IndexType);
+
     break;
   }
   case ISD::VP_SCATTER: {
@@ -13916,6 +13955,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     SDLoc DL(N);
     if (legalizeScatterGatherIndexType(DL, Index, IndexType, DCI))
+      return DAG.getScatterVP(N->getVTList(), VPSN->getMemoryVT(), DL,
+                              {VPSN->getChain(), VPSN->getValue(),
+                               VPSN->getBasePtr(), Index, ScaleOp,
+                               VPSN->getMask(), VPSN->getVectorLength()},
+                              VPSN->getMemOperand(), IndexType);
+
+    if (narrowIndex(Index, IndexType, DAG))
       return DAG.getScatterVP(N->getVTList(), VPSN->getMemoryVT(), DL,
                               {VPSN->getChain(), VPSN->getValue(),
                                VPSN->getBasePtr(), Index, ScaleOp,
@@ -14225,23 +14271,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return DAG.getConstant(-1, DL, VT);
       return DAG.getConstant(0, DL, VT);
     }
-    case Intrinsic::riscv_vloxei:
-    case Intrinsic::riscv_vloxei_mask:
-    case Intrinsic::riscv_vluxei:
-    case Intrinsic::riscv_vluxei_mask:
-    case Intrinsic::riscv_vsoxei:
-    case Intrinsic::riscv_vsoxei_mask:
-    case Intrinsic::riscv_vsuxei:
-    case Intrinsic::riscv_vsuxei_mask:
-      if (SDValue V = narrowIndex(N->getOperand(4), DAG)) {
-        SmallVector<SDValue, 8> Ops(N->ops());
-        Ops[4] = V;
-        const auto *MemSD = cast<MemIntrinsicSDNode>(N);
-        return DAG.getMemIntrinsicNode(N->getOpcode(), SDLoc(N), N->getVTList(),
-                                       Ops, MemSD->getMemoryVT(),
-                                       MemSD->getMemOperand());
-      }
-      return SDValue();
     }
   }
   case ISD::BITCAST: {
@@ -17677,9 +17706,13 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   return Result;
 }
 
-bool RISCVTargetLowering::shouldRemoveExtendFromGSIndex(EVT IndexVT,
+bool RISCVTargetLowering::shouldRemoveExtendFromGSIndex(SDValue Extend,
                                                         EVT DataVT) const {
-  return false;
+  // We have indexed loads for all legal index types.  Indices are always
+  // zero extended
+  return Extend.getOpcode() == ISD::ZERO_EXTEND &&
+    isTypeLegal(Extend.getValueType()) &&
+    isTypeLegal(Extend.getOperand(0).getValueType());
 }
 
 bool RISCVTargetLowering::shouldConvertFpToSat(unsigned Op, EVT FPVT,

@@ -2452,8 +2452,11 @@ private:
   /// vector) and sets \p CurrentOrder to the identity permutation; otherwise
   /// returns false, setting \p CurrentOrder to either an empty vector or a
   /// non-identity permutation that allows to reuse extract instructions.
+  /// \param ResizeAllowed indicates whether it is allowed to handle subvector
+  /// extract order.
   bool canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                       SmallVectorImpl<unsigned> &CurrentOrder) const;
+                       SmallVectorImpl<unsigned> &CurrentOrder,
+                       bool ResizeAllowed = false) const;
 
   /// Vectorize a single entry in the tree.
   Value *vectorizeTree(TreeEntry *E);
@@ -4249,7 +4252,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       // Check that gather of extractelements can be represented as
       // just a shuffle of a single vector.
       OrdersType CurrentOrder;
-      bool Reuse = canReuseExtract(TE.Scalars, TE.getMainOp(), CurrentOrder);
+      bool Reuse = canReuseExtract(TE.Scalars, TE.getMainOp(), CurrentOrder,
+                                   /*ResizeAllowed=*/true);
       if (Reuse || !CurrentOrder.empty()) {
         if (!CurrentOrder.empty())
           fixupOrderingIndices(CurrentOrder);
@@ -6378,7 +6382,8 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
 }
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                              SmallVectorImpl<unsigned> &CurrentOrder) const {
+                              SmallVectorImpl<unsigned> &CurrentOrder,
+                              bool ResizeAllowed) const {
   const auto *It = find_if(VL, [](Value *V) {
     return isa<ExtractElementInst, ExtractValueInst>(V);
   });
@@ -6411,46 +6416,55 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
     NElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   }
 
-  if (NElts != VL.size())
+  unsigned E = VL.size();
+  if (!ResizeAllowed && NElts != E)
     return false;
+  SmallVector<int> Indices(E, PoisonMaskElem);
+  unsigned MinIdx = NElts, MaxIdx = 0;
+  for (auto [I, V] : enumerate(VL)) {
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      continue;
+    if (Inst->getOperand(0) != Vec)
+      return false;
+    if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
+      if (isa<UndefValue>(EE->getIndexOperand()))
+        continue;
+    std::optional<unsigned> Idx = getExtractIndex(Inst);
+    if (!Idx)
+      return false;
+    const unsigned ExtIdx = *Idx;
+    if (ExtIdx >= NElts)
+      continue;
+    Indices[I] = ExtIdx;
+    if (MinIdx > ExtIdx)
+      MinIdx = ExtIdx;
+    if (MaxIdx < ExtIdx)
+      MaxIdx = ExtIdx;
+  }
+  if (MaxIdx - MinIdx + 1 > E)
+    return false;
+  if (MaxIdx + 1 <= E)
+    MinIdx = 0;
 
   // Check that all of the indices extract from the correct offset.
   bool ShouldKeepOrder = true;
-  unsigned E = VL.size();
   // Assign to all items the initial value E + 1 so we can check if the extract
   // instruction index was used already.
   // Also, later we can check that all the indices are used and we have a
   // consecutive access in the extract instructions, by checking that no
   // element of CurrentOrder still has value E + 1.
   CurrentOrder.assign(E, E);
-  unsigned I = 0;
-  for (; I < E; ++I) {
-    auto *Inst = dyn_cast<Instruction>(VL[I]);
-    if (!Inst)
+  for (unsigned I = 0; I < E; ++I) {
+    if (Indices[I] == PoisonMaskElem)
       continue;
-    if (Inst->getOperand(0) != Vec)
-      break;
-    if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
-      if (isa<UndefValue>(EE->getIndexOperand()))
-        continue;
-    std::optional<unsigned> Idx = getExtractIndex(Inst);
-    if (!Idx)
-      break;
-    const unsigned ExtIdx = *Idx;
-    if (ExtIdx != I) {
-      if (ExtIdx >= E || CurrentOrder[ExtIdx] != E)
-        break;
-      ShouldKeepOrder = false;
-      CurrentOrder[ExtIdx] = I;
-    } else {
-      if (CurrentOrder[I] != E)
-        break;
-      CurrentOrder[I] = I;
+    const unsigned ExtIdx = Indices[I] - MinIdx;
+    if (CurrentOrder[ExtIdx] != E) {
+      CurrentOrder.clear();
+      return false;
     }
-  }
-  if (I < E) {
-    CurrentOrder.clear();
-    return false;
+    ShouldKeepOrder &= ExtIdx == I;
+    CurrentOrder[ExtIdx] = I;
   }
   if (ShouldKeepOrder)
     CurrentOrder.clear();

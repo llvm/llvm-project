@@ -77,7 +77,7 @@ func.func @sparse_convert_1d_to_sparse(%arg0: tensor<64xf32>) -> tensor<64xf32, 
 
 // -----
 
-#SparseTensor = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense", "compressed" ] }>
+#SparseTensor = #sparse_tensor.encoding<{ map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed) }>
 
 // CHECK-LABEL: func @sparse_convert_3d_from_sparse(
 // CHECK-SAME: %[[A:.*]]: tensor<8x8x8xf64, #{{.*}}>)
@@ -103,7 +103,7 @@ func.func @sparse_positions(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xi
 
 // -----
 
-#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"]}>
+#COO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
 
 // CHECK-LABEL: func @sparse_indices_buffer(
 //  CHECK-SAME: %[[A:.*]]: tensor<?x?xf64, #{{.*}}>)

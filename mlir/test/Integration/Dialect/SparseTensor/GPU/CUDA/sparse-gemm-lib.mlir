@@ -34,7 +34,7 @@ module {
   // Computes C = A x B with A,B,C sparse CSR.
   func.func @matmulCSR(%A: tensor<8x8xf32, #CSR>,
                        %B: tensor<8x8xf32, #CSR>) -> tensor<8x8xf32, #CSR> {
-    %init = bufferization.alloc_tensor() : tensor<8x8xf32, #CSR>
+    %init = tensor.empty() : tensor<8x8xf32, #CSR>
     %C = linalg.matmul
       ins(%A, %B: tensor<8x8xf32, #CSR>,
                   tensor<8x8xf32, #CSR>)

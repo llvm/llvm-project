@@ -27,7 +27,7 @@
 }>
 
 #UCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_no" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed(nonordered))
 }>
 
 #CSC = #sparse_tensor.encoding<{
@@ -41,21 +41,19 @@
 }>
 
 #Dense3D = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "dense" ],
-  dimToLvl = affine_map<(i, j, k) -> (k, i, j)>
+  map = (d0, d1, d2) -> (d2 : dense, d0 : dense, d1 : dense)
 }>
 
 #Coo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CooPNo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton_no" ],
-  dimToLvl = affine_map<(i, j) -> (j, i)>
+  map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton(nonordered))
 }>
 
 #ccoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed(nonunique), d2 : singleton)
 }>
 
 // CHECK-LABEL: func @sparse_nop(
