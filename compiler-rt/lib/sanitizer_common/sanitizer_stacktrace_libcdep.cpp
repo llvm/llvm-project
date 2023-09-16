@@ -29,8 +29,7 @@ class StackTraceTextPrinter {
         frame_delimiter_(frame_delimiter),
         output_(output),
         dedup_token_(dedup_token),
-        symbolize_(StackTracePrinter::GetOrInit()->RenderNeedsSymbolization(
-            stack_trace_fmt)) {}
+        symbolize_(RenderNeedsSymbolization(stack_trace_fmt)) {}
 
   bool ProcessAddressFrames(uptr pc) {
     SymbolizedStack *frames = symbolize_
@@ -41,10 +40,10 @@ class StackTraceTextPrinter {
 
     for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
       uptr prev_len = output_->length();
-      StackTracePrinter::GetOrInit()->RenderFrame(
-          output_, stack_trace_fmt_, frame_num_++, cur->info.address,
-          symbolize_ ? &cur->info : nullptr, common_flags()->symbolize_vs_style,
-          common_flags()->strip_path_prefix);
+      RenderFrame(output_, stack_trace_fmt_, frame_num_++, cur->info.address,
+                  symbolize_ ? &cur->info : nullptr,
+                  common_flags()->symbolize_vs_style,
+                  common_flags()->strip_path_prefix);
 
       if (prev_len != output_->length())
         output_->append("%c", frame_delimiter_);
@@ -211,8 +210,7 @@ void __sanitizer_symbolize_global(uptr data_addr, const char *fmt,
   DataInfo DI;
   if (!Symbolizer::GetOrInit()->SymbolizeData(data_addr, &DI)) return;
   InternalScopedString data_desc;
-  StackTracePrinter::GetOrInit()->RenderData(&data_desc, fmt, &DI,
-                                             common_flags()->strip_path_prefix);
+  RenderData(&data_desc, fmt, &DI, common_flags()->strip_path_prefix);
   internal_strncpy(out_buf, data_desc.data(), out_buf_size);
   out_buf[out_buf_size - 1] = 0;
 }
