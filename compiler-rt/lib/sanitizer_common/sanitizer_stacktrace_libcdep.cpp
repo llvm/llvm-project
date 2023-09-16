@@ -63,8 +63,8 @@ class StackTraceTextPrinter {
     if (dedup_frames_-- > 0) {
       if (dedup_token_->length())
         dedup_token_->AppendF("--");
-      if (stack->info.function != nullptr)
-        dedup_token_->AppendF("%s", stack->info.function);
+      if (stack->info.function)
+        dedup_token_->Append(stack->info.function);
     }
   }
 
