@@ -283,10 +283,10 @@ Bug Fixes to C++ Support
 - Clang now properly handles out of line template specializations when there is
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
-  
-- Clang now properly converts static lambda call operator to function 
-  pointer on win32.
-  (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)  
+
+- Clang now properly converts static lambda call operator to function
+  pointers on win32.
+  (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
