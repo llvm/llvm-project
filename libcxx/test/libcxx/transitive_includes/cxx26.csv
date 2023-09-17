@@ -582,9 +582,9 @@ stop_token cstddef
 stop_token cstdint
 stop_token cstring
 stop_token ctime
+stop_token iosfwd
 stop_token limits
 stop_token ratio
-stop_token thread
 stop_token version
 streambuf cstdint
 streambuf ios
@@ -627,6 +627,7 @@ system_error stdexcept
 system_error string
 system_error version
 thread array
+thread atomic
 thread cerrno
 thread compare
 thread cstddef
