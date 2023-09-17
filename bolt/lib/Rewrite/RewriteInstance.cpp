@@ -799,7 +799,12 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   // Sort symbols in the file by value. Ignore symbols from non-allocatable
-  // sections.
+  // sections. We memoize getAddress(), as it has rather high overhead.
+  struct SymbolInfo {
+    uint64_t Address;
+    SymbolRef Symbol;
+  };
+  std::vector<SymbolInfo> SortedSymbols;
   auto isSymbolInMemory = [this](const SymbolRef &Sym) {
     if (cantFail(Sym.getType()) == SymbolRef::ST_File)
       return false;
@@ -810,25 +815,22 @@ void RewriteInstance::discoverFileObjects() {
     BinarySection Section(*BC, *cantFail(Sym.getSection()));
     return Section.isAllocatable();
   };
-  std::vector<SymbolRef> SortedFileSymbols;
-  llvm::copy_if(InputFile->symbols(), std::back_inserter(SortedFileSymbols),
-                isSymbolInMemory);
-  auto CompareSymbols = [this](const SymbolRef &A, const SymbolRef &B) {
-    // Marker symbols have the highest precedence, while
-    // SECTIONs have the lowest.
-    auto AddressA = cantFail(A.getAddress());
-    auto AddressB = cantFail(B.getAddress());
-    if (AddressA != AddressB)
-      return AddressA < AddressB;
+  for (const SymbolRef &Symbol : InputFile->symbols())
+    if (isSymbolInMemory(Symbol))
+      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
 
-    bool AMarker = BC->isMarker(A);
-    bool BMarker = BC->isMarker(B);
+  auto CompareSymbols = [this](const SymbolInfo &A, const SymbolInfo &B) {
+    if (A.Address != B.Address)
+      return A.Address < B.Address;
+
+    const bool AMarker = BC->isMarker(A.Symbol);
+    const bool BMarker = BC->isMarker(B.Symbol);
     if (AMarker || BMarker) {
       return AMarker && !BMarker;
     }
 
-    auto AType = cantFail(A.getType());
-    auto BType = cantFail(B.getType());
+    const auto AType = cantFail(A.Symbol.getType());
+    const auto BType = cantFail(B.Symbol.getType());
     if (AType == SymbolRef::ST_Function && BType != SymbolRef::ST_Function)
       return true;
     if (BType == SymbolRef::ST_Debug && AType != SymbolRef::ST_Debug)
@@ -836,11 +838,10 @@ void RewriteInstance::discoverFileObjects() {
 
     return false;
   };
+  llvm::stable_sort(SortedSymbols, CompareSymbols);
 
-  llvm::stable_sort(SortedFileSymbols, CompareSymbols);
-
-  auto LastSymbol = SortedFileSymbols.end();
-  if (!SortedFileSymbols.empty())
+  auto LastSymbol = SortedSymbols.end();
+  if (!SortedSymbols.empty())
     --LastSymbol;
 
   // For aarch64, the ABI defines mapping symbols so we identify data in the
@@ -855,39 +856,34 @@ void RewriteInstance::discoverFileObjects() {
   };
 
   std::vector<MarkerSym> SortedMarkerSymbols;
-  auto addExtraDataMarkerPerSymbol =
-      [this](const std::vector<SymbolRef> &SortedFileSymbols,
-             std::vector<MarkerSym> &SortedMarkerSymbols) {
-        bool IsData = false;
-        uint64_t LastAddr = 0;
-        for (auto Sym = SortedFileSymbols.begin();
-             Sym < SortedFileSymbols.end(); ++Sym) {
-          uint64_t Address = cantFail(Sym->getAddress());
-          if (LastAddr == Address) // don't repeat markers
-            continue;
+  auto addExtraDataMarkerPerSymbol = [&]() {
+    bool IsData = false;
+    uint64_t LastAddr = 0;
+    for (const auto &SymInfo : SortedSymbols) {
+      if (LastAddr == SymInfo.Address) // don't repeat markers
+        continue;
 
-          MarkerSymType MarkerType = BC->getMarkerType(*Sym);
-          if (MarkerType != MarkerSymType::NONE) {
-            SortedMarkerSymbols.push_back(MarkerSym{Address, MarkerType});
-            LastAddr = Address;
-            IsData = MarkerType == MarkerSymType::DATA;
-            continue;
-          }
+      MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
+      if (MarkerType != MarkerSymType::NONE) {
+        SortedMarkerSymbols.push_back(MarkerSym{SymInfo.Address, MarkerType});
+        LastAddr = SymInfo.Address;
+        IsData = MarkerType == MarkerSymType::DATA;
+        continue;
+      }
 
-          if (IsData) {
-            SortedMarkerSymbols.push_back(
-                MarkerSym{cantFail(Sym->getAddress()), MarkerSymType::DATA});
-            LastAddr = Address;
-          }
-        }
-      };
+      if (IsData) {
+        SortedMarkerSymbols.push_back({SymInfo.Address, MarkerSymType::DATA});
+        LastAddr = SymInfo.Address;
+      }
+    }
+  };
 
   if (BC->isAArch64() || BC->isRISCV()) {
-    addExtraDataMarkerPerSymbol(SortedFileSymbols, SortedMarkerSymbols);
+    addExtraDataMarkerPerSymbol();
     LastSymbol = std::stable_partition(
-        SortedFileSymbols.begin(), SortedFileSymbols.end(),
-        [this](const SymbolRef &Symbol) { return !BC->isMarker(Symbol); });
-    if (!SortedFileSymbols.empty())
+        SortedSymbols.begin(), SortedSymbols.end(),
+        [this](const SymbolInfo &S) { return !BC->isMarker(S.Symbol); });
+    if (!SortedSymbols.empty())
       --LastSymbol;
   }
 
@@ -897,12 +893,11 @@ void RewriteInstance::discoverFileObjects() {
   // Regex object for matching cold fragments.
   Regex ColdFragment(".*\\.cold(\\.[0-9]+)?");
 
-  const auto SortedSymbolsEnd = LastSymbol == SortedFileSymbols.end()
-                                    ? LastSymbol
-                                    : std::next(LastSymbol);
-  for (auto ISym = SortedFileSymbols.begin(); ISym != SortedSymbolsEnd;
-       ++ISym) {
-    const SymbolRef &Symbol = *ISym;
+  const auto SortedSymbolsEnd =
+      LastSymbol == SortedSymbols.end() ? LastSymbol : std::next(LastSymbol);
+  for (auto Iter = SortedSymbols.begin(); Iter != SortedSymbolsEnd; ++Iter) {
+    const SymbolRef &Symbol = Iter->Symbol;
+
     // Keep undefined symbols for pretty printing?
     if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Undefined)
       continue;
