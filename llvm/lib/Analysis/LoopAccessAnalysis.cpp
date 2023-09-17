@@ -2529,6 +2529,42 @@ void LoopAccessInfo::emitUnsafeDependenceRemark(LoadStoreSourceExpression *LSE) 
             "loop";
   OptimizationRemarkAnalysis &R =
       recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
+  
+  // Report source expression for dependence source and destination if the user
+  // asked for it.
+
+  if (ReportSourceExpr) {
+    llvm::Instruction *SourceInst = Dep.getSource(*this);
+    llvm::Instruction *DestInst = Dep.getDestination(*this);
+
+    R << " Dependence source: ";
+    llvm::Value *SourceValue = nullptr;
+
+    if (llvm::StoreInst *StoreInstruction =
+            llvm::dyn_cast<llvm::StoreInst>(SourceInst)) {
+      SourceValue = StoreInstruction->getPointerOperand();
+    } else if (llvm::LoadInst *LoadInstruction =
+                   llvm::dyn_cast<llvm::LoadInst>(SourceInst)) {
+      SourceValue = LoadInstruction->getPointerOperand();
+    } else {
+      SourceValue = Dep.getSource(*this);
+    }
+    R << LSE->getSourceExpressionForValue(SourceValue);
+
+    R << " Dependence destination: ";
+    llvm::Value *DestValue = nullptr;
+
+    if (llvm::StoreInst *StoreInstruction =
+            llvm::dyn_cast<llvm::StoreInst>(DestInst)) {
+      DestValue = StoreInstruction->getPointerOperand();
+    } else if (llvm::LoadInst *LoadInstruction =
+                   llvm::dyn_cast<llvm::LoadInst>(DestInst)) {
+      DestValue = LoadInstruction->getPointerOperand();
+    } else {
+      DestValue = Dep.getDestination(*this);
+    }
+    R << LSE->getSourceExpressionForValue(DestValue);
+  }
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:
