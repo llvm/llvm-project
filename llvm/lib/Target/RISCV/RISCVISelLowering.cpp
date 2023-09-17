@@ -5088,7 +5088,7 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
     SDValue AND = DAG.getNode(RISCVISD::AND_VL, DL, ContainerDstVT, FPCLASS,
                               TDCMaskV, DAG.getUNDEF(ContainerDstVT), Mask, VL);
 
-    SDValue SplatZero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+    SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
     SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerDstVT,
                             DAG.getUNDEF(ContainerDstVT), SplatZero, VL);
 
