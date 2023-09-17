@@ -28,7 +28,9 @@ char *__llvm_profile_end_counters(void);
 
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const void *DataBegin, const void *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
+    const char *VTableBegin, const char *VTableEnd, const char *VNamesBegin,
+    const char *VNamesEnd);
 
 int __llvm_profile_write_buffer_internal(char *Buffer, const void *DataBegin,
                                          const void *DataEnd,
@@ -43,7 +45,11 @@ int main(int argc, const char *argv[]) {
   uint64_t bufsize = __llvm_profile_get_size_for_buffer_internal(
       __llvm_profile_begin_data(), __llvm_profile_end_data(),
       __llvm_profile_begin_counters(), __llvm_profile_end_counters(),
-      __llvm_profile_begin_names(), __llvm_profile_end_names());
+      __llvm_profile_begin_names(), __llvm_profile_end_names(), NULL, NULL,
+      NULL, NULL);
+
+  // printf("buffer size is %lld\n", bufsize);
+  //uint64_t aligned_bufsize = ((bufsize + 32) >> 6) << 6;
 
   char *buf = malloc(bufsize);
   int ret = __llvm_profile_write_buffer_internal(buf,

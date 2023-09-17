@@ -38,6 +38,12 @@ typedef struct ValueProfNode {
 #include "profile/InstrProfData.inc"
 } ValueProfNode;
 
+typedef void *IntPtrT;
+typedef struct VTableProfData {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer) Type Name;
+#include "profile/InstrProfData.inc"
+} VTableProfData;
+
 /*!
  * \brief Return 1 if profile counters are continuously synced to the raw
  * profile via an mmap(). This is in contrast to the default mode, in which
@@ -86,10 +92,14 @@ const __llvm_profile_data *__llvm_profile_begin_data(void);
 const __llvm_profile_data *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
+const char *__llvm_profile_begin_vnames(void);
+const char *__llvm_profile_end_vnames(void);
 char *__llvm_profile_begin_counters(void);
 char *__llvm_profile_end_counters(void);
 ValueProfNode *__llvm_profile_begin_vnodes();
 ValueProfNode *__llvm_profile_end_vnodes();
+VTableProfData *__llvm_profile_begin_vtables();
+VTableProfData *__llvm_profile_end_vtables();
 uint32_t *__llvm_profile_begin_orderfile();
 
 /*!
@@ -276,6 +286,12 @@ uint64_t __llvm_profile_get_num_counters(const char *Begin, const char *End);
 /*! \brief Get the size of the profile counters section in bytes. */
 uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End);
 
+uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
+                                       const VTableProfData *End);
+
+uint64_t __llvm_profile_get_vtable_size(const VTableProfData *Begin,
+                                        const VTableProfData *End);
+
 /* ! \brief Given the sizes of the data and counter information, return the
  * number of padding bytes before and after the counters, and after the names,
  * in the raw profile.
@@ -287,8 +303,10 @@ uint64_t __llvm_profile_get_counters_size(const char *Begin, const char *End);
  */
 void __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
+    uint64_t VTableSize, uint64_t VNameSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
-    uint64_t *PaddingBytesAfterNames);
+    uint64_t *PaddingBytesAfterNames, uint64_t *PaddingBytesAfterVTable,
+    uint64_t *PaddingBytesAfterVNames);
 
 /*!
  * \brief Set the flag that profile data has been dumped to the file.

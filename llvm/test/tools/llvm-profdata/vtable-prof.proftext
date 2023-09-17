@@ -1,0 +1,16 @@
+RUN: llvm-profdata show --function=main --show-vtables %p/Inputs/vtable-prof.proftext | FileCheck %s --check-prefix=VTABLE
+
+VTABLE: Counters:
+VTABLE:  main:
+VTABLE:    Hash: 0x0f9a16fe6d398548
+VTABLE:    Counters: 2
+VTABLE:    VTable Results:
+VTABLE:	       [  0, _ZTV8Derived2,        750 ] (75.00%)
+VTABLE:	       [  0, _ZTV8Derived1,        250 ] (25.00%)
+VTABLE:	       [  1, _ZTV8Derived2,        750 ] (75.00%)
+VTABLE:	       [  1, _ZTV8Derived1,        250 ] (25.00%)
+VTABLE: Instrumentation level: IR  entry_first = 0
+VTABLE: Functions shown: 1
+VTABLE: Total functions: 6
+VTABLE: Maximum function count: 1000
+VTABLE: Maximum internal block count: 250

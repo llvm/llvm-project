@@ -54,11 +54,12 @@ try.cont:                                         ; preds = %catch, %entry
 }
 
 ; GEN: catch:
-; GEN: call void @llvm.instrprof.value.profile(
+; GEN: call void @llvm.instrprof.value.profile({{.*}} i32 2, i32 0)
+; GEN: call void @llvm.instrprof.value.profile({{.*}} i32 0, i32 0)
 ; GEN-SAME: [ "funclet"(token %tmp1) ]
 
 ; LOWER: catch:
-; LOWER: call void @__llvm_profile_instrument_target(
+; LOWER: call void @__llvm_profile_instrument_target({{.*}} i32 0)
 ; LOWER-SAME: [ "funclet"(token %tmp1) ]
 
 declare dso_local void @"?may_throw@@YAXH@Z"(i32)

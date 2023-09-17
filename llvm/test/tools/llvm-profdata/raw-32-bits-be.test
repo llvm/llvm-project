@@ -1,5 +1,6 @@
+// Header
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\10' >> %t
+RUN: printf '\0\0\0\0\0\0\0\11' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
@@ -8,6 +9,10 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\20' >> %t
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t
 RUN: printf '\0\0\0\0\2\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// NumVTables
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// ValueKindLast
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\134\370\302\114\333\030\275\254' >> %t

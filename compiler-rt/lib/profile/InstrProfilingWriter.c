@@ -248,8 +248,13 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *CountersEnd = __llvm_profile_end_counters();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
+  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
+  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
+  const char *VNamesBegin = __llvm_profile_begin_vnames();
+  const char *VNamesEnd = __llvm_profile_end_vnames();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
                             CountersEnd, VPDataReader, NamesBegin, NamesEnd,
+                            VTableBegin, VTableEnd, VNamesBegin, VNamesEnd,
                             SkipNameDataWrite);
 }
 
@@ -258,7 +263,9 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const __llvm_profile_data *DataEnd,
                    const char *CountersBegin, const char *CountersEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
-                   const char *NamesEnd, int SkipNameDataWrite) {
+                   const char *NamesEnd, const VTableProfData *VTableBegin,
+                   const VTableProfData *VTableEnd, const char *VNamesBegin,
+                   const char *VNamesEnd, int SkipNameDataWrite) {
   int DebugInfoCorrelate =
       (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) != 0ULL;
 
@@ -272,6 +279,13 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   const uint64_t NumCounters =
       __llvm_profile_get_num_counters(CountersBegin, CountersEnd);
   const uint64_t NamesSize = DebugInfoCorrelate ? 0 : NamesEnd - NamesBegin;
+  const uint64_t NumVTables =
+      __llvm_profile_get_num_vtable(VTableBegin, VTableEnd);
+  const uint64_t VTableSectionSize =
+      __llvm_profile_get_vtable_size(VTableBegin, VTableEnd);
+  // Note, in reality, vtable profiling is not supported when DebugInfoCorrelate
+  // is true.
+  const uint64_t VNamesSize = DebugInfoCorrelate ? 0 : VNamesEnd - VNamesBegin;
 
   /* Create the header. */
   __llvm_profile_header Header;
@@ -279,11 +293,12 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames;
+      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSectionSize, CountersSectionSize, NamesSize,
-      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterNames);
+      DataSectionSize, CountersSectionSize, NamesSize, VTableSectionSize,
+      VNamesSize, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
+      &PaddingBytesAfterVNames);
 
   {
 /* Initialize header structure.  */
@@ -305,12 +320,23 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
 
   /* Write the profile header. */
   ProfDataIOVec IOVec[] = {{&Header, sizeof(__llvm_profile_header), 1, 0}};
+  // printf("Size of profile header is %d\n",
+  // (int)(sizeof(__llvm_profile_header)));
   if (Writer->Write(Writer, IOVec, sizeof(IOVec) / sizeof(*IOVec)))
     return -1;
 
+  // printf("Completed profile header\n");
+
   /* Write the binary id lengths and data. */
-  if (__llvm_write_binary_ids(Writer) == -1)
+  int binary_id_size = __llvm_write_binary_ids(Writer);
+  if (binary_id_size == -1)
     return -1;
+
+  // Might be needed for debugging. Clean up before commit.
+  // uint64_t VTableProfDataOffset =
+  //    sizeof(__llvm_profile_header) + binary_id_size + DataSectionSize +
+  //    PaddingBytesBeforeCounters + CountersSectionSize +
+  //    PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames;
 
   /* Write the profile data. */
   ProfDataIOVec IOVecData[] = {
@@ -321,7 +347,12 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
       {(SkipNameDataWrite || DebugInfoCorrelate) ? NULL : NamesBegin,
        sizeof(uint8_t), NamesSize, 0},
-      {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
+      {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1},
+      {VTableBegin, sizeof(uint8_t), VTableSectionSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterVTable, 1},
+      {(SkipNameDataWrite || DebugInfoCorrelate) ? NULL : VNamesBegin,
+       sizeof(uint8_t), VNamesSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterVNames, 1}};
   if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
     return -1;
 

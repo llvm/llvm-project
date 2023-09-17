@@ -1,0 +1,100 @@
+To update the inputs used below, run Inputs/update_vtable_value_prof_inputs.sh /path/to/updated/clang++ /path/to/updated/llvm-profdata
+
+Show profile data from raw profiles.
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables %p/Inputs/vtable_prof.profraw | FileCheck %s --check-prefix=RAW
+
+Generate indexed profile from raw profile and show the data.
+RUN: llvm-profdata merge %p/Inputs/vtable_prof.profraw -o %t_indexed.profdata
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables %t_indexed.profdata | FileCheck %s --check-prefix=INDEXED
+
+Generate text profile from raw profile and show the data.
+RUN: llvm-profdata merge --text %p/Inputs/vtable_prof.profraw -o %t.proftext
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %t.proftext | FileCheck %s --check-prefix=ICTEXT 
+
+RAW: Counters:
+RAW-NEXT:  main:
+RAW-NEXT:  Hash: 0x0f9a16fe6d398548
+RAW-NEXT:  Counters: 2
+RAW-NEXT:  Indirect Call Site Count: 2
+RAW-NEXT:  VTable Results:
+RAW-NEXT:	     [  0, _ZTV8Derived1,        250 ] (25.00%)
+RAW-NEXT:      [  0, _ZTV8Derived2,        750 ] (75.00%)
+RAW-NEXT:      [  1, _ZTV8Derived1,        250 ] (25.00%)
+RAW-NEXT:	     [  1, _ZTV8Derived2,        750 ] (75.00%)
+RAW-NEXT:  Indirect Target Results:
+RAW-NEXT:	     [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
+RAW-NEXT:	     [  0, _ZN8Derived25func1Eii,        750 ] (75.00%)
+RAW-NEXT:	     [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
+RAW-NEXT:	     [  1, _ZN8Derived25func2Eii,        750 ] (75.00%)
+RAW-NEXT: Instrumentation level: IR  entry_first = 0
+RAW-NEXT: Functions shown: 1
+RAW-NEXT: Total functions: 6
+RAW-NEXT: Maximum function count: 1000
+RAW-NEXT: Maximum internal block count: 250
+RAW-NEXT: Statistics for indirect call sites profile:
+RAW-NEXT:   Total number of sites: 2
+RAW-NEXT:   Total number of sites with values: 2
+RAW-NEXT:   Total number of profiled values: 4
+RAW-NEXT:   Value sites histogram:
+RAW-NEXT:         NumTargets, SiteCount
+RAW-NEXT:         2, 2
+
+INDEXED:      Counters:
+INDEXED-NEXT:   main:
+INDEXED-NEXT:     Hash: 0x0f9a16fe6d398548
+INDEXED-NEXT:     Counters: 2
+INDEXED-NEXT:     Indirect Call Site Count: 2
+INDEXED-NEXT:     VTable Results:
+INDEXED-NEXT:	      [  0, _ZTV8Derived2,        750 ] (75.00%)
+INDEXED-NEXT:     	  [  0, _ZTV8Derived1,        250 ] (25.00%)
+INDEXED-NEXT:         [  1, _ZTV8Derived2,        750 ] (75.00%)
+INDEXED-NEXT:         [  1, _ZTV8Derived1,        250 ] (25.00%)
+INDEXED-NEXT:     Indirect Target Results:
+INDEXED-NEXT:         [  0, _ZN8Derived25func1Eii,        750 ] (75.00%)
+INDEXED-NEXT:         [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
+INDEXED-NEXT:         [  1, _ZN8Derived25func2Eii,        750 ] (75.00%)
+INDEXED-NEXT:         [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
+INDEXED-NEXT: Instrumentation level: IR  entry_first = 0
+INDEXED-NEXT: Functions shown: 1
+INDEXED-NEXT: Total functions: 6
+INDEXED-NEXT: Maximum function count: 1000
+INDEXED-NEXT: Maximum internal block count: 250
+INDEXED-NEXT: Statistics for indirect call sites profile:
+INDEXED-NEXT:   Total number of sites: 2
+INDEXED-NEXT:   Total number of sites with values: 2
+INDEXED-NEXT:   Total number of profiled values: 4
+INDEXED-NEXT:   Value sites histogram:
+INDEXED-NEXT:       NumTargets, SiteCount
+INDEXED-NEXT:       2, 2
+
+ICTEXT: :ir
+ICTEXT: main
+ICTEXT: # Func Hash:
+ICTEXT: 1124236338992350536
+ICTEXT: # Num Counters:
+ICTEXT: 2
+ICTEXT: # Counter Values:
+ICTEXT: 1000
+ICTEXT: 1
+ICTEXT: # Num Value Kinds:
+ICTEXT: 2
+ICTEXT: # ValueKind = IPVK_IndirectCallTarget:
+ICTEXT: 0
+ICTEXT: # NumValueSites:
+ICTEXT: 2
+ICTEXT: 2
+ICTEXT: _ZN8Derived25func1Eii:750
+ICTEXT: _ZN8Derived15func1Eii:250
+ICTEXT: 2
+ICTEXT: _ZN8Derived25func2Eii:750
+ICTEXT: _ZN8Derived15func2Eii:250
+ICTEXT: # ValueKind = IPVK_VTableTarget:
+ICTEXT: 2
+ICTEXT: # NumValueSites:
+ICTEXT: 2
+ICTEXT: 2
+ICTEXT: _ZTV8Derived2:750
+ICTEXT: _ZTV8Derived1:250
+ICTEXT: 2
+ICTEXT: _ZTV8Derived2:750
+ICTEXT: _ZTV8Derived1:250
