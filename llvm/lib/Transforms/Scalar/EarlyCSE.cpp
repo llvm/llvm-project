@@ -595,13 +595,13 @@ template <> struct DenseMapInfo<GEPValue> {
       return DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
-  static unsigned getHashValue(GEPValue Val);
-  static bool isEqual(GEPValue LHS, GEPValue RHS);
+  static unsigned getHashValue(const GEPValue &Val);
+  static bool isEqual(const GEPValue &LHS, const GEPValue &RHS);
 };
 
 } // end namespace llvm
 
-unsigned DenseMapInfo<GEPValue>::getHashValue(GEPValue Val) {
+unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
   GetElementPtrInst *GEP = cast<GetElementPtrInst>(Val.Inst);
   if (Val.HasConstantOffset)
       return hash_combine(GEP->getOpcode(), GEP->getPointerOperand(),
@@ -611,7 +611,7 @@ unsigned DenseMapInfo<GEPValue>::getHashValue(GEPValue Val) {
       hash_combine_range(GEP->value_op_begin(), GEP->value_op_end()));
 }
 
-bool DenseMapInfo<GEPValue>::isEqual(GEPValue LHS, GEPValue RHS) {
+bool DenseMapInfo<GEPValue>::isEqual(const GEPValue &LHS, const GEPValue &RHS) {
   if (LHS.isSentinel() || RHS.isSentinel())
       return LHS.Inst == RHS.Inst;
   GetElementPtrInst *LGEP = cast<GetElementPtrInst>(LHS.Inst);
