@@ -349,29 +349,61 @@ InputSectionBase *InputSection::getRelocatedSection() const {
   return sections[info];
 }
 
+template <class ELFT, class RelTy>
+void InputSection::copyRelocations(uint8_t *buf) {
+  if (config->relax && !config->relocatable && config->emachine == EM_RISCV) {
+    // On RISC-V, relaxation might change relocations: copy from internal ones
+    // that are updated by relaxation.
+    InputSectionBase *sec = getRelocatedSection();
+    copyRelocations<ELFT, RelTy>(buf, llvm::make_range(sec->relocations.begin(),
+                                                       sec->relocations.end()));
+  } else {
+    // Convert the raw relocations in the input section into Relocation objects
+    // suitable to be used by copyRelocations below.
+    struct MapRel {
+      const ObjFile<ELFT> &file;
+      Relocation operator()(const RelTy &rel) const {
+        // RelExpr is not used so set to a dummy value.
+        return Relocation{R_NONE, rel.getType(config->isMips64EL), rel.r_offset,
+                          getAddend<ELFT>(rel), &file.getRelocTargetSym(rel)};
+      }
+    };
+
+    using RawRels = ArrayRef<RelTy>;
+    using MapRelIter =
+        llvm::mapped_iterator<typename RawRels::iterator, MapRel>;
+    auto mapRel = MapRel{*getFile<ELFT>()};
+    RawRels rawRels = getDataAs<RelTy>();
+    auto rels = llvm::make_range(MapRelIter(rawRels.begin(), mapRel),
+                                 MapRelIter(rawRels.end(), mapRel));
+    copyRelocations<ELFT, RelTy>(buf, rels);
+  }
+}
+
 // This is used for -r and --emit-relocs. We can't use memcpy to copy
 // relocations because we need to update symbol table offset and section index
 // for each relocation. So we copy relocations one by one.
-template <class ELFT, class RelTy>
-void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
+template <class ELFT, class RelTy, class RelIt>
+void InputSection::copyRelocations(uint8_t *buf,
+                                   llvm::iterator_range<RelIt> rels) {
   const TargetInfo &target = *elf::target;
   InputSectionBase *sec = getRelocatedSection();
   (void)sec->contentMaybeDecompress(); // uncompress if needed
 
-  for (const RelTy &rel : rels) {
-    RelType type = rel.getType(config->isMips64EL);
+  for (const Relocation &rel : rels) {
+    RelType type = rel.type;
     const ObjFile<ELFT> *file = getFile<ELFT>();
-    Symbol &sym = file->getRelocTargetSym(rel);
+    Symbol &sym = *rel.sym;
 
     auto *p = reinterpret_cast<typename ELFT::Rela *>(buf);
     buf += sizeof(RelTy);
 
     if (RelTy::IsRela)
-      p->r_addend = getAddend<ELFT>(rel);
+      p->r_addend = rel.addend;
 
     // Output section VA is zero for -r, so r_offset is an offset within the
     // section, but for --emit-relocs it is a virtual address.
-    p->r_offset = sec->getVA(rel.r_offset);
+    p->r_offset = sec->getVA(rel.offset);
     p->setSymbolAndType(in.symTab->getSymbolIndex(&sym), type,
                         config->isMips64EL);
 
@@ -408,8 +440,8 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
         continue;
       }
 
-      int64_t addend = getAddend<ELFT>(rel);
-      const uint8_t *bufLoc = sec->content().begin() + rel.r_offset;
+      int64_t addend = rel.addend;
+      const uint8_t *bufLoc = sec->content().begin() + rel.offset;
       if (!RelTy::IsRela)
         addend = target.getImplicitAddend(bufLoc, type);
 
@@ -432,7 +464,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       else if (config->relocatable && type != target.noneRel)
-        sec->addReloc({R_ABS, type, rel.r_offset, addend, &sym});
+        sec->addReloc({R_ABS, type, rel.offset, addend, &sym});
     } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
       // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
@@ -1106,11 +1138,11 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
   if (LLVM_UNLIKELY(type == SHT_RELA)) {
-    copyRelocations<ELFT>(buf, getDataAs<typename ELFT::Rela>());
+    copyRelocations<ELFT, typename ELFT::Rela>(buf);
     return;
   }
   if (LLVM_UNLIKELY(type == SHT_REL)) {
-    copyRelocations<ELFT>(buf, getDataAs<typename ELFT::Rel>());
+    copyRelocations<ELFT, typename ELFT::Rel>(buf);
     return;
   }
 

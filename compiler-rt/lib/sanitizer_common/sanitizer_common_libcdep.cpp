@@ -119,8 +119,10 @@ void MaybeStartBackgroudThread() {}
 #endif
 
 void WriteToSyslog(const char *msg) {
+  if (!msg)
+    return;
   InternalScopedString msg_copy;
-  msg_copy.append("%s", msg);
+  msg_copy.Append(msg);
   const char *p = msg_copy.data();
 
   // Print one line at a time.

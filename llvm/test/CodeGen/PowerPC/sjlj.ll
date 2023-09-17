@@ -80,8 +80,8 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK: # %bb.1:
 
 ; CHECK: .LBB1_3:
-; CHECK: ld [[REG2:[0-9]+]], [[OFF]](31)                   # 8-byte Folded Reload
 ; CHECK: mflr [[REGL:[0-9]+]]
+; CHECK: ld [[REG2:[0-9]+]], [[OFF]](31)                   # 8-byte Folded Reload
 ; CHECK: std [[REGL]], 8([[REG2]])
 ; CHECK: li 3, 0
 

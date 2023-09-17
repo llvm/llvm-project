@@ -326,7 +326,7 @@ defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, AMDGPUlog>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
-defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
+defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 let TRANS = 1, SchedRW = [WriteTrans64] in {

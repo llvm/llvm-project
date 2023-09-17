@@ -31,11 +31,11 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed"]
+  map = (d0) -> (d0 : compressed)
 }>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = ["compressed", "compressed"]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait_1d = {
@@ -161,8 +161,8 @@ module {
     %dm = sparse_tensor.convert %m2 : tensor<3x4xi64> to tensor<3x4xi64, #SparseMatrix>
 
     // Setup out tensors.
-    %init_8 = bufferization.alloc_tensor() : tensor<8xi64>
-    %init_3_4 = bufferization.alloc_tensor() : tensor<3x4xi64>
+    %init_8 = tensor.empty() : tensor<8xi64>
+    %init_3_4 = tensor.empty() : tensor<3x4xi64>
 
     // Call the kernels.
     %0 = call @sparse_index_1d_conj(%sv, %init_8) : (tensor<8xi64, #SparseVector>, tensor<8xi64>) -> tensor<8xi64>

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: !libcpp-hardening-mode=debug
+// REQUIRES: libcpp-hardening-mode={{safe|debug}}
 // REQUIRES: has-unix-headers
 // XFAIL: availability-verbose_abort-missing
 

@@ -88,7 +88,7 @@ static bool hasDefaultInitialization(const Fortran::semantics::Symbol &sym) {
 
 // Does this variable have a finalization?
 static bool hasFinalization(const Fortran::semantics::Symbol &sym) {
-  if (sym.has<Fortran::semantics::ObjectEntityDetails>() && sym.size())
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
     if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
       if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
               declTypeSpec->AsDerived())
@@ -660,6 +660,11 @@ static bool needEndFinalization(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol())
     return false;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
+  const Fortran::semantics::Scope &owner = sym.owner();
+  if (owner.kind() == Fortran::semantics::Scope::Kind::MainProgram) {
+    // The standard does not require finalizing main program variables.
+    return false;
+  }
   if (!Fortran::semantics::IsPointer(sym) &&
       !Fortran::semantics::IsAllocatable(sym) &&
       !Fortran::semantics::IsDummy(sym) &&
@@ -1275,12 +1280,14 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 
 /// Helper to decide if a dummy argument must be tracked in an BoxValue.
 static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
-                            mlir::Value dummyArg) {
+                            mlir::Value dummyArg,
+                            Fortran::lower::AbstractConverter &converter) {
   // Only dummy arguments coming as fir.box can be tracked in an BoxValue.
   if (!dummyArg || !dummyArg.getType().isa<fir::BaseBoxType>())
     return false;
   // Non contiguous arrays must be tracked in an BoxValue.
-  if (sym.Rank() > 0 && !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS))
+  if (sym.Rank() > 0 && !Fortran::evaluate::IsSimplyContiguous(
+                            sym, converter.getFoldingContext()))
     return true;
   // Assumed rank and optional fir.box cannot yet be read while lowering the
   // specifications.
@@ -1713,16 +1720,60 @@ void Fortran::lower::mapSymbolAttributes(
 
   if (isDummy) {
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
-    if (lowerToBoxValue(sym, dummyArg)) {
+    if (lowerToBoxValue(sym, dummyArg, converter)) {
       llvm::SmallVector<mlir::Value> lbounds;
       llvm::SmallVector<mlir::Value> explicitExtents;
       llvm::SmallVector<mlir::Value> explicitParams;
       // Lower lower bounds, explicit type parameters and explicit
       // extents if any.
-      if (ba.isChar())
+      if (ba.isChar()) {
         if (mlir::Value len =
                 lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
           explicitParams.push_back(len);
+        if (sym.Rank() == 0) {
+          // Do not keep scalar characters as fir.box (even when optional).
+          // Lowering and FIR is not meant to deal with scalar characters as
+          // fir.box outside of calls.
+          auto boxTy = dummyArg.getType().dyn_cast<fir::BaseBoxType>();
+          mlir::Type refTy = builder.getRefType(boxTy.getEleTy());
+          mlir::Type lenType = builder.getCharacterLengthType();
+          mlir::Value addr, len;
+          if (Fortran::semantics::IsOptional(sym)) {
+            auto isPresent = builder.create<fir::IsPresentOp>(
+                loc, builder.getI1Type(), dummyArg);
+            auto addrAndLen =
+                builder
+                    .genIfOp(loc, {refTy, lenType}, isPresent,
+                             /*withElseRegion=*/true)
+                    .genThen([&]() {
+                      mlir::Value readAddr =
+                          builder.create<fir::BoxAddrOp>(loc, refTy, dummyArg);
+                      mlir::Value readLength =
+                          charHelp.readLengthFromBox(dummyArg);
+                      builder.create<fir::ResultOp>(
+                          loc, mlir::ValueRange{readAddr, readLength});
+                    })
+                    .genElse([&] {
+                      mlir::Value readAddr = builder.genAbsentOp(loc, refTy);
+                      mlir::Value readLength =
+                          fir::factory::createZeroValue(builder, loc, lenType);
+                      builder.create<fir::ResultOp>(
+                          loc, mlir::ValueRange{readAddr, readLength});
+                    })
+                    .getResults();
+            addr = addrAndLen[0];
+            len = addrAndLen[1];
+          } else {
+            addr = builder.create<fir::BoxAddrOp>(loc, refTy, dummyArg);
+            len = charHelp.readLengthFromBox(dummyArg);
+          }
+          if (!explicitParams.empty())
+            len = explicitParams[0];
+          ::genDeclareSymbol(converter, symMap, sym, addr, len, /*extents=*/{},
+                             /*lbounds=*/{}, replace);
+          return;
+        }
+      }
       // TODO: derived type length parameters.
       lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
       lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents, symMap,
@@ -2106,9 +2157,10 @@ void Fortran::lower::createRuntimeTypeInfoGlobal(
 
 Fortran::semantics::SymbolRef
 Fortran::lower::getCrayPointer(Fortran::semantics::SymbolRef sym) {
-  assert(!sym->owner().crayPointers().empty() &&
+  assert(!sym->GetUltimate().owner().crayPointers().empty() &&
          "empty Cray pointer/pointee map");
-  for (const auto &[pointee, pointer] : sym->owner().crayPointers()) {
+  for (const auto &[pointee, pointer] :
+       sym->GetUltimate().owner().crayPointers()) {
     if (pointee == sym->name()) {
       Fortran::semantics::SymbolRef v{pointer.get()};
       return v;

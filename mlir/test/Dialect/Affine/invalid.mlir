@@ -145,7 +145,7 @@ func.func @affine_store_missing_l_square(%C: memref<4096x4096xf32>) {
 func.func @affine_store_wrong_value_type(%C: memref<f32>) {
   %c0 = arith.constant 0 : i32
   // expected-error@+1 {{value to store must have the same type as memref element type}}
-  "affine.store"(%c0, %C) : (i32, memref<f32>) -> ()
+  "affine.store"(%c0, %C) <{map = affine_map<(i) -> (i)>}> : (i32, memref<f32>) -> ()
   return
 }
 
@@ -287,7 +287,7 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<100x100xi32>
-  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minf") -> (f32) {
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minimumf") -> (f32) {
     %2 = affine.load %0[%i, %j] : memref<100x100xi32>
     //  expected-error@+1 {{types mismatch between yield op and its parent}}
     affine.yield %2 : i32

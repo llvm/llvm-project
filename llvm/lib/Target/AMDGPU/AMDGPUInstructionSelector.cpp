@@ -1710,7 +1710,7 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
 }
 
 bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
-  if (TM.getOptLevel() > CodeGenOpt::None) {
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     unsigned WGSize = STI.getFlatWorkGroupSizes(MF->getFunction()).second;
     if (WGSize <= STI.getWavefrontSize()) {
       MachineBasicBlock *MBB = MI.getParent();

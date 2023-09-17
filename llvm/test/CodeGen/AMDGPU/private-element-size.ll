@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mattr=-promote-alloca,+max-private-element-size-16 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=HSA-ELT16,ALL %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mattr=-promote-alloca,+max-private-element-size-8 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=HSA-ELT8,ALL,HSA-ELTGE8 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mattr=-promote-alloca,+max-private-element-size-4 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=HSA-ELT4,ALL %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mattr=-promote-alloca,+max-private-element-size-16 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=HSA-ELT16,ALL %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mattr=-promote-alloca,+max-private-element-size-8 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=HSA-ELT8,ALL,HSA-ELTGE8 %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mattr=-promote-alloca,+max-private-element-size-4 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=HSA-ELT4,ALL %s
 
 
 ; ALL-LABEL: {{^}}private_elt_size_v4i32:

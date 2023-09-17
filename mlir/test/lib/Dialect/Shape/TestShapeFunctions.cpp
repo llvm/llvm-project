@@ -57,7 +57,7 @@ void ReportShapeFnPass::runOnOperation() {
 
   // Lookup shape function library.
   SmallVector<shape::FunctionLibraryOp, 4> libraries;
-  auto attr = module->getAttr("shape.lib");
+  auto attr = module->getDiscardableAttr("shape.lib");
   if (attr) {
     auto lookup = [&](Attribute attr) {
       return cast<shape::FunctionLibraryOp>(

@@ -361,6 +361,112 @@ struct MoveVectorToTileSliceToArmSMELowering
   }
 };
 
+/// Lower `vector.outerproduct` to SME MOPA intrinsics.
+///
+/// Example:
+///
+///   %0 = vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>}
+///     : vector<[4]xf32>, vector<[4]xf32>
+///
+/// is converted to:
+///
+///   "arm_sme.intr.mopa"(%tile_id, %ptrue_s, %ptrue_s, %lhs, %rhs)
+///     : (i32, vector<[4]xi1>, vector<[4]xi1>, vector<[4]xf32>,
+///        vector<[4]xf32>) -> ()
+///
+/// Currently only supports FMOPA and BFMOPA (non-widening).
+struct VectorOuterProductToArmSMELowering
+    : public ConvertOpToLLVMPattern<vector::OuterProductOp> {
+  using ConvertOpToLLVMPattern<vector::OuterProductOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::OuterProductOp outerProductOp,
+                  vector::OuterProductOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto isSupportedType = [](VectorType vectorType) {
+      // TODO: the FP outer product instruction variants are predicated on
+      // different features [1]:
+      //
+      // * FMOPA (non-widening)
+      //   * half-precision   - +sme2p1,+sme-f16f16
+      //   * single-precision - +sme
+      //   * double-precision - +sme-f64f64
+      // * BFMOPA
+      //   * half-precision   - +sme2p1,+b16b16
+      //
+      // It should be possible to control lowering based on target features.
+      // [1] https://developer.arm.com/downloads/-/exploration-tools/feature-names-for-a-profile
+      if ((vectorType.getRank() != 2) || !vectorType.allDimsScalable())
+        return false;
+
+      auto elementType = vectorType.getElementType();
+
+      if (!elementType.isF16() && !elementType.isBF16() &&
+          !elementType.isF32() && !elementType.isF64())
+        return false;
+
+      unsigned minNumElts = arm_sme::MinStreamingVectorLengthInBits /
+                            vectorType.getElementTypeBitWidth();
+      if (vectorType.getShape() != ArrayRef<int64_t>({minNumElts, minNumElts}))
+        return false;
+
+      return true;
+    };
+
+    auto resultVectorType = outerProductOp.getResultVectorType();
+    if (!isSupportedType(resultVectorType))
+      return outerProductOp.emitError("unsupported type");
+
+    vector::CombiningKind kind = outerProductOp.getKind();
+    if (kind != vector::CombiningKind::ADD)
+      // TODO: support subtract.
+      return outerProductOp.emitError("unsupported kind");
+
+    auto maskableOp =
+        cast<vector::MaskableOpInterface>(outerProductOp.getOperation());
+    if (maskableOp.isMasked())
+      // TODO: support masking.
+      return outerProductOp.emitError("masking is currently unsupported");
+
+    if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
+      // AXPY operation not suited for SME.
+      return failure();
+
+    auto loc = outerProductOp.getLoc();
+
+    Value acc = outerProductOp.getAcc();
+    if (!acc)
+      // Initalize accumulator with zero.
+      acc = rewriter.create<arm_sme::ZeroOp>(loc, resultVectorType);
+
+    unsigned elementWidth = resultVectorType.getElementTypeBitWidth();
+    auto tileId = rewriter.create<arm_sme::CastVectorToTile>(
+        loc, rewriter.getIntegerType(elementWidth), acc);
+
+    // Create all active predicate mask.
+    auto one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI1Type(),
+        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+    auto predTy =
+        VectorType::get(resultVectorType.getShape()[0], rewriter.getI1Type(),
+                        /*scalableDims=*/{true});
+    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
+
+    auto tileI32 = castTileIDToI32(tileId, loc, rewriter);
+
+    // Create 'arm_sme.intr.mopa' outer product intrinsic.
+    rewriter.create<arm_sme::aarch64_sme_mopa>(
+        loc, tileI32, allActiveMask, allActiveMask, outerProductOp.getLhs(),
+        outerProductOp.getRhs());
+
+    // Create `CastTileToVectorOp` to use as the output.
+    rewriter.replaceOpWithNewOp<arm_sme::CastTileToVector>(
+        outerProductOp, resultVectorType, tileId);
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::configureArmSMELegalizeForExportTarget(
@@ -374,8 +480,10 @@ void mlir::configureArmSMELegalizeForExportTarget(
       arm_sme::aarch64_sme_st1b_horiz, arm_sme::aarch64_sme_st1h_horiz,
       arm_sme::aarch64_sme_st1w_horiz, arm_sme::aarch64_sme_st1d_horiz,
       arm_sme::aarch64_sme_st1q_horiz, arm_sme::aarch64_sme_write_horiz,
-      arm_sme::aarch64_sme_za_enable, arm_sme::aarch64_sme_za_disable>();
+      arm_sme::aarch64_sme_mopa, arm_sme::aarch64_sme_za_enable,
+      arm_sme::aarch64_sme_za_disable>();
   target.addLegalOp<GetTileID>();
+  target.addIllegalOp<vector::OuterProductOp>();
 
   // Mark 'func.func' ops as legal if either:
   //   1. no 'arm_za' function attribute is present.
@@ -405,7 +513,8 @@ void mlir::configureArmSMELegalizeForExportTarget(
 void mlir::populateArmSMELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<EnableZAPattern, DisableZAPattern>(patterns.getContext());
-  patterns.add<ZeroOpConversion, StoreTileSliceToArmSMELowering,
-               LoadTileSliceToArmSMELowering,
-               MoveVectorToTileSliceToArmSMELowering>(converter);
+  patterns
+      .add<ZeroOpConversion, StoreTileSliceToArmSMELowering,
+           LoadTileSliceToArmSMELowering, MoveVectorToTileSliceToArmSMELowering,
+           VectorOuterProductToArmSMELowering>(converter);
 }

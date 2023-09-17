@@ -20,12 +20,7 @@ LLVM_LIBC_FUNCTION(void, abort, ()) {
   port.send([&](rpc::Buffer *) {});
   port.close();
 
-#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
-  LIBC_INLINE_ASM("exit;" ::: "memory");
-#elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
-  __builtin_amdgcn_endpgm();
-#endif
-  __builtin_unreachable();
+  gpu::end_program();
 }
 
 } // namespace __llvm_libc

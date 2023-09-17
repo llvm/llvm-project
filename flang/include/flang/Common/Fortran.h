@@ -87,6 +87,9 @@ ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 // CUDA data attributes; mutually exclusive
 ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture)
 
+// OpenMP atomic_default_mem_order clause allowed values
+ENUM_CLASS(OmpAtomicDefaultMemOrderType, SeqCst, AcqRel, Relaxed)
+
 // Fortran names may have up to 63 characters (See Fortran 2018 C601).
 static constexpr int maxNameLen{63};
 

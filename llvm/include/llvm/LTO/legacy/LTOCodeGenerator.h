@@ -94,7 +94,7 @@ struct LTOCodeGenerator {
   }
 
   /// Set the file type to be emitted (assembly or object code).
-  /// The default is CGFT_ObjectFile.
+  /// The default is CodeGenFileType::ObjectFile.
   void setFileType(CodeGenFileType FT) { Config.CGFileType = FT; }
 
   void setCpu(StringRef MCpu) { Config.CPU = std::string(MCpu); }

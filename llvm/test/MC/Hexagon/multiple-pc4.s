@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=asm %s 2>%t; FileCheck --implicit-check-not=error: %s <%t
+# RUN: llvm-mc -triple=hexagon -filetype=asm %s 2>%t; FileCheck --implicit-check-not=error: %s <%t
 
 # Check that multiple changes to a predicate in a packet are caught.
 

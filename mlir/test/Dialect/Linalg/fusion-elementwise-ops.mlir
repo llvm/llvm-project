@@ -940,7 +940,7 @@ func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -
     iterator_types = ["parallel", "reduction"]
   } ins(%5 : tensor<?x?xf32>) outs(%7 : tensor<?xf32>) {
   ^bb0(%arg2: f32, %arg3: f32):
-    %9 = arith.maxf %arg2, %arg3 : f32
+    %9 = arith.maximumf %arg2, %arg3 : f32
     linalg.yield %9 : f32
   } -> tensor<?xf32>
   return %8 : tensor<?xf32>

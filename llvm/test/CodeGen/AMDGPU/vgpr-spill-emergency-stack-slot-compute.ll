@@ -1,9 +1,9 @@
 ; XFAIL: *
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
-; RUN: llc -march=amdgcn  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
-; RUN: llc -march=amdgcn  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=SIMESA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=VIMESA %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCNMESA -check-prefix=GFX9MESA %s
+; RUN: llc  -mcpu=hawaii -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CIHSA -check-prefix=HSA %s
+; RUN: llc  -mcpu=fiji -mtriple=amdgcn-unknown-amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VIHSA -check-prefix=HSA %s
 
 ; This ends up using all 256 registers and requires register
 ; scavenging which will fail to find an unsued register.

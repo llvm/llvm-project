@@ -12,14 +12,14 @@
 ;       CHECK: DW_AT_alignment
 ;       CHECK: DW_AT_data_member_location [DW_FORM_data1]	(0x00)
 
-%F = type { [0 x i8], ptr, [8 x i8] }
+%F = type { [0 x i8], i64, [8 x i8] }
 %"F::Nope" = type {}
 
 define internal void @_ZN2e34main17h934ff72f9a38d4bbE() unnamed_addr #0 !dbg !5 {
 start:
   %qq = alloca %F, align 8
   call void @llvm.dbg.declare(metadata ptr %qq, metadata !10, metadata !28), !dbg !29
-  store ptr null, ptr %qq, !dbg !29
+  store i64 0, ptr %qq, !dbg !29
   ret void, !dbg !30
 }
 

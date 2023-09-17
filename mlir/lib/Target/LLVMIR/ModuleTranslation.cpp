@@ -1278,29 +1278,18 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   if (!ompBuilder) {
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
+    ompBuilder->initialize();
 
-    bool isTargetDevice = false, isGPU = false;
-    llvm::StringRef hostIRFilePath = "";
-
-    if (auto deviceAttr =
-            mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_target_device"))
-      isTargetDevice = deviceAttr.getValue();
-
-    if (auto gpuAttr = mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_gpu"))
-      isGPU = gpuAttr.getValue();
-
-    if (auto filepathAttr =
-            mlirModule->getAttrOfType<mlir::StringAttr>("omp.host_ir_filepath"))
-      hostIRFilePath = filepathAttr.getValue();
-
-    ompBuilder->initialize(hostIRFilePath);
-
-    // TODO: set the flags when available
-    llvm::OpenMPIRBuilderConfig config(
-        isTargetDevice, isGPU,
-        /* HasRequiresUnifiedSharedMemory */ false,
-        /* OpenMPOffloadMandatory */ false);
-    ompBuilder->setConfig(config);
+    // Flags represented as top-level OpenMP dialect attributes are set in
+    // `OpenMPDialectLLVMIRTranslationInterface::amendOperation()`. Here we set
+    // the default configuration.
+    ompBuilder->setConfig(llvm::OpenMPIRBuilderConfig(
+        /* IsTargetDevice = */ false, /* IsGPU = */ false,
+        /* OpenMPOffloadMandatory = */ false,
+        /* HasRequiresReverseOffload = */ false,
+        /* HasRequiresUnifiedAddress = */ false,
+        /* HasRequiresUnifiedSharedMemory = */ false,
+        /* HasRequiresDynamicAllocators = */ false));
   }
   return ompBuilder.get();
 }
@@ -1327,7 +1316,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
   if (auto dataLayoutAttr =
-          m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
+          m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
   } else {
     FailureOr<llvm::DataLayout> llvmDataLayout(llvm::DataLayout(""));
@@ -1347,7 +1336,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
     llvmModule->setDataLayout(*llvmDataLayout);
   }
   if (auto targetTripleAttr =
-          m->getAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
+          m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
     llvmModule->setTargetTriple(cast<StringAttr>(targetTripleAttr).getValue());
 
   // Inject declarations for `malloc` and `free` functions that can be used in

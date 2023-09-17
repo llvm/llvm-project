@@ -137,7 +137,7 @@ private:
   bool parseAngle() {
     if (!CurrentToken || !CurrentToken->Previous)
       return false;
-    if (NonTemplateLess.count(CurrentToken->Previous))
+    if (NonTemplateLess.count(CurrentToken->Previous) > 0)
       return false;
 
     const FormatToken &Previous = *CurrentToken->Previous; // The '<'.
@@ -2598,9 +2598,12 @@ private:
     if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
-    // "&&(" is quite unlikely to be two successive unary "&".
-    if (Tok.is(tok::ampamp) && NextToken->is(tok::l_paren))
+    // "&&" followed by "(", "*", or "&" is quite unlikely to be two successive
+    // unary "&".
+    if (Tok.is(tok::ampamp) &&
+        NextToken->isOneOf(tok::l_paren, tok::star, tok::amp)) {
       return TT_BinaryOperator;
+    }
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
@@ -5652,6 +5655,17 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return !isItAnEmptyLambdaAllowed(Left, ShortLambdaOption);
     if (isAllmanLambdaBrace(Right))
       return !isItAnEmptyLambdaAllowed(Right, ShortLambdaOption);
+  }
+
+  if (Right.is(tok::kw_noexcept) && Right.is(TT_TrailingAnnotation)) {
+    switch (Style.AllowBreakBeforeNoexceptSpecifier) {
+    case FormatStyle::BBNSS_Never:
+      return false;
+    case FormatStyle::BBNSS_Always:
+      return true;
+    case FormatStyle::BBNSS_OnlyWithParen:
+      return Right.Next && Right.Next->is(tok::l_paren);
+    }
   }
 
   return Left.isOneOf(tok::comma, tok::coloncolon, tok::semi, tok::l_brace,
