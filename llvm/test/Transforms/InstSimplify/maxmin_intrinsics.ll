@@ -2332,3 +2332,108 @@ false:
   %m2 = call i8 @llvm.smin.i8(i8 %x, i8 %y)
   ret i8 %m2
 }
+
+; Tests from PR65833
+define i8 @umin_and_mask(i8 %x) {
+; CHECK-LABEL: @umin_and_mask(
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = and i8 %x, 1
+  %and2 = and i8 %x, 3
+  %val = call i8 @llvm.umin.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umax_and_mask(i8 %x) {
+; CHECK-LABEL: @umax_and_mask(
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = and i8 %x, 1
+  %and2 = and i8 %x, 3
+  %val = call i8 @llvm.umax.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umin_or_mask(i8 %x) {
+; CHECK-LABEL: @umin_or_mask(
+; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 3
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = or i8 %x, 1
+  %and2 = or i8 %x, 3
+  %val = call i8 @llvm.umin.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umax_or_mask(i8 %x) {
+; CHECK-LABEL: @umax_or_mask(
+; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 3
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = or i8 %x, 1
+  %and2 = or i8 %x, 3
+  %val = call i8 @llvm.umax.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umin_and_mask_negative(i8 %x) {
+; CHECK-LABEL: @umin_and_mask_negative(
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 2
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = and i8 %x, 1
+  %and2 = and i8 %x, 2
+  %val = call i8 @llvm.umin.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umax_and_mask_negative(i8 %x) {
+; CHECK-LABEL: @umax_and_mask_negative(
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 2
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = and i8 %x, 1
+  %and2 = and i8 %x, 2
+  %val = call i8 @llvm.umax.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umin_or_mask_negative(i8 %x) {
+; CHECK-LABEL: @umin_or_mask_negative(
+; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 2
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = or i8 %x, 1
+  %and2 = or i8 %x, 2
+  %val = call i8 @llvm.umin.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}
+
+define i8 @umax_or_mask_negative(i8 %x) {
+; CHECK-LABEL: @umax_or_mask_negative(
+; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 2
+; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[AND1]], i8 [[AND2]])
+; CHECK-NEXT:    ret i8 [[VAL]]
+;
+  %and1 = or i8 %x, 1
+  %and2 = or i8 %x, 2
+  %val = call i8 @llvm.umax.i8(i8 %and1, i8 %and2)
+  ret i8 %val
+}

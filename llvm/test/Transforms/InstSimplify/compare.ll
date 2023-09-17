@@ -1919,6 +1919,227 @@ define i1 @tautological8(i32 %A, i32 %B) {
   ret i1 %D
 }
 
+define i1 @tautological9(i32 %A) {
+; CHECK-LABEL: @tautological9(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define <2 x i1> @tautological9_vec(<2 x i32> %A) {
+; CHECK-LABEL: @tautological9_vec(
+; CHECK-NEXT:    [[C1:%.*]] = and <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[C2:%.*]] = and <2 x i32> [[A]], <i32 3, i32 3>
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt <2 x i32> [[C1]], [[C2]]
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %C1 = and <2 x i32> %A, <i32 1, i32 1>
+  %C2 = and <2 x i32> %A, <i32 3, i32 3>
+  %D = icmp ugt <2 x i32> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define i1 @tautological10(i32 %A) {
+; CHECK-LABEL: @tautological10(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp ule i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological11(i32 %A) {
+; CHECK-LABEL: @tautological11(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp ule i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological12(i32 %A) {
+; CHECK-LABEL: @tautological12(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological13(i32 %A) {
+; CHECK-LABEL: @tautological13(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological14(i32 %A) {
+; CHECK-LABEL: @tautological14(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological15(i32 %A) {
+; CHECK-LABEL: @tautological15(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological16(i32 %A) {
+; CHECK-LABEL: @tautological16(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological9_negative(i32 %A) {
+; CHECK-LABEL: @tautological9_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological10_negative(i32 %A) {
+; CHECK-LABEL: @tautological10_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ule i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological11_negative(i32 %A) {
+; CHECK-LABEL: @tautological11_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ule i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological12_negative(i32 %A) {
+; CHECK-LABEL: @tautological12_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological13_negative(i32 %A) {
+; CHECK-LABEL: @tautological13_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological14_negative(i32 %A) {
+; CHECK-LABEL: @tautological14_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological15_negative(i32 %A) {
+; CHECK-LABEL: @tautological15_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological16_negative(i32 %A) {
+; CHECK-LABEL: @tautological16_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
 declare void @helper_i1(i1)
 ; Series of tests for icmp s[lt|ge] (or A, B), A and icmp s[gt|le] A, (or A, B)
 define void @icmp_slt_sge_or(i32 %Ax, i32 %Bx) {
