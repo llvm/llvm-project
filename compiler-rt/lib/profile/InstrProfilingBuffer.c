@@ -9,6 +9,8 @@
 // Note: This is linked into the Darwin kernel, and must remain compatible
 // with freestanding compilation. See `darwin_add_builtin_libraries`.
 
+#include <assert.h>
+
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
@@ -45,9 +47,14 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
   const char *CountersEnd = __llvm_profile_end_counters();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
+  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
+  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
+  const char *VNamesBegin = __llvm_profile_begin_vnames();
+  const char *VNamesEnd = __llvm_profile_end_vnames();
 
   return __llvm_profile_get_size_for_buffer_internal(
-      DataBegin, DataEnd, CountersBegin, CountersEnd, NamesBegin, NamesEnd);
+      DataBegin, DataEnd, CountersBegin, CountersEnd, NamesBegin, NamesEnd,
+      VTableBegin, VTableEnd, VNamesBegin, VNamesEnd);
 }
 
 COMPILER_RT_VISIBILITY
@@ -62,6 +69,18 @@ COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
                                       const __llvm_profile_data *End) {
   return __llvm_profile_get_num_data(Begin, End) * sizeof(__llvm_profile_data);
+}
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_num_vtable(const VTableProfData *Begin,
+                                       const VTableProfData *End) {
+  intptr_t EndI = (intptr_t)End, BeginI = (intptr_t)Begin;
+  return (EndI + sizeof(VTableProfData) - 1 - BeginI) / sizeof(VTableProfData);
+}
+
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_vtable_size(const VTableProfData *Begin,
+                                        const VTableProfData *End) {
+  return __llvm_profile_get_num_vtable(Begin, End) * sizeof(VTableProfData);
 }
 
 COMPILER_RT_VISIBILITY size_t __llvm_profile_counter_entry_size(void) {
@@ -103,46 +122,68 @@ static int needsCounterPadding(void) {
 COMPILER_RT_VISIBILITY
 void __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
+    uint64_t VTableSize, uint64_t VNameSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
-    uint64_t *PaddingBytesAfterNames) {
+    uint64_t *PaddingBytesAfterNames, uint64_t *PaddingBytesAfterVTable,
+    uint64_t *PaddingBytesAfterVName) {
+  // Counter padding is needed only if continuous mode is enabled.
   if (!needsCounterPadding()) {
     *PaddingBytesBeforeCounters = 0;
     *PaddingBytesAfterCounters =
         __llvm_profile_get_num_padding_bytes(CountersSize);
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);
+    *PaddingBytesAfterVTable = __llvm_profile_get_num_padding_bytes(VTableSize);
+    *PaddingBytesAfterVName = __llvm_profile_get_num_padding_bytes(VNameSize);
     return;
   }
 
+  // Value profiling not supported in continuous mode at profile-write time
+  // according to
+  // https://github.com/llvm/llvm-project/blob/e6a007f6b51a661ed3dd8b0210b734b3e9b4354f/compiler-rt/lib/profile/InstrProfilingWriter.c#L328
+  assert(VTableSize == 0 && VNameSize == 0 &&
+         "Value profile not supported for continuous mode");
   // In continuous mode, the file offsets for headers and for the start of
   // counter sections need to be page-aligned.
   *PaddingBytesBeforeCounters =
       calculateBytesNeededToPageAlign(sizeof(__llvm_profile_header) + DataSize);
   *PaddingBytesAfterCounters = calculateBytesNeededToPageAlign(CountersSize);
   *PaddingBytesAfterNames = calculateBytesNeededToPageAlign(NamesSize);
+  // Set these two variables to zero to avoid uninitialized variables
+  // even if VTableSize and VNameSize are asserted to be zero.
+  *PaddingBytesAfterVTable = 0;
+  *PaddingBytesAfterVName = 0;
 }
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
     const char *CountersBegin, const char *CountersEnd, const char *NamesBegin,
-    const char *NamesEnd) {
+    const char *NamesEnd, const VTableProfData *VTableBegin,
+    const VTableProfData *VTableEnd, const char *VNamesBegin,
+    const char *VNamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   uint64_t CountersSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
+  uint64_t VTableSize = __llvm_profile_get_vtable_size(VTableBegin, VTableEnd);
+  uint64_t VNameSize = (VNamesEnd - VNamesBegin) * sizeof(char);
 
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames;
+      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
-      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+      DataSize, CountersSize, NamesSize, VTableSize, VNameSize,
+      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
+      &PaddingBytesAfterVNames);
 
   return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
          DataSize + PaddingBytesBeforeCounters + CountersSize +
-         PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames;
+         PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames +
+         VTableSize + PaddingBytesAfterVTable + VNameSize +
+         PaddingBytesAfterVNames;
 }
 
 COMPILER_RT_VISIBILITY
@@ -163,6 +204,9 @@ COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
     const char *CountersEnd, const char *NamesBegin, const char *NamesEnd) {
   ProfDataWriter BufferWriter;
   initBufferWriter(&BufferWriter, Buffer);
+  // Set virtual table arguments to NULL since they are not supported yet.
   return lprofWriteDataImpl(&BufferWriter, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, 0, NamesBegin, NamesEnd, 0);
+                            CountersEnd, 0, NamesBegin, NamesEnd,
+                            NULL /* VTableBegin */, NULL /* VTableEnd */,
+                            NULL /* VNamesBegin */, NULL /* VNamesEnd */, 0);
 }

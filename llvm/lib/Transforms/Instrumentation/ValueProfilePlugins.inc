@@ -90,9 +90,33 @@ public:
   }
 };
 
+///------------------------ VirtualTableValueProfilingPlugin ------------------------
+class VTableProfilingPlugin {
+  Function &F;
+
+public:
+  static constexpr InstrProfValueKind Kind = IPVK_VTableTarget;
+
+  VTableProfilingPlugin(Function &Fn, TargetLibraryInfo &TLI) : F(Fn) {}
+
+  void run(std::vector<CandidateInfo> &Candidates) {
+    std::vector<Instruction *> Result = findVTableAddrs(F);
+    for (Instruction* I : Result) {
+      Instruction* InsertPt = I->getNextNonDebugInstruction();
+      while(InsertPt && dyn_cast<PHINode>(InsertPt))
+        InsertPt = InsertPt->getNextNonDebugInstruction();
+      assert(InsertPt);
+
+      Instruction *AnnotatedInst = I;
+      Candidates.emplace_back(CandidateInfo{I, InsertPt, AnnotatedInst});
+    }
+  }
+};
+
 ///----------------------- Registration of the plugins -------------------------
 /// For now, registering a plugin with the ValueProfileCollector is done by
 /// adding the plugin type to the VP_PLUGIN_LIST macro.
 #define VP_PLUGIN_LIST           \
     MemIntrinsicPlugin,          \
-    IndirectCallPromotionPlugin
+    IndirectCallPromotionPlugin, \
+    VTableProfilingPlugin 

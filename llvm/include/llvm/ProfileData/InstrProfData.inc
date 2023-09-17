@@ -91,6 +91,18 @@ INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
 
+#ifndef INSTR_PROF_VTABLE_DATA
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Initializer)
+#else
+#define INSTR_PROF_VTABLE_DATA_DEFINED
+#endif
+INSTR_PROF_VTABLE_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), VTableNameHash, \
+                      ConstantInt::get(llvm::Type::getInt64Ty(Ctx), IndexedInstrProf::ComputeHash(VTableName)))
+INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), VTablePointer, VTableAddr)
+INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize, \
+                      ConstantInt::get(llvm::Type::getInt32Ty(Ctx), VTableSizeVal))
+#undef INSTR_PROF_VTABLE_DATA
+/* INSTR_PROF_VTABLE_DATA end. */
 
 /* This is an internal data structure used by value profiler. It
  * is defined here to allow serialization code sharing by LLVM
@@ -136,6 +148,8 @@ INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
                       (uintptr_t)CountersBegin - (uintptr_t)DataBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
+INSTR_PROF_RAW_HEADER(uint64_t, VNamesSize, VNamesSize)
+INSTR_PROF_RAW_HEADER(uint64_t, NumVTables, NumVTables)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #undef INSTR_PROF_RAW_HEADER
 /* INSTR_PROF_RAW_HEADER  end */
@@ -177,13 +191,14 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0, "indirect call target")
 /* For memory intrinsic functions size profiling. */
 VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
+VALUE_PROF_KIND(IPVK_VTableTarget, 2, "vtable target")
 /* These two kinds must be the last to be
  * declared. This is to make sure the string
  * array created with the template can be
  * indexed with the kind value.
  */
 VALUE_PROF_KIND(IPVK_First, IPVK_IndirectCallTarget, "first")
-VALUE_PROF_KIND(IPVK_Last, IPVK_MemOPSize, "last")
+VALUE_PROF_KIND(IPVK_Last, IPVK_VTableTarget, "last")
 
 #undef VALUE_PROF_KIND
 /* VALUE_PROF_KIND end */
@@ -270,12 +285,18 @@ INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
 INSTR_PROF_SECT_ENTRY(IPSK_name, \
                       INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
                       INSTR_PROF_NAME_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vname, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VNAME_COMMON), \
+                      INSTR_PROF_VNAME_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_vals, \
                       INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON), \
                       INSTR_PROF_VALS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
                       INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), \
                       INSTR_PROF_VNODES_COFF, "__DATA,")
+INSTR_PROF_SECT_ENTRY(IPSK_vtab, \
+                      INSTR_PROF_QUOTE(INSTR_PROF_VTAB_COMMON), \
+                      INSTR_PROF_VTAB_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
                       INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
                       INSTR_PROF_COVMAP_COFF, "__LLVM_COV,")
@@ -646,9 +667,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 
 /* FIXME: Please remedy the fixme in the header before bumping the version. */
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 8
+#define INSTR_PROF_RAW_VERSION 9
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 10
+#define INSTR_PROF_INDEX_VERSION 11
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 5
 
@@ -686,9 +707,11 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
    than WIN32 */
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
+#define INSTR_PROF_VNAME_COMMON __llvm_prf_vnames
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
+#define INSTR_PROF_VTAB_COMMON __llvm_prf_vtab
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
 #define INSTR_PROF_COVFUN_COMMON __llvm_covfun
 #define INSTR_PROF_ORDERFILE_COMMON __llvm_orderfile
@@ -697,9 +720,11 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  */
 #define INSTR_PROF_DATA_COFF ".lprfd$M"
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
+#define INSTR_PROF_VNAME_COFF ".lprfvn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
+#define INSTR_PROF_VTAB_COFF ".lprfvt$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
 #define INSTR_PROF_COVFUN_COFF ".lcovfun$M"
 #define INSTR_PROF_ORDERFILE_COFF ".lorderfile$M"

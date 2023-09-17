@@ -559,6 +559,13 @@ bool InstrProfiling::run(
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
   }
 
+  for (GlobalVariable &GV : M.globals()) {
+    // Global variables with type metadata are virtual table variables.
+    if (GV.hasMetadata(LLVMContext::MD_type)) {
+      getOrCreateVTableProfData(&GV);
+    }
+  }
+
   for (Function &F : M)
     MadeChange |= lowerIntrinsics(&F);
 
@@ -572,6 +579,7 @@ bool InstrProfiling::run(
 
   emitVNodes();
   emitNameData();
+  emitVTableNames();
 
   // Emit runtime hook for the cases where the target does not unconditionally
   // require pulling in profile runtime, and coverage is enabled on code that is
@@ -977,6 +985,135 @@ InstrProfiling::createRegionCounters(InstrProfInstBase *Inc, StringRef Name,
   return GV;
 }
 
+static inline bool shouldRecordVTableAddr(GlobalVariable *GV) {
+  if (!profDataReferencedByCode(*GV->getParent()))
+    return false;
+
+  if (!GV->hasLinkOnceLinkage() && !GV->hasLocalLinkage() &&
+      !GV->hasAvailableExternallyLinkage())
+    return true;
+
+  // This avoids the profile data from referencing internal symbols in
+  // COMDAT.
+  if (GV->hasLocalLinkage() && GV->hasComdat())
+    return false;
+
+  return true;
+}
+
+// FIXME: Does symbollic relocation from 'getFuncAddrForProfData' matter here?
+static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
+  // Store a nullptr in __profvt_ if a real address shouldn't be used.
+  auto *Int8PtrTy = Type::getInt8PtrTy(GV->getContext());
+
+  if (!shouldRecordVTableAddr(GV))
+    return ConstantPointerNull::get(Int8PtrTy);
+
+  return ConstantExpr::getBitCast(GV, Int8PtrTy);
+}
+
+/// Get the name of a profiling variable for a particular variable.
+static std::string getVarName(GlobalVariable *GV, StringRef Prefix) {
+  StringRef Name = GV->getName();
+  return (Prefix + Name).str();
+}
+
+void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
+  assert(!DebugInfoCorrelate &&
+         "Value profiling is not supported with lightweight instrumentation");
+  if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
+    return;
+
+  if (GV->getName().starts_with("llvm.") ||
+      GV->getName().starts_with("__llvm") ||
+      GV->getName().starts_with("__prof"))
+    return;
+
+  // VTableProfData already created
+  auto It = VTableDataMap.find(GV);
+  if (It != VTableDataMap.end() && It->second)
+    return;
+
+  GlobalValue::LinkageTypes Linkage = GV->getLinkage();
+  GlobalValue::VisibilityTypes Visibility = GV->getVisibility();
+
+  // This is to keep consistent with per-function profile data
+  // for correctness.
+  if (TT.isOSBinFormatXCOFF()) {
+    Linkage = GlobalValue::InternalLinkage;
+    Visibility = GlobalValue::DefaultVisibility;
+  }
+
+  LLVMContext &Ctx = M->getContext();
+  Type *DataTypes[] = {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto *DataTy = StructType::get(Ctx, ArrayRef(DataTypes));
+
+  // Used by INSTR_PROF_VTABLE_DATA MACRO
+  Constant *VTableAddr = getVTableAddrForProfData(GV);
+  StringRef VTableName = GV->getName();
+  // Record the length of the vtable. This is needed since vtable pointers
+  // loaded from C++ objects might be from the middle of a vtable definition.
+  uint32_t VTableSizeVal =
+      M->getDataLayout().getTypeAllocSize(GV->getValueType());
+
+  Constant *DataVals[] = {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Init,
+#include "llvm/ProfileData/InstrProfData.inc"
+  };
+
+  auto *Data =
+      new GlobalVariable(*M, DataTy, false /* constant */, Linkage,
+                         ConstantStruct::get(DataTy, DataVals),
+                         getVarName(GV, getInstrProfVTableVarPrefix()));
+
+  Data->setVisibility(Visibility);
+  Data->setSection(getInstrProfSectionName(IPSK_vtab, TT.getObjectFormat()));
+  Data->setAlignment(Align(8));
+
+  const bool NeedComdat = needsComdatForCounter(*GV, *M);
+
+  // GV is the data structure to record vtable information.
+  // Place the global variable for per-vtable profile data in a comdat group
+  // if the associated vtable definition is a COMDAT. This makes sure only one
+  // copy of the variable for the vtable will be emitted after linking.
+  auto MaybeSetComdat = [&](GlobalVariable *GV, StringRef GroupName) {
+    bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
+    if (UseComdat) {
+      // Create a new comdat group using the name of the global variable as
+      // opposed to using the comdat group of the vtable.
+      Comdat *C = M->getOrInsertComdat(GroupName);
+      // For ELF, when not using COMDAT, put the vtable profile data into a
+      // nodeduplicate COMDAT which is lowered to a zero-flag zero group.
+      // This allows -z -start-top-gc to discard the entire group when the
+      // vtable def is discarded.
+      if (!NeedComdat)
+        C->setSelectionKind(Comdat::NoDeduplicate);
+      GV->setComdat(C);
+      // COFF doesn't allow the comdat group leader to have private linkage, so
+      // upgrade private linkage to internal linkage to produce a symbol table
+      // entry.
+      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage()) {
+        GV->setLinkage(GlobalValue::InternalLinkage);
+      }
+      return;
+    }
+  };
+
+  MaybeSetComdat(Data, Data->getName());
+
+  VTableDataMap[GV] = Data;
+
+  ReferencedVTableNames.push_back(GV);
+
+  // VTable <Hash, Addr> is used by runtime but not referenced by other
+  // sections. Conservatively mark it linker retained.
+  UsedVars.push_back(Data);
+}
+
 GlobalVariable *
 InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
@@ -1262,6 +1399,34 @@ void InstrProfiling::emitNameData() {
 
   for (auto *NamePtr : ReferencedNames)
     NamePtr->eraseFromParent();
+}
+
+void InstrProfiling::emitVTableNames() {
+  if (ReferencedVTableNames.empty())
+    return;
+
+  // Collect VTable
+  std::string CompressedVTableNames;
+  if (Error E =
+          collectVTableStrings(ReferencedVTableNames, CompressedVTableNames,
+                               DoInstrProfNameCompression)) {
+    report_fatal_error(Twine(toString(std::move(E))), false);
+  }
+
+  auto &Ctx = M->getContext();
+  auto *VTableNamesVal = ConstantDataArray::getString(
+      Ctx, StringRef(CompressedVTableNames), false /* AddNull */);
+  GlobalVariable *VTableNamesVar =
+      new GlobalVariable(*M, VTableNamesVal->getType(), true /* constant */,
+                         GlobalValue::PrivateLinkage, VTableNamesVal,
+                         getInstrProfVTableNamesVarName());
+  VTableNamesVar->setSection(
+      getInstrProfSectionName(IPSK_vname, TT.getObjectFormat()));
+  VTableNamesVar->setAlignment(Align(1));
+  // Make VTableNames linker retained.
+  UsedVars.push_back(VTableNamesVar);
+
+  // FIXME: Why emitNames call erase method?
 }
 
 void InstrProfiling::emitRegistration() {

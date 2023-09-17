@@ -170,6 +170,47 @@ public:
   }
 };
 
+class InstrProfRecordVTableTrait {
+public:
+  using key_type = StringRef;
+  using key_type_ref = StringRef;
+
+  using data_type = char;
+  using data_type_ref = char;
+
+  using hash_value_type = uint64_t;
+  using offset_type = uint64_t;
+
+  InstrProfRecordVTableTrait() = default;
+
+  static hash_value_type ComputeHash(key_type_ref K) {
+    return IndexedInstrProf::ComputeHash(K);
+  }
+
+  static std::pair<offset_type, offset_type>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
+    using namespace support;
+
+    endian::Writer LE(Out, little);
+
+    offset_type N = K.size();
+    LE.write<offset_type>(N);
+
+    offset_type M = 1;
+    LE.write<offset_type>(M);
+
+    return std::make_pair(N, M);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type N) {
+    Out.write(K.data(), N);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
+    Out.write(&V, 1);
+  }
+};
+
 } // end namespace llvm
 
 InstrProfWriter::InstrProfWriter(bool Sparse,
@@ -447,12 +488,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.MemProfOffset = 0;
   Header.BinaryIdOffset = 0;
   Header.TemporalProfTracesOffset = 0;
+  Header.VTableNamesOffset = 0;
   int N = sizeof(IndexedInstrProf::Header) / sizeof(uint64_t);
 
   // Only write out all the fields except 'HashOffset', 'MemProfOffset',
-  // 'BinaryIdOffset' and `TemporalProfTracesOffset`. We need to remember the
-  // offset of these fields to allow back patching later.
-  for (int I = 0; I < N - 4; I++)
+  // 'BinaryIdOffset', `TemporalProfTracesOffset` and `VTableNamesOffset`. We
+  // need to remember the offset of these fields to allow back patching later.
+  for (int I = 0; I < N - 5; I++)
     OS.write(reinterpret_cast<uint64_t *>(&Header)[I]);
 
   // Save the location of Header.HashOffset field in \c OS.
@@ -474,6 +516,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   OS.write(0);
 
   uint64_t TemporalProfTracesOffset = OS.tell();
+  OS.write(0);
+
+  uint64_t VTableNamesOffset = OS.tell();
   OS.write(0);
 
   // Reserve space to write profile summary data.
@@ -589,6 +634,36 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       OS.writeByte(0);
   }
 
+  // if version >= the version with vtable profile metadata
+  // Intentionally put vtable names before temporal profile section.
+  uint64_t VTableNamesSectionStart = 0;
+  if (IndexedInstrProf::ProfVersion::CurrentVersion >= 11) {
+    VTableNamesSectionStart = OS.tell();
+
+    // Reserve space for vtable record table offset.
+    OS.write(0ULL);
+
+    OnDiskChainedHashTableGenerator<llvm::InstrProfRecordVTableTrait>
+        VTableNamesGenerator;
+    for (const auto &kv : VTableNames) {
+      // printf("InstrProfWriter.cpp key is %s\n", kv.getKey().str().c_str());
+      VTableNamesGenerator.insert(kv.getKey(), '0');
+    }
+
+    auto VTableNamesWriter =
+        std::make_unique<llvm::InstrProfRecordVTableTrait>();
+
+    uint64_t VTableNamesTableOffset =
+        VTableNamesGenerator.Emit(OS.OS, *VTableNamesWriter);
+
+    // printf("InstrProfWriter.cpp:VTableNamesSectionStart is %"PRIu64"\n",
+    // VTableNamesSectionStart); printf("\tVTableNamesTableOffset is
+    // %"PRIu64"\n", VTableNamesTableOffset);
+    PatchItem PatchItems[] = {
+        {VTableNamesSectionStart, &VTableNamesTableOffset, 1}};
+    OS.patch(PatchItems, 1);
+  }
+
   uint64_t TemporalProfTracesSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile)) {
     TemporalProfTracesSectionStart = OS.tell();
@@ -632,6 +707,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       // Patch the Header.TemporalProfTracesOffset (=0 for profiles without
       // traces).
       {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
+      {VTableNamesOffset, &VTableNamesSectionStart, 1},
       // Patch the summary data.
       {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
        (int)(SummarySize / sizeof(uint64_t))},
@@ -684,7 +760,8 @@ Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       DenseSet<uint64_t> SeenValues;
       for (uint32_t I = 0; I < ND; I++)
-        if ((VK != IPVK_IndirectCallTarget) && !SeenValues.insert(VD[I].Value).second)
+        if ((VK != IPVK_IndirectCallTarget && VK != IPVK_VTableTarget) &&
+            !SeenValues.insert(VD[I].Value).second)
           return make_error<InstrProfError>(instrprof_error::invalid_prof);
     }
   }
@@ -721,7 +798,7 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
       OS << ND << "\n";
       std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       for (uint32_t I = 0; I < ND; I++) {
-        if (VK == IPVK_IndirectCallTarget)
+        if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
           OS << Symtab.getFuncNameOrExternalSymbol(VD[I].Value) << ":"
              << VD[I].Count << "\n";
         else
@@ -756,6 +833,11 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
       for (const auto &Func : I.getValue())
         OrderedFuncData.push_back(std::make_pair(I.getKey(), Func));
     }
+  }
+
+  for (const auto &VTableName : VTableNames) {
+    if (Error E = Symtab.addVTableName(VTableName.getKey()))
+      return E;
   }
 
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile))

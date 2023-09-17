@@ -347,6 +347,13 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     });
   }
 
+  const InstrProfSymtab &symtab = Reader->getSymtab();
+  const auto &VTableNames = symtab.getVTableNames();
+
+  for (const auto &kv : VTableNames) {
+    WC->Writer.addVTableName(kv.getKey());
+  }
+
   if (Reader->hasTemporalProfile()) {
     auto &Traces = Reader->getTemporalProfTraces(Input.Weight);
     if (!Traces.empty())
@@ -2413,12 +2420,12 @@ static void showValueSitesStats(raw_fd_ostream &OS, uint32_t VK,
 
 static int showInstrProfile(
     const std::string &Filename, bool ShowCounts, uint32_t TopN,
-    bool ShowIndirectCallTargets, bool ShowMemOPSizes, bool ShowDetailedSummary,
-    std::vector<uint32_t> DetailedSummaryCutoffs, bool ShowAllFunctions,
-    bool ShowCS, uint64_t ValueCutoff, bool OnlyListBelow,
-    const std::string &ShowFunction, bool TextFormat, bool ShowBinaryIds,
-    bool ShowCovered, bool ShowProfileVersion, bool ShowTemporalProfTraces,
-    ShowFormat SFormat, raw_fd_ostream &OS) {
+    bool ShowIndirectCallTargets, bool ShowMemOPSizes, bool ShowVTables,
+    bool ShowDetailedSummary, std::vector<uint32_t> DetailedSummaryCutoffs,
+    bool ShowAllFunctions, bool ShowCS, uint64_t ValueCutoff,
+    bool OnlyListBelow, const std::string &ShowFunction, bool TextFormat,
+    bool ShowBinaryIds, bool ShowCovered, bool ShowProfileVersion,
+    bool ShowTemporalProfTraces, ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for instr profiles");
   if (SFormat == ShowFormat::Yaml)
@@ -2553,6 +2560,13 @@ static int showInstrProfile(
       if (ShowMemOPSizes && NumMemOPCalls > 0)
         OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
            << "\n";
+
+      if (ShowVTables) {
+        OS << "    VTable Results:\n";
+        traverseAllValueSites(Func, IPVK_VTableTarget,
+                              VPStats[IPVK_VTableTarget], OS,
+                              &(Reader->getSymtab()));
+      }
 
       if (ShowCounts) {
         OS << "    Block counts: [";
@@ -2934,6 +2948,9 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<bool> ShowIndirectCallTargets(
       "ic-targets", cl::init(false),
       cl::desc("Show indirect call site target values for shown functions"));
+  cl::opt<bool> ShowVTables(
+      "show-vtables", cl::init(false),
+      cl::desc("Show virtual table target values for shown functions"));
   cl::opt<bool> ShowMemOPSizes(
       "memop-sizes", cl::init(false),
       cl::desc("Show the profiled sizes of the memory intrinsic calls "
@@ -3036,10 +3053,10 @@ static int show_main(int argc, const char *argv[]) {
   if (ProfileKind == instr)
     return showInstrProfile(
         Filename, ShowCounts, TopNFunctions, ShowIndirectCallTargets,
-        ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
-        ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
-        TextFormat, ShowBinaryIds, ShowCovered, ShowProfileVersion,
-        ShowTemporalProfTraces, SFormat, OS);
+        ShowMemOPSizes, ShowVTables, ShowDetailedSummary,
+        DetailedSummaryCutoffs, ShowAllFunctions, ShowCS, ValueCutoff,
+        OnlyListBelow, ShowFunction, TextFormat, ShowBinaryIds, ShowCovered,
+        ShowProfileVersion, ShowTemporalProfTraces, SFormat, OS);
   if (ProfileKind == sample)
     return showSampleProfile(Filename, ShowCounts, TopNFunctions,
                              ShowAllFunctions, ShowDetailedSummary,

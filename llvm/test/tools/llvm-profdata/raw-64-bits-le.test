@@ -1,28 +1,53 @@
 RUN: printf '\201rforpl\377' > %t
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t
+// Version
+RUN: printf '\11\0\0\0\0\0\0\0' >> %t
+// BinaryIdsSize
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// NumData
 RUN: printf '\2\0\0\0\0\0\0\0' >> %t
+// PaddingBytesBeforeCounters
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// NumCounters
 RUN: printf '\3\0\0\0\0\0\0\0' >> %t
+// PaddingBytesAfterCounters
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// NamesSize
 RUN: printf '\20\0\0\0\0\0\0\0' >> %t
+// CountersDelta
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t
+// NamesDelta
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t
+// VNamesSize
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// NumVTables
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// ValueKindLast
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
+// InstrProfData
+// NameRef
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t
+// FuncHash
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t
+// RelativeCounterPtr
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t
+// FunctionPointer
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// Values
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+// NumCounters + Int16ArrayTy
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t
+// Int16ArrayTy + padding
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
+// InstrProfData
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t
-RUN: printf '\xd8\xff\3\0\1\0\0\0' >> %t
+RUN: printf '\xd0\xff\3\0\1\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t

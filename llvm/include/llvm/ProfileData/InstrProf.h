@@ -90,6 +90,9 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
+/// Return the name prefix of variables containing virtual table profile data.
+inline StringRef getInstrProfVTableVarPrefix() { return "__profvt_"; }
+
 /// Return the name prefix of variables containing per-function control data.
 inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 
@@ -107,6 +110,8 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 inline StringRef getInstrProfNamesVarName() {
   return "__llvm_prf_nm";
 }
+
+inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
 /// Return the name of a covarage mapping variable (internal linkage)
 /// for each instrumented source module. Such variables are allocated
@@ -237,10 +242,15 @@ Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
 
+Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
+                           std::string &Result, bool doCompression);
+
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
 /// the format described above. The substrings are separated by 0 or more zero
 /// bytes. This method decodes the string and populates the \c Symtab.
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
+
+Error readVTableNames(StringRef NameStrings, InstrProfSymtab &Symtab);
 
 /// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
 /// set in IR PGO compilation.
@@ -291,7 +301,7 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
-bool needsComdatForCounter(const Function &F, const Module &M);
+bool needsComdatForCounter(const GlobalValue &GV, const Module &M);
 
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
@@ -429,14 +439,24 @@ private:
   uint64_t Address = 0;
   // Unique name strings.
   StringSet<> NameTab;
+  // Unique virtual table names.
+  StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
+  // A map from MD5 keys to virtual table definitions. Only populated when
+  // building the Symtab from a module.
+  std::vector<std::pair<uint64_t, GlobalVariable *>> MD5VTableMap;
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
+  // A map from virtual table runtime address to function name MD5 hash.
+  // This map is only populated and used by raw instr profile reader.
+  // This is a different map from 'AddrToMD5Map' for readability and
+  // debuggability.
+  AddrHashMap VTableAddrToMD5Map;
   bool Sorted = false;
 
   static StringRef getExternalSymbol() {
@@ -471,6 +491,8 @@ public:
   /// This method is a wrapper to \c readPGOFuncNameStrings method.
   inline Error create(StringRef NameStrings);
 
+  inline Error create(StringRef FuncNameStrings, StringRef VTableNameStrings);
+
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
   /// passes such as indirect function call promotion. Variable \c InLTO
@@ -480,6 +502,13 @@ public:
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
   template <typename NameIterRange> Error create(const NameIterRange &IterRange);
+
+  /// Create InstrProfSymtab from a set of function names and vtable
+  /// names iteratable from \p IterRange. This interface is used by
+  /// IndexedProfReader.
+  template <typename FuncNameIterRange, typename VTableNameIterRange>
+  Error create(const FuncNameIterRange &FuncIterRange,
+               const VTableNameIterRange &VTableIterRange);
 
   /// Update the symtab by adding \p FuncName to the table. This interface
   /// is used by the raw and text profile readers.
@@ -496,14 +525,48 @@ public:
     return Error::success();
   }
 
+  Error addVTableName(StringRef VTableName) {
+    if (VTableName.empty())
+      return make_error<InstrProfError>(instrprof_error::malformed,
+                                        "invalid input: VTableName is empty");
+    // Insert into NameTab.
+    auto Ins = NameTab.insert(VTableName);
+
+    // Insert into VTableNames.
+    VTableNames.insert(VTableName);
+
+    // If this is newly added, update MD5NameMap.
+    if (Ins.second) {
+      // printf("VTableName %s\n", VTableName.str().c_str());
+      // printf("AddVTableName hash %"PRIu64" to %s\n",
+      // IndexedInstrProf::ComputeHash(VTableName), Ins.first->getKey());
+      MD5NameMap.push_back(std::make_pair(
+          IndexedInstrProf::ComputeHash(VTableName), Ins.first->getKey()));
+      Sorted = false;
+    }
+    return Error::success();
+  }
+
+  const StringSet<> &getVTableNames() const { return VTableNames; }
+
   /// Map a function address to its name's MD5 hash. This interface
   /// is only used by the raw profiler reader.
   void mapAddress(uint64_t Addr, uint64_t MD5Val) {
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
 
+  // Map the start and end address of a variable to its names' MD5 hash.
+  // This interface is only used by the raw profile header.
+  void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
+    VTableAddrToMD5Map.push_back(std::make_pair(StartAddr, MD5Val));
+    VTableAddrToMD5Map.push_back(std::make_pair(EndAddr, MD5Val));
+  }
+
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
   uint64_t getFunctionHashFromAddress(uint64_t Address);
+
+  /// Return a vtable's hash, or 0 if the vtable doesn't exist in this SymTab.
+  uint64_t getVTableHashFromAddress(uint64_t Address);
 
   /// Return function's PGO name from the function name's symbol
   /// address in the object file. If an error occurs, return
@@ -519,6 +582,11 @@ public:
   /// will be represented using the same StringRef value.
   inline StringRef getFuncNameOrExternalSymbol(uint64_t FuncMD5Hash);
 
+  /// Just like getFuncName, except that it will return a non-empty StringRef
+  /// if the function is external to this symbol table. All such cases
+  /// will be represented using the same StringRef value.
+  // inline StringRef getVTableNameOrExternalSymbol(uint64_t VTableMD5Hash);
+
   /// True if Symbol is the value used to represent external symbols.
   static bool isExternalSymbol(const StringRef &Symbol) {
     return Symbol == InstrProfSymtab::getExternalSymbol();
@@ -526,6 +594,8 @@ public:
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
   inline Function *getFunction(uint64_t FuncMD5Hash);
+  // Return vtable from the name's MD5 hash. Return nullptr if not found.
+  inline GlobalVariable *getGlobalVariable(uint64_t GlobalVariableMD5Hash);
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -544,11 +614,38 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
   return readPGOFuncNameStrings(NameStrings, *this);
 }
 
+Error InstrProfSymtab::create(StringRef FuncNameStrings,
+                              StringRef VTableNameStrings) {
+  if (Error E = readPGOFuncNameStrings(FuncNameStrings, *this))
+    return E;
+
+  // FIXME: Add test coverage that this returns success when VTableNameStrings
+  // is empty.
+  return readVTableNames(VTableNameStrings, *this);
+}
+
 template <typename NameIterRange>
 Error InstrProfSymtab::create(const NameIterRange &IterRange) {
   for (auto Name : IterRange)
     if (Error E = addFuncName(Name))
       return E;
+
+  finalizeSymtab();
+  return Error::success();
+}
+
+template <typename FuncNameIterRange, typename VTableNameIterRange>
+Error InstrProfSymtab::create(const FuncNameIterRange &FuncIterRange,
+                              const VTableNameIterRange &VTableIterRange) {
+  for (auto Name : FuncIterRange)
+    if (Error E = addFuncName(Name))
+      return E;
+
+  for (auto VTableName : VTableIterRange) {
+    if (Error E = addVTableName(VTableName)) {
+      return E;
+    }
+  }
 
   finalizeSymtab();
   return Error::success();
@@ -588,6 +685,19 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
                                   [](const std::pair<uint64_t, Function *> &LHS,
                                      uint64_t RHS) { return LHS.first < RHS; });
   if (Result != MD5FuncMap.end() && Result->first == FuncMD5Hash)
+    return Result->second;
+  return nullptr;
+}
+
+GlobalVariable *
+InstrProfSymtab::getGlobalVariable(uint64_t GlobalVariableMD5Hash) {
+  finalizeSymtab();
+  auto Result =
+      llvm::lower_bound(MD5VTableMap, GlobalVariableMD5Hash,
+                        [](const std::pair<uint64_t, GlobalVariable *> &LHS,
+                           uint64_t RHS) { return LHS.first < RHS; });
+
+  if (Result != MD5VTableMap.end() && Result->first == GlobalVariableMD5Hash)
     return Result->second;
   return nullptr;
 }
@@ -813,6 +923,7 @@ private:
   struct ValueProfData {
     std::vector<InstrProfValueSiteRecord> IndirectCallSites;
     std::vector<InstrProfValueSiteRecord> MemOPSizes;
+    std::vector<InstrProfValueSiteRecord> VTableTargets;
   };
   std::unique_ptr<ValueProfData> ValueData;
 
@@ -835,6 +946,8 @@ private:
       return ValueData->IndirectCallSites;
     case IPVK_MemOPSize:
       return ValueData->MemOPSizes;
+    case IPVK_VTableTarget:
+      return ValueData->VTableTargets;
     default:
       llvm_unreachable("Unknown value kind!");
     }
@@ -849,6 +962,8 @@ private:
       return ValueData->IndirectCallSites;
     case IPVK_MemOPSize:
       return ValueData->MemOPSizes;
+    case IPVK_VTableTarget:
+      return ValueData->VTableTargets;
     default:
       llvm_unreachable("Unknown value kind!");
     }
@@ -1015,6 +1130,8 @@ enum ProfVersion {
   Version9 = 9,
   // An additional (optional) temporal profile traces section is added.
   Version10 = 10,
+  // VTable profiling,
+  Version11 = 11,
   // The current version is 10.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
@@ -1035,6 +1152,7 @@ struct Header {
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;
   uint64_t TemporalProfTracesOffset;
+  uint64_t VTableNamesOffset; // Organize virtual table names.
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.
@@ -1172,6 +1290,11 @@ template <> inline uint64_t getMagic<uint32_t>() {
 template <class IntPtrT> struct alignas(8) ProfileData {
   #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Type Name;
   #include "llvm/ProfileData/InstrProfData.inc"
+};
+
+template <class IntPtrT> struct alignas(8) VTableProfileData {
+#define INSTR_PROF_VTABLE_DATA(Type, LLVMType, Name, Init) Type Name;
+#include "llvm/ProfileData/InstrProfData.inc"
 };
 
 // File header structure of the LLVM profile data in raw format.

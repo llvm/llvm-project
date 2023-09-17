@@ -56,12 +56,18 @@ private:
     }
   };
   DenseMap<GlobalVariable *, PerFunctionProfileData> ProfileDataMap;
+  // Key is virtual table variable, value is 'VTableProfData' in the form of
+  // GlobalVariable.
+  DenseMap<GlobalVariable *, GlobalVariable *> VTableDataMap;
   /// If runtime relocation is enabled, this maps functions to the load
   /// instruction that produces the profile relocation bias.
   DenseMap<const Function *, LoadInst *> FunctionToProfileBiasMap;
   std::vector<GlobalValue *> CompilerUsedVars;
   std::vector<GlobalValue *> UsedVars;
   std::vector<GlobalVariable *> ReferencedNames;
+  // The list of virtual table variables of which the VTableProfData is
+  // collected.
+  std::vector<GlobalVariable *> ReferencedVTableNames;
   GlobalVariable *NamesVar;
   size_t NamesSize;
 
@@ -115,12 +121,18 @@ private:
   /// referring to them will also be created.
   GlobalVariable *getOrCreateRegionCounters(InstrProfInstBase *Inc);
 
+  /// Get the counters for virtual table values, creating them if necessary.
+  void getOrCreateVTableProfData(GlobalVariable *GV);
+
   /// Create the region counters.
   GlobalVariable *createRegionCounters(InstrProfInstBase *Inc, StringRef Name,
                                        GlobalValue::LinkageTypes Linkage);
 
   /// Emit the section with compressed function names.
   void emitNameData();
+
+  /// Emit the section with compressed vtable names.
+  void emitVTableNames();
 
   /// Emit value nodes section for value profiling.
   void emitVNodes();

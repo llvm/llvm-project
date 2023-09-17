@@ -436,6 +436,18 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
       return E;
   }
+
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalVariable &G : M.globals()) {
+    if (!G.hasName())
+      continue;
+    Types.clear();
+    G.getMetadata(LLVMContext::MD_type, Types);
+    if (!Types.empty()) {
+      // errs() << "Insert " << G.getGUID() << "\t into MD5VTableMap\n";
+      MD5VTableMap.emplace_back(G.getGUID(), &G);
+    }
+  }
   Sorted = false;
   finalizeSymtab();
   return Error::success();
@@ -471,6 +483,26 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
     MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
   }
   return Error::success();
+}
+
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+  finalizeSymtab();
+  // printf("look up key 0x%llx\n", Address);
+  // for (auto iter = VTableAddrToMD5Map.begin(); iter !=
+  // VTableAddrToMD5Map.end(); iter++) {
+  //   printf("<key, val> is <0x%llx, %"PRIu64"\n", iter->first, iter->second);
+  // }
+  auto It =
+      partition_point(VTableAddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
+        return A.first < Address;
+      });
+  // FIXME: Does the raw function pointers point apply here?
+  if (It != VTableAddrToMD5Map.end()) {
+    // printf("InstrProfSymtab::getVTableHashFromAddress map addr 0x%llx to hash
+    // value %"PRIu64"\n", Address, (uint64_t)It->second);
+    return (uint64_t)It->second;
+  }
+  return 0;
 }
 
 uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
@@ -549,42 +581,112 @@ Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
       NameStrs, compression::zlib::isAvailable() && doCompression, Result);
 }
 
+Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
+                           std::string &Result, bool doCompression) {
+  std::vector<std::string> VTableNameStrs;
+  for (auto *VTable : VTables) {
+    // printf("VTable name %s added\n", VTable->getName().str().c_str());
+    VTableNameStrs.push_back(std::string(VTable->getName()));
+  }
+  return collectPGOFuncNameStrings(
+      VTableNameStrs, compression::zlib::isAvailable() && doCompression,
+      Result);
+}
+
+instrprof_error decodeAndSplitStrings(
+    const uint8_t *Input, SmallVector<uint8_t, 128> &UncompressedNameStrings,
+    StringRef &NameStrings, uint32_t &Dist, bool &isCompressed) {
+  Dist = 0;
+  const uint8_t *Start = Input;
+  uint32_t UncompressedSizeLen = 0;
+  uint64_t UncompressedSize = decodeULEB128(Start, &UncompressedSizeLen);
+  Start += UncompressedSizeLen;
+  Dist += UncompressedSizeLen;
+  uint32_t CompressedSizeLen = 0;
+  uint64_t CompressedSize = decodeULEB128(Start, &CompressedSizeLen);
+  Start += CompressedSizeLen;
+  Dist += CompressedSizeLen;
+  isCompressed = (CompressedSize != 0);
+  if (isCompressed) {
+    if (!llvm::compression::zlib::isAvailable())
+      return instrprof_error::zlib_unavailable;
+
+    if (Error E = compression::zlib::decompress(ArrayRef(Start, CompressedSize),
+                                                UncompressedNameStrings,
+                                                UncompressedSize)) {
+      consumeError(std::move(E));
+      return instrprof_error::uncompress_failed;
+    }
+    Dist += CompressedSize;
+  } else {
+    NameStrings =
+        StringRef(reinterpret_cast<const char *>(Start), UncompressedSize);
+    Dist += UncompressedSize;
+  }
+
+  return instrprof_error::success;
+}
+
 Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
-    uint32_t N;
-    uint64_t UncompressedSize = decodeULEB128(P, &N);
-    P += N;
-    uint64_t CompressedSize = decodeULEB128(P, &N);
-    P += N;
-    bool isCompressed = (CompressedSize != 0);
-    SmallVector<uint8_t, 128> UncompressedNameStrings;
-    StringRef NameStrings;
-    if (isCompressed) {
-      if (!llvm::compression::zlib::isAvailable())
-        return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
-
-      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
-                                                  UncompressedNameStrings,
-                                                  UncompressedSize)) {
-        consumeError(std::move(E));
-        return make_error<InstrProfError>(instrprof_error::uncompress_failed);
-      }
-      P += CompressedSize;
-      NameStrings = toStringRef(UncompressedNameStrings);
-    } else {
-      NameStrings =
-          StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
-      P += UncompressedSize;
-    }
     // Now parse the name strings.
+    uint32_t Dist = 0;
+    StringRef NameStrings;
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
     SmallVector<StringRef, 0> Names;
+    bool isCompressed = false;
+    instrprof_error E = decodeAndSplitStrings(P, UncompressedNameStrings,
+                                              NameStrings, Dist, isCompressed);
+    if (E != instrprof_error::success)
+      return make_error<InstrProfError>(E);
+
+    if (isCompressed) {
+      NameStrings = toStringRef(UncompressedNameStrings);
+    }
+
     NameStrings.split(Names, getInstrProfNameSeparator());
-    for (StringRef &Name : Names)
+    for (StringRef &Name : Names) {
       if (Error E = Symtab.addFuncName(Name))
         return E;
+    }
 
+    P += Dist;
+    // Skip padding?
+    while (P < EndP && *P == 0)
+      P++;
+  }
+  return Error::success();
+}
+
+Error readVTableNames(StringRef NameStrings, InstrProfSymtab &Symtab) {
+  const uint8_t *P = NameStrings.bytes_begin();
+  const uint8_t *EndP = NameStrings.bytes_end();
+  while (P < EndP) {
+    // Now parse the name strings.
+    uint32_t Dist = 0;
+    StringRef NameStrings;
+    SmallVector<uint8_t, 128> UncompressedNameStrings;
+    SmallVector<StringRef, 0> Names;
+    bool isCompressed = false;
+    instrprof_error E = decodeAndSplitStrings(P, UncompressedNameStrings,
+                                              NameStrings, Dist, isCompressed);
+    if (E != instrprof_error::success)
+      return make_error<InstrProfError>(E);
+
+    if (isCompressed) {
+      NameStrings = toStringRef(UncompressedNameStrings);
+    }
+    NameStrings.split(Names, getInstrProfNameSeparator());
+    for (StringRef &Name : Names) {
+      // printf("Read back vtable name %s\n", Name.str().c_str());
+      if (Error E = Symtab.addVTableName(Name))
+        return E;
+    }
+
+    P += Dist;
+    // Skip padding?
     while (P < EndP && *P == 0)
       P++;
   }
@@ -840,6 +942,11 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
 
   if (ValueKind == IPVK_IndirectCallTarget)
     return SymTab->getFunctionHashFromAddress(Value);
+
+  if (ValueKind == IPVK_VTableTarget) {
+    uint64_t VTableHash = SymTab->getVTableHashFromAddress(Value);
+    return VTableHash;
+  }
 
   return Value;
 }
@@ -1232,8 +1339,8 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
   F.setMetadata(getPGOFuncNameMetadataName(), N);
 }
 
-bool needsComdatForCounter(const Function &F, const Module &M) {
-  if (F.hasComdat())
+bool needsComdatForCounter(const GlobalValue &GV, const Module &M) {
+  if (GV.hasComdat())
     return true;
 
   if (!Triple(M.getTargetTriple()).supportsCOMDAT())
@@ -1249,7 +1356,7 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
   // available_externally functions will end up being duplicated in raw profile
   // data. This can result in distorted profile as the counts of those dups
   // will be accumulated by the profile merger.
-  GlobalValue::LinkageTypes Linkage = F.getLinkage();
+  GlobalValue::LinkageTypes Linkage = GV.getLinkage();
   if (Linkage != GlobalValue::ExternalWeakLinkage &&
       Linkage != GlobalValue::AvailableExternallyLinkage)
     return false;
@@ -1413,6 +1520,9 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
     case IPVK_MemOPSize:
       strncpy(ProfileKindName, "MemOP", 19);
       break;
+    case IPVK_VTableTarget:
+      strncpy(ProfileKindName, "VTable", 19);
+      break;
     default:
       snprintf(ProfileKindName, 19, "VP[%d]", I);
       break;
@@ -1476,9 +1586,12 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 11ull:
+    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
+    [[fallthrough]];
   case 10ull:
     H.TemporalProfTracesOffset =
         read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
@@ -1502,10 +1615,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 11ull:
+    return offsetOf(&Header::VTableNamesOffset) +
+           sizeof(Header::VTableNamesOffset);
   case 10ull:
     return offsetOf(&Header::TemporalProfTracesOffset) +
            sizeof(Header::TemporalProfTracesOffset);

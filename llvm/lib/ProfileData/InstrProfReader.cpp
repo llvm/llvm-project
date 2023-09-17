@@ -372,6 +372,14 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
               return E;
             Value = IndexedInstrProf::ComputeHash(VD.first);
           }
+        } else if (ValueKind == IPVK_VTableTarget) {
+          if (InstrProfSymtab::isExternalSymbol(VD.first)) {
+            Value = 0;
+          } else {
+            if (Error E = Symtab->addVTableName(VD.first))
+              return E;
+            Value = IndexedInstrProf::ComputeHash(VD.first);
+          }
         } else {
           READ_NUM(VD.first, Value);
         }
@@ -516,13 +524,30 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
-  if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart)))
+  if (Error E =
+          Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
+                        StringRef(VNamesStart, VNamesEnd - VNamesStart))) {
     return error(std::move(E));
+  }
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
     const IntPtrT FPtr = swap(I->FunctionPointer);
     if (!FPtr)
       continue;
     Symtab.mapAddress(FPtr, I->NameRef);
+  }
+
+  if (VTableBegin != nullptr && VTableEnd != nullptr) {
+    for (const RawInstrProf::VTableProfileData<IntPtrT> *I = VTableBegin;
+         I != VTableEnd; ++I) {
+      const IntPtrT VPtr = I->VTablePointer;
+      if (!VPtr)
+        continue;
+      // Map both begin and end address to the name hash, since the instrumented
+      // address could be somewhere in the middle.
+      // VPtr is of type uint32_t or uint64_t so 'VPtr + I->VTableSize' marks
+      // the end of vtable address.
+      Symtab.mapVTableAddress(VPtr, VPtr + I->VTableSize, I->VTableNameHash);
+    }
   }
   return success();
 }
@@ -555,17 +580,29 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto CountersSize = swap(Header.NumCounters) * getCounterTypeSize();
   auto PaddingBytesAfterCounters = swap(Header.PaddingBytesAfterCounters);
   auto NamesSize = swap(Header.NamesSize);
+  auto VTableNameSize = Header.VNamesSize;
+  auto NumVTables = Header.NumVTables;
   ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
-  auto PaddingSize = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterNames = getNumPaddingBytes(NamesSize);
+  auto PaddingBytesAfterVTableNames = getNumPaddingBytes(VTableNameSize);
+
+  auto VTableSectionSize =
+      Header.NumVTables * sizeof(RawInstrProf::VTableProfileData<IntPtrT>);
+  auto PaddingBytesAfterVTableProfData = getNumPaddingBytes(VTableSectionSize);
 
   // Profile data starts after profile header and binary ids if exist.
   ptrdiff_t DataOffset = sizeof(RawInstrProf::Header) + BinaryIdsSize;
   ptrdiff_t CountersOffset = DataOffset + DataSize + PaddingBytesBeforeCounters;
   ptrdiff_t NamesOffset =
       CountersOffset + CountersSize + PaddingBytesAfterCounters;
-  ptrdiff_t ValueDataOffset = NamesOffset + NamesSize + PaddingSize;
+  ptrdiff_t VTableProfDataOffset =
+      NamesOffset + NamesSize + PaddingBytesAfterNames;
+  ptrdiff_t VTableNameOffset = VTableProfDataOffset + VTableSectionSize +
+                               PaddingBytesAfterVTableProfData;
+  ptrdiff_t ValueDataOffset =
+      VTableNameOffset + VTableNameSize + PaddingBytesAfterVTableNames;
 
   auto *Start = reinterpret_cast<const char *>(&Header);
   if (Start + ValueDataOffset > DataBuffer->getBufferEnd())
@@ -584,8 +621,14 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);
     DataEnd = Data + NumData;
+    VTableBegin =
+        reinterpret_cast<const RawInstrProf::VTableProfileData<IntPtrT> *>(
+            Start + VTableProfDataOffset);
+    VTableEnd = VTableBegin + NumVTables;
     NamesStart = Start + NamesOffset;
     NamesEnd = NamesStart + NamesSize;
+    VNamesStart = Start + VTableNameOffset;
+    VNamesEnd = VNamesStart + VTableNameSize;
   }
 
   // Binary ids start just after the header.
@@ -829,6 +872,19 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
     }
   }
   return DataBuffer;
+}
+
+InstrProfVTableLookupTrait::hash_value_type
+InstrProfVTableLookupTrait::ComputeHash(StringRef K) {
+  return IndexedInstrProf::ComputeHash(HashType, K);
+}
+
+InstrProfVTableLookupTrait::data_type
+InstrProfVTableLookupTrait::ReadData(StringRef K, const unsigned char *D,
+                                     offset_type N) {
+  char v =
+      support::endian::readNext<char, support::little, support::unaligned>(D);
+  return v;
 }
 
 template <typename HashTableImpl>
@@ -1150,6 +1206,21 @@ Error IndexedInstrProfReader::readHeader() {
                                         "corrupted binary ids");
   }
 
+  if (GET_VERSION(Header->formatVersion()) >= 11) {
+    uint64_t VTableNamesOffset =
+        endian::byte_swap<uint64_t, little>(Header->VTableNamesOffset);
+    const unsigned char *Ptr = Start + VTableNamesOffset;
+
+    const uint64_t HashTableMetadataOffset =
+        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+
+    VirtualTableIndex.reset(VirtualTableNamesHashTable::Create(
+        /*Bucket=*/Start + HashTableMetadataOffset,
+        /*Payload=*/Ptr,
+        /*Base=*/Start,
+        InstrProfVTableLookupTrait(HashType, Header->formatVersion())));
+  }
+
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
       Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
     uint64_t TemporalProfTracesOffset =
@@ -1204,7 +1275,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
     return *Symtab;
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Index->populateSymtab(*NewSymtab)) {
+  if (Error E = Index->populateSymtab(*NewSymtab, VirtualTableIndex.get())) {
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     consumeError(error(ErrCode, Msg));
   }
