@@ -97,7 +97,7 @@ parsePresburgerRelationFromPresburgerSet(ArrayRef<StringRef> strs,
   PresburgerRelation result(rel);
   for (unsigned i = 1, e = strs.size(); i < e; ++i)
     result.unionInPlace(parseIntegerPolyhedron(strs[i]));
-  result.convertVarKind(VarKind::Range, 0, numDomain, VarKind::Domain, 0);
+  result.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain, 0);
   return result;
 }
 
