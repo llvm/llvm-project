@@ -2115,10 +2115,7 @@ define i1 @tautological16_negative(i32 %A) {
 
 define i1 @tautological17_subset1(i32 %A) {
 ; CHECK-LABEL: @tautological17_subset1(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
-; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = and i32 %A, 1
   %C2 = and i32 %A, 3
@@ -2128,10 +2125,7 @@ define i1 @tautological17_subset1(i32 %A) {
 
 define i1 @tautological17_subset2(i32 %A) {
 ; CHECK-LABEL: @tautological17_subset2(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], -4
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
-; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = and i32 %A, -4
   %C2 = and i32 %A, -3
@@ -2154,10 +2148,7 @@ define i1 @tautological17_negative(i32 %A) {
 
 define i1 @tautological18_subset1(i32 %A) {
 ; CHECK-LABEL: @tautological18_subset1(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
-; CHECK-NEXT:    [[D:%.*]] = icmp sle i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 true
 ;
   %C1 = and i32 %A, 1
   %C2 = and i32 %A, 3
@@ -2167,10 +2158,7 @@ define i1 @tautological18_subset1(i32 %A) {
 
 define i1 @tautological18_subset2(i32 %A) {
 ; CHECK-LABEL: @tautological18_subset2(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], -4
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
-; CHECK-NEXT:    [[D:%.*]] = icmp sle i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 true
 ;
   %C1 = and i32 %A, -4
   %C2 = and i32 %A, -3
@@ -2193,10 +2181,7 @@ define i1 @tautological18_negative(i32 %A) {
 
 define i1 @tautological19_subset1(i32 %A) {
 ; CHECK-LABEL: @tautological19_subset1(
-; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 3
-; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = or i32 %A, 1
   %C2 = or i32 %A, 3
@@ -2206,10 +2191,7 @@ define i1 @tautological19_subset1(i32 %A) {
 
 define i1 @tautological19_subset2(i32 %A) {
 ; CHECK-LABEL: @tautological19_subset2(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], -4
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
-; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 false
 ;
   %C1 = and i32 %A, -4
   %C2 = and i32 %A, -3
@@ -2232,10 +2214,7 @@ define i1 @tautological19_negative(i32 %A) {
 
 define i1 @tautological20_subset1(i32 %A) {
 ; CHECK-LABEL: @tautological20_subset1(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 3
-; CHECK-NEXT:    [[D:%.*]] = icmp sle i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 true
 ;
   %C1 = and i32 %A, 1
   %C2 = and i32 %A, 3
@@ -2245,10 +2224,7 @@ define i1 @tautological20_subset1(i32 %A) {
 
 define i1 @tautological20_subset2(i32 %A) {
 ; CHECK-LABEL: @tautological20_subset2(
-; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], -4
-; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
-; CHECK-NEXT:    [[D:%.*]] = icmp sle i32 [[C1]], [[C2]]
-; CHECK-NEXT:    ret i1 [[D]]
+; CHECK-NEXT:    ret i1 true
 ;
   %C1 = and i32 %A, -4
   %C2 = and i32 %A, -3
