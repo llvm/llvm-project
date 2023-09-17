@@ -235,10 +235,6 @@ def gfortran_Group : OptionGroup<"<gfortran group>">,
 Flags that will be passed onto the ``gfortran`` compiler when Clang is given
 a Fortran input.}]>;
 
-def flang_rt_Group : OptionGroup<"Flang runtime library Group">;
-def pgi_fortran_Group : OptionGroup<"PGI Fortran compatibility Group">,
-  Visibility<[FlangOption]>;
-
 def Link_Group : OptionGroup<"<T/e/s/t/u group>">, DocName<"Linker options">,
                  DocBrief<[{Flags that are passed on to the linker}]>;
 def T_Group : OptionGroup<"<T group>">, Group<Link_Group>, DocFlatten;
@@ -1308,10 +1304,6 @@ def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
   "__cyg_profile_func_enter and __cyg_profile_func_exit">;
-def fenable_host_devmem : Flag<["-"], "fenable-host-devmem">, Group<f_Group>,
-  HelpText<"Enable host-assisted dynamic device memory management (Default)">;
-def fdisable_host_devmem : Flag<["-"], "fdisable-host-devmem">, Group<f_Group>,
-  HelpText<"Disable host-assisted dynamic device memory management">;
 def gpu_bundle_output : Flag<["--"], "gpu-bundle-output">,
   HelpText<"Bundle output files of HIP device compilation">;
 def no_gpu_bundle_output : Flag<["--"], "no-gpu-bundle-output">,
@@ -1348,11 +1340,6 @@ def module_dependency_dir : Separate<["-"], "module-dependency-dir">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Directory to dump module dependencies to">,
   MarshallingInfoString<DependencyOutputOpts<"ModuleDependencyOutputDir">>;
-def module_dir : Separate<["-"], "module-dir">, Visibility<[FlangOption,FC1Option]>, MetaVarName<"<dir>">,
-  HelpText<"Put MODULE files in <dir>">,
-  DocBrief<[{This option specifies where to put .mod files for compiled modules.
-It is also added to the list of directories to be searched by an USE statement.
-The default is the current directory.}]>;
 def dsym_dir : JoinedOrSeparate<["-"], "dsym-dir">,
   Flags<[NoXarchOption, RenderAsInput]>,
   HelpText<"Directory to output dSYM's (if any) to">, MetaVarName<"<dir>">;
@@ -3245,11 +3232,6 @@ def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
-
-def fopenmp_runtimelib_EQ : Joined<["-"], "fopenmp-runtimelib=">, Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Flags<[NoArgumentUnused]>,
-  HelpText<"Select lib, lib-perf, or lib-debug openmp runtime"
-           " <arg> must be: lib, lib-perf or lib-debug.">;
-
 def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
@@ -3277,6 +3259,15 @@ def fopenmp_cuda_blocks_per_sm_EQ : Joined<["-"], "fopenmp-cuda-blocks-per-sm=">
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams-reduction-recs-num=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+
+// AMD OpenMP
+def fenable_host_devmem : Flag<["-"], "fenable-host-devmem">, Group<f_Group>,
+  HelpText<"Enable host-assisted dynamic device memory management (Default)">;
+def fdisable_host_devmem : Flag<["-"], "fdisable-host-devmem">, Group<f_Group>,
+  HelpText<"Disable host-assisted dynamic device memory management">;
+def fopenmp_runtimelib_EQ : Joined<["-"], "fopenmp-runtimelib=">, Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Flags<[NoArgumentUnused]>,
+  HelpText<"Select lib, lib-perf, or lib-debug openmp runtime"
+           " <arg> must be: lib, lib-perf or lib-debug.">;
 def fopenmp_gpu_threads_per_team_EQ : Joined<["-"], "fopenmp-gpu-threads-per-team=">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_target_xteam_reduction_blocksize_EQ : Joined<["-"], "fopenmp-target-xteam-reduction-blocksize=">, Group<f_Group>,
@@ -6124,8 +6115,6 @@ defm devirtualize_speculatively : BooleanFFlag<"devirtualize-speculatively">,
 // Generic gfortran options.
 def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;
 def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group>;
-def J : JoinedOrSeparate<["-"], "J">, Flags<[RenderJoined]>, Group<gfortran_Group>;
-def J18 : JoinedOrSeparate<["-"], "J18">, Visibility<[FlangOption, FC1Option]>, Flags<[RenderJoined]>, Group<gfortran_Group>, Alias<module_dir>;
 
 // "f" options with values for gfortran.
 def fblas_matmul_limit_EQ : Joined<["-"], "fblas-matmul-limit=">, Group<gfortran_Group>;
@@ -6143,8 +6132,6 @@ def fmax_stack_var_size_EQ : Joined<["-"], "fmax-stack-var-size=">, Group<gfortr
 def fmax_subrecord_length_EQ : Joined<["-"], "fmax-subrecord-length=">, Group<gfortran_Group>;
 def frecord_marker_EQ : Joined<["-"], "frecord-marker=">, Group<gfortran_Group>;
 
-// Define a group for Fortran source format
-def fortran_format_Group : OptionGroup<"Fortran format Group">, Group<gfortran_Group>;
 // "f" flags for gfortran.
 defm aggressive_function_elimination : BooleanFFlag<"aggressive-function-elimination">, Group<gfortran_Group>;
 defm align_commons : BooleanFFlag<"align-commons">, Group<gfortran_Group>;
@@ -6182,139 +6169,24 @@ defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
-defm fortran_gnu_ext : BooleanFFlag<"allow-fortran-gnu-ext">, Group<gfortran_Group>,
-  HelpText<"Allow Fortran GNU extensions">;
-defm func_args_alias : BooleanFFlag<"func-args-alias">, Group<gfortran_Group>,
-  HelpText<"Function argument may alias (equivalent to ansi alias)">;
-defm use_flang_math_libs : BooleanFFlag<"use-flang-math-libs">, Group<gfortran_Group>,
-  HelpText<"Use Flang internal runtime math library instead of LLVM math intrinsics.">;
-// Flang option to enable all loop vectorize pragmas: !dir$ vector/novector/ivdep
-def Menable_vectorize_pragmas_EQ : Joined<["-"], "Menable-vectorize-pragmas=">, Group<pgi_fortran_Group>,
-HelpText<"Enable loop vectorizing pragmas">, Values<"true,false">,
-Flags<[HelpHidden]>;
-// AOCC End
 
-// Flang-specific options
-multiclass BooleanKFlag<string name> {
-  def _on : Flag<["-"], "K"#name>;
-  def _off : Flag<["-"], "Kno"#name>;
-}
-
-multiclass BooleanMFlag<string name> {
-  def _on : Flag<["-"], "M"#name>;
-  def _off : Flag<["-"], "Mno"#name>;
-}
-
-// for amdflang
-def fixed_form_off : Flag<["-"], "fno-fixed-form">, Group<fortran_format_Group>,
-  HelpText<"Disable fixed-form format for Fortran">,
+//Suspicious fortran entries
+def flang_rt_Group : OptionGroup<"Flang runtime library Group">;
+def pgi_fortran_Group : OptionGroup<"PGI Fortran compatibility Group">,
   Visibility<[FlangOption]>;
-def free_form_off : Flag<["-"], "fno-free-form">, Group<fortran_format_Group>,
-  HelpText<"Disable free-form format for Fortran">,
-  Visibility<[FlangOption]>;
-def Mfixed : Flag<["-"], "Mfixed">, Group<fortran_format_Group>,
-  HelpText<"Force fixed-form format Fortran">,
-  Visibility<[FlangOption]>;
-def Mfree_on: Flag<["-"], "Mfree">, Group<fortran_format_Group>,
-  HelpText<"Enable free-form format for Fortran">,
-  Visibility<[FlangOption]>;
-def Mfree_off: Flag<["-"], "Mnofree">, Group<fortran_format_Group>,
-  HelpText<"Disable free-form format for Fortran">,
-  Visibility<[FlangOption]>;
-def Mfreeform_on: Flag<["-"], "Mfreeform">, Group<fortran_format_Group>,
-  HelpText<"Enable free-form format for Fortran">,
-  Visibility<[FlangOption]>;
-def Mfreeform_off: Flag<["-"], "Mnofreeform">, Group<fortran_format_Group>,
-  HelpText<"Disable free-form format for Fortran">,
-  Visibility<[FlangOption]>;
-
-def Mipa: Joined<["-"], "Mipa">, Group<pgi_fortran_Group>;
-def Mstackarrays: Joined<["-"], "Mstack_arrays">, Group<pgi_fortran_Group>;
-def pc: JoinedOrSeparate<["-"], "pc">, Group<pgi_fortran_Group>;
-def Mfprelaxed: Joined<["-"], "Mfprelaxed">, Group<pgi_fortran_Group>;
-def Mnofprelaxed: Joined<["-"], "Mnofprelaxed">, Group<pgi_fortran_Group>;
-defm Mstride0: BooleanMFlag<"stride0">, Group<pgi_fortran_Group>;
-defm Mrecursive: BooleanMFlag<"recursive">, Group<pgi_fortran_Group>;
-defm Mreentrant: BooleanMFlag<"reentrant">, Group<pgi_fortran_Group>;
-defm Mbounds: BooleanMFlag<"bounds">, Group<pgi_fortran_Group>;
-def Mdaz_on: Flag<["-"], "Mdaz">, Group<pgi_fortran_Group>,
-  HelpText<"Treat denormalized numbers as zero">;
-def Mdaz_off: Flag<["-"], "Mnodaz">, Group<pgi_fortran_Group>,
-  HelpText<"Disable treating denormalized numbers as zero">;
-def Kieee_on : Flag<["-"], "Kieee">, Group<pgi_fortran_Group>,
-  HelpText<"Enable IEEE division">;
-def Kieee_off : Flag<["-"], "Knoieee">, Group<pgi_fortran_Group>,
-  HelpText<"Disable IEEE division">;
-def Mextend : Flag<["-"], "Mextend">, Group<pgi_fortran_Group>,
-  HelpText<"Allow lines up to 132 characters in Fortran sources">;
-def Mpreprocess : Flag<["-"], "Mpreprocess">, Group<pgi_fortran_Group>,
-  HelpText<"Preprocess Fortran files">;
-def Mstandard: Flag<["-"], "Mstandard">, Group<pgi_fortran_Group>,
-  HelpText<"Check Fortran standard conformance">;
-def Mchkptr: Flag<["-"], "Mchkptr">, Group<pgi_fortran_Group>;
-defm Minline: BooleanMFlag<"inline">, Group<pgi_fortran_Group>;
-def fma: Flag<["-"], "fma">, Group<pgi_fortran_Group>,
-  HelpText<"Enable generation of FMA instructions">;
-def nofma: Flag<["-"], "nofma">, Group<pgi_fortran_Group>,
-  HelpText<"Disable generation of FMA instructions">;
-defm Mfma: BooleanMFlag<"fma">, Group<pgi_fortran_Group>,
-  HelpText<"Enable generation of FMA instructions">;
 def mp: Flag<["-"], "mp">, Group<pgi_fortran_Group>,
   HelpText<"Enable OpenMP">;
 def nomp: Flag<["-"], "nomp">, Group<pgi_fortran_Group>,
   HelpText<"Do not link with OpenMP library libomp">;
-def Mflushz_on: Flag<["-"], "Mflushz">, Group<pgi_fortran_Group>,
-  HelpText<"Set SSE to flush-to-zero mode">;
-def Mflushz_off: Flag<["-"], "Mnoflushz">, Group<pgi_fortran_Group>,
-  HelpText<"Disabling setting SSE to flush-to-zero mode">;
-def Msave_on: Flag<["-"], "Msave">, Group<pgi_fortran_Group>,
-  HelpText<"Assume all Fortran variables have SAVE attribute">;
-def Msave_off: Flag<["-"], "Mnosave">, Group<pgi_fortran_Group>,
-  HelpText<"Assume no Fortran variables have SAVE attribute">;
-def Mcache_align_on: Flag<["-"], "Mcache_align">, Group<pgi_fortran_Group>,
-  HelpText<"Align large objects on cache-line boundaries">;
-def Mcache_align_off: Flag<["-"], "Mnocache_align">, Group<pgi_fortran_Group>,
-  HelpText<"Disable aligning large objects on cache-line boundaries">;
-def ModuleDir : Separate<["-"], "module">, Group<pgi_fortran_Group>,
-  HelpText<"Fortran module path">;
-def Minform_EQ : Joined<["-"], "Minform=">,
-  HelpText<"Set error level of messages to display">;
-def Mallocatable_EQ : Joined<["-"], "Mallocatable=">,
-  HelpText<"Select semantics for assignments to allocatables (F03 or F95)">;
-def Mbyteswapio: Flag<["-"], "Mbyteswapio">, Group<pgi_fortran_Group>,
-  HelpText<"Swap byte-order for unformatted input/output">;
-def byteswapio: Flag<["-"], "byteswapio">, Group<gfortran_Group>,
-  HelpText<"Swap byte-order for unformatted input/output">;
-def Mbackslash: Flag<["-"], "Mbackslash">, Group<pgi_fortran_Group>,
-  HelpText<"Treat backslash like any other character in character strings">;
-def Mnobackslash: Flag<["-"], "Mnobackslash">, Group<pgi_fortran_Group>,
-  HelpText<"Treat backslash as C-style escape character">;
 def staticFlangLibs: Flag<["-"], "static-flang-libs">, Group<flang_rt_Group>,
   HelpText<"Link using static Flang libraries">;
 def noFlangLibs: Flag<["-"], "no-flang-libs">, Group<flang_rt_Group>,
   HelpText<"Do not link against Flang libraries">;
-def r8: Flag<["-"], "r8">, Group<pgi_fortran_Group>,
-  HelpText<"Treat REAL as REAL*8">;
-def i8: Flag<["-"], "i8">, Group<pgi_fortran_Group>,
-  HelpText<"Treat INTEGER and LOGICAL as INTEGER*8 and LOGICAL*8">;
 def no_fortran_main: Flag<["-"], "fno-fortran-main">, Group<gfortran_Group>,
   HelpText<"Don't link in Fortran main">;
 def Mnomain: Flag<["-"], "Mnomain">, Group<pgi_fortran_Group>,
   HelpText<"Don't link in Fortran main">;
-
-// Flang internal debug options
-def Mx_EQ : Joined<["-"], "Mx,">, Group<pgi_fortran_Group>;
-def My_EQ : Joined<["-"], "My,">, Group<pgi_fortran_Group>;
-def Hx_EQ : Joined<["-"], "Hx,">, Group<pgi_fortran_Group>;
-def Hy_EQ : Joined<["-"], "Hy,">, Group<pgi_fortran_Group>;
-def Hz_EQ : Joined<["-"], "Hz,">, Group<pgi_fortran_Group>;
-def Wm_EQ : Joined<["-"], "Wm,">, Group<pgi_fortran_Group>;
-
-def Mq_EQ : Joined<["-"], "Mq,">, Group<pgi_fortran_Group>;
-def Hq_EQ : Joined<["-"], "Hq,">, Group<pgi_fortran_Group>;
-def Mqq_EQ : Joined<["-"], "Mqq,">, Group<pgi_fortran_Group>;
-def Hqq_EQ : Joined<["-"], "Hqq,">, Group<pgi_fortran_Group>;
-def Wh_EQ : Joined<["-"], "Wh,">, Group<pgi_fortran_Group>;
+// end suspicious
 
 // -W <arg> options unsupported by the flang compiler
 // If any of these options are passed into flang's compiler driver,
@@ -6379,7 +6251,6 @@ def Xflang : Separate<["-"], "Xflang">,
 //===----------------------------------------------------------------------===//
 // FlangOption and FC1 Options
 //===----------------------------------------------------------------------===//
-let Flags = [HelpHidden] in {
 
 let Visibility = [FC1Option, FlangOption] in {
 
@@ -6387,11 +6258,11 @@ def cpp : Flag<["-"], "cpp">, Group<f_Group>,
   HelpText<"Enable predefined and command line preprocessor macros">;
 def nocpp : Flag<["-"], "nocpp">, Group<f_Group>,
   HelpText<"Disable predefined and command line preprocessor macros">;
-//def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
-//  HelpText<"Put MODULE files in <dir>">,
-//  DocBrief<[{This option specifies where to put .mod files for compiled modules.
-//It is also added to the list of directories to be searched by an USE statement.
-//The default is the current directory.}]>;
+def module_dir : JoinedOrSeparate<["-"], "module-dir">, MetaVarName<"<dir>">,
+  HelpText<"Put MODULE files in <dir>">,
+  DocBrief<[{This option specifies where to put .mod files for compiled modules.
+It is also added to the list of directories to be searched by an USE statement.
+The default is the current directory.}]>;
 
 def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
   HelpText<"Process source files in fixed form">;
@@ -6404,19 +6275,14 @@ file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
-}
-}
-
-let Visibility = [FC1Option, FlangOption] in {
-
 def fopenacc : Flag<["-"], "fopenacc">, Group<f_Group>,
   HelpText<"Enable OpenACC">;
-defm default_double_8 : OptInCC1FFlag<"default-double-8", "", "",
-  "Set the default double precision kind to an 8 byte wide type">;
-defm default_integer_8 : OptInCC1FFlag<"default-integer-8", "", "",
-  "Set the default integer kind to an 8 byte wide type">;
-defm default_real_8 : OptInCC1FFlag<"default-real-8", "", "",
-  "Set the default real kind to an 8 byte wide type">;
+def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,
+  HelpText<"Set the default double precision kind to an 8 byte wide type">;
+def fdefault_integer_8 : Flag<["-"],"fdefault-integer-8">, Group<f_Group>,
+  HelpText<"Set the default integer and logical kind to an 8 byte wide type">;
+def fdefault_real_8 : Flag<["-"],"fdefault-real-8">, Group<f_Group>,
+  HelpText<"Set the default real kind to an 8 byte wide type">;
 def flarge_sizes : Flag<["-"],"flarge-sizes">, Group<f_Group>,
   HelpText<"Use INTEGER(KIND=8) for the result type in size-related intrinsics">;
 
@@ -6447,10 +6313,10 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
 } // let Visibility = [FC1Option, FlangOption]
 
-//def J : JoinedOrSeparate<["-"], "J">,
-//  Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
-//  Group<gfortran_Group>,
-//  Alias<module_dir>;
+def J : JoinedOrSeparate<["-"], "J">,
+  Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
+  Group<gfortran_Group>,
+  Alias<module_dir>;
 
 //===----------------------------------------------------------------------===//
 // FC1 Options
