@@ -23,6 +23,7 @@ static_library("bugprone") {
     "BoolPointerImplicitConversionCheck.cpp",
     "BranchCloneCheck.cpp",
     "BugproneTidyModule.cpp",
+    "ComparePointerToMemberVirtualFunctionCheck.cpp",
     "CopyConstructorInitCheck.cpp",
     "DanglingHandleCheck.cpp",
     "DynamicStaticInitializersCheck.cpp",

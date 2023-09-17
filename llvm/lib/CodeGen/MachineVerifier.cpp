@@ -888,7 +888,8 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
     // There may be implicit ops after the fixed operands.
     if (!MO.isImm())
       break;
-    NumOps = 1 + InlineAsm::getNumOperandRegisters(MO.getImm());
+    const InlineAsm::Flag F(MO.getImm());
+    NumOps = 1 + F.getNumOperandRegisters();
   }
 
   if (OpNo > MI->getNumOperands())

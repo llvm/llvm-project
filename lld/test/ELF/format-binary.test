@@ -6,8 +6,10 @@
 
 # RUN: mkdir d
 # RUN: echo -n "Fluffle Puff" > d/t.txt
-# RUN: ld.lld -m elf_x86_64 -r -b binary d/t.txt -o ro
+# RUN: ld.lld -m elf_x86_64 -r -b binary d/t.txt -t -o ro | FileCheck %s --check-prefix=RO-TRACE
 # RUN: llvm-readelf -h -S -s -x .data ro | FileCheck --check-prefix=RO %s
+
+# RO-TRACE: d/t.txt
 
 # RO:      Machine: Advanced Micro Devices X86-64
 # RO:      Name         Type     Address          Off    Size   ES Flg Lk Inf Al

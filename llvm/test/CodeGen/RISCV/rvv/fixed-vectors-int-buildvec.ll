@@ -518,9 +518,8 @@ define void @buildvec_seq_v8i8_v4i16(ptr %x) {
 ; CHECK-LABEL: buildvec_seq_v8i8_v4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 513
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <8 x i8> <i8 1, i8 2, i8 1, i8 2, i8 1, i8 2, i8 undef, i8 2>, ptr %x
@@ -623,9 +622,8 @@ define void @buildvec_seq_v4i16_v2i32(ptr %x) {
 ; CHECK-LABEL: buildvec_seq_v4i16_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, -127
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <4 x i16> <i16 -127, i16 -1, i16 -127, i16 -1>, ptr %x

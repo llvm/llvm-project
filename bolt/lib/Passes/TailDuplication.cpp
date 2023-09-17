@@ -303,7 +303,7 @@ TailDuplication::aggressiveDuplicate(BinaryBasicBlock &BB,
   if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
 
-  BinaryBasicBlock *CurrBB = &BB;
+  BinaryBasicBlock *CurrBB = &Tail;
   while (CurrBB) {
     LLVM_DEBUG(dbgs() << "Aggressive tail duplication: adding "
                       << CurrBB->getName() << " to duplication list\n";);

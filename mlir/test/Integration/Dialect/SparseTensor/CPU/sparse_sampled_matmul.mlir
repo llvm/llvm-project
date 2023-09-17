@@ -35,7 +35,7 @@
 !Filename = !llvm.ptr<i8>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>

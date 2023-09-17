@@ -1,12 +1,9 @@
 // RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-convert=false" \
 // RUN: | FileCheck %s
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
-#DENSE = #sparse_tensor.encoding<{lvlTypes = ["dense", "dense"]}>
-#DENSE_P = #sparse_tensor.encoding<{
-  lvlTypes = ["dense", "dense"],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
-}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
+#DENSE = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : dense)}>
+#DENSE_P = #sparse_tensor.encoding<{map = (d0, d1) -> (d1 : dense, d0 : dense)}>
 // CHECK-LABEL: @concat_sparse_sparse(
 //  CHECK-SAME:  %[[TMP_arg0:.*]]: tensor<2x4xf64, #sparse_tensor
 //  CHECK-SAME:  %[[TMP_arg1:.*]]: tensor<3x4xf64, #sparse_tensor

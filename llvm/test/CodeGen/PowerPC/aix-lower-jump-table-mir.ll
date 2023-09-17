@@ -29,8 +29,8 @@ define i32 @jump_table(i32 %a) {
   ; 32SMALL-MIR-NEXT:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
   ; 32SMALL-MIR-NEXT:   liveins: $r3
   ; 32SMALL-MIR-NEXT: {{  $}}
-  ; 32SMALL-MIR-NEXT:   renamable $r4 = LWZtoc %jump-table.0, $r2 :: (load (s32) from got)
   ; 32SMALL-MIR-NEXT:   renamable $r3 = RLWINM killed renamable $r3, 2, 0, 29
+  ; 32SMALL-MIR-NEXT:   renamable $r4 = LWZtoc %jump-table.0, $r2 :: (load (s32) from got)
   ; 32SMALL-MIR-NEXT:   renamable $r3 = LWZX killed renamable $r3, renamable $r4 :: (load (s32) from jump-table)
   ; 32SMALL-MIR-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r4
   ; 32SMALL-MIR-NEXT:   MTCTR killed renamable $r3, implicit-def $ctr
@@ -76,9 +76,9 @@ define i32 @jump_table(i32 %a) {
   ; 32LARGE-MIR-NEXT:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
   ; 32LARGE-MIR-NEXT:   liveins: $r3
   ; 32LARGE-MIR-NEXT: {{  $}}
+  ; 32LARGE-MIR-NEXT:   renamable $r3 = RLWINM killed renamable $r3, 2, 0, 29
   ; 32LARGE-MIR-NEXT:   renamable $r4 = ADDIStocHA $r2, %jump-table.0
   ; 32LARGE-MIR-NEXT:   renamable $r4 = LWZtocL %jump-table.0, killed renamable $r4, implicit $r2 :: (load (s32) from got)
-  ; 32LARGE-MIR-NEXT:   renamable $r3 = RLWINM killed renamable $r3, 2, 0, 29
   ; 32LARGE-MIR-NEXT:   renamable $r3 = LWZX killed renamable $r3, renamable $r4 :: (load (s32) from jump-table)
   ; 32LARGE-MIR-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r4
   ; 32LARGE-MIR-NEXT:   MTCTR killed renamable $r3, implicit-def $ctr
@@ -124,8 +124,8 @@ define i32 @jump_table(i32 %a) {
   ; 64SMALL-MIR-NEXT:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
   ; 64SMALL-MIR-NEXT:   liveins: $x3
   ; 64SMALL-MIR-NEXT: {{  $}}
-  ; 64SMALL-MIR-NEXT:   renamable $x4 = LDtocJTI %jump-table.0, $x2 :: (load (s64) from got)
   ; 64SMALL-MIR-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 2, 30
+  ; 64SMALL-MIR-NEXT:   renamable $x4 = LDtocJTI %jump-table.0, $x2 :: (load (s64) from got)
   ; 64SMALL-MIR-NEXT:   renamable $x3 = LWAX killed renamable $x3, renamable $x4 :: (load (s32) from jump-table)
   ; 64SMALL-MIR-NEXT:   renamable $x3 = ADD8 killed renamable $x3, killed renamable $x4
   ; 64SMALL-MIR-NEXT:   MTCTR8 killed renamable $x3, implicit-def $ctr8
@@ -171,9 +171,9 @@ define i32 @jump_table(i32 %a) {
   ; 64LARGE-MIR-NEXT:   successors: %bb.2(0x20000000), %bb.3(0x20000000), %bb.4(0x20000000), %bb.5(0x20000000)
   ; 64LARGE-MIR-NEXT:   liveins: $x3
   ; 64LARGE-MIR-NEXT: {{  $}}
+  ; 64LARGE-MIR-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 2, 30
   ; 64LARGE-MIR-NEXT:   renamable $x4 = ADDIStocHA8 $x2, %jump-table.0
   ; 64LARGE-MIR-NEXT:   renamable $x4 = LDtocL %jump-table.0, killed renamable $x4, implicit $x2 :: (load (s64) from got)
-  ; 64LARGE-MIR-NEXT:   renamable $x3 = RLDIC killed renamable $x3, 2, 30
   ; 64LARGE-MIR-NEXT:   renamable $x3 = LWAX killed renamable $x3, renamable $x4 :: (load (s32) from jump-table)
   ; 64LARGE-MIR-NEXT:   renamable $x3 = ADD8 killed renamable $x3, killed renamable $x4
   ; 64LARGE-MIR-NEXT:   MTCTR8 killed renamable $x3, implicit-def $ctr8

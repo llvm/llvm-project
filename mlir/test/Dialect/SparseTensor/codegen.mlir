@@ -1,62 +1,59 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen  --canonicalize -cse | FileCheck %s
 
-#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#SV = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed" ],
+  map = (d0) -> (d0 : compressed),
   crdWidth = 64,
   posWidth = 32
 }>
 
 #Dense2D = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense" ],
+  map = (d0, d1) -> (d0 : dense, d1 : dense),
   crdWidth = 64,
   posWidth = 32
 }>
 
 #Row = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense" ],
+  map = (d0, d1) -> (d0 : compressed, d1 : dense),
   crdWidth = 64,
   posWidth = 32
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   crdWidth = 64,
   posWidth = 32
 }>
 
 #UCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_no" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed(nonordered))
 }>
 
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i, j) -> (j, i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed),
   crdWidth = 64,
   posWidth = 32
 }>
 
 #Dense3D = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "dense", "dense" ],
-  dimToLvl = affine_map<(i, j, k) -> (k, i, j)>
+  map = (d0, d1, d2) -> (d2 : dense, d0 : dense, d1 : dense)
 }>
 
 #Coo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CooPNo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton_no" ],
-  dimToLvl = affine_map<(i, j) -> (j, i)>
+  map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton(nonordered))
 }>
 
 #ccoo = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed(nonunique), d2 : singleton)
 }>
 
 // CHECK-LABEL: func @sparse_nop(

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefix=GFX9ERR --implicit-check-not=error: %s
 
 v_cvt_f16_u16_e64 v5, 0.5
 // GFX9ERR: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported

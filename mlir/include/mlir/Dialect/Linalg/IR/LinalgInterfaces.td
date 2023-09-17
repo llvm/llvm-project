@@ -324,7 +324,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         // MLIR currently does not support dependent interfaces or interface
         // inheritance. By construction all ops with StructuredOpInterface must
         // implement DestinationStyleOpInterface.
-        // TODO: reevalute the need for a cast when a better mechanism exists.
+        // TODO: reevaluate the need for a cast when a better mechanism exists.
         return getBlock()->getArguments().take_front(
             cast<DestinationStyleOpInterface>(*this->getOperation())
                 .getNumDpsInputs());
@@ -342,7 +342,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         // MLIR currently does not support dependent interfaces or interface
         // inheritance. By construction all ops with StructuredOpInterface must
         // implement DestinationStyleOpInterface.
-        // TODO: reevalute the need for a cast when a better mechanism exists.
+        // TODO: reevaluate the need for a cast when a better mechanism exists.
         return getBlock()->getArguments().take_back(
             cast<DestinationStyleOpInterface>(*this->getOperation())
                 .getNumDpsInits());
@@ -421,7 +421,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         // MLIR currently does not support dependent interfaces or interface
         // inheritance. By construction all ops with StructuredOpInterface must
         // implement DestinationStyleOpInterface.
-        // TODO: reevalute the need for a cast when a better mechanism exists.
+        // TODO: reevaluate the need for a cast when a better mechanism exists.
         return *(indexingMaps.begin() +
                  cast<DestinationStyleOpInterface>(*this->getOperation())
                      .getNumDpsInputs() +
@@ -442,7 +442,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         // MLIR currently does not support dependent interfaces or interface
         // inheritance. By construction all ops with StructuredOpInterface must
         // implement DestinationStyleOpInterface.
-        // TODO: reevalute the need for a cast when a better mechanism exists.
+        // TODO: reevaluate the need for a cast when a better mechanism exists.
         int64_t resultIndex =
             opOperand->getOperandNumber() -
             cast<DestinationStyleOpInterface>(*this->getOperation())
@@ -713,7 +713,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*desc=*/[{
         Like `getShape`, but only returns statically-known information, without
         generating any new IR. For each shape dimension, returns >=0 if that
-        dimension is statically known, or ShapeType::kDynamic otherwise.
+        dimension is statically known, or ShapedType::kDynamic otherwise.
       }],
       /*retTy=*/"SmallVector<int64_t>",
       /*methodName=*/"getStaticShape",
@@ -730,7 +730,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*desc=*/[{
         Returns the statically-known loop ranges. Composes
         `getShapesToLoopsMap()` with the result of `getStaticShape`.
-        Returns ShapeType::kDynamic for non-statically-known loop ranges.
+        Returns ShapedType::kDynamic for non-statically-known loop ranges.
         This is expected to be called by a valid Linalg op
       }],
       /*retTy=*/"SmallVector<int64_t, 4>",
@@ -807,7 +807,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     // MLIR currently does not support dependent interfaces or interface
     // inheritance. By construction all ops with StructuredOpInterface must
     // implement DestinationStyleOpInterface.
-    // TODO: reevalute the need for a cast when a better mechanism exists.
+    // TODO: reevaluate the need for a cast when a better mechanism exists.
     //========================================================================//
 
     int64_t getNumDpsInputs() {

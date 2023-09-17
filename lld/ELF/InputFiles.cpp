@@ -284,13 +284,6 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   if (!isCompatible(file))
     return;
 
-  // Binary file
-  if (auto *f = dyn_cast<BinaryFile>(file)) {
-    ctx.binaryFiles.push_back(f);
-    f->parse();
-    return;
-  }
-
   // Lazy object file
   if (file->lazy) {
     if (auto *f = dyn_cast<BitcodeFile>(file)) {
@@ -305,22 +298,18 @@ template <class ELFT> static void doParseFile(InputFile *file) {
   if (config->trace)
     message(toString(file));
 
-  // .so file
-  if (auto *f = dyn_cast<SharedFile>(file)) {
+  if (file->kind() == InputFile::ObjKind) {
+    ctx.objectFiles.push_back(cast<ELFFileBase>(file));
+    cast<ObjFile<ELFT>>(file)->parse();
+  } else if (auto *f = dyn_cast<SharedFile>(file)) {
     f->parse<ELFT>();
-    return;
-  }
-
-  // LLVM bitcode file
-  if (auto *f = dyn_cast<BitcodeFile>(file)) {
+  } else if (auto *f = dyn_cast<BitcodeFile>(file)) {
     ctx.bitcodeFiles.push_back(f);
     f->parse();
-    return;
+  } else {
+    ctx.binaryFiles.push_back(cast<BinaryFile>(file));
+    cast<BinaryFile>(file)->parse();
   }
-
-  // Regular object file
-  ctx.objectFiles.push_back(cast<ELFFileBase>(file));
-  cast<ObjFile<ELFT>>(file)->parse();
 }
 
 // Add symbols in File to the symbol table.

@@ -876,7 +876,7 @@ static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
 
   auto *FalseValI = cast<Instruction>(FalseVal);
   auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
-                                     *FalseValI);
+                                     FalseValI->getIterator());
   IC.replaceOperand(*FalseValI, FalseValI->getOperand(0) == Y ? 0 : 1, FrY);
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
@@ -2567,7 +2567,7 @@ static Instruction *foldSelectToPhiImpl(SelectInst &Sel, BasicBlock *BB,
         return nullptr;
   }
 
-  Builder.SetInsertPoint(&*BB->begin());
+  Builder.SetInsertPoint(BB, BB->begin());
   auto *PN = Builder.CreatePHI(Sel.getType(), Inputs.size());
   for (auto *Pred : predecessors(BB))
     PN->addIncoming(Inputs[Pred], Pred);
@@ -2616,20 +2616,33 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   if (!TrueIfSigned)
     std::swap(TrueVal, FalseVal);
 
-  // We are matching a quite specific pattern here:
+  auto FoldToBitwiseAnd = [&](Value *Remainder) -> Instruction * {
+    Value *Add = Builder.CreateAdd(
+        Remainder, Constant::getAllOnesValue(RemRes->getType()));
+    return BinaryOperator::CreateAnd(Op, Add);
+  };
+
+  // Match the general case:
   // %rem = srem i32 %x, %n
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (!(match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
-        match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
-        IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
-        FalseVal == RemRes))
-    return nullptr;
+  if (match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
+      match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
+      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(Remainder);
 
-  Value *Add = Builder.CreateAdd(Remainder,
-                                 Constant::getAllOnesValue(RemRes->getType()));
-  return BinaryOperator::CreateAnd(Op, Add);
+  // Match the case where the one arm has been replaced by constant 1:
+  // %rem = srem i32 %n, 2
+  // %cnd = icmp slt i32 %rem, 0
+  // %sel = select i1 %cnd, i32 1, i32 %rem
+  if (match(TrueVal, m_One()) &&
+      match(RemRes, m_SRem(m_Value(Op), m_SpecificInt(2))) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(ConstantInt::get(RemRes->getType(), 2));
+
+  return nullptr;
 }
 
 static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
@@ -3118,7 +3131,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     Value *Op1 = IsAnd ? TrueVal : FalseVal;
     if (isCheckForZeroAndMulWithOverflow(CondVal, Op1, IsAnd, Y)) {
       auto *FI = new FreezeInst(*Y, (*Y)->getName() + ".fr");
-      InsertNewInstBefore(FI, *cast<Instruction>(Y->getUser()));
+      InsertNewInstBefore(FI, cast<Instruction>(Y->getUser())->getIterator());
       replaceUse(*Y, FI);
       return replaceInstUsesWith(SI, Op1);
     }

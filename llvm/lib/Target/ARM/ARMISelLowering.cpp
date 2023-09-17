@@ -1335,7 +1335,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     // On v8, we have particularly efficient implementations of atomic fences
     // if they can be combined with nearby atomic loads and stores.
     if (!Subtarget->hasAcquireRelease() ||
-        getTargetMachine().getOptLevel() == 0) {
+        getTargetMachine().getOptLevel() == CodeGenOptLevel::None) {
       // Automatically insert fences (dmb ish) around ATOMIC_SWAP etc.
       InsertFencesForAtomic = true;
     }
@@ -1349,19 +1349,19 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_FENCE,   MVT::Other,
                        Subtarget->hasAnyDataBarrier() ? Custom : Expand);
 
-    // Set them all for expansion, which will force libcalls.
-    setOperationAction(ISD::ATOMIC_CMP_SWAP,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_SWAP,      MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_ADD,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_SUB,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_AND,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_OR,   MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR,  MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, Expand);
+    // Set them all for libcall, which will force libcalls.
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, MVT::i32, LibCall);
     // Mark ATOMIC_LOAD and ATOMIC_STORE custom so we can handle the
     // Unordered/Monotonic case.
     if (!InsertFencesForAtomic) {
@@ -2395,6 +2395,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          return isa<Instruction>(U) &&
                                 cast<Instruction>(U)->getParent() == BB;
                        }) > 2;
+      // The indirect call lowering hinders the MachineOutliner's ability to
+      // recognize common sequences. The resulting indirect calls all have the
+      // same target, but the outliner can't tell this a priori, since the
+      // branch target is turned into a register operand, and those can't (yet?)
+      // be assumed to have the same value at runtime.
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.EnableMachineOutliner)
+        PreferIndirect = false;
     }
   }
   if (isTailCall) {
@@ -21316,7 +21324,7 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     // the stack and close enough to the spill slot, this can lead to a
     // situation where the monitor always gets cleared and the atomic operation
     // can never succeed. So at -O0 lower this operation to a CAS loop.
-    if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+    if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
       return AtomicExpansionKind::CmpXChg;
     return AtomicExpansionKind::LLSC;
   }
@@ -21340,8 +21348,8 @@ ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
     HasAtomicCmpXchg = Subtarget->hasV7Ops();
   else
     HasAtomicCmpXchg = Subtarget->hasV6Ops();
-  if (getTargetMachine().getOptLevel() != 0 && HasAtomicCmpXchg &&
-      Size <= (Subtarget->isMClass() ? 32U : 64U))
+  if (getTargetMachine().getOptLevel() != CodeGenOptLevel::None &&
+      HasAtomicCmpXchg && Size <= (Subtarget->isMClass() ? 32U : 64U))
     return AtomicExpansionKind::LLSC;
   return AtomicExpansionKind::None;
 }

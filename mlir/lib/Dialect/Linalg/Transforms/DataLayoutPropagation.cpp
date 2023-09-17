@@ -448,46 +448,6 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
                        *packInfo);
 }
 
-/// Folds pack(fill) into a single fill op if
-///   1. The pack op does not have padding value, or
-///   2. The filled value and padding value are the same.
-static FailureOr<FillOp>
-foldFillPackIntoFillOp(RewriterBase &rewriter, tensor::PackOp packOp,
-                       ControlPropagationFn controlFn) {
-  auto fillOp = packOp.getSource().getDefiningOp<FillOp>();
-  if (!fillOp)
-    return failure();
-
-  // User controlled propagation function.
-  if (!controlFn(fillOp))
-    return failure();
-
-  if (auto paddingValue = packOp.getPaddingValue())
-    if (!isEqualConstantIntOrValue(paddingValue, fillOp.value()))
-      return failure();
-
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(fillOp);
-
-  Value packOpDest = packOp.getDest();
-  if (!packOpDest.hasOneUse())
-    return failure();
-  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
-    packOpDest = tensor::PackOp::createDestinationTensor(
-        rewriter, fillOp.getLoc(), fillOp.getDpsInitOperand(0)->get(),
-        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
-        packOp.getOuterDimsPerm());
-  } else {
-    DominanceInfo dom(fillOp);
-    if (!dom.properlyDominates(packOpDest, fillOp))
-      return failure();
-  }
-
-  Value fillDest = packOpDest;
-  return clone(rewriter, fillOp, packOpDest.getType(),
-               {fillOp.value(), fillDest});
-}
-
 /// Wrapper pattern that applies bubbleUpPackOpThroughGenericOp method.
 struct BubbleUpPackOpThroughGenericOpPattern
     : public OpRewritePattern<tensor::PackOp> {
@@ -503,25 +463,6 @@ public:
     if (failed(genericOp))
       return failure();
     rewriter.replaceOp(packOp, genericOp->getResults());
-    return success();
-  }
-
-private:
-  ControlPropagationFn controlFn;
-};
-
-/// Wrapper pattern that applies foldFillPackIntoFillOp method.
-struct FoldFillPackIntoFillOpPattern : public OpRewritePattern<tensor::PackOp> {
-public:
-  FoldFillPackIntoFillOpPattern(MLIRContext *context, ControlPropagationFn fun)
-      : OpRewritePattern<tensor::PackOp>(context), controlFn(std::move(fun)) {}
-
-  LogicalResult matchAndRewrite(tensor::PackOp packOp,
-                                PatternRewriter &rewriter) const override {
-    auto fillOp = foldFillPackIntoFillOp(rewriter, packOp, controlFn);
-    if (failed(fillOp))
-      return failure();
-    rewriter.replaceOp(packOp, fillOp.value().result());
     return success();
   }
 
@@ -750,7 +691,6 @@ void mlir::linalg::populateDataLayoutPropagationPatterns(
     RewritePatternSet &patterns,
     const ControlPropagationFn &controlPackUnPackPropagation) {
   patterns.insert<BubbleUpPackOpThroughGenericOpPattern,
-                  FoldFillPackIntoFillOpPattern,
                   PushDownUnPackOpThroughGenericOp, PushDownUnPackThroughPadOp>(
       patterns.getContext(), controlPackUnPackPropagation);
 }

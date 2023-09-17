@@ -237,10 +237,8 @@ struct NMSymbol {
   std::string IndirectName;
 
   bool isDefined() const {
-    if (Sym.getRawDataRefImpl().p) {
-      uint32_t Flags = cantFail(Sym.getFlags());
-      return !(Flags & SymbolRef::SF_Undefined);
-    }
+    if (Sym.getRawDataRefImpl().p)
+      return !(SymFlags & SymbolRef::SF_Undefined);
     return TypeChar != 'U';
   }
 
@@ -1025,10 +1023,12 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
 static char getSymbolNMTypeChar(TapiFile &Obj, basic_symbol_iterator I) {
   auto Type = cantFail(Obj.getSymbolType(I->getRawDataRefImpl()));
   switch (Type) {
-  case SymbolRef::ST_Data:
-    return 'd';
   case SymbolRef::ST_Function:
     return 't';
+  case SymbolRef::ST_Data:
+    if (Obj.hasSegmentInfo())
+      return 'd';
+    [[fallthrough]];
   default:
     return 's';
   }

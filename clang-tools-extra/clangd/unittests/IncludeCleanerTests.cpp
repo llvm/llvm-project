@@ -88,10 +88,10 @@ TEST(IncludeCleaner, StdlibUnused) {
       template <typename> class vector {};
     }
   )cpp";
-  TU.AdditionalFiles["list"] = "#include <bits>";
-  TU.AdditionalFiles["queue"] = "#include <bits>";
-  TU.AdditionalFiles["vector"] = "#include <bits>";
-  TU.AdditionalFiles["string"] = "#include <bits>";
+  TU.AdditionalFiles["list"] = guard("#include <bits>");
+  TU.AdditionalFiles["queue"] = guard("#include <bits>");
+  TU.AdditionalFiles["vector"] = guard("#include <bits>");
+  TU.AdditionalFiles["string"] = guard("#include <bits>");
   TU.ExtraArgs = {"-isystem", testRoot()};
   auto AST = TU.build();
   IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);

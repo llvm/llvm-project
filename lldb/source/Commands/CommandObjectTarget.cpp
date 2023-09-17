@@ -4942,6 +4942,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
     lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), lldb::eStopHookIDCompletion, request, nullptr);
   }
