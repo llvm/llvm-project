@@ -197,7 +197,8 @@ New checks
   <clang-tidy/checks/modernize/use-std-numbers>` check.
 
   Finds constants and function calls to math functions that can be replaced
-  with c++20's mathematical constants ('numbers' header).
+  with c++20's mathematical constants from the ``numbers`` header and
+  offers fix-it hints.
 
 - New :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check.
