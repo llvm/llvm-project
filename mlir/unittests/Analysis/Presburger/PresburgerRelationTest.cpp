@@ -281,12 +281,12 @@ TEST(PresburgerRelationTest, convertVarKind) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 3, 0);
 
   IntegerRelation disj1 = parseRelationFromSet(
-                      "(x, y, a)[U, V, W] : (x - U == 0, y + a == W, U - V >= "
-                      "0, y - a >= 0)",
+                      "(x, y, a)[U, V, W] : (x - U == 0, y + a - W == 0,"
+                      "U - V >= 0, y - a >= 0)",
                       2),
                   disj2 = parseRelationFromSet(
-                      "(x, y, a)[U, V, W] : (x - U == 0, y + a == W, U - V >= "
-                      "0, y - a >= 0)",
+                      "(x, y, a)[U, V, W] : (x + y - U == 0, x - a + V == 0,"
+                      "V - U >= 0, y + a >= 0)",
                       2);
 
   PresburgerRelation rel(disj1);
