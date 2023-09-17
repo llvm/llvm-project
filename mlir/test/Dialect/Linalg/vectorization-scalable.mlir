@@ -29,7 +29,7 @@ func.func @vectorize_dynamic_identity(%arg0: tensor<?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [[4]] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [[4]] : !transform.any_op
 }
 
 // -----
@@ -71,7 +71,7 @@ func.func @vectorize_partial_dynamic_identity(%arg0: tensor<8x?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, [32]] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, [32]] : !transform.any_op
 }
 
 // -----
@@ -111,7 +111,7 @@ func.func @vectorize_static_shape_with_mask(%arg0: tensor<8x30xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, [32]] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, [32]] : !transform.any_op
 }
 
 // -----
@@ -131,6 +131,6 @@ func.func @vectorize_dynamic_fill(%A : tensor<?x?xf32>, %arg0 : f32) -> tensor<?
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, [16]] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, [16]] : !transform.any_op
 }
 

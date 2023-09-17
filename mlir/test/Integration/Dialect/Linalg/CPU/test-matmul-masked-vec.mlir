@@ -51,7 +51,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %func_op = get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
-  transform.structured.masked_vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
   transform.apply_patterns to %func_op {
     transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
   } : !transform.op<"func.func">

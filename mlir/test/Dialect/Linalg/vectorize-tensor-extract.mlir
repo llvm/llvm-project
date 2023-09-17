@@ -65,7 +65,7 @@ func.func @vectorize_nd_tensor_extract_constant_idx(%arg0: tensor<3x3xf32>, %arg
 transform.sequence failures(propagate) {
  ^bb1(%arg1: !transform.any_op):
    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 { vectorize_nd_extract }  : !transform.any_op
+  transform.structured.vectorize %0 { vectorize_nd_extract }  : !transform.any_op
  }
 
 // -----

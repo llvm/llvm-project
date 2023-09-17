@@ -2016,7 +2016,7 @@ def VectorizeChildrenOp : Op<Transform_Dialect, "structured.vectorize_children",
   }];
 }
 
-def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
+def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
@@ -2030,9 +2030,9 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
     ```mlir
     # Masked vectorization - vector sizes are specified explicitly
-    transform.structured.masked_vectorize %target vector_sizes [1, 4] : !transform.any_op
+    transform.structured.vectorize %target vector_sizes [1, 4] : !transform.any_op
     # Regular vectorization - vector sizes are inferred from the target Op
-    transform.structured.masked_vectorize %target : !transform.any_op
+    transform.structured.vectorize %target : !transform.any_op
     ```
 
     The vector sizes can be either static or dynamic (SSA values). In case of

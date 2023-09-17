@@ -80,7 +80,7 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // Apply masked vectorization to padding ops.
-  transform.structured.masked_vectorize %tiled_pad_op vector_sizes [128, 4]
+  transform.structured.vectorize %tiled_pad_op vector_sizes [128, 4]
       : !transform.any_op
 
   // Assign shared memory buffer to padding.
@@ -105,7 +105,7 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> !transform.any_op
   %bufferized_copy_back = transform.structured.match ops{["linalg.copy"]} in %func_op_2
       : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize
+  transform.structured.vectorize
       %bufferized_copy_back vector_sizes [128, 4] : !transform.any_op
 
   // Canonicalize, cleanup and vector lowering. This step also removes buffer
@@ -192,7 +192,7 @@ transform.sequence failures(propagate) {
   }
 
   // Apply masked vectorization to padding ops.
-  transform.structured.masked_vectorize %tiled_pad_op vector_sizes [128, 4]
+  transform.structured.vectorize %tiled_pad_op vector_sizes [128, 4]
       : !transform.any_op
 
   // Assign shared memory buffer to padding.
@@ -217,7 +217,7 @@ transform.sequence failures(propagate) {
       : (!transform.any_op) -> !transform.any_op
   %bufferized_copy_back = transform.structured.match ops{["linalg.copy"]} in %func_op_2
       : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize
+  transform.structured.vectorize
       %bufferized_copy_back vector_sizes [128, 4] : !transform.any_op
 
   // Canonicalize, cleanup and vector lowering. This step also removes buffer

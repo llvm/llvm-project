@@ -13,7 +13,7 @@ func.func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memre
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0  : !transform.any_op
+  transform.structured.vectorize %0  : !transform.any_op
 }
 
 // -----

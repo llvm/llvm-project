@@ -360,8 +360,8 @@ class MapCopyToThreadsOp:
         )
 
 
-class MaskedVectorizeOp:
-    """Specialization for MaskedVectorizeOp class."""
+class VectorizeOp:
+    """Specialization for VectorizeOp class."""
 
     def __init__(
         self,

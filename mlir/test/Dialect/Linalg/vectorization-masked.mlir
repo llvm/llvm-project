@@ -29,7 +29,7 @@ func.func @vectorize_dynamic_identity(%arg0: tensor<?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [4] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
 }
 
 // -----
@@ -63,7 +63,7 @@ func.func @vectorize_dynamic_1d_broadcast(%arg0: tensor<?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [4] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4] : !transform.any_op
 }
 
 // -----
@@ -101,7 +101,7 @@ func.func @vectorize_dynamic_2d_transpose(%arg0: tensor<?x?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [4, 8] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
 }
 
 // -----
@@ -138,7 +138,7 @@ func.func @vectorize_dynamic_generic_2d_broadcast(%arg0: tensor<?x?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [4, 8] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
 }
 
 // -----
@@ -160,7 +160,7 @@ func.func @vectorize_dynamic_reduction(%arg0: tensor<?x?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [4, 8] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4, 8] : !transform.any_op
 }
 
 // CHECK-LABEL:   @vectorize_dynamic_reduction(
@@ -198,7 +198,7 @@ func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [4, 8, 16] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [4, 8, 16] : !transform.any_op
 }
 
 // CHECK-LABEL:   @vectorize_dynamic_transpose_reduction(
@@ -256,7 +256,7 @@ func.func @vectorize_partial_dynamic_identity(%arg0: tensor<8x?xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, 32] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
 }
 
 // -----
@@ -283,7 +283,7 @@ func.func @do_not_generate_masks(%arg0: tensor<8x32xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, 32] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
 }
 
 // -----
@@ -323,7 +323,7 @@ func.func @vectorize_static_shape_with_mask(%arg0: tensor<8x30xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, 32] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, 32] : !transform.any_op
 }
 
 // -----
@@ -343,7 +343,7 @@ func.func @vectorize_dynamic_fill(%A : tensor<?x?xf32>, %arg0 : f32) -> tensor<?
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [8, 16] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [8, 16] : !transform.any_op
 }
 
 // -----
@@ -364,7 +364,7 @@ func.func @test_masked_vectorize_linalg_copy(%A : memref<?x?xf32>, %B : memref<?
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [2, 4] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
 }
 
 // -----
@@ -400,7 +400,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [2, 4] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
 }
 
 // -----
@@ -442,7 +442,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [2, 4] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [2, 4] : !transform.any_op
 }
 
 // -----
@@ -476,7 +476,7 @@ func.func @matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>)
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %matmul vector_sizes [8, 16, 4] : !transform.any_op
+  transform.structured.vectorize %matmul vector_sizes [8, 16, 4] : !transform.any_op
 }
 
 // -----
@@ -510,5 +510,5 @@ func.func @matmul_scalable(%A: memref<?x?xf32>, %B: memref<?x?xf32>, %C: memref<
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %matmul vector_sizes [8, [16], 4] : !transform.any_op
+  transform.structured.vectorize %matmul vector_sizes [8, [16], 4] : !transform.any_op
 }

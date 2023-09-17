@@ -2994,9 +2994,9 @@ DiagnosedSilenceableFailure transform::VectorizeChildrenOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
-// MaskedVectorizeOp
+// VectorizeOp
 //===----------------------------------------------------------------------===//
-DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
+DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
     mlir::transform::TransformState &state) {
@@ -3060,19 +3060,19 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
-void transform::MaskedVectorizeOp::getEffects(
+void transform::VectorizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   onlyReadsHandle(getVectorSizes(), effects);
   modifiesPayload(effects);
 }
 
-SmallVector<OpFoldResult> MaskedVectorizeOp::getMixedVectorSizes() {
+SmallVector<OpFoldResult> VectorizeOp::getMixedVectorSizes() {
   OpBuilder b(getContext());
   return getMixedValues(getStaticVectorSizes(), getVectorSizes(), b);
 }
 
-LogicalResult transform::MaskedVectorizeOp::verify() {
+LogicalResult transform::VectorizeOp::verify() {
   if (getStaticVectorSizes().size() != getScalableSizes().size())
     return emitOpError("expected same number of vector sizes (")
            << getStaticVectorSizes().size() << ") and scalable sizes ("
