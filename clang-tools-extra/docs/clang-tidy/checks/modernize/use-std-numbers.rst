@@ -5,7 +5,7 @@ modernize-use-std-numbers
 
 Finds constants and function calls to math functions that can be replaced
 with c++20's mathematical constants from the ``numbers`` header and offers fix-it hints.
-Does not match the use of variables or macros with that value and instead, offers a replacement
+Does not match the use of variables or macros with that value, and instead, offers a replacement
 at the definition of said variables and macros.
 
 .. code-block:: c++
