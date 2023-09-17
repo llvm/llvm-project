@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LinkAllPasses.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -38,15 +39,12 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/TargetParser/ARMTargetParser.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -197,19 +195,14 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
       TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
-  const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
+  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
-  if (MachineTriple.isRISCV())
-    llvm::riscvExtensionsHelp();
-  else if (MachineTriple.isAArch64())
-    llvm::AArch64::PrintSupportedExtensions();
-  else if (MachineTriple.isARM())
-    llvm::ARM::PrintSupportedExtensions();
-  else {
-    // The option was already checked in Driver::HandleImmediateArgs,
-    // so we do not expect to get here if we are not a supported architecture.
-    assert(0 && "Unhandled triple for --print-supported-extensions option.");
-    return 1;
+  llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
+      MCInfo->getAllProcessorFeatures();
+  llvm::outs() << "All available -march extensions for " << TheTarget->getName()
+         << "\n\n";
+  for (const llvm::SubtargetFeatureKV &feature : Features) {
+    llvm::outs() << llvm::format("  %-40s %s\n", feature.Key, feature.Desc);
   }
 
   return 0;

@@ -4279,19 +4279,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
     // custom Compile phase that prints out supported cpu models and quits.
     //
-    // If --print-supported-extensions is specified, call the helper function
-    // RISCVMarchHelp in RISCVISAInfo.cpp that prints out supported extensions
-    // and quits.
+    // If --print-supported-extensions is specified, list all supported flags
+    // within the target and quit.
     if (Arg *A = Args.getLastArg(Opt)) {
-      if (Opt == options::OPT_print_supported_extensions &&
-          !C.getDefaultToolChain().getTriple().isRISCV() &&
-          !C.getDefaultToolChain().getTriple().isAArch64() &&
-          !C.getDefaultToolChain().getTriple().isARM()) {
-        C.getDriver().Diag(diag::err_opt_not_valid_on_target)
-            << "--print-supported-extensions";
-        return;
-      }
-
       // Use the -mcpu=? flag as the dummy input to cc1.
       Actions.clear();
       Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
