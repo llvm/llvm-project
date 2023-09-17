@@ -67,6 +67,7 @@ STATISTIC(NumCSE,      "Number of instructions CSE'd");
 STATISTIC(NumCSECVP,   "Number of compare instructions CVP'd");
 STATISTIC(NumCSELoad,  "Number of load instructions CSE'd");
 STATISTIC(NumCSECall,  "Number of call instructions CSE'd");
+STATISTIC(NumCSEGEP, "Number of GEP instructions CSE'd");
 STATISTIC(NumDSE,      "Number of trivial dead stores removed");
 
 DEBUG_COUNTER(CSECounter, "early-cse",
@@ -1294,6 +1295,20 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
   return Result;
 }
 
+static void combineIRFlags(Instruction &From, Value *To) {
+  if (auto *I = dyn_cast<Instruction>(To)) {
+    // If I being poison triggers UB, there is no need to drop those
+    // flags. Otherwise, only retain flags present on both I and Inst.
+    // TODO: Currently some fast-math flags are not treated as
+    // poison-generating even though they should. Until this is fixed,
+    // always retain flags present on both I and Inst for floating point
+    // instructions.
+    if (isa<FPMathOperator>(I) ||
+        (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
+      I->andIRFlags(&From);
+  }
+}
+
 bool EarlyCSE::overridingStores(const ParseMemoryInst &Earlier,
                                 const ParseMemoryInst &Later) {
   // Can we remove Earlier store because of Later store?
@@ -1519,16 +1534,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          // If I being poison triggers UB, there is no need to drop those
-          // flags. Otherwise, only retain flags present on both I and Inst.
-          // TODO: Currently some fast-math flags are not treated as
-          // poison-generating even though they should. Until this is fixed,
-          // always retain flags present on both I and Inst for floating point
-          // instructions.
-          if (isa<FPMathOperator>(I) || (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
-            I->andIRFlags(&Inst);
-        }
+        combineIRFlags(Inst, V);
         Inst.replaceAllUsesWith(V);
         salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
@@ -1641,35 +1647,26 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       continue;
     }
 
+    // Compare GEP instructions based on offset.
     if (GEPValue::canHandle(&Inst)) {
       GetElementPtrInst *GEP = cast<GetElementPtrInst>(&Inst);
       APInt Offset(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
       bool HasConstantOffset = GEP->accumulateConstantOffset(SQ.DL, Offset);
       GEPValue GEPVal(GEP, Offset, HasConstantOffset);
       if (Value *V = AvailableGEPs.lookup(GEPVal)) {
-        LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE GEP: " << Inst << "  to: " << *V
                           << '\n');
-        if (auto *I = dyn_cast<Instruction>(V)) {
-          // If I being poison triggers UB, there is no need to drop those
-          // flags. Otherwise, only retain flags present on both I and Inst.
-          // TODO: Currently some fast-math flags are not treated as
-          // poison-generating even though they should. Until this is fixed,
-          // always retain flags present on both I and Inst for floating point
-          // instructions.
-          if (isa<FPMathOperator>(I) ||
-              (I->hasPoisonGeneratingFlags() && !programUndefinedIfPoison(I)))
-            I->andIRFlags(&Inst);
-        }
+        combineIRFlags(Inst, V);
         Inst.replaceAllUsesWith(V);
         salvageKnowledge(&Inst, &AC);
         removeMSSA(Inst);
         Inst.eraseFromParent();
         Changed = true;
-        ++NumCSE;
+        ++NumCSEGEP;
         continue;
       }
 
-      // Otherwise, just remember that this value is available.
+      // Otherwise, just remember that we have this GEP.
       AvailableGEPs.insert(GEPVal, &Inst);
       continue;
     }
