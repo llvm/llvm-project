@@ -43,7 +43,7 @@ void PresburgerRelation::convertVarKind(VarKind srcKind, unsigned srcPos,
                                         unsigned num, VarKind dstKind,
                                         unsigned dstPos) {
   assert(srcKind != VarKind::Local && dstKind != VarKind::Local &&
-      "srcKind/dstKind" "cannot be local");
+      "srcKind/dstKind cannot be local");
   assert(srcKind != dstKind && "cannot convert variables to the same kind");
   assert(srcPos + num <= space.getNumVarKind(srcKind) &&
          "invalid range for source variables");
