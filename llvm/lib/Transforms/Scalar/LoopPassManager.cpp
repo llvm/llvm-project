@@ -14,6 +14,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/SourceExpressionAnalysis.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
@@ -235,6 +236,7 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
                                      AM.getResult<ScalarEvolutionAnalysis>(F),
                                      AM.getResult<TargetLibraryAnalysis>(F),
                                      AM.getResult<TargetIRAnalysis>(F),
+                                     AM.getResult<SourceExpressionAnalysis>(F),
                                      BFI,
                                      BPI,
                                      MSSA};

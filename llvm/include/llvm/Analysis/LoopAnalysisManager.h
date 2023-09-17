@@ -43,6 +43,7 @@ class MemorySSA;
 class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
+class LoadStoreSourceExpression;
 
 /// The adaptor from a function pass to a loop pass computes these analyses and
 /// makes them available to the loop passes "for free". Each loop pass is
@@ -56,6 +57,7 @@ struct LoopStandardAnalysisResults {
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   TargetTransformInfo &TTI;
+  LoadStoreSourceExpression &LSE;
   BlockFrequencyInfo *BFI;
   BranchProbabilityInfo *BPI;
   MemorySSA *MSSA;

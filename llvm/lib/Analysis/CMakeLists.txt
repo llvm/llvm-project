@@ -83,6 +83,7 @@ add_llvm_component_library(LLVMAnalysis
   LazyValueInfo.cpp
   Lint.cpp
   Loads.cpp
+  SourceExpressionAnalysis.cpp
   Local.cpp
   LoopAccessAnalysis.cpp
   LoopAnalysisManager.cpp
