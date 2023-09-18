@@ -34,9 +34,11 @@ namespace presburger {
 /// (i, j) is stored at data[i*nReservedColumns + j]. The reserved but unused
 /// columns always have all zero values. The reserved rows are just reserved
 /// space in the underlying SmallVector's capacity.
+/// This class only works for the types MPInt and Fraction, since the method
+/// implementations are in the Matrix.cpp file. Only these two types have
+/// been explicitly instantiated there.
 template<typename T>
 class Matrix {
-  // This class is not intended for general use: it supports only integers and rational numbers.
 static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
 public:
   Matrix() = delete;
