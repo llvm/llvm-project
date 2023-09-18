@@ -114,24 +114,39 @@ namespace {
 // example, Printf may call syslog() which can itself be built with hwasan).
 class SavedStackAllocations {
  public:
-  SavedStackAllocations(StackAllocationsRingBuffer *rb) {
+  SavedStackAllocations() = default;
+
+  explicit SavedStackAllocations(Thread *t) { CopyFrom(t); }
+
+  void CopyFrom(Thread *t) {
+    StackAllocationsRingBuffer *rb = t->stack_allocations();
     uptr size = rb->size() * sizeof(uptr);
     void *storage =
         MmapAlignedOrDieOnFatalError(size, size * 2, "saved stack allocations");
     new (&rb_) StackAllocationsRingBuffer(*rb, storage);
+    thread_id_ = t->unique_id();
   }
 
   ~SavedStackAllocations() {
-    StackAllocationsRingBuffer *rb = get();
-    UnmapOrDie(rb->StartOfStorage(), rb->size() * sizeof(uptr));
+    if (rb_) {
+      StackAllocationsRingBuffer *rb = get();
+      UnmapOrDie(rb->StartOfStorage(), rb->size() * sizeof(uptr));
+    }
+  }
+
+  const StackAllocationsRingBuffer *get() const {
+    return (const StackAllocationsRingBuffer *)&rb_;
   }
 
   StackAllocationsRingBuffer *get() {
     return (StackAllocationsRingBuffer *)&rb_;
   }
 
+  u32 thread_id() const { return thread_id_; }
+
  private:
-  uptr rb_;
+  uptr rb_ = 0;
+  u32 thread_id_;
 };
 
 class Decorator: public __sanitizer::SanitizerCommonDecorator {
@@ -737,8 +752,7 @@ class TagMismatchReport : public BaseReport {
 };
 
 TagMismatchReport::~TagMismatchReport() {
-  SavedStackAllocations current_stack_allocations(
-      GetCurrentThread()->stack_allocations());
+  SavedStackAllocations current_stack_allocations(GetCurrentThread());
 
   Decorator d;
   // TODO: when possible, try to print heap-use-after-free, etc.
