@@ -569,9 +569,20 @@ uptr GetTopPc(StackTrace *stack) {
                      : 0;
 }
 
-void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
-  ScopedReport R(flags()->halt_on_error);
+namespace {
+class InvalidFreeReport {
+ public:
+  InvalidFreeReport(StackTrace *stack, uptr tagged_addr)
+      : stack(stack), tagged_addr(tagged_addr) {}
+  ~InvalidFreeReport();
 
+ private:
+  StackTrace *stack;
+  uptr tagged_addr;
+};
+
+InvalidFreeReport::~InvalidFreeReport() {
+  ScopedReport R(flags()->halt_on_error);
   uptr untagged_addr = UntagAddr(tagged_addr);
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr = nullptr;
@@ -610,9 +621,31 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
+}  // namespace
 
-void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
-                           const u8 *expected) {
+void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
+  InvalidFreeReport R(stack, tagged_addr);
+}
+
+namespace {
+class TailOverwrittenReport {
+ public:
+  explicit TailOverwrittenReport(StackTrace *stack, uptr tagged_addr,
+                                 uptr orig_size, const u8 *expected)
+      : stack(stack),
+        tagged_addr(tagged_addr),
+        orig_size(orig_size),
+        expected(expected) {}
+  ~TailOverwrittenReport();
+
+ private:
+  StackTrace *stack;
+  uptr tagged_addr;
+  uptr orig_size;
+  const u8 *expected;
+};
+
+TailOverwrittenReport::~TailOverwrittenReport() {
   uptr tail_size = kShadowAlignment - (orig_size % kShadowAlignment);
   u8 actual_expected[kShadowAlignment];
   internal_memcpy(actual_expected, expected, tail_size);
@@ -682,9 +715,37 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
+}  // namespace
 
-void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
-                       bool is_store, bool fatal, uptr *registers_frame) {
+void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
+                           const u8 *expected) {
+  TailOverwrittenReport R(stack, tagged_addr, orig_size, expected);
+}
+
+namespace {
+class TagMismatchReport {
+ public:
+  explicit TagMismatchReport(StackTrace *stack, uptr tagged_addr,
+                             uptr access_size, bool is_store, bool fatal,
+                             uptr *registers_frame)
+      : stack(stack),
+        tagged_addr(tagged_addr),
+        access_size(access_size),
+        is_store(is_store),
+        fatal(fatal),
+        registers_frame(registers_frame) {}
+  ~TagMismatchReport();
+
+ private:
+  StackTrace *stack;
+  uptr tagged_addr;
+  uptr access_size;
+  bool is_store;
+  bool fatal;
+  uptr *registers_frame;
+};
+
+TagMismatchReport::~TagMismatchReport() {
   ScopedReport R(fatal);
   SavedStackAllocations current_stack_allocations(
       GetCurrentThread()->stack_allocations());
@@ -752,6 +813,13 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
+}
+}  // namespace
+
+void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
+                       bool is_store, bool fatal, uptr *registers_frame) {
+  TagMismatchReport R(stack, tagged_addr, access_size, is_store, fatal,
+                      registers_frame);
 }
 
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
