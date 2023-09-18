@@ -644,11 +644,11 @@ struct InsertSliceOpInterface
     RankedTensorType destType = insertSliceOp.getDestType();
 
     // The source is always read.
-    if (&opOperand == &op->getOpOperand(0) /*src*/)
+    if (&opOperand == &insertSliceOp.getSourceMutable()[0])
       return true;
 
     // For the destination, it depends...
-    assert(&opOperand == &insertSliceOp->getOpOperand(1) && "expected dest");
+    assert(&opOperand == &insertSliceOp.getDestMutable()[0] && "expected dest");
 
     // Dest is not read if it is entirely overwritten. E.g.:
     // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
@@ -851,9 +851,8 @@ struct ReshapeOpInterface
                                                     tensor::ReshapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(1) /* shape */)
-      return true;
-    return false;
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    return &opOperand == &reshapeOp.getShapeMutable()[0];
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -915,7 +914,8 @@ struct ParallelInsertSliceOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    return &opOperand == &op->getOpOperand(1) /*dest*/;
+    auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
+    return &opOperand == &parallelInsertSliceOp.getDestMutable()[0];
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
