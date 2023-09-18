@@ -576,11 +576,38 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
   return success();
 }
 
+bool MaterializeInDestinationOp::bufferizesToElementwiseAccess(
+    const AnalysisState &state, ArrayRef<OpOperand *> opOperands) {
+  // As elements are copied from the "source" buffer to the "dest" buffer,
+  // already copied elements are not read a second time.
+  return true;
+}
+
 LogicalResult MaterializeInDestinationOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
   reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
   return success();
+}
+
+Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
+                                                        Location loc) {
+  // The subset is the entire destination tensor.
+  return getDest();
+}
+
+bool MaterializeInDestinationOp::isEquivalentSubset(
+    Value candidate, function_ref<bool(Value, Value)> equivalenceFn) {
+  return equivalenceFn(getDest(), candidate);
+}
+
+SmallVector<Value>
+MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
+  return {getDest()};
+}
+
+OpOperand &MaterializeInDestinationOp::getSourceOperand() {
+  return getOperation()->getOpOperand(0) /*source*/;
 }
 
 //===----------------------------------------------------------------------===//
