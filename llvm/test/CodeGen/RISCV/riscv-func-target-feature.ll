@@ -35,10 +35,10 @@ entry:
   ret void
 }
 
-; CHECK: .option push
+; CHECK-NOT: .option push
 define void @test5() "target-features"="+unaligned-scalar-mem" {
 ; CHECK-LABEL: test5
-; CHECK: .option pop
+; CHECK-NOT: .option pop
 entry:
   ret void
 }
