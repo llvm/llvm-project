@@ -233,66 +233,40 @@ public:
                                                 PatternMatch::m_Value()));
   }
 
+  /// Return nonnull value if V is free to invert under the condition of
+  /// WillInvertAllUses.
+  /// If Builder is nonnull, it will return a simplified ~V.
+  /// If Builder is null, it will return an arbitrary nonnull value (not
+  /// dereferenceable).
+  /// If the inversion will consume instructions, `DoesConsume` will be set to
+  /// true. Otherwise it will be false.
+  static Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                      BuilderTy *Builder, bool &DoesConsume,
+                                      unsigned Depth);
+
+  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder, bool &DoesConsume) {
+    DoesConsume = false;
+    return getFreelyInvertedImpl(V, WillInvertAllUses, Builder, DoesConsume,
+                                 /*Depth*/ 0);
+  }
+
+  static Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
+                                  BuilderTy *Builder) {
+    bool Unused;
+    return getFreelyInverted(V, WillInvertAllUses, Builder, Unused);
+  }
+
   /// Return true if the specified value is free to invert (apply ~ to).
   /// This happens in cases where the ~ can be eliminated.  If WillInvertAllUses
   /// is true, work under the assumption that the caller intends to remove all
   /// uses of V and only keep uses of ~V.
   ///
   /// See also: canFreelyInvertAllUsersOf()
-  static bool isFreeToInvertImpl(Value *V, bool WillInvertAllUses,
-                                 bool &DoesConsume, unsigned Depth) {
-    using namespace llvm::PatternMatch;
-    // ~(~(X)) -> X.
-    if (match(V, m_Not(m_Value()))) {
-      DoesConsume = true;
-      return true;
-    }
-
-    // Constants can be considered to be not'ed values.
-    if (match(V, m_AnyIntegralConstant()))
-      return true;
-
-    if (Depth++ >= MaxAnalysisRecursionDepth)
-      return false;
-
-    // The rest of the cases require that we invert all uses so don't bother
-    // doing the analysis if we know we can't use the result.
-    if (!WillInvertAllUses)
-      return false;
-
-    // Compares can be inverted if all of their uses are being modified to use
-    // the ~V.
-    if (isa<CmpInst>(V))
-      return true;
-
-    Value *A, *B;
-    // If `V` is of the form `A + B` then `-1 - V` can be folded into
-    // `~B - A` or `~A - B` if we are willing to invert all of the uses.
-    if (match(V, m_Add(m_Value(A), m_Value(B))))
-      return isFreeToInvertImpl(A, A->hasOneUse(), DoesConsume, Depth) ||
-             isFreeToInvertImpl(B, B->hasOneUse(), DoesConsume, Depth);
-
-    // If `V` is of the form `A - B` then `-1 - V` can be folded into
-    // `~A + B` if we are willing to invert all of the uses.
-    if (match(V, m_Sub(m_Value(A), m_Value())))
-      return isFreeToInvertImpl(A, A->hasOneUse(), DoesConsume, Depth);
-
-    // LogicOps are special in that we canonicalize them at the cost of an
-    // instruction.
-    bool IsSelect = match(V, m_Select(m_Value(), m_Value(A), m_Value(B))) &&
-                    !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
-    // Selects/min/max with invertible operands are freely invertible
-    if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B))))
-      return isFreeToInvertImpl(A, A->hasOneUse(), DoesConsume, Depth) &&
-             isFreeToInvertImpl(B, B->hasOneUse(), DoesConsume, Depth);
-
-    return false;
-  }
-
   static bool isFreeToInvert(Value *V, bool WillInvertAllUses,
                              bool &DoesConsume) {
-    DoesConsume = false;
-    return isFreeToInvertImpl(V, WillInvertAllUses, DoesConsume, /*Depth*/ 0);
+    return getFreelyInverted(V, WillInvertAllUses, /*Builder*/ nullptr,
+                             DoesConsume) != nullptr;
   }
 
   static bool isFreeToInvert(Value *V, bool WillInvertAllUses) {
