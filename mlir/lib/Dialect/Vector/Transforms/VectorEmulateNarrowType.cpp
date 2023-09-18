@@ -317,8 +317,16 @@ namespace {
 // In the above, each row represents one target vector element and each
 // column represents one bit contribution from a source vector element.
 // The algorithm creates vector.shuffle operations (in this case there are 3
-// shuffles (i.e. the max number of columns in BitCastBitsEnumerator), as
-// follows:
+// shuffles (i.e. the max number of columns in BitCastBitsEnumerator). The
+// algorithm populates the bits as follows:
+// ```
+//     src bits 0 ...
+// 1st shuffle |xxxxx   |xx      |...
+// 2nd shuffle |     xxx|  xxxxx |...
+// 3rd shuffle |        |       x|...
+// ```
+//
+// The algorithm proceeds as follows:
 //   1. for each vector.shuffle, collect the source vectors that participate in
 //     this shuffle. One source vector per target element of the resulting
 //     vector.shuffle. If there is no source element contributing bits for the
@@ -375,16 +383,20 @@ struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
       SmallVector<Attribute> masks, shiftRightAmounts, shiftLeftAmounts;
 
       // Create the attribute quantities for the shuffle / mask / shift ops.
-      for (auto &l : be.sourceElementRanges) {
-        int64_t sourceElementIdx = (shuffleIdx < (int64_t)l.size())
-                                       ? l[shuffleIdx].sourceElementIdx
-                                       : 0;
+      for (auto &srcEltRangeList : be.sourceElementRanges) {
+        bool idxContributesBits =
+            (shuffleIdx < (int64_t)srcEltRangeList.size());
+        int64_t sourceElementIdx =
+            idxContributesBits ? srcEltRangeList[shuffleIdx].sourceElementIdx
+                               : 0;
         shuffles.push_back(sourceElementIdx);
 
-        int64_t bitLo =
-            (shuffleIdx < (int64_t)l.size()) ? l[shuffleIdx].sourceBitBegin : 0;
-        int64_t bitHi =
-            (shuffleIdx < (int64_t)l.size()) ? l[shuffleIdx].sourceBitEnd : 0;
+        int64_t bitLo = (shuffleIdx < (int64_t)srcEltRangeList.size())
+                            ? srcEltRangeList[shuffleIdx].sourceBitBegin
+                            : 0;
+        int64_t bitHi = (shuffleIdx < (int64_t)srcEltRangeList.size())
+                            ? srcEltRangeList[shuffleIdx].sourceBitEnd
+                            : 0;
         IntegerAttr mask = IntegerAttr::get(
             rewriter.getIntegerType(initalElementBitWidth),
             llvm::APInt::getBitsSet(initalElementBitWidth, bitLo, bitHi));
@@ -394,7 +406,7 @@ struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
         shiftRightAmounts.push_back(IntegerAttr::get(
             rewriter.getIntegerType(initalElementBitWidth), shiftRight));
 
-        int64_t shiftLeft = l.computeLeftShiftAmount(shuffleIdx);
+        int64_t shiftLeft = srcEltRangeList.computeLeftShiftAmount(shuffleIdx);
         shiftLeftAmounts.push_back(IntegerAttr::get(
             rewriter.getIntegerType(initalElementBitWidth), shiftLeft));
       }
