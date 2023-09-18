@@ -31,7 +31,7 @@ void ImplementationInNamespaceCheck::check(
   if (!Result.SourceManager->isInMainFile(MatchedDecl->getLocation()))
     return;
 
-  if (auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl)) {
+  if (const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl)) {
     if (!Result.SourceManager->isMacroBodyExpansion(NS->getLocation()))
       diag(NS->getLocation(),
            "the outermost namespace should be the '%0' macro")
