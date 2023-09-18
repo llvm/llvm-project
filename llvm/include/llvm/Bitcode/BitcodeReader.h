@@ -41,7 +41,7 @@ class Value;
 // The first argument is the target triple, the second argument the data layout
 // string from the input, or a default string. It will be used if the callback
 // returns std::nullopt.
-typedef std::function<std::optional<std::string>(StringRef, StringRef)>
+typedef std::function<std::optional<std::string>(StringRef)>
     DataLayoutCallbackFuncTy;
 
 typedef std::function<Type *(unsigned)> GetTypeByIDTy;

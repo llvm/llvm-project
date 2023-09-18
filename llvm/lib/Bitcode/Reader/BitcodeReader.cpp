@@ -4214,8 +4214,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Apply override
     if (Callbacks.DataLayout) {
-      if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
+      if (auto LayoutOverride =
+              (*Callbacks.DataLayout)(TheModule->getTargetTriple()))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 

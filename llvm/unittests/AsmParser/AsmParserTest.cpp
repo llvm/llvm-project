@@ -401,12 +401,11 @@ TEST(AsmParserTest, InvalidDataLayoutStringCallback) {
   // that fixing the DL str from the callback works,
   // and that the resulting module has the correct DL.
   SlotMapping Mapping2;
-  auto Mod2 = parseAssembly(
-      SourceBuffer, Error, Ctx, &Mapping2,
-      [&](StringRef Triple, StringRef DLStr) -> std::optional<std::string> {
-        EXPECT_EQ(DLStr, InvalidDLStr);
-        return std::string{FixedDLStr};
-      });
+  auto Mod2 =
+      parseAssembly(SourceBuffer, Error, Ctx, &Mapping2,
+                    [&](StringRef Triple) -> std::optional<std::string> {
+                      return std::string{FixedDLStr};
+                    });
   ASSERT_TRUE(Mod2 != nullptr);
   EXPECT_EQ(Mod2->getDataLayout(), FixedDL);
 }

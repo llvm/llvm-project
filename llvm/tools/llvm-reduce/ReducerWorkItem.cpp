@@ -762,8 +762,8 @@ llvm::parseReducerWorkItem(StringRef ToolName, StringRef Filename,
     std::unique_ptr<MIRParser> MParser =
         createMIRParser(std::move(FileOrErr.get()), Ctxt);
 
-    auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
-                             StringRef OldDLStr) -> std::optional<std::string> {
+    auto SetDataLayout =
+        [&](StringRef DataLayoutTargetTriple) -> std::optional<std::string> {
       // If we are supposed to override the target triple, do so now.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())

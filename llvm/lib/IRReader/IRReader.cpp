@@ -86,9 +86,9 @@ std::unique_ptr<Module> llvm::parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
     return std::move(ModuleOrErr.get());
   }
 
-  return parseAssembly(Buffer, Err, Context, nullptr,
-                       Callbacks.DataLayout.value_or(
-                           [](StringRef, StringRef) { return std::nullopt; }));
+  return parseAssembly(
+      Buffer, Err, Context, nullptr,
+      Callbacks.DataLayout.value_or([](StringRef) { return std::nullopt; }));
 }
 
 std::unique_ptr<Module> llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err,

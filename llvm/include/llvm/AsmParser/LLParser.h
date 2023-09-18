@@ -179,10 +179,8 @@ namespace llvm {
           Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
           BlockAddressPFS(nullptr) {}
     bool Run(
-        bool UpgradeDebugInfo,
-        DataLayoutCallbackTy DataLayoutCallback = [](StringRef, StringRef) {
-          return std::nullopt;
-        });
+        bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
+                                   [](StringRef) { return std::nullopt; });
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
