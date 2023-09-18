@@ -27,7 +27,7 @@ flag to it. Example invocation:
 mkdir myswift
 cd myswift
 git clone https://github.com/apple/swift.git swift
-./swift/utils/update-checkout
+./swift/utils/update-checkout --clone
 ./llvm-project/lldb/scripts/macos-setup-codesign.sh
 ./swift/utils/build-script -r --lldb
 ```
