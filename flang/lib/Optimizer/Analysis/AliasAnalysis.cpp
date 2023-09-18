@@ -138,12 +138,12 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   if (src1->kind == SourceKind::Allocate)
     return AliasResult::NoAlias;
 
-  assert((src1->kind == SourceKind::Global &&
-          (src2->kind == SourceKind::Argument ||
-           src2->kind == SourceKind::HostAssoc)) ||
-         (src1->kind == SourceKind::Argument &&
-          src2->kind == SourceKind::HostAssoc) &&
-             "unexpected memory source kinds");
+  assert(((src1->kind == SourceKind::Global &&
+           (src2->kind == SourceKind::Argument ||
+            src2->kind == SourceKind::HostAssoc)) ||
+          (src1->kind == SourceKind::Argument &&
+           src2->kind == SourceKind::HostAssoc)) &&
+         "unexpected memory source kinds");
 
   if (src1->kind == SourceKind::Argument &&
       src2->kind == SourceKind::HostAssoc) {
