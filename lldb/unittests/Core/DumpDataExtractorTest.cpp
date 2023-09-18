@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpDataExtractor.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -17,6 +19,20 @@
 
 using namespace lldb;
 using namespace lldb_private;
+
+// This is needed for the tests because they rely on the Target global
+// properties.
+class DumpDataExtractorTest : public ::testing::Test {
+public:
+  void SetUp() override {
+    FileSystem::Initialize();
+    HostInfo::Initialize();
+  }
+  void TearDown() override {
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+  }
+};
 
 static void TestDumpWithAddress(uint64_t base_addr, size_t item_count,
                                 llvm::StringRef expected) {
