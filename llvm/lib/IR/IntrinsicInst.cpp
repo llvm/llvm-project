@@ -557,7 +557,7 @@ VPIntrinsic::getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
   return ::getFunctionalIntrinsicIDForVP(ID);
 }
 
-constexpr static bool VPHasNoFunctionalEquivalent(Intrinsic::ID ID) {
+constexpr static bool doesVPHaveNoFunctionalEquivalent(Intrinsic::ID ID) {
   switch (ID) {
   default:
     break;
@@ -571,18 +571,11 @@ constexpr static bool VPHasNoFunctionalEquivalent(Intrinsic::ID ID) {
 
 // All VP intrinsics should have an equivalent non-VP opcode or intrinsic
 // defined, or be marked that they don't have one.
-constexpr static bool allVPFunctionalDefined() {
-  for (Intrinsic::ID ID = 0; ID < Intrinsic::num_intrinsics; ID++) {
-    if (!isVPIntrinsic(ID))
-      continue;
-    if (!VPHasNoFunctionalEquivalent(ID) && !getFunctionalOpcodeForVP(ID) &&
-        !getFunctionalIntrinsicIDForVP(ID))
-      return false;
-  }
-  return true;
-}
-static_assert(allVPFunctionalDefined(),
-              "VP intrinsic missing functional opcode or intrinsic");
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
+  static_assert(doesVPHaveNoFunctionalEquivalent(Intrinsic::VPID) ||           \
+                getFunctionalOpcodeForVP(Intrinsic::VPID) ||                   \
+                getFunctionalIntrinsicIDForVP(Intrinsic::VPID));
+#include "llvm/IR/VPIntrinsics.def"
 
 // Equivalent non-predicated constrained intrinsic
 std::optional<Intrinsic::ID>
