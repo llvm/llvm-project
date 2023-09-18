@@ -199,10 +199,10 @@ void mlir::configureOpenMPToLLVMConversionLegality(
     ConversionTarget &target, LLVMTypeConverter &typeConverter) {
   target.addDynamicallyLegalOp<
       mlir::omp::AtomicUpdateOp, mlir::omp::CriticalOp, mlir::omp::TargetOp,
-      mlir::omp::DataOp, mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
-      mlir::omp::SimdLoopOp, mlir::omp::MasterOp, mlir::omp::SectionOp,
-      mlir::omp::SectionsOp, mlir::omp::SingleOp, mlir::omp::TaskGroupOp,
-      mlir::omp::TaskOp>([&](Operation *op) {
+      mlir::omp::DataOp, mlir::omp::OrderedRegionOp, mlir::omp::ParallelOp,
+      mlir::omp::WsLoopOp, mlir::omp::SimdLoopOp, mlir::omp::MasterOp,
+      mlir::omp::SectionOp, mlir::omp::SectionsOp, mlir::omp::SingleOp,
+      mlir::omp::TaskGroupOp, mlir::omp::TaskOp>([&](Operation *op) {
     return typeConverter.isLegal(&op->getRegion(0)) &&
            typeConverter.isLegal(op->getOperandTypes()) &&
            typeConverter.isLegal(op->getResultTypes());
@@ -234,6 +234,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       AtomicReadOpConversion, ReductionOpConversion,
       ReductionDeclareOpConversion, RegionOpConversion<omp::CriticalOp>,
       RegionOpConversion<omp::MasterOp>, ReductionOpConversion,
+      RegionOpConversion<omp::OrderedRegionOp>,
       RegionOpConversion<omp::ParallelOp>, RegionOpConversion<omp::WsLoopOp>,
       RegionOpConversion<omp::SectionsOp>, RegionOpConversion<omp::SectionOp>,
       RegionOpConversion<omp::SimdLoopOp>, RegionOpConversion<omp::SingleOp>,
