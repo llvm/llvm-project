@@ -115,7 +115,7 @@ static void writeDebugRecord(const PerfJITDebugInfoRecord &DebugRecord) {
   assert(State && "PerfState not initialized");
   LLVM_DEBUG(dbgs() << "Writing debug record with "
                     << DebugRecord.Entries.size() << " entries\n");
-  size_t Written = 0;
+  [[maybe_unused]] size_t Written = 0;
   DIR Dir{RecHeader{static_cast<uint32_t>(DebugRecord.Prefix.Id),
                     DebugRecord.Prefix.TotalSize, perf_get_timestamp()},
           DebugRecord.CodeAddr, DebugRecord.Entries.size()};
