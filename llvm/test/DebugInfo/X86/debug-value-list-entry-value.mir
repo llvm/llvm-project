@@ -10,9 +10,9 @@
   source_filename = "test.ll"
   target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-apple-macosx12.1.0"
-  
+
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   define swifttailcc void @blah(ptr swiftasync %0) !dbg !15 {
     %use = getelementptr i8, ptr %0, i64 9
     call void @llvm.dbg.value(metadata ptr %0, metadata !18, metadata !DIExpression(DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16, DW_OP_deref, DW_OP_deref)), !dbg !22
@@ -71,7 +71,7 @@ frameInfo:
 body:             |
   bb.0 (%ir-block.1):
     liveins: $r14
-  
+
     DBG_PHI $r14, 1
     DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16, DW_OP_deref, DW_OP_deref), dbg-instr-ref(1, 0), debug-location !22
     DBG_VALUE_LIST !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16, DW_OP_deref, DW_OP_deref), $r14, debug-location !DILocation(line: 0, scope: !19, inlinedAt: !23)

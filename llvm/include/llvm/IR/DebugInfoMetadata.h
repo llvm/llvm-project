@@ -2905,7 +2905,7 @@ public:
   /// Similar to `convertToNonVariadicExpression`, but faster and cheaper - it
   /// does not check whether the expression is a single-location expression, and
   /// it returns elements rather than creating a new DIExpression.
-  ArrayRef<uint64_t> getSingleLocationExpressionElements() const;
+  std::optional<ArrayRef<uint64_t>> getSingleLocationExpressionElements() const;
 
   /// Removes all elements from \p Expr that do not apply to an undef debug
   /// value, which includes every operator that computes the value/location on

@@ -1343,17 +1343,23 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
 }
 bool DIExpression::isEntryValue() const {
-  auto singleLocElts = getSingleLocationExpressionElements();
-  return singleLocElts.size() > 0 &&
-         singleLocElts[0] == dwarf::DW_OP_LLVM_entry_value;
+  if (auto singleLocElts = getSingleLocationExpressionElements()) {
+    return singleLocElts->size() > 0 &&
+           (*singleLocElts)[0] == dwarf::DW_OP_LLVM_entry_value;
+  }
+  return false;
 }
 bool DIExpression::startsWithDeref() const {
-  auto singleLocElts = getSingleLocationExpressionElements();
-  return singleLocElts.size() > 0 && singleLocElts[0] == dwarf::DW_OP_deref;
+  if (auto singleLocElts = getSingleLocationExpressionElements())
+    return singleLocElts->size() > 0 &&
+           (*singleLocElts)[0] == dwarf::DW_OP_deref;
+  return false;
 }
 bool DIExpression::isDeref() const {
-  auto singleLocElts = getSingleLocationExpressionElements();
-  return singleLocElts.size() == 1 && singleLocElts[0] == dwarf::DW_OP_deref;
+  if (auto singleLocElts = getSingleLocationExpressionElements())
+    return singleLocElts->size() == 1 &&
+           (*singleLocElts)[0] == dwarf::DW_OP_deref;
+  return false;
 }
 
 DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
@@ -1541,11 +1547,21 @@ bool DIExpression::isSingleLocationExpression() const {
   });
 }
 
-ArrayRef<uint64_t> DIExpression::getSingleLocationExpressionElements() const {
-  if (getNumElements() < 2 || Elements[0] != dwarf::DW_OP_LLVM_arg ||
-      Elements[1] != 0)
-    return Elements;
-  return getElements().drop_front(2);
+std::optional<ArrayRef<uint64_t>>
+DIExpression::getSingleLocationExpressionElements() const {
+  // Check for `isValid` covered by `isSingleLocationExpression`.
+  if (!isSingleLocationExpression())
+    return std::nullopt;
+
+  // An empty expression is already non-variadic.
+  if (!getNumElements())
+    return ArrayRef<uint64_t>();
+
+  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
+  // anything.
+  if (getElements()[0] == dwarf::DW_OP_LLVM_arg)
+    return getElements().drop_front(2);
+  return getElements();
 }
 
 const DIExpression *
@@ -1576,22 +1592,10 @@ DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
   if (!Expr)
     return std::nullopt;
 
-  // Check for `isValid` covered by `isSingleLocationExpression`.
-  if (!Expr->isSingleLocationExpression())
-    return std::nullopt;
+  if (auto Elts = Expr->getSingleLocationExpressionElements())
+    return DIExpression::get(Expr->getContext(), *Elts);
 
-  // An empty expression is already non-variadic.
-  if (!Expr->getNumElements())
-    return Expr;
-
-  auto ElementsBegin = Expr->elements_begin();
-  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
-  // anything.
-  if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
-    return Expr;
-
-  return DIExpression::get(Expr->getContext(),
-                           Expr->getElements().drop_front(2));
+  return std::nullopt;
 }
 
 void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
@@ -1662,7 +1666,11 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
 }
 
 bool DIExpression::extractIfOffset(int64_t &Offset) const {
-  auto SingleLocElts = getSingleLocationExpressionElements();
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt)
+    return false;
+  auto SingleLocElts = *SingleLocEltsOpt;
+
   if (SingleLocElts.size() == 0) {
     Offset = 0;
     return true;
@@ -1703,7 +1711,11 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
                                                       unsigned &AddrClass) {
   // FIXME: This seems fragile. Nothing that verifies that these elements
   // actually map to ops and not operands.
-  auto SingleLocElts = Expr->getSingleLocationExpressionElements();
+  auto SingleLocEltsOpt = Expr->getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt)
+    return nullptr;
+  auto SingleLocElts = *SingleLocEltsOpt;
+
   const unsigned PatternSize = 4;
   if (SingleLocElts.size() >= PatternSize &&
       SingleLocElts[PatternSize - 4] == dwarf::DW_OP_constu &&
