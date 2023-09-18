@@ -58,6 +58,7 @@ public:
     static constexpr openmode ate;
     static constexpr openmode binary;
     static constexpr openmode in;
+    static constexpr openmode noreplace; // since C++23
     static constexpr openmode out;
     static constexpr openmode trunc;
 
@@ -277,12 +278,15 @@ public:
     static const iostate goodbit = 0x0;
 
     typedef unsigned int openmode;
-    static const openmode app    = 0x01;
-    static const openmode ate    = 0x02;
-    static const openmode binary = 0x04;
-    static const openmode in     = 0x08;
-    static const openmode out    = 0x10;
-    static const openmode trunc  = 0x20;
+    static const openmode app       = 0x01;
+    static const openmode ate       = 0x02;
+    static const openmode binary    = 0x04;
+    static const openmode in        = 0x08;
+    static const openmode out       = 0x10;
+    static const openmode trunc     = 0x20;
+#if _LIBCPP_STD_VER >= 23
+    static const openmode noreplace = 0x40;
+#endif
 
     enum seekdir {beg, cur, end};
 

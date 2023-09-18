@@ -48,6 +48,7 @@ Implemented Papers
 - P2538R1 - ADL-proof ``std::projected``
 - P2614R2 - Deprecate ``numeric_limits::has_denorm``
 - P0053R7 - C++ Synchronized Buffered Ostream (in the experimental library)
+- P2467R1 - Support exclusive mode for fstreams
 
 
 Improvements and New Features
