@@ -661,15 +661,32 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
   bool actualIsNull{evaluate::IsNullPointer(actual)};
   if (dummyIsAllocatable) {
-    if (!actualIsAllocatable && !(actualIsNull && dummyIsOptional)) {
+    if (actualIsAllocatable) {
+      if (actualIsCoindexed && dummy.intent != common::Intent::In) {
+        messages.Say(
+            "ALLOCATABLE %s must have INTENT(IN) to be associated with a coindexed actual argument"_err_en_US,
+            dummyName);
+      }
+    } else if (actualIsNull) {
+      if (dummyIsOptional) {
+      } else if (dummy.intent == common::Intent::In) {
+        // Extension (Intel, NAG, XLF): a NULL() pointer is an acceptable
+        // actual argument for an INTENT(IN) allocatable dummy, and it
+        // is treated as an unassociated allocatable.
+        if (context.languageFeatures().ShouldWarn(
+                common::LanguageFeature::NullActualForAllocatable)) {
+          messages.Say(
+              "Allocatable %s is associated with a null pointer"_port_en_US,
+              dummyName);
+        }
+      } else {
+        messages.Say(
+            "A null pointer may not be associated with allocatable %s without INTENT(IN)"_err_en_US,
+            dummyName);
+      }
+    } else {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
-          dummyName);
-    }
-    if (actualIsAllocatable && actualIsCoindexed &&
-        dummy.intent != common::Intent::In) {
-      messages.Say(
-          "ALLOCATABLE %s must have INTENT(IN) to be associated with a coindexed actual argument"_err_en_US,
           dummyName);
     }
     if (!actualIsCoindexed && actualLastSymbol &&
@@ -791,7 +808,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // NULL(MOLD=) checking for non-intrinsic procedures
-  if (!intrinsic && !dummyIsPointer && !dummyIsOptional && actualIsNull) {
+  if (!intrinsic && !dummyIsAllocatableOrPointer && !dummyIsOptional &&
+      actualIsNull) {
     messages.Say(
         "Actual argument associated with %s may not be null pointer %s"_err_en_US,
         dummyName, actual.AsFortran());
@@ -1083,12 +1101,19 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
                     evaluate::IsNullPointer(*expr)) {
-                  // Unsupported extension that more or less naturally falls
-                  // out of other Fortran implementations that pass separate
-                  // base address and descriptor address physical arguments
-                  messages.Say(
-                      "Null actual argument '%s' may not be associated with allocatable %s"_err_en_US,
-                      expr->AsFortran(), dummyName);
+                  if (object.intent == common::Intent::In) {
+                    // Extension (Intel, NAG, XLF); see CheckExplicitDataArg.
+                    if (context.languageFeatures().ShouldWarn(common::
+                                LanguageFeature::NullActualForAllocatable)) {
+                      messages.Say(
+                          "Allocatable %s is associated with NULL()"_port_en_US,
+                          dummyName);
+                    }
+                  } else {
+                    messages.Say(
+                        "NULL() actual argument '%s' may not be associated with allocatable %s without INTENT(IN)"_err_en_US,
+                        expr->AsFortran(), dummyName);
+                  }
                 } else {
                   messages.Say(
                       "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,
