@@ -200,7 +200,7 @@ static bool FindHeapAllocation(HeapAllocationsRingBuffer *rb, uptr tagged_addr,
   return false;
 }
 
-static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
+static void PrintStackAllocations(const StackAllocationsRingBuffer *sa,
                                   tag_t addr_tag, uptr untagged_addr) {
   uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
   bool found_local = false;
@@ -457,23 +457,31 @@ class BaseReport {
         tagged_addr(tagged_addr),
         access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
-        ptr_tag(GetTagFromPointer(tagged_addr)) {}
+        ptr_tag(GetTagFromPointer(tagged_addr)) {
+    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+      if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
+          t->AddrIsInStack(untagged_addr)) {
+        stack_allocations[stack_allocations_count++].CopyFrom(t);
+      }
+    });
+  }
 
  protected:
+  void PrintAddressDescription() const;
+
   ScopedReport scoped_report;
   StackTrace *stack = nullptr;
   uptr tagged_addr = 0;
   uptr access_size = 0;
   uptr untagged_addr = 0;
   tag_t ptr_tag = 0;
+  uptr stack_allocations_count = 0;
+  SavedStackAllocations stack_allocations[16];
 };
 
-static void PrintAddressDescription(
-    uptr tagged_addr, uptr access_size,
-    StackAllocationsRingBuffer *current_stack_allocations) {
+void BaseReport::PrintAddressDescription() const {
   Decorator d;
   int num_descriptions_printed = 0;
-  uptr untagged_addr = UntagAddr(tagged_addr);
 
   if (MemIsShadow(untagged_addr)) {
     Printf("%s%p is HWAsan shadow memory.\n%s", d.Location(), untagged_addr,
@@ -495,48 +503,42 @@ static void PrintAddressDescription(
            d.Default());
   }
 
-  tag_t addr_tag = GetTagFromPointer(tagged_addr);
-
-  bool on_stack = false;
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
-  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-    if (t->AddrIsInStack(untagged_addr)) {
-      on_stack = true;
-      // TODO(fmayer): figure out how to distinguish use-after-return and
-      // stack-buffer-overflow.
-      Printf("%s", d.Error());
-      Printf("\nCause: stack tag-mismatch\n");
-      Printf("%s", d.Location());
-      Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
-             t->unique_id());
-      Printf("%s", d.Default());
-      t->Announce();
+  for (uptr i = 0; i < stack_allocations_count; ++i) {
+    auto &allocations = stack_allocations[i];
+    // TODO(fmayer): figure out how to distinguish use-after-return and
+    // stack-buffer-overflow.
+    Printf("%s", d.Error());
+    Printf("\nCause: stack tag-mismatch\n");
+    Printf("%s", d.Location());
+    Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
+           allocations.thread_id());
+    Printf("%s", d.Default());
+    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+      if (allocations.thread_id() == t->unique_id())
+        t->Announce();
+    });
 
-      auto *sa = (t == GetCurrentThread() && current_stack_allocations)
-                     ? current_stack_allocations
-                     : t->stack_allocations();
-      PrintStackAllocations(sa, addr_tag, untagged_addr);
-      num_descriptions_printed++;
-    }
-  });
+    PrintStackAllocations(allocations.get(), ptr_tag, untagged_addr);
+    num_descriptions_printed++;
+  }
 
   // Check if this looks like a heap buffer overflow by scanning
   // the shadow left and right and looking for the first adjacent
-  // object with a different memory tag. If that tag matches addr_tag,
+  // object with a different memory tag. If that tag matches ptr_tag,
   // check the allocator if it has a live chunk there.
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
   uptr candidate_distance = 0;
   for (; candidate_distance < 1000; candidate_distance++) {
-    if (MemIsShadow(reinterpret_cast<uptr>(left)) &&
-        TagsEqual(addr_tag, left)) {
+    if (MemIsShadow(reinterpret_cast<uptr>(left)) && TagsEqual(ptr_tag, left)) {
       candidate = left;
       break;
     }
     --left;
     if (MemIsShadow(reinterpret_cast<uptr>(right)) &&
-        TagsEqual(addr_tag, right)) {
+        TagsEqual(ptr_tag, right)) {
       candidate = right;
       break;
     }
@@ -545,7 +547,8 @@ static void PrintAddressDescription(
 
   constexpr auto kCloseCandidateDistance = 1;
 
-  if (!on_stack && candidate && candidate_distance <= kCloseCandidateDistance) {
+  if (!stack_allocations_count && candidate &&
+      candidate_distance <= kCloseCandidateDistance) {
     ShowHeapOrGlobalCandidate(untagged_addr, candidate, left, right);
     num_descriptions_printed++;
   }
@@ -645,7 +648,7 @@ InvalidFreeReport::~InvalidFreeReport() {
 
   stack->Print();
 
-  PrintAddressDescription(tagged_addr, 0, nullptr);
+  PrintAddressDescription();
 
   if (tag_ptr)
     PrintTagsAroundAddr(tag_ptr);
@@ -754,8 +757,6 @@ class TagMismatchReport : public BaseReport {
 };
 
 TagMismatchReport::~TagMismatchReport() {
-  SavedStackAllocations current_stack_allocations(GetCurrentThread());
-
   Decorator d;
   // TODO: when possible, try to print heap-use-after-free, etc.
   const char *bug_type = "tag-mismatch";
@@ -806,8 +807,7 @@ TagMismatchReport::~TagMismatchReport() {
 
   stack->Print();
 
-  PrintAddressDescription(tagged_addr, access_size,
-                          current_stack_allocations.get());
+  PrintAddressDescription();
   t->Announce();
 
   PrintTagsAroundAddr(tag_ptr);
