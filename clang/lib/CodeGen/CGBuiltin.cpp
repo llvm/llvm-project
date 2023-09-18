@@ -10783,7 +10783,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI_CopyFloatFromInt32 ||
       BuiltinID == AArch64::BI_CopyInt32FromFloat ||
       BuiltinID == AArch64::BI_CopyInt64FromDouble) {
-    return EmitScalarExpr(E->getArg(0));
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+
+    if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
+        BuiltinID == AArch64::BI_CopyFloatFromInt32)
+      Arg = Builder.CreateSIToFP(Arg, RetTy);
+    else
+      Arg = Builder.CreateFPToSI(Arg, RetTy);
+    return Arg;
   }
 
   if (BuiltinID == AArch64::BI_CountLeadingOnes ||
