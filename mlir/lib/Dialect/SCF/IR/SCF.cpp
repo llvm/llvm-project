@@ -343,15 +343,11 @@ LogicalResult ForOp::verify() {
   if (matchPattern(getStep(), m_Constant(&step)) && step.getInt() <= 0)
     return emitOpError("constant step operand must be positive");
 
-  auto opNumResults = getNumResults();
-  if (opNumResults == 0)
-    return success();
-  // If ForOp defines values, check that the number and types of
-  // the defined values match ForOp initial iter operands and backedge
-  // basic block arguments.
-  if (getNumIterOperands() != opNumResults)
+  // Check that the number of init args and op results is the same.
+  if (getInitArgs().size() != getNumResults())
     return emitOpError(
         "mismatch in number of loop-carried values and defined values");
+
   return success();
 }
 
@@ -362,19 +358,15 @@ LogicalResult ForOp::verifyRegions() {
     return emitOpError(
         "expected induction variable to be same type as bounds and step");
 
-  auto opNumResults = getNumResults();
-  if (opNumResults == 0)
-    return success();
-
-  if (getNumRegionIterArgs() != opNumResults)
+  if (getNumRegionIterArgs() != getNumResults())
     return emitOpError(
         "mismatch in number of basic block args and defined values");
 
-  auto iterOperands = getIterOperands();
+  auto initArgs = getInitArgs();
   auto iterArgs = getRegionIterArgs();
   auto opResults = getResults();
   unsigned i = 0;
-  for (auto e : llvm::zip(iterOperands, iterArgs, opResults)) {
+  for (auto e : llvm::zip(initArgs, iterArgs, opResults)) {
     if (std::get<0>(e).getType() != std::get<2>(e).getType())
       return emitOpError() << "types mismatch between " << i
                            << "th iter operand and defined value";
@@ -419,7 +411,7 @@ LogicalResult ForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
   // iter_args.
   SmallVector<Value> bbArgReplacements;
   bbArgReplacements.push_back(getLowerBound());
-  bbArgReplacements.append(getIterOperands().begin(), getIterOperands().end());
+  llvm::append_range(bbArgReplacements, getInitArgs());
 
   // Move the loop body operations to the loop's containing block.
   rewriter.inlineBlockBefore(getBody(), getOperation()->getBlock(),
@@ -456,16 +448,15 @@ void ForOp::print(OpAsmPrinter &p) {
   p << " " << getInductionVar() << " = " << getLowerBound() << " to "
     << getUpperBound() << " step " << getStep();
 
-  printInitializationList(p, getRegionIterArgs(), getIterOperands(),
-                          " iter_args");
-  if (!getIterOperands().empty())
-    p << " -> (" << getIterOperands().getTypes() << ')';
+  printInitializationList(p, getRegionIterArgs(), getInitArgs(), " iter_args");
+  if (!getInitArgs().empty())
+    p << " -> (" << getInitArgs().getTypes() << ')';
   p << ' ';
   if (Type t = getInductionVar().getType(); !t.isIndex())
     p << " : " << t << ' ';
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/hasIterOperands());
+                /*printBlockTerminators=*/!getInitArgs().empty());
   p.printOptionalAttrDict((*this)->getAttrs());
 }
 
@@ -751,12 +742,12 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     keepMask.reserve(yieldOp.getNumOperands());
     SmallVector<Value, 4> newBlockTransferArgs, newIterArgs, newYieldValues,
         newResultValues;
-    newBlockTransferArgs.reserve(1 + forOp.getNumIterOperands());
+    newBlockTransferArgs.reserve(1 + forOp.getInitArgs().size());
     newBlockTransferArgs.push_back(Value()); // iv placeholder with null value
-    newIterArgs.reserve(forOp.getNumIterOperands());
+    newIterArgs.reserve(forOp.getInitArgs().size());
     newYieldValues.reserve(yieldOp.getNumOperands());
     newResultValues.reserve(forOp.getNumResults());
-    for (auto it : llvm::zip(forOp.getIterOperands(),   // iter from outside
+    for (auto it : llvm::zip(forOp.getInitArgs(),       // iter from outside
                              forOp.getRegionIterArgs(), // iter inside region
                              forOp.getResults(),        // op results
                              yieldOp.getOperands()      // iter yield
@@ -876,7 +867,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     // If the upper bound is the same as the lower bound, the loop does not
     // iterate, just remove it.
     if (op.getLowerBound() == op.getUpperBound()) {
-      rewriter.replaceOp(op, op.getIterOperands());
+      rewriter.replaceOp(op, op.getInitArgs());
       return success();
     }
 
@@ -887,7 +878,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
 
     // If the loop is known to have 0 iterations, remove it.
     if (*diff <= 0) {
-      rewriter.replaceOp(op, op.getIterOperands());
+      rewriter.replaceOp(op, op.getInitArgs());
       return success();
     }
 
@@ -900,9 +891,9 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
     llvm::APInt stepValue = *maybeStepValue;
     if (stepValue.sge(*diff)) {
       SmallVector<Value, 4> blockArgs;
-      blockArgs.reserve(op.getNumIterOperands() + 1);
+      blockArgs.reserve(op.getInitArgs().size() + 1);
       blockArgs.push_back(op.getLowerBound());
-      llvm::append_range(blockArgs, op.getIterOperands());
+      llvm::append_range(blockArgs, op.getInitArgs());
       replaceOpWithRegion(rewriter, op, op.getLoopBody(), blockArgs);
       return success();
     }
