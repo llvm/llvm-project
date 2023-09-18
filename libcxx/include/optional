@@ -264,7 +264,7 @@ public:
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NORETURN
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
 void __throw_bad_optional_access() {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
@@ -277,7 +277,7 @@ void __throw_bad_optional_access() {
 struct nullopt_t
 {
     struct __secret_tag { explicit __secret_tag() = default; };
-    _LIBCPP_INLINE_VISIBILITY constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
 };
 
 inline constexpr nullopt_t nullopt{nullopt_t::__secret_tag{}, nullopt_t::__secret_tag{}};
@@ -300,20 +300,20 @@ struct __optional_destruct_base<_Tp, false>
     };
     bool __engaged_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__optional_destruct_base()
     {
         if (__engaged_)
             __val_.~value_type();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __optional_destruct_base() noexcept
         :  __null_state_(),
            __engaged_(false) {}
 
     template <class... _Args>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit __optional_destruct_base(in_place_t, _Args&&... __args)
         :  __val_(_VSTD::forward<_Args>(__args)...),
            __engaged_(true) {}
@@ -325,7 +325,7 @@ struct __optional_destruct_base<_Tp, false>
       : __val_(_VSTD::invoke(_VSTD::forward<_Fp>(__f), _VSTD::forward<_Args>(__args)...)), __engaged_(true) {}
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept
     {
         if (__engaged_)
@@ -349,13 +349,13 @@ struct __optional_destruct_base<_Tp, true>
     };
     bool __engaged_;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __optional_destruct_base() noexcept
         :  __null_state_(),
            __engaged_(false) {}
 
     template <class... _Args>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit __optional_destruct_base(in_place_t, _Args&&... __args)
         :  __val_(_VSTD::forward<_Args>(__args)...),
            __engaged_(true) {}
@@ -367,7 +367,7 @@ struct __optional_destruct_base<_Tp, true>
       : __val_(_VSTD::invoke(_VSTD::forward<_Fp>(__f), _VSTD::forward<_Args>(__args)...)), __engaged_(true) {}
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept
     {
         if (__engaged_)
@@ -384,35 +384,35 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     using value_type = _Tp;
     using __base::__base;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr bool has_value() const noexcept
     {
         return this->__engaged_;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr value_type& __get() & noexcept
     {
         return this->__val_;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr const value_type& __get() const& noexcept
     {
         return this->__val_;
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr value_type&& __get() && noexcept
     {
         return _VSTD::move(this->__val_);
     }
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr const value_type&& __get() const&& noexcept
     {
         return _VSTD::move(this->__val_);
     }
 
     template <class... _Args>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_Args&&... __args)
     {
         _LIBCPP_ASSERT_INTERNAL(!has_value(), "__construct called for engaged __optional_storage");
@@ -425,7 +425,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     }
 
     template <class _That>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct_from(_That&& __opt)
     {
         if (__opt.has_value())
@@ -433,7 +433,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     }
 
     template <class _That>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt)
     {
         if (this->__engaged_ == __opt.has_value())
@@ -477,12 +477,12 @@ struct __optional_storage_base<_Tp, true>
                 is_convertible<_UpPtr, _TpPtr>::value);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr __optional_storage_base() noexcept
         :  __value_(nullptr) {}
 
     template <class _UArg>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit __optional_storage_base(in_place_t, _UArg&& __uarg)
         :  __value_(_VSTD::addressof(__uarg))
     {
@@ -491,23 +491,23 @@ struct __optional_storage_base<_Tp, true>
         "possible temporary");
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void reset() noexcept { __value_ = nullptr; }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr bool has_value() const noexcept
       { return __value_ != nullptr; }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr value_type& __get() const& noexcept
       { return *__value_; }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr value_type&& __get() const&& noexcept
       { return _VSTD::forward<value_type>(*__value_); }
 
     template <class _UArg>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_UArg&& __val)
     {
         _LIBCPP_ASSERT_INTERNAL(!has_value(), "__construct called for engaged __optional_storage");
@@ -518,7 +518,7 @@ struct __optional_storage_base<_Tp, true>
     }
 
     template <class _That>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct_from(_That&& __opt)
     {
         if (__opt.has_value())
@@ -526,7 +526,7 @@ struct __optional_storage_base<_Tp, true>
     }
 
     template <class _That>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt)
     {
         if (has_value() == __opt.has_value())
@@ -555,20 +555,20 @@ struct __optional_copy_base<_Tp, false> : __optional_storage_base<_Tp>
 {
     using __optional_storage_base<_Tp>::__optional_storage_base;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_base() = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 __optional_copy_base(const __optional_copy_base& __opt)
     {
         this->__construct_from(__opt);
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_base(__optional_copy_base&&) = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_base& operator=(const __optional_copy_base&) = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_base& operator=(__optional_copy_base&&) = default;
 };
 
@@ -584,21 +584,21 @@ struct __optional_move_base<_Tp, false> : __optional_copy_base<_Tp>
     using value_type = _Tp;
     using __optional_copy_base<_Tp>::__optional_copy_base;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_base() = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_base(const __optional_move_base&) = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 __optional_move_base(__optional_move_base&& __opt)
         noexcept(is_nothrow_move_constructible_v<value_type>)
     {
         this->__construct_from(_VSTD::move(__opt));
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_base& operator=(const __optional_move_base&) = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_base& operator=(__optional_move_base&&) = default;
 };
 
@@ -616,21 +616,21 @@ struct __optional_copy_assign_base<_Tp, false> : __optional_move_base<_Tp>
 {
     using __optional_move_base<_Tp>::__optional_move_base;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_assign_base() = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_assign_base(const __optional_copy_assign_base&) = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_assign_base(__optional_copy_assign_base&&) = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 __optional_copy_assign_base& operator=(const __optional_copy_assign_base& __opt)
     {
         this->__assign_from(__opt);
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_copy_assign_base& operator=(__optional_copy_assign_base&&) = default;
 };
 
@@ -649,16 +649,16 @@ struct __optional_move_assign_base<_Tp, false> : __optional_copy_assign_base<_Tp
     using value_type = _Tp;
     using __optional_copy_assign_base<_Tp>::__optional_copy_assign_base;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_assign_base() = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_assign_base(const __optional_move_assign_base& __opt) = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_assign_base(__optional_move_assign_base&&) = default;
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     __optional_move_assign_base& operator=(const __optional_move_assign_base&) = default;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 __optional_move_assign_base& operator=(__optional_move_assign_base&& __opt)
         noexcept(is_nothrow_move_assignable_v<value_type> &&
                  is_nothrow_move_constructible_v<value_type>)
@@ -800,10 +800,10 @@ private:
 
 public:
 
-    _LIBCPP_INLINE_VISIBILITY constexpr optional() noexcept {}
-    _LIBCPP_INLINE_VISIBILITY constexpr optional(const optional&) = default;
-    _LIBCPP_INLINE_VISIBILITY constexpr optional(optional&&) = default;
-    _LIBCPP_INLINE_VISIBILITY constexpr optional(nullopt_t) noexcept {}
+    _LIBCPP_HIDE_FROM_ABI constexpr optional() noexcept {}
+    _LIBCPP_HIDE_FROM_ABI constexpr optional(const optional&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr optional(optional&&) = default;
+    _LIBCPP_HIDE_FROM_ABI constexpr optional(nullopt_t) noexcept {}
 
     template <class _InPlaceT, class... _Args, class = enable_if_t<
           _And<
@@ -812,28 +812,28 @@ public:
             >::value
         >
     >
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit optional(_InPlaceT, _Args&&... __args)
         : __base(in_place, _VSTD::forward<_Args>(__args)...) {}
 
     template <class _Up, class... _Args, class = enable_if_t<
         is_constructible_v<value_type, initializer_list<_Up>&, _Args...>>
     >
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit optional(in_place_t, initializer_list<_Up> __il, _Args&&... __args)
         : __base(in_place, __il, _VSTD::forward<_Args>(__args)...) {}
 
     template <class _Up = value_type, enable_if_t<
         _CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr optional(_Up&& __v)
         : __base(in_place, _VSTD::forward<_Up>(__v)) {}
 
     template <class _Up, enable_if_t<
         _CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit optional(_Up&& __v)
         : __base(in_place, _VSTD::forward<_Up>(__v)) {}
 
@@ -841,7 +841,7 @@ public:
     template <class _Up, enable_if_t<
         _CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>& __v)
     {
         this->__construct_from(__v);
@@ -849,7 +849,7 @@ public:
     template <class _Up, enable_if_t<
         _CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(const optional<_Up>& __v)
     {
         this->__construct_from(__v);
@@ -859,7 +859,7 @@ public:
     template <class _Up, enable_if_t<
         _CheckOptionalLikeCtor<_Up, _Up &&>::template __enable_implicit<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(optional<_Up>&& __v)
     {
         this->__construct_from(_VSTD::move(__v));
@@ -867,7 +867,7 @@ public:
     template <class _Up, enable_if_t<
         _CheckOptionalLikeCtor<_Up, _Up &&>::template __enable_explicit<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(optional<_Up>&& __v)
     {
         this->__construct_from(_VSTD::move(__v));
@@ -881,7 +881,7 @@ public:
   }
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(nullopt_t) noexcept
     {
         reset();
@@ -904,7 +904,7 @@ public:
                           is_assignable<value_type&, _Up>
                       >::value>
              >
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 optional&
     operator=(_Up&& __v)
     {
@@ -919,7 +919,7 @@ public:
     template <class _Up, enable_if_t<
         _CheckOptionalLikeAssign<_Up, _Up const&>::template __enable_assign<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 optional&
     operator=(const optional<_Up>& __v)
     {
@@ -931,7 +931,7 @@ public:
     template <class _Up, enable_if_t<
         _CheckOptionalLikeCtor<_Up, _Up &&>::template __enable_assign<_Up>()
     , int> = 0>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 optional&
     operator=(optional<_Up>&& __v)
     {
@@ -945,7 +945,7 @@ public:
                           is_constructible_v<value_type, _Args...>
                       >
              >
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp &
     emplace(_Args&&... __args)
     {
@@ -960,7 +960,7 @@ public:
                           is_constructible_v<value_type, initializer_list<_Up>&, _Args...>
                       >
              >
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp &
     emplace(initializer_list<_Up> __il, _Args&&... __args)
     {
@@ -969,7 +969,7 @@ public:
         return this->__get();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(optional& __opt)
         noexcept(is_nothrow_move_constructible_v<value_type> &&
                  is_nothrow_swappable_v<value_type>)
@@ -995,7 +995,7 @@ public:
         }
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     add_pointer_t<value_type const>
     operator->() const
@@ -1004,7 +1004,7 @@ public:
         return _VSTD::addressof(this->__get());
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     add_pointer_t<value_type>
     operator->()
@@ -1013,7 +1013,7 @@ public:
         return _VSTD::addressof(this->__get());
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     const value_type&
     operator*() const& noexcept
@@ -1022,7 +1022,7 @@ public:
         return this->__get();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     value_type&
     operator*() & noexcept
@@ -1031,7 +1031,7 @@ public:
         return this->__get();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     value_type&&
     operator*() && noexcept
@@ -1040,7 +1040,7 @@ public:
         return _VSTD::move(this->__get());
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr
     const value_type&&
     operator*() const&& noexcept
@@ -1049,13 +1049,13 @@ public:
         return _VSTD::move(this->__get());
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr explicit operator bool() const noexcept { return has_value(); }
 
     using __base::has_value;
     using __base::__get;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
     constexpr value_type const& value() const&
     {
@@ -1064,7 +1064,7 @@ public:
         return this->__get();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
     constexpr value_type& value() &
     {
@@ -1073,7 +1073,7 @@ public:
         return this->__get();
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
     constexpr value_type&& value() &&
     {
@@ -1082,7 +1082,7 @@ public:
         return _VSTD::move(this->__get());
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
     constexpr value_type const&& value() const&&
     {
@@ -1092,7 +1092,7 @@ public:
     }
 
     template <class _Up>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr value_type value_or(_Up&& __v) const&
     {
         static_assert(is_copy_constructible_v<value_type>,
@@ -1104,7 +1104,7 @@ public:
     }
 
     template <class _Up>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     constexpr value_type value_or(_Up&& __v) &&
     {
         static_assert(is_move_constructible_v<value_type>,
@@ -1251,7 +1251,7 @@ template<class _Tp>
 
 // Comparisons between optionals
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() ==
         std::declval<const _Up&>()), bool>,
@@ -1267,7 +1267,7 @@ operator==(const optional<_Tp>& __x, const optional<_Up>& __y)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() !=
         std::declval<const _Up&>()), bool>,
@@ -1283,7 +1283,7 @@ operator!=(const optional<_Tp>& __x, const optional<_Up>& __y)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() <
         std::declval<const _Up&>()), bool>,
@@ -1299,7 +1299,7 @@ operator<(const optional<_Tp>& __x, const optional<_Up>& __y)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() >
         std::declval<const _Up&>()), bool>,
@@ -1315,7 +1315,7 @@ operator>(const optional<_Tp>& __x, const optional<_Up>& __y)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() <=
         std::declval<const _Up&>()), bool>,
@@ -1331,7 +1331,7 @@ operator<=(const optional<_Tp>& __x, const optional<_Up>& __y)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() >=
         std::declval<const _Up&>()), bool>,
@@ -1360,7 +1360,7 @@ operator<=>(const optional<_Tp>& __x, const optional<_Up>& __y) {
 
 // Comparisons with nullopt
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator==(const optional<_Tp>& __x, nullopt_t) noexcept
 {
@@ -1370,7 +1370,7 @@ operator==(const optional<_Tp>& __x, nullopt_t) noexcept
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator==(nullopt_t, const optional<_Tp>& __x) noexcept
 {
@@ -1378,7 +1378,7 @@ operator==(nullopt_t, const optional<_Tp>& __x) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator!=(const optional<_Tp>& __x, nullopt_t) noexcept
 {
@@ -1386,7 +1386,7 @@ operator!=(const optional<_Tp>& __x, nullopt_t) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator!=(nullopt_t, const optional<_Tp>& __x) noexcept
 {
@@ -1394,7 +1394,7 @@ operator!=(nullopt_t, const optional<_Tp>& __x) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator<(const optional<_Tp>&, nullopt_t) noexcept
 {
@@ -1402,7 +1402,7 @@ operator<(const optional<_Tp>&, nullopt_t) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator<(nullopt_t, const optional<_Tp>& __x) noexcept
 {
@@ -1410,7 +1410,7 @@ operator<(nullopt_t, const optional<_Tp>& __x) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator<=(const optional<_Tp>& __x, nullopt_t) noexcept
 {
@@ -1418,7 +1418,7 @@ operator<=(const optional<_Tp>& __x, nullopt_t) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator<=(nullopt_t, const optional<_Tp>&) noexcept
 {
@@ -1426,7 +1426,7 @@ operator<=(nullopt_t, const optional<_Tp>&) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator>(const optional<_Tp>& __x, nullopt_t) noexcept
 {
@@ -1434,7 +1434,7 @@ operator>(const optional<_Tp>& __x, nullopt_t) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator>(nullopt_t, const optional<_Tp>&) noexcept
 {
@@ -1442,7 +1442,7 @@ operator>(nullopt_t, const optional<_Tp>&) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator>=(const optional<_Tp>&, nullopt_t) noexcept
 {
@@ -1450,7 +1450,7 @@ operator>=(const optional<_Tp>&, nullopt_t) noexcept
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 bool
 operator>=(nullopt_t, const optional<_Tp>& __x) noexcept
 {
@@ -1468,7 +1468,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const optional<_Tp>&
 
 // Comparisons with T
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() ==
         std::declval<const _Up&>()), bool>,
@@ -1480,7 +1480,7 @@ operator==(const optional<_Tp>& __x, const _Up& __v)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() ==
         std::declval<const _Up&>()), bool>,
@@ -1492,7 +1492,7 @@ operator==(const _Tp& __v, const optional<_Up>& __x)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() !=
         std::declval<const _Up&>()), bool>,
@@ -1504,7 +1504,7 @@ operator!=(const optional<_Tp>& __x, const _Up& __v)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() !=
         std::declval<const _Up&>()), bool>,
@@ -1516,7 +1516,7 @@ operator!=(const _Tp& __v, const optional<_Up>& __x)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() <
         std::declval<const _Up&>()), bool>,
@@ -1528,7 +1528,7 @@ operator<(const optional<_Tp>& __x, const _Up& __v)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() <
         std::declval<const _Up&>()), bool>,
@@ -1540,7 +1540,7 @@ operator<(const _Tp& __v, const optional<_Up>& __x)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() <=
         std::declval<const _Up&>()), bool>,
@@ -1552,7 +1552,7 @@ operator<=(const optional<_Tp>& __x, const _Up& __v)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() <=
         std::declval<const _Up&>()), bool>,
@@ -1564,7 +1564,7 @@ operator<=(const _Tp& __v, const optional<_Up>& __x)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() >
         std::declval<const _Up&>()), bool>,
@@ -1576,7 +1576,7 @@ operator>(const optional<_Tp>& __x, const _Up& __v)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() >
         std::declval<const _Up&>()), bool>,
@@ -1588,7 +1588,7 @@ operator>(const _Tp& __v, const optional<_Up>& __x)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() >=
         std::declval<const _Up&>()), bool>,
@@ -1600,7 +1600,7 @@ operator>=(const optional<_Tp>& __x, const _Up& __v)
 }
 
 template <class _Tp, class _Up>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 enable_if_t<
     is_convertible_v<decltype(std::declval<const _Tp&>() >=
         std::declval<const _Up&>()), bool>,
@@ -1624,7 +1624,7 @@ operator<=>(const optional<_Tp>& __x, const _Up& __v) {
 
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 enable_if_t<
     is_move_constructible_v<_Tp> && is_swappable_v<_Tp>,
     void
@@ -1635,21 +1635,21 @@ swap(optional<_Tp>& __x, optional<_Tp>& __y) noexcept(noexcept(__x.swap(__y)))
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 optional<decay_t<_Tp>> make_optional(_Tp&& __v)
 {
     return optional<decay_t<_Tp>>(_VSTD::forward<_Tp>(__v));
 }
 
 template <class _Tp, class... _Args>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 optional<_Tp> make_optional(_Args&&... __args)
 {
     return optional<_Tp>(in_place, _VSTD::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class _Up, class... _Args>
-_LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 optional<_Tp> make_optional(initializer_list<_Up> __il,  _Args&&... __args)
 {
     return optional<_Tp>(in_place, __il, _VSTD::forward<_Args>(__args)...);
@@ -1665,7 +1665,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<
     _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t        result_type;
 #endif
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     size_t operator()(const optional<_Tp>& __opt) const
     {
         return static_cast<bool>(__opt) ? hash<remove_const_t<_Tp>>()(*__opt) : 0;

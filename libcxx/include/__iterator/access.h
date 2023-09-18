@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Np>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 _Tp*
 begin(_Tp (&__array)[_Np])
 {
@@ -28,7 +28,7 @@ begin(_Tp (&__array)[_Np])
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 _Tp*
 end(_Tp (&__array)[_Np])
 {
@@ -38,7 +38,7 @@ end(_Tp (&__array)[_Np])
 #if !defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 begin(_Cp& __c) -> decltype(__c.begin())
 {
@@ -46,7 +46,7 @@ begin(_Cp& __c) -> decltype(__c.begin())
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 begin(const _Cp& __c) -> decltype(__c.begin())
 {
@@ -54,7 +54,7 @@ begin(const _Cp& __c) -> decltype(__c.begin())
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 end(_Cp& __c) -> decltype(__c.end())
 {
@@ -62,7 +62,7 @@ end(_Cp& __c) -> decltype(__c.end())
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 end(const _Cp& __c) -> decltype(__c.end())
 {
@@ -72,14 +72,14 @@ end(const _Cp& __c) -> decltype(__c.end())
 #if _LIBCPP_STD_VER >= 14
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 auto cbegin(const _Cp& __c) -> decltype(_VSTD::begin(__c))
 {
     return _VSTD::begin(__c);
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 auto cend(const _Cp& __c) -> decltype(_VSTD::end(__c))
 {
     return _VSTD::end(__c);
@@ -91,7 +91,7 @@ auto cend(const _Cp& __c) -> decltype(_VSTD::end(__c))
 #else  // defined(_LIBCPP_CXX03_LANG)
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::iterator
 begin(_Cp& __c)
 {
@@ -99,7 +99,7 @@ begin(_Cp& __c)
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::const_iterator
 begin(const _Cp& __c)
 {
@@ -107,7 +107,7 @@ begin(const _Cp& __c)
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::iterator
 end(_Cp& __c)
 {
@@ -115,7 +115,7 @@ end(_Cp& __c)
 }
 
 template <class _Cp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 typename _Cp::const_iterator
 end(const _Cp& __c)
 {

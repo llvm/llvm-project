@@ -44,17 +44,17 @@ class __invert // invert the sense of a comparison
 private:
     _Predicate __p_;
 public:
-    _LIBCPP_INLINE_VISIBILITY __invert() {}
+    _LIBCPP_HIDE_FROM_ABI __invert() {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __invert(_Predicate __p) : __p_(__p) {}
 
     template <class _T1>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator()(const _T1& __x) {return !__p_(__x);}
 
     template <class _T1, class _T2>
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     bool operator()(const _T1& __x, const _T2& __y) {return __p_(__y, __x);}
 };
 

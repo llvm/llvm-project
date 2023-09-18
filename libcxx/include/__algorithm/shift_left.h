@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _ForwardIterator>
-inline _LIBCPP_INLINE_VISIBILITY constexpr
+inline _LIBCPP_HIDE_FROM_ABI constexpr
 _ForwardIterator
 shift_left(_ForwardIterator __first, _ForwardIterator __last,
            typename iterator_traits<_ForwardIterator>::difference_type __n)

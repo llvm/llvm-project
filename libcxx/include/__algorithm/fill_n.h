@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // fill_n isn't specialized for std::memset, because the compiler already optimizes the loop to a call to std::memset.
 
 template <class _OutputIterator, class _Size, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value)
 {
@@ -32,7 +32,7 @@ __fill_n(_OutputIterator __first, _Size __n, const _Tp& __value)
 }
 
 template <class _OutputIterator, class _Size, class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 fill_n(_OutputIterator __first, _Size __n, const _Tp& __value)
 {

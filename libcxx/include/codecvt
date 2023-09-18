@@ -91,7 +91,7 @@ public:
     typedef mbstate_t state_type;
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -125,7 +125,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -159,7 +159,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf8(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -188,11 +188,11 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8
     : public __codecvt_utf8<_Elem>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit codecvt_utf8(size_t __refs = 0)
         : __codecvt_utf8<_Elem>(__refs, _Maxcode, _Mode) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~codecvt_utf8() {}
 };
 _LIBCPP_SUPPRESS_DEPRECATED_POP
@@ -216,7 +216,7 @@ public:
     typedef mbstate_t state_type;
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -252,7 +252,7 @@ public:
     typedef mbstate_t state_type;
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -286,7 +286,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -320,7 +320,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -354,7 +354,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -388,7 +388,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -417,11 +417,11 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf16
     : public __codecvt_utf16<_Elem, _Mode & little_endian>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit codecvt_utf16(size_t __refs = 0)
         : __codecvt_utf16<_Elem, _Mode & little_endian>(__refs, _Maxcode, _Mode) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~codecvt_utf16() {}
 };
 _LIBCPP_SUPPRESS_DEPRECATED_POP
@@ -445,7 +445,7 @@ public:
     typedef mbstate_t state_type;
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<wchar_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -479,7 +479,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char32_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -513,7 +513,7 @@ public:
     typedef char      extern_type;
     typedef mbstate_t state_type;
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit __codecvt_utf8_utf16(size_t __refs, unsigned long __maxcode,
                             codecvt_mode __mode)
         : codecvt<char16_t, char, mbstate_t>(__refs), __maxcode_(__maxcode),
@@ -542,11 +542,11 @@ class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 codecvt_utf8_utf16
     : public __codecvt_utf8_utf16<_Elem>
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     explicit codecvt_utf8_utf16(size_t __refs = 0)
         : __codecvt_utf8_utf16<_Elem>(__refs, _Maxcode, _Mode) {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     ~codecvt_utf8_utf16() {}
 };
 _LIBCPP_SUPPRESS_DEPRECATED_POP

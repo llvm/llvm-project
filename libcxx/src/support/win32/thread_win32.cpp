@@ -140,7 +140,7 @@ int __libcpp_condvar_destroy(__libcpp_condvar_t *__cv)
 }
 
 // Execute Once
-static inline _LIBCPP_INLINE_VISIBILITY BOOL CALLBACK
+static inline _LIBCPP_HIDE_FROM_ABI BOOL CALLBACK
 __libcpp_init_once_execute_once_thunk(PINIT_ONCE __init_once, PVOID __parameter,
                                       PVOID *__context)
 {
@@ -180,7 +180,7 @@ struct __libcpp_beginthreadex_thunk_data
   void *__arg;
 };
 
-static inline _LIBCPP_INLINE_VISIBILITY unsigned WINAPI
+static inline _LIBCPP_HIDE_FROM_ABI unsigned WINAPI
 __libcpp_beginthreadex_thunk(void *__raw_data)
 {
   auto *__data =

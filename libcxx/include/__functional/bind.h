@@ -83,7 +83,7 @@ struct is_placeholder<placeholders::__ph<_Np> >
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Uj>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _Tp&
 __mu(reference_wrapper<_Tp> __t, _Uj&)
 {
@@ -91,7 +91,7 @@ __mu(reference_wrapper<_Tp> __t, _Uj&)
 }
 
 template <class _Ti, class ..._Uj, size_t ..._Indx>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __invoke_of<_Ti&, _Uj...>::type
 __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>)
 {
@@ -99,7 +99,7 @@ __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>)
 }
 
 template <class _Ti, class ..._Uj, __enable_if_t<is_bind_expression<_Ti>::value, int> = 0>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __invoke_of<_Ti&, _Uj...>::type
 __mu(_Ti& __ti, tuple<_Uj...>& __uj)
 {
@@ -117,7 +117,7 @@ struct __mu_return2<true, _Ti, _Uj>
 };
 
 template <class _Ti, class _Uj, __enable_if_t<0 < is_placeholder<_Ti>::value, int> = 0>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __mu_return2<0 < is_placeholder<_Ti>::value, _Ti, _Uj>::type
 __mu(_Ti&, _Uj& __uj)
 {
@@ -128,7 +128,7 @@ __mu(_Ti&, _Uj& __uj)
 template <class _Ti, class _Uj, __enable_if_t<!is_bind_expression<_Ti>::value &&
                                               is_placeholder<_Ti>::value == 0 &&
                                               !__is_reference_wrapper<_Ti>::value, int> = 0>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 _Ti&
 __mu(_Ti& __ti, _Uj&)
 {
@@ -240,7 +240,7 @@ struct __bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj, true>
 };
 
 template <class _Fp, class _BoundArgs, size_t ..._Indx, class _Args>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename __bind_return<_Fp, _BoundArgs, _Args>::type
 __apply_functor(_Fp& __f, _BoundArgs& __bound_args, __tuple_indices<_Indx...>,
                 _Args&& __args)
@@ -262,13 +262,13 @@ private:
 public:
     template <class _Gp, class ..._BA,
               __enable_if_t<is_constructible<_Fd, _Gp>::value && !is_same<__libcpp_remove_reference_t<_Gp>, __bind>::value, int> = 0>
-      _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+      _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       explicit __bind(_Gp&& __f, _BA&& ...__bound_args)
         : __f_(_VSTD::forward<_Gp>(__f)),
           __bound_args_(_VSTD::forward<_BA>(__bound_args)...) {}
 
     template <class ..._Args>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args)
         {
@@ -277,7 +277,7 @@ public:
         }
 
     template <class ..._Args>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type
         operator()(_Args&& ...__args) const
         {
@@ -302,14 +302,14 @@ public:
 
     template <class _Gp, class ..._BA,
               __enable_if_t<is_constructible<_Fd, _Gp>::value && !is_same<__libcpp_remove_reference_t<_Gp>, __bind_r>::value, int> = 0>
-      _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+      _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       explicit __bind_r(_Gp&& __f, _BA&& ...__bound_args)
         : base(_VSTD::forward<_Gp>(__f),
                _VSTD::forward<_BA>(__bound_args)...) {}
 
     template <class ..._Args, __enable_if_t<is_convertible<typename __bind_return<_Fd, _Td, tuple<_Args&&...> >::type,
                                                            result_type>::value || is_void<_Rp>::value, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         result_type
         operator()(_Args&& ...__args)
         {
@@ -319,7 +319,7 @@ public:
 
     template <class ..._Args, __enable_if_t<is_convertible<typename __bind_return<const _Fd, const _Td, tuple<_Args&&...> >::type,
                                                            result_type>::value || is_void<_Rp>::value, int> = 0>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
         result_type
         operator()(_Args&& ...__args) const
         {
@@ -332,7 +332,7 @@ template<class _Rp, class _Fp, class ..._BoundArgs>
 struct is_bind_expression<__bind_r<_Rp, _Fp, _BoundArgs...> > : public true_type {};
 
 template<class _Fp, class ..._BoundArgs>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 __bind<_Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args)
 {
@@ -341,7 +341,7 @@ bind(_Fp&& __f, _BoundArgs&&... __bound_args)
 }
 
 template<class _Rp, class _Fp, class ..._BoundArgs>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 __bind_r<_Rp, _Fp, _BoundArgs...>
 bind(_Fp&& __f, _BoundArgs&&... __bound_args)
 {

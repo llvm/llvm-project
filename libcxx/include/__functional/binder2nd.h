@@ -29,19 +29,19 @@ protected:
     _Operation                                op;
     typename _Operation::second_argument_type value;
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI
     binder2nd(const _Operation& __x, const typename _Operation::second_argument_type __y)
         : op(__x), value(__y) {}
-    _LIBCPP_INLINE_VISIBILITY typename _Operation::result_type operator()
+    _LIBCPP_HIDE_FROM_ABI typename _Operation::result_type operator()
         (      typename _Operation::first_argument_type& __x) const
             {return op(__x, value);}
-    _LIBCPP_INLINE_VISIBILITY typename _Operation::result_type operator()
+    _LIBCPP_HIDE_FROM_ABI typename _Operation::result_type operator()
         (const typename _Operation::first_argument_type& __x) const
             {return op(__x, value);}
 };
 
 template <class _Operation, class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX11 inline _LIBCPP_HIDE_FROM_ABI
 binder2nd<_Operation>
 bind2nd(const _Operation& __op, const _Tp& __x)
     {return binder2nd<_Operation>(__op, __x);}

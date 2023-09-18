@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy,
           class _PopulationIterator, class _PopulationSentinel, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _SampleIterator __sample(_PopulationIterator __first,
                          _PopulationSentinel __last, _SampleIterator __output_iter,
                          _Distance __n,
@@ -53,7 +53,7 @@ _SampleIterator __sample(_PopulationIterator __first,
 template <class _AlgPolicy,
           class _PopulationIterator, class _PopulationSentinel, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _SampleIterator __sample(_PopulationIterator __first,
                          _PopulationSentinel __last, _SampleIterator __output_iter,
                          _Distance __n,
@@ -73,7 +73,7 @@ _SampleIterator __sample(_PopulationIterator __first,
 template <class _AlgPolicy,
           class _PopulationIterator, class _PopulationSentinel, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_HIDE_FROM_ABI
 _SampleIterator __sample(_PopulationIterator __first,
                          _PopulationSentinel __last, _SampleIterator __output_iter,
                          _Distance __n, _UniformRandomNumberGenerator& __g) {
@@ -91,7 +91,7 @@ _SampleIterator __sample(_PopulationIterator __first,
 #if _LIBCPP_STD_VER >= 17
 template <class _PopulationIterator, class _SampleIterator, class _Distance,
           class _UniformRandomNumberGenerator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_HIDE_FROM_ABI
 _SampleIterator sample(_PopulationIterator __first,
                        _PopulationIterator __last, _SampleIterator __output_iter,
                        _Distance __n, _UniformRandomNumberGenerator&& __g) {
