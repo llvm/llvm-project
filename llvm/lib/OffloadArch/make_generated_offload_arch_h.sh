@@ -50,6 +50,7 @@ fi
 # These are the input files
 AOT_PCIID2CODENAME="$INPUTDIR/amdgpu/pciid2codename.txt $INPUTDIR/nvidia/pciid2codename.txt"
 AOT_CODENAME2OFFLOADARCH="$INPUTDIR/amdgpu/codename2offloadarch.txt $INPUTDIR/nvidia/codename2offloadarch.txt"
+AOT_CODENAME2OFFLOADARCH_AMD="$INPUTDIR/amdgpu/codename2offloadarch.txt"
 
 # This is the output file which is always written to current dir
 AOT_DOTH_FILE="$PWD/generated_offload_arch.h"
@@ -129,6 +130,11 @@ struct AOT_OFFLOADARCH_TO_STRING{
   const char* offloadarch;
 };
 
+struct AOT_OFFLOADARCH_TO_CODENAME_ENTRY{
+  const char* offloadarch;
+  const char* codename;
+};
+
 struct AOT_TABLE_ENTRY{
     uint16_t vendorid;
     uint16_t devid;
@@ -137,6 +143,21 @@ struct AOT_TABLE_ENTRY{
 };
 EOF
 cat $aot_tmpfile >> $AOT_DOTH_FILE
+}
+
+function write_AMD_OFFLOADARCH_TO_CODENAME_TABLE()
+{
+  echo " " >> $AOT_DOTH_FILE
+  echo "extern const AOT_OFFLOADARCH_TO_CODENAME_ENTRY AOT_AMD_OFFLOADARCH_TO_CODENAME_TABLE[] = {" >> $AOT_DOTH_FILE
+  cat $AOT_CODENAME2OFFLOADARCH_AMD | sort -u -t" " -k2 > $aot_tmpfile
+  while read -r line ; do
+      echo $line
+       codename=`echo $line | cut  -d " " -f1`
+       offloadarch=`echo $line | cut -d " " -f2`
+       echo "{ \"${offloadarch}\", \"${codename}\" }," >>$AOT_DOTH_FILE
+  done < $aot_tmpfile
+  echo "};" >> $AOT_DOTH_FILE
+  echo " " >> $AOT_DOTH_FILE
 }
 
 function write_AOT_TABLE()
@@ -155,6 +176,7 @@ function write_AOT_TABLE()
     fi
   done < $aot_tmpfile
   echo "};" >> $AOT_DOTH_FILE
+  echo " " >> $AOT_DOTH_FILE
 }
 
 #  ===========  Main code starts here ======================
@@ -171,6 +193,7 @@ write_AOT_CODENAME
 write_AOT_STRUCTS
 write_AOT_CODENAMEID_TO_STRING
 write_AOT_OFFLOADARCH_TO_STRING
+write_AMD_OFFLOADARCH_TO_CODENAME_TABLE
 write_AOT_TABLE
 
 rm $aot_tmpfile

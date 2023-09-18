@@ -95,6 +95,11 @@ struct AOT_OFFLOADARCH_TO_STRING{
   const char* offloadarch;
 };
 
+struct AOT_OFFLOADARCH_TO_CODENAME_ENTRY{
+  const char* offloadarch;
+  const char* codename;
+};
+
 struct AOT_TABLE_ENTRY{
     uint16_t vendorid;
     uint16_t devid;
@@ -182,6 +187,35 @@ extern const AOT_OFFLOADARCH_TO_STRING AOT_OFFLOADARCHS[] =  {
   {AOT_SM_60, "sm_60"},
   {AOT_SM_61, "sm_61"},
   {AOT_SM_70, "sm_70"},
+};
+extern const AOT_OFFLOADARCH_TO_CODENAME_ENTRY AOT_AMD_OFFLOADARCH_TO_CODENAME_TABLE[] = {
+{ "gfx1010", "NAVI10" },
+{ "gfx1011", "NAVI12" },
+{ "gfx1012", "NAVI14" },
+{ "gfx1013", "CYAN_SKILLFISH" },
+{ "gfx1030", "SIENNA_CICHLID" },
+{ "gfx1031", "NAVY_FLOUNDER" },
+{ "gfx1032", "DIMGREY_CAVEFISH" },
+{ "gfx1033", "VANGOGH" },
+{ "gfx1034", "BEIGE_GOBY" },
+{ "gfx1035", "REMBRANDT" },
+{ "gfx1036", "RAPHAEL" },
+{ "gfx1100", "PLUM_BONITO" },
+{ "gfx1101", "WHEAT_NAS" },
+{ "gfx1102", "HOTPINK_BONEFISH" },
+{ "gfx1103", "PINK_SARDINE" },
+{ "gfx700", "SPECTRE" },
+{ "gfx701", "HAWAII" },
+{ "gfx801", "CARRIZO" },
+{ "gfx802", "TONGA" },
+{ "gfx803", "FIJI" },
+{ "gfx900", "VEGA10" },
+{ "gfx902", "RAVEN" },
+{ "gfx904", "VEGA12" },
+{ "gfx906", "VEGA20" },
+{ "gfx908", "ARCTURUS" },
+{ "gfx90a", "ALDEBARAN" },
+{ "gfx90c", "RENOIR" },
 };
 extern const AOT_TABLE_ENTRY AOT_TABLE[] = {
 { 0x1002, 0x1304, AOT_CN_SPECTRE, AOT_GFX700 },

@@ -40,9 +40,28 @@ std::string getFileContents(std::string fname) {
   return file_contents;
 }
 
-std::vector<std::string> getPCIIds(const char *driver_search_phrase,
-                                   const char *pci_id_search_phrase) {
-  std::vector<std::string> PCI_IDS;
+std::vector<std::pair<std::string, std::string>>
+getAmdGpuDevices(const char *driver_search_phrase,
+                 const char *pci_id_search_phrase, bool hsa_detection) {
+  std::vector<std::pair<std::string, std::string>> offloadArchs;
+
+  if (!hsa_detection) {
+    offloadArchs = getPCIIds(driver_search_phrase, pci_id_search_phrase);
+  }
+
+  if (offloadArchs.empty()) {
+    if (IsAmdDeviceAvailable()) {
+      BindHsaMethodsAndInitHSA();
+    }
+    offloadArchs = runHsaDetection();
+  }
+
+  return offloadArchs;
+}
+
+std::vector<std::pair<std::string, std::string>>
+getPCIIds(const char *driver_search_phrase, const char *pci_id_search_phrase) {
+  std::vector<std::pair<std::string, std::string>> PCI_IDS;
 #ifndef _WIN32
   char uevent_filename[MAXPATHSIZE];
   const char *sys_bus_pci_devices_dir = "/sys/bus/pci/devices";
@@ -61,8 +80,18 @@ std::vector<std::string> getPCIIds(const char *driver_search_phrase,
         std::size_t found_loc = file_contents.find(driver_search_phrase);
         if (found_loc != std::string::npos) {
           found_loc = file_contents.find(pci_id_search_phrase);
-          if (found_loc != std::string::npos)
-            PCI_IDS.push_back(file_contents.substr(found_loc + 7, 9));
+          if (found_loc != std::string::npos) {
+            std::string pci_id = file_contents.substr(found_loc + 7, 9);
+            unsigned vid32, devid32;
+            sscanf(pci_id.c_str(), "%x:%x", &vid32, &devid32);
+            uint16_t vid = vid32;
+            uint16_t devid = devid32;
+            std::string offload_arch = getOffloadArch(vid, devid);
+
+            if (!offload_arch.empty()) {
+              PCI_IDS.emplace_back(offload_arch, pci_id);
+            }
+          }
         }
       }
     } // end of foreach subdir
@@ -96,7 +125,7 @@ std::vector<std::string> lookupCodename(std::string lookup_codename) {
 
 std::vector<std::string> lookupOffloadArch(std::string lookup_offload_arch) {
   std::vector<std::string> PCI_IDS;
-  for (auto id2str : AOT_OFFLOADARCHS)
+  for (auto id2str : AOT_OFFLOADARCHS) {
     if (lookup_offload_arch.compare(id2str.offloadarch) == 0)
       for (auto aot_table_entry : AOT_TABLE) {
         if (id2str.offloadarch_id == aot_table_entry.offloadarch_id) {
@@ -109,19 +138,17 @@ std::vector<std::string> lookupOffloadArch(std::string lookup_offload_arch) {
           PCI_IDS.push_back(std::string(&pci_id[0]));
         }
       }
+  }
   return PCI_IDS;
 }
 
-std::string getCodename(uint16_t VendorID, uint16_t DeviceID) {
-  std::string retval;
-  for (auto aot_table_entry : AOT_TABLE) {
-    if ((VendorID == aot_table_entry.vendorid) &&
-        (DeviceID == aot_table_entry.devid))
-      for (auto id2str : AOT_CODENAMES)
-        if (id2str.codename_id == aot_table_entry.codename_id)
-          return std::string(id2str.codename);
-  }
-  return retval;
+std::string getCodename(std::string offloadArch) {
+
+  for (auto aot_table_entry : AOT_AMD_OFFLOADARCH_TO_CODENAME_TABLE)
+    if (aot_table_entry.offloadarch == offloadArch)
+      return std::string(aot_table_entry.codename);
+
+  return " ";
 }
 
 std::string getOffloadArch(uint16_t VendorID, uint16_t DeviceID) {
@@ -136,71 +163,51 @@ std::string getOffloadArch(uint16_t VendorID, uint16_t DeviceID) {
   return retval;
 }
 
-std::string getVendorCapabilities(uint16_t vid, uint16_t devid,
-                                  std::string oa) {
+std::string
+getVendorCapabilities(std::pair<std::string, std::string> offloadarch) {
+
+  if (llvm::StringRef(offloadarch.first).starts_with_insensitive("gfx") &&
+      llvm::StringRef(offloadarch.second).starts_with_insensitive("gpu")) {
+    return getAMDGPUCapabilitiesForOffloadarch(offloadarch.second);
+  }
+
+  std::string pci_id = offloadarch.second;
+  unsigned vid, devid;
+  sscanf(pci_id.c_str(), "%x:%x", &vid, &devid);
+
   switch (vid) {
   case 0x1002:
-    return getAMDGPUCapabilities(vid, devid, oa);
+    return getAMDGPUCapabilities((uint16_t)vid, (uint16_t)devid,
+                                 offloadarch.first);
   case 0x10de:
-    return getNVPTXCapabilities(vid, devid, oa);
+    return getNVPTXCapabilities((uint16_t)vid, (uint16_t)devid,
+                                offloadarch.first);
   }
-  return nullptr;
+
+  return "";
 }
 
-std::string getTriple(uint16_t VendorID, uint16_t DeviceID) {
-  std::string retval;
-  switch (VendorID) {
-  case 0x1002:
+std::string getTriple(std::string offloadarch) {
+  llvm::StringRef OffloadarchRef(offloadarch);
+
+  if (OffloadarchRef.starts_with_insensitive("gfx"))
     return (std::string("amdgcn-amd-amdhsa"));
-    break;
-  case 0x10de:
+
+  if (OffloadarchRef.starts_with_insensitive("sm"))
     return (std::string("nvptx64-nvidia-cuda"));
-    break;
-  }
-  return retval;
+
+  return "";
 }
 
-std::vector<std::string> getAllPCIIds() {
-  std::vector<std::string> PCI_IDS =
-      getPCIIds(AMDGPU_SEARCH_PHRASE, AMDGPU_PCIID_PHRASE);
-  for (auto PCI_ID : getPCIIds(NVIDIA_SEARCH_PHRASE, NVIDIA_PCIID_PHRASE))
-    PCI_IDS.push_back(PCI_ID);
+std::vector<std::pair<std::string, std::string>>
+getAllPCIIds(bool hsa_detection) {
+  std::vector<std::pair<std::string, std::string>> PCI_IDS = getAmdGpuDevices(
+      AMDGPU_SEARCH_PHRASE, AMDGPU_PCIID_PHRASE, hsa_detection);
+  std::vector<std::pair<std::string, std::string>> PCI_IDS_NV =
+      getPCIIds(NVIDIA_SEARCH_PHRASE, NVIDIA_PCIID_PHRASE);
+  PCI_IDS.insert(std::end(PCI_IDS), std::begin(PCI_IDS_NV),
+                 std::end(PCI_IDS_NV));
   return PCI_IDS;
-}
-
-/// Get runtime capabilities of this system for libomptarget runtime
-int getRuntimeCapabilities(char *offload_arch_output_buffer,
-                           size_t offload_arch_output_buffer_size) {
-  std::vector<std::string> PCI_IDS = getAllPCIIds();
-  std::string offload_arch;
-  for (auto PCI_ID : PCI_IDS) {
-    unsigned vid32, devid32;
-    sscanf(PCI_ID.c_str(), "%x:%x", &vid32, &devid32);
-    uint16_t vid = vid32;
-    uint16_t devid = devid32;
-    offload_arch = getOffloadArch(vid, devid);
-    if (offload_arch.empty()) {
-      fprintf(stderr, "ERROR: offload-arch not found for %x:%x.\n", vid, devid);
-      return 1;
-    }
-    std::string caps = getVendorCapabilities(vid, devid, offload_arch);
-    std::size_t found_loc = caps.find("NOT-VISIBLE");
-    if (found_loc == std::string::npos) {
-      // Found first visible GPU, so append caps and exit loop
-      offload_arch.clear();
-      offload_arch = caps;
-      break;
-    }
-  }
-  size_t out_str_len = offload_arch.size();
-  if (out_str_len > offload_arch_output_buffer_size) {
-    fprintf(stderr, "ERROR: strlen %zd exceeds buffer length %zd \n",
-            out_str_len, offload_arch_output_buffer_size);
-    return 1;
-  }
-  strncpy(offload_arch_output_buffer, offload_arch.c_str(), out_str_len);
-  offload_arch_output_buffer[out_str_len] = '\0'; // terminate string
-  return 0;
 }
 
 [[noreturn]] inline void exitWithError(const Twine &Message,
@@ -222,7 +229,7 @@ int getRuntimeCapabilities(char *offload_arch_output_buffer,
   exitWithError(errorToErrorCode(std::move(E)), Whence);
 }
 template <typename T, typename... Ts>
-T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+T unwrapOrError(Expected<T> EO, Ts &&...Args) {
   if (EO)
     return std::move(*EO);
   exitWithError(EO.takeError(), std::forward<Ts>(Args)...);
@@ -280,18 +287,19 @@ getOffloadArchFromBinary(const std::string &input_filename) {
 }
 
 bool isHomogeneousSystemOf(std::string arch) {
+
   std::vector<std::string> archPCI_IDs = lookupOffloadArch(arch);
-  std::vector<std::string> allPCI_IDs = getAllPCIIds();
+  std::vector<std::pair<std::string,std::string>> allPCI_IDs = getAllPCIIds(false);
 
   // arch PCI_IDs could be saved with letters in upper or lower case
   // make comparison case insensitive
   for (auto it : allPCI_IDs) {
     auto find_it = std::find_if(
         archPCI_IDs.begin(), archPCI_IDs.end(), [&](std::string &archID) {
-          if (archID.size() != it.size())
+          if (archID.size() != it.second.size())
             return false;
           for (long unsigned int i = 0; i < archID.size(); i++)
-            if (std::toupper(archID[i]) != std::toupper(it[i]))
+            if (std::toupper(archID[i]) != std::toupper((it.second.c_str())[i]))
               return false;
           return true;
         });

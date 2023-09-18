@@ -201,6 +201,21 @@ typedef enum {
 } hsa_status_t;
 
 /**
+ * @brief Agent features.
+ */
+typedef enum {
+  /**
+   * The agent supports AQL packets of kernel dispatch type. If this
+   * feature is enabled, the agent is also a kernel agent.
+   */
+  HSA_AGENT_FEATURE_KERNEL_DISPATCH = 1,
+  /**
+   * The agent supports AQL packets of agent dispatch type.
+   */
+  HSA_AGENT_FEATURE_AGENT_DISPATCH = 2
+} hsa_agent_feature_t;
+
+/**
  * @brief Instruction set architecture.
  */
 typedef struct hsa_isa_s {
@@ -556,6 +571,22 @@ typedef enum {
   HSA_AGENT_INFO_VERSION_MINOR = 22
 
 } hsa_agent_info_t;
+
+/**
+ * @brief Agent attributes.
+ */
+typedef enum hsa_amd_agent_info_s {
+  /**
+   * Queries UUID of an agent. The value is an Ascii string with a maximum
+   * of 21 chars including NUL. The string value consists of two parts: header
+   * and body. The header identifies device type (GPU, CPU, DSP) while body
+   * encodes UUID as a 16 digit hex string
+   *
+   * Agents that do not support UUID will return the string "GPU-XX" or
+   * "CPU-XX" or "DSP-XX" depending upon their device type ::hsa_device_type_t
+   */
+  HSA_AMD_AGENT_INFO_UUID = 0xA011
+} hsa_amd_agent_info_t;
 
 /**
  * @brief Hardware device type.

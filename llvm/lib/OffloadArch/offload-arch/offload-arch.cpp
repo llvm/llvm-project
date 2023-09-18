@@ -34,6 +34,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/OffloadArch/OffloadArch.h"
+#include <assert.h>
 
 void aot_usage() {
   printf("\n\
@@ -77,6 +78,7 @@ void aot_usage() {
      or no option will only show information for the first visible device.\n\
 \n\
      Other Options:\n\
+     -hsa Using HSA for device detection instead of PCI IDs.\n\
      -h  Print this help message\n\
      -f  <filename> Print offload requirements including offload-arch for\n\
          each offload image compiled into an application binary file.\n\
@@ -104,6 +106,8 @@ int main(int argc, char **argv) {
   bool nvidia_arch = false;
   AOT_get_first_capable_device = true;
   bool print_triple = false;
+  bool hsa_detection = false;
+
   std::string lookup_value;
   std::string a, input_filename;
   for (int argi = 0; argi < argc; argi++) {
@@ -121,6 +125,8 @@ int main(int argc, char **argv) {
         print_runtime_capabilities = true;
       } else if (a == "-h") {
         aot_usage();
+      } else if (a == "-hsa") {
+        hsa_detection = true;
       } else if (a == "-a") {
         AOT_get_first_capable_device = false; // get all devices
       } else if (a == "-t") {
@@ -143,83 +149,70 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::vector<std::string> PCI_IDS;
-
   if (!input_filename.empty()) {
-    PCI_IDS = getOffloadArchFromBinary(input_filename);
-    if (PCI_IDS.empty())
+    std::vector<std::string> OffloadArchs;
+    OffloadArchs = getOffloadArchFromBinary(input_filename);
+    if (OffloadArchs.empty())
       return 1;
-    for (auto PCI_ID : PCI_IDS)
-      printf("%s\n", PCI_ID.c_str());
+    for (auto OffloadArch : OffloadArchs)
+      printf("%s\n", OffloadArch.c_str());
     return 0;
+  }
 
-  } else if (lookup_value.empty()) {
+  std::vector<std::pair<std::string, std::string>> OffloadArchs;
+  if (lookup_value.empty()) {
     // No lookup_value so get the current pci ids.
     // First check if invocation was arch specific.
     if (amdgpu_arch)
-      PCI_IDS = getPCIIds(AMDGPU_SEARCH_PHRASE, AMDGPU_PCIID_PHRASE);
+      OffloadArchs = getAmdGpuDevices(AMDGPU_SEARCH_PHRASE, AMDGPU_PCIID_PHRASE,
+                                      hsa_detection);
     else if (nvidia_arch)
-      PCI_IDS = getPCIIds(NVIDIA_SEARCH_PHRASE, NVIDIA_PCIID_PHRASE);
+      OffloadArchs = getPCIIds(NVIDIA_SEARCH_PHRASE, NVIDIA_PCIID_PHRASE);
     else
-      PCI_IDS = getAllPCIIds();
+      OffloadArchs = getAllPCIIds(hsa_detection);
   } else {
     if (print_runtime_capabilities) {
       fprintf(stderr, "ERROR: cannot lookup offload-arch/codename AND query\n");
       fprintf(stderr, "       active runtime capabilities (-c).\n");
       return 1;
     }
-    PCI_IDS = lookupOffloadArch(lookup_value);
-    if (PCI_IDS.empty())
-      PCI_IDS = lookupCodename(lookup_value);
-    if (PCI_IDS.empty()) {
-      fprintf(stderr, "ERROR: Could not find \"%s\" in offload-arch tables\n",
-              lookup_value.c_str());
-      fprintf(stderr, "       as either an offload-arch or a codename.\n");
-      return 1;
-    }
   }
 
-  if (PCI_IDS.empty()) {
+  if (OffloadArchs.empty()) {
+    fprintf(stderr, "No devices found!\n");
     return 1;
   }
 
   int rc = 0;
   bool first_device_printed = false;
-  for (auto PCI_ID : PCI_IDS) {
+  for (auto OffloadArch : OffloadArchs) {
     if (AOT_get_first_capable_device && first_device_printed)
       break;
-    unsigned vid32, devid32;
-    sscanf(PCI_ID.c_str(), "%x:%x", &vid32, &devid32);
-    uint16_t vid = vid32;
-    uint16_t devid = devid32;
-    std::string offload_arch = getOffloadArch(vid, devid);
-    if (offload_arch.empty()) {
-      fprintf(stderr, "ERROR: offload-arch not found for %x:%x.\n", vid, devid);
-      rc = 1;
-    } else {
-      std::string xinfo;
-      if (print_codename)
-        xinfo.append(" ").append(getCodename(vid, devid));
-      if (print_numeric)
-        xinfo.append(" ").append(PCI_ID);
-      if (print_triple)
-        xinfo.append(" ").append(getTriple(vid, devid));
 
-      std::string caps = getVendorCapabilities(vid, devid, offload_arch);
-      std::size_t found_loc = caps.find("NOT-VISIBLE");
-      if (found_loc == std::string::npos) {
-        if (print_runtime_capabilities) {
-          xinfo.clear();
-          xinfo = std::move(caps);
-          printf("%s\n", xinfo.c_str());
-        } else {
-          printf("%s%s\n", offload_arch.c_str(), xinfo.c_str());
-        }
-        first_device_printed = true;
+    std::string xinfo;
+    if (print_codename)
+      xinfo.append(" ").append(getCodename(OffloadArch.first));
+    if (print_numeric)
+      xinfo.append(" ").append(OffloadArch.second);
+    if (print_triple)
+      xinfo.append(" ").append(getTriple(OffloadArch.first));
+
+    std::string caps = getVendorCapabilities(OffloadArch);
+    std::size_t found_loc = caps.find("NOT-VISIBLE");
+    if (found_loc == std::string::npos) {
+      if (print_runtime_capabilities) {
+        xinfo.clear();
+        xinfo = std::move(caps);
+        printf("%s\n", xinfo.c_str());
+      } else {
+        printf("%s%s\n", OffloadArch.first.c_str(), xinfo.c_str());
       }
+      first_device_printed = true;
     }
   }
+
   if (!first_device_printed)
     rc = 1;
+
   return rc;
 }

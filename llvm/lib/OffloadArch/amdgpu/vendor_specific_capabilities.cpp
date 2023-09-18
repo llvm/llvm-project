@@ -15,6 +15,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "llvm/OffloadArch/OffloadArch.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 // So offload-arch can be built without ROCm installed as a copy of hsa.h
@@ -149,28 +150,19 @@ void *_aot_dynload_hsa_runtime() {
 #endif
   return dlhandle;
 }
+
 std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
                                   std::string oa) {
   std::string amdgpu_capabilities;
   offload_arch_requested = oa;
 
-  if (first_call) {
-    first_call = false;
-    void *dlhandle = _aot_dynload_hsa_runtime();
-    if (!dlhandle) {
-      amdgpu_capabilities.append(" HSAERROR-LOADING");
-      return amdgpu_capabilities;
-    }
-    hsa_status_t Status = _dl_hsa_init();
-    if (Status != HSA_STATUS_SUCCESS) {
-      amdgpu_capabilities.append(" HSAERROR-INITIALIZATION");
-      return amdgpu_capabilities;
-    }
-  } else {
-    // Make sure that previous calls' results don't interfere
-    AMDGPU_FEATUREs.clear();
-    HSA_AGENTs.clear();
+  if (IsAmdDeviceAvailable()) {
+    BindHsaMethodsAndInitHSA();
   }
+
+  // Make sure that previous calls' results don't interfere
+  AMDGPU_FEATUREs.clear();
+  HSA_AGENTs.clear();
 
   std::vector<std::string> GPUs;
   hsa_status_t Status = _dl_hsa_iterate_agents(
@@ -225,4 +217,129 @@ std::string getAMDGPUCapabilities(uint16_t vid, uint16_t devid,
   // _aot_amd_capabilities could be called multiple times.
 
   return amdgpu_capabilities;
+}
+
+std::string getAMDGPUCapabilitiesForOffloadarch(std::string uuid) {
+  std::string amdgpu_capabilities;
+
+  if (HSA_AGENTs.empty())
+    return amdgpu_capabilities;
+
+  int isa_number = 0;
+
+  for (auto Agent : HSA_AGENTs) {
+
+    char agent_uuid[24];
+    hsa_status_t Stat = _dl_hsa_agent_get_info(
+        Agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_UUID, &agent_uuid);
+
+    if (Stat != HSA_STATUS_SUCCESS) {
+      amdgpu_capabilities = "HSA_AGENT_GET_INFO_ERROR\n";
+      return amdgpu_capabilities;
+    }
+
+    if (uuid.compare(agent_uuid) == 0) {
+      Stat = _dl_hsa_agent_iterate_isas(Agent, get_isa_info, &isa_number);
+
+      if (Stat != HSA_STATUS_SUCCESS) {
+        amdgpu_capabilities = "HSA_AGENT_ITERATE_ISAS_ERROR\n";
+        return amdgpu_capabilities;
+      }
+
+      llvm::StringRef TargetFeatures(AMDGPU_FEATUREs.back().name_str);
+      auto Features = TargetFeatures.split(":");
+      auto Triple = Features.first.rsplit('-');
+      amdgpu_capabilities.append(Triple.second.data());
+      break;
+    }
+  }
+  return amdgpu_capabilities;
+}
+
+bool IsAmdDeviceAvailable() {
+  // Check status of ROCk
+  auto InitstateOrError =
+      llvm::MemoryBuffer::getFile("/sys/module/amdgpu/initstate");
+  if (std::error_code EC = InitstateOrError.getError()) {
+    fprintf(stderr, "unable to open device!\n");
+    return false;
+  }
+
+  llvm::StringRef FileContent = InitstateOrError.get()->getBuffer();
+
+  if (FileContent.find_insensitive("live") != llvm::StringRef::npos) {
+    return true;
+  }
+
+  fprintf(stderr, "No AMD Device(s) found!\n");
+  return false;
+}
+
+void BindHsaMethodsAndInitHSA() {
+
+  if (first_call) {
+    void *dlhandle = _aot_dynload_hsa_runtime();
+    if (!dlhandle) {
+      fprintf(stderr, " HSAERROR - DIDN'T FOUND RUNTIME\n");
+      abort();
+    }
+
+    assert(_dl_hsa_init != nullptr);
+    hsa_status_t Status = _dl_hsa_init();
+    if (Status != HSA_STATUS_SUCCESS) {
+      fprintf(stderr, " HSAERROR - INITIALIZATION");
+      abort();
+    }
+    first_call = false;
+  }
+}
+
+std::vector<std::pair<std::string, std::string>> runHsaDetection() {
+  std::vector<std::pair<std::string, std::string>> OffloadingGpus;
+  HSA_AGENTs.clear();
+
+  auto Err = _dl_hsa_iterate_agents(
+      [](hsa_agent_t Agent, void *GpuData) {
+        hsa_device_type_t DeviceType;
+        hsa_status_t Stat =
+            _dl_hsa_agent_get_info(Agent, HSA_AGENT_INFO_DEVICE, &DeviceType);
+        if (Stat != HSA_STATUS_SUCCESS)
+          return Stat;
+
+        std::vector<std::pair<std::string, std::string>> *GpuVector =
+            static_cast<std::vector<std::pair<std::string, std::string>> *>(
+                GpuData);
+
+        if (DeviceType == HSA_DEVICE_TYPE_GPU) {
+          hsa_agent_feature_t Features;
+          Stat =
+              _dl_hsa_agent_get_info(Agent, HSA_AGENT_INFO_FEATURE, &Features);
+          if (Stat != HSA_STATUS_SUCCESS)
+            return Stat;
+
+          if (Features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
+
+            char hsa_name[64];
+            Stat = _dl_hsa_agent_get_info(Agent, HSA_AGENT_INFO_NAME, hsa_name);
+            if (Stat != HSA_STATUS_SUCCESS)
+              return Stat;
+
+            char uuid[24];
+            Stat = _dl_hsa_agent_get_info(
+                Agent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_UUID, &uuid);
+            if (Stat != HSA_STATUS_SUCCESS)
+              return Stat;
+
+            GpuVector->emplace_back(hsa_name, uuid);
+            HSA_AGENTs.push_back(Agent);
+          }
+        }
+        return HSA_STATUS_SUCCESS;
+      },
+      &OffloadingGpus);
+
+  if (Err != HSA_STATUS_SUCCESS)
+    OffloadingGpus.emplace_back("HSA_ITERATE_AGENT_ERRROR\n", " ");
+
+  return OffloadingGpus;
 }
