@@ -41,10 +41,10 @@
 ; SPV-DAG: %[[#mone_16:]] = OpConstant %[[#int_16]] 65535
 ; SPV-DAG: %[[#mone_32:]] = OpConstant %[[#int_32]] 4294967295
 ; SPV-DAG: %[[#zero_64:]] = OpConstantNull %[[#int_64]]
-; SPV-DAG: %[[#mone_64:]] = OpConstant %[[#int_64]] 4294967295 4294967295
+; SPV-DAG: %[[#mone_64:]] = OpConstant %[[#int_64]] 18446744073709551615
 ; SPV-DAG: %[[#one_8:]] = OpConstant %[[#int_8]] 1
 ; SPV-DAG: %[[#one_16:]] = OpConstant %[[#int_16]] 1
-; SPV-DAG: %[[#one_64:]] = OpConstant %[[#int_64]] 1 0
+; SPV-DAG: %[[#one_64:]] = OpConstant %[[#int_64]] 1
 ; SPV-DAG: %[[#void:]] = OpTypeVoid
 ; SPV-DAG: %[[#float:]] = OpTypeFloat 32
 ; SPV-DAG: %[[#bool:]] = OpTypeBool

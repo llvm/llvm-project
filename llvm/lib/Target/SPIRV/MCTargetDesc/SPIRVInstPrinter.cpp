@@ -169,7 +169,9 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         }
         case SPIRV::OpConstantI:
         case SPIRV::OpConstantF:
-          printOpConstantVarOps(MI, NumFixedOps, OS);
+          // The last fixed operand along with any variadic operands that follow
+          // are part of the variable value.
+          printOpConstantVarOps(MI, NumFixedOps - 1, OS);
           break;
         default:
           printRemainingVariableOps(MI, NumFixedOps, OS);
