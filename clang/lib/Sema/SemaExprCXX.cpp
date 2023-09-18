@@ -9063,7 +9063,8 @@ Sema::BuildExprRequirement(
     concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement) {
   auto Status = concepts::ExprRequirement::SS_Satisfied;
   ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
-  if (E->isInstantiationDependent() || ReturnTypeRequirement.isDependent())
+  if (E->isInstantiationDependent() || E->getType()->isPlaceholderType() ||
+      ReturnTypeRequirement.isDependent())
     Status = concepts::ExprRequirement::SS_Dependent;
   else if (NoexceptLoc.isValid() && canThrow(E) == CanThrowResult::CT_Can)
     Status = concepts::ExprRequirement::SS_NoexceptNotMet;
