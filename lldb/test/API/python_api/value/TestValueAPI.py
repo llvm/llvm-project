@@ -3,9 +3,9 @@ Test some SBValue APIs.
 """
 
 import lldb
+from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 
 
 class ValueAPITestCase(TestBase):
@@ -205,4 +205,19 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable("sinthex").GetValueAsSigned(),
             -526164208,
             "signed sinthex == -526164208",
+        )
+
+        # Check that hex value printing works as expected.
+        self.assertEqual(
+            frame0.FindVariable("fixed_int_ptr").GetValue(),
+            "0x00000000000000aa",
+        )
+        self.runCmd("settings set target.show-hex-values-with-leading-zeroes false")
+        self.assertEqual(
+            frame0.FindVariable("another_fixed_int_ptr").GetValue(),
+            "0xaa",
+        )
+        self.assertEqual(
+            frame0.FindVariable("a_null_int_ptr").GetValue(),
+            "0x0",
         )

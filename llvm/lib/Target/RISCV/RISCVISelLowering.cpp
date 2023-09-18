@@ -10116,10 +10116,7 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
 
   if (XLenVT == MVT::i32 && IndexVT.getVectorElementType().bitsGT(XLenVT)) {
     IndexVT = IndexVT.changeVectorElementType(XLenVT);
-    SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, Mask.getValueType(),
-                                   VL);
-    Index = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, IndexVT, Index,
-                        TrueMask, VL);
+    Index = DAG.getNode(ISD::TRUNCATE, DL, IndexVT, Index);
   }
 
   unsigned IntID =
@@ -10218,10 +10215,7 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
 
   if (XLenVT == MVT::i32 && IndexVT.getVectorElementType().bitsGT(XLenVT)) {
     IndexVT = IndexVT.changeVectorElementType(XLenVT);
-    SDValue TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, Mask.getValueType(),
-                                   VL);
-    Index = DAG.getNode(RISCVISD::TRUNCATE_VECTOR_VL, DL, IndexVT, Index,
-                        TrueMask, VL);
+    Index = DAG.getNode(ISD::TRUNCATE, DL, IndexVT, Index);
   }
 
   unsigned IntID =

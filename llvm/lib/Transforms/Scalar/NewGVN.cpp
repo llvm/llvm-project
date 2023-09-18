@@ -1904,7 +1904,7 @@ NewGVN::ExprResult NewGVN::performSymbolicCmpEvaluation(Instruction *I) const {
       LastPredInfo = PI;
       // In phi of ops cases, we may have predicate info that we are evaluating
       // in a different context.
-      if (!DT->dominates(PBranch->To, getBlockForValue(I)))
+      if (!DT->dominates(PBranch->To, I->getParent()))
         continue;
       // TODO: Along the false edge, we may know more things too, like
       // icmp of
@@ -2765,6 +2765,9 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       // Clone the instruction, create an expression from it that is
       // translated back into the predecessor, and see if we have a leader.
       Instruction *ValueOp = I->clone();
+      // Emit the temporal instruction in the predecessor basic block where the
+      // corresponding value is defined.
+      ValueOp->insertBefore(PredBB->getTerminator());
       if (MemAccess)
         TempToMemory.insert({ValueOp, MemAccess});
       bool SafeForPHIOfOps = true;
@@ -2794,7 +2797,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       FoundVal = !SafeForPHIOfOps ? nullptr
                                   : findLeaderForInst(ValueOp, Visited,
                                                       MemAccess, I, PredBB);
-      ValueOp->deleteValue();
+      ValueOp->eraseFromParent();
       if (!FoundVal) {
         // We failed to find a leader for the current ValueOp, but this might
         // change in case of the translated operands change.
