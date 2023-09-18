@@ -439,7 +439,7 @@ return:
   ret void
 }
 
-; FIXME: {-128,+,-128} should not be <nsw>.
+; {-128,+,-128} should not be <nsw>.
 define void @pr66066() {
 ; CHECK-LABEL: 'pr66066'
 ; CHECK-NEXT:  Classifying expressions for: @pr66066
@@ -448,7 +448,7 @@ define void @pr66066() {
 ; CHECK-NEXT:    %iv.dec = add i8 %iv, -1
 ; CHECK-NEXT:    --> {0,+,-1}<nsw><%loop> U: [-1,1) S: [-1,1) Exits: -1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %shl = shl i8 %iv, 7
-; CHECK-NEXT:    --> {-128,+,-128}<nsw><%loop> U: [-128,-127) S: [-128,-127) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {-128,+,-128}<%loop> U: [0,-127) S: [-128,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @pr66066
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1
