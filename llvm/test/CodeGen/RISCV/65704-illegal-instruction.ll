@@ -2,19 +2,12 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+f,+m,+zfh,+zvfh \
 ; RUN:  < %s | FileCheck %s
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare <16 x i8> @llvm.vector.extract.v16i8.nxv8i8(<vscale x 8 x i8>, i64 immarg) #3
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v16i8(<vscale x 8 x i8>, <16 x i8>, i64 immarg) #3
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
+declare <16 x i8> @llvm.vector.extract.v16i8.nxv8i8(<vscale x 8 x i8>, i64 immarg)
+declare <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v16i8(<vscale x 8 x i8>, <16 x i8>, i64 immarg)
 declare <vscale x 8 x i8> @llvm.riscv.vslideup.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, i64, i64, i64 immarg)
+declare <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32>, <4 x i32>, i64 immarg)
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32>, <4 x i32>, i64 immarg) #3
-
-define void @foo(<vscale x 8 x i8> %0) #2 {
+define void @foo(<vscale x 8 x i8> %0) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -32
