@@ -78,6 +78,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
                 "Scalable vectorization is available and favored when the "
                 "cost is inconclusive.")));
 
+static cl::opt<bool> UseWiderVFIfVariantsPresent(
+    "vectorizer-maximize-bandwidth-if-variant-present", cl::init(true),
+    cl::Hidden,
+    cl::desc("Try wider VFs if they enable the use of vector variants"));
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -942,6 +947,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             }
           }
       }
+
+      // If we found a vectorized variant of a function, note that so LV can
+      // make better decisions about maximum VF.
+      if (CI && !VFDatabase::getMappings(*CI).empty() &&
+          UseWiderVFIfVariantsPresent)
+        VecVariantsFound = true;
 
       // Check that the instruction return type is vectorizable.
       // Also, we can't vectorize extractelement instructions.

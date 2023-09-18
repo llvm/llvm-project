@@ -5152,7 +5152,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
                            : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
   if (MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
-                            TTI.shouldMaximizeVectorBandwidth(RegKind))) {
+                            (TTI.shouldMaximizeVectorBandwidth(RegKind) ||
+                             Legal->hasVectorVariants()))) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
