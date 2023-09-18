@@ -781,18 +781,16 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   // Determine scalar opcode
   std::optional<unsigned> FunctionalOpcode =
       VPI.getFunctionalOpcode();
-  bool ScalarIsIntr = false;
-  std::optional<Intrinsic::ID> ScalarIntrID;
+  std::optional<Intrinsic::ID> ScalarIntrID = std::nullopt;
   if (!FunctionalOpcode) {
     ScalarIntrID = VPI.getFunctionalIntrinsicID();
     if (!ScalarIntrID)
       return false;
-    ScalarIsIntr = true;
   }
 
   // Calculate cost of scalarizing
   InstructionCost ScalarOpCost = 0;
-  if (ScalarIsIntr) {
+  if (ScalarIntrID) {
     IntrinsicCostAttributes Attrs(*ScalarIntrID, VecTy->getScalarType(), Args);
     ScalarOpCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
   } else {
@@ -818,17 +816,15 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   ElementCount EC = cast<VectorType>(Op0->getType())->getElementCount();
   Value *EVL = VPI.getArgOperand(3);
   const DataLayout &DL = VPI.getModule()->getDataLayout();
-  bool IsKnownNonZeroVL = isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT);
   bool MustHaveNonZeroVL =
       IntrID == Intrinsic::vp_sdiv || IntrID == Intrinsic::vp_udiv ||
-      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem ||
-      IntrID == Intrinsic::vp_fdiv || IntrID  == Intrinsic::vp_frem;
+      IntrID == Intrinsic::vp_srem || IntrID == Intrinsic::vp_urem;
 
-  if ((MustHaveNonZeroVL && IsKnownNonZeroVL) || !MustHaveNonZeroVL) {
+  if (!MustHaveNonZeroVL || isKnownNonZero(EVL, DL, 0, &AC, &VPI, &DT)) {
     Value *ScalarOp0 = getSplatValue(Op0);
     Value *ScalarOp1 = getSplatValue(Op1);
     Value *ScalarVal =
-        ScalarIsIntr
+        ScalarIntrID
             ? Builder.CreateIntrinsic(VecTy->getScalarType(), *ScalarIntrID,
                                       {ScalarOp0, ScalarOp1})
             : Builder.CreateBinOp((Instruction::BinaryOps)(*FunctionalOpcode),
