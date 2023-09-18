@@ -9,7 +9,7 @@ jobs:
   build:
     name: Build + LIT
     runs-on: ubuntu-latest
-    timeout-minutes: 150 
+    timeout-minutes: 200 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
