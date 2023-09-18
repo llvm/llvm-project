@@ -138,7 +138,6 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
       BlockEdges[E.getOffset()] = EdgeTarget(E);
     }
 
-  CIEInfosMap CIEInfos;
   BinaryStreamReader BlockReader(
       StringRef(B.getContent().data(), B.getContent().size()),
       PC.G.getEndianness());
