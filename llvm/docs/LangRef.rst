@@ -2025,6 +2025,10 @@ example:
    Note: Comparing address of a global variable to ``null`` may still
    evaluate to false because of a limitation in querying this attribute inside
    constant expressions.
+``optdebug``
+    This attribute suggests that optimization passes and code generator passes
+    should make choices that try to preserve debug info without significantly
+    degrading runtime performance.
 ``optforfuzzing``
     This attribute indicates that this function should be optimized
     for maximum fuzzing signal.
