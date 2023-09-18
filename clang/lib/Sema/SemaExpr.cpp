@@ -18468,7 +18468,10 @@ static void RemoveNestedImmediateInvocation(
       DRSet.erase(cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit()));
       return Base::TransformCXXOperatorCallExpr(E);
     }
-    /// Base::TransformInitializer skip ConstantExpr so we need to visit them
+    /// Base::TransformUserDefinedLiteral doesn't preserve the
+    /// UserDefinedLiteral node.
+    ExprResult TransformUserDefinedLiteral(UserDefinedLiteral *E) { return E; }
+    /// Base::TransformInitializer skips ConstantExpr so we need to visit them
     /// here.
     ExprResult TransformInitializer(Expr *Init, bool NotCopyInit) {
       if (!Init)
