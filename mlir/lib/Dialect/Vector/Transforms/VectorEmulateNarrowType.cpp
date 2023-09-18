@@ -526,9 +526,9 @@ struct RewriteBitCastOfTruncI : OpRewritePattern<vector::BitCastOp> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Rewrite bitcast(trunci) to a sequence of shuffles and bitwise ops that take
-/// advantage of high-level information to avoid leaving LLVM to scramble with
-/// peephole optimizations.
+/// Rewrite ext{s,u}i(bitcast) to a sequence of shuffles and bitwise ops that
+/// take advantage of high-level information to avoid leaving LLVM to scramble
+/// with peephole optimizations.
 template <typename ExtOpType>
 struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
   using OpRewritePattern<ExtOpType>::OpRewritePattern;
