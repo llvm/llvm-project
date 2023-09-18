@@ -2316,14 +2316,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // ErrnoOverriden is true if math-errno is overriden via the
   // '#pragma float_control(precise, on)'. This pragma disables fast-math,
   // which implies math-errno.
-  // ErrnoOverrideValue is the value to which errno was overriden to (true for
-  // precise on and false otherwise).
   if (E->hasStoredFPFeatures()) {
     FPOptionsOverride OP = E->getFPFeatures();
     if (OP.hasMathErrnoOverride())
       ErrnoOverriden = OP.getMathErrnoOverride();
   }
-
   // True if 'atttibute__((optnone)) is used. This attibute overrides
   // fast-math which implies math-errno.
   bool OptNone = CurFuncDecl && CurFuncDecl->hasAttr<OptimizeNoneAttr>();
