@@ -250,6 +250,11 @@ public:
   mangleName(const Fortran::semantics::DerivedTypeSpec &) = 0;
   /// Unique a compiler generated name (add a containing scope specific prefix)
   virtual std::string mangleName(std::string &) = 0;
+  /// Return the field name for a derived type component inside a fir.record
+  /// type.
+  virtual std::string
+  getRecordTypeFieldName(const Fortran::semantics::Symbol &component) = 0;
+
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 

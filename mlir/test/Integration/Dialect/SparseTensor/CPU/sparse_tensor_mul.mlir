@@ -30,7 +30,7 @@
 // Do the same run, but now with  VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#ST = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed", "compressed"]}>
+#ST = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed)}>
 
 //
 // Trait for 3-d tensor element wise multiplication.
@@ -55,7 +55,7 @@ module {
     %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xf64, #ST>
     %d1 = tensor.dim %arga, %c1 : tensor<?x?x?xf64, #ST>
     %d2 = tensor.dim %arga, %c2 : tensor<?x?x?xf64, #ST>
-    %xt = bufferization.alloc_tensor(%d0, %d1, %d2) : tensor<?x?x?xf64, #ST>
+    %xt = tensor.empty(%d0, %d1, %d2) : tensor<?x?x?xf64, #ST>
     %0 = linalg.generic #trait_mul
        ins(%arga, %argb: tensor<?x?x?xf64, #ST>, tensor<?x?x?xf64, #ST>)
         outs(%xt: tensor<?x?x?xf64, #ST>) {

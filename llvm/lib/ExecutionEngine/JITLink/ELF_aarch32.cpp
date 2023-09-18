@@ -42,6 +42,10 @@ Expected<aarch32::EdgeKind_aarch32> getJITLinkEdgeKind(uint32_t ELFType) {
     return aarch32::Arm_Call;
   case ELF::R_ARM_JUMP24:
     return aarch32::Arm_Jump24;
+  case ELF::R_ARM_MOVW_ABS_NC:
+    return aarch32::Arm_MovwAbsNC;
+  case ELF::R_ARM_MOVT_ABS:
+    return aarch32::Arm_MovtAbs;
   case ELF::R_ARM_THM_CALL:
     return aarch32::Thumb_Call;
   case ELF::R_ARM_THM_JUMP24:
@@ -68,6 +72,10 @@ Expected<uint32_t> getELFRelocationType(Edge::Kind Kind) {
     return ELF::R_ARM_CALL;
   case aarch32::Arm_Jump24:
     return ELF::R_ARM_JUMP24;
+  case aarch32::Arm_MovwAbsNC:
+    return ELF::R_ARM_MOVW_ABS_NC;
+  case aarch32::Arm_MovtAbs:
+    return ELF::R_ARM_MOVT_ABS;
   case aarch32::Thumb_Call:
     return ELF::R_ARM_THM_CALL;
   case aarch32::Thumb_Jump24:

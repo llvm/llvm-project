@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(LLVMProfdataTests
     OutputSizeLimitTest.cpp
-    MD5CollisionTest.cpp
   )
 
 target_link_libraries(LLVMProfdataTests PRIVATE LLVMTestingSupport)

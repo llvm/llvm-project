@@ -23,7 +23,7 @@
 // TODO: support lib path.
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #DCSR_SLICE = #sparse_tensor.encoding<{
@@ -32,7 +32,7 @@
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
@@ -41,7 +41,7 @@
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR_SLICE_1 = #sparse_tensor.encoding<{
@@ -83,7 +83,7 @@ module {
   //
   func.func @matmul_dyn(%A: tensor<4x4xf64, #CSR_SLICE_dyn>,
                         %B: tensor<4x4xf64, #DCSR_SLICE_dyn>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x4xf64, #CSR_SLICE_dyn>, tensor<4x4xf64, #DCSR_SLICE_dyn>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -95,7 +95,7 @@ module {
   //
   func.func @matmul1(%A: tensor<4x4xf64, #CSR_SLICE_1>,
                      %B: tensor<4x4xf64, #DCSR_SLICE_1>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x4xf64, #CSR_SLICE_1>, tensor<4x4xf64, #DCSR_SLICE_1>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -107,7 +107,7 @@ module {
   //
   func.func @matmul2(%A: tensor<4x8xf64, #CSR_SLICE>,
                      %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+    %C = tensor.empty() : tensor<4x4xf64, #CSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #CSR_SLICE>, tensor<8x4xf64, #CSR>)
          outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>
@@ -119,7 +119,7 @@ module {
   //
   func.func @matmul3(%A: tensor<4x8xf64, #DCSR_SLICE>,
                      %B: tensor<8x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #DCSR>
+    %C = tensor.empty() : tensor<4x4xf64, #DCSR>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x8xf64, #DCSR_SLICE>, tensor<8x4xf64, #DCSR>)
          outs(%C: tensor<4x4xf64, #DCSR>) -> tensor<4x4xf64, #DCSR>
@@ -131,7 +131,7 @@ module {
   //
   func.func @matmul5(%A: tensor<4x4xf64, #COO_SLICE_1>,
                      %B: tensor<4x4xf64, #COO_SLICE_2>) -> tensor<4x4xf64, #COO> {
-    %C = bufferization.alloc_tensor() : tensor<4x4xf64, #COO>
+    %C = tensor.empty() : tensor<4x4xf64, #COO>
     %D = linalg.matmul
       ins(%A, %B: tensor<4x4xf64, #COO_SLICE_1>, tensor<4x4xf64, #COO_SLICE_2>)
          outs(%C: tensor<4x4xf64, #COO>) -> tensor<4x4xf64, #COO>

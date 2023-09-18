@@ -1,5 +1,7 @@
 !RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s  --check-prefix=DEVICE
+!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s  --check-prefix=DEVICE
+!RUN: bbc -emit-fir -fopenmp %s -o - | FileCheck %s
+!RUN: bbc -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s --check-prefix=DEVICE
 
 ! CHECK-LABEL: func.func @_QPimplicitly_captured
 ! CHECK-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>{{.*}}}

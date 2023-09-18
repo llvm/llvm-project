@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --sparsification="enable-gpu-libgen" | FileCheck %s
 
-#CSR = #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>
+#CSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : dense, d1 : compressed) }>
 
 // CHECK-LABEL: func.func @matmulCSR(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<8x8xf32, #{{.*}}>,

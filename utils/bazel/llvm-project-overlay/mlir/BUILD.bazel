@@ -8249,6 +8249,7 @@ cc_library(
         ":AsyncToLLVM",
         ":AsyncTransforms",
         ":BufferizationDialect",
+        ":BufferizationPipelines",
         ":BufferizationTransformOps",
         ":BufferizationTransforms",
         ":CastInterfaces",
@@ -9767,6 +9768,36 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td",
     deps = [
         ":BufferizableOpInterfaceTdFiles",
+    ],
+)
+
+td_library(
+    name = "BufferDeallocationOpInterfaceTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "BufferDeallocationOpInterfaceIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.td",
+    deps = [
+        ":BufferDeallocationOpInterfaceTdFiles",
     ],
 )
 
@@ -12061,6 +12092,8 @@ gentbl_cc_library(
     deps = [
         ":BufferizableOpInterfaceTdFiles",
         ":BufferizationOpsTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
+        ":SubsetInsertionOpInterfaceTdFiles",
     ],
 )
 
@@ -12180,6 +12213,21 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":Support",
+        ":Transforms",
+    ],
+)
+
+cc_library(
+    name = "BufferizationPipelines",
+    srcs = glob(["lib/Dialect/Bufferization/Pipelines/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/Bufferization/Pipelines/Passes.h"],
+    includes = ["include"],
+    deps = [
+        ":BufferizationToMemRef",
+        ":BufferizationTransforms",
+        ":FuncDialect",
+        ":MemRefTransforms",
+        ":Pass",
         ":Transforms",
     ],
 )

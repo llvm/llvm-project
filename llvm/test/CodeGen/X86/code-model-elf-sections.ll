@@ -2,6 +2,10 @@
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
 ; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE
+; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=79 -o %t
+; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=LARGE
+; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=medium -large-data-threshold=80 -o %t
+; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
 ; RUN: llc < %s -relocation-model=pic -filetype=obj -code-model=large -o %t
 ; RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SMALL
 

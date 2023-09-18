@@ -32,7 +32,7 @@ using namespace llvm;
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
-                                       llvm::CodeGenOpt::Level OptLevel) {
+                                       llvm::CodeGenOptLevel OptLevel) {
   return new NVPTXDAGToDAGISel(TM, OptLevel);
 }
 
@@ -41,9 +41,9 @@ char NVPTXDAGToDAGISel::ID = 0;
 INITIALIZE_PASS(NVPTXDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 NVPTXDAGToDAGISel::NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
-                                     CodeGenOpt::Level OptLevel)
+                                     CodeGenOptLevel OptLevel)
     : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {
-  doMulWide = (OptLevel > 0);
+  doMulWide = (OptLevel > CodeGenOptLevel::None);
 }
 
 bool NVPTXDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {

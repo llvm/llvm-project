@@ -1,4 +1,5 @@
 add_mlir_dialect(IRDL irdl)
+add_mlir_doc(IRDL IRDL Dialects/ -gen-dialect-doc)
 
 # Add IRDL interfaces
 set(LLVM_TARGET_DEFINITIONS IRDLInterfaces.td)

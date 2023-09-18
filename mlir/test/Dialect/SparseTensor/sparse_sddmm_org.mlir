@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s  --pre-sparsification-rewrite --sparsification --cse | FileCheck %s
 
-#SM = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#SM = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 #trait_matmul = {
   indexing_maps = [

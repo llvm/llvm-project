@@ -850,17 +850,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   }
 
   // Scalable vectors cannot be global variables, since we don't know
-  // the runtime size. If the global is an array containing scalable vectors,
-  // that will be caught by the isValidElementType methods in StructType or
-  // ArrayType instead.
-  Check(!isa<ScalableVectorType>(GV.getValueType()),
-        "Globals cannot contain scalable vectors", &GV);
-
-  if (auto *STy = dyn_cast<StructType>(GV.getValueType())) {
-    SmallPtrSet<Type *, 4> Visited;
-    Check(!STy->containsScalableVectorType(&Visited),
-          "Globals cannot contain scalable vectors", &GV);
-  }
+  // the runtime size.
+  Check(!GV.getValueType()->isScalableTy(),
+        "Globals cannot contain scalable types", &GV);
 
   // Check if it's a target extension type that disallows being used as a
   // global.
@@ -6306,6 +6298,20 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
   verifyFnArgs(DII);
+
+  if (auto *Declare = dyn_cast<DbgDeclareInst>(&DII)) {
+    if (auto *Alloca = dyn_cast_or_null<AllocaInst>(Declare->getAddress())) {
+      DIExpression *Expr = Declare->getExpression();
+      std::optional<uint64_t> FragSize = Declare->getFragmentSizeInBits();
+      std::optional<TypeSize> AllocSize = Alloca->getAllocationSizeInBits(DL);
+      if (FragSize && AllocSize && !AllocSize->isScalable() &&
+          !Expr->isComplex()) {
+        CheckDI(*FragSize <= AllocSize->getFixedValue(),
+                "llvm.dbg.declare has larger fragment size than alloca size ",
+                &DII);
+      }
+    }
+  }
 }
 
 void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {

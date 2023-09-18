@@ -45,8 +45,8 @@ namespace {
 
     XCoreDAGToDAGISel() = delete;
 
-    XCoreDAGToDAGISel(XCoreTargetMachine &TM, CodeGenOpt::Level OptLevel)
-      : SelectionDAGISel(ID, TM, OptLevel) {}
+    XCoreDAGToDAGISel(XCoreTargetMachine &TM, CodeGenOptLevel OptLevel)
+        : SelectionDAGISel(ID, TM, OptLevel) {}
 
     void Select(SDNode *N) override;
     bool tryBRIND(SDNode *N);
@@ -88,8 +88,8 @@ INITIALIZE_PASS(XCoreDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 /// XCore-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createXCoreISelDag(XCoreTargetMachine &TM,
-                                       CodeGenOpt::Level OptLevel) {
-  return new XCoreDAGToDAGISel(TM, OptLevel);
+                                       CodeGenOptLevel OptLevel) {
+    return new XCoreDAGToDAGISel(TM, OptLevel);
 }
 
 bool XCoreDAGToDAGISel::SelectADDRspii(SDValue Addr, SDValue &Base,

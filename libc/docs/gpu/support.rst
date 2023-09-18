@@ -126,6 +126,13 @@ stdio.h
 =============  =========  ============
 Function Name  Available  RPC Required
 =============  =========  ============
+feof           |check|    |check|
+ferror         |check|    |check|
+clearerr       |check|    |check|
+fgetc          |check|    |check|
+fgets          |check|    |check|
+getc           |check|    |check|
+getchar        |check|    |check|
 puts           |check|    |check|
 fputs          |check|    |check|
 fputc          |check|    |check|

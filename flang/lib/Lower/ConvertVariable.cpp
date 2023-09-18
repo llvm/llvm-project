@@ -324,7 +324,7 @@ static mlir::Value genDefaultInitializerValue(
     if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
       continue;
     mlir::Value componentValue;
-    llvm::StringRef name = toStringRef(component.name());
+    std::string name = converter.getRecordTypeFieldName(component);
     mlir::Type componentTy = recTy.getType(name);
     assert(componentTy && "component not found in type");
     if (const auto *object{
@@ -660,6 +660,11 @@ static bool needEndFinalization(const Fortran::lower::pft::Variable &var) {
   if (!var.hasSymbol())
     return false;
   const Fortran::semantics::Symbol &sym = var.getSymbol();
+  const Fortran::semantics::Scope &owner = sym.owner();
+  if (owner.kind() == Fortran::semantics::Scope::Kind::MainProgram) {
+    // The standard does not require finalizing main program variables.
+    return false;
+  }
   if (!Fortran::semantics::IsPointer(sym) &&
       !Fortran::semantics::IsAllocatable(sym) &&
       !Fortran::semantics::IsDummy(sym) &&
