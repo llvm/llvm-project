@@ -297,6 +297,10 @@ Bug Fixes to C++ Support
   definition the specialization was instantiated from.
   (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
 
+- Fix a crash when a default member initializer of a base aggregate
+  makes an invalid call to an immediate function.
+  (`#66324 <https://github.com/llvm/llvm-project/issues/66324>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
