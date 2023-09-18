@@ -1,7 +1,9 @@
 !REQUIRES: amdgpu-registered-target
 
-!RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-fir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s
-!RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-fir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
+!RUN: bbc -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s 
+!RUN: bbc -emit-fir -fopenmp -fopenmp-is-gpu -fopenmp-is-target-device %s -o - | FileCheck %s 
 
 !CHECK: func.func @_QPtarget_function
 
