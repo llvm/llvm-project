@@ -905,8 +905,10 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpAssumeTrueKHR:
   case SPIRV::OpExpectKHR:
-    Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
-    Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
+    if(ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
+      Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
+    }
     break;
   default:
     break;
