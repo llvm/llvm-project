@@ -186,7 +186,7 @@ protected:
                             : Register(Subtarget.getTOCPointerRegister()));
             BuildMI(MBB, I, DL, TII->get(TargetOpcode::COPY), GPR3)
                 .addReg(MHReg);
-            // The call to __tls_get_mod.
+            // The call to .__tls_get_mod.
             BuildMI(MBB, I, DL, TII->get(Opc2), GPR3).addReg(GPR3);
             BuildMI(MBB, I, DL, TII->get(Is64Bit ? PPC::ADD8 : PPC::ADD4), GPR3)
                 .addReg(GPR3)
