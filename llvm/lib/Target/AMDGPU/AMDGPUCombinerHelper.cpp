@@ -42,8 +42,7 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   case AMDGPU::G_AMDGPU_FMIN_LEGACY:
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return true;
-  case AMDGPU::G_INTRINSIC:
-  case AMDGPU::G_INTRINSIC_CONVERGENT: {
+  case AMDGPU::G_INTRINSIC: {
     unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:

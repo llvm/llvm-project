@@ -885,6 +885,13 @@ Instruction::getPrevNonDebugInstruction(bool SkipPseudoOp) const {
   return nullptr;
 }
 
+const DebugLoc &Instruction::getStableDebugLoc() const {
+  if (isa<DbgInfoIntrinsic>(this))
+    if (const Instruction *Next = getNextNonDebugInstruction())
+      return Next->getDebugLoc();
+  return getDebugLoc();
+}
+
 bool Instruction::isAssociative() const {
   unsigned Opcode = getOpcode();
   if (isAssociative(Opcode))

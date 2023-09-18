@@ -24,7 +24,7 @@
 // TODO: support slices on lib path
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ]
+  map = (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 #CSR_SLICE = #sparse_tensor.encoding<{
@@ -38,7 +38,7 @@
 }>
 
 #COO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #COO_SLICE = #sparse_tensor.encoding<{

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx906 -filetype=obj %s | llvm-objdump -d --mcpu=gfx906 - | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx906 -filetype=obj %s | llvm-objdump -d --mcpu=gfx906 - | FileCheck %s
 
 // Check that the offset is correctly calculated.
 

@@ -1,4 +1,4 @@
-//===------ WmmaOpsToSPIRV.cpp - WMMA LD/ST/Compute to SPIRV lowering------===//
+//===------ WmmaOpsToSPIRV.cpp - WMMA LD/ST/Compute to SPIRV lowering -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains definitions of patterns to lower GPU Subgroup MMA ops to
-// SPIRV Dialect ops.
+// SPIRV Cooperative Matrix ops.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,21 +18,28 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/StringSwitch.h"
 
-using namespace mlir;
+#include <cassert>
 
+namespace mlir {
 /// Creates a SPIR-V op to replace the given GPU subgroup mma elementwise op
 /// when the elementwise op directly supports with cooperative matrix type.
 /// Returns false if cannot.
 ///
 /// See SPV_NV_cooperative_matrix for supported elementwise ops.
 static bool createElementwiseOp(ConversionPatternRewriter &builder,
-                                gpu::SubgroupMmaElementwiseOp op,
-                                spirv::CooperativeMatrixNVType coopType,
+                                gpu::SubgroupMmaElementwiseOp op, Type coopType,
                                 ValueRange operands) {
+  assert((isa<spirv::CooperativeMatrixType, spirv::CooperativeMatrixNVType>(
+      coopType)));
+
   switch (op.getOpType()) {
   case gpu::MMAElementwiseOp::ADDF:
     builder.replaceOpWithNewOp<spirv::FAddOp>(op, coopType, operands);
@@ -70,12 +77,114 @@ static bool createElementwiseOp(ConversionPatternRewriter &builder,
   return false;
 }
 
+//===----------------------------------------------------------------------===//
+// SPV_KHR_cooperative_matrix
+//===----------------------------------------------------------------------===//
+
+namespace khr {
 namespace {
 
-/// This class implements the conversion of GPU MMA loadOp to
-/// CooperativeMatrixLoad op in the SPIRV dialect.
-struct WmmaLoadOpToSPIRVLowering
-    : public OpConversionPattern<gpu::SubgroupMmaLoadMatrixOp> {
+/// Converts the GPU MMA loadOp to KHRCooperativeMatrixLoad op in the SPIRV
+/// dialect.
+struct WmmaLoadOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaLoadMatrixOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaLoadMatrixOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    Location loc = op->getLoc();
+
+    auto retType = cast<gpu::MMAMatrixType>(op.getRes().getType());
+    MemRefType memrefType = op.getSrcMemref().getType();
+    Value bufferPtr =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getSrcMemref(),
+                             adaptor.getIndices(), loc, rewriter);
+
+    auto coopType =
+        typeConverter.convertType<spirv::CooperativeMatrixType>(retType);
+    if (!coopType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    int64_t stride = op.getLeadDimension().getSExtValue();
+    IntegerType i32Type = rewriter.getI32Type();
+    auto strideValue = rewriter.create<spirv::ConstantOp>(
+        loc, i32Type, IntegerAttr::get(i32Type, stride));
+
+    bool isColMajor = op.getTranspose().value_or(false);
+    auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
+                             : spirv::CooperativeMatrixLayoutKHR::RowMajor;
+
+    rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixLoadOp>(
+        op, coopType, bufferPtr, strideValue, layout);
+    return success();
+  }
+};
+
+/// Converts the GPU MMA StoreOp to KHRCooperativeMatrixStore op in the SPIRV
+/// dialect.
+struct WmmaStoreOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaStoreMatrixOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaStoreMatrixOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    Location loc = op->getLoc();
+
+    auto memrefType = cast<MemRefType>(op.getDstMemref().getType());
+    Value bufferPtr =
+        spirv::getElementPtr(typeConverter, memrefType, adaptor.getDstMemref(),
+                             adaptor.getIndices(), loc, rewriter);
+
+    int64_t stride = op.getLeadDimension().getSExtValue();
+    IntegerType i32Type = rewriter.getI32Type();
+    auto strideValue = rewriter.create<spirv::ConstantOp>(
+        loc, i32Type, IntegerAttr::get(i32Type, stride));
+
+    bool isColMajor = op.getTranspose().value_or(false);
+    auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
+                             : spirv::CooperativeMatrixLayoutKHR::RowMajor;
+
+    rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixStoreOp>(
+        op, bufferPtr, adaptor.getSrc(), strideValue, layout);
+    return success();
+  }
+};
+
+/// Converts GPU MMA Compute to KHRCooperativeMatrixMulAdd op in the SPIRV
+/// dialect.
+struct WmmaMmaOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaComputeOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaComputeOp subgroupMmaComputeOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixMulAddOp>(
+        subgroupMmaComputeOp, adaptor.getOpA(), adaptor.getOpB(),
+        adaptor.getOpC());
+    return success();
+  }
+};
+
+} // namespace
+} // namespace khr
+
+//===----------------------------------------------------------------------===//
+// SPV_NV_cooperative_matrix
+//===----------------------------------------------------------------------===//
+
+namespace nv {
+namespace {
+
+/// Converts the GPU MMA loadOp to NVCooperativeMatrixLoad op in the SPIRV
+/// dialect.
+struct WmmaLoadOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaLoadMatrixOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -90,7 +199,7 @@ struct WmmaLoadOpToSPIRVLowering
     Value bufferPtr = spirv::getElementPtr(
         *getTypeConverter<const SPIRVTypeConverter>(), memrefType,
         adaptor.getSrcMemref(), adaptor.getIndices(), loc, rewriter);
-    auto coopType = convertMMAToSPIRVType(retType);
+    auto coopType = convertMMAToSPIRVCoopMatrixNVType(retType);
     int64_t stride = subgroupMmaLoadMatrixOp.getLeadDimension().getSExtValue();
     auto i32Type = rewriter.getI32Type();
     auto strideValue = rewriter.create<spirv::ConstantOp>(
@@ -105,10 +214,10 @@ struct WmmaLoadOpToSPIRVLowering
   }
 };
 
-/// This class implements the conversion of GPU MMA StoreOp to
-/// CooperativeMatrixStore op in the SPIRV dialect.
-struct WmmaStoreOpToSPIRVLowering
-    : public OpConversionPattern<gpu::SubgroupMmaStoreMatrixOp> {
+/// Converts the GPU MMA StoreOp to NVCooperativeMatrixStore op in the SPIRV
+/// dialect.
+struct WmmaStoreOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaStoreMatrixOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -136,10 +245,10 @@ struct WmmaStoreOpToSPIRVLowering
   }
 };
 
-/// This class implements the conversion of GPU MMA Compute to
-/// CooperativeMatrixMulAdd op in the SPIRV dialect.
-struct WmmaMmaOpToSPIRVLowering
-    : public OpConversionPattern<gpu::SubgroupMmaComputeOp> {
+/// Converts GPU MMA Compute to
+/// NVCooperativeMatrixMulAdd op in the SPIRV dialect.
+struct WmmaMmaOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaComputeOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -153,9 +262,10 @@ struct WmmaMmaOpToSPIRVLowering
   }
 };
 
-/// Convert GPU MMA ConstantMatrixOp to constant SPIR-V cooperative matrix ops.
-struct WmmaConstantOpToSPIRVLowering
-    : public OpConversionPattern<gpu::SubgroupMmaConstantMatrixOp> {
+/// Converts GPU MMA ConstantMatrixOp to constant SPIR-V NV cooperative matrix
+/// ops.
+struct WmmaConstantOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaConstantMatrixOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -163,7 +273,7 @@ struct WmmaConstantOpToSPIRVLowering
                   OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value cst = adaptor.getOperands()[0];
-    auto coopType = convertMMAToSPIRVType(
+    auto coopType = convertMMAToSPIRVCoopMatrixNVType(
         cast<gpu::MMAMatrixType>(subgroupMmaConstantMatrixOp.getType()));
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
         subgroupMmaConstantMatrixOp, coopType, cst);
@@ -173,8 +283,8 @@ struct WmmaConstantOpToSPIRVLowering
 
 /// Converts elementwise ops to SPIR-V cooperative matrix elementwise ops for
 /// the default case.
-struct WmmaElementwiseOpToSPIRVDefaultLowering
-    : public OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
+struct WmmaElementwiseOpToSPIRVDefaultLowering final
+    : OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -186,7 +296,7 @@ struct WmmaElementwiseOpToSPIRVDefaultLowering
       if (!isa<spirv::CooperativeMatrixNVType>(operand.getType()))
         return failure();
     }
-    auto coopType = convertMMAToSPIRVType(
+    auto coopType = convertMMAToSPIRVCoopMatrixNVType(
         cast<gpu::MMAMatrixType>(elementwiseOp.getType()));
     return success(createElementwiseOp(rewriter, elementwiseOp, coopType,
                                        adaptor.getOperands()));
@@ -195,8 +305,8 @@ struct WmmaElementwiseOpToSPIRVDefaultLowering
 
 /// Converts elementwise ops to SPIR-V cooperative matrix elementwise ops for
 /// matrix times scalar case.
-struct WmmaElementwiseOpToSPIRVScalarMulLowering
-    : public OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
+struct WmmaElementwiseOpToSPIRVScalarMulLowering final
+    : OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -238,7 +348,7 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering
     assert(cc.getConstituents().size() == 1);
     scalar = cc.getConstituents().front();
 
-    auto coopType = convertMMAToSPIRVType(
+    auto coopType = convertMMAToSPIRVCoopMatrixNVType(
         cast<gpu::MMAMatrixType>(elementwiseOp.getType()));
     rewriter.replaceOpWithNewOp<spirv::MatrixTimesScalarOp>(
         elementwiseOp, coopType, ValueRange{matrix, scalar});
@@ -247,23 +357,51 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering
 };
 
 } // namespace
+} // namespace nv
+} // namespace mlir
 
-/// Return the LLVMStructureType corresponding to the MMAMatrixType `type`.
 mlir::spirv::CooperativeMatrixNVType
-mlir::convertMMAToSPIRVType(gpu::MMAMatrixType type) {
+mlir::convertMMAToSPIRVCoopMatrixNVType(gpu::MMAMatrixType type) {
   ArrayRef<int64_t> retTypeShape = type.getShape();
   Type elementType = type.getElementType();
   return spirv::CooperativeMatrixNVType::get(
       elementType, spirv::Scope::Subgroup, retTypeShape[0], retTypeShape[1]);
 }
 
-void mlir::populateGpuWMMAToSPIRVConversionPatterns(
+mlir::spirv::CooperativeMatrixType
+mlir::convertMMAToSPIRVCoopMatrixType(gpu::MMAMatrixType type) {
+  ArrayRef<int64_t> retTypeShape = type.getShape();
+  Type elementType = type.getElementType();
+
+  auto use =
+      llvm::StringSwitch<spirv::CooperativeMatrixUseKHR>(type.getOperand())
+          .Case("AOp", spirv::CooperativeMatrixUseKHR::MatrixA)
+          .Case("BOp", spirv::CooperativeMatrixUseKHR::MatrixB)
+          .Default(spirv::CooperativeMatrixUseKHR::MatrixAcc);
+
+  return spirv::CooperativeMatrixType::get(elementType, retTypeShape[0],
+                                           retTypeShape[1],
+                                           spirv::Scope::Subgroup, use);
+}
+
+void mlir::populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
     SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
+  using namespace mlir;
   MLIRContext *context = patterns.getContext();
-  patterns.add<WmmaLoadOpToSPIRVLowering, WmmaMmaOpToSPIRVLowering,
-               WmmaStoreOpToSPIRVLowering, WmmaConstantOpToSPIRVLowering,
-               WmmaElementwiseOpToSPIRVDefaultLowering>(converter, context);
+  patterns.add<khr::WmmaLoadOpToSPIRVLowering, khr::WmmaMmaOpToSPIRVLowering,
+               khr::WmmaStoreOpToSPIRVLowering>(converter, context);
+}
+
+void mlir::populateGpuWMMAToSPIRVCoopMatrixNVConversionPatterns(
+    SPIRVTypeConverter &converter, RewritePatternSet &patterns) {
+  using namespace mlir;
+  MLIRContext *context = patterns.getContext();
+  patterns
+      .add<nv::WmmaLoadOpToSPIRVLowering, nv::WmmaMmaOpToSPIRVLowering,
+           nv::WmmaStoreOpToSPIRVLowering, nv::WmmaConstantOpToSPIRVLowering,
+           nv::WmmaElementwiseOpToSPIRVDefaultLowering>(converter, context);
   // Give the following patterns higher benefit to prevail over the default one.
-  patterns.add<WmmaElementwiseOpToSPIRVScalarMulLowering>(converter, context,
-                                                          /*benefit=*/2);
+  patterns.add<nv::WmmaElementwiseOpToSPIRVScalarMulLowering>(converter,
+                                                              context,
+                                                              /*benefit=*/2);
 }

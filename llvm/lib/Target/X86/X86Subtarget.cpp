@@ -268,18 +268,23 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (!FS.empty())
     FullFS = (Twine(FullFS) + "," + FS).str();
 
-  // Attach EVEX512 feature when we have AVX512 features and EVEX512 is not set.
-  size_t posNoEVEX512 = FS.rfind("-evex512");
-  // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
-                                                : FS.rfind("-avx512f,");
-  size_t posEVEX512 = FS.rfind("+evex512");
-  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
+  // Attach EVEX512 feature when we have AVX512 features with a default CPU.
+  // "pentium4" is default CPU for 32-bit targets.
+  // "x86-64" is default CPU for 64-bit targets.
+  if (CPU == "generic" || CPU == "pentium4" || CPU == "x86-64") {
+    size_t posNoEVEX512 = FS.rfind("-evex512");
+    // Make sure we won't be cheated by "-avx512fp16".
+    size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
+                                                  : FS.rfind("-avx512f,");
+    size_t posEVEX512 = FS.rfind("+evex512");
+    // Any AVX512XXX will enable AVX512F.
+    size_t posAVX512F = FS.rfind("+avx512");
 
-  if (posAVX512F != StringRef::npos &&
-      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-      FullFS += ",+evex512";
+    if (posAVX512F != StringRef::npos &&
+        (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
+      if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
+        FullFS += ",+evex512";
+  }
 
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPU, TuneCPU, FullFS);

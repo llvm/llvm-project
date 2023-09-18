@@ -33,7 +33,7 @@ FunctionPass *createWebAssemblyLowerRefTypesIntPtrConv();
 
 // ISel and immediate followup passes.
 FunctionPass *createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                       CodeGenOpt::Level OptLevel);
+                                       CodeGenOptLevel OptLevel);
 FunctionPass *createWebAssemblyArgumentMove();
 FunctionPass *createWebAssemblySetP2AlignOperands();
 

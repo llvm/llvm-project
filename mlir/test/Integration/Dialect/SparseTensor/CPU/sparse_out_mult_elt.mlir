@@ -31,7 +31,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait_mult_elt = {
@@ -48,7 +48,7 @@ module {
   // Sparse kernel.
   func.func @sparse_mult_elt(
       %arga: tensor<32x16xf32, #DCSR>, %argb: tensor<32x16xf32, #DCSR>) -> tensor<32x16xf32, #DCSR> {
-    %argx = bufferization.alloc_tensor() : tensor<32x16xf32, #DCSR>
+    %argx = tensor.empty() : tensor<32x16xf32, #DCSR>
     %0 = linalg.generic #trait_mult_elt
       ins(%arga, %argb: tensor<32x16xf32, #DCSR>, tensor<32x16xf32, #DCSR>)
       outs(%argx: tensor<32x16xf32, #DCSR>) {

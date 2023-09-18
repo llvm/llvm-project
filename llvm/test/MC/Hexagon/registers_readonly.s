@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=obj -mv5 %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=hexagon -filetype=obj -mv5 %s 2>&1 | FileCheck %s
 
 # CHECK: 4:1: error: Cannot write to read-only register `PC'
 pc = r0

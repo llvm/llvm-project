@@ -22,6 +22,8 @@ auto try_add_lvalue_reference(...) -> cpp::type_identity<T>;
 template <class T>
 struct add_lvalue_reference : decltype(detail::try_add_lvalue_reference<T>(0)) {
 };
+template <class T>
+using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
 
 } // namespace __llvm_libc::cpp
 

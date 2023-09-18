@@ -75,10 +75,9 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<
   let summary = "Scale a floating-point matrix.";
 
   let description = [{
-    Result Type must be an OpTypeMatrix whose Column Type is a vector of
-    floating-point type.
+    Result Type must be a matrix type with a float component type.
 
-     The type of Matrix must be the same as Result Type. Each component in
+    The type of Matrix must be the same as Result Type. Each component in
     each column in Matrix is multiplied by Scalar.
 
     Scalar must have the same type as the Component Type in Result Type.

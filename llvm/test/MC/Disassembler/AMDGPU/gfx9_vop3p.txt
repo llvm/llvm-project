@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: v_pk_mad_i16 v5, v1, v2, v3             ; encoding: [0x05,0x40,0x80,0xd3,0x01,0x05,0x0e,0x1c]
 0x05,0x40,0x80,0xd3,0x01,0x05,0x0e,0x1c

@@ -467,7 +467,7 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
 
   // Combine aggressively (for code size)
   ShouldCombineAggressively =
-    MF.getTarget().getOptLevel() <= CodeGenOpt::Default;
+      MF.getTarget().getOptLevel() <= CodeGenOptLevel::Default;
 
   // Disable CONST64 for tiny core since it takes a LD resource.
   if (!OptForSize && ST->isTinyCore())

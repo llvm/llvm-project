@@ -64,8 +64,6 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 
-include(common_libc_tuners.cmake)
-
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
 # Check --print-resource-dir to find the compiler resource dir if this flag
@@ -192,7 +190,17 @@ if(LLVM_LIBC_ENABLE_LINTING)
     if(LLVM_LIBC_CLANG_TIDY)
       # Check clang-tidy major version.
       execute_process(COMMAND ${LLVM_LIBC_CLANG_TIDY} "--version"
-                      OUTPUT_VARIABLE CLANG_TIDY_OUTPUT)
+        OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
+        ERROR_VARIABLE CLANG_TIDY_ERROR
+        RESULT_VARIABLE CLANG_TIDY_RESULT)
+
+      if(CLANG_TIDY_RESULT AND NOT CLANG_TIDY_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to execute '${LLVM_LIBC_CLANG_TIDY} --version'
+          output : '${CLANG_TIDY_OUTPUT}'
+          error  : '${CLANG_TIDY_ERROR}'
+          result : '${CLANG_TIDY_RESULT}'
+          ")
+      endif()
       string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
       string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
         "${CMAKE_CXX_COMPILER_VERSION}")
@@ -288,7 +296,6 @@ endif()
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all
 # of the other directories.
-# TODO: Add testing support for the libc GPU target.
 add_subdirectory(lib)
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

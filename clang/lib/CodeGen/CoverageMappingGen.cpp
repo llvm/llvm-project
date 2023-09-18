@@ -31,6 +31,10 @@
 // is textually included.
 #define COVMAP_V3
 
+namespace llvm {
+extern cl::opt<bool> DebugInfoCorrelate;
+} // namespace llvm
+
 static llvm::cl::opt<bool> EmptyLineCommentCoverage(
     "emptyline-comment-coverage",
     llvm::cl::desc("Emit emptylines and comment lines as skipped regions (only "
@@ -1032,11 +1036,20 @@ struct CounterCoverageMappingBuilder
     // lexer may not be able to report back precise token end locations for
     // these children nodes (llvm.org/PR39822), and moreover users will not be
     // able to see coverage for them.
+    Counter BodyCounter = getRegionCounter(Body);
     bool Defaulted = false;
     if (auto *Method = dyn_cast<CXXMethodDecl>(D))
       Defaulted = Method->isDefaulted();
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
+      for (auto *Initializer : Ctor->inits()) {
+        if (Initializer->isWritten()) {
+          auto *Init = Initializer->getInit();
+          propagateCounts(BodyCounter, Init);
+        }
+      }
+    }
 
-    propagateCounts(getRegionCounter(Body), Body,
+    propagateCounts(BodyCounter, Body,
                     /*VisitChildren=*/!Defaulted);
     assert(RegionStack.empty() && "Regions entered but never exited");
   }
@@ -1820,6 +1833,22 @@ void CoverageMappingModuleGen::emit() {
     new llvm::GlobalVariable(CGM.getModule(), NamesArrTy, true,
                              llvm::GlobalValue::InternalLinkage, NamesArrVal,
                              llvm::getCoverageUnusedNamesVarName());
+  }
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  llvm::Type *IntTy64 = llvm::Type::getInt64Ty(Ctx);
+  uint64_t ProfileVersion = INSTR_PROF_RAW_VERSION;
+  if (llvm::DebugInfoCorrelate)
+    ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
+  auto *VersionVariable = new llvm::GlobalVariable(
+      CGM.getModule(), llvm::Type::getInt64Ty(Ctx), true,
+      llvm::GlobalValue::WeakAnyLinkage,
+      llvm::Constant::getIntegerValue(IntTy64, llvm::APInt(64, ProfileVersion)),
+      VarName);
+  VersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  llvm::Triple TT(CGM.getModule().getTargetTriple());
+  if (TT.supportsCOMDAT()) {
+    VersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    VersionVariable->setComdat(CGM.getModule().getOrInsertComdat(VarName));
   }
 }
 

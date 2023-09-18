@@ -172,11 +172,11 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    je .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %t
 ; CHECK-NEXT:    movq %rdx, %rbx
-; CHECK-NEXT:    movq %rsi, %r15
 ; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    cmpq %rsi, %r14
 ; CHECK-NEXT:    setb %dil
+; CHECK-NEXT:    movq %rsi, %r15
 ; CHECK-NEXT:    callq call@PLT
 ; CHECK-NEXT:    subq %r15, %r14
 ; CHECK-NEXT:    jae .LBB9_2

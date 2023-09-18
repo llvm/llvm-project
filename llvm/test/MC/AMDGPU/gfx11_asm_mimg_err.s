@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=NOGFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=NOGFX11 --implicit-check-not=error: %s
 
 image_sample_d v[64:66], [v32, v16, v8, v4, v2, v1], s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_2D
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.

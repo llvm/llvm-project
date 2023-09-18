@@ -27,6 +27,8 @@ class A
     int data_;
 public:
     A() : data_(1) {}
+    A(const A&) = default;
+    A& operator=(const A&) = default;
     ~A() {data_ = -1;}
 
     friend bool operator==(const A& x, const A& y)

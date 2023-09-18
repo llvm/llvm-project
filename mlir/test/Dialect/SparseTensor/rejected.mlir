@@ -3,7 +3,7 @@
 
 // The file contains examples that will be rejected by sparse compiler
 // (we expect the linalg.generic unchanged).
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 
 #trait = {
   indexing_maps = [ 

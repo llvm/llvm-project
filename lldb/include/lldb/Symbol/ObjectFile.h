@@ -538,6 +538,30 @@ public:
     return false;
   }
 
+  /// Get metadata about threads from the corefile.
+  ///
+  /// The corefile may have metadata (e.g. a Mach-O "thread extrainfo"
+  /// LC_NOTE) which for the threads in the process; this method tries
+  /// to retrieve them.
+  ///
+  /// \param[out] tids
+  ///     Filled in with a vector of tid_t's that matches the number
+  ///     of threads in the corefile (ObjectFile::GetNumThreadContexts).
+  ///     If a tid is not specified for one of the corefile threads,
+  ///     that entry in the vector will have LLDB_INVALID_THREAD_ID and
+  ///     the caller should assign a tid to the thread that does not
+  ///     conflict with the ones provided in this array.
+  ///     As additional metadata are added, this method may return a
+  ///     \a tids vector with no thread id's specified at all; the
+  ///     corefile may only specify one of the other metadata.
+  ///
+  /// \return
+  ///     Returns true if thread metadata was found in this corefile.
+  ///
+  virtual bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) {
+    return false;
+  }
+
   virtual lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) {
     return lldb::RegisterContextSP();

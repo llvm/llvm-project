@@ -85,8 +85,12 @@ func.func private @sparse_sorted_coo(tensor<10x10xf64, #SortedCOO>)
 // -----
 
 #BCSR = #sparse_tensor.encoding<{
-   lvlTypes = [ "compressed", "compressed", "dense", "dense" ],
-   dimToLvl  = affine_map<(i, j) -> (i floordiv 2, j floordiv 3, i mod 2, j mod 3)>
+   map = ( i, j ) ->
+      ( i floordiv 2 : compressed,
+        j floordiv 3 : compressed,
+        i mod 2      : dense,
+        j mod 3      : dense
+      )
 }>
 
 // CHECK-LABEL: func private @sparse_bcsr(

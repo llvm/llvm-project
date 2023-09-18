@@ -1034,6 +1034,7 @@ define i1 @icmp_ne_bool_1(ptr %ptr) {
   ret i1 %cmp
 }
 
+; Tests from PR65073
 define i1 @icmp_ne_zext_eq_zero(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_zext_eq_zero(
 ; CHECK-NEXT:    ret i1 true
@@ -1163,7 +1164,7 @@ define i1 @icmp_eq_zext_ne_non_boolean(i32 %a) {
 }
 
 define <2 x i1> @icmp_ne_zext_eq_zero_vec(<2 x i32> %a) {
-; CHECK-LABEL: @icmp_ne_zext_eq_zero_vec(
+; CHECK-LABEL: @icmp_ne_zext_eq_zero_vec
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>

@@ -438,6 +438,6 @@ public:
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
-#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                                    
+#define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)
 
 #endif

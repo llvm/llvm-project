@@ -41,6 +41,9 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The default extension name for PCH generation (``-c -xc-header`` and ``-c
+  -xc++-header``) is now ``.pch`` instead of ``.gch``.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -164,8 +167,11 @@ Improvements to Clang's diagnostics
   result in string truncation.
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
   Also clang no longer emits false positive warnings about the output length of
-  ``%g`` format specifier.
+  ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
+- Clang no longer emits irrelevant notes about unsatisfied constraint expressions
+  on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
+  (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -215,9 +221,11 @@ Bug Fixes in This Version
 - Support MSVC predefined macro expressions in constant expressions and in
   local structs.
 - Correctly parse non-ascii identifiers that appear immediately after a line splicing
-  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
+  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_)
 - Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
   an invalid conversion during method function overload resolution.
+- Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
+  (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -272,8 +280,16 @@ Bug Fixes to C++ Support
 
 - Fix crash when the trailing return type of a generic and dependent
   lambda refers to an init-capture.
-  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
-  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_ and
+  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_)
+
+- Clang now properly handles out of line template specializations when there is
+  a non-template inner-class between the function and the class template.
+  (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
+
+- Clang now properly converts static lambda call operator to function
+  pointers on win32.
+  (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -377,6 +393,9 @@ Floating Point Support in Clang
   semantics. If ``math-errno`` is disabled in the current TU, clang will
   re-enable ``math-errno`` in the presense of
   ``#pragma float_control(precise,on)``.
+- Add ``__builtin_exp10``, ``__builtin_exp10f``,
+  ``__builtin_exp10f16``, ``__builtin_exp10l`` and
+  ``__builtin_exp10f128`` builtins.
 
 AST Matchers
 ------------
@@ -386,6 +405,7 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``AllowBreakBeforeNoexceptSpecifier`` option.
 
 libclang
 --------

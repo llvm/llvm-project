@@ -172,9 +172,9 @@ enum NodeType : unsigned {
   // mask and VL operand.
   TRUNCATE_VECTOR_VL,
   // Matches the semantics of vslideup/vslidedown. The first operand is the
-  // pass-thru operand, the second is the source vector, the third is the
-  // XLenVT index (either constant or non-constant), the fourth is the mask
-  // and the fifth the VL.
+  // pass-thru operand, the second is the source vector, the third is the XLenVT
+  // index (either constant or non-constant), the fourth is the mask, the fifth
+  // is the VL and the sixth is the policy.
   VSLIDEUP_VL,
   VSLIDEDOWN_VL,
   // Matches the semantics of vslide1up/slide1down. The first operand is
@@ -566,7 +566,8 @@ public:
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
-  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
@@ -605,6 +606,10 @@ public:
     return VT.isScalarInteger();
   }
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
+
+  bool isCtpopFast(EVT VT) const override;
+
+  unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const override;
 
   bool preferZeroCompareBranch() const override { return true; }
 
@@ -747,7 +752,7 @@ public:
                                            const RISCVRegisterInfo *TRI);
   MVT getContainerForFixedLengthVector(MVT VT) const;
 
-  bool shouldRemoveExtendFromGSIndex(EVT IndexVT, EVT DataVT) const override;
+  bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const override;
 
   bool isLegalElementTypeForRVV(EVT ScalarTy) const;
 

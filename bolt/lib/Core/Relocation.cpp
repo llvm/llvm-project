@@ -101,6 +101,7 @@ static bool isSupportedRISCV(uint64_t Type) {
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_PCREL_HI20:
   case ELF::R_RISCV_PCREL_LO12_I:
+  case ELF::R_RISCV_PCREL_LO12_S:
   case ELF::R_RISCV_RVC_JUMP:
   case ELF::R_RISCV_RVC_BRANCH:
   case ELF::R_RISCV_ADD32:
@@ -195,6 +196,7 @@ static size_t getSizeForTypeRISCV(uint64_t Type) {
   case ELF::R_RISCV_BRANCH:
   case ELF::R_RISCV_PCREL_HI20:
   case ELF::R_RISCV_PCREL_LO12_I:
+  case ELF::R_RISCV_PCREL_LO12_S:
   case ELF::R_RISCV_32_PCREL:
   case ELF::R_RISCV_CALL:
   case ELF::R_RISCV_CALL_PLT:
@@ -350,7 +352,7 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
     assert(isInt<28>(Value) && "only PC +/- 128MB is allowed for direct call");
     // Immediate goes in bits 25:0 of BL.
     // OP 1001_01 goes in bits 31:26 of BL.
-    Value = (Value >> 2) | 0x94000000ULL;
+    Value = ((Value >> 2) & 0x3ffffff) | 0x94000000ULL;
     break;
   }
   return Value;
@@ -480,6 +482,10 @@ static uint64_t extractIImmRISCV(uint32_t Contents) {
   return SignExtend64<12>(Contents >> 20);
 }
 
+static uint64_t extractSImmRISCV(uint32_t Contents) {
+  return SignExtend64<12>(((Contents >> 7) & 0x1f) | ((Contents >> 25) << 5));
+}
+
 static uint64_t extractJImmRISCV(uint32_t Contents) {
   return SignExtend64<21>(
       (((Contents >> 21) & 0x3ff) << 1) | (((Contents >> 20) & 0x1) << 11) |
@@ -516,6 +522,8 @@ static uint64_t extractValueRISCV(uint64_t Type, uint64_t Contents,
     return extractUImmRISCV(Contents);
   case ELF::R_RISCV_PCREL_LO12_I:
     return extractIImmRISCV(Contents);
+  case ELF::R_RISCV_PCREL_LO12_S:
+    return extractSImmRISCV(Contents);
   case ELF::R_RISCV_RVC_JUMP:
     return SignExtend64<11>(Contents >> 2);
   case ELF::R_RISCV_RVC_BRANCH:
@@ -692,6 +700,7 @@ static bool isPCRelativeRISCV(uint64_t Type) {
   case ELF::R_RISCV_GOT_HI20:
   case ELF::R_RISCV_PCREL_HI20:
   case ELF::R_RISCV_PCREL_LO12_I:
+  case ELF::R_RISCV_PCREL_LO12_S:
   case ELF::R_RISCV_RVC_JUMP:
   case ELF::R_RISCV_RVC_BRANCH:
   case ELF::R_RISCV_32_PCREL:

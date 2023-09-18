@@ -35,11 +35,16 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotr(_Tp __t, int __cn
   return (__t >> (__cnt % __dig)) | (__t << (__dig - (__cnt % __dig)));
 }
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __rotl(_Tp __t, int __cnt) _NOEXCEPT {
+  return std::__rotr(__t, -__cnt);
+}
+
 #if _LIBCPP_STD_VER >= 20
 
 template <__libcpp_unsigned_integer _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp rotl(_Tp __t, int __cnt) noexcept {
-  return std::__rotr(__t, -__cnt);
+  return std::__rotl(__t, __cnt);
 }
 
 template <__libcpp_unsigned_integer _Tp>

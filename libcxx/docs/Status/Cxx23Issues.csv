@@ -190,7 +190,7 @@
 "`3118 <https://wg21.link/LWG3118>`__","``fpos`` equality comparison unspecified", "November 2022","","",""
 "`3177 <https://wg21.link/LWG3177>`__","Limit permission to specialize variable templates to program-defined types", "November 2022","|Nothing to do|","",""
 "`3515 <https://wg21.link/LWG3515>`__","§[stacktrace.basic.nonmem]: ``operator<<`` should be less templatized", "November 2022","","",""
-"`3545 <https://wg21.link/LWG3545>`__","``std::pointer_traits`` should be SFINAE-friendly", "November 2022","","",""
+"`3545 <https://wg21.link/LWG3545>`__","``std::pointer_traits`` should be SFINAE-friendly", "November 2022","|Complete|","18.0",""
 "`3569 <https://wg21.link/LWG3569>`__","``join_view`` fails to support ranges of ranges with non-default_initializable iterators", "November 2022","","","|ranges|"
 "`3594 <https://wg21.link/LWG3594>`__","``inout_ptr`` — inconsistent ``release()`` in destructor", "November 2022","","",""
 "`3597 <https://wg21.link/LWG3597>`__","Unsigned integer types don't model advanceable", "November 2022","","","|ranges|"

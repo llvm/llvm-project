@@ -457,6 +457,11 @@ static const u8 kPrologueWithShortJump2[] = {
 
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
+#if SANITIZER_ARM64
+  // An ARM64 instruction is 4 bytes long.
+  return 4;
+#endif
+
 #if SANITIZER_WINDOWS64
   if (memcmp((u8*)address, kPrologueWithShortJump1,
              sizeof(kPrologueWithShortJump1)) == 0 ||
