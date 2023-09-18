@@ -140,3 +140,10 @@ func.func @genx.matrix.init(%mat : !genx.jointmatrix<8x32xi32, RowMajor>, %val :
   genx.matrix.init <Subgroup> %mat, %val : (!genx.jointmatrix<8x32xi32, RowMajor>, i32)
   llvm.return  
 }
+
+func.func @genx.matrix.copy(%src: !genx.jointmatrix<8x32xi32, RowMajor>) {
+  // CHECK-LABEL: genx.matrix.copy
+  // CHECK: %0 = genx.matrix.copy <Subgroup>  %arg0 : (!genx.jointmatrix<8x32xi32, RowMajor>) -> !genx.jointmatrix<8x32xf32, RowMajor>
+  %0 = genx.matrix.copy <Subgroup> %src : (!genx.jointmatrix<8x32xi32, RowMajor>) -> !genx.jointmatrix<8x32xf32, RowMajor>
+  llvm.return  
+}

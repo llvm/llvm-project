@@ -130,3 +130,25 @@ LogicalResult GENX::MatrixInitOp::verify() {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// genx.matrix.copy
+//===----------------------------------------------------------------------===//
+
+LogicalResult GENX::MatrixCopyOp::verify() {
+  // The scope attribute must be 'Subgroup' currently.
+  if (getScope() != GENX::Scope::Subgroup)
+    return this->emitOpError("scope attribute must have value 'Subgroup'");
+
+  auto resType = getResult().getType().cast<GENX::JointMatrixType>();
+  auto srcType = getSrc().getType().cast<GENX::JointMatrixType>();
+
+  if ((resType.getNumRows() != srcType.getNumRows()) ||
+      (resType.getNumColumns() != srcType.getNumColumns()))
+    return this->emitOpError("result shape must match source shape");
+
+  if (resType.getMatrixLayout() != srcType.getMatrixLayout())
+    return this->emitOpError("result layout must match source layout");
+
+  return success();
+}
