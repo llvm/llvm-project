@@ -28,6 +28,11 @@ struct TestProperties {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestProperties)
 };
 
+bool operator==(const TestProperties &lhs, TestProperties &rhs) {
+  return lhs.a == rhs.a && lhs.b == rhs.b && lhs.array == rhs.array &&
+         lhs.label == rhs.label;
+}
+
 /// Convert a DictionaryAttr to a TestProperties struct, optionally emit errors
 /// through the provided diagnostic if any. This is used for example during
 /// parsing with the generic format.

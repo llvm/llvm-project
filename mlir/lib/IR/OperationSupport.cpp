@@ -768,7 +768,8 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
       lhs->getNumResults() != rhs->getNumResults() ||
-      lhs->hashProperties() != rhs->hashProperties())
+      !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                        rhs->getPropertiesStorage()))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;
