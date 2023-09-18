@@ -156,8 +156,6 @@ bool RISCVInitUndef::handleReg(MachineInstr *MI) {
       continue;
     if (!isVectorRegClass(UseMO.getReg()))
       continue;
-    if (UseMO.getReg() == 0)
-      continue;
 
     if (UseMO.isUndef() || findImplictDefMIFromReg(UseMO.getReg(), MRI))
       Changed |= fixupIllOperand(MI, UseMO);
