@@ -1446,6 +1446,55 @@ TEST(TransferTest, BaseClassInitializer) {
       llvm::Succeeded());
 }
 
+TEST(TransferTest, StructModeledFieldsWithAccessor) {
+  std::string Code = R"(
+    class S {
+      int *Ptr;
+      int *PtrNonConst;
+      int Int;
+      int IntWithInc;
+      int IntNotAccessed;
+      int IntRef;
+    public:
+      int *getPtr() const { return Ptr; }
+      int *getPtrNonConst() { return PtrNonConst; }
+      int getInt(int i) const { return Int; }
+      int getWithInc(int i) { IntWithInc += i; return IntWithInc; }
+      int getIntNotAccessed() const { return IntNotAccessed; }
+      int getIntNoDefinition() const;
+      int &getIntRef() { return IntRef; }
+    };
+
+    void target() {
+      S s;
+      int *p1 = s.getPtr();
+      int *p2 = s.getPtrNonConst();
+      int i1 = s.getInt(1);
+      int i2 = s.getWithInc(1);
+      int i3 = s.getIntNoDefinition();
+      int &iref = s.getIntRef();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env =
+              getEnvironmentAtAnnotation(Results, "p");
+        auto &SLoc = getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s");
+        std::vector<const ValueDecl*> Fields;
+        for (auto [Field, _] : SLoc.children())
+          Fields.push_back(Field);
+        // Only the fields that have simple accessor methods (that have a
+        // single statement body that returns the member variable) should be
+        // modeled.
+        ASSERT_THAT(Fields, UnorderedElementsAre(
+            findValueDecl(ASTCtx, "Ptr"), findValueDecl(ASTCtx, "PtrNonConst"),
+            findValueDecl(ASTCtx, "Int"), findValueDecl(ASTCtx, "IntRef")));
+      });
+}
+
 TEST(TransferTest, StructModeledFieldsWithComplicatedInheritance) {
   std::string Code = R"(
     struct Base1 {
