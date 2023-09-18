@@ -20,7 +20,7 @@ namespace fir {
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
-class AliasAnalysis {
+struct AliasAnalysis {
   // Structures to describe the memory source of a value.
 
   /// Kind of the memory source referenced by a value.
@@ -81,7 +81,6 @@ class AliasAnalysis {
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                        const AliasAnalysis::Source &op);
 
-public:
   /// Given two values, return their aliasing behavior.
   mlir::AliasResult alias(mlir::Value lhs, mlir::Value rhs);
 
