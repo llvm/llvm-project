@@ -2058,6 +2058,9 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-subtarget", "lib/Target/RISCV/RISCVGenSubtargetInfo.inc"),
             ("-gen-searchable-tables", "lib/Target/RISCV/RISCVGenSearchableTables.inc"),
         ],
+        "tbl_deps": [
+            ":riscv_isel_target_gen",
+        ],
     },
     {
         "name": "VE",
@@ -2180,6 +2183,22 @@ gentbl(
         ":common_target_td_sources",
     ] + glob([
         "lib/Target/AMDGPU/*.td",
+    ]),
+)
+
+gentbl(
+    name = "riscv_isel_target_gen",
+    strip_include_prefix = "lib/Target/RISCV",
+    tbl_outs = [
+      ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
+      ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
+    ],
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/RISCV/RISCVGISel.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/RISCV/**/*.td",
     ]),
 )
 
