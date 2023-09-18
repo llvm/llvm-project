@@ -301,6 +301,10 @@ Bug Fixes to C++ Support
   makes an invalid call to an immediate function.
   (`#66324 <https://github.com/llvm/llvm-project/issues/66324>`_)
 
+- Fix crash for a lambda attribute with a statement expression
+  that contains a `return`.
+  (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
