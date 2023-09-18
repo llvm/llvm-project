@@ -517,6 +517,11 @@ void MutableOperandRange::updateLength(unsigned newLength) {
   }
 }
 
+OpOperand &MutableOperandRange::operator[](unsigned index) const {
+  assert(index < length && "index is out of bounds");
+  return owner->getOpOperand(start + index);
+}
+
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
 
