@@ -37,6 +37,9 @@ struct PickAlignment {
  enum { value = alignment == 0 ? alignof(T) : alignment };
 };
 
+template <class T>
+void __never_used(T) { }
+
 } // end namespace detail
 
 namespace endian {
