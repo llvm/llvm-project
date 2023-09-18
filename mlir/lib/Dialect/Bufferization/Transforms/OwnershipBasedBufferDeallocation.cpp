@@ -48,89 +48,6 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
 static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
 
 //===----------------------------------------------------------------------===//
-// Backedges analysis
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-/// A straight-forward program analysis which detects loop backedges induced by
-/// explicit control flow.
-class Backedges {
-public:
-  using BlockSetT = SmallPtrSet<Block *, 16>;
-  using BackedgeSetT = llvm::DenseSet<std::pair<Block *, Block *>>;
-
-public:
-  /// Constructs a new backedges analysis using the op provided.
-  Backedges(Operation *op) { recurse(op); }
-
-  /// Returns the number of backedges formed by explicit control flow.
-  size_t size() const { return edgeSet.size(); }
-
-  /// Returns the start iterator to loop over all backedges.
-  BackedgeSetT::const_iterator begin() const { return edgeSet.begin(); }
-
-  /// Returns the end iterator to loop over all backedges.
-  BackedgeSetT::const_iterator end() const { return edgeSet.end(); }
-
-private:
-  /// Enters the current block and inserts a backedge into the `edgeSet` if we
-  /// have already visited the current block. The inserted edge links the given
-  /// `predecessor` with the `current` block.
-  bool enter(Block &current, Block *predecessor) {
-    bool inserted = visited.insert(&current).second;
-    if (!inserted)
-      edgeSet.insert(std::make_pair(predecessor, &current));
-    return inserted;
-  }
-
-  /// Leaves the current block.
-  void exit(Block &current) { visited.erase(&current); }
-
-  /// Recurses into the given operation while taking all attached regions into
-  /// account.
-  void recurse(Operation *op) {
-    Block *current = op->getBlock();
-    // If the current op implements the `BranchOpInterface`, there can be
-    // cycles in the scope of all successor blocks.
-    if (isa<BranchOpInterface>(op)) {
-      for (Block *succ : current->getSuccessors())
-        recurse(*succ, current);
-    }
-    // Recurse into all distinct regions and check for explicit control-flow
-    // loops.
-    for (Region &region : op->getRegions()) {
-      if (!region.empty())
-        recurse(region.front(), current);
-    }
-  }
-
-  /// Recurses into explicit control-flow structures that are given by
-  /// the successor relation defined on the block level.
-  void recurse(Block &block, Block *predecessor) {
-    // Try to enter the current block. If this is not possible, we are
-    // currently processing this block and can safely return here.
-    if (!enter(block, predecessor))
-      return;
-
-    // Recurse into all operations and successor blocks.
-    for (Operation &op : block.getOperations())
-      recurse(&op);
-
-    // Leave the current block.
-    exit(block);
-  }
-
-  /// Stores all blocks that are currently visited and on the processing stack.
-  BlockSetT visited;
-
-  /// Stores all backedges in the format (source, target).
-  BackedgeSetT edgeSet;
-};
-
-} // namespace
-
-//===----------------------------------------------------------------------===//
 // BufferDeallocation
 //===----------------------------------------------------------------------===//
 
@@ -393,12 +310,6 @@ private:
   FailureOr<std::pair<Value, Value>>
   materializeUniqueOwnership(OpBuilder &builder, Value memref, Block *block);
 
-  /// Checks all the preconditions for operations implementing the
-  /// FunctionOpInterface that have to hold for the deallocation to be
-  /// applicable:
-  /// (1) Checks that there are not explicit control flow loops.
-  static LogicalResult verifyFunctionPreconditions(FunctionOpInterface op);
-
   /// Checks all the preconditions for operations inside the region of
   /// operations implementing the FunctionOpInterface that have to hold for the
   /// deallocation to be applicable:
@@ -473,19 +384,6 @@ static bool regionOperatesOnMemrefValues(Region &region) {
     return WalkResult::advance();
   });
   return result.wasInterrupted();
-}
-
-LogicalResult
-BufferDeallocation::verifyFunctionPreconditions(FunctionOpInterface op) {
-  // (1) Ensure that there are supported loops only (no explicit control flow
-  // loops).
-  Backedges backedges(op);
-  if (backedges.size()) {
-    op->emitError("Only structured control-flow loops are supported.");
-    return failure();
-  }
-
-  return success();
 }
 
 LogicalResult BufferDeallocation::verifyOperationPreconditions(Operation *op) {
@@ -570,10 +468,6 @@ BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
 }
 
 LogicalResult BufferDeallocation::deallocate(FunctionOpInterface op) {
-  // Stop and emit a proper error message if we don't support the input IR.
-  if (failed(verifyFunctionPreconditions(op)))
-    return failure();
-
   // Process the function block by block.
   auto result = op->walk<WalkOrder::PostOrder, ForwardDominanceIterator<>>(
       [&](Block *block) {
