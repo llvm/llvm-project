@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ModRef.h"
@@ -371,6 +372,52 @@ static bool runIPSCCP(
       StoreInst *SI = cast<StoreInst>(GV->user_back());
       SI->eraseFromParent();
     }
+
+    // Try to create a debug constant expression for the glbal variable
+    // initializer value.
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV->getDebugInfo(GVEs);
+    if (GVEs.size() == 1) {
+      DIBuilder DIB(M);
+
+      // Create integer constant expression.
+      auto createIntExpression = [&DIB](const Constant *CV) -> DIExpression * {
+        const APInt &API = dyn_cast<ConstantInt>(CV)->getValue();
+        std::optional<uint64_t> InitIntOpt;
+        if (API.isNonNegative())
+          InitIntOpt = API.tryZExtValue();
+        else if (auto Temp = API.trySExtValue(); Temp.has_value())
+          // Transform a signed optional to unsigned optional.
+          InitIntOpt = (uint64_t)Temp.value();
+        return DIB.createConstantValueExpression(InitIntOpt.value());
+      };
+
+      const Constant *CV = GV->getInitializer();
+      Type *Ty = GV->getValueType();
+      if (Ty->isIntegerTy()) {
+        GVEs[0]->replaceOperandWith(1, createIntExpression(CV));
+      } else if (Ty->isFloatTy() || Ty->isDoubleTy()) {
+        const APFloat &APF = dyn_cast<ConstantFP>(CV)->getValueAPF();
+        DIExpression *NewExpr = DIB.createConstantValueExpression(
+            APF.bitcastToAPInt().getZExtValue());
+        GVEs[0]->replaceOperandWith(1, NewExpr);
+      } else if (Ty->isPointerTy()) {
+        if (isa<ConstantPointerNull>(CV)) {
+          GVEs[0]->replaceOperandWith(1, DIB.createConstantValueExpression(0));
+        } else {
+          if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(CV)) {
+            if (CE->getNumOperands() == 1) {
+              const Value *V = CE->getOperand(0);
+              const Constant *CV = dyn_cast<Constant>(V);
+              if (CV && !isa<GlobalValue>(CV))
+                if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
+                  GVEs[0]->replaceOperandWith(1, createIntExpression(CI));
+            }
+          }
+        }
+      }
+    }
+
     MadeChanges = true;
     M.eraseGlobalVariable(GV);
     ++NumGlobalConst;
