@@ -169,6 +169,9 @@ Improvements to Clang's diagnostics
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
+- Clang no longer emits irrelevant notes about unsatisfied constraint expressions
+  on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
+  (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 
 Bug Fixes in This Version
 -------------------------
