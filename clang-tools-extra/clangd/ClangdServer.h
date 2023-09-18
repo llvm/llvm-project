@@ -292,6 +292,10 @@ public:
   void incomingCalls(const CallHierarchyItem &Item,
                      Callback<std::vector<CallHierarchyIncomingCall>>);
 
+  /// Resolve outgoing calls for a given call hierarchy item.
+  void outgoingCalls(const CallHierarchyItem &Item,
+                     Callback<std::vector<CallHierarchyOutgoingCall>>);
+
   /// Resolve inlay hints for a given document.
   void inlayHints(PathRef File, std::optional<Range> RestrictRange,
                   Callback<std::vector<InlayHint>>);

@@ -147,6 +147,11 @@ void Dex::buildIndex() {
   for (DocID SymbolRank = 0; SymbolRank < Symbols.size(); ++SymbolRank)
     Builder.add(*Symbols[SymbolRank], SymbolRank);
   InvertedIndex = std::move(Builder).build();
+
+  // Build RevRefs
+  for (const auto &Pair : Refs)
+    for (const auto &R : Pair.second)
+      RevRefs[R.Container].emplace_back(R, Pair.first);
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
@@ -314,6 +319,23 @@ bool Dex::refs(const RefsRequest &Req,
   return false; // We reported all refs.
 }
 
+bool Dex::refersTo(
+    const RefsRequest &Req,
+    llvm::function_ref<void(const RefersToResult &)> Callback) const {
+  trace::Span Tracer("Dex reversed refs");
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  for (const auto &ID : Req.IDs)
+    for (const auto &Rev : RevRefs.lookup(ID)) {
+      if (!static_cast<int>(Req.Filter & Rev.ref().Kind))
+        continue;
+      if (Remaining == 0)
+        return true; // More refs were available.
+      --Remaining;
+      Callback(Rev.refersToResult());
+    }
+  return false; // We reported all refs.
+}
+
 void Dex::relations(
     const RelationsRequest &Req,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
@@ -350,6 +372,9 @@ size_t Dex::estimateMemoryUsage() const {
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
   Bytes += Refs.getMemorySize();
+  Bytes += RevRefs.getMemorySize();
+  for (const auto &Entry : RevRefs)
+    Bytes += Entry.second.size() * sizeof(Entry.second.front());
   Bytes += Relations.getMemorySize();
   return Bytes + BackingDataSize;
 }

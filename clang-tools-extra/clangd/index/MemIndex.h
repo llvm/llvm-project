@@ -72,6 +72,10 @@ public:
   bool refs(const RefsRequest &Req,
             llvm::function_ref<void(const Ref &)> Callback) const override;
 
+  bool refersTo(
+      const RefsRequest &Req,
+      llvm::function_ref<void(const RefersToResult &)> Callback) const override;
+
   void relations(const RelationsRequest &Req,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>
                      Callback) const override;
