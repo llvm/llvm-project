@@ -256,6 +256,7 @@ BitCastBitsEnumerator::BitCastBitsEnumerator(VectorType sourceVectorType,
   LDBG("targetVectorType: " << targetVectorType);
 
   int64_t bitwidth = targetBitWidth * mostMinorTargetDim;
+  (void) mostMinorSourceDim;
   assert(bitwidth == sourceBitWidth * mostMinorSourceDim &&
          "source and target bitwidths must match");
 
