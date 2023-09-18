@@ -6400,9 +6400,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
             Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
                                        : ICmpInst::ICMP_ULT,
             X,
-            Constant::getIntegerValue(
-                X->getType(), APInt(X->getType()->getScalarSizeInBits(),
-                                    Pred1 == ICmpInst::ICMP_NE ? 1 : 2)));
+            ConstantInt::get(X->getType(), Pred1 == ICmpInst::ICMP_NE ? 1 : 2));
       }
     } else if (C->isOne()) {
       if (Pred2 == ICmpInst::ICMP_NE) {
@@ -6418,9 +6416,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
             Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
                                        : ICmpInst::ICMP_ULT,
             X,
-            Constant::getIntegerValue(
-                X->getType(), APInt(X->getType()->getScalarSizeInBits(),
-                                    Pred1 == ICmpInst::ICMP_NE ? 1 : 2)));
+            ConstantInt::get(X->getType(), Pred1 == ICmpInst::ICMP_NE ? 1 : 2));
       }
     } else {
       // C != 0 && C != 1
@@ -6430,10 +6426,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
       // icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, 1
       return ICmpInst::Create(
           Instruction::ICmp, Pred1, X,
-          Constant::getIntegerValue(
-              X->getType(),
-              APInt(X->getType()->getScalarSizeInBits(),
-                    static_cast<uint64_t>(Pred2 == ICmpInst::ICMP_NE))));
+          ConstantInt::get(X->getType(), Pred2 == ICmpInst::ICMP_NE ? 1 : 0));
     }
   }
 
