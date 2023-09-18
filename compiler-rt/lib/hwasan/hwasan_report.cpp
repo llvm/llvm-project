@@ -390,21 +390,8 @@ class BaseReport {
     if (MemIsShadow(untagged_addr))
       return;
 
-    HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
-    heap.begin = chunk.Beg();
-    if (heap.begin) {
-      heap.size = chunk.ActualSize();
-      heap.from_small_heap = chunk.FromSmallHeap();
-      heap.is_allocated = chunk.IsAllocated();
-    }
-
-    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-      if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
-          t->AddrIsInStack(untagged_addr)) {
-        stack_allocations[stack_allocations_count++].CopyFrom(t);
-      }
-    });
-
+    CopyHeapChunk();
+    CopyStackAllocations();
     candidate = FindBufferOverflowCandidate();
   }
 
@@ -423,6 +410,8 @@ class BaseReport {
     } heap;
   };
 
+  void CopyHeapChunk();
+  void CopyStackAllocations();
   OverflowCandidate FindBufferOverflowCandidate() const;
   void PrintAddressDescription() const;
   void PrintHeapOrGlobalCandidate() const;
@@ -446,6 +435,25 @@ class BaseReport {
 
   OverflowCandidate candidate;
 };
+
+void BaseReport::CopyHeapChunk() {
+  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
+  heap.begin = chunk.Beg();
+  if (heap.begin) {
+    heap.size = chunk.ActualSize();
+    heap.from_small_heap = chunk.FromSmallHeap();
+    heap.is_allocated = chunk.IsAllocated();
+  }
+}
+
+void BaseReport::CopyStackAllocations() {
+  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+    if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
+        t->AddrIsInStack(untagged_addr)) {
+      stack_allocations[stack_allocations_count++].CopyFrom(t);
+    }
+  });
+}
 
 BaseReport::OverflowCandidate BaseReport::FindBufferOverflowCandidate() const {
   // Check if this looks like a heap buffer overflow by scanning
