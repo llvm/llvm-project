@@ -358,7 +358,7 @@ Error CoverageMapping::loadFromFile(
   MemoryBufferRef CovMappingBufRef =
       CovMappingBufOrErr.get()->getMemBufferRef();
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
-  InstrProfSymtab& ProfSymTab = ProfileReader.getSymtab();
+  InstrProfSymtab &ProfSymTab = ProfileReader.getSymtab();
 
   SmallVector<object::BuildIDRef> BinaryIDs;
   auto CoverageReadersOrErr = BinaryCoverageReader::create(

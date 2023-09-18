@@ -209,6 +209,11 @@ protected:
                                               FileType Type,
                                               bool AddArch) const;
 
+  /// Find the target-specific subdirectory for the current target triple under
+  /// \p BaseDir, doing fallback triple searches as necessary.
+  /// \return The subdirectory path if it exists.
+  std::optional<std::string> getTargetSubDirPath(StringRef BaseDir) const;
+
   /// \name Utilities for implementing subclasses.
   ///@{
   static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
@@ -504,8 +509,8 @@ public:
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 
-  // Returns target specific standard library paths.
-  path_list getStdlibPaths() const;
+  // Returns target specific standard library path if it exists.
+  std::optional<std::string> getStdlibPath() const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch> or <ResourceDir>/lib/<triple>.
   // This is used by runtimes (such as OpenMP) to find arch-specific libraries.

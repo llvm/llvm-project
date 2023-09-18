@@ -1038,7 +1038,7 @@ static Error getProfileNamesFromDebugInfo(StringRef FileName,
 
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
-                 InstrProfSymtab ProfSymTab, StringRef CompilationDir = "",
+                 InstrProfSymtab &ProfSymTab, StringRef CompilationDir = "",
                  object::BuildIDRef *BinaryID = nullptr) {
   std::unique_ptr<ObjectFile> OF;
   if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
@@ -1176,7 +1176,7 @@ Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
     MemoryBufferRef ObjectBuffer, StringRef Arch,
     SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-    InstrProfSymtab ProfSymTab, StringRef CompilationDir,
+    InstrProfSymtab &ProfSymTab, StringRef CompilationDir,
     SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
 

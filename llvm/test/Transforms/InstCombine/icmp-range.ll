@@ -1268,8 +1268,8 @@ define i1 @icmp_eq_sext_ne_zero(i32 %a) {
   ret i1 %cmp1
 }
 
-define i1 @icmp_ne_sext_eq_allone(i32 %a) {
-; CHECK-LABEL: @icmp_ne_sext_eq_allone(
+define i1 @icmp_ne_sext_eq_allones(i32 %a) {
+; CHECK-LABEL: @icmp_ne_sext_eq_allones(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
@@ -1281,8 +1281,8 @@ define i1 @icmp_ne_sext_eq_allone(i32 %a) {
   ret i1 %cmp1
 }
 
-define i1 @icmp_ne_sext_ne_allone(i32 %a) {
-; CHECK-LABEL: @icmp_ne_sext_ne_allone(
+define i1 @icmp_ne_sext_ne_allones(i32 %a) {
+; CHECK-LABEL: @icmp_ne_sext_ne_allones(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
@@ -1294,8 +1294,8 @@ define i1 @icmp_ne_sext_ne_allone(i32 %a) {
   ret i1 %cmp1
 }
 
-define i1 @icmp_eq_sext_eq_allone(i32 %a) {
-; CHECK-LABEL: @icmp_eq_sext_eq_allone(
+define i1 @icmp_eq_sext_eq_allones(i32 %a) {
+; CHECK-LABEL: @icmp_eq_sext_eq_allones(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
@@ -1307,8 +1307,8 @@ define i1 @icmp_eq_sext_eq_allone(i32 %a) {
   ret i1 %cmp1
 }
 
-define i1 @icmp_eq_sext_ne_allone(i32 %a) {
-; CHECK-LABEL: @icmp_eq_sext_ne_allone(
+define i1 @icmp_eq_sext_ne_allones(i32 %a) {
+; CHECK-LABEL: @icmp_eq_sext_ne_allones(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
@@ -1398,8 +1398,8 @@ define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
   ret <2 x i1> %cmp1
 }
 
-define <2 x i1> @icmp_ne_sext_eq_allone_vec(<2 x i32> %a) {
-; CHECK-LABEL: @icmp_ne_sext_eq_allone_vec(
+define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
+; CHECK-LABEL: @icmp_ne_sext_eq_allones_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
@@ -1411,8 +1411,8 @@ define <2 x i1> @icmp_ne_sext_eq_allone_vec(<2 x i32> %a) {
   ret <2 x i1> %cmp1
 }
 
-define <2 x i1> @icmp_ne_sext_ne_allone_vec(<2 x i32> %a) {
-; CHECK-LABEL: @icmp_ne_sext_ne_allone_vec(
+define <2 x i1> @icmp_ne_sext_ne_allones_vec(<2 x i32> %a) {
+; CHECK-LABEL: @icmp_ne_sext_ne_allones_vec(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
