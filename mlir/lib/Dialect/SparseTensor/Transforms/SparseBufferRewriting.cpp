@@ -584,8 +584,7 @@ static void createChoosePivot(OpBuilder &builder, ModuleOp module,
 //       }
 //     }
 //   }
-//   return p
-//   }
+// }
 static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
                                 func::FuncOp func, uint64_t nx, uint64_t ny,
                                 bool isCoo, uint32_t nTrailingP = 0) {
@@ -608,10 +607,10 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   Value i = lo;
   Value j = builder.create<arith::SubIOp>(loc, hi, c1);
   createChoosePivot(builder, module, func, nx, ny, isCoo, i, j, p, args);
-  Value cont = constantI1(builder, loc, true);   // The value for while (true)
-  SmallVector<Value, 4> operands{i, j, p, cont}; // Exactly four values.
+  Value trueVal = constantI1(builder, loc, true); // The value for while (true)
+  SmallVector<Value, 4> operands{i, j, p, trueVal}; // Exactly four values.
   SmallVector<Type, 4> types{i.getType(), j.getType(), p.getType(),
-                             cont.getType()};
+                             trueVal.getType()};
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
 
   // The before-region of the WhileOp.
