@@ -14251,14 +14251,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = performCONCAT_VECTORSCombine(N, DAG, Subtarget, *this))
       return V;
     break;
+  case RISCVISD::VSLIDEUP_VL:
   case RISCVISD::VSLIDEDOWN_VL: {
     MVT OrigVT = N->getSimpleValueType(0);
     auto *CVL = dyn_cast<ConstantSDNode>(N->getOperand(4));
-    auto *CIdx = dyn_cast<ConstantSDNode>(N->getOperand(2));
-    if (!CVL || !CIdx)
+    if (!CVL)
       break;
-    unsigned MaxIdx = CVL->getZExtValue() + CIdx->getZExtValue() - 1;
-    // We can try and reduce the LMUL that a vslidedown uses if we know where
+
+    // The maximum index read or written is VL - 1 for vslideup, and VL + offset
+    // - 1 for vslidedown.
+    unsigned MaxIdx = CVL->getZExtValue() - 1;
+    if (N->getOpcode() == RISCVISD::VSLIDEDOWN_VL) {
+      auto *COffset = dyn_cast<ConstantSDNode>(N->getOperand(2));
+      if (!COffset)
+        break;
+      MaxIdx += COffset->getZExtValue();
+    }
+
+    // We can try and reduce the LMUL that a vslide* uses if we know where
     // the maximum index is. For example, if the target has Zvl128b, a
     // vslidedown of e32 with with an offset of 4 and VL of 2 is only going to
     // read from the first 2 registers at most. So if we were operating at
@@ -14280,7 +14290,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           DAG.getNode(RISCVISD::VMSET_VL, SDLoc(N), getMaskTypeFor(*ShrunkVT),
                       N->getOperand(4));
       SDValue ShrunkSlidedown =
-          DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, *ShrunkVT,
+          DAG.getNode(N->getOpcode(), DL, *ShrunkVT,
                       {ShrunkPassthru, ShrunkInVec, N->getOperand(2),
                        ShrunkMask, N->getOperand(4), N->getOperand(5)});
       return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigVT, N->getOperand(0),
