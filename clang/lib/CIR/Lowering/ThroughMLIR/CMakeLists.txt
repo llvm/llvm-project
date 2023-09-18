@@ -12,6 +12,10 @@ add_clang_library(clangCIRLoweringThroughMLIR
   DEPENDS
   MLIRCIROpsIncGen
   MLIRCIREnumsGen
+  MLIRCIRASTAttrInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
+  MLIRFunctionInterfacesIncGen
 
   LINK_LIBS
   clangAST

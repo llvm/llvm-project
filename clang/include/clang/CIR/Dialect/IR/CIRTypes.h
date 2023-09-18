@@ -17,15 +17,11 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
+
 //===----------------------------------------------------------------------===//
 // CIR Dialect Types
 //===----------------------------------------------------------------------===//
-
-namespace mlir {
-namespace cir {
-class ASTRecordDeclAttr;
-} // namespace cir
-} // namespace mlir
 
 #define GET_TYPEDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsTypes.h.inc"

@@ -488,7 +488,7 @@ module {
 
 // -----
 !s8i = !cir.int<s, 8>
-!ty_22Init22 = !cir.struct<class "Init" {!s8i} #cir.recdecl.ast>
+!ty_22Init22 = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
 module {
   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
   }
@@ -498,7 +498,7 @@ module {
 // -----
 !s8i = !cir.int<s, 8>
 #true = #cir.bool<true> : !cir.bool
-!ty_22Init22 = !cir.struct<class "Init" {!s8i} #cir.recdecl.ast>
+!ty_22Init22 = !cir.struct<class "Init" {!s8i} #cir.record.decl.ast>
 module {
   cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22Init22>)
   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {

@@ -23,6 +23,7 @@ if(CLANG_ENABLE_CIR)
     )
   list(APPEND deps
     MLIRBuiltinLocationAttributesIncGen
+    MLIRBuiltinTypeInterfacesIncGen
     )
 
   include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)

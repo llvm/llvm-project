@@ -13,7 +13,9 @@ add_clang_library(MLIRCIRTransforms
 
   MLIRAnalysis
   MLIRIR
-  MLIRCIR
   MLIRPass
   MLIRTransformUtils
+
+  MLIRCIR
+  MLIRCIRASTAttrInterfaces
 )

@@ -195,7 +195,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
 
 CIRGenModule::~CIRGenModule() {}
 
-bool CIRGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor, bool ExcludeDtor) {
+bool CIRGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor,
+                                  bool ExcludeDtor) {
   if (!Ty.isConstant(astCtx) && !Ty->isReferenceType())
     return false;
 
@@ -712,7 +713,7 @@ CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *D, mlir::Type Ty,
   return builder.getGlobalViewAttr(builder.getPointerTo(Ty), globalOp);
 }
 
-mlir::Operation* CIRGenModule::getWeakRefReference(const ValueDecl *VD) {
+mlir::Operation *CIRGenModule::getWeakRefReference(const ValueDecl *VD) {
   const AliasAttr *AA = VD->getAttr<AliasAttr>();
   assert(AA && "No alias?");
 
@@ -727,8 +728,8 @@ mlir::Operation* CIRGenModule::getWeakRefReference(const ValueDecl *VD) {
   mlir::Type DeclTy = getTypes().convertTypeForMem(VD->getType());
   if (DeclTy.isa<mlir::cir::FuncType>()) {
     auto F = GetOrCreateCIRFunction(AA->getAliasee(), DeclTy,
-                                          GlobalDecl(cast<FunctionDecl>(VD)),
-                                          /*ForVtable=*/false);
+                                    GlobalDecl(cast<FunctionDecl>(VD)),
+                                    /*ForVtable=*/false);
     F.setLinkage(mlir::cir::GlobalLinkageKind::ExternalWeakLinkage);
     WeakRefReferences.insert(F);
     return F;
@@ -1806,7 +1807,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
 
     if (FD)
-      f.setAstAttr(builder.getAttr<mlir::cir::ASTFunctionDeclAttr>(FD));
+      f.setAstAttr(makeFuncDeclAttr(FD, builder.getContext()));
 
     if (FD && !FD->hasPrototype())
       f.setNoProtoAttr(builder.getUnitAttr());
@@ -1848,7 +1849,7 @@ mlir::Location CIRGenModule::getLocForFunction(const clang::FunctionDecl *FD) {
 }
 
 void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
-                                         const clang::FunctionDecl *FD) {
+                                             const clang::FunctionDecl *FD) {
   mlir::NamedAttrList attrs;
 
   if (!FD) {
@@ -1923,8 +1924,7 @@ void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
   }
 
   f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
-      builder.getContext(),
-      attrs.getDictionary(builder.getContext())));
+      builder.getContext(), attrs.getDictionary(builder.getContext())));
 }
 
 /// If the specified mangled name is not in the module,

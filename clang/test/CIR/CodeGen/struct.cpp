@@ -30,7 +30,7 @@ void yoyo(incomplete *i) {}
 //  CHECK-DAG: !ty_22Bar22 = !cir.struct<struct "Bar" {!s32i, !s8i}>
 
 //  CHECK-DAG: !ty_22Foo22 = !cir.struct<struct "Foo" {!s32i, !s8i, !ty_22Bar22}>
-//  CHECK-DAG: !ty_22Mandalore22 = !cir.struct<struct "Mandalore" {!u32i, !cir.ptr<!void>, !s32i} #cir.recdecl.ast>
+//  CHECK-DAG: !ty_22Mandalore22 = !cir.struct<struct "Mandalore" {!u32i, !cir.ptr<!void>, !s32i} #cir.record.decl.ast>
 //  CHECK-DAG: !ty_22Adv22 = !cir.struct<class "Adv" {!ty_22Mandalore22}>
 //  CHECK-DAG: !ty_22Entry22 = !cir.struct<struct "Entry" {!cir.ptr<!cir.func<!u32i (!s32i, !cir.ptr<!s8i>, !cir.ptr<!void>)>>}>
 

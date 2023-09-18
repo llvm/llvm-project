@@ -8,7 +8,7 @@
 
 !ty_2222 = !cir.struct<struct "" {!cir.array<!cir.ptr<!u8i> x 5>}>
 !ty_22221 = !cir.struct<struct "" {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
-!ty_22A22 = !cir.struct<class "A" incomplete #cir.recdecl.ast>
+!ty_22A22 = !cir.struct<class "A" incomplete #cir.record.decl.ast>
 !ty_22i22 = !cir.struct<union "i" incomplete>
 !ty_22S22 = !cir.struct<struct "S" {!u8i, !u16i, !u32i}>
 !ty_22S122 = !cir.struct<struct "S1" {!s32i, !s32i}>

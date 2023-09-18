@@ -6,10 +6,10 @@ typedef union { yolo y; struct { int lifecnt; }; } yolm;
 typedef union { yolo y; struct { int *lifecnt; int genpad; }; } yolm2;
 typedef union { yolo y; struct { bool life; int genpad; }; } yolm3;
 
-// CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!s16i, f32} #cir.recdecl.ast>
-// CHECK-DAG: !ty_22anon221 = !cir.struct<struct "anon" {!cir.bool, !s32i} #cir.recdecl.ast>
-// CHECK-DAG: !ty_22yolo22 = !cir.struct<struct "yolo" {!s32i} #cir.recdecl.ast>
-// CHECK-DAG: !ty_22anon222 = !cir.struct<struct "anon" {!cir.ptr<!s32i>, !s32i} #cir.recdecl.ast>
+// CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!s16i, f32} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22anon221 = !cir.struct<struct "anon" {!cir.bool, !s32i} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22yolo22 = !cir.struct<struct "yolo" {!s32i} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22anon222 = !cir.struct<struct "anon" {!cir.ptr<!s32i>, !s32i} #cir.record.decl.ast>
 
 // CHECK-DAG: !ty_22yolm22 = !cir.struct<union "yolm" {!ty_22yolo22, !ty_22anon22}>
 // CHECK-DAG: !ty_22yolm322 = !cir.struct<union "yolm3" {!ty_22yolo22, !ty_22anon221}>
@@ -33,14 +33,14 @@ union U2 {
     float f;
   } s;
 } u2;
-// CHECK-DAG: !cir.struct<union "U2" {!cir.bool, !ty_22U23A3ADummy22} #cir.recdecl.ast>
+// CHECK-DAG: !cir.struct<union "U2" {!cir.bool, !ty_22U23A3ADummy22} #cir.record.decl.ast>
 
 // Should genereate unions without padding.
 union U3 {
   short b;
   U u;
 } u3;
-// CHECK-DAG: !ty_22U322 = !cir.struct<union "U3" {!s16i, !ty_22U22} #cir.recdecl.ast>
+// CHECK-DAG: !ty_22U322 = !cir.struct<union "U3" {!s16i, !ty_22U22} #cir.record.decl.ast>
 
 void m() {
   yolm q;

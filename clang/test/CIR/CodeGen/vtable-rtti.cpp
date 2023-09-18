@@ -24,7 +24,7 @@ public:
 // CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<struct "" {!cir.array<!cir.ptr<!u8i> x 5>}>
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.recdecl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.record.decl.ast>
 
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {![[ClassA]]}>
