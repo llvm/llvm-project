@@ -458,6 +458,17 @@ class BaseReport {
         access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
         ptr_tag(GetTagFromPointer(tagged_addr)) {
+    if (MemIsShadow(untagged_addr))
+      return;
+
+    HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
+    heap.begin = chunk.Beg();
+    if (heap.begin) {
+      heap.size = chunk.ActualSize();
+      heap.from_small_heap = chunk.FromSmallHeap();
+      heap.is_allocated = chunk.IsAllocated();
+    }
+
     hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
       if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
           t->AddrIsInStack(untagged_addr)) {
@@ -475,8 +486,16 @@ class BaseReport {
   uptr access_size = 0;
   uptr untagged_addr = 0;
   tag_t ptr_tag = 0;
+
   uptr stack_allocations_count = 0;
   SavedStackAllocations stack_allocations[16];
+
+  struct {
+    uptr begin = 0;
+    uptr size = 0;
+    bool from_small_heap = false;
+    bool is_allocated = false;
+  } heap;
 };
 
 void BaseReport::PrintAddressDescription() const {
@@ -490,17 +509,14 @@ void BaseReport::PrintAddressDescription() const {
   }
 
   // Print some very basic information about the address, if it's a heap.
-  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
-  if (uptr beg = chunk.Beg()) {
-    uptr size = chunk.ActualSize();
-    Printf("%s[%p,%p) is a %s %s heap chunk; "
-           "size: %zd offset: %zd\n%s",
-           d.Location(),
-           beg, beg + size,
-           chunk.FromSmallHeap() ? "small" : "large",
-           chunk.IsAllocated() ? "allocated" : "unallocated",
-           size, untagged_addr - beg,
-           d.Default());
+  if (heap.begin) {
+    Printf(
+        "%s[%p,%p) is a %s %s heap chunk; "
+        "size: %zd offset: %zd\n%s",
+        d.Location(), heap.begin, heap.begin + heap.size,
+        heap.from_small_heap ? "small" : "large",
+        heap.is_allocated ? "allocated" : "unallocated", heap.size,
+        untagged_addr - heap.begin, d.Default());
   }
 
   // Check stack first. If the address is on the stack of a live thread, we
