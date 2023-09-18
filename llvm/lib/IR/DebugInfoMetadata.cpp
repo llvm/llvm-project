@@ -1343,17 +1343,13 @@ DIExpression *DIExpression::getImpl(LLVMContext &Context,
   DEFINE_GETIMPL_STORE_NO_OPS(DIExpression, (Elements));
 }
 bool DIExpression::isEntryValue() const {
-  auto singleLocElts = getSingleLocationExpressionElements();
-  return singleLocElts.size() > 0 &&
-         singleLocElts[0] == dwarf::DW_OP_LLVM_entry_value;
+  return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_LLVM_entry_value;
 }
 bool DIExpression::startsWithDeref() const {
-  auto singleLocElts = getSingleLocationExpressionElements();
-  return singleLocElts.size() > 0 && singleLocElts[0] == dwarf::DW_OP_deref;
+  return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
 }
 bool DIExpression::isDeref() const {
-  auto singleLocElts = getSingleLocationExpressionElements();
-  return singleLocElts.size() == 1 && singleLocElts[0] == dwarf::DW_OP_deref;
+  return getNumElements() == 1 && startsWithDeref();
 }
 
 DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
@@ -1530,22 +1526,12 @@ bool DIExpression::isSingleLocationExpression() const {
 
   auto ExprOpBegin = expr_ops().begin();
   auto ExprOpEnd = expr_ops().end();
-  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg) {
-    if (ExprOpBegin->getArg(0) != 0)
-      return false;
+  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg)
     ++ExprOpBegin;
-  }
 
   return !std::any_of(ExprOpBegin, ExprOpEnd, [](auto Op) {
     return Op.getOp() == dwarf::DW_OP_LLVM_arg;
   });
-}
-
-ArrayRef<uint64_t> DIExpression::getSingleLocationExpressionElements() const {
-  if (getNumElements() < 2 || Elements[0] != dwarf::DW_OP_LLVM_arg ||
-      Elements[1] != 0)
-    return Elements;
-  return getElements().drop_front(2);
 }
 
 const DIExpression *
@@ -1573,9 +1559,6 @@ DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
 
 std::optional<const DIExpression *>
 DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
-  if (!Expr)
-    return std::nullopt;
-
   // Check for `isValid` covered by `isSingleLocationExpression`.
   if (!Expr->isSingleLocationExpression())
     return std::nullopt;
@@ -1590,8 +1573,9 @@ DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
   if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
     return Expr;
 
-  return DIExpression::get(Expr->getContext(),
-                           Expr->getElements().drop_front(2));
+  SmallVector<uint64_t> NonVariadicOps(
+      make_range(ElementsBegin + 2, Expr->elements_end()));
+  return DIExpression::get(Expr->getContext(), NonVariadicOps);
 }
 
 void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
@@ -1662,25 +1646,23 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
 }
 
 bool DIExpression::extractIfOffset(int64_t &Offset) const {
-  auto SingleLocElts = getSingleLocationExpressionElements();
-  if (SingleLocElts.size() == 0) {
+  if (getNumElements() == 0) {
     Offset = 0;
     return true;
   }
 
-  if (SingleLocElts.size() == 2 &&
-      SingleLocElts[0] == dwarf::DW_OP_plus_uconst) {
-    Offset = SingleLocElts[1];
+  if (getNumElements() == 2 && Elements[0] == dwarf::DW_OP_plus_uconst) {
+    Offset = Elements[1];
     return true;
   }
 
-  if (SingleLocElts.size() == 3 && SingleLocElts[0] == dwarf::DW_OP_constu) {
-    if (SingleLocElts[2] == dwarf::DW_OP_plus) {
-      Offset = SingleLocElts[1];
+  if (getNumElements() == 3 && Elements[0] == dwarf::DW_OP_constu) {
+    if (Elements[2] == dwarf::DW_OP_plus) {
+      Offset = Elements[1];
       return true;
     }
-    if (SingleLocElts[2] == dwarf::DW_OP_minus) {
-      Offset = -SingleLocElts[1];
+    if (Elements[2] == dwarf::DW_OP_minus) {
+      Offset = -Elements[1];
       return true;
     }
   }
@@ -1703,19 +1685,18 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
                                                       unsigned &AddrClass) {
   // FIXME: This seems fragile. Nothing that verifies that these elements
   // actually map to ops and not operands.
-  auto SingleLocElts = Expr->getSingleLocationExpressionElements();
   const unsigned PatternSize = 4;
-  if (SingleLocElts.size() >= PatternSize &&
-      SingleLocElts[PatternSize - 4] == dwarf::DW_OP_constu &&
-      SingleLocElts[PatternSize - 2] == dwarf::DW_OP_swap &&
-      SingleLocElts[PatternSize - 1] == dwarf::DW_OP_xderef) {
-    AddrClass = SingleLocElts[PatternSize - 3];
+  if (Expr->Elements.size() >= PatternSize &&
+      Expr->Elements[PatternSize - 4] == dwarf::DW_OP_constu &&
+      Expr->Elements[PatternSize - 2] == dwarf::DW_OP_swap &&
+      Expr->Elements[PatternSize - 1] == dwarf::DW_OP_xderef) {
+    AddrClass = Expr->Elements[PatternSize - 3];
 
-    if (SingleLocElts.size() == PatternSize)
+    if (Expr->Elements.size() == PatternSize)
       return nullptr;
-    return DIExpression::get(
-        Expr->getContext(),
-        ArrayRef(&*SingleLocElts.begin(), SingleLocElts.size() - PatternSize));
+    return DIExpression::get(Expr->getContext(),
+                             ArrayRef(&*Expr->Elements.begin(),
+                                      Expr->Elements.size() - PatternSize));
   }
   return Expr;
 }

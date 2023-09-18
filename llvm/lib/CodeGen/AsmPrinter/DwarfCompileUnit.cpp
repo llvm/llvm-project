@@ -795,7 +795,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
       if (Entry->isLocation()) {
         addVariableAddress(DV, *VariableDie, Entry->getLoc());
       } else if (Entry->isInt()) {
-        auto *Expr = DVal->getExpression();
+        auto *Expr = DV.getSingleExpression();
         if (Expr && Expr->getNumElements()) {
           DIELoc *Loc = new (DIEValueAllocator) DIELoc;
           DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
@@ -829,7 +829,7 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
           return Entry.isLocation() && !Entry.getLoc().getReg();
         }))
       return VariableDie;
-    const DIExpression *Expr = DVal->getExpression();
+    const DIExpression *Expr = DV.getSingleExpression();
     assert(Expr && "Variadic Debug Value must have an Expression.");
     DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);

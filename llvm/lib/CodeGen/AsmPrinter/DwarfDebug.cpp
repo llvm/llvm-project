@@ -240,15 +240,7 @@ const DIType *DbgVariable::getType() const {
 /// Get .debug_loc entry for the instruction range starting at MI.
 static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
-  const bool IsVariadic = !Expr->isSingleLocationExpression();
-  // If we have a variadic debug value instruction that is equivalent to a
-  // non-variadic instruction, then convert it to non-variadic form here.
-  if (!IsVariadic && !MI->isNonListDebugValue()) {
-    assert(MI->getNumDebugOperands() == 1 &&
-           "Mismatched DIExpression and debug operands for debug instruction.");
-    Expr = DIExpression::get(Expr->getContext(),
-                             Expr->getSingleLocationExpressionElements());
-  }
+  const bool IsVariadic = MI->isDebugValueList();
   assert(MI->getNumOperands() >= 3);
   SmallVector<DbgValueLocEntry, 4> DbgValueLocEntries;
   for (const MachineOperand &Op : MI->debug_operands()) {
@@ -280,12 +272,9 @@ void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
          "Wrong inlined-at");
 
   ValueLoc = std::make_unique<DbgValueLoc>(getDebugLocValue(DbgValue));
-  // Use the debug value's expression as a FrameIndexExpr iff it is suitable,
-  // which requires it to be non-variadic.
-  if (auto E = DIExpression::convertToNonVariadicExpression(
-          DbgValue->getDebugExpression()))
-    if ((*E)->getNumElements())
-      FrameIndexExprs.push_back({0, *E});
+  if (auto *E = DbgValue->getDebugExpression())
+    if (E->getNumElements())
+      FrameIndexExprs.push_back({0, E});
 }
 
 ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
