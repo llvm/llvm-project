@@ -324,7 +324,7 @@ static mlir::Value genDefaultInitializerValue(
     if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
       continue;
     mlir::Value componentValue;
-    llvm::StringRef name = toStringRef(component.name());
+    std::string name = converter.getRecordTypeFieldName(component);
     mlir::Type componentTy = recTy.getType(name);
     assert(componentTy && "component not found in type");
     if (const auto *object{
