@@ -1486,6 +1486,15 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       Instruction *I = Worklist.back();
       Worklist.pop_back();
       for (const Use &U : I->uses()) {
+        auto *UI = cast<Instruction>(U.getUser());
+        // TODO: We can perform the transformation if we move src alloca to
+        // before the dominator of all uses. If any use that isn't dominated by
+        // SrcAlloca exists, non-dominating uses will be produced.
+        if (!DT->dominates(SrcAlloca, UI)) {
+          LLVM_DEBUG(dbgs() << "Stack Move: SrcAlloca doesn't dominate all "
+                               "uses for the location, bailing\n");
+          return false;
+        }
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
               dbgs()
@@ -1499,10 +1508,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           return false;
         case UseCaptureKind::PASSTHROUGH:
           // Instructions cannot have non-instruction users.
-          Worklist.push_back(cast<Instruction>(U.getUser()));
+          Worklist.push_back(UI);
           continue;
         case UseCaptureKind::NO_CAPTURE: {
-          auto *UI = cast<Instruction>(U.getUser());
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
