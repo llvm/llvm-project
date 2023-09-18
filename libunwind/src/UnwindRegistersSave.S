@@ -305,18 +305,17 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mflr  0
   std   0, PPC64_OFFS_SRR0(3) // store lr as ssr0
   PPC64_STR(1)
-  PPC64_STR(4)      // Save r4 first since it will be used for fixing r2.
+  PPC64_STR(4)        // Save r4 first since it will be used for fixing r2.
 #if defined(_AIX)
   // The TOC register (r2) was changed by the glue code if unw_getcontext
   // is called from a different module. Save the original TOC register
   // in the context if this is the case.
-  mflr  4
-  lwz   4, 0(4)     // Get the first instruction at the return address.
-  lis   0, 0xe841   // Is it reloading the TOC register "ld 2,40(1)"?
-  ori   0, 0, 0x28
-  cmpw  0, 0, 4
-  bne   0, LnoR2Fix // No need to fix up r2 if it is not.
-  ld    2, 40(1)    // Use the saved TOC register in the stack.
+  mflr   4
+  lwz    4, 0(4)      // Get the first instruction at the return address.
+  xoris  0, 4, 0xe841 // Is it reloading the TOC register "ld 2,40(1)"?
+  cmplwi 0, 0x28
+  bne    0, LnoR2Fix  // No need to fix up r2 if it is not.
+  ld     2, 40(1)     // Use the saved TOC register in the stack.
 LnoR2Fix:
 #endif
   PPC64_STR(2)
@@ -566,9 +565,9 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   // is called from a different module. Save the original TOC register
   // in the context if this is the case.
   mflr    4
-  lwz     4,  0(4)      // Get the instruction at the return address.
-  xoris   4,  4, 0x8041 // Is it reloading the TOC register "lwz r2,20(r1)"?
-  cmplwi  4,  0x14
+  lwz     4,   0(4)     // Get the instruction at the return address.
+  xoris   0,  4, 0x8041 // Is it reloading the TOC register "ld 2,40(1)"?
+  cmplwi  0,  0x14
   bne     0,  LnoR2Fix  // No need to fix up r2 if it is not.
   lwz     2,  20(1)     // Use the saved TOC register in the stack.
 LnoR2Fix:
