@@ -583,9 +583,14 @@ static uint64_t readFdeAddr(uint8_t *buf, int size) {
 uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
                                   uint8_t enc) const {
   // The starting address to which this FDE applies is
-  // stored at FDE + 8 byte.
+  // stored at FDE + 8 byte. And this offset is within
+  // the .eh_frame section.
   size_t off = fdeOff + 8;
   uint64_t addr = readFdeAddr(buf + off, enc & 0xf);
+  // Adding outSecOff as finalizeAddressDependentContent()
+  // may have altered the corresponding outSecOff. This is
+  // required to get the correct PC relative offset.
+  off = off + outSecOff;
   if ((enc & 0x70) == DW_EH_PE_absptr)
     return addr;
   if ((enc & 0x70) == DW_EH_PE_pcrel)

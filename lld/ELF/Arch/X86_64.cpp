@@ -989,6 +989,10 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec)) {
+    SyntheticSection *ehFrame = ehIn->getParent();
+    secAddr += ehFrame->outSecOff;
+  }
   for (const Relocation &rel : sec.relocs()) {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;
