@@ -962,7 +962,6 @@ public:
       const Type iTp = rewriter.getIndexType();
       Value dimCoords = genAlloca(rewriter, loc, dimRank, iTp);
       Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
-      Block *insertionBlock = rewriter.getInsertionBlock();
       // TODO: Dense buffers should be allocated/deallocated via the callback
       // in BufferizationOptions.
       Value dst = allocDenseTensor(rewriter, loc, dstTp, dimSizes);
@@ -982,11 +981,6 @@ public:
       genDelIteratorCall(rewriter, loc, elemTp, iter);
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(
           op, dstTp.getRankedTensorType(), dst);
-      // Deallocate the buffer.
-      if (bufferization::allocationDoesNotEscape(op->getOpResult(0))) {
-        rewriter.setInsertionPoint(insertionBlock->getTerminator());
-        deallocDenseTensor(rewriter, loc, dst);
-      }
       return success();
     }
     assert(!srcTp.hasEncoding() && dstTp.hasEncoding());
