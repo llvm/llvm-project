@@ -206,7 +206,7 @@ public:
   create(MemoryBufferRef ObjectBuffer,
          StringRef Arch,
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-         InstrProfSymtab IndexedProfSymTab,
+         InstrProfSymtab& IndexedProfSymTab,
          StringRef CompilationDir = "",
          SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
 
