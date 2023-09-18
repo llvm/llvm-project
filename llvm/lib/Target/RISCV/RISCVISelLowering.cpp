@@ -11633,39 +11633,15 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
-/// According to the property that indexed load/store instructions zero-extend
-/// their indices, try to narrow the type of index operand.
+// According to the property that indexed load/store instructions
+// zero-extended their indices, \p narrowIndex tries to narrow the type of index
+// operand if it is matched to pattern (shl (zext x to ty), C) and bits(x) + C <
+// bits(ty).
 static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &DAG) {
   if (isIndexTypeSigned(IndexType))
     return false;
 
-  if (!N->hasOneUse())
-    return false;
-
-  EVT VT = N.getValueType();
-  SDLoc DL(N);
-
-  // In general, what we're doing here is seeing if we can sink a truncate to
-  // a smaller element type into the expression tree building our index.
-  // TODO: We can generalize this and handle a bunch more cases if useful.
-
-  // Narrow a buildvector to the narrowest element type.  This requires less
-  // work and less register pressure at high LMUL, and creates smaller constants
-  // which may be cheaper to materialize.
-  if (ISD::isBuildVectorOfConstantSDNodes(N.getNode())) {
-    KnownBits Known = DAG.computeKnownBits(N);
-    unsigned ActiveBits = std::max(8u, Known.countMaxActiveBits());
-    LLVMContext &C = *DAG.getContext();
-    EVT ResultVT = EVT::getIntegerVT(C, ActiveBits).getRoundIntegerType(C);
-    if (ResultVT.bitsLT(VT.getVectorElementType())) {
-      N = DAG.getNode(ISD::TRUNCATE, DL,
-                      VT.changeVectorElementType(ResultVT), N);
-      return true;
-    }
-  }
-
-  // Handle the pattern (shl (zext x to ty), C) and bits(x) + C < bits(ty).
-  if (N.getOpcode() != ISD::SHL)
+  if (N.getOpcode() != ISD::SHL || !N->hasOneUse())
     return false;
 
   SDValue N0 = N.getOperand(0);
