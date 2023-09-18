@@ -660,6 +660,11 @@ feature_test_macros = [
             "headers": ["functional"],
         },
         {
+            "name": "__cpp_lib_ios_noreplace",
+            "values": { "c++23": 202207 },
+            "headers": ["ios"],
+        },
+        {
             "name": "__cpp_lib_is_aggregate",
             "values": {"c++17": 201703},
             "headers": ["type_traits"],
