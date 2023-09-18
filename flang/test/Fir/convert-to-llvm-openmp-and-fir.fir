@@ -657,6 +657,7 @@ func.func @_QPs(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "x"}) {
 }
 
 // -----
+
 // Test if llvm.alloca is properly inserted in the omp section
 
 //CHECK:  %[[CONST:.*]] = llvm.mlir.constant(1 : i64) : i64
@@ -693,3 +694,35 @@ fir.global internal @_QFEx target : i32 {
   %0 = fir.zero_bits i32
   fir.has_value %0 : i32
 }
+
+// -----
+
+// Test if llvm.alloca is properly inserted in the omp ordered region
+
+// CHECK: llvm.func @sub_
+func.func @sub_() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsubEi"}
+// CHECK: omp.ordered_region
+  omp.ordered_region {
+    %1 = fir.convert %c1 : (index) -> i32
+    cf.br ^bb1(%1, %c1 : i32, index)
+  ^bb1(%2: i32, %3: index):  // 2 preds: ^bb0, ^bb2
+    %4 = arith.cmpi sgt, %3, %c0 : index
+    cf.cond_br %4, ^bb2, ^bb3
+  ^bb2:  // pred: ^bb1
+    fir.store %2 to %0 : !fir.ref<i32>
+    %5 = fir.load %0 : !fir.ref<i32>
+// CHECK: llvm.add
+    %6 = arith.addi %5, %1 : i32
+// CHECK: llvm.sub
+    %7 = arith.subi %3, %c1 : index
+    cf.br ^bb1(%6, %7 : i32, index)
+  ^bb3:  // pred: ^bb1
+    fir.store %2 to %0 : !fir.ref<i32>
+// CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+} 
