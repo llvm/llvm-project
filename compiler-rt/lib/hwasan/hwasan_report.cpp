@@ -375,6 +375,82 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
   }
 }
 
+void ReportStats() {}
+
+static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
+                                   void (*print_tag)(InternalScopedString &s,
+                                                     tag_t *tag)) {
+  const uptr row_len = 16;  // better be power of two.
+  tag_t *center_row_beg = reinterpret_cast<tag_t *>(
+      RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
+  tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
+  tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
+  InternalScopedString s;
+  for (tag_t *row = beg_row; row < end_row; row += row_len) {
+    s.Append(row == center_row_beg ? "=>" : "  ");
+    s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
+    for (uptr i = 0; i < row_len; i++) {
+      s.Append(row + i == tag_ptr ? "[" : " ");
+      print_tag(s, &row[i]);
+      s.Append(row + i == tag_ptr ? "]" : " ");
+    }
+    s.AppendF("\n");
+  }
+  Printf("%s", s.data());
+}
+
+static void PrintTagsAroundAddr(tag_t *tag_ptr) {
+  Printf(
+      "Memory tags around the buggy address (one tag corresponds to %zd "
+      "bytes):\n",
+      kShadowAlignment);
+  PrintTagInfoAroundAddr(tag_ptr, 17, [](InternalScopedString &s, tag_t *tag) {
+    s.AppendF("%02x", *tag);
+  });
+
+  Printf(
+      "Tags for short granules around the buggy address (one tag corresponds "
+      "to %zd bytes):\n",
+      kShadowAlignment);
+  PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
+    if (*tag >= 1 && *tag <= kShadowAlignment) {
+      uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
+      s.AppendF("%02x",
+                *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
+    } else {
+      s.AppendF("..");
+    }
+  });
+  Printf(
+      "See "
+      "https://clang.llvm.org/docs/"
+      "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
+      "description of short granule tags\n");
+}
+
+static uptr GetTopPc(StackTrace *stack) {
+  return stack->size ? StackTrace::GetPreviousInstructionPc(stack->trace[0])
+                     : 0;
+}
+
+namespace {
+class BaseReport {
+ public:
+  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr)
+      : scoped_report(fatal),
+        stack(stack),
+        tagged_addr(tagged_addr),
+        untagged_addr(UntagAddr(tagged_addr)),
+        ptr_tag(GetTagFromPointer(tagged_addr)) {}
+
+ protected:
+  ScopedReport scoped_report;
+  StackTrace *stack;
+  uptr tagged_addr;
+  uptr untagged_addr;
+  tag_t ptr_tag;
+};
+
 static void PrintAddressDescription(
     uptr tagged_addr, uptr access_size,
     StackAllocationsRingBuffer *current_stack_allocations) {
@@ -513,81 +589,6 @@ static void PrintAddressDescription(
         num_descriptions_printed);
   }
 }
-
-void ReportStats() {}
-
-static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
-                                   void (*print_tag)(InternalScopedString &s,
-                                                     tag_t *tag)) {
-  const uptr row_len = 16;  // better be power of two.
-  tag_t *center_row_beg = reinterpret_cast<tag_t *>(
-      RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
-  tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
-  tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  InternalScopedString s;
-  for (tag_t *row = beg_row; row < end_row; row += row_len) {
-    s.Append(row == center_row_beg ? "=>" : "  ");
-    s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
-    for (uptr i = 0; i < row_len; i++) {
-      s.Append(row + i == tag_ptr ? "[" : " ");
-      print_tag(s, &row[i]);
-      s.Append(row + i == tag_ptr ? "]" : " ");
-    }
-    s.AppendF("\n");
-  }
-  Printf("%s", s.data());
-}
-
-static void PrintTagsAroundAddr(tag_t *tag_ptr) {
-  Printf(
-      "Memory tags around the buggy address (one tag corresponds to %zd "
-      "bytes):\n", kShadowAlignment);
-  PrintTagInfoAroundAddr(tag_ptr, 17, [](InternalScopedString &s, tag_t *tag) {
-    s.AppendF("%02x", *tag);
-  });
-
-  Printf(
-      "Tags for short granules around the buggy address (one tag corresponds "
-      "to %zd bytes):\n",
-      kShadowAlignment);
-  PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
-    if (*tag >= 1 && *tag <= kShadowAlignment) {
-      uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
-      s.AppendF("%02x",
-                *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
-    } else {
-      s.AppendF("..");
-    }
-  });
-  Printf(
-      "See "
-      "https://clang.llvm.org/docs/"
-      "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
-      "description of short granule tags\n");
-}
-
-static uptr GetTopPc(StackTrace *stack) {
-  return stack->size ? StackTrace::GetPreviousInstructionPc(stack->trace[0])
-                     : 0;
-}
-
-namespace {
-class BaseReport {
- public:
-  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr)
-      : scoped_report(fatal),
-        stack(stack),
-        tagged_addr(tagged_addr),
-        untagged_addr(UntagAddr(tagged_addr)),
-        ptr_tag(GetTagFromPointer(tagged_addr)) {}
-
- protected:
-  ScopedReport scoped_report;
-  StackTrace *stack;
-  uptr tagged_addr;
-  uptr untagged_addr;
-  tag_t ptr_tag;
-};
 
 class InvalidFreeReport : public BaseReport {
  public:
