@@ -212,7 +212,7 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable("fixed_int_ptr").GetValue(),
             "0x00000000000000aa",
         )
-        self.runCmd("settings set target.show-hex-values-with-leading-zeroes false")
+        self.runCmd("settings set target.show-hex-variable-values-with-leading-zeroes false")
         self.assertEqual(
             frame0.FindVariable("another_fixed_int_ptr").GetValue(),
             "0xaa",
