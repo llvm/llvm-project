@@ -175,5 +175,4 @@ public:
 void mlir::bufferization::registerTransformDialectExtension(
     DialectRegistry &registry) {
   registry.addExtensions<BufferizationTransformDialectExtension>();
-  bufferization::registerAllocationOpInterfaceExternalModels(registry);
 }
