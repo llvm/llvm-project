@@ -767,6 +767,28 @@ m_ImmConstant(Constant *&C) {
   return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
 }
 
+/// Match a pattern, capturing the value if we match.
+template <typename SubPattern_t, typename Class> struct capture_ty {
+  SubPattern_t SubPattern;
+  Class *&VR;
+
+  capture_ty(const SubPattern_t &SP, Class *&V) : SubPattern(SP), VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    if (auto *CV = dyn_cast<Class>(V)) {
+      VR = CV;
+      return SubPattern.match(V);
+    }
+    return false;
+  }
+};
+
+template <typename T>
+inline capture_ty<T, Instruction> m_Instruction(Instruction *&I,
+                                                const T &SubPattern) {
+  return capture_ty<T, Instruction>(SubPattern, I);
+}
+
 /// Match a specified Value*.
 struct specificval_ty {
   const Value *Val;

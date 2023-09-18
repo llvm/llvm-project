@@ -6380,53 +6380,71 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
       Y->getType()->isIntOrIntVectorTy(1) && Pred == ICmpInst::ICMP_ULE)
     return BinaryOperator::CreateOr(Builder.CreateIsNull(X), Y);
 
+  // icmp eq/ne X, (zext/sext (icmp eq/ne X, C))
   ICmpInst::Predicate Pred1, Pred2;
   const APInt *C;
-  // icmp eq/ne X, (zext (icmp eq/ne X, C))
+  Instruction *ExtI;
   if (match(&I, m_c_ICmp(Pred1, m_Value(X),
-                         m_ZExt(m_ICmp(Pred2, m_Deferred(X), m_APInt(C))))) &&
-      ICmpInst::isEquality(Pred1) && ICmpInst::isEquality(Pred2)) {
+                         m_Instruction(ExtI,
+                                       m_ZExtOrSExt(m_ICmp(Pred2, m_Deferred(X),
+                                                           m_APInt(C))))))) {
+    bool IsSExt = ExtI->getOpcode() == Instruction::SExt;
+    bool HasOneUse = ExtI->hasOneUse() && ExtI->getOperand(0)->hasOneUse();
     if (C->isZero()) {
       if (Pred2 == ICmpInst::ICMP_EQ) {
-        // icmp eq X, (zext (icmp eq X, 0)) --> false
-        // icmp ne X, (zext (icmp eq X, 0)) --> true
+        // icmp eq X, (zext/sext (icmp eq X, 0)) --> false
+        // icmp ne X, (zext/sext (icmp eq X, 0)) --> true
         return replaceInstUsesWith(
             I, ConstantInt::getBool(I.getType(), Pred1 == ICmpInst::ICMP_NE));
-      } else {
+      } else if (!IsSExt || HasOneUse) {
         // icmp eq X, (zext (icmp ne X, 0)) --> icmp ult X, 2
         // icmp ne X, (zext (icmp ne X, 0)) --> icmp ugt X, 1
+        // icmp eq X, (sext (icmp ne X, 0)) --> icmp ult (X + 1), 2
+        // icmp ne X, (sext (icmp ne X, 0)) --> icmp ugt (X + 1), 1
         return ICmpInst::Create(
             Instruction::ICmp,
             Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
                                        : ICmpInst::ICMP_ULT,
-            X,
+            IsSExt ? Builder.CreateAdd(X, ConstantInt::get(X->getType(), 1))
+                   : X,
             ConstantInt::get(X->getType(), Pred1 == ICmpInst::ICMP_NE ? 1 : 2));
       }
-    } else if (C->isOne()) {
+    } else if (IsSExt ? C->isAllOnes() : C->isOne()) {
       if (Pred2 == ICmpInst::ICMP_NE) {
         // icmp eq X, (zext (icmp ne X, 1)) --> false
         // icmp ne X, (zext (icmp ne X, 1)) --> true
+        // icmp eq X, (sext (icmp ne X, -1)) --> false
+        // icmp ne X, (sext (icmp ne X, -1)) --> true
         return replaceInstUsesWith(
             I, ConstantInt::getBool(I.getType(), Pred1 == ICmpInst::ICMP_NE));
-      } else {
+      } else if (!IsSExt || HasOneUse) {
         // icmp eq X, (zext (icmp eq X, 1)) --> icmp ult X, 2
         // icmp ne X, (zext (icmp eq X, 1)) --> icmp ugt X, 1
+        // icmp eq X, (sext (icmp eq X, -1)) --> icmp ult (X + 1), 2
+        // icmp ne X, (sext (icmp eq X, -1)) --> icmp ugt (X + 1), 1
         return ICmpInst::Create(
             Instruction::ICmp,
             Pred1 == ICmpInst::ICMP_NE ? ICmpInst::ICMP_UGT
                                        : ICmpInst::ICMP_ULT,
-            X,
+            IsSExt ? Builder.CreateAdd(X, ConstantInt::get(X->getType(), 1))
+                   : X,
             ConstantInt::get(X->getType(), Pred1 == ICmpInst::ICMP_NE ? 1 : 2));
       }
     } else {
-      // C != 0 && C != 1
-      // icmp eq X, (zext (icmp eq X, C)) --> icmp eq X, 0
-      // icmp eq X, (zext (icmp ne X, C)) --> icmp eq X, 1
-      // icmp ne X, (zext (icmp eq X, C)) --> icmp ne X, 0
-      // icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, 1
+      // when C != 0 && C != 1:
+      //   icmp eq X, (zext (icmp eq X, C)) --> icmp eq X, 0
+      //   icmp eq X, (zext (icmp ne X, C)) --> icmp eq X, 1
+      //   icmp ne X, (zext (icmp eq X, C)) --> icmp ne X, 0
+      //   icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, 1
+      // when C != 0 && C != -1:
+      //   icmp eq X, (zext (icmp eq X, C)) --> icmp eq X, 0
+      //   icmp eq X, (zext (icmp ne X, C)) --> icmp eq X, -1
+      //   icmp ne X, (zext (icmp eq X, C)) --> icmp ne X, 0
+      //   icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, -1
       return ICmpInst::Create(
           Instruction::ICmp, Pred1, X,
-          ConstantInt::get(X->getType(), Pred2 == ICmpInst::ICMP_NE ? 1 : 0));
+          ConstantInt::get(X->getType(),
+                           Pred2 == ICmpInst::ICMP_NE ? (IsSExt ? -1 : 1) : 0));
     }
   }
 
