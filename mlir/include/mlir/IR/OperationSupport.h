@@ -141,6 +141,7 @@ public:
                           function_ref<InFlightDiagnostic &()> getDiag) = 0;
     virtual Attribute getPropertiesAsAttr(Operation *) = 0;
     virtual void copyProperties(OpaqueProperties, OpaqueProperties) = 0;
+    virtual bool compareProperties(OpaqueProperties, OpaqueProperties) = 0;
     virtual llvm::hash_code hashProperties(OpaqueProperties) = 0;
   };
 
@@ -221,6 +222,7 @@ protected:
                           function_ref<InFlightDiagnostic &()> getDiag) final;
     Attribute getPropertiesAsAttr(Operation *) final;
     void copyProperties(OpaqueProperties, OpaqueProperties) final;
+    bool compareProperties(OpaqueProperties, OpaqueProperties) final;
     llvm::hash_code hashProperties(OpaqueProperties) final;
   };
 
@@ -445,6 +447,10 @@ public:
     return getImpl()->copyProperties(lhs, rhs);
   }
 
+  bool compareOpProperties(OpaqueProperties lhs, OpaqueProperties rhs) const {
+    return getImpl()->compareProperties(lhs, rhs);
+  }
+
   llvm::hash_code hashOpProperties(OpaqueProperties properties) const {
     return getImpl()->hashProperties(properties);
   }
@@ -645,6 +651,13 @@ public:
                                                concreteOp.getProperties());
       }
       return {};
+    }
+    bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
+      if constexpr (hasProperties) {
+        return *lhs.as<Properties *>() == *rhs.as<Properties *>();
+      } else {
+        return true;
+      }
     }
     void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
