@@ -304,7 +304,7 @@ SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMax() const {
   // Get lexmax by flipping range sign in the PWMA constraints.
   for (auto &flippedPiece :
        flippedSymbolicIntegerLexMax.lexopt.getAllPieces()) {
-    Matrix mat = flippedPiece.output.getOutputMatrix();
+    Matrix<MPInt> mat = flippedPiece.output.getOutputMatrix();
     for (unsigned i = 0, e = mat.getNumRows(); i < e; i++)
       mat.negateRow(i);
     MultiAffineFunction maf(flippedPiece.output.getSpace(), mat);
@@ -738,7 +738,7 @@ bool IntegerRelation::isEmptyByGCDTest() const {
 //
 // It is sufficient to check the perpendiculars of the constraints, as the set
 // of perpendiculars which are bounded must span all bounded directions.
-Matrix IntegerRelation::getBoundedDirections() const {
+Matrix<MPInt> IntegerRelation::getBoundedDirections() const {
   // Note that it is necessary to add the equalities too (which the constructor
   // does) even though we don't need to check if they are bounded; whether an
   // inequality is bounded or not depends on what other constraints, including
@@ -759,7 +759,7 @@ Matrix IntegerRelation::getBoundedDirections() const {
   // The direction vector is given by the coefficients and does not include the
   // constant term, so the matrix has one fewer column.
   unsigned dirsNumCols = getNumCols() - 1;
-  Matrix dirs(boundedIneqs.size() + getNumEqualities(), dirsNumCols);
+  Matrix<MPInt> dirs(boundedIneqs.size() + getNumEqualities(), dirsNumCols);
 
   // Copy the bounded inequalities.
   unsigned row = 0;
@@ -845,7 +845,7 @@ IntegerRelation::findIntegerSample() const {
   // m is a matrix containing, in each row, a vector in which S is
   // bounded, such that the linear span of all these dimensions contains all
   // bounded dimensions in S.
-  Matrix m = getBoundedDirections();
+  Matrix<MPInt> m = getBoundedDirections();
   // In column echelon form, each row of m occupies only the first rank(m)
   // columns and has zeros on the other columns. The transform T that brings S
   // to column echelon form is unimodular as well, so this is a suitable
