@@ -385,7 +385,7 @@ Outlined resume part of the coroutine will reside in function `f.resume`:
   entry:
     %inc.spill.addr = getelementptr %f.frame, ptr %frame.ptr.resume, i64 0, i32 2
     %inc.spill = load i32, ptr %inc.spill.addr, align 4
-    %inc = add i32 %n.val, 1
+    %inc = add i32 %inc.spill, 1
     store i32 %inc, ptr %inc.spill.addr, align 4
     tail call void @print(i32 %inc)
     ret void
@@ -494,8 +494,13 @@ as the code in the previous section):
                                   i8 1, label %cleanup]
 
 In this case, the coroutine frame would include a suspend index that will
-indicate at which suspend point the coroutine needs to resume. The resume
-function will use an index to jump to an appropriate basic block and will look
+indicate at which suspend point the coroutine needs to resume.
+
+.. code-block:: llvm
+
+  %f.frame = type { ptr, ptr, i32, i32 }
+
+The resume function will use an index to jump to an appropriate basic block and will look
 as follows:
 
 .. code-block:: llvm
@@ -507,10 +512,11 @@ as follows:
     %switch = icmp eq i8 %index, 0
     %n.addr = getelementptr inbounds %f.Frame, ptr %FramePtr, i64 0, i32 3
     %n = load i32, ptr %n.addr, align 4
+
     br i1 %switch, label %loop.resume, label %loop
 
   loop.resume:
-    %sub = xor i32 %n, -1
+    %sub = sub nsw i32 0, %n
     call void @print(i32 %sub)
     br label %suspend
   loop:
@@ -586,7 +592,7 @@ correct resume point):
     %save2 = call token @llvm.coro.save(ptr %hdl)
     call void @async_op2(ptr %hdl)
     %suspend2 = call i1 @llvm.coro.suspend(token %save2, i1 false)
-    switch i8 %suspend1, label %suspend [i8 0, label %resume2
+    switch i8 %suspend2, label %suspend [i8 0, label %resume2
                                          i8 1, label %cleanup]
 
 .. _coroutine promise:

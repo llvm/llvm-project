@@ -2337,9 +2337,7 @@ false:
 define i8 @umin_and_mask(i8 %x) {
 ; CHECK-LABEL: @umin_and_mask(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[AND1]]
 ;
   %and1 = and i8 %x, 1
   %and2 = and i8 %x, 3
@@ -2349,10 +2347,8 @@ define i8 @umin_and_mask(i8 %x) {
 
 define i8 @umax_and_mask(i8 %x) {
 ; CHECK-LABEL: @umax_and_mask(
-; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = and i8 %x, 1
   %and2 = and i8 %x, 3
@@ -2363,9 +2359,7 @@ define i8 @umax_and_mask(i8 %x) {
 define i8 @umin_or_mask(i8 %x) {
 ; CHECK-LABEL: @umin_or_mask(
 ; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umin.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[AND1]]
 ;
   %and1 = or i8 %x, 1
   %and2 = or i8 %x, 3
@@ -2375,10 +2369,8 @@ define i8 @umin_or_mask(i8 %x) {
 
 define i8 @umax_or_mask(i8 %x) {
 ; CHECK-LABEL: @umax_or_mask(
-; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.umax.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = or i8 %x, 1
   %and2 = or i8 %x, 3
@@ -2441,9 +2433,7 @@ define i8 @umax_or_mask_negative(i8 %x) {
 define i8 @smin_and_mask_subset1(i8 %x) {
 ; CHECK-LABEL: @smin_and_mask_subset1(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smin.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[AND1]]
 ;
   %and1 = and i8 %x, 1
   %and2 = and i8 %x, 3
@@ -2453,10 +2443,8 @@ define i8 @smin_and_mask_subset1(i8 %x) {
 
 define i8 @smax_and_mask_subset1(i8 %x) {
 ; CHECK-LABEL: @smax_and_mask_subset1(
-; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smax.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = and i8 %x, 1
   %and2 = and i8 %x, 3
@@ -2467,9 +2455,7 @@ define i8 @smax_and_mask_subset1(i8 %x) {
 define i8 @smin_or_mask_subset1(i8 %x) {
 ; CHECK-LABEL: @smin_or_mask_subset1(
 ; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smin.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[AND1]]
 ;
   %and1 = or i8 %x, 1
   %and2 = or i8 %x, 3
@@ -2479,10 +2465,8 @@ define i8 @smin_or_mask_subset1(i8 %x) {
 
 define i8 @smax_or_mask_subset1(i8 %x) {
 ; CHECK-LABEL: @smax_or_mask_subset1(
-; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], 3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smax.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = or i8 %x, 1
   %and2 = or i8 %x, 3
@@ -2493,9 +2477,7 @@ define i8 @smax_or_mask_subset1(i8 %x) {
 define i8 @smin_and_mask_subset2(i8 %x) {
 ; CHECK-LABEL: @smin_and_mask_subset2(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], -3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smin.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[AND1]]
 ;
   %and1 = and i8 %x, -4
   %and2 = and i8 %x, -3
@@ -2505,10 +2487,8 @@ define i8 @smin_and_mask_subset2(i8 %x) {
 
 define i8 @smax_and_mask_subset2(i8 %x) {
 ; CHECK-LABEL: @smax_and_mask_subset2(
-; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X]], -3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smax.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[X:%.*]], -3
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = and i8 %x, -4
   %and2 = and i8 %x, -3
@@ -2519,9 +2499,7 @@ define i8 @smax_and_mask_subset2(i8 %x) {
 define i8 @smin_or_mask_subset2(i8 %x) {
 ; CHECK-LABEL: @smin_or_mask_subset2(
 ; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], -3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smin.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    ret i8 [[AND1]]
 ;
   %and1 = or i8 %x, -4
   %and2 = or i8 %x, -3
@@ -2531,10 +2509,8 @@ define i8 @smin_or_mask_subset2(i8 %x) {
 
 define i8 @smax_or_mask_subset2(i8 %x) {
 ; CHECK-LABEL: @smax_or_mask_subset2(
-; CHECK-NEXT:    [[AND1:%.*]] = or i8 [[X:%.*]], -4
-; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X]], -3
-; CHECK-NEXT:    [[VAL:%.*]] = call i8 @llvm.smax.i8(i8 [[AND1]], i8 [[AND2]])
-; CHECK-NEXT:    ret i8 [[VAL]]
+; CHECK-NEXT:    [[AND2:%.*]] = or i8 [[X:%.*]], -3
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = or i8 %x, -4
   %and2 = or i8 %x, -3
