@@ -382,23 +382,25 @@ struct TypeBuilderImpl {
 
     // Gather the record type fields.
     // (1) The data components.
-    for (const auto &field :
+    for (const auto &component :
          Fortran::semantics::OrderedComponentIterator(tySpec)) {
       // Lowering is assuming non deferred component lower bounds are always 1.
       // Catch any situations where this is not true for now.
       if (!converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-          componentHasNonDefaultLowerBounds(field))
-        TODO(converter.genLocation(field.name()),
+          componentHasNonDefaultLowerBounds(component))
+        TODO(converter.genLocation(component.name()),
              "derived type components with non default lower bounds");
-      if (IsProcedure(field))
-        TODO(converter.genLocation(field.name()), "procedure components");
-      mlir::Type ty = genSymbolType(field);
+      if (IsProcedure(component))
+        TODO(converter.genLocation(component.name()), "procedure components");
+      mlir::Type ty = genSymbolType(component);
       // Do not add the parent component (component of the parents are
       // added and should be sufficient, the parent component would
-      // duplicate the fields).
-      if (field.test(Fortran::semantics::Symbol::Flag::ParentComp))
+      // duplicate the fields). Note that genSymbolType must be called above on
+      // it so that the dispatch table for the parent type still gets emitted
+      // as needed.
+      if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
         continue;
-      cs.emplace_back(field.name().ToString(), ty);
+      cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
     }
 
     // (2) The LEN type parameters.
