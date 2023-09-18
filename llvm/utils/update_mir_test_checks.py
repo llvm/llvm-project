@@ -33,12 +33,12 @@ from UpdateTestChecks import common
 MIR_FUNC_NAME_RE = re.compile(r" *name: *(?P<func>[A-Za-z0-9_.-]+)")
 MIR_BODY_BEGIN_RE = re.compile(r" *body: *\|")
 MIR_BASIC_BLOCK_RE = re.compile(r" *bb\.[0-9]+.*:$")
-VREG_RE = re.compile(r"(%[0-9]+)(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?")
+VREG_RE = re.compile(r"(%[0-9]+)(?:\.[a-z0-9_]+)?(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?")
 MI_FLAGS_STR = (
     r"(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn "
     r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge )*"
 )
-VREG_DEF_FLAGS_STR = r"(?:dead )*"
+VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
 VREG_DEF_RE = re.compile(
     r"^ *(?P<vregs>{2}{0}(?:, {2}{0})*) = "
     r"{1}(?P<opcode>[A-Zt][A-Za-z0-9_]+)".format(
