@@ -11,7 +11,7 @@
 // template <class T>
 // struct pointer_traits<T*>
 // {
-//     static pointer pointer_to(<details>); // constexpr in C++20
+//     static pointer pointer_to(<details>) noexcept; // constexpr in C++20
 //     ...
 // };
 
@@ -23,14 +23,25 @@
 
 TEST_CONSTEXPR_CXX20 bool test()
 {
+    // pointer_traits<T*>
     {
         int i = 0;
         static_assert(std::is_same<decltype(std::pointer_traits<int*>::pointer_to(i)), int*>::value, "");
+        ASSERT_NOEXCEPT(std::pointer_traits<int*>::pointer_to(i));
         assert(std::pointer_traits<int*>::pointer_to(i) == &i);
     }
+    // pointer_traits<const T*>
+    {
+        int const i = 0;
+        static_assert(std::is_same<decltype(std::pointer_traits<const int*>::pointer_to(i)), const int*>::value, "");
+        ASSERT_NOEXCEPT(std::pointer_traits<const int*>::pointer_to(i));
+        assert(std::pointer_traits<const int*>::pointer_to(i) == &i);
+    }
+    // pointer_traits<const T*> with a non-const argument
     {
         int i = 0;
         static_assert(std::is_same<decltype(std::pointer_traits<const int*>::pointer_to(i)), const int*>::value, "");
+        ASSERT_NOEXCEPT(std::pointer_traits<const int*>::pointer_to(i));
         assert(std::pointer_traits<const int*>::pointer_to(i) == &i);
     }
     return true;
