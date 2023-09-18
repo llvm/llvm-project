@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-diagnostics -ownership-based-buffer-deallocation \
+// RUN: mlir-opt -verify-diagnostics -ownership-based-buffer-deallocation=allow-cloning=true \
 // RUN:   --buffer-deallocation-simplification -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true -split-input-file %s > /dev/null
 
@@ -109,6 +109,14 @@ func.func @dealloc_existing_clones(%arg0: memref<?x?xf64>, %arg1: memref<?x?xf64
 // dealloc operand
 
 // -----
+
+// Note: memref.get_global does not provide ownership of the memref it returns
+// because a global constant must not be deallocated. However, the function
+// boundary ABI requires to return ownership for function results. Enabling
+// "allow-cloning" fixes this issue automatically but requires buffer writes to
+// dominate all buffer reads (not just for this memref but for all of them in
+// the IR). Otherwise, a clone operation has to be inserted manually before
+// running buffer deallocation.
 
 memref.global "private" constant @__constant_4xf32 : memref<4xf32> = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]>
 

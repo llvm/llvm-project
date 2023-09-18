@@ -17,6 +17,7 @@
 
 namespace mlir {
 namespace bufferization {
+struct DeallocationOptions;
 
 /// Options for the buffer deallocation pipeline.
 struct BufferDeallocationPipelineOptions
@@ -28,6 +29,22 @@ struct BufferDeallocationPipelineOptions
           "dynamically pass ownership of memrefs to callees. This can enable "
           "earlier deallocations."),
       llvm::cl::init(false)};
+  PassOptions::Option<bool> allowCloning{
+      *this, "allow-cloning",
+      llvm::cl::desc(
+          "Allows the pass to insert `bufferization.clone` operations. This is "
+          "useful for supporting IR that does not adhere to the function "
+          "boundary ABI initially (excl. external functions) and to support "
+          "operations with results with 'Unknown' ownership. However, it "
+          "requires that all buffer writes dominate all buffer reads (i.e., "
+          "only enable this option if your IR is guaranteed to have this "
+          "property)."),
+      llvm::cl::init(false)};
+
+  /// Convert this BufferDeallocationPipelineOptions struct to a
+  /// DeallocationOptions struct to be passed to the
+  /// OwnershipBasedBufferDeallocationPass.
+  DeallocationOptions asDeallocationOptions() const;
 };
 
 //===----------------------------------------------------------------------===//

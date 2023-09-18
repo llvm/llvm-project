@@ -132,16 +132,21 @@ void DeallocationState::getLiveMemrefsIn(Block *block,
   memrefs.append(liveMemrefs);
 }
 
-std::pair<Value, Value>
-DeallocationState::getMemrefWithUniqueOwnership(OpBuilder &builder,
-                                                Value memref, Block *block) {
+FailureOr<std::pair<Value, Value>>
+DeallocationState::getMemrefWithUniqueOwnership(
+    const DeallocationOptions &options, OpBuilder &builder, Value memref,
+    Block *block) {
   auto iter = ownershipMap.find({memref, block});
   assert(iter != ownershipMap.end() &&
          "Value must already have been registered in the ownership map");
 
   Ownership ownership = iter->second;
   if (ownership.isUnique())
-    return {memref, ownership.getIndicator()};
+    return std::make_pair(memref, ownership.getIndicator());
+
+  if (!options.allowCloning)
+    return emitError(memref.getLoc(),
+                     "MemRef value does not have valid ownership");
 
   // Instead of inserting a clone operation we could also insert a dealloc
   // operation earlier in the block and use the updated ownerships returned by
@@ -155,7 +160,7 @@ DeallocationState::getMemrefWithUniqueOwnership(OpBuilder &builder,
   Value newMemref = cloneOp.getResult();
   updateOwnership(newMemref, condition);
   memrefsToDeallocatePerBlock[newMemref.getParentBlock()].push_back(newMemref);
-  return {newMemref, condition};
+  return std::make_pair(newMemref, condition);
 }
 
 void DeallocationState::getMemrefsToRetain(

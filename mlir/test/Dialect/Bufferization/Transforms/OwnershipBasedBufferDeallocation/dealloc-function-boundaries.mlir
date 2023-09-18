@@ -1,4 +1,4 @@
-// RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=false \
+// RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=allow-cloning=true \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s
 // RUN: mlir-opt --allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true \
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s --check-prefix=CHECK-DYNAMIC
@@ -91,6 +91,12 @@ func.func private @redundantOperations(%arg0: memref<2xf32>) {
 // BufferDeallocation expected behavior: It must not dealloc %arg1 and %x
 // since they are operands of return operation and should escape from
 // deallocating. It should dealloc %y after CopyOp.
+
+// Note: when dynamic ownership is disabled, we need to allow cloning in this 
+// example because a function argument is returned again which is against the
+// function boundary ABI. Buffer deallocation will fix this by inserting an
+// additional clone operation, but as a prerequisite all buffer writes have to
+// dominate all buffer reads.
 
 func.func private @memref_in_function_results(
   %arg0: memref<5xf32>,
