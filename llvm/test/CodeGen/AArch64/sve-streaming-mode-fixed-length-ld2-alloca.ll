@@ -89,22 +89,22 @@ define void @alloc_v32i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ldp q0, q3, [sp, #16]
 ; CHECK-NEXT:    mov z1.b, z0.b[14]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z2.b, z0.b[12]
 ; CHECK-NEXT:    mov z4.b, z0.b[10]
+; CHECK-NEXT:    mov z2.b, z0.b[12]
 ; CHECK-NEXT:    mov z5.b, z0.b[8]
 ; CHECK-NEXT:    strb w8, [sp]
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov z1.b, z0.b[6]
-; CHECK-NEXT:    strb w8, [sp, #7]
-; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    mov z2.b, z0.b[4]
 ; CHECK-NEXT:    mov z0.b, z0.b[2]
-; CHECK-NEXT:    strb w8, [sp, #6]
+; CHECK-NEXT:    strb w8, [sp, #7]
 ; CHECK-NEXT:    fmov w8, s4
+; CHECK-NEXT:    strb w9, [sp, #6]
+; CHECK-NEXT:    fmov w9, s5
 ; CHECK-NEXT:    strb w8, [sp, #5]
-; CHECK-NEXT:    fmov w8, s5
-; CHECK-NEXT:    strb w8, [sp, #4]
 ; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    strb w9, [sp, #4]
 ; CHECK-NEXT:    strb w8, [sp, #3]
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    strb w8, [sp, #2]

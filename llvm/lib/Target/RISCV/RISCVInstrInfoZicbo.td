@@ -76,10 +76,10 @@ def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
 
 let Predicates = [HasStdExtZicbop] in {
   // FIXME: Match address with offset
-  def : Pat<(prefetch GPR:$rs1, imm, imm, (XLenVT 0)),
+  def : Pat<(prefetch GPR:$rs1, timm, timm, (i32 0)),
             (PREFETCH_I GPR:$rs1, 0)>;
-  def : Pat<(prefetch GPR:$rs1, (XLenVT 0), imm, (XLenVT 1)),
+  def : Pat<(prefetch GPR:$rs1, (i32 0), timm, (i32 1)),
             (PREFETCH_R GPR:$rs1, 0)>;
-  def : Pat<(prefetch GPR:$rs1, (XLenVT 1), imm, (XLenVT 1)),
+  def : Pat<(prefetch GPR:$rs1, (i32 1), timm, (i32 1)),
             (PREFETCH_W GPR:$rs1, 0)>;
 }

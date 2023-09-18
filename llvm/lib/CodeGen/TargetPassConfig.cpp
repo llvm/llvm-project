@@ -1244,9 +1244,6 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&LiveDebugValuesID);
   addPass(&MachineSanitizerBinaryMetadataID);
 
-  if (EnableMachineOutliner == RunOutliner::NeverOutline)
-    TM->Options.EnableMachineOutliner = false;
-
   if (TM->Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {

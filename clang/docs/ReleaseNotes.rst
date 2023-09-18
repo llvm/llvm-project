@@ -349,6 +349,16 @@ Bug Fixes to C++ Support
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
 
+- Fixed some cases where the source location for an instantiated specialization
+  of a function template or a member function of a class template was assigned
+  the location of a non-defining declaration rather than the location of the
+  definition the specialization was instantiated from.
+  (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
+
+- Fix a crash when a default member initializer of a base aggregate
+  makes an invalid call to an immediate function.
+  (`#66324 <https://github.com/llvm/llvm-project/issues/66324>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
