@@ -298,6 +298,8 @@ end
 * Unrestricted `INTRINSIC` functions are accepted for use in
   `PROCEDURE` statements in generic interfaces, as in some other
   compilers.
+* A `NULL()` pointer is treated as an unallocated allocatable
+  when associated with an `INTENT(IN)` allocatable dummy argument.
 
 ### Extensions supported when enabled by options
 
