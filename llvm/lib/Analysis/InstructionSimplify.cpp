@@ -2079,6 +2079,13 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op0, m_Not(m_Specific(Op1))) || match(Op1, m_Not(m_Specific(Op0))))
     return Constant::getNullValue(Op0->getType());
 
+  // A & !A  =  !A & A  =  0
+  ICmpInst::Predicate EqPred;
+  if ((match(Op0, m_ZExt(m_ICmp(EqPred, m_Specific(Op1), m_Zero()))) ||
+       match(Op1, m_ZExt(m_ICmp(EqPred, m_Specific(Op0), m_Zero())))) &&
+      EqPred == ICmpInst::ICMP_EQ)
+    return Constant::getNullValue(Op0->getType());
+
   // (A | ?) & A = A
   if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
     return Op1;

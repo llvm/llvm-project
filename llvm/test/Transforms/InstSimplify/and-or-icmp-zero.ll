@@ -265,10 +265,7 @@ define i1 @and_cmps_ptr_eq_zero_with_mask_commute4(ptr %p, i64 %y) {
 ; tests from PR66606
 define i32 @and_zext_eq_zero(i32 %a) {
 ; CHECK-LABEL: @and_zext_eq_zero(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[NOT:%.*]] = zext i1 [[COND]] to i32
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], [[NOT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %cond = icmp eq i32 %a, 0
   %not = zext i1 %cond to i32
@@ -278,10 +275,7 @@ define i32 @and_zext_eq_zero(i32 %a) {
 
 define i32 @and_zext_eq_zero_commuted(i32 %a) {
 ; CHECK-LABEL: @and_zext_eq_zero_commuted(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[NOT:%.*]] = zext i1 [[COND]] to i32
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[NOT]], [[A]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 0
 ;
   %cond = icmp eq i32 %a, 0
   %not = zext i1 %cond to i32
