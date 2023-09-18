@@ -529,8 +529,21 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
 
         const llvm::APSInt *Result =
           BasicVals.evalAPSInt(op, LHSValue, RHSValue);
-        if (!Result)
+        if (!Result) {
+          if (op == BO_Shl || op == BO_Shr) {
+            // FIXME: At this point the constant folding claims that the result
+            // of a bitwise shift is undefined. However, constant folding
+            // relies on the inaccurate type information that is stored in the
+            // bit size of APSInt objects, and if we reached this point, then
+            // the checker core.BitwiseShift already determined that the shift
+            // is valid (in a PreStmt callback, by querying the real type from
+            // the AST node).
+            // To avoid embarrassing false positives, let's just say that we
+            // don't know anything about the result of the shift.
+            return UnknownVal();
+          }
           return UndefinedVal();
+        }
 
         return nonloc::ConcreteInt(*Result);
       }
