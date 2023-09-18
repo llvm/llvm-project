@@ -350,7 +350,7 @@ public:
 
 private:
   void reportDiag(const clang::Token &Tok, const llvm::StringRef Constant) {
-    Check->diag(Tok.getLocation(), "prefer math constant")
+    Check->diag(Tok.getLocation(), "prefer std::numbers math constant")
         << clang::FixItHint::CreateReplacement(
                clang::SourceRange(Tok.getLocation(), Tok.getLastLoc()),
                Constant);
