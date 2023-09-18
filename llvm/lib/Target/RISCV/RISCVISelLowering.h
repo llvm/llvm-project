@@ -607,6 +607,10 @@ public:
   }
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
+  bool isCtpopFast(EVT VT) const override;
+
+  unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const override;
+
   bool preferZeroCompareBranch() const override { return true; }
 
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {

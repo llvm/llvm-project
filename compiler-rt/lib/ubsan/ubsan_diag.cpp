@@ -223,7 +223,7 @@ static void RenderText(InternalScopedString *Buffer, const char *Message,
 #else
       snprintf(FloatBuffer, sizeof(FloatBuffer), "%Lg", (long double)A.Float);
 #endif
-      Buffer->AppendF("%s", FloatBuffer);
+      Buffer->Append(FloatBuffer);
       break;
     }
     case Diag::AK_Pointer:
@@ -289,7 +289,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
   Buffer.AppendF("\n");
 
   // Emit highlights.
-  Buffer.AppendF("%s", Decor.Highlight());
+  Buffer.Append(Decor.Highlight());
   Range *InRange = upperBound(Min, Ranges, NumRanges);
   for (uptr P = Min; P != Max; ++P) {
     char Pad = ' ', Byte = ' ';
@@ -358,7 +358,7 @@ Diag::~Diag() {
     Buffer.clear();
   }
 
-  Buffer.AppendF("%s", Decor.Bold());
+  Buffer.Append(Decor.Bold());
   RenderLocation(&Buffer, Loc);
   Buffer.AppendF(":");
 

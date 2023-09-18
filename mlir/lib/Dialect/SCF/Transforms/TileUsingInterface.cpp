@@ -509,7 +509,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   // 1. Get the producer of the source (potentially walking through
   // `iter_args` of nested `scf.for`)
   auto [fusableProducer, destinationIterArg] =
-      getUntiledProducerFromSliceSource(&candidateSliceOp->getOpOperand(0),
+      getUntiledProducerFromSliceSource(&candidateSliceOp.getSourceMutable()[0],
                                         loops);
   if (!fusableProducer)
     return std::nullopt;

@@ -62,8 +62,8 @@ func.func @fold_yield_direct_zero() -> tensor<32xf64> {
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant dense<0.000000e+00> : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_7:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false]} : tensor<8x8xf64>
-// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {bufferization.escape = [false], memory_space = 0 : i64} : tensor<8x8xf64>
+// CHECK-DAG:       %[[VAL_7:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) : tensor<8x8xf64>
+// CHECK-DAG:       %[[VAL_8:.*]] = bufferization.alloc_tensor() copy(%[[VAL_6]]) {memory_space = 0 : i64} : tensor<8x8xf64>
 // CHECK-DAG:       %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
 // CHECK-DAG:       %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{{.*}}>> to memref<?xindex>

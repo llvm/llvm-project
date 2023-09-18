@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-allocs bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @elementwise_no_conflict
 func.func @elementwise_no_conflict(%a: tensor<5xf32>,

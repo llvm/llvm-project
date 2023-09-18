@@ -698,11 +698,8 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
     return AddModuleSegments(module_name.data(), info, data->modules);
   }
 
-  if (info->dlpi_name) {
-    InternalScopedString module_name;
-    module_name.AppendF("%s", info->dlpi_name);
-    return AddModuleSegments(module_name.data(), info, data->modules);
-  }
+  if (info->dlpi_name)
+    return AddModuleSegments(info->dlpi_name, info, data->modules);
 
   return 0;
 }

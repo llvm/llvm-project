@@ -37,7 +37,7 @@ namespace __hwasan {
 
 class ScopedReport {
  public:
-  ScopedReport(bool fatal = false) : error_message_(1), fatal(fatal) {
+  ScopedReport(bool fatal = false) : fatal(fatal) {
     Lock lock(&error_message_lock_);
     error_message_ptr_ = fatal ? &error_message_ : nullptr;
     ++hwasan_report_count;
@@ -65,11 +65,7 @@ class ScopedReport {
     Lock lock(&error_message_lock_);
     if (!error_message_ptr_)
       return;
-    uptr len = internal_strlen(msg);
-    uptr old_size = error_message_ptr_->size();
-    error_message_ptr_->resize(old_size + len);
-    // overwrite old trailing '\0', keep new trailing '\0' untouched.
-    internal_memcpy(&(*error_message_ptr_)[old_size - 1], msg, len);
+    error_message_ptr_->Append(msg);
   }
 
   static void SetErrorReportCallback(void (*callback)(const char *)) {
@@ -78,17 +74,17 @@ class ScopedReport {
   }
 
  private:
-  ScopedErrorReportLock error_report_lock_;
-  InternalMmapVector<char> error_message_;
+  InternalScopedString error_message_;
   bool fatal;
 
-  static InternalMmapVector<char> *error_message_ptr_;
   static Mutex error_message_lock_;
+  static InternalScopedString *error_message_ptr_
+      SANITIZER_GUARDED_BY(error_message_lock_);
   static void (*error_report_callback_)(const char *);
 };
 
-InternalMmapVector<char> *ScopedReport::error_message_ptr_;
 Mutex ScopedReport::error_message_lock_;
+InternalScopedString *ScopedReport::error_message_ptr_;
 void (*ScopedReport::error_report_callback_)(const char *);
 
 // If there is an active ScopedReport, append to its error message.
@@ -528,12 +524,12 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
   tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
   InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
-    s.AppendF("%s", row == center_row_beg ? "=>" : "  ");
+    s.Append(row == center_row_beg ? "=>" : "  ");
     s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
     for (uptr i = 0; i < row_len; i++) {
-      s.AppendF("%s", row + i == tag_ptr ? "[" : " ");
+      s.Append(row + i == tag_ptr ? "[" : " ");
       print_tag(s, &row[i]);
-      s.AppendF("%s", row + i == tag_ptr ? "]" : " ");
+      s.Append(row + i == tag_ptr ? "]" : " ");
     }
     s.AppendF("\n");
   }
