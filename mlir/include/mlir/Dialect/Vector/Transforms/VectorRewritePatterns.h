@@ -305,6 +305,7 @@ void populateVectorNarrowTypeEmulationPatterns(
 
 /// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
 /// vector operations comprising `shuffle` and `bitwise` ops.
+/// Warning: these patterns currently only work for little endian targets.
 FailureOr<Value> rewriteBitCastOfTruncI(RewriterBase &rewriter,
                                         vector::BitCastOp bitCastOp,
                                         arith::TruncIOp truncOp,
@@ -312,12 +313,14 @@ FailureOr<Value> rewriteBitCastOfTruncI(RewriterBase &rewriter,
 
 /// Rewrite a vector `ext(bitcast)` to use a more efficient sequence of
 /// vector operations comprising `shuffle` and `bitwise` ops.
+/// Warning: these patterns currently only work for little endian targets.
 FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
                                      vector::BitCastOp bitCastOp,
                                      vector::BroadcastOp maybeBroadcastOp);
 
 /// Appends patterns for rewriting vector operations over narrow types with
 /// ops over wider types.
+/// Warning: these patterns currently only work for little endian targets.
 void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
                                              PatternBenefit benefit = 1);
 
