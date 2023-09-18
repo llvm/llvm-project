@@ -1,4 +1,4 @@
-; REQUIRES: x86-registered-target
+; REQUIRES: object-emission
 ;
 ; RUN: llvm-link %s %p/type-unique-simple2-b.ll -S -o - | %llc_dwarf -filetype=obj -O0 | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
@@ -25,8 +25,6 @@
 ; CHECK: DW_TAG
 
 ; ModuleID = 'a.cpp'
-
-target triple = "x86_64-unknown-linux-gnu"
 
 %class.A = type { ptr }
 
