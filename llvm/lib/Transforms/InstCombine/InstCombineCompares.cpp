@@ -6391,10 +6391,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         // icmp eq X, (zext (icmp eq X, 0)) --> false
         // icmp ne X, (zext (icmp eq X, 0)) --> true
         return replaceInstUsesWith(
-            I,
-            Constant::getIntegerValue(
-                I.getType(),
-                APInt(1U, static_cast<uint64_t>(Pred1 == ICmpInst::ICMP_NE))));
+            I, ConstantInt::getBool(I.getType(), Pred1 == ICmpInst::ICMP_NE));
       } else {
         // icmp eq X, (zext (icmp ne X, 0)) --> icmp ult X, 2
         // icmp ne X, (zext (icmp ne X, 0)) --> icmp ugt X, 1
@@ -6412,10 +6409,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         // icmp eq X, (zext (icmp ne X, 1)) --> false
         // icmp ne X, (zext (icmp ne X, 1)) --> true
         return replaceInstUsesWith(
-            I,
-            Constant::getIntegerValue(
-                I.getType(),
-                APInt(1U, static_cast<uint64_t>(Pred1 == ICmpInst::ICMP_NE))));
+            I, ConstantInt::getBool(I.getType(), Pred1 == ICmpInst::ICMP_NE));
       } else {
         // icmp eq X, (zext (icmp eq X, 1)) --> icmp ult X, 2
         // icmp ne X, (zext (icmp eq X, 1)) --> icmp ugt X, 1
