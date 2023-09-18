@@ -384,3 +384,34 @@ llvm.func @_QQmain() {
 llvm.func @_QFPdo_work(%arg0: !llvm.ptr<i32> {fir.bindc_name = "i"}) {
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL:  @sub_
+llvm.func @sub_() {
+  %0 = llvm.mlir.constant(0 : index) : i64
+  %1 = llvm.mlir.constant(1 : index) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFsubEi"} : (i64) -> !llvm.ptr<i32>
+// CHECK: omp.ordered_region
+  omp.ordered_region {
+    %4 = llvm.trunc %1 : i64 to i32
+    llvm.br ^bb1(%4, %1 : i32, i64)
+  ^bb1(%5: i32, %6: i64):  // 2 preds: ^bb0, ^bb2
+    %7 = llvm.icmp "sgt" %6, %0 : i64
+    llvm.cond_br %7, ^bb2, ^bb3
+  ^bb2:  // pred: ^bb1
+    llvm.store %5, %3 : !llvm.ptr<i32>
+    %8 = llvm.load %3 : !llvm.ptr<i32>
+// CHECK: llvm.add
+    %9 = arith.addi %8, %4 : i32
+// CHECK: llvm.sub
+    %10 = arith.subi %6, %1 : i64
+    llvm.br ^bb1(%9, %10 : i32, i64)
+  ^bb3:  // pred: ^bb1
+    llvm.store %5, %3 : !llvm.ptr<i32>
+// CHECK: omp.terminator
+    omp.terminator
+  }
+  llvm.return
+}
