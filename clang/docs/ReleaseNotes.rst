@@ -291,6 +291,9 @@ Bug Fixes to C++ Support
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
 
+- Clang now no longer asserts when an UnresolvedLookupExpr is used as an
+  expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
