@@ -325,40 +325,26 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
   {
     // Process the CIE pointer field.
     auto CIEEdgeItr = BlockEdges.find(RecordOffset + CIEDeltaFieldOffset);
+    if (CIEEdgeItr != BlockEdges.end())
+      return make_error<JITLinkError>(
+          "CIE pointer field already has edge at " +
+          formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset));
+
     orc::ExecutorAddr CIEAddress =
         RecordAddress + orc::ExecutorAddrDiff(CIEDeltaFieldOffset) -
         orc::ExecutorAddrDiff(CIEDelta);
-    if (CIEEdgeItr == BlockEdges.end()) {
-
-      LLVM_DEBUG({
-        dbgs() << "        Adding edge at "
-               << (RecordAddress + CIEDeltaFieldOffset)
-               << " to CIE at: " << CIEAddress << "\n";
-      });
-      if (auto CIEInfoOrErr = PC.findCIEInfo(CIEAddress))
-        CIEInfo = *CIEInfoOrErr;
-      else
-        return CIEInfoOrErr.takeError();
-      assert(CIEInfo->CIESymbol && "CIEInfo has no CIE symbol set");
-      B.addEdge(NegDelta32, RecordOffset + CIEDeltaFieldOffset,
-                *CIEInfo->CIESymbol, 0);
-    } else {
-      LLVM_DEBUG({
-        dbgs() << "        Already has edge at "
-               << (RecordAddress + CIEDeltaFieldOffset) << " to CIE at "
-               << CIEAddress << "\n";
-      });
-      auto &EI = CIEEdgeItr->second;
-      if (EI.Addend)
-        return make_error<JITLinkError>(
-            "CIE edge at " +
-            formatv("{0:x16}", RecordAddress + CIEDeltaFieldOffset) +
-            " has non-zero addend");
-      if (auto CIEInfoOrErr = PC.findCIEInfo(EI.Target->getAddress()))
-        CIEInfo = *CIEInfoOrErr;
-      else
-        return CIEInfoOrErr.takeError();
-    }
+    LLVM_DEBUG({
+      dbgs() << "        Adding edge at "
+             << (RecordAddress + CIEDeltaFieldOffset)
+             << " to CIE at: " << CIEAddress << "\n";
+    });
+    if (auto CIEInfoOrErr = PC.findCIEInfo(CIEAddress))
+      CIEInfo = *CIEInfoOrErr;
+    else
+      return CIEInfoOrErr.takeError();
+    assert(CIEInfo->CIESymbol && "CIEInfo has no CIE symbol set");
+    B.addEdge(NegDelta32, RecordOffset + CIEDeltaFieldOffset,
+              *CIEInfo->CIESymbol, 0);
   }
 
   // Process the PC-Begin field.
