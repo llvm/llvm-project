@@ -752,9 +752,6 @@ Error RewriteInstance::run() {
 void RewriteInstance::discoverFileObjects() {
   NamedRegionTimer T("discoverFileObjects", "discover file objects",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
-  FileSymRefs.clear();
-  BC->getBinaryFunctions().clear();
-  BC->clearBinaryData();
 
   // For local symbols we want to keep track of associated FILE symbol name for
   // disambiguation by combined name.
@@ -891,26 +888,21 @@ void RewriteInstance::discoverFileObjects() {
   unsigned AnonymousId = 0;
 
   // Regex object for matching cold fragments.
-  Regex ColdFragment(".*\\.cold(\\.[0-9]+)?");
+  const Regex ColdFragment(".*\\.cold(\\.[0-9]+)?");
 
   const auto SortedSymbolsEnd =
       LastSymbol == SortedSymbols.end() ? LastSymbol : std::next(LastSymbol);
   for (auto Iter = SortedSymbols.begin(); Iter != SortedSymbolsEnd; ++Iter) {
     const SymbolRef &Symbol = Iter->Symbol;
-
-    // Keep undefined symbols for pretty printing?
-    if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Undefined)
-      continue;
-
+    const uint64_t SymbolAddress = Iter->Address;
+    const auto SymbolFlags = cantFail(Symbol.getFlags());
     const SymbolRef::Type SymbolType = cantFail(Symbol.getType());
 
     if (SymbolType == SymbolRef::ST_File)
       continue;
 
     StringRef SymName = cantFail(Symbol.getName(), "cannot get symbol name");
-    uint64_t Address =
-        cantFail(Symbol.getAddress(), "cannot get symbol address");
-    if (Address == 0) {
+    if (SymbolAddress == 0) {
       if (opts::Verbosity >= 1 && SymbolType == SymbolRef::ST_Function)
         errs() << "BOLT-WARNING: function with 0 address seen\n";
       continue;
@@ -920,11 +912,12 @@ void RewriteInstance::discoverFileObjects() {
     if (SymName == "__hot_start" || SymName == "__hot_end")
       continue;
 
-    FileSymRefs[Address] = Symbol;
+    FileSymRefs[SymbolAddress] = Symbol;
 
     // Skip section symbols that will be registered by disassemblePLT().
-    if ((cantFail(Symbol.getType()) == SymbolRef::ST_Debug)) {
-      ErrorOr<BinarySection &> BSection = BC->getSectionForAddress(Address);
+    if (SymbolType == SymbolRef::ST_Debug) {
+      ErrorOr<BinarySection &> BSection =
+          BC->getSectionForAddress(SymbolAddress);
       if (BSection && getPLTSectionInfo(BSection->getName()))
         continue;
     }
@@ -946,10 +939,10 @@ void RewriteInstance::discoverFileObjects() {
     std::string AlternativeName;
     if (Name.empty()) {
       UniqueName = "ANONYMOUS." + std::to_string(AnonymousId++);
-    } else if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global) {
+    } else if (SymbolFlags & SymbolRef::SF_Global) {
       if (const BinaryData *BD = BC->getBinaryDataByName(Name)) {
         if (BD->getSize() == ELFSymbolRef(Symbol).getSize() &&
-            BD->getAddress() == Address) {
+            BD->getAddress() == SymbolAddress) {
           if (opts::Verbosity > 1)
             errs() << "BOLT-WARNING: ignoring duplicate global symbol " << Name
                    << "\n";
@@ -985,14 +978,13 @@ void RewriteInstance::discoverFileObjects() {
 
     uint64_t SymbolSize = ELFSymbolRef(Symbol).getSize();
     uint64_t SymbolAlignment = Symbol.getAlignment();
-    unsigned SymbolFlags = cantFail(Symbol.getFlags());
 
     auto registerName = [&](uint64_t FinalSize) {
       // Register names even if it's not a function, e.g. for an entry point.
-      BC->registerNameAtAddress(UniqueName, Address, FinalSize, SymbolAlignment,
-                                SymbolFlags);
+      BC->registerNameAtAddress(UniqueName, SymbolAddress, FinalSize,
+                                SymbolAlignment, SymbolFlags);
       if (!AlternativeName.empty())
-        BC->registerNameAtAddress(AlternativeName, Address, FinalSize,
+        BC->registerNameAtAddress(AlternativeName, SymbolAddress, FinalSize,
                                   SymbolAlignment, SymbolFlags);
     };
 
@@ -1012,7 +1004,7 @@ void RewriteInstance::discoverFileObjects() {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
 
-    if (Address == Section->getAddress() + Section->getSize()) {
+    if (SymbolAddress == Section->getAddress() + Section->getSize()) {
       assert(SymbolSize == 0 &&
              "unexpect non-zero sized symbol at end of section");
       LLVM_DEBUG(
@@ -1038,11 +1030,12 @@ void RewriteInstance::discoverFileObjects() {
     // their local labels. The only way to tell them apart is to look at
     // symbol scope - global vs local.
     if (PreviousFunction && SymbolType != SymbolRef::ST_Function) {
-      if (PreviousFunction->containsAddress(Address)) {
+      if (PreviousFunction->containsAddress(SymbolAddress)) {
         if (PreviousFunction->isSymbolValidInScope(Symbol, SymbolSize)) {
           LLVM_DEBUG(dbgs()
                      << "BOLT-DEBUG: symbol is a function local symbol\n");
-        } else if (Address == PreviousFunction->getAddress() && !SymbolSize) {
+        } else if (SymbolAddress == PreviousFunction->getAddress() &&
+                   !SymbolSize) {
           LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring symbol as a marker\n");
         } else if (opts::Verbosity > 1) {
           errs() << "BOLT-WARNING: symbol " << UniqueName
@@ -1059,8 +1052,8 @@ void RewriteInstance::discoverFileObjects() {
       }
     }
 
-    if (PreviousFunction && PreviousFunction->containsAddress(Address) &&
-        PreviousFunction->getAddress() != Address) {
+    if (PreviousFunction && PreviousFunction->containsAddress(SymbolAddress) &&
+        PreviousFunction->getAddress() != SymbolAddress) {
       if (PreviousFunction->isSymbolValidInScope(Symbol, SymbolSize)) {
         if (opts::Verbosity >= 1)
           outs() << "BOLT-INFO: skipping possibly another entry for function "
@@ -1072,12 +1065,12 @@ void RewriteInstance::discoverFileObjects() {
 
         registerName(0);
 
-        PreviousFunction->addEntryPointAtOffset(Address -
+        PreviousFunction->addEntryPointAtOffset(SymbolAddress -
                                                 PreviousFunction->getAddress());
 
         // Remove the symbol from FileSymRefs so that we can skip it from
         // in the future.
-        auto SI = FileSymRefs.find(Address);
+        auto SI = FileSymRefs.find(SymbolAddress);
         assert(SI != FileSymRefs.end() && "symbol expected to be present");
         assert(SI->second == Symbol && "wrong symbol found");
         FileSymRefs.erase(SI);
@@ -1087,10 +1080,10 @@ void RewriteInstance::discoverFileObjects() {
 
     // Checkout for conflicts with function data from FDEs.
     bool IsSimple = true;
-    auto FDEI = CFIRdWrt->getFDEs().lower_bound(Address);
+    auto FDEI = CFIRdWrt->getFDEs().lower_bound(SymbolAddress);
     if (FDEI != CFIRdWrt->getFDEs().end()) {
       const dwarf::FDE &FDE = *FDEI->second;
-      if (FDEI->first != Address) {
+      if (FDEI->first != SymbolAddress) {
         // There's no matching starting address in FDE. Make sure the previous
         // FDE does not contain this address.
         if (FDEI != CFIRdWrt->getFDEs().begin()) {
@@ -1098,7 +1091,8 @@ void RewriteInstance::discoverFileObjects() {
           const dwarf::FDE &PrevFDE = *FDEI->second;
           uint64_t PrevStart = PrevFDE.getInitialLocation();
           uint64_t PrevLength = PrevFDE.getAddressRange();
-          if (Address > PrevStart && Address < PrevStart + PrevLength) {
+          if (SymbolAddress > PrevStart &&
+              SymbolAddress < PrevStart + PrevLength) {
             errs() << "BOLT-ERROR: function " << UniqueName
                    << " is in conflict with FDE ["
                    << Twine::utohexstr(PrevStart) << ", "
@@ -1115,11 +1109,11 @@ void RewriteInstance::discoverFileObjects() {
                  << "; symbol table : " << SymbolSize << ". Using max size.\n";
         }
         SymbolSize = std::max(SymbolSize, FDE.getAddressRange());
-        if (BC->getBinaryDataAtAddress(Address)) {
-          BC->setBinaryDataSize(Address, SymbolSize);
+        if (BC->getBinaryDataAtAddress(SymbolAddress)) {
+          BC->setBinaryDataSize(SymbolAddress, SymbolSize);
         } else {
           LLVM_DEBUG(dbgs() << "BOLT-DEBUG: No BD @ 0x"
-                            << Twine::utohexstr(Address) << "\n");
+                            << Twine::utohexstr(SymbolAddress) << "\n");
         }
       }
     }
@@ -1128,7 +1122,7 @@ void RewriteInstance::discoverFileObjects() {
     // Since function may not have yet obtained its real size, do a search
     // using the list of registered functions instead of calling
     // getBinaryFunctionAtAddress().
-    auto BFI = BC->getBinaryFunctions().find(Address);
+    auto BFI = BC->getBinaryFunctions().find(SymbolAddress);
     if (BFI != BC->getBinaryFunctions().end()) {
       BF = &BFI->second;
       // Duplicate the function name. Make sure everything matches before we add
@@ -1142,15 +1136,17 @@ void RewriteInstance::discoverFileObjects() {
                  << BF->getSize() << " new " << SymbolSize << "\n";
         }
         BF->setSize(std::max(SymbolSize, BF->getSize()));
-        BC->setBinaryDataSize(Address, BF->getSize());
+        BC->setBinaryDataSize(SymbolAddress, BF->getSize());
       }
       BF->addAlternativeName(UniqueName);
     } else {
-      ErrorOr<BinarySection &> Section = BC->getSectionForAddress(Address);
+      ErrorOr<BinarySection &> Section =
+          BC->getSectionForAddress(SymbolAddress);
       // Skip symbols from invalid sections
       if (!Section) {
         errs() << "BOLT-WARNING: " << UniqueName << " (0x"
-               << Twine::utohexstr(Address) << ") does not have any section\n";
+               << Twine::utohexstr(SymbolAddress)
+               << ") does not have any section\n";
         continue;
       }
 
@@ -1158,7 +1154,8 @@ void RewriteInstance::discoverFileObjects() {
       if (!Section->getSize())
         continue;
 
-      BF = BC->createBinaryFunction(UniqueName, *Section, Address, SymbolSize);
+      BF = BC->createBinaryFunction(UniqueName, *Section, SymbolAddress,
+                                    SymbolSize);
       if (!IsSimple)
         BF->setSimple(false);
     }
