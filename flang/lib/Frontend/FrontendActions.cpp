@@ -70,6 +70,8 @@
 #include <memory>
 #include <system_error>
 
+#include "flang/Tools/CLOptions.inc"
+
 using namespace Fortran::frontend;
 
 // Declare plugin extension function declarations.
@@ -313,12 +315,10 @@ bool CodeGenAction::beginSourceFileAction() {
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
       isDevice = offloadMod.getIsTargetDevice();
-
-    pm.addPass(fir::createOMPMarkDeclareTargetPass());
-    if (isDevice) {
-      pm.addPass(fir::createOMPEarlyOutliningPass());
-      pm.addPass(fir::createOMPFunctionFilteringPass());
-    }
+    // WARNING: This pipeline must be run immediately after the lowering to
+    // ensure that the FIR is correct with respect to OpenMP operations/
+    // attributes.
+    fir::createOpenMPFIRPassPipeline(pm, isDevice);
   }
 
   pm.enableVerifier(/*verifyPasses=*/true);
@@ -650,8 +650,6 @@ void GetSymbolsSourcesAction::executeAction() {
 //===----------------------------------------------------------------------===//
 
 CodeGenAction::~CodeGenAction() = default;
-
-#include "flang/Tools/CLOptions.inc"
 
 static llvm::OptimizationLevel
 mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
