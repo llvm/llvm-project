@@ -88,7 +88,7 @@ public:
   // VGPR to SGPR copy being processed
   MachineInstr *Copy;
   // All SALU instructions reachable from this copy in SSA graph
-  DenseSet<MachineInstr *> SChain;
+  SetVector<MachineInstr *> SChain;
   // Number of SGPR to VGPR copies that are used to put the SALU computation
   // results back to VALU.
   unsigned NumSVCopies;
@@ -1009,7 +1009,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
           V2SCopyInfo &SI = SibInfoIt->getSecond();
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());
           if (!SI.NeedToBeConvertedToVALU) {
-            set_subtract(SI.SChain, C.SChain);
+            SI.SChain.set_subtract(C.SChain);
             if (needToBeConvertedToVALU(&SI))
               LoweringWorklist.push_back(SI.ID);
           }
