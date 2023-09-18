@@ -47,7 +47,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
           // into a complex constructor so that lowering can deal with the
           // optional aspect (there is no optional aspect with the complex
           // constructor).
-          if (MayBePassedAsAbsentOptional(*args[1]->UnwrapExpr(), context)) {
+          if (MayBePassedAsAbsentOptional(*args[1]->UnwrapExpr())) {
             return Expr<T>{std::move(funcRef)};
           }
         }
