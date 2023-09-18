@@ -12092,6 +12092,8 @@ gentbl_cc_library(
     deps = [
         ":BufferizableOpInterfaceTdFiles",
         ":BufferizationOpsTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
+        ":SubsetInsertionOpInterfaceTdFiles",
     ],
 )
 
