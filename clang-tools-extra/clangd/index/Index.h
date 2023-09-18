@@ -84,6 +84,14 @@ struct RelationsRequest {
   std::optional<uint32_t> Limit;
 };
 
+struct RefersToResult {
+  /// The source location where the symbol is named.
+  SymbolLocation Location;
+  RefKind Kind = RefKind::Unknown;
+  /// The ID of the symbol which is referred to
+  SymbolID Symbol;
+};
+
 /// Describes what data is covered by an index.
 ///
 /// Indexes may contain symbols but not references from a file, etc.
@@ -141,6 +149,17 @@ public:
   virtual bool refs(const RefsRequest &Req,
                     llvm::function_ref<void(const Ref &)> Callback) const = 0;
 
+  /// Find all symbols that are referenced by a symbol and apply
+  /// \p Callback on each result.
+  ///
+  /// Results should be returned in arbitrary order.
+  /// The returned result must be deep-copied if it's used outside Callback.
+  ///
+  /// Returns true if there will be more results (limited by Req.Limit);
+  virtual bool
+  refersTo(const RefsRequest &Req,
+           llvm::function_ref<void(const RefersToResult &)> Callback) const = 0;
+
   /// Finds all relations (S, P, O) stored in the index such that S is among
   /// Req.Subjects and P is Req.Predicate, and invokes \p Callback for (S, O) in
   /// each.
@@ -175,6 +194,9 @@ public:
               llvm::function_ref<void(const Symbol &)>) const override;
   bool refs(const RefsRequest &,
             llvm::function_ref<void(const Ref &)>) const override;
+  bool
+  refersTo(const RefsRequest &,
+           llvm::function_ref<void(const RefersToResult &)>) const override;
   void relations(const RelationsRequest &,
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>)
       const override;

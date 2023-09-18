@@ -85,6 +85,25 @@ bool MemIndex::refs(const RefsRequest &Req,
   return false; // We reported all refs.
 }
 
+bool MemIndex::refersTo(
+    const RefsRequest &Req,
+    llvm::function_ref<void(const RefersToResult &)> Callback) const {
+  trace::Span Tracer("MemIndex refersTo");
+  uint32_t Remaining = Req.Limit.value_or(std::numeric_limits<uint32_t>::max());
+  for (const auto &Pair : Refs) {
+    for (const auto &R : Pair.second) {
+      if (!static_cast<int>(Req.Filter & R.Kind) ||
+          !Req.IDs.contains(R.Container))
+        continue;
+      if (Remaining == 0)
+        return true; // More refs were available.
+      --Remaining;
+      Callback({R.Location, R.Kind, Pair.first});
+    }
+  }
+  return false; // We reported all refs.
+}
+
 void MemIndex::relations(
     const RelationsRequest &Req,
     llvm::function_ref<void(const SymbolID &, const Symbol &)> Callback) const {
