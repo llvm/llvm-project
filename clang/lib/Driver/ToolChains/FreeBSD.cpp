@@ -161,7 +161,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (Args.hasArg(options::OPT_rdynamic))
       CmdArgs.push_back("-export-dynamic");
     if (Args.hasArg(options::OPT_shared)) {
-      CmdArgs.push_back("-Bshareable");
+      CmdArgs.push_back("-shared");
     } else if (!Args.hasArg(options::OPT_r)) {
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/libexec/ld-elf.so.1");
@@ -303,9 +303,9 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lm");
     }
     if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     if (NeedsXRayDeps)
-      linkXRayRuntimeDeps(ToolChain, CmdArgs);
+      linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding
     // the default system libraries. Just mimic this for now.
     if (Profiling)

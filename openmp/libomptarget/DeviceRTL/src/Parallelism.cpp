@@ -68,8 +68,10 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 }
 
 // Invoke an outlined parallel function unwrapping arguments (up to 32).
-void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
-                     void **args, int64_t nargs) {
+__attribute__((always_inline)) void invokeMicrotask(int32_t global_tid,
+                                                    int32_t bound_tid, void *fn,
+                                                    void **args,
+                                                    int64_t nargs) {
   switch (nargs) {
 #include "generated_microtask_cases.gen"
   default:
@@ -82,9 +84,10 @@ void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
 
 extern "C" {
 
-void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
-                        int32_t num_threads, int proc_bind, void *fn,
-                        void *wrapper_fn, void **args, int64_t nargs) {
+__attribute__((always_inline)) void
+__kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
+                   int32_t num_threads, int proc_bind, void *fn,
+                   void *wrapper_fn, void **args, int64_t nargs) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
   // Assert the parallelism level is zero if disabled by the user.

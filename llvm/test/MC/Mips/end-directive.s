@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32 -filetype=obj %s -o - | \
+# RUN: llvm-mc -triple=mips -mcpu=mips32 -filetype=obj %s -o - | \
 # RUN:   llvm-readobj --symbols - | FileCheck %s
 
 # Check that the assembler doesn't choke on .align between a symbol and the

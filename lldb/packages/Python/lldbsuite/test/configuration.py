@@ -7,9 +7,6 @@ Provides the configuration class, which holds all information related to
 how this invocation of the test suite should be run.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-
 # System modules
 import os
 

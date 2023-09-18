@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -149,7 +148,7 @@ bool matchAArch64MulConstCombine(
   APInt ConstValue = Const->Value.sext(Ty.getSizeInBits());
   // The following code is ported from AArch64ISelLowering.
   // Multiplication of a power of two plus/minus one can be done more
-  // cheaply as as shift+add/sub. For now, this is true unilaterally. If
+  // cheaply as shift+add/sub. For now, this is true unilaterally. If
   // future CPUs have a cheaper MADD instruction, this may need to be
   // gated on a subtarget feature. For Cyclone, 32-bit MADD is 4 cycles and
   // 64-bit is 5 cycles, so this is always a win.
@@ -339,26 +338,65 @@ void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   Store.eraseFromParent();
 }
 
-class AArch64PostLegalizerCombinerImpl : public GIMatchTableExecutor {
-protected:
-  CombinerHelper &Helper;
-  const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
+bool matchOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                  std::tuple<Register, Register, Register> &MatchInfo) {
+  const LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!DstTy.isVector())
+    return false;
 
+  Register AO1, AO2, BVO1, BVO2;
+  if (!mi_match(MI, MRI,
+                m_GOr(m_GAnd(m_Reg(AO1), m_Reg(BVO1)),
+                      m_GAnd(m_Reg(AO2), m_Reg(BVO2)))))
+    return false;
+
+  auto *BV1 = getOpcodeDef<GBuildVector>(BVO1, MRI);
+  auto *BV2 = getOpcodeDef<GBuildVector>(BVO2, MRI);
+  if (!BV1 || !BV2)
+    return false;
+
+  for (int I = 0, E = DstTy.getNumElements(); I < E; I++) {
+    auto ValAndVReg1 =
+        getIConstantVRegValWithLookThrough(BV1->getSourceReg(I), MRI);
+    auto ValAndVReg2 =
+        getIConstantVRegValWithLookThrough(BV2->getSourceReg(I), MRI);
+    if (!ValAndVReg1 || !ValAndVReg2 ||
+        ValAndVReg1->Value != ~ValAndVReg2->Value)
+      return false;
+  }
+
+  MatchInfo = {AO1, AO2, BVO1};
+  return true;
+}
+
+void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                  MachineIRBuilder &B,
+                  std::tuple<Register, Register, Register> &MatchInfo) {
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(
+      AArch64::G_BSP, {MI.getOperand(0).getReg()},
+      {std::get<2>(MatchInfo), std::get<0>(MatchInfo), std::get<1>(MatchInfo)});
+  MI.eraseFromParent();
+}
+
+class AArch64PostLegalizerCombinerImpl : public Combiner {
+protected:
+  // TODO: Make CombinerHelper methods const.
+  mutable CombinerHelper Helper;
+  const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
-  MachineRegisterInfo &MRI;
-  GISelChangeObserver &Observer;
-  MachineIRBuilder &B;
-  MachineFunction &MF;
 
 public:
   AArch64PostLegalizerCombinerImpl(
+      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+      GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
       const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
-      const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-      MachineIRBuilder &B, CombinerHelper &Helper);
+      const AArch64Subtarget &STI, MachineDominatorTree *MDT,
+      const LegalizerInfo *LI);
 
   static const char *getName() { return "AArch64PostLegalizerCombiner"; }
 
-  bool tryCombineAll(MachineInstr &I) const;
+  bool tryCombineAll(MachineInstr &I) const override;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -371,47 +409,18 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
+    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
+    GISelKnownBits &KB, GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
-    const AArch64Subtarget &STI, GISelChangeObserver &Observer,
-    MachineIRBuilder &B, CombinerHelper &Helper)
-    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), MRI(*B.getMRI()),
-      Observer(Observer), B(B), MF(B.getMF()),
+    const AArch64Subtarget &STI, MachineDominatorTree *MDT,
+    const LegalizerInfo *LI)
+    : Combiner(MF, CInfo, TPC, &KB, CSEInfo),
+      Helper(Observer, B, /*IsPreLegalize*/ false, &KB, MDT, LI),
+      RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
-}
-
-class AArch64PostLegalizerCombinerInfo : public CombinerInfo {
-  GISelKnownBits *KB;
-  MachineDominatorTree *MDT;
-
-public:
-  AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
-
-  AArch64PostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                                   GISelKnownBits *KB,
-                                   MachineDominatorTree *MDT)
-      : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT) {
-    if (!RuleConfig.parseCommandLineOption())
-      report_fatal_error("Invalid rule identifier");
-  }
-
-  bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-               MachineIRBuilder &B) const override;
-};
-
-bool AArch64PostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
-                                               MachineInstr &MI,
-                                               MachineIRBuilder &B) const {
-  const auto &STI = MI.getMF()->getSubtarget<AArch64Subtarget>();
-  const auto *LI = STI.getLegalizerInfo();
-  CombinerHelper Helper(Observer, B, /*IsPreLegalize*/ false, KB, MDT, LI);
-  AArch64PostLegalizerCombinerImpl Impl(RuleConfig, STI, Observer, B, Helper);
-  Impl.setupMF(*MI.getMF(), KB);
-  return Impl.tryCombineAll(MI);
 }
 
 class AArch64PostLegalizerCombiner : public MachineFunctionPass {
@@ -429,6 +438,7 @@ public:
 
 private:
   bool IsOptNone;
+  AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
 
@@ -450,6 +460,9 @@ void AArch64PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 AArch64PostLegalizerCombiner::AArch64PostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   initializeAArch64PostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
+
+  if (!RuleConfig.parseCommandLineOption())
+    report_fatal_error("Invalid rule identifier");
 }
 
 bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -462,17 +475,24 @@ bool AArch64PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
+
+  const AArch64Subtarget &ST = MF.getSubtarget<AArch64Subtarget>();
+  const auto *LI = ST.getLegalizerInfo();
+
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
-  AArch64PostLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                          F.hasMinSize(), KB, MDT);
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
-  Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, CSEInfo);
+
+  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+                     /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
+                     F.hasMinSize());
+  AArch64PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *KB, CSEInfo,
+                                        RuleConfig, ST, MDT, LI);
+  return Impl.combineMachineInstrs();
 }
 
 char AArch64PostLegalizerCombiner::ID = 0;

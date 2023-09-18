@@ -21,6 +21,7 @@
 #include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/Serialization/SerializerBase.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
@@ -87,10 +88,18 @@ public:
     /// The source symbol conforms to the target symbol.
     /// For example Objective-C protocol conformances.
     ConformsTo,
+
+    /// The source symbol is an extension to the target symbol.
+    /// For example Objective-C categories extending an external type.
+    ExtensionTo,
   };
 
   /// Get the string representation of the relationship kind.
   static StringRef getRelationshipString(RelationshipKind Kind);
+
+  enum ConstraintKind { Conformance, ConditionalConformance };
+
+  static StringRef getConstraintString(ConstraintKind Kind);
 
 private:
   /// Just serialize the currently recorded objects in Symbol Graph format.
@@ -147,7 +156,11 @@ protected:
 
   SymbolGraphSerializerOption Options;
 
+  llvm::StringSet<> visitedCategories;
+
 public:
+  void visitNamespaceRecord(const NamespaceRecord &Record);
+
   /// Visit a global function record.
   void visitGlobalFunctionRecord(const GlobalFunctionRecord &Record);
 
@@ -164,8 +177,49 @@ public:
 
   void visitCXXClassRecord(const CXXClassRecord &Record);
 
+  void visitClassTemplateRecord(const ClassTemplateRecord &Record);
+
+  void visitClassTemplateSpecializationRecord(
+      const ClassTemplateSpecializationRecord &Record);
+
+  void visitClassTemplatePartialSpecializationRecord(
+      const ClassTemplatePartialSpecializationRecord &Record);
+
+  void visitCXXInstanceMethodRecord(const CXXInstanceMethodRecord &Record);
+
+  void visitCXXStaticMethodRecord(const CXXStaticMethodRecord &Record);
+
+  void visitMethodTemplateRecord(const CXXMethodTemplateRecord &Record);
+
+  void visitMethodTemplateSpecializationRecord(
+      const CXXMethodTemplateSpecializationRecord &Record);
+
+  void visitCXXFieldRecord(const CXXFieldRecord &Record);
+
+  void visitCXXFieldTemplateRecord(const CXXFieldTemplateRecord &Record);
+
+  void visitConceptRecord(const ConceptRecord &Record);
+
+  void
+  visitGlobalVariableTemplateRecord(const GlobalVariableTemplateRecord &Record);
+
+  void visitGlobalVariableTemplateSpecializationRecord(
+      const GlobalVariableTemplateSpecializationRecord &Record);
+
+  void visitGlobalVariableTemplatePartialSpecializationRecord(
+      const GlobalVariableTemplatePartialSpecializationRecord &Record);
+
+  void
+  visitGlobalFunctionTemplateRecord(const GlobalFunctionTemplateRecord &Record);
+
+  void visitGlobalFunctionTemplateSpecializationRecord(
+      const GlobalFunctionTemplateSpecializationRecord &Record);
+
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record);
+
+  /// Visit an Objective-C category record.
+  void visitObjCCategoryRecord(const ObjCCategoryRecord &Record);
 
   /// Visit a macro definition record.
   void visitMacroDefinitionRecord(const MacroDefinitionRecord &Record);

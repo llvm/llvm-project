@@ -5,10 +5,10 @@ target triple = "arm64-apple-ios7.0"
 define i64 @foo(ptr nocapture readonly %ptr, i64 %a, i64 %b, i64 %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldr w8, [x0, #4]
-; CHECK-NEXT:    lsr x9, x1, #32
+; CHECK-NEXT:    lsr x8, x1, #32
+; CHECK-NEXT:    ldr w9, [x0, #4]
 ; CHECK-NEXT:    cmn x3, x2
-; CHECK-NEXT:    umull x8, w8, w9
+; CHECK-NEXT:    umull x8, w9, w8
 ; CHECK-NEXT:    cinc x0, x8, hs
 ; CHECK-NEXT:    ret
 entry:

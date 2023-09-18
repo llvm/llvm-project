@@ -71,6 +71,7 @@ static lto::Config createConfig() {
   c.DebugPassManager = config->ltoDebugPassManager;
   c.CSIRProfile = std::string(config->csProfilePath);
   c.RunCSIRInstr = config->csProfileGenerate;
+  c.PGOWarnMismatch = config->pgoWarnMismatch;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)
@@ -305,7 +306,9 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       modTime = getModTime(filePath);
     }
     ret.push_back(make<ObjFile>(
-        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime, ""));
+        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime,
+        /*archiveName=*/"", /*lazy=*/false,
+        /*forceHidden=*/false, /*compatArch=*/true, /*builtFromBitcode=*/true));
   }
 
   return ret;

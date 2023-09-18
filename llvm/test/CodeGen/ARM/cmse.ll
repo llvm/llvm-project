@@ -290,9 +290,9 @@ define void @func5() #4 {
 ; CHECK-8B-NEXT:    mov sp, r4
 ; CHECK-8B-NEXT:    mov r0, sp
 ; CHECK-8B-NEXT:    bl func51
-; CHECK-8B-NEXT:    subs r4, r7, #7
-; CHECK-8B-NEXT:    subs r4, #1
-; CHECK-8B-NEXT:    mov sp, r4
+; CHECK-8B-NEXT:    subs r6, r7, #7
+; CHECK-8B-NEXT:    subs r6, #1
+; CHECK-8B-NEXT:    mov sp, r6
 ; CHECK-8B-NEXT:    pop {r4, r6, r7}
 ; CHECK-8B-NEXT:    pop {r0}
 ; CHECK-8B-NEXT:    mov lr, r0

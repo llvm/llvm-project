@@ -1039,7 +1039,7 @@ struct FuncUnitSorter {
       for (const MCWriteProcResEntry &PRE :
            make_range(STI->getWriteProcResBegin(SCDesc),
                       STI->getWriteProcResEnd(SCDesc))) {
-        if (!PRE.Cycles)
+        if (!PRE.ReleaseAtCycle)
           continue;
         const MCProcResourceDesc *ProcResource =
             STI->getSchedModel().getProcResource(PRE.ProcResourceIdx);
@@ -1082,7 +1082,7 @@ struct FuncUnitSorter {
       for (const MCWriteProcResEntry &PRE :
            make_range(STI->getWriteProcResBegin(SCDesc),
                       STI->getWriteProcResEnd(SCDesc))) {
-        if (!PRE.Cycles)
+        if (!PRE.ReleaseAtCycle)
           continue;
         Resources[PRE.ProcResourceIdx]++;
       }
@@ -2635,7 +2635,7 @@ bool SMSchedule::isLoopCarried(SwingSchedulerDAG *SSD, MachineInstr &Phi) {
 ///        v1 = phi(v2, v3)
 ///  (Def) v3 = op v1
 ///  (MO)   = v1
-/// If MO appears before Def, then then v1 and v3 may get assigned to the same
+/// If MO appears before Def, then v1 and v3 may get assigned to the same
 /// register.
 bool SMSchedule::isLoopCarriedDefOfUse(SwingSchedulerDAG *SSD,
                                        MachineInstr *Def, MachineOperand &MO) {
@@ -3092,7 +3092,7 @@ void ResourceManager::reserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       ++MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -3104,7 +3104,7 @@ void ResourceManager::unreserveResources(const MCSchedClassDesc *SCDesc,
   assert(!UseDFA);
   for (const MCWriteProcResEntry &PRE : make_range(
            STI->getWriteProcResBegin(SCDesc), STI->getWriteProcResEnd(SCDesc)))
-    for (int C = Cycle; C < Cycle + PRE.Cycles; ++C)
+    for (int C = Cycle; C < Cycle + PRE.ReleaseAtCycle; ++C)
       --MRT[positiveModulo(C, InitiationInterval)][PRE.ProcResourceIdx];
 
   for (int C = Cycle; C < Cycle + SCDesc->NumMicroOps; ++C)
@@ -3220,10 +3220,10 @@ int ResourceManager::calculateResMII() const {
         if (SwpDebugResource) {
           const MCProcResourceDesc *Desc =
               SM.getProcResource(PRE.ProcResourceIdx);
-          dbgs() << Desc->Name << ": " << PRE.Cycles << ", ";
+          dbgs() << Desc->Name << ": " << PRE.ReleaseAtCycle << ", ";
         }
       });
-      ResourceCount[PRE.ProcResourceIdx] += PRE.Cycles;
+      ResourceCount[PRE.ProcResourceIdx] += PRE.ReleaseAtCycle;
     }
     LLVM_DEBUG(if (SwpDebugResource) dbgs() << "\n");
   }

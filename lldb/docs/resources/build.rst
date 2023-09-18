@@ -1,9 +1,6 @@
 Building
 ========
 
-.. contents::
-   :local:
-
 Getting the Sources
 -------------------
 
@@ -35,6 +32,8 @@ scripting support.
 
 * `Python <http://www.python.org/>`_
 * `SWIG <http://swig.org/>`_ 4 or later.
+
+.. _Optional Dependencies:
 
 Optional Dependencies
 *********************
@@ -423,11 +422,15 @@ To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build t
 Cross-compiling LLDB
 --------------------
 
+The advice presented here may not be complete or represent the best practices
+of CMake at this time. Please refer to `CMake's documentation <https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html>`_
+if you have any doubts or want more in depth information.
+
 In order to debug remote targets running different architectures than your
-host, you will need to compile LLDB (or at least the server component) for the
-target. While the easiest solution is to just compile it locally on the target,
-this is often not feasible, and in these cases you will need to cross-compile
-LLDB on your host.
+host, you will need to compile LLDB (or at least the server component
+``lldb-server``) for the target. While the easiest solution is to compile it
+locally on the target, this is often not feasible, and in these cases you will
+need to cross-compile LLDB on your host.
 
 Cross-compilation is often a daunting task and has a lot of quirks which depend
 on the exact host and target architectures, so it is not possible to give a
@@ -458,56 +461,120 @@ further by passing the appropriate cmake options, such as:
   -DLLDB_ENABLE_CURSES=0
   -DLLVM_ENABLE_TERMINFO=0
 
+(see :ref:`Optional Dependencies` for more)
+
 In this case you, will often not need anything other than the standard C and
 C++ libraries.
 
-Once all of the dependencies are in place, it's just a matter of configuring
-the build system with the locations and arguments of all the necessary tools.
-The most important cmake options here are:
+If you find that CMake is finding a version of an optional dependency that
+for whatever reason doesn't work, consider simply disabling it if you don't
+know that you need it.
 
-* ``CMAKE_CROSSCOMPILING`` : Set to 1 to enable cross-compilation.
-* ``CMAKE_LIBRARY_ARCHITECTURE`` : Affects the cmake search path when looking
-  for libraries. You may need to set this to your architecture triple if you do
-  not specify all your include and library paths explicitly.
+Once all of the dependencies are in place, you need to configure the build
+system with the locations and arguments of all the necessary tools.
+
+There are 2 ways to do this depending on your starting point and requirements.
+
+1. If you are starting from scratch and only need the resulting cross compiled
+binaries, you can have LLVM build the native tools for you.
+
+2. If you need a host build too, or already have one, you can tell CMake where
+that is and it will use those native tools instead.
+
+If you are going to run ``lldb`` and ``lldb-server`` only on the target machine,
+choose option 1. If you are going to run ``lldb`` on the host machine and
+connect to ``lldb-server`` on the target, choose option 2.
+
+Either way, the most important cmake options when cross-compiling are:
+
+* ``CMAKE_SYSTEM_NAME`` and ``CMAKE_SYSTEM_PROCESSOR``: This tells CMake what
+  the build target is and from this it will infer that you are cross compiling.
 * ``CMAKE_C_COMPILER``, ``CMAKE_CXX_COMPILER`` : C and C++ compilers for the
-  target architecture
+  target architecture.
 * ``CMAKE_C_FLAGS``, ``CMAKE_CXX_FLAGS`` : The flags for the C and C++ target
-  compilers. You may need to specify the exact target cpu and abi besides the
+  compilers. You may need to specify the exact target cpu and ABI besides the
   include paths for the target headers.
 * ``CMAKE_EXE_LINKER_FLAGS`` : The flags to be passed to the linker. Usually
-  just a list of library search paths referencing the target libraries.
-* ``LLVM_TABLEGEN``, ``CLANG_TABLEGEN`` : Paths to llvm-tblgen and clang-tblgen
-  for the host architecture. If you already have built clang for the host, you
-  can point these variables to the executables in your build directory. If not,
-  you will need to build the llvm-tblgen and clang-tblgen host targets at
-  least.
+  this is a list of library search paths referencing the target libraries.
 * ``LLVM_HOST_TRIPLE`` : The triple of the system that lldb (or lldb-server)
   will run on. Not setting this (or setting it incorrectly) can cause a lot of
   issues with remote debugging as a lot of the choices lldb makes depend on the
   triple reported by the remote platform.
+* ``LLVM_NATIVE_TOOL_DIR`` (only when using an existing host build): Is a
+  path to the llvm tools compiled for the host. Any tool that must be run on the
+  host during a cross build will be configured from this path, so you do not
+  need to set them all individually. If you are doing a host build only for the
+  purpose of a cross build, you will need it to include at least
+  ``llvm-tblgen``, ``clang-tblgen`` and ``lldb-tblgen``. Be aware that
+  the list may grow over time.
+* ``CMAKE_LIBRARY_ARCHITECTURE`` : Affects the cmake search path when looking
+  for libraries. You may need to set this to your architecture triple if you do
+  not specify all your include and library paths explicitly.
+
+To find the possible values of the ``CMAKE_*`` options, please refer to the
+CMake documentation.
 
 You can of course also specify the usual cmake options like
 ``CMAKE_BUILD_TYPE``, etc.
+
+For testing, you may want to set one of:
+
+* ``LLDB_TEST_COMPILER`` : The compiler used to build programs used
+  in the test suite. If you are also building clang, this will be used
+  but if you want to test remotely from the host, you should choose the
+  cross compiler you are using for the cross build.
+* ``LLDB_INCLUDE_TESTS=0`` : To disable the tests completely.
 
 Example 1: Cross-compiling for linux arm64 on Ubuntu host
 *********************************************************
 
 Ubuntu already provides the packages necessary to cross-compile LLDB for arm64.
 It is sufficient to install packages ``gcc-aarch64-linux-gnu``,
-``g++-aarch64-linux-gnu``, ``binutils-aarch64-linux-gnu``. Then it is possible
-to prepare the cmake build with the following parameters:
+``g++-aarch64-linux-gnu``, ``binutils-aarch64-linux-gnu``.
+
+Configure as follows:
 
 ::
 
-  -DCMAKE_CROSSCOMPILING=1 \
-  -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-  -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-  -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
-  -DLLVM_TABLEGEN=<path-to-host>/bin/llvm-tblgen \
-  -DCLANG_TABLEGEN=<path-to-host>/bin/clang-tblgen \
-  -DLLDB_ENABLE_PYTHON=0 \
-  -DLLDB_ENABLE_LIBEDIT=0 \
-  -DLLDB_ENABLE_CURSES=0
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
+    -DLLDB_ENABLE_PYTHON=0 \
+    -DLLDB_ENABLE_LIBEDIT=0 \
+    -DLLDB_ENABLE_CURSES=0
+
+During this build native tools will be built automatically when they are needed.
+The contents of ``<build dir>/bin`` will be target binaries as you'd expect.
+AArch64 binaries in this case.
+
+Example 2: Cross-compiling for linux arm64 on Ubuntu host using an existing host build
+**************************************************************************************
+
+This build requires an existing host build that includes the required native
+tools. Install the compiler as in example 1 then run CMake as follows:
+
+::
+
+  cmake <path-to-monorepo>/llvm-project/llvm -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=AArch64 \
+    -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+    -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+    -DLLVM_HOST_TRIPLE=aarch64-unknown-linux-gnu \
+    -DLLVM_NATIVE_TOOL_DIR=<path-to-host>/bin/ \
+    -DLLDB_ENABLE_PYTHON=0 \
+    -DLLDB_ENABLE_LIBEDIT=0 \
+    -DLLDB_ENABLE_CURSES=0
+
+The only difference from example 1 is the addition of
+``DLLVM_NATIVE_TOOL_DIR`` pointing to your existing host build.
 
 An alternative (and recommended) way to compile LLDB is with clang.
 Unfortunately, clang is not able to find all the include paths necessary for a
@@ -530,7 +597,7 @@ qemu and chroot to simulate the target environment. Then you can install the
 necessary packages in this environment (python-dev, libedit-dev, etc.) and
 point your compiler to use them using the correct -I and -L arguments.
 
-Example 2: Cross-compiling for Android on Linux
+Example 3: Cross-compiling for Android on Linux
 ***********************************************
 
 In the case of Android, the toolchain and all required headers and libraries

@@ -12,8 +12,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @masked_gather_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
@@ -42,8 +42,8 @@ define void @masked_gather_v4i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_gather_v8i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1b { z0.d }, p0/z, [z0.d]
@@ -114,8 +114,8 @@ define void @masked_gather_v32i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v2i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
@@ -146,8 +146,8 @@ define void @masked_gather_v4i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_gather_v8i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
@@ -214,8 +214,8 @@ define void @masked_gather_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v2i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    str d0, [x0]
@@ -244,8 +244,9 @@ define void @masked_gather_v4i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_gather_v8i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
@@ -254,8 +255,7 @@ define void @masked_gather_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p0, z1.s, z0.s
-; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p1, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: masked_gather_v8i32:
@@ -310,8 +310,8 @@ define void @masked_gather_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -338,8 +338,8 @@ define void @masked_gather_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_gather_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [z0.d]

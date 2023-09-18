@@ -12,9 +12,6 @@
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
-#include "Program.h"
-#include "State.h"
-#include "clang/Basic/LLVM.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -125,7 +122,7 @@ bool ByteCodeStmtGen<Emitter>::emitLambdaStaticInvokerBody(
     // We do the lvalue-to-rvalue conversion manually here, so no need
     // to care about references.
     PrimType ParamType = this->classify(PVD->getType()).value_or(PT_Ptr);
-    if (!this->emitGetParam(ParamType, It->second, MD))
+    if (!this->emitGetParam(ParamType, It->second.Offset, MD))
       return false;
   }
 
@@ -246,6 +243,8 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
     return visitAsmStmt(cast<AsmStmt>(S));
+  case Stmt::AttributedStmtClass:
+    return visitAttributedStmt(cast<AttributedStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -341,7 +340,7 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
     return IS->getElse() ? visitStmt(IS->getElse()) : true;
 
   if (auto *CondInit = IS->getInit())
-    if (!visitStmt(IS->getInit()))
+    if (!visitStmt(CondInit))
       return false;
 
   if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())
@@ -626,6 +625,12 @@ bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitAsmStmt(const AsmStmt *S) {
   return this->emitInvalid(S);
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
+  // Ignore all attributes.
+  return this->visitStmt(S->getSubStmt());
 }
 
 namespace clang {

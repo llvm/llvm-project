@@ -218,10 +218,8 @@ bool ValueObject::UpdateFormatsIfNeeded() {
     SetValueFormat(DataVisualization::GetFormat(*this, eNoDynamicValues));
     SetSummaryFormat(
         DataVisualization::GetSummaryFormat(*this, GetDynamicValueType()));
-#if LLDB_ENABLE_PYTHON
     SetSyntheticChildren(
         DataVisualization::GetSyntheticChildren(*this, GetDynamicValueType()));
-#endif
   }
 
   return any_change;
@@ -336,7 +334,7 @@ bool ValueObject::ResolveValue(Scalar &scalar) {
   {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     Value tmp_value(m_value);
-    scalar = tmp_value.ResolveValue(&exe_ctx);
+    scalar = tmp_value.ResolveValue(&exe_ctx, GetModule().get());
     if (scalar.IsValid()) {
       const uint32_t bitfield_bit_size = GetBitfieldBitSize();
       if (bitfield_bit_size)
@@ -434,23 +432,6 @@ ValueObject::GetChildAtNamePath(llvm::ArrayRef<llvm::StringRef> names) {
   for (llvm::StringRef name : names) {
     root = root->GetChildMemberWithName(name);
     if (!root) {
-      return root;
-    }
-  }
-  return root;
-}
-
-lldb::ValueObjectSP ValueObject::GetChildAtNamePath(
-    llvm::ArrayRef<std::pair<ConstString, bool>> names,
-    ConstString *name_of_error) {
-  if (names.size() == 0)
-    return GetSP();
-  ValueObjectSP root(GetSP());
-  for (std::pair<ConstString, bool> name : names) {
-    root = root->GetChildMemberWithName(name.first, name.second);
-    if (!root) {
-      if (name_of_error)
-        *name_of_error = name.first;
       return root;
     }
   }
@@ -1170,7 +1151,7 @@ bool ValueObject::DumpPrintableRepresentation(
     Stream &s, ValueObjectRepresentationStyle val_obj_display,
     Format custom_format, PrintableRepresentationSpecialCases special,
     bool do_dump_error) {
-    
+
   // If the ValueObject has an error, we might end up dumping the type, which
   // is useful, but if we don't even have a type, then don't examine the object
   // further as that's not meaningful, only the error is.
@@ -2148,11 +2129,10 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       temp_expression = temp_expression.drop_front(); // skip . or >
 
       size_t next_sep_pos = temp_expression.find_first_of("-.[", 1);
-      ConstString child_name;
       if (next_sep_pos == llvm::StringRef::npos) // if no other separator just
                                                  // expand this last layer
       {
-        child_name.SetString(temp_expression);
+        llvm::StringRef child_name = temp_expression;
         ValueObjectSP child_valobj_sp =
             root->GetChildMemberWithName(child_name);
 
@@ -2220,8 +2200,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
       } else // other layers do expand
       {
         llvm::StringRef next_separator = temp_expression.substr(next_sep_pos);
-
-        child_name.SetString(temp_expression.slice(0, next_sep_pos));
+        llvm::StringRef child_name = temp_expression.slice(0, next_sep_pos);
 
         ValueObjectSP child_valobj_sp =
             root->GetChildMemberWithName(child_name);
@@ -2785,15 +2764,15 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
-  // type.  We don't know how to fetch more data for all the ConstResult types, 
+  // type.  We don't know how to fetch more data for all the ConstResult types,
   // so we can't guarantee this will work:
   Status error;
   CompilerType my_type = GetCompilerType();
 
-  ExecutionContextScope *exe_scope 
+  ExecutionContextScope *exe_scope
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope) 
+  if (compiler_type.GetByteSize(exe_scope)
       <= GetCompilerType().GetByteSize(exe_scope)) {
         return DoCast(compiler_type);
   }

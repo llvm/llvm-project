@@ -84,8 +84,8 @@ define i32 @n5_extrause2(i32 %ptr, i32 %alignment, i32* %mask_storage, i32* %bia
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub w8, w1, #1
 ; CHECK-NEXT:    and w9, w0, w8
-; CHECK-NEXT:    sub w0, w0, w9
 ; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    sub w0, w0, w9
 ; CHECK-NEXT:    str w9, [x3]
 ; CHECK-NEXT:    ret
   %mask = add i32 %alignment, -1

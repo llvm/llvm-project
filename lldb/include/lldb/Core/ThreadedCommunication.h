@@ -223,10 +223,22 @@ public:
   }
 
 protected:
-  HostThread m_read_thread; ///< The read thread handle in case we need to
-                            /// cancel the thread.
+  /// The read thread handle in case we need to cancel the thread.
+  /// @{
+  HostThread m_read_thread;
+  std::mutex m_read_thread_mutex;
+  /// @}
+
+  /// Whether the read thread is enabled. This cannot be guarded by the read
+  /// thread mutex becuase it is used as the control variable to exit the read
+  /// thread.
   std::atomic<bool> m_read_thread_enabled;
+
+  /// Whether the read thread is enabled. Technically this could be guarded by
+  /// the read thread mutex but that needlessly complicates things to
+  /// check this variables momentary value.
   std::atomic<bool> m_read_thread_did_exit;
+
   std::string
       m_bytes; ///< A buffer to cache bytes read in the ReadThread function.
   std::recursive_mutex m_bytes_mutex;   ///< A mutex to protect multi-threaded

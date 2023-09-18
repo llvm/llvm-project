@@ -535,12 +535,12 @@ define void @st4b_i8_invalid_imm_out_of_lower_bound(<vscale x 16 x i8> %v0, <vsc
 ; CHECK-LABEL: st4b_i8_invalid_imm_out_of_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov x9, #-576
-; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mov x9, #-576 // =0xfffffffffffffdc0
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0, x8]
 ; CHECK-NEXT:    ret
@@ -562,12 +562,12 @@ define void @st4b_i8_invalid_imm_out_of_upper_bound(<vscale x 16 x i8> %v0, <vsc
 ; CHECK-LABEL: st4b_i8_invalid_imm_out_of_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #512
-; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    mov w9, #512 // =0x200
 ; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
+; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0, x8]
 ; CHECK-NEXT:    ret

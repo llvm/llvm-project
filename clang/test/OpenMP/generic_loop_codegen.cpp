@@ -20,7 +20,7 @@ void foo(int t) {
       z += i+j;
 }
 #endif
-// IR-LABEL: define dso_local void {{[_A-Za-z0-9?@]*}}foo{{[@A-Za-z]*}}
+// IR-LABEL: define dso_local void @_Z3fooi
 // IR-SAME: (i32 noundef [[T:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[T_ADDR:%.*]] = alloca i32, align 4
@@ -140,7 +140,7 @@ void foo(int t) {
 // IR-NEXT:    ret void
 //
 //
-// IR-PCH-LABEL: define dso_local void {{[_A-Za-z0-9?@]*}}foo{{[@A-Za-z]*}}
+// IR-PCH-LABEL: define dso_local void @_Z3fooi
 // IR-PCH-SAME: (i32 noundef [[T:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[T_ADDR:%.*]] = alloca i32, align 4

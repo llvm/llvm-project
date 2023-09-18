@@ -1007,6 +1007,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       Action = TLI.getOperationAction(Node->getOpcode(), MVT::Other);
     break;
   case ISD::SET_FPENV:
+  case ISD::SET_FPMODE:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(1).getValueType());
     break;
@@ -1042,7 +1043,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   }
   case ISD::ATOMIC_STORE:
     Action = TLI.getOperationAction(Node->getOpcode(),
-                                    Node->getOperand(2).getValueType());
+                                    Node->getOperand(1).getValueType());
     break;
   case ISD::SELECT_CC:
   case ISD::STRICT_FSETCC:
@@ -3079,11 +3080,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::ATOMIC_STORE: {
     // There is no libcall for atomic store; fake it with ATOMIC_SWAP.
-    SDValue Swap = DAG.getAtomic(ISD::ATOMIC_SWAP, dl,
-                                 cast<AtomicSDNode>(Node)->getMemoryVT(),
-                                 Node->getOperand(0),
-                                 Node->getOperand(1), Node->getOperand(2),
-                                 cast<AtomicSDNode>(Node)->getMemOperand());
+    SDValue Swap = DAG.getAtomic(
+        ISD::ATOMIC_SWAP, dl, cast<AtomicSDNode>(Node)->getMemoryVT(),
+        Node->getOperand(0), Node->getOperand(2), Node->getOperand(1),
+        cast<AtomicSDNode>(Node)->getMemOperand());
     Results.push_back(Swap.getValue(1));
     break;
   }
@@ -3130,6 +3130,23 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     Results.push_back(ExtRes.getValue(0));
     Results.push_back(Success);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD_SUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    SDValue RHS = Node->getOperand(2);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    if (RHS->getOpcode() == ISD::SIGN_EXTEND_INREG &&
+        cast<VTSDNode>(RHS->getOperand(1))->getVT() == AN->getMemoryVT())
+      RHS = RHS->getOperand(0);
+    SDValue NewRHS =
+        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
     Results.push_back(Res.getValue(1));
     break;
   }
@@ -3333,7 +3350,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(DAG.expandVACopy(Node));
     break;
   case ISD::EXTRACT_VECTOR_ELT:
-    if (Node->getOperand(0).getValueType().getVectorNumElements() == 1)
+    if (Node->getOperand(0).getValueType().getVectorElementCount().isScalar())
       // This must be an access of the only element.  Return it.
       Tmp1 = DAG.getNode(ISD::BITCAST, dl, Node->getValueType(0),
                          Node->getOperand(0));
@@ -3904,6 +3921,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Chain = Node->getOperand(0);
     SDValue Table = Node->getOperand(1);
     SDValue Index = Node->getOperand(2);
+    int JTI = cast<JumpTableSDNode>(Table.getNode())->getIndex();
 
     const DataLayout &TD = DAG.getDataLayout();
     EVT PTy = TLI.getPointerTy(TD);
@@ -3938,7 +3956,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                           TLI.getPICJumpTableRelocBase(Table, DAG));
     }
 
-    Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, DAG);
+    Tmp1 = TLI.expandIndirectJTBranch(dl, LD.getValue(1), Addr, JTI, DAG);
     Results.push_back(Tmp1);
     break;
   }
@@ -4418,6 +4436,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::EXP2_F32, RTLIB::EXP2_F64, RTLIB::EXP2_F80,
                     RTLIB::EXP2_F128, RTLIB::EXP2_PPCF128, Results);
     break;
+  case ISD::FEXP10:
+    ExpandFPLibCall(Node, RTLIB::EXP10_F32, RTLIB::EXP10_F64, RTLIB::EXP10_F80,
+                    RTLIB::EXP10_F128, RTLIB::EXP10_PPCF128, Results);
+    break;
   case ISD::FTRUNC:
   case ISD::STRICT_FTRUNC:
     ExpandFPLibCall(Node, RTLIB::TRUNC_F32, RTLIB::TRUNC_F64,
@@ -4818,6 +4840,46 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     SDValue EnvPtr = Node->getOperand(1);
     Results.push_back(
         DAG.makeStateFunctionCall(RTLIB::FESETENV, EnvPtr, Chain, dl));
+    break;
+  }
+  case ISD::GET_FPMODE: {
+    // Call fegetmode, which saves control modes into a stack slot. Then load
+    // the value to return from the stack.
+    EVT ModeVT = Node->getValueType(0);
+    SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    SDValue Chain = DAG.makeStateFunctionCall(RTLIB::FEGETMODE, StackPtr,
+                                              Node->getOperand(0), dl);
+    SDValue LdInst = DAG.getLoad(
+        ModeVT, dl, Chain, StackPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
+    Results.push_back(LdInst);
+    Results.push_back(LdInst.getValue(1));
+    break;
+  }
+  case ISD::SET_FPMODE: {
+    // Move control modes to stack slot and then call fesetmode with the pointer
+    // to the slot as argument.
+    SDValue Mode = Node->getOperand(1);
+    EVT ModeVT = Mode.getValueType();
+    SDValue StackPtr = DAG.CreateStackTemporary(ModeVT);
+    int SPFI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    SDValue StInst = DAG.getStore(
+        Node->getOperand(0), dl, Mode, StackPtr,
+        MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI));
+    Results.push_back(
+        DAG.makeStateFunctionCall(RTLIB::FESETMODE, StackPtr, StInst, dl));
+    break;
+  }
+  case ISD::RESET_FPMODE: {
+    // It is legalized to a call 'fesetmode(FE_DFL_MODE)'. On most targets
+    // FE_DFL_MODE is defined as '((const femode_t *) -1)' in glibc. If not, the
+    // target must provide custom lowering.
+    const DataLayout &DL = DAG.getDataLayout();
+    EVT PtrTy = TLI.getPointerTy(DL);
+    SDValue Mode = DAG.getConstant(-1LL, dl, PtrTy);
+    Results.push_back(DAG.makeStateFunctionCall(RTLIB::FESETMODE, Mode,
+                                                Node->getOperand(0), dl));
     break;
   }
   }
@@ -5261,6 +5323,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FABS:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
     Results.push_back(
@@ -5457,6 +5520,23 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                       AM->getMemOperand());
     Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
     Results.push_back(NewAtomic.getValue(1));
+    break;
+  }
+  case ISD::SPLAT_VECTOR: {
+    SDValue Scalar = Node->getOperand(0);
+    MVT ScalarType = Scalar.getSimpleValueType();
+    MVT NewScalarType = NVT.getVectorElementType();
+    if (ScalarType.isInteger()) {
+      Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NewScalarType, Scalar);
+      Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
+      break;
+    }
+    Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NewScalarType, Scalar);
+    Tmp2 = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1);
+    Results.push_back(
+        DAG.getNode(ISD::FP_ROUND, dl, OVT, Tmp2,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
   }
   }

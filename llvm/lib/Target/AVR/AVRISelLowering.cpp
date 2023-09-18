@@ -976,7 +976,7 @@ SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
       Ops.push_back(Operand);
     }
   }
-  unsigned Flags = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
+  InlineAsm::Flag Flags(InlineAsm::Kind::RegUse, 1);
   Ops.push_back(DAG.getTargetConstant(Flags, dl, MVT::i32));
   Ops.push_back(ZeroReg);
   if (Glue) {
@@ -2521,13 +2521,13 @@ AVRTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-unsigned
+InlineAsm::ConstraintCode
 AVRTargetLowering::getInlineAsmMemConstraint(StringRef ConstraintCode) const {
   // Not sure if this is actually the right thing to do, but we got to do
   // *something* [agnat]
   switch (ConstraintCode[0]) {
   case 'Q':
-    return InlineAsm::Constraint_Q;
+    return InlineAsm::ConstraintCode::Q;
   }
   return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
 }

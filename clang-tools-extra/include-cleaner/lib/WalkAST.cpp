@@ -126,12 +126,24 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    // Static class members are handled here, as they don't produce MemberExprs.
-    if (DRE->getFoundDecl()->isCXXClassMember()) {
-      if (auto *Qual = DRE->getQualifier())
-        report(DRE->getLocation(), Qual->getAsRecordDecl(), RefType::Implicit);
-    } else {
-      report(DRE->getLocation(), DRE->getFoundDecl());
+    auto *FD = DRE->getFoundDecl();
+    // For refs to non-meber-like decls, use the found decl.
+    // For member-like decls, we should have a reference from the qualifier to
+    // the container decl instead, which is preferred as it'll handle
+    // aliases/exports properly.
+    if (!FD->isCXXClassMember() && !llvm::isa<EnumConstantDecl>(FD)) {
+      report(DRE->getLocation(), FD);
+      return true;
+    }
+    // If the ref is without a qualifier, and is a member, ignore it. As it is
+    // available in current context due to some other construct (e.g. base
+    // specifiers, using decls) that has to spell the name explicitly.
+    //
+    // If it's an enum constant, it must be due to prior decl. Report references
+    // to it when qualifier isn't a type.
+    if (llvm::isa<EnumConstantDecl>(FD)) {
+      if (!DRE->getQualifier() || DRE->getQualifier()->getAsNamespace())
+        report(DRE->getLocation(), FD);
     }
     return true;
   }
@@ -164,9 +176,8 @@ public:
 
   bool VisitOverloadExpr(OverloadExpr *E) {
     // Since we can't prove which overloads are used, report all of them.
-    llvm::for_each(E->decls(), [this, E](NamedDecl *D) {
+    for (NamedDecl *D : E->decls())
       report(E->getNameLoc(), D, RefType::Ambiguous);
-    });
     return true;
   }
 
@@ -229,6 +240,11 @@ public:
     // type-checking purposes.
     if (D->isThisDeclarationADefinition() && D->getIntegerTypeSourceInfo())
       report(D->getLocation(), D);
+    return true;
+  }
+
+  bool VisitConceptReference(const ConceptReference *CR) {
+    report(CR->getConceptNameLoc(), CR->getFoundDecl());
     return true;
   }
 

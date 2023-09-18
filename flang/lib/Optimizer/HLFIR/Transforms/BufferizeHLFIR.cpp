@@ -25,6 +25,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -163,9 +164,52 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
 static std::pair<hlfir::Entity, mlir::Value>
 createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
                 mlir::Type exprType, mlir::Value shape,
-                mlir::ValueRange extents, mlir::ValueRange lenParams) {
+                mlir::ValueRange extents, mlir::ValueRange lenParams,
+                std::optional<hlfir::Entity> polymorphicMold) {
   mlir::Type sequenceType = hlfir::getFortranElementOrSequenceType(exprType);
   llvm::StringRef tmpName{".tmp.array"};
+
+  if (polymorphicMold) {
+    // Create *allocated* polymorphic temporary using the dynamic type
+    // of the mold and the provided shape/extents. The created temporary
+    // array will be written element per element, that is why it has to be
+    // allocated.
+    mlir::Type boxHeapType = fir::HeapType::get(sequenceType);
+    mlir::Value alloc = fir::factory::genNullBoxStorage(
+        builder, loc, fir::ClassType::get(boxHeapType));
+    mlir::Value isHeapAlloc = builder.createBool(loc, true);
+    fir::FortranVariableFlagsAttr declAttrs =
+        fir::FortranVariableFlagsAttr::get(
+            builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
+
+    auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
+                                                      /*shape=*/nullptr,
+                                                      lenParams, declAttrs);
+
+    int rank = extents.size();
+    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
+                                          polymorphicMold->getFirBase(), rank);
+    if (!extents.empty()) {
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      unsigned dim = 0;
+      for (mlir::Value extent : extents) {
+        mlir::Value dimIndex = builder.createIntegerConstant(loc, idxTy, dim++);
+        fir::runtime::genAllocatableSetBounds(builder, loc, alloc, dimIndex,
+                                              one, extent);
+      }
+    }
+    if (!lenParams.empty()) {
+      // We should call AllocatableSetDerivedLength() here.
+      // TODO: does the mold provide the length parameters or
+      // the operation itself or should they be in sync?
+      TODO(loc, "polymorphic type with length parameters in HLFIR");
+    }
+    fir::runtime::genAllocatableAllocate(builder, loc, alloc);
+
+    return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
+  }
+
   mlir::Value allocmem = builder.createHeapTemporary(loc, sequenceType, tmpName,
                                                      extents, lenParams);
   auto declareOp =
@@ -405,9 +449,10 @@ static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
           mlir::isa<hlfir::GetLengthOp>(useOp)) {
         if (!endAssociate)
           continue;
-        // not known to occur in practice:
+        // If useOp dominates the endAssociate, then it is definitely safe.
         if (useOp->getBlock() != endAssociate->getBlock())
-          TODO(endAssociate->getLoc(), "Associate split over multiple blocks");
+          if (mlir::DominanceInfo{}.dominates(useOp, endAssociate))
+            continue;
         if (useOp->isBeforeInBlock(endAssociate))
           continue;
       }
@@ -487,14 +532,31 @@ struct AssociateOpConversion
       firVar = adjustVar(firVar, associateFirVarType);
       associate.getResult(1).replaceAllUsesWith(firVar);
       associate.getResult(2).replaceAllUsesWith(flag);
-      rewriter.replaceOp(associate, {hlfirVar, firVar, flag});
+      // FIXME: note that the AssociateOp that is being erased
+      // here will continue to be a user of the original Source
+      // operand (e.g. a result of hlfir.elemental), because
+      // the erasure is not immediate in the rewriter.
+      // In case there are multiple uses of the Source operand,
+      // the allOtherUsesAreSafeForAssociate() below will always
+      // see them, so there is no way to reuse the buffer.
+      // I think we have to run this analysis before doing
+      // the conversions, so that we can analyze HLFIR in its
+      // original form and decide which of the AssociateOp
+      // users of hlfir.expr can reuse the buffer (if it can).
+      rewriter.eraseOp(associate);
     };
 
     // If this is the last use of the expression value and this is an hlfir.expr
     // that was bufferized, re-use the storage.
     // Otherwise, create a temp and assign the storage to it.
+    //
+    // WARNING: it is important to use the original Source operand
+    // of the AssociateOp to look for the users, because its replacement
+    // has zero materialized users at this point.
+    // So allOtherUsesAreSafeForAssociate() may incorrectly return
+    // true here.
     if (!isTrivialValue && allOtherUsesAreSafeForAssociate(
-                               adaptor.getSource(), associate.getOperation(),
+                               associate.getSource(), associate.getOperation(),
                                getEndAssociate(associate))) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
       // outside of the hlfir.destroy. Take on the cleaning-up responsibility
@@ -676,10 +738,17 @@ struct ElementalOpConversion
     builder.setListener(&listener);
 
     mlir::Value shape = adaptor.getShape();
+    std::optional<hlfir::Entity> mold;
+    if (adaptor.getMold())
+      mold = getBufferizedExprStorage(adaptor.getMold());
     auto extents = hlfir::getIndexExtents(loc, builder, shape);
     auto [temp, cleanup] =
         createArrayTemp(loc, builder, elemental.getType(), shape, extents,
-                        adaptor.getTypeparams());
+                        adaptor.getTypeparams(), mold);
+    // If the box load is needed, we'd better place it outside
+    // of the loop nest.
+    temp = derefPointersAndAllocatables(loc, builder, temp);
+
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
     hlfir::LoopNest loopNest =
@@ -721,6 +790,12 @@ struct ElementalOpConversion
 
     mlir::Value bufferizedExpr =
         packageBufferizedExpr(loc, builder, temp, cleanup);
+    // Explicitly delete the body of the elemental to get rid
+    // of any users of hlfir.expr values inside the body as early
+    // as possible.
+    rewriter.startRootUpdate(elemental);
+    rewriter.eraseBlock(elemental.getBody());
+    rewriter.finalizeRootUpdate(elemental);
     rewriter.replaceOp(elemental, bufferizedExpr);
     return mlir::success();
   }

@@ -62,7 +62,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32],
   def CV_BCLRR : CVBitManipRR<0b0011100, "cv.bclrr">;
   def CV_BSETR : CVBitManipRR<0b0011101, "cv.bsetr">;
 
-  def CVROR : CVBitManipRR<0b0100000, "cv.ror">;
+  def CV_ROR : CVBitManipRR<0b0100000, "cv.ror">;
   def CV_FF1 : CVBitManipR<0b0100001, "cv.ff1">;
   def CV_FL1 : CVBitManipR<0b0100010, "cv.fl1">;
   def CV_CLB : CVBitManipR<0b0100011, "cv.clb">;
@@ -445,10 +445,10 @@ let Predicates = [HasVendorXCVsimd, IsRV32],
 
   def CV_PACK :      CVSIMDRR<0b11110, 0, 0, 0b000, "cv.pack">;
   def CV_PACK_H :    CVSIMDRR<0b11110, 0, 1, 0b000, "cv.pack.h">;
-  
+
   def CV_PACKHI_B : CVSIMDRRWb<0b11111, 0, 1, 0b001, "cv.packhi.b">;
   def CV_PACKLO_B : CVSIMDRRWb<0b11111, 0, 0, 0b001, "cv.packlo.b">;
-  
+
   defm CMPEQ :  CVSIMDBinarySigned<0b00000, 1, 0, "cmpeq">;
   defm CMPNE :  CVSIMDBinarySigned<0b00001, 1, 0, "cmpne">;
   defm CMPGT :  CVSIMDBinarySigned<0b00010, 1, 0, "cmpgt">;

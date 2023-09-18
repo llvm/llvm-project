@@ -392,8 +392,8 @@ void MetadataStreamerYamlV2::emitHiddenKernelArgs(const Function &Func,
   if (HiddenArgNumBytes >= 24)
     emitKernelArg(DL, Int64Ty, Align(8), ValueKind::HiddenGlobalOffsetZ);
 
-  auto Int8PtrTy = Type::getInt8PtrTy(Func.getContext(),
-                                      AMDGPUAS::GLOBAL_ADDRESS);
+  auto Int8PtrTy =
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
     // We forbid the use of features requiring hostcall when compiling OpenCL
@@ -714,15 +714,19 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
   if (Node && ArgNo < Node->getNumOperands())
     BaseTypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
-  StringRef AccQual;
-  if (Arg.getType()->isPointerTy() && Arg.onlyReadsMemory() &&
-      Arg.hasNoAliasAttr()) {
-    AccQual = "read_only";
-  } else {
-    Node = Func->getMetadata("kernel_arg_access_qual");
-    if (Node && ArgNo < Node->getNumOperands())
-      AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
+  StringRef ActAccQual;
+  // Do we really need NoAlias check here?
+  if (Arg.getType()->isPointerTy() && Arg.hasNoAliasAttr()) {
+    if (Arg.onlyReadsMemory())
+      ActAccQual = "read_only";
+    else if (Arg.hasAttribute(Attribute::WriteOnly))
+      ActAccQual = "write_only";
   }
+
+  StringRef AccQual;
+  Node = Func->getMetadata("kernel_arg_access_qual");
+  if (Node && ArgNo < Node->getNumOperands())
+    AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
 
   StringRef TypeQual;
   Node = Func->getMetadata("kernel_arg_type_qual");
@@ -747,14 +751,15 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
 
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                PointeeAlign, Name, TypeName, BaseTypeName, AccQual, TypeQual);
+                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
+                AccQual, TypeQual);
 }
 
 void MetadataStreamerMsgPackV3::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
-    StringRef AccQual, StringRef TypeQual) {
+    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
   auto Arg = Args.getDocument()->getMapNode();
 
   if (!Name.empty())
@@ -780,7 +785,8 @@ void MetadataStreamerMsgPackV3::emitKernelArg(
   if (auto AQ = getAccessQualifier(AccQual))
     Arg[".access"] = Arg.getDocument()->getNode(*AQ, /*Copy=*/true);
 
-  // TODO: Emit Arg[".actual_access"].
+  if (auto AAQ = getAccessQualifier(ActAccQual))
+    Arg[".actual_access"] = Arg.getDocument()->getNode(*AAQ, /*Copy=*/true);
 
   SmallVector<StringRef, 1> SplitTypeQuals;
   TypeQual.split(SplitTypeQuals, " ", -1, false);
@@ -824,7 +830,7 @@ void MetadataStreamerMsgPackV3::emitHiddenKernelArgs(
                   Args);
 
   auto Int8PtrTy =
-      Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (HiddenArgNumBytes >= 32) {
     // We forbid the use of features requiring hostcall when compiling OpenCL
@@ -1044,7 +1050,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
 
   Offset += 6; // Reserved.
   auto Int8PtrTy =
-      Type::getInt8PtrTy(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
+      PointerType::get(Func.getContext(), AMDGPUAS::GLOBAL_ADDRESS);
 
   if (M->getNamedMetadata("llvm.printf.fmts")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
@@ -1097,7 +1103,7 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 8; // Skipped.
   }
 
-  if (MFI.hasQueuePtr())
+  if (MFI.getUserSGPRInfo().hasQueuePtr())
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
 

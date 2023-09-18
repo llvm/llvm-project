@@ -204,9 +204,17 @@ def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
 def AArch64umulh_p : SDNode<"AArch64ISD::MULHU_PRED", SDT_AArch64Arith>;
 
+def AArch64fadd_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                     (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
+  return N->getFlags().hasAllowContract();
+}]>;
 def AArch64fadd_p_nsz : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                 (AArch64fadd_p node:$op1, node:$op2, node:$op3), [{
   return N->getFlags().hasNoSignedZeros();
+}]>;
+def AArch64fsub_p_contract : PatFrag<(ops node:$op1, node:$op2, node:$op3),
+                                     (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
+  return N->getFlags().hasAllowContract();
 }]>;
 def AArch64fsub_p_nsz : PatFrag<(ops node:$op1, node:$op2, node:$op3),
                                 (AArch64fsub_p node:$op1, node:$op2, node:$op3), [{
@@ -363,14 +371,12 @@ def AArch64fabd_p : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                               (AArch64fabs_mt node:$pg, (AArch64fsub_p node:$pg, node:$op1, node:$op2), undef)]>;
 
 def AArch64fmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
-                             [(AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za),
-                              (vselect node:$pg, (AArch64fma_p (AArch64ptrue 31), node:$zn, node:$zm, node:$za), node:$za)]>;
+                             [(AArch64fma_p node:$pg, node:$zn, node:$zm, node:$za)]>;
 
 def AArch64fmls_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                              [(int_aarch64_sve_fmls_u node:$pg, node:$za, node:$zn, node:$zm),
                               (AArch64fma_p node:$pg, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$zm, node:$za),
-                              (AArch64fma_p node:$pg, node:$zm, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$za),
-                              (vselect node:$pg, (AArch64fma_p (AArch64ptrue 31), (AArch64fneg_mt (AArch64ptrue 31), node:$zn, (undef)), node:$zm, node:$za), node:$za)]>;
+                              (AArch64fma_p node:$pg, node:$zm, (AArch64fneg_mt node:$pg, node:$zn, (undef)), node:$za)]>;
 
 def AArch64fnmla_p : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
                               [(int_aarch64_sve_fnmla_u node:$pg, node:$za, node:$zn, node:$zm),
@@ -423,18 +429,15 @@ def AArch64eor3 : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_eor3 node:$op1, node:$op2, node:$op3),
                             (xor node:$op1, (xor node:$op2, node:$op3))]>;
 
-class fma_patfrags<SDPatternOperator intrinsic, SDPatternOperator add>
-    : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
-               [(intrinsic node:$pred, node:$op1, node:$op2, node:$op3),
-                (vselect node:$pred, (add (SVEAllActive), node:$op1, (AArch64fmul_p_oneuse (SVEAllActive), node:$op2, node:$op3)), node:$op1)],
-[{
-  if (N->getOpcode() == ISD::VSELECT)
-    return N->getOperand(1)->getFlags().hasAllowContract();
-  return true;  // it's the intrinsic
-}]>;
+def AArch64fmla_m1 : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
+                              [(int_aarch64_sve_fmla node:$pg, node:$za, node:$zn, node:$zm),
+                               (vselect node:$pg, (AArch64fadd_p_contract (SVEAllActive), node:$za, (AArch64fmul_p_oneuse (SVEAllActive), node:$zn, node:$zm)), node:$za),
+                               (vselect node:$pg, (AArch64fma_p (SVEAllActive), node:$zn, node:$zm, node:$za), node:$za)]>;
 
-def AArch64fmla_m1 : fma_patfrags<int_aarch64_sve_fmla, AArch64fadd_p>;
-def AArch64fmls_m1 : fma_patfrags<int_aarch64_sve_fmls, AArch64fsub_p>;
+def AArch64fmls_m1 : PatFrags<(ops node:$pg, node:$za, node:$zn, node:$zm),
+                              [(int_aarch64_sve_fmls node:$pg, node:$za, node:$zn, node:$zm),
+                               (vselect node:$pg, (AArch64fsub_p_contract (SVEAllActive), node:$za, (AArch64fmul_p_oneuse (SVEAllActive), node:$zn, node:$zm)), node:$za),
+                               (vselect node:$pg, (AArch64fma_p (SVEAllActive), (AArch64fneg_mt (SVEAllActive), node:$zn, (undef)), node:$zm, node:$za), node:$za)]>;
 
 def AArch64add_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_add, add>;
 def AArch64sub_m1 : VSelectUnpredOrPassthruPatFrags<int_aarch64_sve_sub, sub>;
@@ -2308,14 +2311,14 @@ let Predicates = [HasSVEorSME] in {
   // These get expanded to individual LDR_ZXI/STR_ZXI instructions in
   // AArch64ExpandPseudoInsts.
   let mayLoad = 1, hasSideEffects = 0 in {
-    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
   let mayStore = 1, hasSideEffects = 0 in {
-    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
     def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
   }
 
   let AddedComplexity = 1 in {
@@ -2352,13 +2355,15 @@ let Predicates = [HasSVEorSME] in {
   // LDR1 of 64-bit data
   defm : LD1RPat<nxv2i64, load, LD1RD_IMM, PTRUE_D, i64, am_indexed64_6b, uimm6s8>;
 
-  // LD1R of FP data
-  defm : LD1RPat<nxv8f16, load, LD1RH_IMM,   PTRUE_H, f16, am_indexed16_6b, uimm6s2>;
-  defm : LD1RPat<nxv4f16, load, LD1RH_S_IMM, PTRUE_S, f16, am_indexed16_6b, uimm6s2>;
-  defm : LD1RPat<nxv2f16, load, LD1RH_D_IMM, PTRUE_D, f16, am_indexed16_6b, uimm6s2>;
-  defm : LD1RPat<nxv4f32, load, LD1RW_IMM,   PTRUE_S, f32, am_indexed32_6b, uimm6s4>;
-  defm : LD1RPat<nxv2f32, load, LD1RW_D_IMM, PTRUE_D, f32, am_indexed32_6b, uimm6s4>;
-  defm : LD1RPat<nxv2f64, load, LD1RD_IMM,   PTRUE_D, f64, am_indexed64_6b, uimm6s8>;
+  let Predicates = [HasSVEorSME, UseSVEFPLD1R] in {
+    // LD1R of FP data
+    defm : LD1RPat<nxv8f16, load, LD1RH_IMM,   PTRUE_H, f16, am_indexed16_6b, uimm6s2>;
+    defm : LD1RPat<nxv4f16, load, LD1RH_S_IMM, PTRUE_S, f16, am_indexed16_6b, uimm6s2>;
+    defm : LD1RPat<nxv2f16, load, LD1RH_D_IMM, PTRUE_D, f16, am_indexed16_6b, uimm6s2>;
+    defm : LD1RPat<nxv4f32, load, LD1RW_IMM,   PTRUE_S, f32, am_indexed32_6b, uimm6s4>;
+    defm : LD1RPat<nxv2f32, load, LD1RW_D_IMM, PTRUE_D, f32, am_indexed32_6b, uimm6s4>;
+    defm : LD1RPat<nxv2f64, load, LD1RD_IMM,   PTRUE_D, f64, am_indexed64_6b, uimm6s8>;
+  }
 
 // LD1R of 128-bit masked data
   multiclass ld1rq_pat<ValueType vt1, SDPatternOperator op, Instruction load_instr, ComplexPattern AddrCP>{
@@ -2472,7 +2477,7 @@ let Predicates = [HasSVEorSME] in {
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
   // constraint that none of the bits change when stored to memory as one
-  // type, and and reloaded as another type.
+  // type, and reloaded as another type.
   let Predicates = [IsLE] in {
     def : Pat<(nxv16i8 (bitconvert (nxv8i16 ZPR:$src))), (nxv16i8 ZPR:$src)>;
     def : Pat<(nxv16i8 (bitconvert (nxv4i32 ZPR:$src))), (nxv16i8 ZPR:$src)>;
@@ -3519,7 +3524,7 @@ let Predicates = [HasSVE2orSME] in {
   defm SQSHRUNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b000, "sqshrunb",  int_aarch64_sve_sqshrunb>;
   defm SQRSHRUNB_ZZI : sve2_int_bin_shift_imm_right_narrow_bottom<0b001, "sqrshrunb", int_aarch64_sve_sqrshrunb>;
   defm SHRNB_ZZI     : sve2_int_bin_shift_imm_right_narrow_bottom<0b010, "shrnb",     int_aarch64_sve_shrnb>;
-  defm RSHRNB_ZZI    : sve2_int_bin_shift_imm_right_narrow_bottom<0b011, "rshrnb",    int_aarch64_sve_rshrnb>;
+  defm RSHRNB_ZZI    : sve2_int_bin_shift_imm_right_narrow_bottom<0b011, "rshrnb",    AArch64rshrnb_pf>;
   defm SQSHRNB_ZZI   : sve2_int_bin_shift_imm_right_narrow_bottom<0b100, "sqshrnb",   int_aarch64_sve_sqshrnb>;
   defm SQRSHRNB_ZZI  : sve2_int_bin_shift_imm_right_narrow_bottom<0b101, "sqrshrnb",  int_aarch64_sve_sqrshrnb>;
   defm UQSHRNB_ZZI   : sve2_int_bin_shift_imm_right_narrow_bottom<0b110, "uqshrnb",   int_aarch64_sve_uqshrnb>;

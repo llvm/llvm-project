@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -o - | FileCheck %s
-// rdar: //8620524
 // PR7851
 struct string {
   string (const string& );

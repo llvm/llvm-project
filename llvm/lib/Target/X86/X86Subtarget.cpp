@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86Subtarget.h"
+#include "GISel/X86CallLowering.h"
+#include "GISel/X86LegalizerInfo.h"
+#include "GISel/X86RegisterBankInfo.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
-#include "X86CallLowering.h"
-#include "X86LegalizerInfo.h"
 #include "X86MacroFusion.h"
-#include "X86RegisterBankInfo.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -268,6 +268,24 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (!FS.empty())
     FullFS = (Twine(FullFS) + "," + FS).str();
 
+  // Attach EVEX512 feature when we have AVX512 features with a default CPU.
+  // "pentium4" is default CPU for 32-bit targets.
+  // "x86-64" is default CPU for 64-bit targets.
+  if (CPU == "generic" || CPU == "pentium4" || CPU == "x86-64") {
+    size_t posNoEVEX512 = FS.rfind("-evex512");
+    // Make sure we won't be cheated by "-avx512fp16".
+    size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
+                                                  : FS.rfind("-avx512f,");
+    size_t posEVEX512 = FS.rfind("+evex512");
+    // Any AVX512XXX will enable AVX512F.
+    size_t posAVX512F = FS.rfind("+avx512");
+
+    if (posAVX512F != StringRef::npos &&
+        (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
+      if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
+        FullFS += ",+evex512";
+  }
+
   // Parse features string and set the CPU.
   ParseSubtargetFeatures(CPU, TuneCPU, FullFS);
 
@@ -323,7 +341,9 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
-  if (!isPositionIndependent())
+  if (!isPositionIndependent() || TM.getCodeModel() == CodeModel::Large)
+    // With the large code model, None forces all memory accesses to be indirect
+    // rather than RIP-relative.
     setPICStyle(PICStyles::Style::None);
   else if (is64Bit())
     setPICStyle(PICStyles::Style::RIPRel);

@@ -39,7 +39,7 @@ void call_foo() {
 // things as we unwind.
 //
 // X86-LABEL: define dso_local void @"?call_foo@@YAXXZ"()
-// X86: call ptr @llvm.stacksave()
+// X86: call ptr @llvm.stacksave.p0()
 // X86: %[[argmem:[^ ]*]] = alloca inalloca [[argmem_ty]]
 // X86: %[[arg3:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 2
 // X86: call x86_thiscallcc noundef ptr @"??0A@@QAE@H@Z"(ptr {{[^,]*}} %[[arg3]], i32 noundef 3)
@@ -48,7 +48,7 @@ void call_foo() {
 // X86: %[[arg1:[^ ]*]] = getelementptr inbounds [[argmem_ty]], ptr %[[argmem]], i32 0, i32 0
 // X86: invoke x86_thiscallcc noundef ptr @"??0A@@QAE@H@Z"(ptr {{[^,]*}} %[[arg1]], i32 noundef 1)
 // X86: call void @"?foo@@YAXUA@@00@Z"(ptr inalloca([[argmem_ty]]) %[[argmem]])
-// X86: call void @llvm.stackrestore
+// X86: call void @llvm.stackrestore.p0
 // X86: ret void
 //
 //   lpad2:

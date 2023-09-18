@@ -99,7 +99,7 @@ protected:
   CoveragePrinter(const CoverageViewOptions &Opts) : Opts(Opts) {}
 
   /// Return `OutputDir/ToplevelDir/Path.Extension`. If \p InToplevel is
-  /// false, skip the ToplevelDir component. If \p Relative is false, skip the
+  /// true, skip the ToplevelDir component. If \p Relative is true, skip the
   /// OutputDir component.
   std::string getOutputPath(StringRef Path, StringRef Extension,
                             bool InToplevel, bool Relative = true) const;

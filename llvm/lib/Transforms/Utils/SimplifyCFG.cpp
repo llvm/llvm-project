@@ -1607,13 +1607,14 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI, bool EqTermsOnly) {
         // The debug location is an integral part of a debug info intrinsic
         // and can't be separated from it or replaced.  Instead of attempting
         // to merge locations, simply hoist both copies of the intrinsic.
-        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
-        BIParent->splice(BI->getIterator(), BB2, I2->getIterator());
+        I1->moveBeforePreserving(BI);
+        I2->moveBeforePreserving(BI);
+        Changed = true;
       } else {
         // For a normal instruction, we just move one to right before the
         // branch, then replace all uses of the other with the first.  Finally,
         // we remove the now redundant second instruction.
-        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
+        I1->moveBeforePreserving(BI);
         if (!I2->use_empty())
           I2->replaceAllUsesWith(I1);
         I1->andIRFlags(I2);
@@ -1808,9 +1809,18 @@ static bool canSinkInstructions(
   }
 
   const Instruction *I0 = Insts.front();
-  for (auto *I : Insts)
+  for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0))
       return false;
+
+    // swifterror pointers can only be used by a load or store; sinking a load
+    // or store would require introducing a select for the pointer operand,
+    // which isn't allowed for swifterror pointers.
+    if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
+      return false;
+    if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
+      return false;
+  }
 
   // All instructions in Insts are known to be the same opcode. If they have a
   // use, check that the only user is a PHI or in the same block as the
@@ -1952,8 +1962,9 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     // Create a new PHI in the successor block and populate it.
     auto *Op = I0->getOperand(O);
     assert(!Op->getType()->isTokenTy() && "Can't PHI tokens!");
-    auto *PN = PHINode::Create(Op->getType(), Insts.size(),
-                               Op->getName() + ".sink", &BBEnd->front());
+    auto *PN =
+        PHINode::Create(Op->getType(), Insts.size(), Op->getName() + ".sink");
+    PN->insertBefore(BBEnd->begin());
     for (auto *I : Insts)
       PN->addIncoming(I->getOperand(O), I->getParent());
     NewOperands.push_back(PN);
@@ -1963,7 +1974,8 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   // and move it to the start of the successor block.
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O)
     I0->getOperandUse(O).set(NewOperands[O]);
-  I0->moveBefore(&*BBEnd->getFirstInsertionPt());
+
+  I0->moveBefore(*BBEnd, BBEnd->getFirstInsertionPt());
 
   // Update metadata and IR flags, and merge debug locations.
   for (auto *I : Insts)
@@ -3009,7 +3021,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI,
     //   store %merge, %x.dest, !DIAssignID !2
     //   dbg.assign %merge, "x", ..., !2
     for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
-      if (any_of(DAI->location_ops(), [&](Value *V) { return V == OrigV; }))
+      if (llvm::is_contained(DAI->location_ops(), OrigV))
         DAI->replaceVariableLocationOp(OrigV, S);
     }
   }
@@ -3867,7 +3879,8 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
       (!isa<Instruction>(V) || cast<Instruction>(V)->getParent() != BB))
     return V;
 
-  PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge", &Succ->front());
+  PHI = PHINode::Create(V->getType(), 2, "simplifycfg.merge");
+  PHI->insertBefore(Succ->begin());
   PHI->addIncoming(V, BB);
   for (BasicBlock *PredBB : predecessors(Succ))
     if (PredBB != BB)
@@ -3991,7 +4004,9 @@ static bool mergeConditionalStoreToAddress(
   Value *QPHI = ensureValueAvailableInSuccessor(QStore->getValueOperand(),
                                                 QStore->getParent(), PPHI);
 
-  IRBuilder<> QB(&*PostBB->getFirstInsertionPt());
+  BasicBlock::iterator PostBBFirst = PostBB->getFirstInsertionPt();
+  IRBuilder<> QB(PostBB, PostBBFirst);
+  QB.SetCurrentDebugLocation(PostBBFirst->getStableDebugLoc());
 
   Value *PPred = PStore->getParent() == PTB ? PCond : QB.CreateNot(PCond);
   Value *QPred = QStore->getParent() == QTB ? QCond : QB.CreateNot(QCond);
@@ -4002,9 +4017,11 @@ static bool mergeConditionalStoreToAddress(
     QPred = QB.CreateNot(QPred);
   Value *CombinedPred = QB.CreateOr(PPred, QPred);
 
-  auto *T = SplitBlockAndInsertIfThen(CombinedPred, &*QB.GetInsertPoint(),
+  BasicBlock::iterator InsertPt = QB.GetInsertPoint();
+  auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
+
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
   SI->setAAMetadata(PStore->getAAMetadata().merge(QStore->getAAMetadata()));
@@ -4140,10 +4157,10 @@ static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
   // 2) We can sink side effecting instructions into BI's fallthrough
   //    successor provided they doesn't contribute to computation of
   //    BI's condition.
-  Value *CondWB, *WC;
-  BasicBlock *IfTrueBB, *IfFalseBB;
-  if (!parseWidenableBranch(PBI, CondWB, WC, IfTrueBB, IfFalseBB) ||
-      IfTrueBB != BI->getParent() || !BI->getParent()->getSinglePredecessor())
+  BasicBlock *IfTrueBB = PBI->getSuccessor(0);
+  BasicBlock *IfFalseBB = PBI->getSuccessor(1);
+  if (!isWidenableBranch(PBI) || IfTrueBB != BI->getParent() ||
+      !BI->getParent()->getSinglePredecessor())
     return false;
   if (!IfFalseBB->phis().empty())
     return false; // TODO
@@ -5667,7 +5684,7 @@ getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
   for (Instruction &I : CaseDest->instructionsWithoutDebug(false)) {
     if (I.isTerminator()) {
       // If the terminator is a simple branch, continue to the next block.
-      if (I.getNumSuccessors() != 1 || I.isExceptionalTerminator())
+      if (I.getNumSuccessors() != 1 || I.isSpecialTerminator())
         return false;
       Pred = CaseDest;
       CaseDest = I.getSuccessor(0);
@@ -5890,8 +5907,8 @@ static void removeSwitchAfterSelectFold(SwitchInst *SI, PHINode *PHI,
 
   // Remove the switch.
 
-  while (PHI->getBasicBlockIndex(SelectBB) >= 0)
-    PHI->removeIncomingValue(SelectBB);
+  PHI->removeIncomingValueIf(
+      [&](unsigned Idx) { return PHI->getIncomingBlock(Idx) == SelectBB; });
   PHI->addIncoming(SelectValue, SelectBB);
 
   SmallPtrSet<BasicBlock *, 4> RemovedSuccessors;
@@ -6051,8 +6068,9 @@ SwitchLookupTable::SwitchLookupTable(
     bool LinearMappingPossible = true;
     APInt PrevVal;
     APInt DistToPrev;
-    // When linear map is monotonic, we can attach nsw.
-    bool Wrapped = false;
+    // When linear map is monotonic and signed overflow doesn't happen on
+    // maximum index, we can attach nsw on Add and Mul.
+    bool NonMonotonic = false;
     assert(TableSize >= 2 && "Should be a SingleValue table.");
     // Check if there is the same distance between two consecutive values.
     for (uint64_t I = 0; I < TableSize; ++I) {
@@ -6072,7 +6090,7 @@ SwitchLookupTable::SwitchLookupTable(
           LinearMappingPossible = false;
           break;
         }
-        Wrapped |=
+        NonMonotonic |=
             Dist.isStrictlyPositive() ? Val.sle(PrevVal) : Val.sgt(PrevVal);
       }
       PrevVal = Val;
@@ -6080,7 +6098,10 @@ SwitchLookupTable::SwitchLookupTable(
     if (LinearMappingPossible) {
       LinearOffset = cast<ConstantInt>(TableContents[0]);
       LinearMultiplier = ConstantInt::get(M.getContext(), DistToPrev);
-      LinearMapValWrapped = Wrapped;
+      bool MayWrap = false;
+      APInt M = LinearMultiplier->getValue();
+      (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
+      LinearMapValWrapped = NonMonotonic || MayWrap;
       Kind = LinearMapKind;
       ++NumLinearMaps;
       return;

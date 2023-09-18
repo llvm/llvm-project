@@ -113,9 +113,9 @@ define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vsc
 ; CHECK-NEXT:    ld1h { z2.d }, p1/z, [z2.d]
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
+; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    ld1h { z1.d }, p1/z, [z1.d]
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [z0.d]
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
 ; CHECK-NEXT:    ret
@@ -126,8 +126,8 @@ define <vscale x 8 x half> @masked_gather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vsc
 define <vscale x 8 x bfloat> @masked_gather_nxv8bf16(ptr %base, <vscale x 8 x i16> %indices, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpkhi z1.s, z0.h
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    sunpkhi z1.s, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x0, z1.s, sxtw #1]
@@ -175,16 +175,16 @@ define <vscale x 8 x float> @masked_gather_nxv8f32(ptr %base, <vscale x 8 x i32>
 define <vscale x 16 x i8> @masked_gather_nxv16i8(ptr %base, <vscale x 16 x i8> %indices, <vscale x 16 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sunpkhi z1.h, z0.b
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
+; CHECK-NEXT:    sunpkhi z1.h, z0.b
+; CHECK-NEXT:    sunpklo z0.h, z0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    sunpkhi z2.s, z1.h
-; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    punpkhi p2.h, p1.b
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    ld1b { z2.s }, p2/z, [x0, z2.s, sxtw]
 ; CHECK-NEXT:    ld1b { z1.s }, p1/z, [x0, z1.s, sxtw]
-; CHECK-NEXT:    sunpklo z0.h, z0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p1.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h

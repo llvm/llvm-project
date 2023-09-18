@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fobjc-arc -fblocks -Wno-objc-root-class -verify %s
 
-// rdar://problem/10982793
 // [p foo] in ARC creates a cleanup.
 // The plus is invalid and causes the cleanup to go unbound.
 // Don't crash.
@@ -17,7 +16,6 @@ void test1(void) {
   takeBlock(^{ (void) p; }); // expected-error {{cannot capture __autoreleasing variable in a block}}
 }
 
-// rdar://17024681
 @class WebFrame;
 @interface WebView  // expected-note {{previous definition is here}}
 - (WebFrame *)mainFrame;

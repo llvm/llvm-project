@@ -28,16 +28,37 @@ namespace printf_core {
 LIBC_INLINE constexpr char to_lower(char a) { return a | 32; }
 LIBC_INLINE constexpr bool is_lower(char a) { return (a & 32) > 0; }
 
+namespace details {
+
+using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
+using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
+using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
+using DecFmt = IntegerToString<uintmax_t>;
+
+LIBC_INLINE constexpr size_t num_buf_size() {
+  constexpr auto max = [](size_t a, size_t b) -> size_t {
+    return (a < b) ? b : a;
+  };
+  return max(HexFmt::buffer_size(),
+             max(HexFmtUppercase::buffer_size(),
+                 max(OctFmt::buffer_size(), DecFmt::buffer_size())));
+}
+
 LIBC_INLINE cpp::optional<cpp::string_view>
 num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
   if (to_lower(conv_name) == 'x') {
-    return IntegerToString::hex(num, bufref, is_lower(conv_name));
+    if (is_lower(conv_name))
+      return HexFmt::format_to(bufref, num);
+    else
+      return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
-    return IntegerToString::oct(num, bufref);
+    return OctFmt::format_to(bufref, num);
   } else {
-    return IntegerToString::dec(num, bufref);
+    return DecFmt::format_to(bufref, num);
   }
 }
+
+} // namespace details
 
 LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   static constexpr size_t BITS_IN_BYTE = 8;
@@ -66,8 +87,8 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
 
   num = apply_length_modifier(num, to_conv.length_modifier);
 
-  char buf[IntegerToString::oct_bufsize<intmax_t>()];
-  auto str = num_to_strview(num, buf, to_conv.conv_name);
+  cpp::array<char, details::num_buf_size()> buf;
+  auto str = details::num_to_strview(num, buf, to_conv.conv_name);
   if (!str)
     return INT_CONVERSION_ERROR;
 

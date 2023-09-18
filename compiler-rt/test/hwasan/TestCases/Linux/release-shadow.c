@@ -23,7 +23,7 @@ const size_t kMapSize = kNumPages * kPageSize;
 void sync_rss() {
   char *page = (char *)mmap(0, kPageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   // Linux kernel updates RSS counters after a set number of page faults.
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < 10000; ++i) {
     page[0] = 42;
     madvise(page, kPageSize, MADV_DONTNEED);
   }
@@ -54,7 +54,7 @@ void test_rss_difference(void *p) {
   size_t diff = rss_before - rss_after;
   fprintf(stderr, "diff %zu\n", diff);
   // Check that the difference is at least close to kNumShadowPages.
-  assert(diff > kNumShadowPages / 4 * 3);
+  assert(diff > kNumShadowPages / 2);
 }
 
 int main() {

@@ -16,6 +16,7 @@
 #include "BadSignalToKillThreadCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
+#include "ComparePointerToMemberVirtualFunctionCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DynamicStaticInitializersCheck.h"
@@ -28,6 +29,7 @@
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
+#include "IncorrectEnableIfCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
@@ -102,6 +104,8 @@ public:
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");
+    CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
+        "bugprone-compare-pointer-to-member-virtual-function");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<DanglingHandleCheck>(
@@ -122,6 +126,8 @@ public:
         "bugprone-implicit-widening-of-multiplication-result");
     CheckFactories.registerCheck<InaccurateEraseCheck>(
         "bugprone-inaccurate-erase");
+    CheckFactories.registerCheck<IncorrectEnableIfCheck>(
+        "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
     CheckFactories.registerCheck<IncDecInConditionsCheck>(

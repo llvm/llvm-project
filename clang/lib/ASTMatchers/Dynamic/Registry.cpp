@@ -485,6 +485,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(lambdaCapture);
   REGISTER_MATCHER(lambdaExpr);
   REGISTER_MATCHER(linkageSpecDecl);
+  REGISTER_MATCHER(macroQualifiedType);
   REGISTER_MATCHER(materializeTemporaryExpr);
   REGISTER_MATCHER(member);
   REGISTER_MATCHER(memberExpr);

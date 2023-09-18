@@ -88,14 +88,14 @@ define i1 @test_redxor_v8i1(<8 x i1> %a) {
 ; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    fmov w12, s4
 ; GISEL-NEXT:    fmov w13, s5
+; GISEL-NEXT:    fmov w14, s6
 ; GISEL-NEXT:    eor w8, w8, w9
-; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    fmov w9, s7
 ; GISEL-NEXT:    eor w10, w10, w11
-; GISEL-NEXT:    fmov w11, s7
-; GISEL-NEXT:    eor w12, w12, w13
+; GISEL-NEXT:    eor w11, w12, w13
 ; GISEL-NEXT:    eor w8, w8, w10
-; GISEL-NEXT:    eor w9, w9, w11
-; GISEL-NEXT:    eor w9, w12, w9
+; GISEL-NEXT:    eor w9, w14, w9
+; GISEL-NEXT:    eor w9, w11, w9
 ; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    and w0, w8, #0x1
 ; GISEL-NEXT:    ret
@@ -121,39 +121,39 @@ define i1 @test_redxor_v16i1(<16 x i1> %a) {
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
 ; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    fmov w10, s2
-; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    mov b16, v0.b[8]
 ; GISEL-NEXT:    mov b17, v0.b[9]
 ; GISEL-NEXT:    mov b18, v0.b[10]
 ; GISEL-NEXT:    mov b19, v0.b[11]
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
+; GISEL-NEXT:    fmov w12, s6
+; GISEL-NEXT:    mov b20, v0.b[12]
+; GISEL-NEXT:    mov b21, v0.b[13]
+; GISEL-NEXT:    fmov w13, s7
+; GISEL-NEXT:    mov b22, v0.b[14]
+; GISEL-NEXT:    mov b23, v0.b[15]
 ; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    eor w9, w10, w11
 ; GISEL-NEXT:    fmov w10, s4
+; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    fmov w11, s5
-; GISEL-NEXT:    fmov w12, s6
-; GISEL-NEXT:    fmov w13, s7
-; GISEL-NEXT:    mov b20, v0.b[12]
-; GISEL-NEXT:    mov b21, v0.b[13]
-; GISEL-NEXT:    mov b22, v0.b[14]
-; GISEL-NEXT:    mov b23, v0.b[15]
-; GISEL-NEXT:    eor w10, w10, w11
-; GISEL-NEXT:    eor w11, w12, w13
-; GISEL-NEXT:    fmov w12, s16
-; GISEL-NEXT:    fmov w13, s17
 ; GISEL-NEXT:    fmov w14, s18
 ; GISEL-NEXT:    fmov w15, s19
 ; GISEL-NEXT:    fmov w16, s22
 ; GISEL-NEXT:    fmov w17, s23
+; GISEL-NEXT:    eor w10, w10, w11
+; GISEL-NEXT:    eor w11, w12, w13
+; GISEL-NEXT:    fmov w12, s16
+; GISEL-NEXT:    eor w9, w10, w11
+; GISEL-NEXT:    fmov w13, s17
 ; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    eor w12, w12, w13
-; GISEL-NEXT:    eor w9, w10, w11
 ; GISEL-NEXT:    eor w13, w14, w15
 ; GISEL-NEXT:    fmov w14, s20
 ; GISEL-NEXT:    fmov w15, s21
 ; GISEL-NEXT:    eor w10, w12, w13
-; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    eor w14, w14, w15
 ; GISEL-NEXT:    eor w15, w16, w17
 ; GISEL-NEXT:    eor w11, w14, w15
@@ -181,39 +181,39 @@ define <16 x i1> @test_redxor_ins_v16i1(<16 x i1> %a) {
 ; GISEL-NEXT:    mov b6, v0.b[6]
 ; GISEL-NEXT:    mov b7, v0.b[7]
 ; GISEL-NEXT:    fmov w8, s0
-; GISEL-NEXT:    fmov w9, s1
-; GISEL-NEXT:    fmov w10, s2
-; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    mov b16, v0.b[8]
 ; GISEL-NEXT:    mov b17, v0.b[9]
 ; GISEL-NEXT:    mov b18, v0.b[10]
 ; GISEL-NEXT:    mov b19, v0.b[11]
+; GISEL-NEXT:    fmov w9, s1
+; GISEL-NEXT:    fmov w10, s2
+; GISEL-NEXT:    fmov w11, s3
+; GISEL-NEXT:    fmov w12, s6
+; GISEL-NEXT:    mov b20, v0.b[12]
+; GISEL-NEXT:    mov b21, v0.b[13]
+; GISEL-NEXT:    fmov w13, s7
+; GISEL-NEXT:    mov b22, v0.b[14]
+; GISEL-NEXT:    mov b23, v0.b[15]
 ; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    eor w9, w10, w11
 ; GISEL-NEXT:    fmov w10, s4
+; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    fmov w11, s5
-; GISEL-NEXT:    fmov w12, s6
-; GISEL-NEXT:    fmov w13, s7
-; GISEL-NEXT:    mov b20, v0.b[12]
-; GISEL-NEXT:    mov b21, v0.b[13]
-; GISEL-NEXT:    mov b22, v0.b[14]
-; GISEL-NEXT:    mov b23, v0.b[15]
-; GISEL-NEXT:    eor w10, w10, w11
-; GISEL-NEXT:    eor w11, w12, w13
-; GISEL-NEXT:    fmov w12, s16
-; GISEL-NEXT:    fmov w13, s17
 ; GISEL-NEXT:    fmov w14, s18
 ; GISEL-NEXT:    fmov w15, s19
 ; GISEL-NEXT:    fmov w16, s22
 ; GISEL-NEXT:    fmov w17, s23
+; GISEL-NEXT:    eor w10, w10, w11
+; GISEL-NEXT:    eor w11, w12, w13
+; GISEL-NEXT:    fmov w12, s16
+; GISEL-NEXT:    eor w9, w10, w11
+; GISEL-NEXT:    fmov w13, s17
 ; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    eor w12, w12, w13
-; GISEL-NEXT:    eor w9, w10, w11
 ; GISEL-NEXT:    eor w13, w14, w15
 ; GISEL-NEXT:    fmov w14, s20
 ; GISEL-NEXT:    fmov w15, s21
 ; GISEL-NEXT:    eor w10, w12, w13
-; GISEL-NEXT:    eor w8, w8, w9
 ; GISEL-NEXT:    eor w14, w14, w15
 ; GISEL-NEXT:    eor w15, w16, w17
 ; GISEL-NEXT:    eor w11, w14, w15
@@ -319,14 +319,14 @@ define i8 @test_redxor_v8i8(<8 x i8> %a) {
 ; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    fmov w12, s4
 ; GISEL-NEXT:    fmov w13, s5
+; GISEL-NEXT:    fmov w14, s6
 ; GISEL-NEXT:    eor w8, w8, w9
-; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    fmov w9, s7
 ; GISEL-NEXT:    eor w10, w10, w11
-; GISEL-NEXT:    fmov w11, s7
-; GISEL-NEXT:    eor w12, w12, w13
+; GISEL-NEXT:    eor w11, w12, w13
 ; GISEL-NEXT:    eor w8, w8, w10
-; GISEL-NEXT:    eor w9, w9, w11
-; GISEL-NEXT:    eor w9, w12, w9
+; GISEL-NEXT:    eor w9, w14, w9
+; GISEL-NEXT:    eor w9, w11, w9
 ; GISEL-NEXT:    eor w0, w8, w9
 ; GISEL-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> %a)
@@ -362,14 +362,14 @@ define i8 @test_redxor_v16i8(<16 x i8> %a) {
 ; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    fmov w12, s4
 ; GISEL-NEXT:    fmov w13, s5
+; GISEL-NEXT:    fmov w14, s6
 ; GISEL-NEXT:    eor w8, w8, w9
-; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    fmov w9, s7
 ; GISEL-NEXT:    eor w10, w10, w11
-; GISEL-NEXT:    fmov w11, s7
-; GISEL-NEXT:    eor w12, w12, w13
+; GISEL-NEXT:    eor w11, w12, w13
 ; GISEL-NEXT:    eor w8, w8, w10
-; GISEL-NEXT:    eor w9, w9, w11
-; GISEL-NEXT:    eor w9, w12, w9
+; GISEL-NEXT:    eor w9, w14, w9
+; GISEL-NEXT:    eor w9, w11, w9
 ; GISEL-NEXT:    eor w0, w8, w9
 ; GISEL-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %a)
@@ -407,14 +407,14 @@ define i8 @test_redxor_v32i8(<32 x i8> %a) {
 ; GISEL-NEXT:    fmov w11, s3
 ; GISEL-NEXT:    fmov w12, s4
 ; GISEL-NEXT:    fmov w13, s5
+; GISEL-NEXT:    fmov w14, s6
 ; GISEL-NEXT:    eor w8, w8, w9
-; GISEL-NEXT:    fmov w9, s6
+; GISEL-NEXT:    fmov w9, s7
 ; GISEL-NEXT:    eor w10, w10, w11
-; GISEL-NEXT:    fmov w11, s7
-; GISEL-NEXT:    eor w12, w12, w13
+; GISEL-NEXT:    eor w11, w12, w13
 ; GISEL-NEXT:    eor w8, w8, w10
-; GISEL-NEXT:    eor w9, w9, w11
-; GISEL-NEXT:    eor w9, w12, w9
+; GISEL-NEXT:    eor w9, w14, w9
+; GISEL-NEXT:    eor w9, w11, w9
 ; GISEL-NEXT:    eor w0, w8, w9
 ; GISEL-NEXT:    ret
   %xor_result = call i8 @llvm.vector.reduce.xor.v32i8(<32 x i8> %a)

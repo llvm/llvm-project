@@ -50,7 +50,7 @@ std::vector<Decl::Kind> testWalk(llvm::StringRef TargetCode,
   Inputs.ExtraFiles["target.h"] = Target.code().str();
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
-  Inputs.ExtraArgs.push_back("-std=c++17");
+  Inputs.ExtraArgs.push_back("-std=c++20");
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -114,7 +114,7 @@ TEST(WalkAST, DeclRef) {
   testWalk("int $explicit^x;", "int y = ^x;");
   testWalk("int $explicit^foo();", "int y = ^foo();");
   testWalk("namespace ns { int $explicit^x; }", "int y = ns::^x;");
-  testWalk("struct $implicit^S { static int x; };", "int y = S::^x;");
+  testWalk("struct S { static int x; };", "int y = S::^x;");
   // Canonical declaration only.
   testWalk("extern int $explicit^x; int x;", "int y = ^x;");
   // Return type of `foo` isn't used.
@@ -309,6 +309,14 @@ TEST(WalkAST, Alias) {
     namespace ns { using ::$explicit^Foo; }
     template<> struct ns::Foo<int> {};)cpp",
            "ns::^Foo<int> x;");
+  testWalk(R"cpp(
+    namespace ns { enum class foo { bar }; }
+    using ns::foo;)cpp",
+           "auto x = foo::^bar;");
+  testWalk(R"cpp(
+    namespace ns { enum foo { bar }; }
+    using ns::foo::$explicit^bar;)cpp",
+           "auto x = ^bar;");
 }
 
 TEST(WalkAST, Using) {
@@ -338,6 +346,8 @@ TEST(WalkAST, Using) {
     }
     using ns::$explicit^Y;)cpp",
            "^Y<int> x;");
+  testWalk("namespace ns { enum E {A}; } using enum ns::$explicit^E;",
+           "auto x = ^A;");
 }
 
 TEST(WalkAST, Namespaces) {
@@ -399,10 +409,10 @@ TEST(WalkAST, NestedTypes) {
 }
 
 TEST(WalkAST, MemberExprs) {
-  testWalk("struct $implicit^S { static int f; };", "void foo() { S::^f; }");
-  testWalk("struct B { static int f; }; struct $implicit^S : B {};",
+  testWalk("struct S { static int f; };", "void foo() { S::^f; }");
+  testWalk("struct B { static int f; }; struct S : B {};",
            "void foo() { S::^f; }");
-  testWalk("struct B { static void f(); }; struct $implicit^S : B {};",
+  testWalk("struct B { static void f(); }; struct S : B {};",
            "void foo() { S::^f; }");
   testWalk("struct B { static void f(); }; ",
            "struct S : B { void foo() { ^f(); } };");
@@ -504,9 +514,20 @@ TEST(WalkAST, Functions) {
 }
 
 TEST(WalkAST, Enums) {
-  testWalk("enum E { $explicit^A = 42, B = 43 };", "int e = ^A;");
+  testWalk("enum E { $explicit^A = 42 };", "int e = ^A;");
   testWalk("enum class $explicit^E : int;", "enum class ^E : int {};");
   testWalk("enum class E : int {};", "enum class ^E : int ;");
+  testWalk("namespace ns { enum E { $explicit^A = 42 }; }", "int e = ns::^A;");
+  testWalk("namespace ns { enum E { A = 42 }; } using ns::E::$explicit^A;",
+           "int e = ^A;");
+  testWalk("namespace ns { enum E { A = 42 }; } using enum ns::$explicit^E;",
+           "int e = ^A;");
+  testWalk(R"(namespace ns { enum E { A = 42 }; }
+              struct S { using enum ns::E; };)",
+           "int e = S::^A;");
+  testWalk(R"(namespace ns { enum E { A = 42 }; }
+              struct S { using ns::E::A; };)",
+           "int e = S::^A;");
 }
 
 TEST(WalkAST, InitializerList) {
@@ -517,6 +538,17 @@ TEST(WalkAST, InitializerList) {
            R"cpp(
        const char* s = "";
        auto sx = ^{s};)cpp");
+}
+
+TEST(WalkAST, Concepts) {
+  std::string Concept = "template<typename T> concept $explicit^Foo = true;";
+  testWalk(Concept, "template<typename T>concept Bar = ^Foo<T> && true;");
+  testWalk(Concept, "template<^Foo T>void func() {}");
+  testWalk(Concept, "template<typename T> requires ^Foo<T> void func() {}");
+  testWalk(Concept, "template<typename T> void func() requires ^Foo<T> {}");
+  testWalk(Concept, "void func(^Foo auto x) {}");
+  // FIXME: Foo should be explicitly referenced.
+  testWalk("template<typename T> concept Foo = true;", "void func() { ^Foo auto x = 1; }");
 }
 } // namespace
 } // namespace clang::include_cleaner

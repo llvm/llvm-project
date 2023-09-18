@@ -16,19 +16,46 @@ using namespace mlir::sparse_tensor::ir_detail;
 // `DimLvlExpr` implementation.
 //===----------------------------------------------------------------------===//
 
+Var DimLvlExpr::castAnyVar() const {
+  assert(expr && "uninitialized DimLvlExpr");
+  const auto var = dyn_castAnyVar();
+  assert(var && "expected DimLvlExpr to be a Var");
+  return *var;
+}
+
+std::optional<Var> DimLvlExpr::dyn_castAnyVar() const {
+  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+    return SymVar(s);
+  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+    return Var(getAllowedVarKind(), x);
+  return std::nullopt;
+}
+
 SymVar DimLvlExpr::castSymVar() const {
   return SymVar(expr.cast<AffineSymbolExpr>());
+}
+
+std::optional<SymVar> DimLvlExpr::dyn_castSymVar() const {
+  if (const auto s = expr.dyn_cast_or_null<AffineSymbolExpr>())
+    return SymVar(s);
+  return std::nullopt;
 }
 
 Var DimLvlExpr::castDimLvlVar() const {
   return Var(getAllowedVarKind(), expr.cast<AffineDimExpr>());
 }
 
+std::optional<Var> DimLvlExpr::dyn_castDimLvlVar() const {
+  if (const auto x = expr.dyn_cast_or_null<AffineDimExpr>())
+    return Var(getAllowedVarKind(), x);
+  return std::nullopt;
+}
+
 int64_t DimLvlExpr::castConstantValue() const {
   return expr.cast<AffineConstantExpr>().getValue();
 }
 
-std::optional<int64_t> DimLvlExpr::tryGetConstantValue() const {
+std::optional<int64_t> DimLvlExpr::dyn_castConstantValue() const {
   const auto k = expr.dyn_cast_or_null<AffineConstantExpr>();
   return k ? std::make_optional(k.getValue()) : std::nullopt;
 }
@@ -71,6 +98,12 @@ void DimLvlExpr::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+std::string DimLvlExpr::str() const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os);
+  return os.str();
+}
 void DimLvlExpr::print(AsmPrinter &printer) const {
   print(printer.getStream());
 }
@@ -98,7 +131,7 @@ static std::optional<MatchNeg> matchNeg(DimLvlExpr expr) {
       return MatchNeg{DimLvlExpr{expr.getExprKind(), AffineExpr()}, val};
   }
   if (op == AffineExprKind::Mul)
-    if (const auto rval = rhs.tryGetConstantValue(); rval && *rval < 0)
+    if (const auto rval = rhs.dyn_castConstantValue(); rval && *rval < 0)
       return MatchNeg{lhs, *rval};
   return std::nullopt;
 }
@@ -193,6 +226,12 @@ void DimSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
 }
+std::string DimSpec::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
+}
 void DimSpec::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
 }
@@ -232,6 +271,12 @@ void LvlSpec::getFreeVars(VarSet &vars) const { vars.add(expr); }
 void LvlSpec::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
+}
+std::string LvlSpec::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
 }
 void LvlSpec::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
@@ -303,7 +348,9 @@ AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
   lvlAffines.reserve(getLvlRank());
   for (const auto &lvlSpec : lvlSpecs)
     lvlAffines.push_back(lvlSpec.getExpr().getAffineExpr());
-  return AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+  auto map =  AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+  if (map.isIdentity()) return AffineMap();
+  return map;
 }
 
 AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
@@ -311,12 +358,20 @@ AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
   dimAffines.reserve(getDimRank());
   for (const auto &dimSpec : dimSpecs)
     dimAffines.push_back(dimSpec.getExpr().getAffineExpr());
-  return AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
+  auto map = AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
+  if (map.isIdentity()) return AffineMap();
+  return map;
 }
 
 void DimLvlMap::dump() const {
   print(llvm::errs(), /*wantElision=*/false);
   llvm::errs() << "\n";
+}
+std::string DimLvlMap::str(bool wantElision) const {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  print(os, wantElision);
+  return os.str();
 }
 void DimLvlMap::print(AsmPrinter &printer, bool wantElision) const {
   print(printer.getStream(), wantElision);
@@ -340,7 +395,7 @@ void DimLvlMap::print(llvm::raw_ostream &os, bool wantElision) const {
     os << '{';
     llvm::interleaveComma(
         lvlSpecs, os, [&](LvlSpec const &spec) { os << spec.getBoundVar(); });
-    os << '}';
+    os << "} ";
   }
 
   // Dimension specifiers.

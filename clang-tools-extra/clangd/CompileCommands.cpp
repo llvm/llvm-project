@@ -237,14 +237,8 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
       llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
-      /*FlagsToInclude=*/
-      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
-                  driver::options::CLDXCOption)
-               : /*everything*/ 0,
-      /*FlagsToExclude=*/driver::options::NoDriverOption |
-          (IsCLMode
-               ? 0
-               : (driver::options::CLOption | driver::options::CLDXCOption)));
+      llvm::opt::Visibility(IsCLMode ? driver::options::CLOption
+                                     : driver::options::ClangOption));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
@@ -296,10 +290,10 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
     Cmd.resize(DashDashIndex);
   }
   llvm::sort(IndicesToDrop);
-  llvm::for_each(llvm::reverse(IndicesToDrop),
-                 // +1 to account for the executable name in Cmd[0] that
-                 // doesn't exist in ArgList.
-                 [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
+  for (unsigned Idx : llvm::reverse(IndicesToDrop))
+    // +1 to account for the executable name in Cmd[0] that
+    // doesn't exist in ArgList.
+    Cmd.erase(Cmd.begin() + Idx + 1);
   // All the inputs are stripped, append the name for the requested file. Rest
   // of the modifications should respect `--`.
   Cmd.push_back("--");
@@ -441,23 +435,13 @@ DriverMode getDriverMode(const std::vector<std::string> &Args) {
 
 // Returns the set of DriverModes where an option may be used.
 unsigned char getModes(const llvm::opt::Option &Opt) {
-  // Why is this so complicated?!
-  // Reference is clang::driver::Driver::getIncludeExcludeOptionFlagMasks()
   unsigned char Result = DM_None;
-  if (Opt.hasFlag(driver::options::CC1Option))
+  if (Opt.hasVisibilityFlag(driver::options::ClangOption))
+    Result |= DM_GCC;
+  if (Opt.hasVisibilityFlag(driver::options::CC1Option))
     Result |= DM_CC1;
-  if (!Opt.hasFlag(driver::options::NoDriverOption)) {
-    if (Opt.hasFlag(driver::options::CLOption)) {
-      Result |= DM_CL;
-    } else if (Opt.hasFlag(driver::options::CLDXCOption)) {
-      Result |= DM_CL;
-    } else {
-      Result |= DM_GCC;
-      if (Opt.hasFlag(driver::options::CoreOption)) {
-        Result |= DM_CL;
-      }
-    }
-  }
+  if (Opt.hasVisibilityFlag(driver::options::CLOption))
+    Result |= DM_CL;
   return Result;
 }
 
@@ -493,8 +477,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
   static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
       NAME##_init, std::size(NAME##_init) - 1);
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELP, METAVAR, VALUES)                                          \
+#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -505,8 +489,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       DriverID AliasID;
       const void *AliasArgs;
     } AliasTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELP, METAVAR, VALUES)                                          \
+#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION

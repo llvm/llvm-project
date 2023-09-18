@@ -73,64 +73,39 @@ cl::opt<bool> StaleMatchingJoinIslands(
 
 cl::opt<unsigned> StaleMatchingCostBlockInc(
     "stale-matching-cost-block-inc",
-    cl::desc("The cost of increasing a block's count by one."), cl::init(110),
+    cl::desc("The cost of increasing a block count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingCostBlockDec(
     "stale-matching-cost-block-dec",
-    cl::desc("The cost of decreasing a block's count by one."), cl::init(100),
+    cl::desc("The cost of decreasing a block count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
-
-cl::opt<unsigned> StaleMatchingCostBlockEntryInc(
-    "stale-matching-cost-block-entry-inc",
-    cl::desc("The cost of increasing the entry block's count by one."),
-    cl::init(110), cl::ReallyHidden, cl::cat(BoltOptCategory));
-
-cl::opt<unsigned> StaleMatchingCostBlockEntryDec(
-    "stale-matching-cost-block-entry-dec",
-    cl::desc("The cost of decreasing the entry block's count by one."),
-    cl::init(100), cl::ReallyHidden, cl::cat(BoltOptCategory));
-
-cl::opt<unsigned> StaleMatchingCostBlockZeroInc(
-    "stale-matching-cost-block-zero-inc",
-    cl::desc("The cost of increasing a count of zero-weight block by one."),
-    cl::init(10), cl::Hidden, cl::cat(BoltOptCategory));
-
-cl::opt<unsigned> StaleMatchingCostBlockUnknownInc(
-    "stale-matching-cost-block-unknown-inc",
-    cl::desc("The cost of increasing an unknown block's count by one."),
-    cl::init(10), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingCostJumpInc(
     "stale-matching-cost-jump-inc",
-    cl::desc("The cost of increasing a jump's count by one."), cl::init(100),
+    cl::desc("The cost of increasing a jump count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
-
-cl::opt<unsigned> StaleMatchingCostJumpFTInc(
-    "stale-matching-cost-jump-ft-inc",
-    cl::desc("The cost of increasing a fall-through jump's count by one."),
-    cl::init(100), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingCostJumpDec(
     "stale-matching-cost-jump-dec",
-    cl::desc("The cost of decreasing a jump's count by one."), cl::init(110),
+    cl::desc("The cost of decreasing a jump count by one."), cl::init(150),
     cl::ReallyHidden, cl::cat(BoltOptCategory));
 
-cl::opt<unsigned> StaleMatchingCostJumpFTDec(
-    "stale-matching-cost-jump-ft-dec",
-    cl::desc("The cost of decreasing a fall-through jump's count by one."),
-    cl::init(110), cl::ReallyHidden, cl::cat(BoltOptCategory));
+cl::opt<unsigned> StaleMatchingCostBlockUnknownInc(
+    "stale-matching-cost-block-unknown-inc",
+    cl::desc("The cost of increasing an unknown block count by one."),
+    cl::init(1), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingCostJumpUnknownInc(
     "stale-matching-cost-jump-unknown-inc",
-    cl::desc("The cost of increasing an unknown jump's count by one."),
-    cl::init(50), cl::ReallyHidden, cl::cat(BoltOptCategory));
+    cl::desc("The cost of increasing an unknown jump count by one."),
+    cl::init(140), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
     "stale-matching-cost-jump-unknown-ft-inc",
     cl::desc(
-        "The cost of increasing an unknown fall-through jump's count by one."),
-    cl::init(5), cl::ReallyHidden, cl::cat(BoltOptCategory));
+        "The cost of increasing an unknown fall-through jump count by one."),
+    cl::init(3), cl::ReallyHidden, cl::cat(BoltOptCategory));
 
 } // namespace opts
 
@@ -145,7 +120,8 @@ private:
   using ValueOffset = Bitfield::Element<uint16_t, 0, 16>;
   using ValueOpcode = Bitfield::Element<uint16_t, 16, 16>;
   using ValueInstr = Bitfield::Element<uint16_t, 32, 16>;
-  using ValueNeighbor = Bitfield::Element<uint16_t, 48, 16>;
+  using ValuePred = Bitfield::Element<uint8_t, 48, 8>;
+  using ValueSucc = Bitfield::Element<uint8_t, 56, 8>;
 
 public:
   explicit BlendedBlockHash() {}
@@ -154,7 +130,8 @@ public:
     Offset = Bitfield::get<ValueOffset>(Hash);
     OpcodeHash = Bitfield::get<ValueOpcode>(Hash);
     InstrHash = Bitfield::get<ValueInstr>(Hash);
-    NeighborHash = Bitfield::get<ValueNeighbor>(Hash);
+    PredHash = Bitfield::get<ValuePred>(Hash);
+    SuccHash = Bitfield::get<ValueSucc>(Hash);
   }
 
   /// Combine the blended hash into uint64_t.
@@ -163,7 +140,8 @@ public:
     Bitfield::set<ValueOffset>(Hash, Offset);
     Bitfield::set<ValueOpcode>(Hash, OpcodeHash);
     Bitfield::set<ValueInstr>(Hash, InstrHash);
-    Bitfield::set<ValueNeighbor>(Hash, NeighborHash);
+    Bitfield::set<ValuePred>(Hash, PredHash);
+    Bitfield::set<ValueSucc>(Hash, SuccHash);
     return Hash;
   }
 
@@ -175,7 +153,8 @@ public:
            "incorrect blended hash distance computation");
     uint64_t Dist = 0;
     // Account for NeighborHash
-    Dist += NeighborHash == BBH.NeighborHash ? 0 : 1;
+    Dist += SuccHash == BBH.SuccHash ? 0 : 1;
+    Dist += PredHash == BBH.PredHash ? 0 : 1;
     Dist <<= 16;
     // Account for InstrHash
     Dist += InstrHash == BBH.InstrHash ? 0 : 1;
@@ -192,9 +171,10 @@ public:
   /// (Strong) Hash of the basic block instructions, including opcodes and
   /// operands.
   uint16_t InstrHash{0};
-  /// Hash of the (loose) basic block together with (loose) hashes of its
-  /// successors and predecessors.
-  uint16_t NeighborHash{0};
+  /// (Loose) Hashes of the predecessors of the basic block.
+  uint8_t PredHash{0};
+  /// (Loose) Hashes of the successors of the basic block.
+  uint8_t SuccHash{0};
 };
 
 /// The object is used to identify and match basic blocks in a BinaryFunction
@@ -252,41 +232,43 @@ void BinaryFunction::computeBlockHashes() const {
 
   std::vector<BlendedBlockHash> BlendedHashes(BasicBlocks.size());
   std::vector<uint64_t> OpcodeHashes(BasicBlocks.size());
-  // Initialize hash components
+  // Initialize hash components.
   for (size_t I = 0; I < BasicBlocks.size(); I++) {
     const BinaryBasicBlock *BB = BasicBlocks[I];
     assert(BB->getIndex() == I && "incorrect block index");
     BlendedHashes[I].Offset = BB->getOffset();
-    // Hashing complete instructions
+    // Hashing complete instructions.
     std::string InstrHashStr = hashBlock(
         BC, *BB, [&](const MCOperand &Op) { return hashInstOperand(BC, Op); });
     uint64_t InstrHash = std::hash<std::string>{}(InstrHashStr);
-    BlendedHashes[I].InstrHash = hash_64_to_16(InstrHash);
-    // Hashing opcodes
-    std::string OpcodeHashStr =
-        hashBlock(BC, *BB, [](const MCOperand &Op) { return std::string(); });
+    BlendedHashes[I].InstrHash = (uint16_t)hash_value(InstrHash);
+    // Hashing opcodes.
+    std::string OpcodeHashStr = hashBlockLoose(BC, *BB);
     OpcodeHashes[I] = std::hash<std::string>{}(OpcodeHashStr);
-    BlendedHashes[I].OpcodeHash = hash_64_to_16(OpcodeHashes[I]);
+    BlendedHashes[I].OpcodeHash = (uint16_t)hash_value(OpcodeHashes[I]);
   }
 
-  // Initialize neighbor hash
+  // Initialize neighbor hash.
   for (size_t I = 0; I < BasicBlocks.size(); I++) {
     const BinaryBasicBlock *BB = BasicBlocks[I];
-    uint64_t Hash = OpcodeHashes[I];
-    // Append hashes of successors
+    // Append hashes of successors.
+    uint64_t Hash = 0;
     for (BinaryBasicBlock *SuccBB : BB->successors()) {
       uint64_t SuccHash = OpcodeHashes[SuccBB->getIndex()];
       Hash = hashing::detail::hash_16_bytes(Hash, SuccHash);
     }
-    // Append hashes of predecessors
+    BlendedHashes[I].SuccHash = (uint8_t)hash_value(Hash);
+
+    // Append hashes of predecessors.
+    Hash = 0;
     for (BinaryBasicBlock *PredBB : BB->predecessors()) {
       uint64_t PredHash = OpcodeHashes[PredBB->getIndex()];
       Hash = hashing::detail::hash_16_bytes(Hash, PredHash);
     }
-    BlendedHashes[I].NeighborHash = hash_64_to_16(Hash);
+    BlendedHashes[I].PredHash = (uint8_t)hash_value(Hash);
   }
 
-  //  Assign hashes
+  //  Assign hashes.
   for (size_t I = 0; I < BasicBlocks.size(); I++) {
     const BinaryBasicBlock *BB = BasicBlocks[I];
     BB->setHash(BlendedHashes[I].combine());
@@ -407,22 +389,27 @@ void matchWeightsByHashes(BinaryContext &BC,
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
     BlendedBlockHash YamlHash(YamlBB.Hash);
     const FlowBlock *MatchedBlock = Matcher.matchBlock(YamlHash);
+    // Always match the entry block.
+    if (MatchedBlock == nullptr && YamlBB.Index == 0)
+      MatchedBlock = Blocks[0];
     if (MatchedBlock != nullptr) {
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
-      LLVM_DEBUG(dbgs() << "Matched yaml block with bid = " << YamlBB.Index
-                        << " and hash = " << Twine::utohexstr(YamlBB.Hash)
-                        << " to BB with index = " << MatchedBlock->Index - 1
+      BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
+      LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
+                        << " with hash " << Twine::utohexstr(YamlBB.Hash)
+                        << " to BB (index = " << MatchedBlock->Index - 1 << ")"
+                        << " with hash " << Twine::utohexstr(BinHash.combine())
                         << "\n");
       // Update matching stats accounting for the matched block.
-      BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
       if (Matcher.isHighConfidenceMatch(BinHash, YamlHash)) {
         ++BC.Stats.NumMatchedBlocks;
         BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
+        LLVM_DEBUG(dbgs() << "  exact match\n");
       }
     } else {
       LLVM_DEBUG(
-          dbgs() << "Couldn't match yaml block with bid = " << YamlBB.Index
-                 << " and hash = " << Twine::utohexstr(YamlBB.Hash) << "\n");
+          dbgs() << "Couldn't match yaml block (bid = " << YamlBB.Index << ")"
+                 << " with hash " << Twine::utohexstr(YamlBB.Hash) << "\n");
     }
 
     // Update matching stats.
@@ -575,16 +562,15 @@ void applyInference(FlowFunction &Func) {
   Params.JoinIslands = opts::StaleMatchingJoinIslands;
 
   Params.CostBlockInc = opts::StaleMatchingCostBlockInc;
+  Params.CostBlockEntryInc = opts::StaleMatchingCostBlockInc;
   Params.CostBlockDec = opts::StaleMatchingCostBlockDec;
-  Params.CostBlockEntryInc = opts::StaleMatchingCostBlockEntryInc;
-  Params.CostBlockEntryDec = opts::StaleMatchingCostBlockEntryDec;
-  Params.CostBlockZeroInc = opts::StaleMatchingCostBlockZeroInc;
+  Params.CostBlockEntryDec = opts::StaleMatchingCostBlockDec;
   Params.CostBlockUnknownInc = opts::StaleMatchingCostBlockUnknownInc;
 
   Params.CostJumpInc = opts::StaleMatchingCostJumpInc;
-  Params.CostJumpFTInc = opts::StaleMatchingCostJumpFTInc;
+  Params.CostJumpFTInc = opts::StaleMatchingCostJumpInc;
   Params.CostJumpDec = opts::StaleMatchingCostJumpDec;
-  Params.CostJumpFTDec = opts::StaleMatchingCostJumpFTDec;
+  Params.CostJumpFTDec = opts::StaleMatchingCostJumpDec;
   Params.CostJumpUnknownInc = opts::StaleMatchingCostJumpUnknownInc;
   Params.CostJumpUnknownFTInc = opts::StaleMatchingCostJumpUnknownFTInc;
 

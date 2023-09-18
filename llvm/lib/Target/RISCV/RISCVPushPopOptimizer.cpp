@@ -132,7 +132,8 @@ bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
   for (auto &MBB : Fn) {
     MachineBasicBlock::iterator MBBI = containsPop(MBB);
     MachineBasicBlock::iterator NextI = next_nodbg(MBBI, MBB.end());
-    if (MBBI != MBB.end() && NextI->getOpcode() == RISCV::PseudoRET)
+    if (MBBI != MBB.end() && NextI != MBB.end() &&
+        NextI->getOpcode() == RISCV::PseudoRET)
       Modified |= usePopRet(MBBI, NextI, adjustRetVal(MBBI));
   }
   return Modified;

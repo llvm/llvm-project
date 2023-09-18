@@ -512,6 +512,28 @@ bool isPermlane16(unsigned Opc) {
          Opc == AMDGPU::V_PERMLANEX16_B32_e64_gfx11;
 }
 
+bool isGenericAtomic(unsigned Opc) {
+  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
+         Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
@@ -1930,6 +1952,8 @@ bool isShader(CallingConv::ID cc) {
     case CallingConv::AMDGPU_ES:
     case CallingConv::AMDGPU_GS:
     case CallingConv::AMDGPU_PS:
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
     case CallingConv::AMDGPU_CS:
       return true;
     default:
@@ -1968,6 +1992,16 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC) {
     return true;
   default:
     return isEntryFunctionCC(CC);
+  }
+}
+
+bool isChainCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -2704,6 +2738,25 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
   return isGFX11Plus(STI) ? getGfx11PlusBufferFormatInfo(Format)
                           : isGFX10(STI) ? getGfx10BufferFormatInfo(Format)
                                          : getGfx9BufferFormatInfo(Format);
+}
+
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+  for (auto OpName : { OpName::vdst, OpName::src0, OpName::src1,
+                       OpName::src2 }) {
+    int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
+    if (Idx == -1)
+      continue;
+
+    if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
+        OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+      return true;
+  }
+
+  return false;
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+  return hasAny64BitVGPROperands(OpDesc);
 }
 
 } // namespace AMDGPU

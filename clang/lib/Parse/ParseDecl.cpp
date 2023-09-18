@@ -18,6 +18,7 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -288,6 +289,16 @@ static bool attributeHasIdentifierArg(const IdentifierInfo &II) {
 #undef CLANG_ATTR_IDENTIFIER_ARG_LIST
 }
 
+/// Determine whether the given attribute has an identifier argument.
+static ParsedAttributeArgumentsProperties
+attributeStringLiteralListArg(const IdentifierInfo &II) {
+#define CLANG_ATTR_STRING_LITERAL_ARG_LIST
+  return llvm::StringSwitch<uint32_t>(normalizeAttrName(II.getName()))
+#include "clang/Parse/AttrParserStringSwitches.inc"
+      .Default(0);
+#undef CLANG_ATTR_STRING_LITERAL_ARG_LIST
+}
+
 /// Determine whether the given attribute has a variadic identifier argument.
 static bool attributeHasVariadicIdentifierArg(const IdentifierInfo &II) {
 #define CLANG_ATTR_VARIADIC_IDENTIFIER_ARG_LIST
@@ -369,6 +380,81 @@ void Parser::ParseAttributeWithTypeArg(IdentifierInfo &AttrName,
   else
     Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
                  ScopeName, ScopeLoc, nullptr, 0, Form);
+}
+
+ExprResult
+Parser::ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName) {
+  if (Tok.is(tok::l_paren)) {
+    BalancedDelimiterTracker Paren(*this, tok::l_paren);
+    Paren.consumeOpen();
+    ExprResult Res = ParseUnevaluatedStringInAttribute(AttrName);
+    Paren.consumeClose();
+    return Res;
+  }
+  if (!isTokenStringLiteral()) {
+    Diag(Tok.getLocation(), diag::err_expected_string_literal)
+        << /*in attribute...*/ 4 << AttrName.getName();
+    return ExprError();
+  }
+  return ParseUnevaluatedStringLiteralExpression();
+}
+
+bool Parser::ParseAttributeArgumentList(
+    const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
+    ParsedAttributeArgumentsProperties ArgsProperties) {
+  bool SawError = false;
+  unsigned Arg = 0;
+  while (true) {
+    ExprResult Expr;
+    if (ArgsProperties.isStringLiteralArg(Arg)) {
+      Expr = ParseUnevaluatedStringInAttribute(AttrName);
+    } else if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
+      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Expr = ParseBraceInitializer();
+    } else {
+      Expr = ParseAssignmentExpression();
+    }
+    Expr = Actions.CorrectDelayedTyposInExpr(Expr);
+
+    if (Tok.is(tok::ellipsis))
+      Expr = Actions.ActOnPackExpansion(Expr.get(), ConsumeToken());
+    else if (Tok.is(tok::code_completion)) {
+      // There's nothing to suggest in here as we parsed a full expression.
+      // Instead fail and propagate the error since caller might have something
+      // the suggest, e.g. signature help in function call. Note that this is
+      // performed before pushing the \p Expr, so that signature help can report
+      // current argument correctly.
+      SawError = true;
+      cutOffParsing();
+      break;
+    }
+
+    if (Expr.isInvalid()) {
+      SawError = true;
+      break;
+    }
+
+    Exprs.push_back(Expr.get());
+
+    if (Tok.isNot(tok::comma))
+      break;
+    // Move to the next argument, remember where the comma was.
+    Token Comma = Tok;
+    ConsumeToken();
+    checkPotentialAngleBracketDelimiter(Comma);
+    Arg++;
+  }
+
+  if (SawError) {
+    // Ensure typos get diagnosed when errors were encountered while parsing the
+    // expression list.
+    for (auto &E : Exprs) {
+      ExprResult Expr = Actions.CorrectDelayedTyposInExpr(E);
+      if (Expr.isUsable())
+        E = Expr.get();
+    }
+  }
+  return SawError;
 }
 
 unsigned Parser::ParseAttributeArgsCommon(
@@ -463,9 +549,9 @@ unsigned Parser::ParseAttributeArgsCommon(
                        : Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
       ExprVector ParsedExprs;
-      if (ParseExpressionList(ParsedExprs, llvm::function_ref<void()>(),
-                              /*FailImmediatelyOnInvalidExpr=*/true,
-                              /*EarlyTypoCorrection=*/true)) {
+      ParsedAttributeArgumentsProperties ArgProperties =
+          attributeStringLiteralListArg(*AttrName);
+      if (ParseAttributeArgumentList(*AttrName, ParsedExprs, ArgProperties)) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return 0;
       }
@@ -1230,31 +1316,19 @@ void Parser::ParseAvailabilityAttribute(
     }
     ConsumeToken();
     if (Keyword == Ident_message || Keyword == Ident_replacement) {
-      if (Tok.isNot(tok::string_literal)) {
+      if (!isTokenStringLiteral()) {
         Diag(Tok, diag::err_expected_string_literal)
           << /*Source='availability attribute'*/2;
         SkipUntil(tok::r_paren, StopAtSemi);
         return;
       }
-      if (Keyword == Ident_message)
-        MessageExpr = ParseStringLiteralExpression();
-      else
-        ReplacementExpr = ParseStringLiteralExpression();
-      // Also reject wide string literals.
-      if (StringLiteral *MessageStringLiteral =
-              cast_or_null<StringLiteral>(MessageExpr.get())) {
-        if (!MessageStringLiteral->isOrdinary()) {
-          Diag(MessageStringLiteral->getSourceRange().getBegin(),
-               diag::err_expected_string_literal)
-            << /*Source='availability attribute'*/ 2;
-          SkipUntil(tok::r_paren, StopAtSemi);
-          return;
-        }
-      }
-      if (Keyword == Ident_message)
+      if (Keyword == Ident_message) {
+        MessageExpr = ParseUnevaluatedStringLiteralExpression();
         break;
-      else
+      } else {
+        ReplacementExpr = ParseUnevaluatedStringLiteralExpression();
         continue;
+      }
     }
 
     // Special handling of 'NA' only when applied to introduced or
@@ -1422,7 +1496,7 @@ void Parser::ParseExternalSourceSymbolAttribute(
     else
       HasDefinedIn = true;
 
-    if (Tok.isNot(tok::string_literal)) {
+    if (!isTokenStringLiteral()) {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='external_source_symbol attribute'*/ 3
           << /*language | source container | USR*/ (
@@ -1436,27 +1510,27 @@ void Parser::ParseExternalSourceSymbolAttribute(
       if (HadLanguage) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
             << Keyword;
-        ParseStringLiteralExpression();
+        ParseUnevaluatedStringLiteralExpression();
         continue;
       }
-      Language = ParseStringLiteralExpression();
+      Language = ParseUnevaluatedStringLiteralExpression();
     } else if (Keyword == Ident_USR) {
       if (HadUSR) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
             << Keyword;
-        ParseStringLiteralExpression();
+        ParseUnevaluatedStringLiteralExpression();
         continue;
       }
-      USR = ParseStringLiteralExpression();
+      USR = ParseUnevaluatedStringLiteralExpression();
     } else {
       assert(Keyword == Ident_defined_in && "Invalid clause keyword!");
       if (HadDefinedIn) {
         Diag(KeywordLoc, diag::err_external_source_symbol_duplicate_clause)
             << Keyword;
-        ParseStringLiteralExpression();
+        ParseUnevaluatedStringLiteralExpression();
         continue;
       }
-      DefinedInExpr = ParseStringLiteralExpression();
+      DefinedInExpr = ParseUnevaluatedStringLiteralExpression();
     }
   } while (TryConsumeToken(tok::comma));
 
@@ -1761,7 +1835,7 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs,
       AL.setInvalid();
       continue;
     }
-    if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
+    if (!AL.isStandardAttributeSyntax())
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute) {
       if (WarnOnUnknownAttrs)
@@ -1776,8 +1850,7 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributes &Attrs,
 
 void Parser::DiagnoseCXX11AttributeExtension(ParsedAttributes &Attrs) {
   for (const ParsedAttr &PA : Attrs) {
-    if (PA.isCXX11Attribute() || PA.isC2xAttribute() ||
-        PA.isRegularKeywordAttribute())
+    if (PA.isStandardAttributeSyntax() || PA.isRegularKeywordAttribute())
       Diag(PA.getLoc(), diag::ext_cxx11_attr_placement)
           << PA << PA.isRegularKeywordAttribute() << PA.getRange();
   }
@@ -2498,6 +2571,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     }
   }
 
+  Sema::CUDATargetContextRAII X(Actions, Sema::CTCK_InitGlobalVar, ThisDecl);
   switch (TheInitKind) {
   // Parse declarator '=' initializer.
   case InitKind::Equal: {
@@ -3330,9 +3404,9 @@ void Parser::ParseDeclarationSpecifiers(
       if (!AttrsLastTime)
         ProhibitAttributes(attrs);
       else {
-        // Reject C++11 / C2x attributes that aren't type attributes.
+        // Reject C++11 / C23 attributes that aren't type attributes.
         for (const ParsedAttr &PA : attrs) {
-          if (!PA.isCXX11Attribute() && !PA.isC2xAttribute() &&
+          if (!PA.isCXX11Attribute() && !PA.isC23Attribute() &&
               !PA.isRegularKeywordAttribute())
             continue;
           if (PA.getKind() == ParsedAttr::UnknownAttribute)
@@ -3348,7 +3422,7 @@ void Parser::ParseDeclarationSpecifiers(
           }
           // We reject AT_LifetimeBound and AT_AnyX86NoCfCheck, even though they
           // are type attributes, because we historically haven't allowed these
-          // to be used as type attributes in C++11 / C2x syntax.
+          // to be used as type attributes in C++11 / C23 syntax.
           if (PA.isTypeAttr() && PA.getKind() != ParsedAttr::AT_LifetimeBound &&
               PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
             continue;
@@ -4000,8 +4074,8 @@ void Parser::ParseDeclarationSpecifiers(
       isStorageClass = true;
       break;
     case tok::kw_thread_local:
-      if (getLangOpts().C2x)
-        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+      if (getLangOpts().C23)
+        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
       isInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS_thread_local, Loc,
                                                PrevSpec, DiagID);
       isStorageClass = true;
@@ -4237,8 +4311,8 @@ void Parser::ParseDeclarationSpecifiers(
                                      DiagID, Policy);
       break;
     case tok::kw_bool:
-      if (getLangOpts().C2x)
-        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+      if (getLangOpts().C23)
+        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
       [[fallthrough]];
     case tok::kw__Bool:
       if (Tok.is(tok::kw__Bool) && !getLangOpts().C99)
@@ -4361,7 +4435,7 @@ void Parser::ParseDeclarationSpecifiers(
         continue;
       break;
 
-    // C2x/GNU typeof support.
+    // C23/GNU typeof support.
     case tok::kw_typeof:
     case tok::kw_typeof_unqual:
       ParseTypeofSpecifier(DS);
@@ -4508,7 +4582,7 @@ void Parser::ParseDeclarationSpecifiers(
 /// not to the declaration of a struct.
 ///
 ///       struct-declaration:
-/// [C2x]   attributes-specifier-seq[opt]
+/// [C23]   attributes-specifier-seq[opt]
 ///           specifier-qualifier-list struct-declarator-list
 /// [GNU]   __extension__ struct-declaration
 /// [GNU]   specifier-qualifier-list
@@ -4543,7 +4617,7 @@ void Parser::ParseStructDeclaration(
   // If there are no declarators, this is a free-standing declaration
   // specifier. Let the actions module cope with it.
   if (Tok.is(tok::semi)) {
-    // C2x 6.7.2.1p9 : "The optional attribute specifier sequence in a
+    // C23 6.7.2.1p9 : "The optional attribute specifier sequence in a
     // member declaration appertains to each of the members declared by the
     // member declarator list; it shall not appear if the optional member
     // declarator list is omitted."
@@ -5381,7 +5455,7 @@ bool Parser::isTypeSpecifierQualifier() {
 
     // GNU attributes support.
   case tok::kw___attribute:
-    // C2x/GNU typeof support.
+    // C23/GNU typeof support.
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 
@@ -5657,7 +5731,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
 
-    // C2x/GNU typeof support.
+    // C23/GNU typeof support.
   case tok::kw_typeof:
   case tok::kw_typeof_unqual:
 
@@ -6593,7 +6667,7 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // Objective-C++: Detect C++ keywords and try to prevent further errors by
       // treating these keyword as valid member names.
       if (getLangOpts().ObjC && getLangOpts().CPlusPlus &&
-          Tok.getIdentifierInfo() &&
+          !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
           Tok.getIdentifierInfo()->isCPlusPlusKeyword(getLangOpts())) {
         Diag(getMissingDeclaratorIdLoc(D, Tok.getLocation()),
              diag::err_expected_member_name_or_semi_objcxx_keyword)
@@ -7019,7 +7093,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       Diag(Tok, diag::err_argument_required_after_attribute);
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
-    // strict prototypes as in C2x because it allows a function definition to
+    // strict prototypes as in C23 because it allows a function definition to
     // have an identifier list. See OpenCL 3.0 6.11/g for more details.
     HasProto = ParamInfo.size() || getLangOpts().requiresStrictPrototypes() ||
                getLangOpts().OpenCL;
@@ -7202,9 +7276,9 @@ bool Parser::isFunctionDeclaratorIdentifierList() {
 void Parser::ParseFunctionDeclaratorIdentifierList(
        Declarator &D,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo) {
-  // We should never reach this point in C2x or C++.
+  // We should never reach this point in C23 or C++.
   assert(!getLangOpts().requiresStrictPrototypes() &&
-         "Cannot parse an identifier list in C2x or C++");
+         "Cannot parse an identifier list in C23 or C++");
 
   // If there was no identifier specified for the declarator, either we are in
   // an abstract-declarator, or we are in a parameter declarator which was found
@@ -7464,7 +7538,8 @@ void Parser::ParseParameterDeclarationClause(
           } else {
             if (Tok.is(tok::l_paren) && NextToken().is(tok::l_brace)) {
               Diag(Tok, diag::err_stmt_expr_in_default_arg) << 0;
-              Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
+              Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
+                                                     /*DefaultArg=*/nullptr);
               // Skip the statement expression and continue parsing
               SkipUntil(tok::comma, StopBeforeMatch);
               continue;
@@ -7473,7 +7548,8 @@ void Parser::ParseParameterDeclarationClause(
           }
           DefArgResult = Actions.CorrectDelayedTyposInExpr(DefArgResult);
           if (DefArgResult.isInvalid()) {
-            Actions.ActOnParamDefaultArgumentError(Param, EqualLoc);
+            Actions.ActOnParamDefaultArgumentError(Param, EqualLoc,
+                                                   /*DefaultArg=*/nullptr);
             SkipUntil(tok::comma, tok::r_paren, StopAtSemi | StopBeforeMatch);
           } else {
             // Inform the actions module about the default argument
@@ -7738,7 +7814,7 @@ void Parser::ParseMisplacedBracketDeclarator(Declarator &D) {
 ///           typeof ( expressions )
 ///           typeof ( type-name )
 /// [GNU/C++] typeof unary-expression
-/// [C2x]   typeof-specifier:
+/// [C23]   typeof-specifier:
 ///           typeof '(' typeof-specifier-argument ')'
 ///           typeof_unqual '(' typeof-specifier-argument ')'
 ///
@@ -7752,8 +7828,8 @@ void Parser::ParseTypeofSpecifier(DeclSpec &DS) {
 
   bool IsUnqual = Tok.is(tok::kw_typeof_unqual);
   const IdentifierInfo *II = Tok.getIdentifierInfo();
-  if (getLangOpts().C2x && !II->getName().startswith("__"))
-    Diag(Tok.getLocation(), diag::warn_c2x_compat_keyword) << Tok.getName();
+  if (getLangOpts().C23 && !II->getName().startswith("__"))
+    Diag(Tok.getLocation(), diag::warn_c23_compat_keyword) << Tok.getName();
 
   Token OpTok = Tok;
   SourceLocation StartLoc = ConsumeToken();
@@ -7950,10 +8026,10 @@ void Parser::DiagnoseBitIntUse(const Token &Tok) {
     Diag(Loc, diag::warn_ext_int_deprecated)
         << FixItHint::CreateReplacement(Loc, "_BitInt");
   } else {
-    // In C2x mode, diagnose that the use is not compatible with pre-C2x modes.
+    // In C23 mode, diagnose that the use is not compatible with pre-C23 modes.
     // Otherwise, diagnose that the use is a Clang extension.
-    if (getLangOpts().C2x)
-      Diag(Loc, diag::warn_c2x_compat_keyword) << Tok.getName();
+    if (getLangOpts().C23)
+      Diag(Loc, diag::warn_c23_compat_keyword) << Tok.getName();
     else
       Diag(Loc, diag::ext_bit_int) << getLangOpts().CPlusPlus;
   }

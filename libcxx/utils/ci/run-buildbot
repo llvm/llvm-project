@@ -51,6 +51,12 @@ GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
 
 ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
                     is optional.
+
+ENABLE_STD_MODULES  Whether to enable or disable building the C++23 std
+                    modules. This variable is optional.
+                    TODO MODULES remove when all supported compilers support
+                    modules.
+
 EOF
 }
 
@@ -119,6 +125,10 @@ if [ -z "${ENABLE_CLANG_TIDY}" ]; then
     ENABLE_CLANG_TIDY=Off
 fi
 
+if [ -n "${ENABLE_STD_MODULES}" ]; then
+    ENABLE_STD_MODULES="-DLIBCXX_ENABLE_STD_MODULES=${ENABLE_STD_MODULES}"
+fi
+
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -131,7 +141,8 @@ function generate-cmake-base() {
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
           -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
-          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+          ${ENABLE_STD_MODULES} \
+          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
 
@@ -359,13 +370,14 @@ bootstrapping-build)
           -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
-          -DLLVM_ENABLE_ASSERTIONS=ON
+          -DLLVM_ENABLE_ASSERTIONS=ON \
+          -DLLVM_LIT_ARGS="-v --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
     echo "+++ Running the libc++ and libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}" check-runtimes
+    ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
     echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -C "${BUILD_DIR}" install-runtimes
+    ${NINJA} -vC "${BUILD_DIR}" install-runtimes
 
     ccache -s
 ;;
@@ -385,6 +397,12 @@ generic-merged)
 generic-hardened-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-safe-mode)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-safe-mode.cmake"
     check-runtimes
     check-abi-list
 ;;
@@ -411,12 +429,6 @@ generic-modules)
 generic-modules-lsv)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules-lsv.cmake"
-    check-runtimes
-    check-abi-list
-;;
-generic-module-std-cxx23)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-module-std-cxx23.cmake"
     check-runtimes
     check-abi-list
 ;;
@@ -451,6 +463,11 @@ generic-no-unicode)
 generic-no-wide-characters)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-wide-characters.cmake"
+    check-runtimes
+;;
+generic-no-tzdb)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-tzdb.cmake"
     check-runtimes
 ;;
 generic-no-experimental)

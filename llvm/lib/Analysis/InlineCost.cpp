@@ -118,7 +118,7 @@ static cl::opt<int> ColdCallSiteRelFreq(
              "entry frequency, for a callsite to be cold in the absence of "
              "profile information."));
 
-static cl::opt<int> HotCallSiteRelFreq(
+static cl::opt<uint64_t> HotCallSiteRelFreq(
     "hot-callsite-rel-freq", cl::Hidden, cl::init(60),
     cl::desc("Minimum block frequency, expressed as a multiple of caller's "
              "entry frequency, for a callsite to be hot in the absence of "
@@ -817,7 +817,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   // Determine whether we should inline the given call site, taking into account
   // both the size cost and the cycle savings.  Return std::nullopt if we don't
-  // have suficient profiling information to determine.
+  // have sufficient profiling information to determine.
   std::optional<bool> costBenefitAnalysis() {
     if (!CostBenefitAnalysisEnabled)
       return std::nullopt;
@@ -1820,10 +1820,11 @@ InlineCostCallAnalyzer::getHotCallSiteThreshold(CallBase &Call,
   // potentially cache the computation of scaled entry frequency, but the added
   // complexity is not worth it unless this scaling shows up high in the
   // profiles.
-  auto CallSiteBB = Call.getParent();
-  auto CallSiteFreq = CallerBFI->getBlockFreq(CallSiteBB).getFrequency();
-  auto CallerEntryFreq = CallerBFI->getEntryFreq();
-  if (CallSiteFreq >= CallerEntryFreq * HotCallSiteRelFreq)
+  const BasicBlock *CallSiteBB = Call.getParent();
+  BlockFrequency CallSiteFreq = CallerBFI->getBlockFreq(CallSiteBB);
+  BlockFrequency CallerEntryFreq = CallerBFI->getEntryFreq();
+  std::optional<BlockFrequency> Limit = CallerEntryFreq.mul(HotCallSiteRelFreq);
+  if (Limit && CallSiteFreq >= *Limit)
     return Params.LocallyHotCallSiteThreshold;
 
   // Otherwise treat it normally.

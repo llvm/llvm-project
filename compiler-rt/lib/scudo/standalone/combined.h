@@ -18,7 +18,6 @@
 #include "options.h"
 #include "quarantine.h"
 #include "report.h"
-#include "rss_limit_checker.h"
 #include "secondary.h"
 #include "stack_depot.h"
 #include "string_utils.h"
@@ -148,9 +147,6 @@ public:
 
     initFlags();
     reportUnrecognizedFlags();
-
-    RssChecker.init(scudo::getFlags()->soft_rss_limit_mb,
-                    scudo::getFlags()->hard_rss_limit_mb);
 
     // Store some flags locally.
     if (getFlags()->may_return_null)
@@ -329,8 +325,6 @@ public:
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.shouldSample())) {
       if (void *Ptr = GuardedAlloc.allocate(Size, Alignment)) {
-        if (UNLIKELY(&__scudo_allocate_hook))
-          __scudo_allocate_hook(Ptr, Size);
         Stats.lock();
         Stats.add(StatAllocated, GuardedAllocSlotSize);
         Stats.sub(StatFree, GuardedAllocSlotSize);
@@ -362,19 +356,6 @@ public:
       reportAllocationSizeTooBig(Size, NeededSize, MaxAllowedMallocSize);
     }
     DCHECK_LE(Size, NeededSize);
-
-    switch (RssChecker.getRssLimitExceeded()) {
-    case RssLimitChecker::Neither:
-      break;
-    case RssLimitChecker::Soft:
-      if (Options.get(OptionBit::MayReturnNull))
-        return nullptr;
-      reportSoftRSSLimit(RssChecker.getSoftRssLimit());
-      break;
-    case RssLimitChecker::Hard:
-      reportHardRSSLimit(RssChecker.getHardRssLimit());
-      break;
-    }
 
     void *Block = nullptr;
     uptr ClassId = 0;
@@ -535,9 +516,6 @@ public:
         Chunk::SizeOrUnusedBytesMask;
     Chunk::storeHeader(Cookie, Ptr, &Header);
 
-    if (UNLIKELY(&__scudo_allocate_hook))
-      __scudo_allocate_hook(TaggedPtr, Size);
-
     return TaggedPtr;
   }
 
@@ -550,9 +528,6 @@ public:
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-
-    if (UNLIKELY(&__scudo_deallocate_hook))
-      __scudo_deallocate_hook(Ptr);
 
     if (UNLIKELY(!Ptr))
       return;
@@ -697,8 +672,6 @@ public:
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
-      if (UNLIKELY(&__scudo_deallocate_hook))
-        __scudo_deallocate_hook(OldTaggedPtr);
       quarantineOrDeallocateChunk(Options, OldTaggedPtr, &OldHeader, OldSize);
     }
     return NewPtr;
@@ -751,6 +724,13 @@ public:
   void printStats() {
     ScopedString Str;
     getStats(&Str);
+    Str.output();
+  }
+
+  void printFragmentationInfo() {
+    ScopedString Str;
+    Primary.getFragmentationInfo(&Str);
+    // Secondary allocator dumps the fragmentation data in getStats().
     Str.output();
   }
 
@@ -885,13 +865,6 @@ public:
     Chunk::UnpackedHeader Header;
     return Chunk::isValid(Cookie, Ptr, &Header) &&
            Header.State == Chunk::State::Allocated;
-  }
-
-  void setRssLimitsTestOnly(int SoftRssLimitMb, int HardRssLimitMb,
-                            bool MayReturnNull) {
-    RssChecker.init(SoftRssLimitMb, HardRssLimitMb);
-    if (MayReturnNull)
-      Primary.Options.set(OptionBit::MayReturnNull);
   }
 
   bool useMemoryTaggingTestOnly() const {
@@ -1053,7 +1026,6 @@ private:
   QuarantineT Quarantine;
   TSDRegistryT TSDRegistry;
   pthread_once_t PostInitNonce = PTHREAD_ONCE_INIT;
-  RssLimitChecker RssChecker;
 
 #ifdef GWP_ASAN_HOOKS
   gwp_asan::GuardedPoolAllocator GuardedAlloc;
@@ -1524,7 +1496,7 @@ private:
         map(/*Addr=*/nullptr,
             roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
                     getPageSizeCached()),
-            "AllocatorRingBuffer"));
+            "scudo:ring_buffer"));
     auto *RingBuffer = reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
     RingBuffer->Size = AllocationRingBufferSize;
     static_assert(sizeof(AllocationRingBuffer) %

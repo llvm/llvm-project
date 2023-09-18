@@ -1,0 +1,441 @@
+# RUN: llc -run-pass=prologepilog %s -o - | FileCheck %s
+# Tests to check that CPSR is saved and restored if live when we emit tMOVi32imm
+# to resolve a frame offset.
+
+--- |
+  target triple = "thumbv6m-arm-none-eabi"
+
+  define void @test_def_in_block(i32 %x) #0 {
+  entry:
+    %var = alloca i32, align 4
+    %dummy = alloca [2048 x i8], align 1
+    %cmp = icmp eq i32 %x, 0
+    store i32 %x, ptr %var, align 4
+    br i1 %cmp, label %if.then, label %if.end
+
+  if.then:
+    br label %if.end
+
+  if.end:
+    ret void
+  }
+
+  define void @test_live_in(i32 %x) #0 {
+  entry:
+    %var = alloca i32, align 4
+    %dummy = alloca [2048 x i8], align 1
+    %cmp = icmp eq i32 %x, 0
+    br i1 %cmp, label %if.then, label %if.end
+
+  if.then:
+    store i32 %x, ptr %var, align 4
+    %cmp1 = icmp slt i32 %x, 0
+    br i1 %cmp1, label %if.then2, label %if.end
+
+  if.then2:
+    br label %if.end
+
+  if.end:
+    ret void
+  }
+
+  define void @test_live_out(i32 %x) #0 {
+  entry:
+    %var = alloca i32, align 4
+    %dummy = alloca [2048 x i8], align 1
+    %cmp = icmp eq i32 %x, 0
+    store i32 %x, ptr %var, align 4
+    br label %if.then
+
+  if.then:
+    br i1 %cmp, label %if.then2, label %if.end
+
+  if.then2:
+    br label %if.end
+
+  if.end:
+    ret void
+  }
+
+  define void @test_live_out_def_after_mov(i32 %x) #0 {
+  entry:
+    %var = alloca i32, align 4
+    %dummy = alloca [2048 x i8], align 1
+    store i32 %x, ptr %var, align 4
+    %cmp = icmp eq i32 %x, 0
+    br label %if.then
+
+  if.then:
+    br i1 %cmp, label %if.then2, label %if.end
+
+  if.then2:
+    br label %if.end
+
+  if.end:
+    ret void
+  }
+
+  attributes #0 = { "target-features"="+execute-only" }
+...
+---
+name:            test_def_in_block
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  2052
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: var, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: dummy, type: default, offset: 0, size: 2048, alignment: 1,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2052, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0
+
+    ; CHECK-LABEL: name: test_def_in_block
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK: tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: $r2 = t2MRS_M 2048, 14 /* CC::al */, $noreg, implicit $cpsr
+    ; CHECK-NEXT: $r1 = tMOVi32imm 2048, implicit-def $cpsr
+    ; CHECK-NEXT: t2MSR_M 2048, killed $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: $r1 = tADDhirr $r1, killed $sp, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tSTRi renamable $r0, killed $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+
+    tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tSTRspi renamable $r0, %stack.0.var, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+    tBcc %bb.1, 1 /* CC::ne */, killed $cpsr
+    tB %bb.2, 14 /* CC::al */, $noreg
+
+  bb.1.if.then:
+    successors: %bb.2(0x80000000)
+
+    tB %bb.2, 14 /* CC::al */, $noreg
+
+  bb.2.if.end:
+    tBX_RET 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_live_in
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  2052
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: var, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: dummy, type: default, offset: 0, size: 2048, alignment: 1,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2052, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+    liveins: $r0
+
+    tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tBcc %bb.3, 1 /* CC::ne */, $cpsr
+    tB %bb.1, 14 /* CC::al */, $noreg
+
+  bb.1.if.then:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $r0, $cpsr
+
+    ; CHECK-LABEL: name: test_live_in
+    ; CHECK-LABEL: bb.1.if.then:
+    ; CHECK: $r2 = t2MRS_M 2048, 14 /* CC::al */, $noreg, implicit $cpsr
+    ; CHECK-NEXT: $r1 = tMOVi32imm 2048, implicit-def $cpsr
+    ; CHECK-NEXT: t2MSR_M 2048, killed $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: $r1 = tADDhirr $r1, killed $sp, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tSTRi renamable $r0, killed $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+
+    tSTRspi renamable $r0, %stack.0.var, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+    tBcc %bb.3, 5 /* CC::pl */, killed $cpsr
+    tB %bb.2, 14 /* CC::al */, $noreg
+
+  bb.2.if.then2:
+    successors: %bb.3(0x80000000)
+
+    tB %bb.3, 14 /* CC::al */, $noreg
+
+  bb.3.if.end:
+    tBX_RET 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_live_out
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  2052
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: var, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: dummy, type: default, offset: 0, size: 2048, alignment: 1,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2052, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000)
+    liveins: $r0
+
+    ; CHECK-LABEL: name: test_live_out
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK: tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: $r2 = t2MRS_M 2048, 14 /* CC::al */, $noreg, implicit $cpsr
+    ; CHECK-NEXT: $r1 = tMOVi32imm 2048, implicit-def $cpsr
+    ; CHECK-NEXT: t2MSR_M 2048, killed $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    ; CHECK-NEXT: $r1 = tADDhirr $r1, killed $sp, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tSTRi renamable $r0, killed $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+
+    tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tSTRspi renamable $r0, %stack.0.var, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+    tB %bb.1, 14 /* CC::al */, $noreg
+
+  bb.1.if.then:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $cpsr
+
+    tBcc %bb.3, 5 /* CC::pl */, killed $cpsr
+    tB %bb.2, 14 /* CC::al */, $noreg
+
+  bb.2.if.then2:
+    successors: %bb.3(0x80000000)
+
+    tB %bb.3, 14 /* CC::al */, $noreg
+
+  bb.3.if.end:
+    tBX_RET 14 /* CC::al */, $noreg
+
+...
+---
+name:            test_live_out_def_after_mov
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:       []
+liveins:
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  2052
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: var, type: default, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -4, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: dummy, type: default, offset: 0, size: 2048, alignment: 1,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2052, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000)
+    liveins: $r0
+
+    ; Here the live-out cpsr is defined after the tMOVi32imm, so cpsr doesn't
+    ; need to be saved.
+    ; CHECK-LABEL: name: test_live_out
+    ; CHECK-LABEL: bb.0.entry:
+    ; CHECK: $r1 = tMOVi32imm 2048, implicit-def $cpsr
+    ; CHECK-NEXT: $r1 = tADDhirr $r1, killed $sp, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: tSTRi renamable $r0, killed $r1, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+    ; CHECK-NEXT: tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+
+    tSTRspi renamable $r0, %stack.0.var, 0, 14 /* CC::al */, $noreg :: (store (s32) into %ir.var)
+    tCMPi8 renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    tB %bb.1, 14 /* CC::al */, $noreg
+
+  bb.1.if.then:
+    successors: %bb.2(0x40000000), %bb.3(0x40000000)
+    liveins: $cpsr
+
+    tBcc %bb.3, 5 /* CC::pl */, killed $cpsr
+    tB %bb.2, 14 /* CC::al */, $noreg
+
+  bb.2.if.then2:
+    successors: %bb.3(0x80000000)
+
+    tB %bb.3, 14 /* CC::al */, $noreg
+
+  bb.3.if.end:
+    tBX_RET 14 /* CC::al */, $noreg
+
+...

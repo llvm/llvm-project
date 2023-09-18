@@ -19,6 +19,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -79,8 +80,6 @@ void registerTestCallGraphPass();
 void registerTestCfAssertPass();
 void registerTestConstantFold();
 void registerTestControlFlowSink();
-void registerTestGpuSerializeToCubinPass();
-void registerTestGpuSerializeToHsacoPass();
 void registerTestDataLayoutPropagation();
 void registerTestDataLayoutQuery();
 void registerTestDeadCodeAnalysisPass();
@@ -203,11 +202,7 @@ void registerTestPasses() {
   mlir::test::registerTestDiagnosticsPass();
   mlir::test::registerTestDialectConversionPasses();
 #if MLIR_CUDA_CONVERSIONS_ENABLED
-  mlir::test::registerTestGpuSerializeToCubinPass();
   mlir::test::registerTestLowerToNVVM();
-#endif
-#if MLIR_ROCM_CONVERSIONS_ENABLED
-  mlir::test::registerTestGpuSerializeToHsacoPass();
 #endif
   mlir::test::registerTestDecomposeCallGraphTypes();
   mlir::test::registerTestDataLayoutPropagation();
@@ -269,12 +264,17 @@ void registerTestPasses() {
 
 int main(int argc, char **argv) {
   registerAllPasses();
+#if MLIR_DEPRECATED_GPU_SERIALIZATION_ENABLE == 1
+  registerGpuSerializeToCubinPass();
+  registerGpuSerializeToHsacoPass();
+#endif
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
 #endif
   DialectRegistry registry;
   registerAllDialects(registry);
   registerAllExtensions(registry);
+  registerAllGPUToLLVMIRTranslations(registry);
 
 #ifdef MLIR_INCLUDE_TESTS
   ::test::registerTestDialect(registry);

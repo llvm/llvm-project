@@ -1,6 +1,13 @@
 %extend lldb::SBUnixSignals {
 #ifdef SWIGPYTHON
     %pythoncode %{
+        def __iter__(self):
+            '''Iterate over all signals in a lldb.SBUnixSignals object.'''
+            return lldb_iter(self, 'GetNumSignals', 'GetSignalAtIndex')
+
+        def __len__(self):
+            return self.GetNumSignals()
+
         def get_unix_signals_list(self):
             signals = []
             for idx in range(0, self.GetNumSignals()):

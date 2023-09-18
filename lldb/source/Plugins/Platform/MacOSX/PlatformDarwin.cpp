@@ -123,8 +123,8 @@ enum {
 
 class PlatformDarwinProperties : public Properties {
 public:
-  static ConstString &GetSettingName() {
-    static ConstString g_setting_name("darwin");
+  static llvm::StringRef GetSettingName() {
+    static constexpr llvm::StringLiteral g_setting_name("darwin");
     return g_setting_name;
   }
 
@@ -989,7 +989,7 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
   StructuredData::DictionarySP dict_sp =
       std::make_shared<StructuredData::Dictionary>();
 
-  auto flatten_asi_dict = [&dict_sp](ConstString key,
+  auto flatten_asi_dict = [&dict_sp](llvm::StringRef key,
                                      StructuredData::Object *val) -> bool {
     if (!val)
       return false;
@@ -998,7 +998,7 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
     if (!arr || !arr->GetSize())
       return false;
 
-    dict_sp->AddItem(key.AsCString(), arr->GetItemAtIndex(0));
+    dict_sp->AddItem(key, arr->GetItemAtIndex(0));
     return true;
   };
 

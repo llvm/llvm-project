@@ -1,12 +1,17 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s | FileCheck %s --check-prefixes=OUTLINER,CHECK
+; RUN: llc -enable-machine-outliner=always < %s | FileCheck %s --check-prefixes=OUTLINER,CHECK
+; RUN: llc -enable-machine-outliner=never < %s  | FileCheck %s --check-prefixes=INDIRECT,CHECK
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7m-arm-none-eabi"
 
 ; CHECK-LABEL: f:
-; CHECK: blx r
-; CHECK: blx r
-; CHECK: blx r
+; OUTLINER: bl g
+; OUTLINER: bl g
+; OUTLINER: bl g
+; INDIRECT: blx r
+; INDIRECT: blx r
+; INDIRECT: blx r
 define void @f() minsize optsize {
 entry:
   call void @g(i32 45, i32 66)

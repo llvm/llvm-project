@@ -795,13 +795,9 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
 void ASTStmtReader::VisitConceptSpecializationExpr(
         ConceptSpecializationExpr *E) {
   VisitExpr(E);
-  E->NestedNameSpec = Record.readNestedNameSpecifierLoc();
-  E->TemplateKWLoc = Record.readSourceLocation();
-  E->ConceptName = Record.readDeclarationNameInfo();
-  E->NamedConcept = readDeclAs<ConceptDecl>();
-  E->FoundDecl = Record.readDeclAs<NamedDecl>();
   E->SpecDecl = Record.readDeclAs<ImplicitConceptSpecializationDecl>();
-  E->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
+  if (Record.readBool())
+    E->ConceptRef = Record.readConceptReference();
   E->Satisfaction = E->isValueDependent() ? nullptr :
       ASTConstraintSatisfaction::Create(Record.getContext(),
                                         readConstraintSatisfaction(Record));
@@ -2391,6 +2387,11 @@ void ASTStmtReader::VisitOMPSectionDirective(OMPSectionDirective *D) {
   D->setHasCancel(Record.readBool());
 }
 
+void ASTStmtReader::VisitOMPScopeDirective(OMPScopeDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+}
+
 void ASTStmtReader::VisitOMPSingleDirective(OMPSingleDirective *D) {
   VisitStmt(D);
   VisitOMPExecutableDirective(D);
@@ -3352,6 +3353,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = OMPSectionDirective::CreateEmpty(Context, Empty);
       break;
 
+    case STMT_OMP_SCOPE_DIRECTIVE:
+      S = OMPScopeDirective::CreateEmpty(
+          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+      break;
+
     case STMT_OMP_SINGLE_DIRECTIVE:
       S = OMPSingleDirective::CreateEmpty(
           Context, Record[ASTStmtReader::NumStmtFields], Empty);
@@ -3870,7 +3876,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CXX_THIS:
-      S = new (Context) CXXThisExpr(Empty);
+      S = CXXThisExpr::CreateEmpty(Context);
       break;
 
     case EXPR_CXX_THROW:

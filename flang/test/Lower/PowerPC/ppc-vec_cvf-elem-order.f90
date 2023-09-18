@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -fno-ppc-native-vector-element-order=true -o - | FileCheck --check-prefixes="FIR" %s
-! RUN: %flang_fc1 -emit-llvm %s -fno-ppc-native-vector-element-order -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -emit-fir %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="FIR" %s
+! RUN: %flang_fc1 -emit-llvm %s -fno-ppc-native-vector-element-order -triple ppc64le-unknown-linux -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 ! CHECK-LABEL: vec_cvf_test_r4r8

@@ -1491,6 +1491,16 @@ VSCANF_INTERCEPTOR_IMPL(__isoc99_vsscanf, false, str, format, ap)
 
 INTERCEPTOR(int, __isoc99_vfscanf, void *stream, const char *format, va_list ap)
 VSCANF_INTERCEPTOR_IMPL(__isoc99_vfscanf, false, stream, format, ap)
+
+INTERCEPTOR(int, __isoc23_vscanf, const char *format, va_list ap)
+VSCANF_INTERCEPTOR_IMPL(__isoc23_vscanf, false, format, ap)
+
+INTERCEPTOR(int, __isoc23_vsscanf, const char *str, const char *format,
+            va_list ap)
+VSCANF_INTERCEPTOR_IMPL(__isoc23_vsscanf, false, str, format, ap)
+
+INTERCEPTOR(int, __isoc23_vfscanf, void *stream, const char *format, va_list ap)
+VSCANF_INTERCEPTOR_IMPL(__isoc23_vfscanf, false, stream, format, ap)
 #endif  // SANITIZER_INTERCEPT_ISOC99_SCANF
 
 INTERCEPTOR(int, scanf, const char *format, ...)
@@ -1511,6 +1521,15 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_fscanf, __isoc99_vfscanf, stream, format)
 
 INTERCEPTOR(int, __isoc99_sscanf, const char *str, const char *format, ...)
 FORMAT_INTERCEPTOR_IMPL(__isoc99_sscanf, __isoc99_vsscanf, str, format)
+
+INTERCEPTOR(int, __isoc23_scanf, const char *format, ...)
+FORMAT_INTERCEPTOR_IMPL(__isoc23_scanf, __isoc23_vscanf, format)
+
+INTERCEPTOR(int, __isoc23_fscanf, void *stream, const char *format, ...)
+FORMAT_INTERCEPTOR_IMPL(__isoc23_fscanf, __isoc23_vfscanf, stream, format)
+
+INTERCEPTOR(int, __isoc23_sscanf, const char *str, const char *format, ...)
+FORMAT_INTERCEPTOR_IMPL(__isoc23_sscanf, __isoc23_vsscanf, str, format)
 #endif
 
 #endif
@@ -1534,7 +1553,13 @@ FORMAT_INTERCEPTOR_IMPL(__isoc99_sscanf, __isoc99_vsscanf, str, format)
   COMMON_INTERCEPT_FUNCTION(__isoc99_fscanf);  \
   COMMON_INTERCEPT_FUNCTION(__isoc99_vscanf);  \
   COMMON_INTERCEPT_FUNCTION(__isoc99_vsscanf); \
-  COMMON_INTERCEPT_FUNCTION(__isoc99_vfscanf);
+  COMMON_INTERCEPT_FUNCTION(__isoc99_vfscanf); \
+  COMMON_INTERCEPT_FUNCTION(__isoc23_scanf);   \
+  COMMON_INTERCEPT_FUNCTION(__isoc23_sscanf);  \
+  COMMON_INTERCEPT_FUNCTION(__isoc23_fscanf);  \
+  COMMON_INTERCEPT_FUNCTION(__isoc23_vscanf);  \
+  COMMON_INTERCEPT_FUNCTION(__isoc23_vsscanf); \
+  COMMON_INTERCEPT_FUNCTION(__isoc23_vfscanf);
 #else
 #define INIT_ISOC99_SCANF
 #endif
@@ -3539,30 +3564,26 @@ UNUSED static inline void StrtolFixAndCheck(void *ctx, const char *nptr,
                                  (real_endptr - nptr) + 1 : 0);
 }
 
-
 #if SANITIZER_INTERCEPT_STRTOIMAX
-INTERCEPTOR(INTMAX_T, strtoimax, const char *nptr, char **endptr, int base) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, strtoimax, nptr, endptr, base);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
+template <typename Fn>
+static ALWAYS_INLINE auto StrtoimaxImpl(void *ctx, Fn real, const char *nptr,
+                                        char **endptr, int base)
+    -> decltype(real(nullptr, nullptr, 0)) {
   char *real_endptr;
-  INTMAX_T res = REAL(strtoimax)(nptr, &real_endptr, base);
+  auto res = real(nptr, &real_endptr, base);
   StrtolFixAndCheck(ctx, nptr, endptr, real_endptr, base);
   return res;
 }
 
+INTERCEPTOR(INTMAX_T, strtoimax, const char *nptr, char **endptr, int base) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, strtoimax, nptr, endptr, base);
+  return StrtoimaxImpl(ctx, REAL(strtoimax), nptr, endptr, base);
+}
 INTERCEPTOR(UINTMAX_T, strtoumax, const char *nptr, char **endptr, int base) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, strtoumax, nptr, endptr, base);
-  // FIXME: under ASan the call below may write to freed memory and corrupt
-  // its metadata. See
-  // https://github.com/google/sanitizers/issues/321.
-  char *real_endptr;
-  UINTMAX_T res = REAL(strtoumax)(nptr, &real_endptr, base);
-  StrtolFixAndCheck(ctx, nptr, endptr, real_endptr, base);
-  return res;
+  return StrtoimaxImpl(ctx, REAL(strtoumax), nptr, endptr, base);
 }
 
 #define INIT_STRTOIMAX                  \
@@ -3570,6 +3591,25 @@ INTERCEPTOR(UINTMAX_T, strtoumax, const char *nptr, char **endptr, int base) {
   COMMON_INTERCEPT_FUNCTION(strtoumax);
 #else
 #define INIT_STRTOIMAX
+#endif
+
+#if SANITIZER_INTERCEPT_STRTOIMAX && SANITIZER_GLIBC
+INTERCEPTOR(INTMAX_T, __isoc23_strtoimax, const char *nptr, char **endptr, int base) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __isoc23_strtoimax, nptr, endptr, base);
+  return StrtoimaxImpl(ctx, REAL(__isoc23_strtoimax), nptr, endptr, base);
+}
+INTERCEPTOR(UINTMAX_T, __isoc23_strtoumax, const char *nptr, char **endptr, int base) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __isoc23_strtoumax, nptr, endptr, base);
+  return StrtoimaxImpl(ctx, REAL(__isoc23_strtoumax), nptr, endptr, base);
+}
+
+#  define INIT_STRTOIMAX_C23                       \
+    COMMON_INTERCEPT_FUNCTION(__isoc23_strtoimax); \
+    COMMON_INTERCEPT_FUNCTION(__isoc23_strtoumax);
+#else
+#  define INIT_STRTOIMAX_C23
 #endif
 
 #if SANITIZER_INTERCEPT_MBSTOWCS
@@ -10304,6 +10344,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETCWD;
   INIT_GET_CURRENT_DIR_NAME;
   INIT_STRTOIMAX;
+  INIT_STRTOIMAX_C23;
   INIT_MBSTOWCS;
   INIT_MBSNRTOWCS;
   INIT_WCSTOMBS;

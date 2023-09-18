@@ -201,9 +201,46 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       memcpy(&PSV.BaseData, &P.Info->Info, sizeof(dxbc::PSV::v2::RuntimeInfo));
       PSV.Resources = P.Info->Resources;
 
-      if (sys::IsBigEndianHost)
-        PSV.swapBytes(static_cast<Triple::EnvironmentType>(
-            Triple::Pixel + P.Info->Info.ShaderStage));
+      for (auto El : P.Info->SigInputElements)
+        PSV.InputElements.push_back(mcdxbc::PSVSignatureElement{
+            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
+            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
+            El.Stream});
+
+      for (auto El : P.Info->SigOutputElements)
+        PSV.OutputElements.push_back(mcdxbc::PSVSignatureElement{
+            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
+            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
+            El.Stream});
+
+      for (auto El : P.Info->SigPatchOrPrimElements)
+        PSV.PatchOrPrimElements.push_back(mcdxbc::PSVSignatureElement{
+            El.Name, El.Indices, El.StartRow, El.Cols, El.StartCol,
+            El.Allocated, El.Kind, El.Type, El.Mode, El.DynamicMask,
+            El.Stream});
+
+      static_assert(PSV.OutputVectorMasks.size() == PSV.InputOutputMap.size());
+      for (unsigned I = 0; I < PSV.OutputVectorMasks.size(); ++I) {
+        PSV.OutputVectorMasks[I].insert(PSV.OutputVectorMasks[I].begin(),
+                                        P.Info->OutputVectorMasks[I].begin(),
+                                        P.Info->OutputVectorMasks[I].end());
+        PSV.InputOutputMap[I].insert(PSV.InputOutputMap[I].begin(),
+                                     P.Info->InputOutputMap[I].begin(),
+                                     P.Info->InputOutputMap[I].end());
+      }
+
+      PSV.PatchOrPrimMasks.insert(PSV.PatchOrPrimMasks.begin(),
+                                  P.Info->PatchOrPrimMasks.begin(),
+                                  P.Info->PatchOrPrimMasks.end());
+      PSV.InputPatchMap.insert(PSV.InputPatchMap.begin(),
+                               P.Info->InputPatchMap.begin(),
+                               P.Info->InputPatchMap.end());
+      PSV.PatchOutputMap.insert(PSV.PatchOutputMap.begin(),
+                                P.Info->PatchOutputMap.begin(),
+                                P.Info->PatchOutputMap.end());
+
+      PSV.finalize(static_cast<Triple::EnvironmentType>(
+          Triple::Pixel + P.Info->Info.ShaderStage));
       PSV.write(OS, P.Info->Version);
       break;
     }

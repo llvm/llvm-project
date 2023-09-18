@@ -371,8 +371,9 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
-  } else if (FName == "VTCompressionSessionEncodeFrame") {
-    // The context argument passed to VTCompressionSessionEncodeFrame()
+  } else if (FName == "VTCompressionSessionEncodeFrame" ||
+             FName == "VTCompressionSessionEncodeMultiImageFrame") {
+    // The context argument passed to VTCompressionSessionEncodeFrame() et.al.
     // is passed to the callback specified when creating the session
     // (e.g. with VTCompressionSessionCreate()) which can release it.
     // To account for this possibility, conservatively stop tracking
@@ -395,7 +396,7 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     return getDoNothingSummary();
   } else if (FName.startswith("NS") && FName.contains("Insert")) {
     // Allowlist NSXXInsertXX, for example NSMapInsertIfAbsent, since they can
-    // be deallocated by NSMapRemove. (radar://11152419)
+    // be deallocated by NSMapRemove.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
     ScratchArgs = AF.add(ScratchArgs, 2, ArgEffect(StopTracking));
     return getPersistentSummary(RetEffect::MakeNoRet(),

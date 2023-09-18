@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-cf \
+// RUN: mlir-opt %s -convert-vector-to-scf -convert-scf-to-cf \
 // RUN:   -test-transform-dialect-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -convert-vector-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \

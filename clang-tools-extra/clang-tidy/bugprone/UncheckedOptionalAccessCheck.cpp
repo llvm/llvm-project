@@ -13,16 +13,13 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/Basic/SourceLocation.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
-#include <memory>
-#include <optional>
-#include <vector>
 
 namespace clang::tidy::bugprone {
 using ast_matchers::MatchFinder;
 using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
-using dataflow::UncheckedOptionalAccessModelOptions;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
@@ -55,7 +52,7 @@ void UncheckedOptionalAccessCheck::check(
   UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   // FIXME: Allow user to set the (defaulted) SAT iterations max for
   // `diagnoseFunction` with config options.
-  if (llvm::Expected<std::vector<SourceLocation>> Locs =
+  if (llvm::Expected<llvm::SmallVector<SourceLocation>> Locs =
           dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
                                      SourceLocation>(*FuncDecl, *Result.Context,
                                                      Diagnoser))

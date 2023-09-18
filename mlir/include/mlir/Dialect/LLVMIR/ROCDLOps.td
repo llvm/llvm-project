@@ -13,6 +13,7 @@
 #ifndef ROCDLIR_OPS
 #define ROCDLIR_OPS
 
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -44,7 +45,19 @@ def ROCDL_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
+
+  let useDefaultAttributePrinterParser = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// ROCDL attribute definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
+    : AttrDef<ROCDL_Dialect, attrName, traits> {
+  let mnemonic = attrMnemonic;
+}
+
 
 //===----------------------------------------------------------------------===//
 // ROCDL op definitions
@@ -94,6 +107,35 @@ class ROCDL_MbcntOp<string mnemonic> :
 
 def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
 def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
+
+def ROCDL_DsSwizzleOp : 
+ROCDL_Op<"ds_swizzle">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$src,
+               I32:$offset)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_swizzle, {$src, $offset});
+  }];
+  let assemblyFormat = [{
+    $src `,` $offset  attr-dict `:` `(` type($src) `,` type($offset) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_DsBpermuteOp : 
+ROCDL_Op<"ds_bpermute">,
+Results<(outs I32:$res)>,
+Arguments<(ins I32:$index,
+               I32:$src)>
+{
+  string llvmBuilder = [{
+    $res = createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_ds_bpermute, {$index, $src});
+  }];
+  let assemblyFormat = [{
+    $index `,` $src  attr-dict `:` `(` type($index) `,` type($src) `)` `->` type($res)
+   }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
@@ -384,6 +426,94 @@ def ROCDL_RawBufferAtomicUMinOp :
             $offset, $soffset, $aux}, {vdataType});
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ROCDL target attribute.
+//===----------------------------------------------------------------------===//
+
+def ROCDL_TargettAttr :
+    ROCDL_Attr<"ROCDLTarget", "target"> {
+  let description = [{
+    ROCDL target attribute for controlling compilation of AMDGPU targets. All
+    parameters decay into default values if not present.
+
+    Examples:
+
+    1. Target with default values.
+    ```
+      gpu.module @mymodule [#rocdl.target] attributes {...} {
+        ...
+      }
+    ```
+
+    2. Target with `gfx90a` chip and fast math.
+    ```
+      gpu.module @mymodule [#rocdl.target<chip = "gfx90a", flags = {fast, no_wave64}>] {
+        ...
+      }
+    ```
+  }];
+  let parameters = (ins
+    DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
+    StringRefParameter<"Target triple.", "\"amdgcn-amd-amdhsa\"">:$triple,
+    StringRefParameter<"Target chip.", "\"gfx900\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"\"">:$features,
+    StringRefParameter<"ABI version.", "\"400\"">:$abi,
+    OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
+    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
+  );
+  let assemblyFormat = [{
+    (`<` struct($O, $triple, $chip, $features, $abi, $flags, $link)^ `>`)?
+  }];
+  let builders = [
+    AttrBuilder<(ins CArg<"int", "2">:$optLevel,
+                     CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
+                     CArg<"StringRef", "\"gfx900\"">:$chip,
+                     CArg<"StringRef", "\"\"">:$features,
+                     CArg<"StringRef", "\"400\"">:$abiVersion,
+                     CArg<"DictionaryAttr", "nullptr">:$targetFlags,
+                     CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
+      return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,
+                       targetFlags, linkFiles);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    bool hasFlag(StringRef flag) const;
+    bool hasWave64() const;
+    bool hasFastMath() const;
+    bool hasDaz() const;
+    bool hasFiniteOnly() const;
+    bool hasUnsafeMath() const;
+    bool hasCorrectSqrt() const;
+  }];
+  let extraClassDefinition = [{
+    bool $cppClass::hasFlag(StringRef flag) const {
+      if (DictionaryAttr flags = getFlags())
+        return flags.get(flag) != nullptr;
+      return false;
+    }
+    bool $cppClass::hasWave64() const {
+      return hasFlag("wave64") || !hasFlag("no_wave64");
+    }
+    bool $cppClass::hasFastMath() const {
+      return hasFlag("fast");
+    }
+    bool $cppClass::hasDaz() const {
+      return hasFlag("daz");
+    }
+    bool $cppClass::hasFiniteOnly() const {
+      return hasFlag("finite_only");
+    }
+    bool $cppClass::hasUnsafeMath() const {
+      return hasFlag("unsafe_math");
+    }
+    bool $cppClass::hasCorrectSqrt() const {
+      return !hasFlag("unsafe_sqrt");
+    }
+  }];
 }
 
 #endif // ROCDLIR_OPS

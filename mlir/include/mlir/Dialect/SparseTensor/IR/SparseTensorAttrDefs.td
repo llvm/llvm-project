@@ -194,20 +194,19 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ```mlir
     // Sparse vector.
     #SparseVector = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed" ]
+      map = (d0) -> (d0 : compressed)
     }>
     ... tensor<?xf32, #SparseVector> ...
 
     // Sorted Coordinate Scheme.
     #SortedCOO = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed-nu", "singleton" ]
+      map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
     }>
     ... tensor<?x?xf64, #SortedCOO> ...
 
     // Doubly compressed sparse column storage with specific bitwidths.
     #DCSC = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed", "compressed" ],
-      dimToLvl = affine_map<(i, j) -> (j, i)>,
+      map = (d0, d1) -> (d1 : compressed, d0 : compressed),
       posWidth = 32,
       crdWidth = 8
     }>
@@ -215,8 +214,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
     // Block sparse row storage (2x3 blocks).
     #BCSR = #sparse_tensor.encoding<{
-      lvlTypes = [ "compressed", "compressed", "dense", "dense" ],
-      dimToLvl = affine_map<(i, j) -> (i floordiv 2, j floordiv 3, i mod 2, j mod 3)>
+      map = ( i, j ) ->
+      ( i floordiv 2 : compressed,
+        j floordiv 3 : compressed,
+        i mod 2      : dense,
+        j mod 3      : dense
+      )
     }>
     ... tensor<20x30xf32, #BCSR> ...
 
@@ -437,6 +440,10 @@ class RankedSparseTensorOf<list<Type> allowedTypes>
   : RankedTensorOf<allowedTypes, [IsSparseTensorPred], "ranked sparse tensor">;
 
 def AnyRankedSparseTensor : RankedSparseTensorOf<[AnyType]>;
+
+class ScalarLikeOf<list<Type> allowedTypes>
+  : AnyTypeOf<[0DTensorOf<allowedTypes>, AnyTypeOf<allowedTypes>]>;
+
 
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Sorting Algorithm Attribute.

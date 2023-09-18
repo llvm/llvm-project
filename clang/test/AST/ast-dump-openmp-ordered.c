@@ -43,7 +43,7 @@ void test_three(int x) {
 // CHECK-NEXT: |       | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-NullStmt {{.*}} <line:11:5>
@@ -70,7 +70,7 @@ void test_three(int x) {
 // CHECK-NEXT:         | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT:         | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT:         | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT:         | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | `-CompoundStmt {{.*}} <col:31, line:18:3>

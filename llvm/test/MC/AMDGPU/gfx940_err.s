@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefix=GFX940 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 %s 2>&1 | FileCheck --check-prefix=GFX940 --implicit-check-not=error: %s
 
 v_mac_f32 v0, v1, v2
 // GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -28,7 +28,7 @@ v_mad_legacy_f32 v0, v1, v2, v3
 // GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 v_mov_b64 v[2:3], v[4:5] row_shl:1
-// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: 64 bit dpp only supports row_newbcast
+// GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: DP ALU dpp only supports row_newbcast
 
 v_mov_b64 v[2:3], -v[4:5]
 // GFX940: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.

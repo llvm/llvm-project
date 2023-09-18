@@ -224,3 +224,25 @@ body:             |
     PseudoRET implicit $x10, implicit $x11, implicit $x12
 
 ...
+---
+name:            select_ptr
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: select_ptr
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[AND]](s64), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[SELECT]](p0)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(p0) = COPY $x10
+    %1:_(p0) = COPY $x11
+    %2:_(s64) = COPY $x12
+    %3:_(s1) = G_TRUNC %2(s64)
+    %4:_(p0) = G_SELECT %3(s1), %0(p0), %1(p0)
+    $x10 = COPY %4(p0)
+    PseudoRET implicit $x10
+
+...

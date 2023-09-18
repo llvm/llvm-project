@@ -480,6 +480,14 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   if (!Filter.CheckCStringOutOfBounds)
     return State;
 
+  SVal BufStart =
+      svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
+
+  // Check if the first byte of the buffer is accessible.
+  State = CheckLocation(C, State, Buffer, BufStart, Access, CK);
+  if (!State)
+    return nullptr;
+
   // Get the access length and make sure it is known.
   // FIXME: This assumes the caller has already checked that the access length
   // is positive. And that it's unsigned.
@@ -496,8 +504,6 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   NonLoc LastOffset = Offset.castAs<NonLoc>();
 
   // Check that the first buffer is sufficiently long.
-  SVal BufStart =
-      svalBuilder.evalCast(BufVal, PtrTy, Buffer.Expression->getType());
   if (std::optional<Loc> BufLoc = BufStart.getAs<Loc>()) {
 
     SVal BufEnd =
@@ -653,13 +659,15 @@ void CStringChecker::emitOverlapBug(CheckerContext &C, ProgramStateRef state,
 void CStringChecker::emitNullArgBug(CheckerContext &C, ProgramStateRef State,
                                     const Stmt *S, StringRef WarningMsg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_Null)
-      BT_Null.reset(new BuiltinBug(
-          Filter.CheckNameCStringNullArg, categories::UnixAPI,
-          "Null pointer argument in call to byte string function"));
+    if (!BT_Null) {
+      // FIXME: This call uses the string constant 'categories::UnixAPI' as the
+      // description of the bug; it should be replaced by a real description.
+      BT_Null.reset(
+          new BugType(Filter.CheckNameCStringNullArg, categories::UnixAPI));
+    }
 
-    BuiltinBug *BT = static_cast<BuiltinBug *>(BT_Null.get());
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, WarningMsg, N);
+    auto Report =
+        std::make_unique<PathSensitiveBugReport>(*BT_Null, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     if (const auto *Ex = dyn_cast<Expr>(S))
       bugreporter::trackExpressionValue(N, Ex, *Report);
@@ -674,13 +682,11 @@ void CStringChecker::emitUninitializedReadBug(CheckerContext &C,
     const char *Msg =
         "Bytes string function accesses uninitialized/garbage values";
     if (!BT_UninitRead)
-      BT_UninitRead.reset(
-          new BuiltinBug(Filter.CheckNameCStringUninitializedRead,
-                         "Accessing unitialized/garbage values", Msg));
+      BT_UninitRead.reset(new BugType(Filter.CheckNameCStringUninitializedRead,
+                                      "Accessing unitialized/garbage values"));
 
-    BuiltinBug *BT = static_cast<BuiltinBug *>(BT_UninitRead.get());
-
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
+    auto Report =
+        std::make_unique<PathSensitiveBugReport>(*BT_UninitRead, Msg, N);
     Report->addRange(E->getSourceRange());
     bugreporter::trackExpressionValue(N, E, *Report);
     C.emitReport(std::move(Report));
@@ -692,18 +698,16 @@ void CStringChecker::emitOutOfBoundsBug(CheckerContext &C,
                                         StringRef WarningMsg) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
     if (!BT_Bounds)
-      BT_Bounds.reset(new BuiltinBug(
-          Filter.CheckCStringOutOfBounds ? Filter.CheckNameCStringOutOfBounds
-                                         : Filter.CheckNameCStringNullArg,
-          "Out-of-bound array access",
-          "Byte string function accesses out-of-bound array element"));
-
-    BuiltinBug *BT = static_cast<BuiltinBug *>(BT_Bounds.get());
+      BT_Bounds.reset(new BugType(Filter.CheckCStringOutOfBounds
+                                      ? Filter.CheckNameCStringOutOfBounds
+                                      : Filter.CheckNameCStringNullArg,
+                                  "Out-of-bound array access"));
 
     // FIXME: It would be nice to eventually make this diagnostic more clear,
     // e.g., by referencing the original declaration or by saying *why* this
     // reference is outside the range.
-    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, WarningMsg, N);
+    auto Report =
+        std::make_unique<PathSensitiveBugReport>(*BT_Bounds, WarningMsg, N);
     Report->addRange(S->getSourceRange());
     C.emitReport(std::move(Report));
   }
@@ -713,10 +717,12 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                                        const Stmt *S,
                                        StringRef WarningMsg) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
-    if (!BT_NotCString)
-      BT_NotCString.reset(new BuiltinBug(
-          Filter.CheckNameCStringNotNullTerm, categories::UnixAPI,
-          "Argument is not a null-terminated string."));
+    if (!BT_NotCString) {
+      // FIXME: This call uses the string constant 'categories::UnixAPI' as the
+      // description of the bug; it should be replaced by a real description.
+      BT_NotCString.reset(
+          new BugType(Filter.CheckNameCStringNotNullTerm, categories::UnixAPI));
+    }
 
     auto Report =
         std::make_unique<PathSensitiveBugReport>(*BT_NotCString, WarningMsg, N);
@@ -729,10 +735,13 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
 void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
                                              ProgramStateRef State) const {
   if (ExplodedNode *N = C.generateErrorNode(State)) {
-    if (!BT_AdditionOverflow)
+    if (!BT_AdditionOverflow) {
+      // FIXME: This call uses the word "API" as the description of the bug;
+      // it should be replaced by a better error message (if this unlikely
+      // situation continues to exist as a separate bug type).
       BT_AdditionOverflow.reset(
-          new BuiltinBug(Filter.CheckNameCStringOutOfBounds, "API",
-                         "Sum of expressions causes overflow."));
+          new BugType(Filter.CheckNameCStringOutOfBounds, "API"));
+    }
 
     // This isn't a great error message, but this should never occur in real
     // code anyway -- you'd have to create a buffer longer than a size_t can
@@ -2006,6 +2015,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
       SVal maxLastElement =
           svalBuilder.evalBinOpLN(state, BO_Add, *dstRegVal, *maxLastNL, ptrTy);
 
+      // Check if the first byte of the destination is writable.
+      state = CheckLocation(C, state, Dst, DstVal, AccessKind::write);
+      if (!state)
+        return;
+      // Check if the last byte of the destination is writable.
       state = CheckLocation(C, state, Dst, maxLastElement, AccessKind::write);
       if (!state)
         return;
@@ -2018,6 +2032,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 
       // ...and we haven't checked the bound, we'll check the actual copy.
       if (!boundWarning) {
+        // Check if the first byte of the destination is writable.
+        state = CheckLocation(C, state, Dst, DstVal, AccessKind::write);
+        if (!state)
+          return;
+        // Check if the last byte of the destination is writable.
         state = CheckLocation(C, state, Dst, lastElement, AccessKind::write);
         if (!state)
           return;

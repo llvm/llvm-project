@@ -715,7 +715,7 @@ def FormatInferTypeRegionsOp
   }];
 }
 
-// Test inferReturnTypes coupled with variadic operands (operand_segment_sizes).
+// Test inferReturnTypes coupled with variadic operands (operandSegmentSizes).
 def FormatInferTypeVariadicOperandsOp
     : TEST_Op<"format_infer_type_variadic_operands",
               [InferTypeOpInterface, AttrSizedOperandSegments]> {

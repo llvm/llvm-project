@@ -23,14 +23,12 @@ ModulePass *createBPFCheckAndAdjustIR();
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMISimplifyPatchablePass();
 FunctionPass *createBPFMIPeepholePass();
-FunctionPass *createBPFMIPeepholeTruncElimPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 void initializeBPFDAGToDAGISelPass(PassRegistry &);
-void initializeBPFMIPeepholePass(PassRegistry&);
-void initializeBPFMIPeepholeTruncElimPass(PassRegistry &);
+void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchablePass(PassRegistry &);

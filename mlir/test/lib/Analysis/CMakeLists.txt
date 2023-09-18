@@ -22,6 +22,7 @@ add_mlir_library(MLIRTestAnalysis
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAnalysis
+  MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass
   MLIRTestDialect

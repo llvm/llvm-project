@@ -579,7 +579,7 @@ public:
   /// moved to the error state due to the failure of a dependency. If this
   /// method returns an error then clients should log it and call
   /// failMaterialize. If no dependencies have been registered for the
-  /// symbols covered by this MaterializationResponsibiility then this method
+  /// symbols covered by this MaterializationResponsibility then this method
   /// is guaranteed to return Error::success() and can be wrapped with cantFail.
   Error notifyResolved(const SymbolMap &Symbols);
 
@@ -591,7 +591,7 @@ public:
   /// moved to the error state due to the failure of a dependency. If this
   /// method returns an error then clients should log it and call
   /// failMaterialize. If no dependencies have been registered for the
-  /// symbols covered by this MaterializationResponsibiility then this method
+  /// symbols covered by this MaterializationResponsibility then this method
   /// is guaranteed to return Error::success() and can be wrapped with cantFail.
   Error notifyEmitted();
 
@@ -610,7 +610,7 @@ public:
 
   /// Notify all not-yet-emitted covered by this MaterializationResponsibility
   /// instance that an error has occurred.
-  /// This will remove all symbols covered by this MaterializationResponsibilty
+  /// This will remove all symbols covered by this MaterializationResponsibility
   /// from the target JITDylib, and send an error to any queries waiting on
   /// these symbols.
   void failMaterialization();
@@ -1434,6 +1434,9 @@ public:
   /// Return the triple for the executor.
   const Triple &getTargetTriple() const { return EPC->getTargetTriple(); }
 
+  // Return the page size for the executor.
+  size_t getPageSize() const { return EPC->getPageSize(); }
+
   /// Get the SymbolStringPool for this instance.
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() {
     return EPC->getSymbolStringPool();
@@ -1671,7 +1674,7 @@ public:
 
   /// Wrap a class method that takes concrete argument types (and a sender for
   /// a concrete return type) to produce an AsyncHandlerWrapperFunction. Uses
-  /// SPS to unpack teh arguments and pack the result.
+  /// SPS to unpack the arguments and pack the result.
   ///
   /// This function is intended to support easy construction of
   /// AsyncHandlerWrapperFunctions that can be associated with a tag

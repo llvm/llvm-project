@@ -538,7 +538,7 @@ void LookupResult::resolveKind() {
     if (HideTags && isa<TagDecl>(D)) {
       bool Hidden = false;
       for (auto *OtherDecl : Decls) {
-        if (canHideTag(OtherDecl) &&
+        if (canHideTag(OtherDecl) && !OtherDecl->isInvalidDecl() &&
             getContextForScopeMatching(OtherDecl)->Equals(
                 getContextForScopeMatching(Decls[I]))) {
           RemovedDecls.set(I);
@@ -5699,12 +5699,12 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
 
 /// Get a "quoted.h" or <angled.h> include path to use in a diagnostic
 /// suggesting the addition of a #include of the specified file.
-static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
+static std::string getHeaderNameForHeader(Preprocessor &PP, FileEntryRef E,
                                           llvm::StringRef IncludingFile) {
-  bool IsSystem = false;
+  bool IsAngled = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
-      E, IncludingFile, &IsSystem);
-  return (IsSystem ? '<' : '"') + Path + (IsSystem ? '>' : '"');
+      E, IncludingFile, &IsAngled);
+  return (IsAngled ? '<' : '"') + Path + (IsAngled ? '>' : '"');
 }
 
 void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
@@ -5732,11 +5732,12 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
 
   // Try to find a suitable header-name to #include.
   std::string HeaderName;
-  if (const FileEntry *Header =
+  if (OptionalFileEntryRef Header =
           PP.getHeaderToIncludeForDiagnostics(UseLoc, DeclLoc)) {
     if (const FileEntry *FE =
             SourceMgr.getFileEntryForID(SourceMgr.getFileID(UseLoc)))
-      HeaderName = getHeaderNameForHeader(PP, Header, FE->tryGetRealPathName());
+      HeaderName =
+          getHeaderNameForHeader(PP, *Header, FE->tryGetRealPathName());
   }
 
   // If we have a #include we should suggest, or if all definition locations

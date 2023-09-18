@@ -88,7 +88,7 @@ namespace llvm {
   /// Use a SparseMultiSet to track physical registers. Storage is only
   /// allocated once for the pass. It can be cleared in constant time and reused
   /// without any frees.
-  using Reg2SUnitsMap =
+  using RegUnit2SUnitsMap =
       SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
 
   /// Use SparseSet as a SparseMap by relying on the fact that it never
@@ -166,8 +166,8 @@ namespace llvm {
     /// iterate upward through the instructions. This is allocated here instead
     /// of inside BuildSchedGraph to avoid the need for it to be initialized and
     /// destructed for each block.
-    Reg2SUnitsMap Defs;
-    Reg2SUnitsMap Uses;
+    RegUnit2SUnitsMap Defs;
+    RegUnit2SUnitsMap Uses;
 
     /// Tracks the last instruction(s) in this region defining each virtual
     /// register. There may be multiple current definitions for a register with

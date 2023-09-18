@@ -170,7 +170,7 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   state.addTypes(derivedResultTypes);
   state.addAttributes(attributes);
   state.addAttribute(
-      "operand_segment_sizes",
+      "operandSegmentSizes",
       b.getDenseI32ArrayAttr({static_cast<int32_t>(inputs.size()),
                               static_cast<int32_t>(outputs.size())}));
 
@@ -226,18 +226,18 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
     // This is a bit complex because we're trying to be backward compatible with
     // operation syntax that mix the inherent attributes and the discardable
     // ones in the same dictionary. If the properties are used, we append the
-    // operand_segment_sizes there directly. Otherwise we append it to the
+    // operandSegmentSizes there directly. Otherwise we append it to the
     // discardable attributes dictionary where it is handled by the generic
     // Operation::create(...) method.
     if (result.propertiesAttr) {
       NamedAttrList attrs = llvm::cast<DictionaryAttr>(result.propertiesAttr);
-      attrs.append("operand_segment_sizes",
+      attrs.append("operandSegmentSizes",
                    parser.getBuilder().getDenseI32ArrayAttr(
                        {static_cast<int32_t>(inputsOperands.size()),
                         static_cast<int32_t>(outputsOperands.size())}));
       result.propertiesAttr = attrs.getDictionary(parser.getContext());
     } else {
-      result.addAttribute("operand_segment_sizes",
+      result.addAttribute("operandSegmentSizes",
                           parser.getBuilder().getDenseI32ArrayAttr(
                               {static_cast<int32_t>(inputsOperands.size()),
                                static_cast<int32_t>(outputsOperands.size())}));
@@ -332,7 +332,7 @@ static void printNamedStructuredOp(OpAsmPrinter &p, Operation *op,
                                    ValueRange inputs, ValueRange outputs) {
   p.printOptionalAttrDict(
       op->getAttrs(),
-      /*elidedAttrs=*/{"operand_segment_sizes",
+      /*elidedAttrs=*/{"operandSegmentSizes",
                        // See generated code in
                        // LinalgNamedStructuredOps.yamlgen.cpp.inc
                        "linalg.memoized_indexing_maps"});
@@ -449,22 +449,22 @@ public:
     case BinaryFn::max_signed:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MaxSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_signed:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_unsigned:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MaxFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MaximumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MaxUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_unsigned:
       assert(!allComplex);
       if (allFloatingPoint)
-        return builder.create<arith::MinFOp>(arg0.getLoc(), arg0, arg1);
+        return builder.create<arith::MinimumFOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MinUIOp>(arg0.getLoc(), arg0, arg1);
     }
     llvm_unreachable("unsupported binary function");
@@ -737,7 +737,8 @@ public:
 
   LogicalResult matchAndRewrite(tensor::ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    // See if tensor input of tensor.extract op is the result of a linalg.fill op.
+    // See if tensor input of tensor.extract op is the result of a linalg.fill
+    // op.
     auto fillOp = extractOp.getTensor().getDefiningOp<linalg::FillOp>();
     if (!fillOp)
       return failure();
@@ -751,15 +752,65 @@ public:
   }
 };
 
+/// Folds pack(fill) into a single fill op if
+///   1. The pack op does not have padding value, or
+///   2. The filled value and padding value are the same.
+static FailureOr<FillOp> foldFillPackIntoFillOp(RewriterBase &rewriter,
+                                                tensor::PackOp packOp) {
+  auto fillOp = packOp.getSource().getDefiningOp<FillOp>();
+  if (!fillOp)
+    return failure();
+
+  if (auto paddingValue = packOp.getPaddingValue())
+    if (!isEqualConstantIntOrValue(paddingValue, fillOp.value()))
+      return failure();
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(fillOp);
+
+  Value packOpDest = packOp.getDest();
+  if (!packOpDest.hasOneUse())
+    return failure();
+  if (auto emptyOp = packOpDest.getDefiningOp<tensor::EmptyOp>()) {
+    packOpDest = tensor::PackOp::createDestinationTensor(
+        rewriter, fillOp.getLoc(), fillOp.getDpsInitOperand(0)->get(),
+        packOp.getMixedTiles(), packOp.getInnerDimsPos(),
+        packOp.getOuterDimsPerm());
+  } else {
+    DominanceInfo dom(fillOp);
+    if (!dom.properlyDominates(packOpDest, fillOp))
+      return failure();
+  }
+
+  Value fillDest = packOpDest;
+  return clone(rewriter, fillOp, packOpDest.getType(),
+               {fillOp.value(), fillDest});
+}
+
+/// Wrapper pattern that applies foldFillPackIntoFillOp method.
+struct FoldFillWithPack : public OpRewritePattern<tensor::PackOp> {
+public:
+  FoldFillWithPack(MLIRContext *context)
+      : OpRewritePattern<tensor::PackOp>(context) {}
+
+  LogicalResult matchAndRewrite(tensor::PackOp packOp,
+                                PatternRewriter &rewriter) const override {
+    auto fillOp = foldFillPackIntoFillOp(rewriter, packOp);
+    if (failed(fillOp))
+      return failure();
+    rewriter.replaceOp(packOp, fillOp.value().result());
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results
-      .add<FoldFillWithTensorExtract,
-           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
-           FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-           FoldInsertPadIntoFill>(context);
+  results.add<FoldFillWithTensorExtract, FoldFillWithPack, FoldFillWithPad,
+              FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+              FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
+              FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -900,7 +951,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
                                SmallVector<Value>(getDpsInitOperands()));
 
-  genericAttrNames.push_back("operand_segment_sizes");
+  genericAttrNames.push_back("operandSegmentSizes");
   genericAttrNamesSet.insert(genericAttrNames.back());
 
   bool hasExtraAttrs = false;
@@ -2345,6 +2396,13 @@ SoftmaxOp::reifyResultShapes(OpBuilder &b,
       .reifyResultShapes(b, reifiedReturnShapes);
 }
 
+void SoftmaxOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(),
+                        getDpsInputOperands(), getDpsInitOperands());
+}
+
 // Helper functions for softmax decomposition.
 // @{
 
@@ -2491,20 +2549,21 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   dims.erase(dims.begin() + reductionDim);
   // Step 1: Compute max along dim.
   Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
-  Value neutralForMaxF =
-      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc);
+  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maximumf,
+                                                 elementType, b, loc,
+                                                 /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();
-  Value max =
-      reduce<arith::MaxFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
+  Value max = reduce<arith::MaximumFOp>(b, loc, input, neutralForMaxFInit,
+                                        reductionDim);
 
   // Step 2: Subtract max from input and exponentiate.
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
 
   // Step 3: Compute sum along dim.
-  Value zero =
-      arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType, b, loc);
+  Value zero = arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType,
+                                       b, loc, /*useOnlyFiniteValue=*/true);
   Value zeroInit =
       b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
   Value denominator =

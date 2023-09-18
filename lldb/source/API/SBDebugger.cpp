@@ -39,10 +39,10 @@
 #include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -781,6 +781,9 @@ SBStructuredData SBDebugger::GetBuildConfiguration() {
   AddBoolConfigEntry(
       *config_up, "editline", LLDB_ENABLE_LIBEDIT,
       "A boolean value that indicates if editline support is enabled in LLDB");
+  AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
+                     "A boolean value that indicates if editline wide "
+                     "characters support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "lzma", LLDB_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");
@@ -1538,14 +1541,11 @@ bool SBDebugger::SetCurrentPlatformSDKRoot(const char *sysroot) {
 bool SBDebugger::GetCloseInputOnEOF() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp ? m_opaque_sp->GetCloseInputOnEOF() : false);
+  return false;
 }
 
 void SBDebugger::SetCloseInputOnEOF(bool b) {
   LLDB_INSTRUMENT_VA(this, b);
-
-  if (m_opaque_sp)
-    m_opaque_sp->SetCloseInputOnEOF(b);
 }
 
 SBTypeCategory SBDebugger::GetCategory(const char *category_name) {

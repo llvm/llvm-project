@@ -205,8 +205,7 @@ define void @ctpop_i32() {
 ; CHECK-SDAG-NEXT:    fmov d0, x9
 ; CHECK-SDAG-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-SDAG-NEXT:    uaddlv h0, v0.8b
-; CHECK-SDAG-NEXT:    fmov w9, s0
-; CHECK-SDAG-NEXT:    str w9, [x8]
+; CHECK-SDAG-NEXT:    str s0, [x8]
 ; CHECK-SDAG-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: ctpop_i32:

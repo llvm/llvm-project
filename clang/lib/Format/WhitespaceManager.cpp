@@ -22,8 +22,13 @@ namespace format {
 bool WhitespaceManager::Change::IsBeforeInFile::operator()(
     const Change &C1, const Change &C2) const {
   return SourceMgr.isBeforeInTranslationUnit(
-      C1.OriginalWhitespaceRange.getBegin(),
-      C2.OriginalWhitespaceRange.getBegin());
+             C1.OriginalWhitespaceRange.getBegin(),
+             C2.OriginalWhitespaceRange.getBegin()) ||
+         (C1.OriginalWhitespaceRange.getBegin() ==
+              C2.OriginalWhitespaceRange.getBegin() &&
+          SourceMgr.isBeforeInTranslationUnit(
+              C1.OriginalWhitespaceRange.getEnd(),
+              C2.OriginalWhitespaceRange.getEnd()));
 }
 
 WhitespaceManager::Change::Change(const FormatToken &Tok,
@@ -425,6 +430,10 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
           return true;
         }
 
+        // Continued template parameter.
+        if (Changes[ScopeStart - 1].Tok->is(TT_TemplateOpener))
+          return true;
+
         return false;
       };
 
@@ -590,14 +599,14 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
       // A new line starts, re-initialize line status tracking bools.
       // Keep the match state if a string literal is continued on this line.
-      if (i == 0 || !Changes[i].Tok->is(tok::string_literal) ||
-          !Changes[i - 1].Tok->is(tok::string_literal)) {
+      if (i == 0 || Changes[i].Tok->isNot(tok::string_literal) ||
+          Changes[i - 1].Tok->isNot(tok::string_literal)) {
         FoundMatchOnLine = false;
       }
       LineIsComment = true;
     }
 
-    if (!Changes[i].Tok->is(tok::comment))
+    if (Changes[i].Tok->isNot(tok::comment))
       LineIsComment = false;
 
     if (Changes[i].Tok->is(tok::comma)) {
@@ -731,10 +740,10 @@ void WhitespaceManager::alignConsecutiveMacros() {
       SpacesRequiredBefore = 0;
     }
 
-    if (!Current || !Current->is(tok::identifier))
+    if (!Current || Current->isNot(tok::identifier))
       return false;
 
-    if (!Current->Previous || !Current->Previous->is(tok::pp_define))
+    if (!Current->Previous || Current->Previous->isNot(tok::pp_define))
       return false;
 
     // For a macro function, 0 spaces are required between the
@@ -781,7 +790,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
       LineIsComment = true;
     }
 
-    if (!Changes[I].Tok->is(tok::comment))
+    if (Changes[I].Tok->isNot(tok::comment))
       LineIsComment = false;
 
     if (!AlignMacrosMatches(Changes[I]))
@@ -1226,6 +1235,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
   if (!CellDescs.isRectangular())
     return;
 
+  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
@@ -1243,7 +1253,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
       do {
         const FormatToken *Previous = Changes[Next->Index].Tok->Previous;
         if (Previous && Previous->isNot(TT_LineComment)) {
-          Changes[Next->Index].Spaces = 0;
+          Changes[Next->Index].Spaces = BracePadding;
           Changes[Next->Index].NewlinesBefore = 0;
         }
         Next = Next->NextColumnElement;
@@ -1276,7 +1286,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
           NetWidth;
       if (Changes[CellIter->Index].NewlinesBefore == 0) {
         Changes[CellIter->Index].Spaces = (CellWidth - (ThisWidth + NetWidth));
-        Changes[CellIter->Index].Spaces += (i > 0) ? 1 : 0;
+        Changes[CellIter->Index].Spaces += (i > 0) ? 1 : BracePadding;
       }
       alignToStartOfCell(CellIter->Index, CellIter->EndIndex);
       for (const auto *Next = CellIter->NextColumnElement; Next;
@@ -1285,7 +1295,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
             calculateCellWidth(Next->Index, Next->EndIndex, true) + NetWidth;
         if (Changes[Next->Index].NewlinesBefore == 0) {
           Changes[Next->Index].Spaces = (CellWidth - ThisWidth);
-          Changes[Next->Index].Spaces += (i > 0) ? 1 : 0;
+          Changes[Next->Index].Spaces += (i > 0) ? 1 : BracePadding;
         }
         alignToStartOfCell(Next->Index, Next->EndIndex);
       }
@@ -1299,12 +1309,13 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
   if (!CellDescs.isRectangular())
     return;
 
+  const int BracePadding = Style.Cpp11BracedListStyle ? 0 : 1;
   auto &Cells = CellDescs.Cells;
   // Now go through and fixup the spaces.
   auto *CellIter = Cells.begin();
   // The first cell needs to be against the left brace.
   if (Changes[CellIter->Index].NewlinesBefore == 0)
-    Changes[CellIter->Index].Spaces = 0;
+    Changes[CellIter->Index].Spaces = BracePadding;
   else
     Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
   ++CellIter;
@@ -1317,7 +1328,8 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     if (Changes[CellIter->Index].NewlinesBefore == 0) {
       Changes[CellIter->Index].Spaces =
           MaxNetWidth - ThisNetWidth +
-          (Changes[CellIter->Index].Tok->isNot(tok::r_brace) ? 1 : 0);
+          (Changes[CellIter->Index].Tok->isNot(tok::r_brace) ? 1
+                                                             : BracePadding);
     }
     auto RowCount = 1U;
     auto Offset = std::distance(Cells.begin(), CellIter);
@@ -1331,7 +1343,7 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
       if (Changes[Next->Index].NewlinesBefore == 0) {
         Changes[Next->Index].Spaces =
             MaxNetWidth - ThisNetWidth +
-            (Changes[Next->Index].Tok->isNot(tok::r_brace) ? 1 : 0);
+            (Changes[Next->Index].Tok->isNot(tok::r_brace) ? 1 : BracePadding);
       }
       ++RowCount;
     }
@@ -1509,10 +1521,55 @@ WhitespaceManager::linkCells(CellDescriptions &&CellDesc) {
 void WhitespaceManager::generateChanges() {
   for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
     const Change &C = Changes[i];
-    if (i > 0 && Changes[i - 1].OriginalWhitespaceRange.getBegin() ==
-                     C.OriginalWhitespaceRange.getBegin()) {
-      // Do not generate two replacements for the same location.
-      continue;
+    if (i > 0) {
+      auto Last = Changes[i - 1].OriginalWhitespaceRange;
+      auto New = Changes[i].OriginalWhitespaceRange;
+      // Do not generate two replacements for the same location.  As a special
+      // case, it is allowed if there is a replacement for the empty range
+      // between 2 tokens and another non-empty range at the start of the second
+      // token.  We didn't implement logic to combine replacements for 2
+      // consecutive source ranges into a single replacement, because the
+      // program works fine without it.
+      //
+      // We can't eliminate empty original whitespace ranges.  They appear when
+      // 2 tokens have no whitespace in between in the input.  It does not
+      // matter whether whitespace is to be added.  If no whitespace is to be
+      // added, the replacement will be empty, and it gets eliminated after this
+      // step in storeReplacement.  For example, if the input is `foo();`,
+      // there will be a replacement for the range between every consecutive
+      // pair of tokens.
+      //
+      // A replacement at the start of a token can be added by
+      // BreakableStringLiteralUsingOperators::insertBreak when it adds braces
+      // around the string literal.  Say Verilog code is being formatted and the
+      // first line is to become the next 2 lines.
+      //     x("long string");
+      //     x({"long ",
+      //        "string"});
+      // There will be a replacement for the empty range between the parenthesis
+      // and the string and another replacement for the quote character.  The
+      // replacement for the empty range between the parenthesis and the quote
+      // comes from ContinuationIndenter::addTokenOnCurrentLine when it changes
+      // the original empty range between the parenthesis and the string to
+      // another empty one.  The replacement for the quote character comes from
+      // BreakableStringLiteralUsingOperators::insertBreak when it adds the
+      // brace.  In the example, the replacement for the empty range is the same
+      // as the original text.  However, eliminating replacements that are same
+      // as the original does not help in general.  For example, a newline can
+      // be inserted, causing the first line to become the next 3 lines.
+      //     xxxxxxxxxxx("long string");
+      //     xxxxxxxxxxx(
+      //         {"long ",
+      //          "string"});
+      // In that case, the empty range between the parenthesis and the string
+      // will be replaced by a newline and 4 spaces.  So we will still have to
+      // deal with a replacement for an empty source range followed by a
+      // replacement for a non-empty source range.
+      if (Last.getBegin() == New.getBegin() &&
+          (Last.getEnd() != Last.getBegin() ||
+           New.getEnd() == New.getBegin())) {
+        continue;
+      }
     }
     if (C.CreateReplacement) {
       std::string ReplacementText = C.PreviousLinePostfix;

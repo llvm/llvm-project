@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu                                                  -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-apple-darwin -code-model=large                             -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LARGE
 ; RUN: llc -mtriple=aarch64    -code-model=tiny                              -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -global-isel                           -verify-machineinstrs < %s | FileCheck %s
 
 @varf32 = global float 0.0
 @varf64 = global double 0.0

@@ -6822,16 +6822,16 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
   TemplateArgumentListInfo NewTemplateArgs;
   NestedNameSpecifierLoc NewNestedNameSpec;
   if (T->isConstrained()) {
+    assert(TL.getConceptReference());
     NewCD = cast_or_null<ConceptDecl>(getDerived().TransformDecl(
         TL.getConceptNameLoc(), T->getTypeConstraintConcept()));
 
     NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
     NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
     typedef TemplateArgumentLocContainerIterator<AutoTypeLoc> ArgIterator;
-    if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
-                                                ArgIterator(TL,
-                                                            TL.getNumArgs()),
-                                                NewTemplateArgs))
+    if (getDerived().TransformTemplateArguments(
+            ArgIterator(TL, 0), ArgIterator(TL, TL.getNumArgs()),
+            NewTemplateArgs))
       return QualType();
 
     if (TL.getNestedNameSpecifierLoc()) {
@@ -6859,15 +6859,20 @@ QualType TreeTransform<Derived>::TransformAutoType(TypeLocBuilder &TLB,
 
   AutoTypeLoc NewTL = TLB.push<AutoTypeLoc>(Result);
   NewTL.setNameLoc(TL.getNameLoc());
-  NewTL.setNestedNameSpecifierLoc(NewNestedNameSpec);
-  NewTL.setTemplateKWLoc(TL.getTemplateKWLoc());
-  NewTL.setConceptNameLoc(TL.getConceptNameLoc());
-  NewTL.setFoundDecl(TL.getFoundDecl());
-  NewTL.setLAngleLoc(TL.getLAngleLoc());
-  NewTL.setRAngleLoc(TL.getRAngleLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
-  for (unsigned I = 0; I < NewTL.getNumArgs(); ++I)
-    NewTL.setArgLocInfo(I, NewTemplateArgs.arguments()[I].getLocInfo());
+  NewTL.setConceptReference(nullptr);
+
+  if (T->isConstrained()) {
+    DeclarationNameInfo DNI = DeclarationNameInfo(
+        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
+        TL.getConceptNameLoc(),
+        TL.getTypePtr()->getTypeConstraintConcept()->getDeclName());
+    auto *CR = ConceptReference::Create(
+        SemaRef.Context, NewNestedNameSpec, TL.getTemplateKWLoc(), DNI,
+        TL.getFoundDecl(), TL.getTypePtr()->getTypeConstraintConcept(),
+        ASTTemplateArgumentListInfo::Create(SemaRef.Context, NewTemplateArgs));
+    NewTL.setConceptReference(CR);
+  }
 
   return Result;
 }
@@ -7491,6 +7496,10 @@ StmtResult
 TreeTransform<Derived>::TransformCompoundStmt(CompoundStmt *S,
                                               bool IsStmtExpr) {
   Sema::CompoundScopeRAII CompoundScope(getSema());
+  Sema::FPFeaturesStateRAII FPSave(getSema());
+  if (S->hasStoredFPFeatures())
+    getSema().resetFPOptions(
+        S->getStoredFPFeatures().applyOverrides(getSema().getLangOpts()));
 
   const Stmt *ExprResult = S->getStmtExprResult();
   bool SubStmtInvalid = false;
@@ -8915,6 +8924,17 @@ StmtResult
 TreeTransform<Derived>::TransformOMPSectionDirective(OMPSectionDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().StartOpenMPDSABlock(OMPD_section, DirName, nullptr,
+                                             D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformOMPScopeDirective(OMPScopeDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_scope, DirName, nullptr,
                                              D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().EndOpenMPDSABlock(Res.get());
@@ -12305,7 +12325,16 @@ TreeTransform<Derived>::TransformCXXNullPtrLiteralExpr(
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
-  QualType T = getSema().getCurrentThisType();
+
+  // In lambdas, the qualifiers of the type depends of where in
+  // the call operator `this` appear, and we do not have a good way to
+  // rebuild this information, so we transform the type.
+  //
+  // In other contexts, the type of `this` may be overrided
+  // for type deduction, so we need to recompute it.
+  QualType T = getSema().getCurLambda() ?
+                   getDerived().TransformType(E->getType())
+                 : getSema().getCurrentThisType();
 
   if (!getDerived().AlwaysRebuild() && T == E->getType()) {
     // Mark it referenced in the new context regardless.
@@ -12587,12 +12616,9 @@ TreeTransform<Derived>::TransformCXXPseudoDestructorExpr(
                                             E->getDestroyedTypeLoc());
   } else {
     // Look for a destructor known with the given name.
-    ParsedType T = SemaRef.getDestructorName(E->getTildeLoc(),
-                                              *E->getDestroyedTypeIdentifier(),
-                                                E->getDestroyedTypeLoc(),
-                                                /*Scope=*/nullptr,
-                                                SS, ObjectTypePtr,
-                                                false);
+    ParsedType T = SemaRef.getDestructorName(
+        *E->getDestroyedTypeIdentifier(), E->getDestroyedTypeLoc(),
+        /*Scope=*/nullptr, SS, ObjectTypePtr, false);
     if (!T)
       return ExprError();
 
@@ -13542,6 +13568,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   auto TPL = getDerived().TransformTemplateParameterList(
       E->getTemplateParameterList());
   LSI->GLTemplateParameterList = TPL;
+  if (TPL)
+    getSema().AddTemplateParametersToLambdaCallOperator(NewCallOperator, Class,
+                                                        TPL);
 
   // Transform the type of the original lambda's call operator.
   // The transformation MUST be done in the CurrentInstantiationScope since

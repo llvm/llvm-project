@@ -25,33 +25,15 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
-    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT]]
-    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL]](s32)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
-    ; CHECK-NEXT: [[FCEIL1:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT1]]
-    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL1]](s32)
-    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
-    ; CHECK-NEXT: [[FCEIL2:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT2]]
-    ; CHECK-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL2]](s32)
-    ; CHECK-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
-    ; CHECK-NEXT: [[FCEIL3:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT3]]
-    ; CHECK-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL3]](s32)
-    ; CHECK-NEXT: [[FPEXT4:%[0-9]+]]:_(s32) = G_FPEXT [[UV4]](s16)
-    ; CHECK-NEXT: [[FCEIL4:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT4]]
-    ; CHECK-NEXT: [[FPTRUNC4:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL4]](s32)
-    ; CHECK-NEXT: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[UV5]](s16)
-    ; CHECK-NEXT: [[FCEIL5:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT5]]
-    ; CHECK-NEXT: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL5]](s32)
-    ; CHECK-NEXT: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[UV6]](s16)
-    ; CHECK-NEXT: [[FCEIL6:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT6]]
-    ; CHECK-NEXT: [[FPTRUNC6:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL6]](s32)
-    ; CHECK-NEXT: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[UV7]](s16)
-    ; CHECK-NEXT: [[FCEIL7:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT7]]
-    ; CHECK-NEXT: [[FPTRUNC7:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL7]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16), [[FPTRUNC4]](s16), [[FPTRUNC5]](s16), [[FPTRUNC6]](s16), [[FPTRUNC7]](s16)
-    ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<8 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV]](<4 x s16>)
+    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV1]](<4 x s16>)
+    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:_(<4 x s32>) = G_FCEIL [[FPEXT]]
+    ; CHECK-NEXT: [[FCEIL1:%[0-9]+]]:_(<4 x s32>) = G_FCEIL [[FPEXT1]]
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FCEIL]](<4 x s32>)
+    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FCEIL1]](<4 x s32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[FPTRUNC]](<4 x s16>), [[FPTRUNC1]](<4 x s16>)
+    ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = G_FCEIL %0
@@ -73,21 +55,10 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
-    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT]]
-    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL]](s32)
-    ; CHECK-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
-    ; CHECK-NEXT: [[FCEIL1:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT1]]
-    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL1]](s32)
-    ; CHECK-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
-    ; CHECK-NEXT: [[FCEIL2:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT2]]
-    ; CHECK-NEXT: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL2]](s32)
-    ; CHECK-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
-    ; CHECK-NEXT: [[FCEIL3:%[0-9]+]]:_(s32) = G_FCEIL [[FPEXT3]]
-    ; CHECK-NEXT: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FCEIL3]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
-    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
+    ; CHECK-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:_(<4 x s32>) = G_FCEIL [[FPEXT]]
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FCEIL]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[FPTRUNC]](<4 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = G_FCEIL %0

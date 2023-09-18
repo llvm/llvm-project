@@ -303,7 +303,6 @@ id test9(void) {
 // CHECK-NEXT: ret ptr
 }
 
-// rdar://problem/9814099
 // Test that we correctly initialize __block variables
 // when the initialization captures the variable.
 void test10a(void) {
@@ -334,10 +333,9 @@ void test10a(void) {
   // CHECK: ret void
 }
 
-// <rdar://problem/10402698>: do this copy and dispose with
-// objc_retainBlock/release instead of _Block_object_assign/destroy.
-// We can also use _Block_object_assign/destroy with
-// BLOCK_FIELD_IS_BLOCK as long as we don't pass BLOCK_BYREF_CALLER.
+// do this copy and dispose with objc_retainBlock/release instead of
+// _Block_object_assign/destroy. We can also use _Block_object_assign/destroy
+// with BLOCK_FIELD_IS_BLOCK as long as we don't pass BLOCK_BYREF_CALLER.
 
 // CHECK-LABEL: define internal void @__Block_byref_object_copy_.{{[0-9]+}}(ptr noundef %0, ptr noundef %1) #{{[0-9]+}} {
 // CHECK:      [[D0:%.*]] = load ptr, ptr {{%.*}}
@@ -389,7 +387,6 @@ void test10b(void) {
   // CHECK: ret void
 }
 
-// rdar://problem/10088932
 void test11_helper(id);
 void test11a(void) {
   int x;
@@ -418,7 +415,6 @@ void test11b(void) {
   // CHECK: ret void
 }
 
-// rdar://problem/9979150
 @interface Test12
 @property (strong) void(^ablock)(void);
 @property (nonatomic, strong) void(^nblock)(void);
@@ -438,7 +434,6 @@ void test11b(void) {
 // CHECK:    call void @objc_setProperty(ptr noundef {{%.*}}, ptr noundef {{%.*}}, i64 noundef {{%.*}}, ptr noundef {{%.*}}, i1 noundef zeroext false, i1 noundef zeroext true)
 @end
 
-// rdar://problem/10131784
 void test13(id x) {
   extern void test13_helper(id);
   extern void test13_use(void(^)(void));
@@ -490,19 +485,16 @@ void test13(id x) {
   // CHECK-NEXT: ret void
 }
 
-// <rdar://problem/10907510>
 void test14(void) {
   void (^const x[1])(void) = { ^{} };
 }
 
-// rdar://11149025
 // Don't make invalid ASTs and crash.
 void test15_helper(void (^block)(void), int x);
 void test15(int a) {
   test15_helper(^{ (void) a; }, ({ a; }));
 }
 
-// rdar://11016025
 void test16(void) {
   void (^BLKVAR)(void) = ^{ BLKVAR(); };
 
@@ -513,8 +505,6 @@ void test16(void) {
   // CHECK-NEXT:  store ptr null, ptr [[BLKVAR]], align 8
 }
 
-// rdar://12151005
-//
 // This is an intentional exception to our conservative jump-scope
 // checking for full-expressions containing block literals with
 // non-trivial cleanups: if the block literal appears in the operand
@@ -592,7 +582,6 @@ void testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers(id x, id y) {
 // CHECK-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
 // CHECK-UNOPT-LABEL: define internal void @__testUnsafeUnretainedLifetimeInCopyAndDestroyHelpers_block_invoke
 
-// rdar://13588325
 void test19_sink(void (^)(int));
 void test19(void (^b)(void)) {
 // CHECK-LABEL:    define{{.*}} void @test19(

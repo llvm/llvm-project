@@ -887,7 +887,7 @@ func.func @switch_wrong_number_of_weights(%arg0 : i32) {
 
 func.func @switch_case_type_mismatch(%arg0 : i64) {
   // expected-error@below {{expects case value type to match condition value type}}
-  "llvm.switch"(%arg0)[^bb1, ^bb2] <{case_operand_segments = array<i32: 0>, case_values = dense<42> : vector<1xi32>, odsOperandSegmentSizes = array<i32: 1, 0, 0>}> : (i64) -> ()
+  "llvm.switch"(%arg0)[^bb1, ^bb2] <{case_operand_segments = array<i32: 0>, case_values = dense<42> : vector<1xi32>, operandSegmentSizes = array<i32: 1, 0, 0>}> : (i64) -> ()
 ^bb1: // pred: ^bb0
   llvm.return
 ^bb2: // pred: ^bb0

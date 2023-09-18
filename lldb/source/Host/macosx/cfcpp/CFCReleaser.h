@@ -11,8 +11,6 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 
-#ifdef __cplusplus
-
 #include <cassert>
 
 // Templatized CF helper class that can own any CF pointer and will
@@ -105,5 +103,4 @@ private:
   T _ptr;
 };
 
-#endif // #ifdef __cplusplus
 #endif // LLDB_SOURCE_HOST_MACOSX_CFCPP_CFCRELEASER_H

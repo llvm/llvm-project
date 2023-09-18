@@ -121,10 +121,9 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 10000, 10000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT4:%.*]] = extractelement <4 x float> [[BROADCAST_SPLAT3]], i32 3
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT5:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]

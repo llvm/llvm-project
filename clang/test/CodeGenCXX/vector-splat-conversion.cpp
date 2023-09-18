@@ -4,7 +4,6 @@ typedef __attribute__((__ext_vector_type__(8))) float vector_float8;
 
 typedef vector_float8 float8;
 
-// rdar://20000762
 // CHECK-LABEL: define{{.*}} void @_Z23MandelbrotPolyCalcSIMD8v
 void MandelbrotPolyCalcSIMD8() {
   constexpr float8 v4 = 4.0;  // value to compare against abs(z)^2, to see if bounded

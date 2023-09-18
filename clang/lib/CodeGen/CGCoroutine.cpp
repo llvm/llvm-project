@@ -201,6 +201,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CGF.CurCoro.InSuspendBlock = true;
   auto *SuspendRet = CGF.EmitScalarExpr(S.getSuspendExpr());
   CGF.CurCoro.InSuspendBlock = false;
+
   if (SuspendRet != nullptr && SuspendRet->getType()->isIntegerTy(1)) {
     // Veto suspension if requested by bool returning await_suspend.
     BasicBlock *RealSuspendBlock =
@@ -402,8 +403,11 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
     llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
     // See if we have a funclet bundle to associate coro.end with. (WinEH)
     auto Bundles = getBundlesForCoroEnd(CGF);
-    auto *CoroEnd = CGF.Builder.CreateCall(
-        CoroEndFn, {NullPtr, CGF.Builder.getTrue()}, Bundles);
+    auto *CoroEnd =
+      CGF.Builder.CreateCall(CoroEndFn,
+                             {NullPtr, CGF.Builder.getTrue(),
+                              llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
+                             Bundles);
     if (Bundles.empty()) {
       // Otherwise, (landingpad model), create a conditional branch that leads
       // either to a cleanup block or a block with EH resume instruction.
@@ -594,7 +598,7 @@ static void emitBodyAndFallthrough(CodeGenFunction &CGF,
 }
 
 void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
-  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
+  auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
   auto &TI = CGM.getContext().getTargetInfo();
   unsigned NewAlign = TI.getNewAlign() / TI.getCharWidth();
 
@@ -754,7 +758,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   // Emit coro.end before getReturnStmt (and parameter destructors), since
   // resume and destroy parts of the coroutine should not include them.
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
-  Builder.CreateCall(CoroEnd, {NullPtr, Builder.getFalse()});
+  Builder.CreateCall(CoroEnd,
+                     {NullPtr, Builder.getFalse(),
+                      llvm::ConstantTokenNone::get(CoroEnd->getContext())});
 
   if (Stmt *Ret = S.getReturnStmt()) {
     // Since we already emitted the return value above, so we shouldn't
@@ -783,7 +789,7 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
     }
     CGM.Error(E->getBeginLoc(), "this builtin expect that __builtin_coro_begin "
                                 "has been used earlier in this function");
-    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getInt8PtrTy());
+    auto *NullPtr = llvm::ConstantPointerNull::get(Builder.getPtrTy());
     return RValue::get(NullPtr);
   }
   case llvm::Intrinsic::coro_size: {
@@ -823,6 +829,10 @@ RValue CodeGenFunction::EmitCoroutineIntrinsic(const CallExpr *E,
   }
   for (const Expr *Arg : E->arguments())
     Args.push_back(EmitScalarExpr(Arg));
+  // @llvm.coro.end takes a token parameter. Add token 'none' as the last
+  // argument.
+  if (IID == llvm::Intrinsic::coro_end)
+    Args.push_back(llvm::ConstantTokenNone::get(getLLVMContext()));
 
   llvm::Function *F = CGM.getIntrinsic(IID);
   llvm::CallInst *Call = Builder.CreateCall(F, Args);

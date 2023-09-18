@@ -374,14 +374,15 @@ using ElementalKernelGenerator = std::function<hlfir::Entity(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
 /// Generate an hlfir.elementalOp given call back to generate the element
 /// value at for each iteration.
-/// If exprType is specified, this will be the return type of the elemental op
-hlfir::ElementalOp genElementalOp(mlir::Location loc,
-                                  fir::FirOpBuilder &builder,
-                                  mlir::Type elementType, mlir::Value shape,
-                                  mlir::ValueRange typeParams,
-                                  const ElementalKernelGenerator &genKernel,
-                                  bool isUnordered = false,
-                                  mlir::Type exprType = mlir::Type{});
+/// If exprType is specified, this will be the return type of the elemental op.
+/// If exprType is not specified, the resulting expression type is computed
+/// from the given \p elementType and \p shape, and the type is polymorphic
+/// if \p polymorphicMold is present.
+hlfir::ElementalOp genElementalOp(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Type elementType,
+    mlir::Value shape, mlir::ValueRange typeParams,
+    const ElementalKernelGenerator &genKernel, bool isUnordered = false,
+    mlir::Value polymorphicMold = {}, mlir::Type exprType = mlir::Type{});
 
 /// Structure to describe a loop nest.
 struct LoopNest {

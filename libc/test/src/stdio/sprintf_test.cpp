@@ -13,6 +13,8 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
+// TODO: Add a comment here explaining the printf format string.
+
 // #include <stdio.h>
 // namespace __llvm_libc {
 // using ::sprintf;
@@ -392,8 +394,54 @@ TEST(LlvmLibcSPrintfTest, PointerConv) {
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, "0x1a2b3c4d");
 
+  if constexpr (sizeof(void *) > 4) {
+    written = __llvm_libc::sprintf(buff, "%p", 0x1a2b3c4d5e6f7081);
+    EXPECT_EQ(written, 18);
+    ASSERT_STREQ(buff, "0x1a2b3c4d5e6f7081");
+  }
+
   written = __llvm_libc::sprintf(buff, "%p", buff);
   EXPECT_GT(written, 0);
+
+  // Width tests:
+
+  written = __llvm_libc::sprintf(buff, "%20p", nullptr);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "           (nullptr)");
+
+  written = __llvm_libc::sprintf(buff, "%20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "          0x1a2b3c4d");
+
+  // Flag tests:
+
+  written = __llvm_libc::sprintf(buff, "%-20p", nullptr);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "(nullptr)           ");
+
+  written = __llvm_libc::sprintf(buff, "%-20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "0x1a2b3c4d          ");
+
+  // Using the 0 flag is technically undefined, but here we're following the
+  // convention of matching the behavior of %#x.
+  written = __llvm_libc::sprintf(buff, "%020p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 20);
+  ASSERT_STREQ(buff, "0x00000000001a2b3c4d");
+
+  // Precision tests:
+  // These are all undefined behavior. The precision option is undefined for %p.
+
+  // Precision specifies the number of characters for a string conversion.
+  written = __llvm_libc::sprintf(buff, "%.5p", nullptr);
+  EXPECT_EQ(written, 5);
+  ASSERT_STREQ(buff, "(null");
+
+  // Precision specifies the number of digits to be written for %x conversions,
+  // and the "0x" doesn't count as part of the digits.
+  written = __llvm_libc::sprintf(buff, "%.20p", 0x1a2b3c4d);
+  EXPECT_EQ(written, 22);
+  ASSERT_STREQ(buff, "0x0000000000001a2b3c4d");
 }
 
 TEST(LlvmLibcSPrintfTest, OctConv) {
@@ -865,12 +913,29 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
 
   written = __llvm_libc::sprintf(buff, "%+-#12.3a % 012.3a", 0.1256, 1256.0);
   ASSERT_STREQ_LEN(written, buff, "+0x1.014p-3   0x1.3a0p+10");
+
+  // These tests check that the padding is properly calculated based on the
+  // min_width field. Specifically, they check that the extra zeroes added by
+  // the high precision are accounted for correctly.
+  written = __llvm_libc::sprintf(buff, "%50.50a", 0x1.0p0);
+  ASSERT_STREQ_LEN(written, buff,
+                   "0x1.00000000000000000000000000000000000000000000000000p+0");
+
+  // The difference with this test is that the formatted number is exactly 57
+  // characters, so padding to 58 adds a space.
+  written = __llvm_libc::sprintf(buff, "%58.50a", 0x1.0p0);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      " 0x1.00000000000000000000000000000000000000000000000000p+0");
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   ForceRoundingMode r(RoundingMode::Nearest);
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
+
+  char big_buff[10000]; // Used for long doubles and other extremely wide
+                        // numbers.
 
   written = __llvm_libc::sprintf(buff, "%f", 1.0);
   ASSERT_STREQ_LEN(written, buff, "1.000000");
@@ -943,8 +1008,6 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   ASSERT_STREQ_LEN(written, buff,
                    "99999999999999999996693535322073426194986990198284960792713"
                    "91541752018669482644324418977840117055488.000000");
-
-  char big_buff[10000];
 
   written = __llvm_libc::sprintf(big_buff, "%Lf", 1e1000L);
   ASSERT_STREQ_LEN(
@@ -1266,6 +1329,55 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   written = __llvm_libc::sprintf(buff, "%.0f", 0x1.1000000000006p+3);
   ASSERT_STREQ_LEN(written, buff, "9");
+
+  // Most of these tests are checking rounding behavior when the precision is
+  // set. As an example, %.9f has a precision of 9, meaning it should be rounded
+  // to 9 digits after the decimal point. In this case, that means that it
+  // should be rounded up. Many of these tests have precisions divisible by 9
+  // since when printing the floating point numbers are broken up into "blocks"
+  // of 9 digits. They often also have a 5 after the end of what's printed,
+  // since in round to nearest mode, that requires checking additional digits.
+  written = __llvm_libc::sprintf(buff, "%.9f", 1.9999999999999514);
+  ASSERT_STREQ_LEN(written, buff, "2.000000000");
+
+  // The number continues after the literal because floating point numbers can't
+  // represent every value. The printed value is the closest value a double can
+  // represent, rounded to the requested precision.
+  written = __llvm_libc::sprintf(buff, "%.238f", 1.131959884853339E-72);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000001"
+      "131959884853339045938639911360973972585316399767392273697826861241937664"
+      "824105639342441431495119762431744054912109728706985341609159156917030486"
+      "5110665559768676757812");
+
+  written = __llvm_libc::sprintf(buff, "%.36f", 9.9e-77);
+  ASSERT_STREQ_LEN(written, buff, "0.000000000000000000000000000000000000");
+
+  written = __llvm_libc::sprintf(big_buff, "%.1071f", 2.0226568751604562E-314);
+  ASSERT_STREQ_LEN(
+      written, big_buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000020226568751604561683387695750739190248658016786"
+      "876938365740768295004457513021760887468117675879956193821375945376632621"
+      "367998639317487303530427946024002091961988296562516210434394107910027236"
+      "308233439098296717697919471698168200340836487924061502604112643734560622"
+      "258525943451473162532620033398739382796482175564084902819878893430369431"
+      "907237673154867595954110791891883281880339550955455702452422857027182100"
+      "606009588295886640782228837851739241290179512817803196347460636150182981"
+      "085084829941917048152725177119574542042352896161225179181967347829576272"
+      "242480201291872969114441104973910102402751449901108484914924879541248714"
+      "939096548775588293353689592872854495101242645279589976452453829724479805"
+      "750016448075109469332839157162950982637994457036256790161132812");
+
+  // If no precision is specified it defaults to 6 for %f.
+  written = __llvm_libc::sprintf(buff, "%f", 2325885.4901960781);
+  ASSERT_STREQ_LEN(written, buff, "2325885.490196");
 
   // Subnormal Precision Tests
 
@@ -1631,6 +1743,14 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
 
   // Length Modifier Tests.
 
+#if defined(SPECIAL_X86_LONG_DOUBLE)
+  written = __llvm_libc::sprintf(buff, "%.9Le", 1000000000500000000.1L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000001e+18");
+
+  written = __llvm_libc::sprintf(buff, "%.9Le", 1000000000500000000.0L);
+  ASSERT_STREQ_LEN(written, buff, "1.000000000e+18");
+#endif
+
   // TODO: Fix long doubles (needs bigger table or alternate algorithm.)
   // Currently the table values are generated, which is very slow.
   /*
@@ -1842,6 +1962,45 @@ TEST_F(LlvmLibcSPrintfTest, FloatExponentConv) {
 
   written = __llvm_libc::sprintf(buff, "%.5e", 1.008e3);
   ASSERT_STREQ_LEN(written, buff, "1.00800e+03");
+
+  // These tests also focus on rounding. Almost all of them have a 5 right after
+  // the printed string (e.g. 9.5 with precision 0 prints 0 digits after the
+  // decimal point). This is again because rounding a number with a 5 after the
+  // printed section means that more digits have to be checked to determine if
+  // this should be rounded up (if there are non-zero digits after the 5) or to
+  // even (if the 5 is the last non-zero digit). Additionally, the algorithm for
+  // checking if a number is all 0s after the decimal point may not work since
+  // the decimal point moves in this representation.
+  written = __llvm_libc::sprintf(buff, "%.0e", 2.5812229360061737E+200);
+  ASSERT_STREQ_LEN(written, buff, "3e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.1e", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9.1e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.0e", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9e+200");
+
+  written = __llvm_libc::sprintf(buff, "%.166e", 1.131959884853339E-72);
+  ASSERT_STREQ_LEN(written, buff,
+                   "1."
+                   "13195988485333904593863991136097397258531639976739227369782"
+                   "68612419376648241056393424414314951197624317440549121097287"
+                   "069853416091591569170304865110665559768676757812e-72");
+
+  written = __llvm_libc::sprintf(buff, "%.0e", 9.5);
+  ASSERT_STREQ_LEN(written, buff, "1e+01");
+
+  written = __llvm_libc::sprintf(buff, "%.10e", 1.9999999999890936);
+  ASSERT_STREQ_LEN(written, buff, "2.0000000000e+00");
+
+  written = __llvm_libc::sprintf(buff, "%.1e", 745362143563.03894);
+  ASSERT_STREQ_LEN(written, buff, "7.5e+11");
+
+  written = __llvm_libc::sprintf(buff, "%.0e", 45181042688.0);
+  ASSERT_STREQ_LEN(written, buff, "5e+10");
+
+  written = __llvm_libc::sprintf(buff, "%.35e", 1.3752441369139243);
+  ASSERT_STREQ_LEN(written, buff, "1.37524413691392433101157166674965993e+00");
 
   // Subnormal Precision Tests
 
@@ -2447,8 +2606,25 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   written = __llvm_libc::sprintf(buff, "%.15g", 22.25);
   ASSERT_STREQ_LEN(written, buff, "22.25");
 
-  // Subnormal Precision Tests
+  // These tests also focus on rounding, but only in how it relates to the base
+  // 10 exponent. The %g conversion selects between being a %f or %e conversion
+  // based on what the exponent would be if it was %e. If we call the precision
+  // P (equal to 6 if the precision is not set, 0 if the provided precision is
+  // 0, and provided precision - 1 otherwise) and the exponent X, then the style
+  // is %f with an effective precision of P - X + 1 if P > X >= -4, else the
+  // style is %e with effective precision P - 1. Additionally, it attempts to
+  // trim zeros that would be displayed after the decimal point.
+  written = __llvm_libc::sprintf(buff, "%.1g", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9e+200");
 
+  written = __llvm_libc::sprintf(buff, "%.2g", 9.059E+200);
+  ASSERT_STREQ_LEN(written, buff, "9.1e+200");
+
+  // For this test, P = 0 and X = 1, so P > X >= -4 is false, giving a %e style.
+  written = __llvm_libc::sprintf(buff, "%.0g", 9.5);
+  ASSERT_STREQ_LEN(written, buff, "1e+01");
+
+  // Subnormal Precision Tests
   written = __llvm_libc::sprintf(buff, "%.310g", 0x1.0p-1022);
   ASSERT_STREQ_LEN(
       written, buff,

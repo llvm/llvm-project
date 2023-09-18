@@ -45,6 +45,19 @@ define <vscale x 1 x i8> @vrem_vi_nxv1i8_0(<vscale x 1 x i8> %va) {
   ret <vscale x 1 x i8> %vc
 }
 
+define <vscale x 1 x i8> @vrem_vv_nxv1i8_sext_twice(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb) {
+; CHECK-LABEL: vrem_vv_nxv1i8_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 1 x i8> %va to <vscale x 1 x i16>
+  %sext_vb = sext <vscale x 1 x i8> %vb to <vscale x 1 x i16>
+  %vc_ext = srem <vscale x 1 x i16> %sext_va, %sext_vb
+  %vc = trunc <vscale x 1 x i16> %vc_ext to <vscale x 1 x i8>
+  ret <vscale x 1 x i8> %vc
+}
+
 define <vscale x 2 x i8> @vrem_vv_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb) {
 ; CHECK-LABEL: vrem_vv_nxv2i8:
 ; CHECK:       # %bb.0:
@@ -83,6 +96,19 @@ define <vscale x 2 x i8> @vrem_vi_nxv2i8_0(<vscale x 2 x i8> %va) {
   %head = insertelement <vscale x 2 x i8> poison, i8 -7, i32 0
   %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
   %vc = srem <vscale x 2 x i8> %va, %splat
+  ret <vscale x 2 x i8> %vc
+}
+
+define <vscale x 2 x i8> @vrem_vv_nxv2i8_sext_twice(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb) {
+; CHECK-LABEL: vrem_vv_nxv2i8_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 2 x i8> %va to <vscale x 2 x i16>
+  %sext_vb = sext <vscale x 2 x i8> %vb to <vscale x 2 x i16>
+  %vc_ext = srem <vscale x 2 x i16> %sext_va, %sext_vb
+  %vc = trunc <vscale x 2 x i16> %vc_ext to <vscale x 2 x i8>
   ret <vscale x 2 x i8> %vc
 }
 
@@ -127,6 +153,19 @@ define <vscale x 4 x i8> @vrem_vi_nxv4i8_0(<vscale x 4 x i8> %va) {
   ret <vscale x 4 x i8> %vc
 }
 
+define <vscale x 4 x i8> @vrem_vv_nxv4i8_sext_twice(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb) {
+; CHECK-LABEL: vrem_vv_nxv4i8_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 4 x i8> %va to <vscale x 4 x i16>
+  %sext_vb = sext <vscale x 4 x i8> %vb to <vscale x 4 x i16>
+  %vc_ext = srem <vscale x 4 x i16> %sext_va, %sext_vb
+  %vc = trunc <vscale x 4 x i16> %vc_ext to <vscale x 4 x i8>
+  ret <vscale x 4 x i8> %vc
+}
+
 define <vscale x 8 x i8> @vrem_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb) {
 ; CHECK-LABEL: vrem_vv_nxv8i8:
 ; CHECK:       # %bb.0:
@@ -165,6 +204,19 @@ define <vscale x 8 x i8> @vrem_vi_nxv8i8_0(<vscale x 8 x i8> %va) {
   %head = insertelement <vscale x 8 x i8> poison, i8 -7, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
   %vc = srem <vscale x 8 x i8> %va, %splat
+  ret <vscale x 8 x i8> %vc
+}
+
+define <vscale x 8 x i8> @vrem_vv_nxv8i8_sext_twice(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb) {
+; CHECK-LABEL: vrem_vv_nxv8i8_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 8 x i8> %va to <vscale x 8 x i16>
+  %sext_vb = sext <vscale x 8 x i8> %vb to <vscale x 8 x i16>
+  %vc_ext = srem <vscale x 8 x i16> %sext_va, %sext_vb
+  %vc = trunc <vscale x 8 x i16> %vc_ext to <vscale x 8 x i8>
   ret <vscale x 8 x i8> %vc
 }
 
@@ -209,6 +261,19 @@ define <vscale x 16 x i8> @vrem_vi_nxv16i8_0(<vscale x 16 x i8> %va) {
   ret <vscale x 16 x i8> %vc
 }
 
+define <vscale x 16 x i8> @vrem_vv_nxv16i8_sext_twice(<vscale x 16 x i8> %va, <vscale x 16 x i8> %vb) {
+; CHECK-LABEL: vrem_vv_nxv16i8_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v10
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 16 x i8> %va to <vscale x 16 x i16>
+  %sext_vb = sext <vscale x 16 x i8> %vb to <vscale x 16 x i16>
+  %vc_ext = srem <vscale x 16 x i16> %sext_va, %sext_vb
+  %vc = trunc <vscale x 16 x i16> %vc_ext to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %vc
+}
+
 define <vscale x 32 x i8> @vrem_vv_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %vb) {
 ; CHECK-LABEL: vrem_vv_nxv32i8:
 ; CHECK:       # %bb.0:
@@ -247,6 +312,19 @@ define <vscale x 32 x i8> @vrem_vi_nxv32i8_0(<vscale x 32 x i8> %va) {
   %head = insertelement <vscale x 32 x i8> poison, i8 -7, i32 0
   %splat = shufflevector <vscale x 32 x i8> %head, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
   %vc = srem <vscale x 32 x i8> %va, %splat
+  ret <vscale x 32 x i8> %vc
+}
+
+define <vscale x 32 x i8> @vrem_vv_nxv32i8_sext_twice(<vscale x 32 x i8> %va, <vscale x 32 x i8> %vb) {
+; CHECK-LABEL: vrem_vv_nxv32i8_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 32 x i8> %va to <vscale x 32 x i16>
+  %sext_vb = sext <vscale x 32 x i8> %vb to <vscale x 32 x i16>
+  %vc_ext = srem <vscale x 32 x i16> %sext_va, %sext_vb
+  %vc = trunc <vscale x 32 x i16> %vc_ext to <vscale x 32 x i8>
   ret <vscale x 32 x i8> %vc
 }
 
@@ -345,6 +423,19 @@ define <vscale x 1 x i16> @vrem_vi_nxv1i16_0(<vscale x 1 x i16> %va) {
   ret <vscale x 1 x i16> %vc
 }
 
+define <vscale x 1 x i16> @vrem_vv_nxv1i16_sext_twice(<vscale x 1 x i16> %va, <vscale x 1 x i16> %vb) {
+; CHECK-LABEL: vrem_vv_nxv1i16_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 1 x i16> %va to <vscale x 1 x i32>
+  %sext_vb = sext <vscale x 1 x i16> %vb to <vscale x 1 x i32>
+  %vc_ext = srem <vscale x 1 x i32> %sext_va, %sext_vb
+  %vc = trunc <vscale x 1 x i32> %vc_ext to <vscale x 1 x i16>
+  ret <vscale x 1 x i16> %vc
+}
+
 define <vscale x 2 x i16> @vrem_vv_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb) {
 ; CHECK-LABEL: vrem_vv_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -396,6 +487,19 @@ define <vscale x 2 x i16> @vrem_vi_nxv2i16_0(<vscale x 2 x i16> %va) {
   %head = insertelement <vscale x 2 x i16> poison, i16 -7, i32 0
   %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
   %vc = srem <vscale x 2 x i16> %va, %splat
+  ret <vscale x 2 x i16> %vc
+}
+
+define <vscale x 2 x i16> @vrem_vv_nxv2i16_sext_twice(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb) {
+; CHECK-LABEL: vrem_vv_nxv2i16_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 2 x i16> %va to <vscale x 2 x i32>
+  %sext_vb = sext <vscale x 2 x i16> %vb to <vscale x 2 x i32>
+  %vc_ext = srem <vscale x 2 x i32> %sext_va, %sext_vb
+  %vc = trunc <vscale x 2 x i32> %vc_ext to <vscale x 2 x i16>
   ret <vscale x 2 x i16> %vc
 }
 
@@ -453,6 +557,19 @@ define <vscale x 4 x i16> @vrem_vi_nxv4i16_0(<vscale x 4 x i16> %va) {
   ret <vscale x 4 x i16> %vc
 }
 
+define <vscale x 4 x i16> @vrem_vv_nxv4i16_sext_twice(<vscale x 4 x i16> %va, <vscale x 4 x i16> %vb) {
+; CHECK-LABEL: vrem_vv_nxv4i16_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 4 x i16> %va to <vscale x 4 x i32>
+  %sext_vb = sext <vscale x 4 x i16> %vb to <vscale x 4 x i32>
+  %vc_ext = srem <vscale x 4 x i32> %sext_va, %sext_vb
+  %vc = trunc <vscale x 4 x i32> %vc_ext to <vscale x 4 x i16>
+  ret <vscale x 4 x i16> %vc
+}
+
 define <vscale x 8 x i16> @vrem_vv_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb) {
 ; CHECK-LABEL: vrem_vv_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -507,6 +624,19 @@ define <vscale x 8 x i16> @vrem_vi_nxv8i16_0(<vscale x 8 x i16> %va) {
   ret <vscale x 8 x i16> %vc
 }
 
+define <vscale x 8 x i16> @vrem_vv_nxv8i16_sext_twice(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb) {
+; CHECK-LABEL: vrem_vv_nxv8i16_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v10
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 8 x i16> %va to <vscale x 8 x i32>
+  %sext_vb = sext <vscale x 8 x i16> %vb to <vscale x 8 x i32>
+  %vc_ext = srem <vscale x 8 x i32> %sext_va, %sext_vb
+  %vc = trunc <vscale x 8 x i32> %vc_ext to <vscale x 8 x i16>
+  ret <vscale x 8 x i16> %vc
+}
+
 define <vscale x 16 x i16> @vrem_vv_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %vb) {
 ; CHECK-LABEL: vrem_vv_nxv16i16:
 ; CHECK:       # %bb.0:
@@ -558,6 +688,19 @@ define <vscale x 16 x i16> @vrem_vi_nxv16i16_0(<vscale x 16 x i16> %va) {
   %head = insertelement <vscale x 16 x i16> poison, i16 -7, i32 0
   %splat = shufflevector <vscale x 16 x i16> %head, <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
   %vc = srem <vscale x 16 x i16> %va, %splat
+  ret <vscale x 16 x i16> %vc
+}
+
+define <vscale x 16 x i16> @vrem_vv_nxv16i16_sext_twice(<vscale x 16 x i16> %va, <vscale x 16 x i16> %vb) {
+; CHECK-LABEL: vrem_vv_nxv16i16_sext_twice:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vrem.vv v8, v8, v12
+; CHECK-NEXT:    ret
+  %sext_va = sext <vscale x 16 x i16> %va to <vscale x 16 x i32>
+  %sext_vb = sext <vscale x 16 x i16> %vb to <vscale x 16 x i32>
+  %vc_ext = srem <vscale x 16 x i32> %sext_va, %sext_vb
+  %vc = trunc <vscale x 16 x i32> %vc_ext to <vscale x 16 x i16>
   ret <vscale x 16 x i16> %vc
 }
 
@@ -963,8 +1106,8 @@ define <vscale x 1 x i64> @vrem_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ;
 ; RV64-V-LABEL: vrem_vi_nxv1i64_0:
 ; RV64-V:       # %bb.0:
-; RV64-V-NEXT:    lui a0, %hi(.LCPI56_0)
-; RV64-V-NEXT:    ld a0, %lo(.LCPI56_0)(a0)
+; RV64-V-NEXT:    lui a0, %hi(.LCPI67_0)
+; RV64-V-NEXT:    ld a0, %lo(.LCPI67_0)(a0)
 ; RV64-V-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-V-NEXT:    vmulh.vx v9, v8, a0
 ; RV64-V-NEXT:    li a0, 63
@@ -1048,8 +1191,8 @@ define <vscale x 2 x i64> @vrem_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ;
 ; RV64-V-LABEL: vrem_vi_nxv2i64_0:
 ; RV64-V:       # %bb.0:
-; RV64-V-NEXT:    lui a0, %hi(.LCPI59_0)
-; RV64-V-NEXT:    ld a0, %lo(.LCPI59_0)(a0)
+; RV64-V-NEXT:    lui a0, %hi(.LCPI70_0)
+; RV64-V-NEXT:    ld a0, %lo(.LCPI70_0)(a0)
 ; RV64-V-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV64-V-NEXT:    vmulh.vx v10, v8, a0
 ; RV64-V-NEXT:    li a0, 63
@@ -1133,8 +1276,8 @@ define <vscale x 4 x i64> @vrem_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ;
 ; RV64-V-LABEL: vrem_vi_nxv4i64_0:
 ; RV64-V:       # %bb.0:
-; RV64-V-NEXT:    lui a0, %hi(.LCPI62_0)
-; RV64-V-NEXT:    ld a0, %lo(.LCPI62_0)(a0)
+; RV64-V-NEXT:    lui a0, %hi(.LCPI73_0)
+; RV64-V-NEXT:    ld a0, %lo(.LCPI73_0)(a0)
 ; RV64-V-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV64-V-NEXT:    vmulh.vx v12, v8, a0
 ; RV64-V-NEXT:    li a0, 63
@@ -1218,8 +1361,8 @@ define <vscale x 8 x i64> @vrem_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ;
 ; RV64-V-LABEL: vrem_vi_nxv8i64_0:
 ; RV64-V:       # %bb.0:
-; RV64-V-NEXT:    lui a0, %hi(.LCPI65_0)
-; RV64-V-NEXT:    ld a0, %lo(.LCPI65_0)(a0)
+; RV64-V-NEXT:    lui a0, %hi(.LCPI76_0)
+; RV64-V-NEXT:    ld a0, %lo(.LCPI76_0)(a0)
 ; RV64-V-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-V-NEXT:    vmulh.vx v16, v8, a0
 ; RV64-V-NEXT:    li a0, 63

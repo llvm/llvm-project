@@ -796,8 +796,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     if (ArrayType *ATy = dyn_cast<ArrayType>(GV.getValueType())) {
       StructType *STy = dyn_cast<StructType>(ATy->getElementType());
       PointerType *FuncPtrTy =
-          FunctionType::get(Type::getVoidTy(Context), false)->
-          getPointerTo(DL.getProgramAddressSpace());
+          PointerType::get(Context, DL.getProgramAddressSpace());
       Check(STy && (STy->getNumElements() == 2 || STy->getNumElements() == 3) &&
                 STy->getTypeAtIndex(0u)->isIntegerTy(32) &&
                 STy->getTypeAtIndex(1) == FuncPtrTy,
@@ -851,17 +850,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   }
 
   // Scalable vectors cannot be global variables, since we don't know
-  // the runtime size. If the global is an array containing scalable vectors,
-  // that will be caught by the isValidElementType methods in StructType or
-  // ArrayType instead.
-  Check(!isa<ScalableVectorType>(GV.getValueType()),
-        "Globals cannot contain scalable vectors", &GV);
-
-  if (auto *STy = dyn_cast<StructType>(GV.getValueType())) {
-    SmallPtrSet<Type *, 4> Visited;
-    Check(!STy->containsScalableVectorType(&Visited),
-          "Globals cannot contain scalable vectors", &GV);
-  }
+  // the runtime size.
+  Check(!GV.getValueType()->isScalableTy(),
+        "Globals cannot contain scalable types", &GV);
 
   // Check if it's a target extension type that disallows being used as a
   // global.
@@ -2031,6 +2022,17 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
               "' does not apply to function return values",
           V);
 
+  unsigned MaxParameterWidth = 0;
+  auto GetMaxParameterWidth = [&MaxParameterWidth](Type *Ty) {
+    if (Ty->isVectorTy()) {
+      if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+        unsigned Size = VT->getPrimitiveSizeInBits().getFixedValue();
+        if (Size > MaxParameterWidth)
+          MaxParameterWidth = Size;
+      }
+    }
+  };
+  GetMaxParameterWidth(FT->getReturnType());
   verifyParameterAttrs(RetAttrs, FT->getReturnType(), V);
 
   // Verify parameter attributes.
@@ -2049,6 +2051,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     }
 
     verifyParameterAttrs(ArgAttrs, Ty, V);
+    GetMaxParameterWidth(Ty);
 
     if (ArgAttrs.hasAttribute(Attribute::Nest)) {
       Check(!SawNest, "More than one parameter has attribute nest!", V);
@@ -2202,6 +2205,16 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     StringRef FP = Attrs.getFnAttr("frame-pointer").getValueAsString();
     if (FP != "all" && FP != "non-leaf" && FP != "none")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
+  }
+
+  // Check EVEX512 feature.
+  if (MaxParameterWidth >= 512 && Attrs.hasFnAttr("target-features")) {
+    Triple T(M.getTargetTriple());
+    if (T.isX86()) {
+      StringRef TF = Attrs.getFnAttr("target-features").getValueAsString();
+      Check(!TF.contains("+avx512f") || !TF.contains("-evex512"),
+            "512-bit vector arguments require 'evex512' for AVX512", V);
+    }
   }
 
   checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
@@ -5831,7 +5844,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
 
-    // If this extraction is not the 'mixed' case where a fixed vector is is
+    // If this extraction is not the 'mixed' case where a fixed vector is
     // extracted from a scalable vector, ensure that the extraction does not
     // overrun the parent vector.
     if (VecEC.isScalable() == ResultEC.isScalable()) {
@@ -5920,26 +5933,18 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                   &Call);
       break;
     }
+
+    Check(Call.paramHasAttr(2, Attribute::InReg),
+          "SGPR arguments must have the `inreg` attribute", &Call);
+    Check(!Call.paramHasAttr(3, Attribute::InReg),
+          "VGPR arguments must not have the `inreg` attribute", &Call);
     break;
   }
   case Intrinsic::experimental_convergence_entry:
-    Check(Call.getFunction()->isConvergent(),
-          "Entry intrinsic can occur only in a convergent function.", &Call);
-    Check(Call.getParent()->isEntryBlock(),
-          "Entry intrinsic must occur in the entry block.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Entry intrinsic must occur at the start of the basic block.", &Call);
     LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
-    Check(!Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Entry or anchor intrinsic must not have a convergencectrl bundle.",
-          &Call);
     break;
   case Intrinsic::experimental_convergence_loop:
-    Check(Call.getOperandBundle(LLVMContext::OB_convergencectrl),
-          "Loop intrinsic must have a convergencectrl bundle.", &Call);
-    Check(Call.getParent()->getFirstNonPHI() == &Call,
-          "Loop intrinsic must occur at the start of the basic block.", &Call);
     break;
   };
 
@@ -6086,6 +6091,11 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
     auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
     Check(CmpInst::isIntPredicate(Pred),
           "invalid predicate for VP integer comparison intrinsic", &VPI);
+  }
+  if (VPI.getIntrinsicID() == Intrinsic::vp_is_fpclass) {
+    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
+    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
+          "unsupported bits for llvm.vp.is.fpclass test mask");
   }
 }
 
@@ -6288,6 +6298,20 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
   verifyFnArgs(DII);
+
+  if (auto *Declare = dyn_cast<DbgDeclareInst>(&DII)) {
+    if (auto *Alloca = dyn_cast_or_null<AllocaInst>(Declare->getAddress())) {
+      DIExpression *Expr = Declare->getExpression();
+      std::optional<uint64_t> FragSize = Declare->getFragmentSizeInBits();
+      std::optional<TypeSize> AllocSize = Alloca->getAllocationSizeInBits(DL);
+      if (FragSize && AllocSize && !AllocSize->isScalable() &&
+          !Expr->isComplex()) {
+        CheckDI(*FragSize <= AllocSize->getFixedValue(),
+                "llvm.dbg.declare has larger fragment size than alloca size ",
+                &DII);
+      }
+    }
+  }
 }
 
 void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {
@@ -6399,12 +6423,16 @@ void Verifier::verifyNotEntryValue(const DbgVariableIntrinsic &I) {
   if (!E || !E->isValid())
     return;
 
-  // We allow EntryValues for swift async arguments, as they have an
-  // ABI-guarantee to be turned into a specific register.
-  if (isa<ValueAsMetadata>(I.getRawLocation()))
-    if (auto *ArgLoc = dyn_cast_or_null<Argument>(I.getVariableLocationOp(0));
+  if (isa<ValueAsMetadata>(I.getRawLocation())) {
+    Value *VarValue = I.getVariableLocationOp(0);
+    if (isa<UndefValue>(VarValue) || isa<PoisonValue>(VarValue))
+      return;
+    // We allow EntryValues for swift async arguments, as they have an
+    // ABI-guarantee to be turned into a specific register.
+    if (auto *ArgLoc = dyn_cast_or_null<Argument>(VarValue);
         ArgLoc && ArgLoc->hasAttribute(Attribute::SwiftAsync))
       return;
+  }
 
   CheckDI(!E->isEntryValue(),
           "Entry values are only allowed in MIR unless they target a "

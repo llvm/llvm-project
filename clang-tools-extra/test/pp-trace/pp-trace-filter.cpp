@@ -14,4 +14,4 @@ int i = M;
 // CHECK-NOT:  - Callback: EndOfMainFile
 // CHECK:      ...
 
-// INVALID: error: invalid glob pattern: [
+// INVALID: error: invalid glob pattern, unmatched '['

@@ -89,10 +89,6 @@ public:
   /// Flag for specifying if the compilation is done for an accelerator.
   std::optional<bool> IsGPU;
 
-  /// Flag for specifying weather a requires unified_shared_memory
-  /// directive is present or not.
-  std::optional<bool> HasRequiresUnifiedSharedMemory;
-
   // Flag for specifying if offloading is mandatory.
   std::optional<bool> OpenMPOffloadMandatory;
 
@@ -101,13 +97,13 @@ public:
   /// Separator used between all of the rest consecutive parts of s name
   std::optional<StringRef> Separator;
 
-  OpenMPIRBuilderConfig() {}
+  OpenMPIRBuilderConfig();
   OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
+                        bool OpenMPOffloadMandatory,
+                        bool HasRequiresReverseOffload,
+                        bool HasRequiresUnifiedAddress,
                         bool HasRequiresUnifiedSharedMemory,
-                        bool OpenMPOffloadMandatory)
-      : IsTargetDevice(IsTargetDevice), IsGPU(IsGPU),
-        HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory),
-        OpenMPOffloadMandatory(OpenMPOffloadMandatory) {}
+                        bool HasRequiresDynamicAllocators);
 
   // Getters functions that assert if the required values are not present.
   bool isTargetDevice() const {
@@ -120,17 +116,22 @@ public:
     return *IsGPU;
   }
 
-  bool hasRequiresUnifiedSharedMemory() const {
-    assert(HasRequiresUnifiedSharedMemory.has_value() &&
-           "HasUnifiedSharedMemory is not set");
-    return *HasRequiresUnifiedSharedMemory;
-  }
-
   bool openMPOffloadMandatory() const {
     assert(OpenMPOffloadMandatory.has_value() &&
            "OpenMPOffloadMandatory is not set");
     return *OpenMPOffloadMandatory;
   }
+
+  bool hasRequiresFlags() const { return RequiresFlags; }
+  bool hasRequiresReverseOffload() const;
+  bool hasRequiresUnifiedAddress() const;
+  bool hasRequiresUnifiedSharedMemory() const;
+  bool hasRequiresDynamicAllocators() const;
+
+  /// Returns requires directive clauses as flags compatible with those expected
+  /// by libomptarget.
+  int64_t getRequiresFlags() const;
+
   // Returns the FirstSeparator if set, otherwise use the default separator
   // depending on isGPU
   StringRef firstSeparator() const {
@@ -153,11 +154,18 @@ public:
 
   void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
   void setIsGPU(bool Value) { IsGPU = Value; }
-  void setHasRequiresUnifiedSharedMemory(bool Value) {
-    HasRequiresUnifiedSharedMemory = Value;
-  }
+  void setOpenMPOffloadMandatory(bool Value) { OpenMPOffloadMandatory = Value; }
   void setFirstSeparator(StringRef FS) { FirstSeparator = FS; }
   void setSeparator(StringRef S) { Separator = S; }
+
+  void setHasRequiresReverseOffload(bool Value);
+  void setHasRequiresUnifiedAddress(bool Value);
+  void setHasRequiresUnifiedSharedMemory(bool Value);
+  void setHasRequiresDynamicAllocators(bool Value);
+
+private:
+  /// Flags for specifying which requires directive clauses are present.
+  int64_t RequiresFlags;
 };
 
 /// Data structure to contain the information needed to uniquely identify
@@ -326,6 +334,8 @@ public:
     OMPTargetGlobalVarEntryEnter = 0x2,
     /// Mark the entry as having no declare target entry kind.
     OMPTargetGlobalVarEntryNone = 0x3,
+    /// Mark the entry as a declare target indirect global.
+    OMPTargetGlobalVarEntryIndirect = 0x8,
   };
 
   /// Kind of device clause for declare target variables
@@ -349,6 +359,7 @@ public:
     /// Type of the global variable.
     int64_t VarSize;
     GlobalValue::LinkageTypes Linkage;
+    const std::string VarName;
 
   public:
     OffloadEntryInfoDeviceGlobalVar()
@@ -359,13 +370,15 @@ public:
     explicit OffloadEntryInfoDeviceGlobalVar(unsigned Order, Constant *Addr,
                                              int64_t VarSize,
                                              OMPTargetGlobalVarEntryKind Flags,
-                                             GlobalValue::LinkageTypes Linkage)
+                                             GlobalValue::LinkageTypes Linkage,
+                                             const std::string &VarName)
         : OffloadEntryInfo(OffloadingEntryInfoDeviceGlobalVar, Order, Flags),
-          VarSize(VarSize), Linkage(Linkage) {
+          VarSize(VarSize), Linkage(Linkage), VarName(VarName) {
       setAddress(Addr);
     }
 
     int64_t getVarSize() const { return VarSize; }
+    StringRef getVarName() const { return VarName; }
     void setVarSize(int64_t Size) { VarSize = Size; }
     GlobalValue::LinkageTypes getLinkage() const { return Linkage; }
     void setLinkage(GlobalValue::LinkageTypes LT) { Linkage = LT; }
@@ -437,14 +450,9 @@ public:
 
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
-  /// before any other method and only once! This internal state includes
-  /// Types used in the OpenMPIRBuilder generated from OMPKinds.def as well
-  /// as loading offload metadata for device from the OpenMP host IR file
-  /// passed in as the HostFilePath argument.
-  /// \param HostFilePath The path to the host IR file, used to load in
-  /// offload metadata for the device, allowing host and device to
-  /// maintain the same metadata mapping.
-  void initialize(StringRef HostFilePath = {});
+  /// before any other method and only once! This internal state includes types
+  /// used in the OpenMPIRBuilder generated from OMPKinds.def.
+  void initialize();
 
   void setConfig(OpenMPIRBuilderConfig C) { Config = C; }
 
@@ -1154,8 +1162,8 @@ public:
                                 InsertPointTy AllocaIP,
                                 BodyGenCallbackTy BodyGenCB);
 
-
-  using FileIdentifierInfoCallbackTy = std::function<std::tuple<std::string, uint64_t>()>;
+  using FileIdentifierInfoCallbackTy =
+      std::function<std::tuple<std::string, uint64_t>()>;
 
   /// Creates a unique info for a target entry when provided a filename and
   /// line number from.
@@ -1734,7 +1742,8 @@ public:
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
   void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
-                          int32_t Flags, GlobalValue::LinkageTypes);
+                          int32_t Flags, GlobalValue::LinkageTypes,
+                          StringRef Name = "");
 
   /// The kind of errors that can occur when emitting the offload entries and
   /// metadata.
@@ -2088,6 +2097,12 @@ public:
   /// duplicating the body code.
   enum BodyGenTy { Priv, DupNoPriv, NoPriv };
 
+  /// Callback type for creating the map infos for the kernel parameters.
+  /// \param CodeGenIP is the insertion point where code should be generated,
+  ///        if any.
+  using GenMapInfoCallbackTy =
+      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
+
   /// Generator for '#omp target data'
   ///
   /// \param Loc The location where the target data construct was encountered.
@@ -2108,8 +2123,7 @@ public:
   OpenMPIRBuilder::InsertPointTy createTargetData(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
-      TargetDataInfo &Info,
-      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)> GenMapInfoCB,
+      TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
       omp::RuntimeFunction *MapperFunc = nullptr,
       function_ref<InsertPointTy(InsertPointTy CodeGenIP,
                                  BodyGenTy BodyGenType)>
@@ -2133,11 +2147,31 @@ public:
   /// as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
   InsertPointTy createTarget(const LocationDescription &Loc,
+                             OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
                              TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
                              int32_t NumThreads,
                              SmallVectorImpl<Value *> &Inputs,
+                             GenMapInfoCallbackTy GenMapInfoCB,
                              TargetBodyGenCallbackTy BodyGenCB);
+
+  /// Returns __kmpc_for_static_init_* runtime function for the specified
+  /// size \a IVSize and sign \a IVSigned. Will create a distribute call
+  /// __kmpc_distribute_static_init* if \a IsGPUDistribute is set.
+  FunctionCallee createForStaticInitFunction(unsigned IVSize, bool IVSigned,
+                                             bool IsGPUDistribute);
+
+  /// Returns __kmpc_dispatch_init_* runtime function for the specified
+  /// size \a IVSize and sign \a IVSigned.
+  FunctionCallee createDispatchInitFunction(unsigned IVSize, bool IVSigned);
+
+  /// Returns __kmpc_dispatch_next_* runtime function for the specified
+  /// size \a IVSize and sign \a IVSigned.
+  FunctionCallee createDispatchNextFunction(unsigned IVSize, bool IVSigned);
+
+  /// Returns __kmpc_dispatch_fini_* runtime function for the specified
+  /// size \a IVSize and sign \a IVSigned.
+  FunctionCallee createDispatchFiniFunction(unsigned IVSize, bool IVSigned);
 
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
   /// generated below. Their names are defined and used in OpenMPKinds.def. Here
@@ -2481,6 +2515,15 @@ public:
   /// loaded from bitcode file, i.e, different from OpenMPIRBuilder::M module.
   void loadOffloadInfoMetadata(Module &M);
 
+  /// Loads all the offload entries information from the host IR
+  /// metadata read from the file passed in as the HostFilePath argument. This
+  /// function is only meant to be used with device code generation.
+  ///
+  /// \param HostFilePath The path to the host IR file,
+  /// used to load in offload metadata for the device, allowing host and device
+  /// to maintain the same metadata mapping.
+  void loadOffloadInfoMetadata(StringRef HostFilePath);
+
   /// Gets (if variable with the given name already exist) or creates
   /// internal global variable with the specified Name. The created variable has
   /// linkage CommonLinkage by default and is initialized by null value.
@@ -2489,6 +2532,16 @@ public:
   /// \param Name Name of the variable.
   GlobalVariable *getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                               unsigned AddressSpace = 0);
+
+  /// Create a global function to register OpenMP requires flags into the
+  /// runtime, according to the `Config`.
+  ///
+  /// This function should be added to the list of constructors of the
+  /// compilation unit in order to be called before other OpenMP runtime
+  /// functions.
+  ///
+  /// \param Name  Name of the created function.
+  Function *createRegisterRequires(StringRef Name);
 };
 
 /// Class to represented the control flow structure of an OpenMP canonical loop.

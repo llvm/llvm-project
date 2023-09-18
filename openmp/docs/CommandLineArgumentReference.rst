@@ -37,8 +37,7 @@ Use the static OpenMP host runtime while linking.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Set the OpenMP version to a specific version ``<arg>`` of the OpenMP standard. 
 For example, you may use ``-fopenmp-version=45`` to select version 4.5 of 
-the OpenMP standard. The default value is ``-fopenmp-version=50`` for ``Clang`` 
-and ``-fopenmp-version=11`` for ``flang-new``.
+the OpenMP standard. The default value is ``-fopenmp-version=51`` for ``Clang``.
 
 .. _offload_command_line_arguments:
 
@@ -66,7 +65,7 @@ Offloading Specific Command-Line Arguments
 | It is also possible to specify :ref:`fopenmp-targets` without specifying 
   ``--offload-arch``. In that case, the executables ``amdgpu-arch`` or
   ``nvptx-arch`` will be executed as part of the compiler driver to 
-  detect the device arhitecture automatically.
+  detect the device architecture automatically.
 | Finally, the device architecture will also be automatically inferred with 
   ``--offload-arch=native``.
 

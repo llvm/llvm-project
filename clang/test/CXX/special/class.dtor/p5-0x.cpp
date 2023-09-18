@@ -63,15 +63,14 @@ struct B4 {
 B4 b4; // expected-error {{deleted function}}
 union B5 {
   B5();
-  // FIXME: Describe the anonymous union member better than ''.
-  union { // expected-note {{because field '' has a deleted destructor}}
+  union { // expected-note-re {{because field 'B5::(anonymous union at {{.+}})' has a deleted destructor}}
     DeletedDtor a; // expected-note {{because field 'a' has a deleted destructor}}
   };
 };
 B5 b5; // expected-error {{deleted function}}
 union B6 {
   B6();
-  union { // expected-note {{because field '' has a deleted destructor}}
+  union { // expected-note-re {{because field 'B6::(anonymous union at {{.+}})' has a deleted destructor}}
     InaccessibleDtor a; // expected-note {{because field 'a' has an inaccessible destructor}}
   };
 };

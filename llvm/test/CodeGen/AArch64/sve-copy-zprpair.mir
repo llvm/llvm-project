@@ -25,6 +25,29 @@ body:             |
 
 ...
 ---
+name:            copy_zpr2strided
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$z0_z1' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $z0_z1
+    ; CHECK-LABEL: name: copy_zpr2strided
+    ; CHECK: liveins: $z0_z1
+    ; CHECK: $z8 = ORR_ZZZ $z1, $z1
+    ; CHECK: $z0 = ORR_ZZZ $z0, $z0
+    ; CHECK: $z1 = ORR_ZZZ $z8, $z8
+    ; CHECK: $z0 = ORR_ZZZ $z0, $z0
+    ; CHECK: RET_ReallyLR
+    $z0_z8 = COPY $z0_z1
+    $z0_z1 = COPY $z0_z8
+    RET_ReallyLR
+
+...
+---
 name:            copy_zpr3
 alignment:       4
 tracksRegLiveness: true
@@ -73,6 +96,33 @@ body:             |
     ; CHECK: RET_ReallyLR
     $z1_z2_z3_z4 = COPY $z0_z1_z2_z3
     $z0_z1_z2_z3 = COPY $z1_z2_z3_z4
+    RET_ReallyLR
+
+...
+---
+name:            copy_zpr4strided
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$z0_z1_z2_z3' }
+frameInfo:
+  maxCallFrameSize: 0
+body:             |
+  bb.0:
+    liveins: $z0_z1_z2_z3
+    ; CHECK-LABEL: name: copy_zpr4
+    ; CHECK: liveins: $z0_z1_z2_z3
+    ; CHECK: $z12 = ORR_ZZZ $z3, $z3
+    ; CHECK: $z8 = ORR_ZZZ $z2, $z2
+    ; CHECK: $z4 = ORR_ZZZ $z1, $z1
+    ; CHECK: $z0 = ORR_ZZZ $z0, $z0
+    ; CHECK: $z3 = ORR_ZZZ $z12, $z12
+    ; CHECK: $z2 = ORR_ZZZ $z8, $z8
+    ; CHECK: $z1 = ORR_ZZZ $z4, $z4
+    ; CHECK: $z0 = ORR_ZZZ $z0, $z0
+    ; CHECK: RET_ReallyLR
+    $z0_z4_z8_z12 = COPY $z0_z1_z2_z3
+    $z0_z1_z2_z3 = COPY $z0_z4_z8_z12
     RET_ReallyLR
 
 ...

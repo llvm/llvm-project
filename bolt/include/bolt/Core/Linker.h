@@ -31,6 +31,11 @@ public:
       std::function<void(const BinarySection &Section, uint64_t Address)>;
   using SectionsMapper = std::function<void(SectionMapper)>;
 
+  struct SymbolInfo {
+    uint64_t Address;
+    uint64_t Size;
+  };
+
   virtual ~BOLTLinker() = default;
 
   /// Load and link \p Obj. \p MapSections will be called before the object is
@@ -38,8 +43,16 @@ public:
   /// of a section can be changed by calling the passed SectionMapper.
   virtual void loadObject(MemoryBufferRef Obj, SectionsMapper MapSections) = 0;
 
+  /// Return the address and size of a symbol or std::nullopt if it cannot be
+  /// found.
+  virtual std::optional<SymbolInfo> lookupSymbolInfo(StringRef Name) const = 0;
+
   /// Return the address of a symbol or std::nullopt if it cannot be found.
-  virtual std::optional<uint64_t> lookupSymbol(StringRef Name) const = 0;
+  std::optional<uint64_t> lookupSymbol(StringRef Name) const {
+    if (const auto Info = lookupSymbolInfo(Name))
+      return Info->Address;
+    return std::nullopt;
+  }
 };
 
 } // namespace bolt

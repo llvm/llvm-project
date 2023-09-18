@@ -1424,7 +1424,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
-      if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
+      if ([[maybe_unused]] auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
         assert(CI->getExceptionBehavior() != fp::ebStrict &&
                "Unexpected ebStrict from SimpleValue::canHandle()");
         assert((!CI->getRoundingMode() ||

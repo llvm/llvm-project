@@ -119,6 +119,10 @@ Options for all Libraries
   Compiler to use for testing. Defaults to the compiler that was also used for
   building.
 
+**OPENMP_TEST_Fortran_COMPILER** = ``${CMAKE_Fortran_COMPILER}``
+  Compiler to use for testing. Defaults to the compiler that was also used for
+  building. Will default to flang if build is in-tree.
+
 **OPENMP_LLVM_TOOLS_DIR** = ``/path/to/built/llvm/tools``
   Additional path to search for LLVM tools needed by tests.
 
@@ -164,12 +168,6 @@ Options for ``libomp``
 
 **LIBOMP_FORTRAN_MODULES** = ``OFF|ON``
   Create the Fortran modules (requires Fortran compiler).
-
-  .. note::
-
-  If libomptarget is built in-tree with both flang and openmp in
-  `LLVM_ENABLE_PROJECTS`, flang will be used for Fortran offloading
-  tests.
 
 macOS* Fat Libraries
 """"""""""""""""""""

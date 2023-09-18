@@ -2,7 +2,7 @@
 // NOTE: this test requires gpu-sm80
 //
 // DEFINE: %{compile} = mlir-opt %s \
-// DEFINE:    --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71
+// DEFINE:    --sparse-compiler="enable-gpu-libgen gpu-triple=nvptx64-nvidia-cuda gpu-chip=sm_80 gpu-features=+ptx71 gpu-format=%gpu_compilation_format
 // DEFINE: %{run} = mlir-cpu-runner \
 // DEFINE:   --shared-libs=%mlir_cuda_runtime \
 // DEFINE:   --shared-libs=%mlir_c_runner_utils \
@@ -25,11 +25,11 @@
 // RUNNOT: %{compile} enable-runtime-library=false gpu-data-transfer-strategy=zero-copy" | %{run}
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed-nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #CSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>

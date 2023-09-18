@@ -381,6 +381,9 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   /// Get the executable.
   hsa_executable_t getExecutable() const { return Executable; }
 
+  /// Get to Code Object Version of the ELF
+  uint16_t getELFABIVersion() const { return ELFABIVersion; }
+
   /// Find an HSA device symbol by its name on the executable.
   Expected<hsa_executable_symbol_t>
   findDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
@@ -401,6 +404,7 @@ private:
   hsa_executable_t Executable;
   hsa_code_object_t CodeObject;
   StringMap<utils::KernelMetaDataTy> KernelInfoMap;
+  uint16_t ELFABIVersion;
 };
 
 /// Class implementing the AMDGPU kernel functionalities which derives from the
@@ -408,8 +412,7 @@ private:
 struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
   AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : GenericKernelTy(Name, ExecutionMode),
-        ImplicitArgsSize(sizeof(utils::AMDGPUImplicitArgsTy)) {}
+      : GenericKernelTy(Name, ExecutionMode) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -450,6 +453,9 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     // TODO: Read the kernel descriptor for the max threads per block. May be
     // read from the image.
 
+    ImplicitArgsSize = utils::getImplicitArgsSize(AMDImage.getELFABIVersion());
+    DP("ELFABIVersion: %d\n", AMDImage.getELFABIVersion());
+
     // Get additional kernel info read from image
     KernelInfo = AMDImage.getKernelInfo(getName());
     if (!KernelInfo.has_value())
@@ -476,6 +482,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Get the HSA kernel object representing the kernel function.
   uint64_t getKernelObject() const { return KernelObject; }
 
+  /// Get the size of implicitargs based on the code object version
+  /// @return 56 for cov4 and 256 for cov5
+  uint32_t getImplicitArgsSize() const { return ImplicitArgsSize; }
+
 private:
   /// The kernel object to execute.
   uint64_t KernelObject;
@@ -486,7 +496,7 @@ private:
   uint32_t PrivateSize;
 
   /// The size of implicit kernel arguments.
-  const uint32_t ImplicitArgsSize;
+  uint32_t ImplicitArgsSize;
 
   /// Additional Info for the AMD GPU Kernel
   std::optional<utils::KernelMetaDataTy> KernelInfo;
@@ -496,19 +506,19 @@ private:
 /// between asynchronous operations: kernel launches and memory transfers.
 struct AMDGPUSignalTy {
   /// Create an empty signal.
-  AMDGPUSignalTy() : Signal({0}), UseCount() {}
-  AMDGPUSignalTy(AMDGPUDeviceTy &Device) : Signal({0}), UseCount() {}
+  AMDGPUSignalTy() : HSASignal({0}), UseCount() {}
+  AMDGPUSignalTy(AMDGPUDeviceTy &Device) : HSASignal({0}), UseCount() {}
 
   /// Initialize the signal with an initial value.
   Error init(uint32_t InitialValue = 1) {
     hsa_status_t Status =
-        hsa_amd_signal_create(InitialValue, 0, nullptr, 0, &Signal);
+        hsa_amd_signal_create(InitialValue, 0, nullptr, 0, &HSASignal);
     return Plugin::check(Status, "Error in hsa_signal_create: %s");
   }
 
   /// Deinitialize the signal.
   Error deinit() {
-    hsa_status_t Status = hsa_signal_destroy(Signal);
+    hsa_status_t Status = hsa_signal_destroy(HSASignal);
     return Plugin::check(Status, "Error in hsa_signal_destroy: %s");
   }
 
@@ -517,7 +527,7 @@ struct AMDGPUSignalTy {
              GenericDeviceTy *Device = nullptr) const {
     if (ActiveTimeout && !RPCServer) {
       hsa_signal_value_t Got = 1;
-      Got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+      Got = hsa_signal_wait_scacquire(HSASignal, HSA_SIGNAL_CONDITION_EQ, 0,
                                       ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
       if (Got == 0)
         return Plugin::success();
@@ -526,7 +536,7 @@ struct AMDGPUSignalTy {
     // If there is an RPC device attached to this stream we run it as a server.
     uint64_t Timeout = RPCServer ? 8192 : UINT64_MAX;
     auto WaitState = RPCServer ? HSA_WAIT_STATE_ACTIVE : HSA_WAIT_STATE_BLOCKED;
-    while (hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
+    while (hsa_signal_wait_scacquire(HSASignal, HSA_SIGNAL_CONDITION_EQ, 0,
                                      Timeout, WaitState) != 0) {
       if (RPCServer && Device)
         if (auto Err = RPCServer->runServer(*Device))
@@ -536,18 +546,20 @@ struct AMDGPUSignalTy {
   }
 
   /// Load the value on the signal.
-  hsa_signal_value_t load() const { return hsa_signal_load_scacquire(Signal); }
+  hsa_signal_value_t load() const {
+    return hsa_signal_load_scacquire(HSASignal);
+  }
 
   /// Signal decrementing by one.
   void signal() {
     assert(load() > 0 && "Invalid signal value");
-    hsa_signal_subtract_screlease(Signal, 1);
+    hsa_signal_subtract_screlease(HSASignal, 1);
   }
 
   /// Reset the signal value before reusing the signal. Do not call this
   /// function if the signal is being currently used by any watcher, such as a
   /// plugin thread or the HSA runtime.
-  void reset() { hsa_signal_store_screlease(Signal, 1); }
+  void reset() { hsa_signal_store_screlease(HSASignal, 1); }
 
   /// Increase the number of concurrent uses.
   void increaseUseCount() { UseCount.increase(); }
@@ -555,11 +567,11 @@ struct AMDGPUSignalTy {
   /// Decrease the number of concurrent uses and return whether was the last.
   bool decreaseUseCount() { return UseCount.decrease(); }
 
-  hsa_signal_t get() const { return Signal; }
+  hsa_signal_t get() const { return HSASignal; }
 
 private:
   /// The underlying HSA signal.
-  hsa_signal_t Signal;
+  hsa_signal_t HSASignal;
 
   /// Reference counter for tracking the concurrent use count. This is mainly
   /// used for knowing how many streams are using the signal.
@@ -860,7 +872,7 @@ private:
       return Plugin::success();
     }
 
-    /// Schedule a release buffer action on the slot.
+    /// Schedule a signal release action on the slot.
     Error schedReleaseSignal(AMDGPUSignalTy *SignalToRelease,
                              AMDGPUSignalManagerTy *SignalManager) {
       ActionFunction = releaseSignalAction;
@@ -1043,7 +1055,7 @@ private:
     return false;
   }
 
-  // Callback for host-to-host memory copies.
+  // Callback for host-to-host memory copies. This is an asynchronous action.
   static Error memcpyAction(void *Data) {
     MemcpyArgsTy *Args = reinterpret_cast<MemcpyArgsTy *>(Data);
     assert(Args && "Invalid arguments");
@@ -1055,7 +1067,19 @@ private:
     return Plugin::success();
   }
 
-  // Callback for releasing a memory buffer to a memory manager.
+  /// Releasing a memory buffer to a memory manager. This is a post completion
+  /// action. There are two kinds of memory buffers:
+  ///   1. For kernel arguments. This buffer can be freed after receiving the
+  ///   kernel completion signal.
+  ///   2. For H2D tranfers that need pinned memory space for staging. This
+  ///   buffer can be freed after receiving the transfer completion signal.
+  ///   3. For D2H tranfers that need pinned memory space for staging. This
+  ///   buffer cannot be freed after receiving the transfer completion signal
+  ///   because of the following asynchronous H2H callback.
+  ///      For this reason, This action can only be taken at
+  ///      AMDGPUStreamTy::complete()
+  /// Because of the case 3, all releaseBufferActions are taken at
+  /// AMDGPUStreamTy::complete() in the current implementation.
   static Error releaseBufferAction(void *Data) {
     ReleaseBufferArgsTy *Args = reinterpret_cast<ReleaseBufferArgsTy *>(Data);
     assert(Args && "Invalid arguments");
@@ -1066,6 +1090,8 @@ private:
     return Args->MemoryManager->deallocate(Args->Buffer);
   }
 
+  /// Releasing a signal object back to SignalManager. This is a post completion
+  /// action. This action can only be taken at AMDGPUStreamTy::complete()
   static Error releaseSignalAction(void *Data) {
     ReleaseSignalArgsTy *Args = reinterpret_cast<ReleaseSignalArgsTy *>(Data);
     assert(Args && "Invalid arguments");
@@ -1785,6 +1811,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     GridValues.GV_Default_Num_Teams = ComputeUnits * OMPX_DefaultTeamsPerCU;
 
+    uint32_t WavesPerCU = 0;
+    if (auto Err =
+            getDeviceAttr(HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU, WavesPerCU))
+      return Err;
+    HardwareParallelism = ComputeUnits * WavesPerCU;
+
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_QUEUE_MAX_SIZE, MaxQueueSize))
@@ -1926,10 +1958,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// AMDGPU devices do not have the concept of contexts.
   Error setContext() override { return Plugin::success(); }
 
+  /// AMDGPU returns the product of the number of compute units and the waves
+  /// per compute unit.
+  uint64_t getHardwareParallelism() const override {
+    return HardwareParallelism;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// availible.
   bool shouldSetupRPCServer() const override {
     return libomptargetSupportsRPC();
+  }
+
+  /// The RPC interface should have enough space for all availible parallelism.
+  uint64_t requestedRPCPortCount() const override {
+    return getHardwareParallelism();
   }
 
   /// Get the stream of the asynchronous info sructure or get a new one.
@@ -2577,6 +2620,9 @@ private:
   /// The frequency of the steady clock inside the device.
   uint64_t ClockFrequency;
 
+  /// The total number of concurrent work items that can be running on the GPU.
+  uint64_t HardwareParallelism;
+
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
 };
@@ -2612,8 +2658,8 @@ Error AMDGPUDeviceImageTy::loadExecutable(const AMDGPUDeviceTy &Device) {
   if (Result)
     return Plugin::error("Loaded HSA executable does not validate");
 
-  if (auto Err =
-          utils::readAMDGPUMetaDataFromImage(getMemoryBuffer(), KernelInfoMap))
+  if (auto Err = utils::readAMDGPUMetaDataFromImage(
+          getMemoryBuffer(), KernelInfoMap, ELFABIVersion))
     return Err;
 
   return Plugin::success();
@@ -2977,6 +3023,15 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // If this kernel requires an RPC server we attach its pointer to the stream.
   if (GenericDevice.getRPCServer())
     Stream->setRPCServer(GenericDevice.getRPCServer());
+
+  // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
+  if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
+    ImplArgs->BlockCountX = NumBlocks;
+    ImplArgs->GroupSizeX = NumThreads;
+    ImplArgs->GroupSizeY = 1;
+    ImplArgs->GroupSizeZ = 1;
+    ImplArgs->GridDims = 1;
+  }
 
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,

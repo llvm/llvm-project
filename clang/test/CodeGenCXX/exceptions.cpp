@@ -75,7 +75,6 @@ namespace test1 {
     return new A(B().x);
   }
 
-  //   rdar://11904428
   //   Terminate landing pads should call __cxa_begin_catch first.
   // CHECK98:      define linkonce_odr hidden void @__clang_call_terminate(ptr %0) [[NI_NR_NUW:#[0-9]+]] comdat
   // CHECK98-NEXT:   [[T0:%.*]] = call ptr @__cxa_begin_catch(ptr %0) [[NUW:#[0-9]+]]
@@ -214,7 +213,6 @@ namespace test3 {
     return new(foo(),bar()) A(5);
   }
 
-  // rdar://problem/8439196
   A *b(bool cond) {
 
     // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1 zeroext

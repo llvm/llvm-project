@@ -176,7 +176,7 @@ inline constexpr __fields __fields_range{.__use_range_fill_ = true, .__clear_bra
 inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
-enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
+enum class __alignment : uint8_t {
   /// No alignment is set in the format string.
   __default,
   __left,
@@ -185,7 +185,7 @@ enum class _LIBCPP_ENUM_VIS __alignment : uint8_t {
   __zero_padding
 };
 
-enum class _LIBCPP_ENUM_VIS __sign : uint8_t {
+enum class __sign : uint8_t {
   /// No sign is set in the format string.
   ///
   /// The sign isn't allowed for certain format-types. By using this value
@@ -197,7 +197,7 @@ enum class _LIBCPP_ENUM_VIS __sign : uint8_t {
   __space
 };
 
-enum class _LIBCPP_ENUM_VIS __type : uint8_t {
+enum class __type : uint8_t {
   __default = 0,
   __string,
   __binary_lower_case,

@@ -150,6 +150,7 @@ enum class Action : uint32_t {
   kEmptyCOO = 4,
   kToCOO = 5,
   kToIterator = 6,
+  kPack = 7,
 };
 
 /// This enum defines all the sparse representations supportable by
@@ -168,6 +169,9 @@ enum class Action : uint32_t {
 ///
 // TODO: We should generalize TwoOutOfFour to N out of M and use property to
 // encode the value of N and M.
+// TODO: Update DimLevelType to use lower 8 bits for storage formats and the
+// higher 4 bits to store level properties. Consider CompressedWithHi and
+// TwoOutOfFour as properties instead of formats.
 enum class DimLevelType : uint8_t {
   Undef = 0,                 // 0b00000_00
   Dense = 4,                 // 0b00001_00
@@ -196,6 +200,14 @@ enum class LevelFormat : uint8_t {
   TwoOutOfFour = 64,     // 0b10000_00
 };
 
+/// This enum defines all the nondefault properties for storage formats.
+enum class LevelNondefaultProperty : uint8_t {
+  Nonunique = 1,  // 0b00000_01
+  Nonordered = 2, // 0b00000_10
+  High = 32,      // 0b01000_00
+  Block2_4 = 64   // 0b10000_00
+};
+
 /// Returns string representation of the given dimension level type.
 constexpr const char *toMLIRString(DimLevelType dlt) {
   switch (dlt) {
@@ -206,27 +218,27 @@ constexpr const char *toMLIRString(DimLevelType dlt) {
   case DimLevelType::Compressed:
     return "compressed";
   case DimLevelType::CompressedNu:
-    return "compressed-nu";
+    return "compressed_nu";
   case DimLevelType::CompressedNo:
-    return "compressed-no";
+    return "compressed_no";
   case DimLevelType::CompressedNuNo:
-    return "compressed-nu-no";
+    return "compressed_nu_no";
   case DimLevelType::Singleton:
     return "singleton";
   case DimLevelType::SingletonNu:
-    return "singleton-nu";
+    return "singleton_nu";
   case DimLevelType::SingletonNo:
-    return "singleton-no";
+    return "singleton_no";
   case DimLevelType::SingletonNuNo:
-    return "singleton-nu-no";
+    return "singleton_nu_no";
   case DimLevelType::CompressedWithHi:
-    return "compressed-hi";
+    return "compressed_hi";
   case DimLevelType::CompressedWithHiNu:
-    return "compressed-hi-nu";
+    return "compressed_hi_nu";
   case DimLevelType::CompressedWithHiNo:
-    return "compressed-hi-no";
+    return "compressed_hi_no";
   case DimLevelType::CompressedWithHiNuNo:
-    return "compressed-hi-nu-no";
+    return "compressed_hi_nu_no";
   case DimLevelType::TwoOutOfFour:
     return "compressed24";
   }

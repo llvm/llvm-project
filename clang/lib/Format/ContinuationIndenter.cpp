@@ -36,6 +36,14 @@ static bool shouldIndentWrappedSelectorName(const FormatStyle &Style,
   return Style.IndentWrappedFunctionNames || LineType == LT_ObjCMethodDecl;
 }
 
+// Returns true if a binary operator following \p Tok should be unindented when
+// the style permits it.
+static bool shouldUnindentNextOperator(const FormatToken &Tok) {
+  const FormatToken *Previous = Tok.getPreviousNonComment();
+  return Previous && (Previous->getPrecedence() == prec::Assignment ||
+                      Previous->isOneOf(tok::kw_return, TT_RequiresClause));
+}
+
 // Returns the length of everything up to the first possible line break after
 // the ), ], } or > matching \c Tok.
 static unsigned getLengthToMatchingParen(const FormatToken &Tok,
@@ -260,6 +268,7 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
                                    /*NoLineBreak=*/false));
   State.NoContinuation = false;
   State.StartOfStringLiteral = 0;
+  State.NoLineBreak = false;
   State.StartOfLineLevel = 0;
   State.LowestLevelOnLine = 0;
   State.IgnoreStackForComparison = false;
@@ -309,10 +318,11 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return false;
 
   // Don't create a 'hanging' indent if there are multiple blocks in a single
-  // statement.
+  // statement and we are aligning lambda blocks to their signatures.
   if (Previous.is(tok::l_brace) && State.Stack.size() > 1 &&
       State.Stack[State.Stack.size() - 2].NestedBlockInlined &&
-      State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks) {
+      State.Stack[State.Stack.size() - 2].HasMultipleNestedBlocks &&
+      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature) {
     return false;
   }
 
@@ -326,6 +336,11 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   // If binary operators are moved to the next line (including commas for some
   // styles of constructor initializers), that's always ok.
   if (!Current.isOneOf(TT_BinaryOperator, tok::comma) &&
+      // Allow breaking opening brace of lambdas (when passed as function
+      // arguments) to a new line when BeforeLambdaBody brace wrapping is
+      // enabled.
+      (!Style.BraceWrapping.BeforeLambdaBody ||
+       Current.isNot(TT_LambdaLBrace)) &&
       CurrentState.NoLineBreakInOperand) {
     return false;
   }
@@ -342,7 +357,7 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     return true;
   }
 
-  return !CurrentState.NoLineBreak;
+  return !State.NoLineBreak && !CurrentState.NoLineBreak;
 }
 
 bool ContinuationIndenter::mustBreak(const LineState &State) {
@@ -429,11 +444,11 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
 
-  if (Current.is(TT_ObjCMethodExpr) && !Previous.is(TT_SelectorName) &&
+  if (Current.is(TT_ObjCMethodExpr) && Previous.isNot(TT_SelectorName) &&
       State.Line->startsWith(TT_ObjCMethodSpecifier)) {
     return true;
   }
-  if (Current.is(TT_SelectorName) && !Previous.is(tok::at) &&
+  if (Current.is(TT_SelectorName) && Previous.isNot(tok::at) &&
       CurrentState.ObjCSelectorNameFound && CurrentState.BreakBeforeParameter &&
       (Style.ObjCBreakBeforeNestedBlockParam ||
        !Current.startsSequence(TT_SelectorName, tok::colon, tok::caret))) {
@@ -468,7 +483,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
 
-  if (!State.Line->First->is(tok::kw_enum) && State.Column <= NewLineColumn)
+  if (State.Line->First->isNot(tok::kw_enum) && State.Column <= NewLineColumn)
     return false;
 
   if (Style.AlwaysBreakBeforeMultilineStrings &&
@@ -577,8 +592,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
         // Don't always break between a JavaScript `function` and the function
         // name.
         !Style.isJavaScript()) ||
-       (Current.is(tok::kw_operator) && !Previous.is(tok::coloncolon))) &&
-      !Previous.is(tok::kw_template) && CurrentState.BreakBeforeParameter) {
+       (Current.is(tok::kw_operator) && Previous.isNot(tok::coloncolon))) &&
+      Previous.isNot(tok::kw_template) && CurrentState.BreakBeforeParameter) {
     return true;
   }
 
@@ -652,6 +667,41 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   assert(State.NextToken->Previous);
   const FormatToken &Previous = *State.NextToken->Previous;
   auto &CurrentState = State.Stack.back();
+
+  bool DisallowLineBreaksOnThisLine =
+      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
+      Style.isCpp() && [&Current] {
+        // Deal with lambda arguments in C++. The aim here is to ensure that we
+        // don't over-indent lambda function bodies when lambdas are passed as
+        // arguments to function calls. We do this by ensuring that either all
+        // arguments (including any lambdas) go on the same line as the function
+        // call, or we break before the first argument.
+        auto PrevNonComment = Current.getPreviousNonComment();
+        if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
+          return false;
+        if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
+          return false;
+        auto BlockParameterCount = PrevNonComment->BlockParameterCount;
+        if (BlockParameterCount == 0)
+          return false;
+
+        // Multiple lambdas in the same function call.
+        if (BlockParameterCount > 1)
+          return true;
+
+        // A lambda followed by another arg.
+        if (!PrevNonComment->Role)
+          return false;
+        auto Comma = PrevNonComment->Role->lastComma();
+        if (!Comma)
+          return false;
+        auto Next = Comma->getNextNonComment();
+        return Next &&
+               !Next->isOneOf(TT_LambdaLSquare, tok::l_brace, tok::caret);
+      }();
+
+  if (DisallowLineBreaksOnThisLine)
+    State.NoLineBreak = true;
 
   if (Current.is(tok::equal) &&
       (State.Line->First->is(tok::kw_for) || Current.NestingLevel == 0) &&
@@ -782,7 +832,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // Exclude relational operators, as there, it is always more desirable to
   // have the LHS 'left' of the RHS.
   const FormatToken *P = Current.getPreviousNonComment();
-  if (!Current.is(tok::comment) && P &&
+  if (Current.isNot(tok::comment) && P &&
       (P->isOneOf(TT_BinaryOperator, tok::comma) ||
        (P->is(TT_ConditionalExpr) && P->is(tok::colon))) &&
       !P->isOneOf(TT_OverloadedOperator, TT_CtorInitializerComma) &&
@@ -797,8 +847,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     // Don't do this if there are only two operands. In these cases, there is
     // always a nice vertical separation between them and the extra line break
     // does not help.
-    bool HasTwoOperands =
-        P->OperatorIndex == 0 && !P->NextOperator && !P->is(TT_ConditionalExpr);
+    bool HasTwoOperands = P->OperatorIndex == 0 && !P->NextOperator &&
+                          P->isNot(TT_ConditionalExpr);
     if ((!BreakBeforeOperator &&
          !(HasTwoOperands &&
            Style.AlignOperands != FormatStyle::OAS_DontAlign)) ||
@@ -817,7 +867,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.NestedBlockIndent = State.Column;
   } else if (!Current.isOneOf(tok::comment, tok::caret) &&
              ((Previous.is(tok::comma) &&
-               !Previous.is(TT_OverloadedOperator)) ||
+               Previous.isNot(TT_OverloadedOperator)) ||
               (Previous.is(tok::colon) && Previous.is(TT_ObjCMethodExpr)))) {
     CurrentState.LastSpace = State.Column;
   } else if (Previous.is(TT_CtorInitializerColon) &&
@@ -826,15 +876,15 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                  FormatStyle::BCIS_AfterColon) {
     CurrentState.Indent = State.Column;
     CurrentState.LastSpace = State.Column;
-  } else if ((Previous.isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
-                               TT_CtorInitializerColon)) &&
+  } else if (Previous.isOneOf(TT_ConditionalExpr, TT_CtorInitializerColon)) {
+    CurrentState.LastSpace = State.Column;
+  } else if (Previous.is(TT_BinaryOperator) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
                 Previous.NextOperator)) ||
               Current.StartsBinaryExpression)) {
     // Indent relative to the RHS of the expression unless this is a simple
-    // assignment without binary expression on the RHS. Also indent relative to
-    // unary operators and the colons of constructor initializers.
+    // assignment without binary expression on the RHS.
     if (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None)
       CurrentState.LastSpace = State.Column;
   } else if (Previous.is(TT_InheritanceColon)) {
@@ -919,9 +969,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   //
   // is common and should be formatted like a free-standing function. The same
   // goes for wrapping before the lambda return type arrow.
-  if (!Current.is(TT_LambdaArrow) &&
+  if (Current.isNot(TT_LambdaArrow) &&
       (!Style.isJavaScript() || Current.NestingLevel != 0 ||
-       !PreviousNonComment || !PreviousNonComment->is(tok::equal) ||
+       !PreviousNonComment || PreviousNonComment->isNot(tok::equal) ||
        !Current.isOneOf(Keywords.kw_async, Keywords.kw_function))) {
     CurrentState.NestedBlockIndent = State.Column;
   }
@@ -1026,9 +1076,40 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       NestedBlockSpecialCase ||
       (Current.MatchingParen &&
        Current.MatchingParen->is(TT_RequiresExpressionLBrace));
-  if (!NestedBlockSpecialCase)
-    for (ParenState &PState : llvm::drop_end(State.Stack))
-      PState.BreakBeforeParameter = true;
+  if (!NestedBlockSpecialCase) {
+    auto ParentLevelIt = std::next(State.Stack.rbegin());
+    if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
+        Current.MatchingParen && Current.MatchingParen->is(TT_LambdaLBrace)) {
+      // If the first character on the new line is a lambda's closing brace, the
+      // stack still contains that lambda's parenthesis. As such, we need to
+      // recurse further down the stack than usual to find the parenthesis level
+      // containing the lambda, which is where we want to set
+      // BreakBeforeParameter.
+      //
+      // We specifically special case "OuterScope"-formatted lambdas here
+      // because, when using that setting, breaking before the parameter
+      // directly following the lambda is particularly unsightly. However, when
+      // "OuterScope" is not set, the logic to find the parent parenthesis level
+      // still appears to be sometimes incorrect. It has not been fixed yet
+      // because it would lead to significant changes in existing behaviour.
+      //
+      // TODO: fix the non-"OuterScope" case too.
+      auto FindCurrentLevel = [&](const auto &It) {
+        return std::find_if(It, State.Stack.rend(), [](const auto &PState) {
+          return PState.Tok != nullptr; // Ignore fake parens.
+        });
+      };
+      auto MaybeIncrement = [&](const auto &It) {
+        return It != State.Stack.rend() ? std::next(It) : It;
+      };
+      auto LambdaLevelIt = FindCurrentLevel(State.Stack.rbegin());
+      auto LevelContainingLambdaIt =
+          FindCurrentLevel(MaybeIncrement(LambdaLevelIt));
+      ParentLevelIt = MaybeIncrement(LevelContainingLambdaIt);
+    }
+    for (auto I = ParentLevelIt, E = State.Stack.rend(); I != E; ++I)
+      I->BreakBeforeParameter = true;
+  }
 
   if (PreviousNonComment &&
       !PreviousNonComment->isOneOf(tok::comma, tok::colon, tok::semi) &&
@@ -1038,7 +1119,11 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       !PreviousNonComment->isOneOf(
           TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
           TT_LeadingJavaAnnotation) &&
-      Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope()) {
+      Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
+      // We don't want to enforce line breaks for subsequent arguments just
+      // because we have been forced to break before a lambda body.
+      (!Style.BraceWrapping.BeforeLambdaBody ||
+       Current.isNot(TT_LambdaLBrace))) {
     CurrentState.BreakBeforeParameter = true;
   }
 
@@ -1057,7 +1142,7 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
 
   if (CurrentState.AvoidBinPacking) {
     // If we are breaking after '(', '{', '<', or this is the break after a ':'
-    // to start a member initializater list in a constructor, this should not
+    // to start a member initializer list in a constructor, this should not
     // be considered bin packing unless the relevant AllowAll option is false or
     // this is a dict/object literal.
     bool PreviousIsBreakingCtorInitializerColon =
@@ -1119,12 +1204,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
                     CurrentState.Indent + Style.ContinuationIndentWidth);
   }
 
-  // After a goto label. Usually labels are on separate lines. However
-  // for Verilog the labels may be only recognized by the annotator and
-  // thus are on the same line as the current token.
-  if ((Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous)) ||
-      (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
-       State.Line->First->is(tok::kw_enum))) {
+  // Indentation of the statement following a Verilog case label is taken care
+  // of in moveStateToNextToken.
+  if (Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous))
+    return State.FirstIndent;
+
+  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+      State.Line->First->is(tok::kw_enum)) {
     return (Style.IndentWidth * State.Line->First->IndentLevel) +
            Style.IndentWidth;
   }
@@ -1385,7 +1471,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   if (Current.is(TT_BinaryOperator) && Current.isNot(tok::lessless))
     CurrentState.LastOperatorWrapped = Newline;
   if (Current.is(TT_ConditionalExpr) && Current.Previous &&
-      !Current.Previous->is(TT_ConditionalExpr)) {
+      Current.Previous->isNot(TT_ConditionalExpr)) {
     CurrentState.LastOperatorWrapped = Newline;
   }
   if (Current.is(TT_ArraySubscriptLSquare) &&
@@ -1414,7 +1500,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       CurrentState.QuestionColumn = State.Column;
   }
   if (!Current.opensScope() && !Current.closesScope() &&
-      !Current.is(TT_PointerOrReference)) {
+      Current.isNot(TT_PointerOrReference)) {
     State.LowestLevelOnLine =
         std::min(State.LowestLevelOnLine, Current.NestingLevel);
   }
@@ -1451,6 +1537,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     CurrentState.NestedBlockIndent = CurrentState.Indent;
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack)
       CurrentState.AvoidBinPacking = true;
+    else
+      CurrentState.BreakBeforeParameter = false;
   }
   if (Current.is(TT_InheritanceColon)) {
     CurrentState.Indent =
@@ -1476,7 +1564,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   //   }, a, b, c);
   if (Current.isNot(tok::comment) && !Current.ClosesRequiresClause &&
       Previous && Previous->isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) &&
-      !Previous->is(TT_DictLiteral) && State.Stack.size() > 1 &&
+      Previous->isNot(TT_DictLiteral) && State.Stack.size() > 1 &&
       !CurrentState.HasMultipleNestedBlocks) {
     if (State.Stack[State.Stack.size() - 2].NestedBlockInlined && Newline)
       for (ParenState &PState : llvm::drop_end(State.Stack))
@@ -1512,6 +1600,15 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
+  // Verilog case labels are on the same unwrapped lines as the statements that
+  // follow. TokenAnnotator identifies them and sets MustBreakBefore.
+  // Indentation is taken care of here. A case label can only have 1 statement
+  // in Verilog, so we don't have to worry about lines that follow.
+  if (Style.isVerilog() && State.NextToken &&
+      State.NextToken->MustBreakBefore &&
+      Keywords.isVerilogEndOfLabel(Current)) {
+    State.FirstIndent += Style.IndentWidth;
+  }
 
   unsigned Penalty =
       handleEndOfLine(Current, State, DryRun, AllowBreak, Newline);
@@ -1583,11 +1680,10 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
       NewParenState.Indent = CurrentState.LastSpace;
 
-    if (Previous &&
-        (Previous->getPrecedence() == prec::Assignment ||
-         Previous->isOneOf(tok::kw_return, TT_RequiresClause) ||
-         (PrecedenceLevel == prec::Conditional && Previous->is(tok::question) &&
-          Previous->is(TT_ConditionalExpr))) &&
+    if ((shouldUnindentNextOperator(Current) ||
+         (Previous &&
+          (PrecedenceLevel == prec::Conditional &&
+           Previous->is(tok::question) && Previous->is(TT_ConditionalExpr)))) &&
         !Newline) {
       // If BreakBeforeBinaryOperators is set, un-indent a bit to account for
       // the operator and keep the operands aligned.
@@ -1606,7 +1702,8 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     //       ParameterToInnerFunction));
     if (PrecedenceLevel > prec::Unknown)
       NewParenState.LastSpace = std::max(NewParenState.LastSpace, State.Column);
-    if (PrecedenceLevel != prec::Conditional && !Current.is(TT_UnaryOperator) &&
+    if (PrecedenceLevel != prec::Conditional &&
+        Current.isNot(TT_UnaryOperator) &&
         Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign) {
       NewParenState.StartOfFunctionCall = State.Column;
     }
@@ -2111,7 +2208,7 @@ unsigned ContinuationIndenter::handleEndOfLine(const FormatToken &Current,
 static StringRef getEnclosingFunctionName(const FormatToken &Current) {
   // Look for: 'function(' or 'function<templates>(' before Current.
   auto Tok = Current.getPreviousNonComment();
-  if (!Tok || !Tok->is(tok::l_paren))
+  if (!Tok || Tok->isNot(tok::l_paren))
     return "";
   Tok = Tok->getPreviousNonComment();
   if (!Tok)
@@ -2121,7 +2218,7 @@ static StringRef getEnclosingFunctionName(const FormatToken &Current) {
     if (Tok)
       Tok = Tok->getPreviousNonComment();
   }
-  if (!Tok || !Tok->is(tok::identifier))
+  if (!Tok || Tok->isNot(tok::identifier))
     return "";
   return Tok->TokenText;
 }
@@ -2150,11 +2247,9 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                            LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
-    // FIXME: String literal breaking is currently disabled for C#, Java, Json
-    // and JavaScript, as it requires strings to be merged using "+" which we
-    // don't support.
-    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
-        Style.isCSharp() || Style.isJson() || !Style.BreakStringLiterals ||
+    // Strings in JSON cannot be broken. Breaking strings in JavaScript is
+    // disabled for now.
+    if (Style.isJson() || Style.isJavaScript() || !Style.BreakStringLiterals ||
         !AllowBreak) {
       return nullptr;
     }
@@ -2176,6 +2271,33 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
       return nullptr;
 
     StringRef Text = Current.TokenText;
+    // We need this to address the case where there is an unbreakable tail only
+    // if certain other formatting decisions have been taken. The
+    // UnbreakableTailLength of Current is an overapproximation in that case and
+    // we need to be correct here.
+    unsigned UnbreakableTailLength = (State.NextToken && canBreak(State))
+                                         ? 0
+                                         : Current.UnbreakableTailLength;
+
+    if (Style.isVerilog() || Style.Language == FormatStyle::LK_Java ||
+        Style.isJavaScript() || Style.isCSharp()) {
+      BreakableStringLiteralUsingOperators::QuoteStyleType QuoteStyle;
+      if (Style.isJavaScript() && Text.startswith("'") && Text.endswith("'")) {
+        QuoteStyle = BreakableStringLiteralUsingOperators::SingleQuotes;
+      } else if (Style.isCSharp() && Text.startswith("@\"") &&
+                 Text.endswith("\"")) {
+        QuoteStyle = BreakableStringLiteralUsingOperators::AtDoubleQuotes;
+      } else if (Text.startswith("\"") && Text.endswith("\"")) {
+        QuoteStyle = BreakableStringLiteralUsingOperators::DoubleQuotes;
+      } else {
+        return nullptr;
+      }
+      return std::make_unique<BreakableStringLiteralUsingOperators>(
+          Current, QuoteStyle,
+          /*UnindentPlus=*/shouldUnindentNextOperator(Current), StartColumn,
+          UnbreakableTailLength, State.Line->InPPDirective, Encoding, Style);
+    }
+
     StringRef Prefix;
     StringRef Postfix;
     // FIXME: Handle whitespace between '_T', '(', '"..."', and ')'.
@@ -2188,13 +2310,6 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
           Text.startswith(Prefix = "u8\"") ||
           Text.startswith(Prefix = "L\""))) ||
         (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
-      // We need this to address the case where there is an unbreakable tail
-      // only if certain other formatting decisions have been taken. The
-      // UnbreakableTailLength of Current is an overapproximation is that case
-      // and we need to be correct here.
-      unsigned UnbreakableTailLength = (State.NextToken && canBreak(State))
-                                           ? 0
-                                           : Current.UnbreakableTailLength;
       return std::make_unique<BreakableStringLiteral>(
           Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
           State.Line->InPPDirective, Encoding, Style);
@@ -2595,6 +2710,9 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
                  Current.UnbreakableTailLength;
 
   if (BreakInserted) {
+    if (!DryRun)
+      Token->updateAfterBroken(Whitespaces);
+
     // If we break the token inside a parameter list, we need to break before
     // the next parameter on all levels, so that the next parameter is clearly
     // visible. Line comments already introduce a break.

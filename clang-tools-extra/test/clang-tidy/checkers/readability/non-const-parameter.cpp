@@ -222,6 +222,24 @@ struct XY {
 void recordpointer(struct XY *xy) {
   *(xy->x) = 0;
 }
+void recordInitList(int *x) {
+  XY xy = {x, nullptr};
+}
+
+struct XYConst {
+  int const *x;
+};
+// CHECK-MESSAGES: :[[@LINE+1]]:30: warning: pointer parameter 'x' can be pointer to const
+void recordInitListDiag(int *x) {
+  // CHECK-FIXES: {{^}}void recordInitListDiag(const int *x) {{{$}}
+  XYConst xy = {x};
+}
+typedef XYConst XYConstAlias;
+// CHECK-MESSAGES: :[[@LINE+1]]:35: warning: pointer parameter 'x' can be pointer to const
+void recordInitListAliasDiag(int *x) {
+  // CHECK-FIXES: {{^}}void recordInitListAliasDiag(const int *x) {{{$}}
+  XYConstAlias xy = {x};
+}
 
 class C {
 public:

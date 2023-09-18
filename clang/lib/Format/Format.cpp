@@ -59,6 +59,16 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(clang::format::FormatStyle::RawStringFormat)
 
 namespace llvm {
 namespace yaml {
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakBeforeNoexceptSpecifierStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakBeforeNoexceptSpecifierStyle &Value) {
+    IO.enumCase(Value, "Never", FormatStyle::BBNSS_Never);
+    IO.enumCase(Value, "OnlyWithParen", FormatStyle::BBNSS_OnlyWithParen);
+    IO.enumCase(Value, "Always", FormatStyle::BBNSS_Always);
+  }
+};
+
 template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
   static void enumInput(IO &IO, FormatStyle::AlignConsecutiveStyle &Value) {
     IO.enumCase(Value, "None",
@@ -260,6 +270,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBeforeInlineASMColonStyle> {
     IO.enumCase(Value, "Always", FormatStyle::BBIAS_Always);
   }
 };
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
   static void
@@ -904,6 +915,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowAllArgumentsOnNextLine);
     IO.mapOptional("AllowAllParametersOfDeclarationOnNextLine",
                    Style.AllowAllParametersOfDeclarationOnNextLine);
+    IO.mapOptional("AllowBreakBeforeNoexceptSpecifier",
+                   Style.AllowBreakBeforeNoexceptSpecifier);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
     IO.mapOptional("AllowShortCaseLabelsOnASingleLine",
@@ -1448,6 +1461,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
   LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -2417,7 +2431,7 @@ private:
     for (const AnnotatedLine *Line : Lines) {
       AlignmentDiff += countVariableAlignments(Line->Children);
       for (FormatToken *Tok = Line->First; Tok && Tok->Next; Tok = Tok->Next) {
-        if (!Tok->is(TT_PointerOrReference))
+        if (Tok->isNot(TT_PointerOrReference))
           continue;
         // Don't treat space in `void foo() &&` as evidence.
         if (const auto *Prev = Tok->getPreviousNonComment()) {
@@ -2688,7 +2702,7 @@ private:
                    bool DeleteLeft) {
     auto NextNotDeleted = [this](const FormatToken &Tok) -> FormatToken * {
       for (auto *Res = Tok.Next; Res; Res = Res->Next) {
-        if (!Res->is(tok::comment) &&
+        if (Res->isNot(tok::comment) &&
             DeletedTokens.find(Res) == DeletedTokens.end()) {
           return Res;
         }

@@ -32,3 +32,11 @@ auto XL1 = []<auto> requires true noexcept requires true {}; // expected-error {
 // expected-warning@-3 {{is a C++23 extension}}
 // expected-warning@-3 {{is a C++23 extension}}
 #endif
+
+namespace GH64962 {
+void f() {
+  [] <typename T>(T i) -> int[] // expected-error {{function cannot return array type 'int[]'}}
+                                // extension-warning {{explicit template parameter list for lambdas is a C++20 extension}}
+    { return 3; } (v); // expected-error {{use of undeclared identifier 'v'}}
+}
+}

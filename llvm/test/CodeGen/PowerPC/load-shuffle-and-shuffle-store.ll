@@ -70,12 +70,12 @@ define <2 x i64> @load_swap01(ptr %vp1, ptr %vp2) {
 define <4 x i32> @load_swap10(ptr %vp1, ptr %vp2) {
 ; CHECK-P8-LABEL: load_swap10:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI2_0@toc@l
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -86,10 +86,10 @@ define <4 x i32> @load_swap10(ptr %vp1, ptr %vp2) {
 ;
 ; CHECK-P8-BE-LABEL: load_swap10:
 ; CHECK-P8-BE:       # %bb.0:
-; CHECK-P8-BE-NEXT:    addis r4, r2, .LCPI2_0@toc@ha
 ; CHECK-P8-BE-NEXT:    lxvw4x v2, 0, r3
-; CHECK-P8-BE-NEXT:    addi r4, r4, .LCPI2_0@toc@l
-; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r4
+; CHECK-P8-BE-NEXT:    addis r3, r2, .LCPI2_0@toc@ha
+; CHECK-P8-BE-NEXT:    addi r3, r3, .LCPI2_0@toc@l
+; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-P8-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-BE-NEXT:    blr
 ;
@@ -110,12 +110,12 @@ define <4 x i32> @load_swap10(ptr %vp1, ptr %vp2) {
 define <4 x i32> @load_swap11(ptr %vp1, ptr %vp2) {
 ; CHECK-P8-LABEL: load_swap11:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -150,12 +150,12 @@ define <4 x i32> @load_swap11(ptr %vp1, ptr %vp2) {
 define <8 x i16> @load_swap20(ptr %vp1, ptr %vp2){
 ; CHECK-P8-LABEL: load_swap20:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r4, r2, .LCPI4_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    addi r4, r4, .LCPI4_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI4_0@toc@l
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -166,10 +166,10 @@ define <8 x i16> @load_swap20(ptr %vp1, ptr %vp2){
 ;
 ; CHECK-P8-BE-LABEL: load_swap20:
 ; CHECK-P8-BE:       # %bb.0:
-; CHECK-P8-BE-NEXT:    addis r4, r2, .LCPI4_0@toc@ha
 ; CHECK-P8-BE-NEXT:    lxvw4x v2, 0, r3
-; CHECK-P8-BE-NEXT:    addi r4, r4, .LCPI4_0@toc@l
-; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r4
+; CHECK-P8-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
+; CHECK-P8-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
+; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-P8-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-BE-NEXT:    blr
 ;
@@ -190,12 +190,12 @@ define <8 x i16> @load_swap20(ptr %vp1, ptr %vp2){
 define <8 x i16> @load_swap21(ptr %vp1, ptr %vp2){
 ; CHECK-P8-LABEL: load_swap21:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI5_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -230,12 +230,12 @@ define <8 x i16> @load_swap21(ptr %vp1, ptr %vp2){
 define <16 x i8> @load_swap30(ptr %vp1, ptr %vp2){
 ; CHECK-P8-LABEL: load_swap30:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    addi r4, r4, .LCPI6_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI6_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI6_0@toc@l
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -246,10 +246,10 @@ define <16 x i8> @load_swap30(ptr %vp1, ptr %vp2){
 ;
 ; CHECK-P8-BE-LABEL: load_swap30:
 ; CHECK-P8-BE:       # %bb.0:
-; CHECK-P8-BE-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
 ; CHECK-P8-BE-NEXT:    lxvw4x v2, 0, r3
-; CHECK-P8-BE-NEXT:    addi r4, r4, .LCPI6_0@toc@l
-; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r4
+; CHECK-P8-BE-NEXT:    addis r3, r2, .LCPI6_0@toc@ha
+; CHECK-P8-BE-NEXT:    addi r3, r3, .LCPI6_0@toc@l
+; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-P8-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-BE-NEXT:    blr
 ;
@@ -267,12 +267,12 @@ define <16 x i8> @load_swap30(ptr %vp1, ptr %vp2){
 define <16 x i8> @load_swap31(ptr %vp1, ptr %vp2){
 ; CHECK-P8-LABEL: load_swap31:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI7_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI7_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -332,12 +332,12 @@ define <2 x double> @load_swap40(ptr %vp1, ptr %vp2) {
 define <4 x float> @load_swap50(ptr %vp1, ptr %vp2) {
 ; CHECK-P8-LABEL: load_swap50:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r4, r2, .LCPI9_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-P8-NEXT:    addi r4, r4, .LCPI9_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
+; CHECK-P8-NEXT:    addi r3, r3, .LCPI9_0@toc@l
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -348,10 +348,10 @@ define <4 x float> @load_swap50(ptr %vp1, ptr %vp2) {
 ;
 ; CHECK-P8-BE-LABEL: load_swap50:
 ; CHECK-P8-BE:       # %bb.0:
-; CHECK-P8-BE-NEXT:    addis r4, r2, .LCPI9_0@toc@ha
 ; CHECK-P8-BE-NEXT:    lxvw4x v2, 0, r3
-; CHECK-P8-BE-NEXT:    addi r4, r4, .LCPI9_0@toc@l
-; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r4
+; CHECK-P8-BE-NEXT:    addis r3, r2, .LCPI9_0@toc@ha
+; CHECK-P8-BE-NEXT:    addi r3, r3, .LCPI9_0@toc@l
+; CHECK-P8-BE-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-P8-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-BE-NEXT:    blr
 ;
@@ -372,12 +372,12 @@ define <4 x float> @load_swap50(ptr %vp1, ptr %vp2) {
 define <4 x float> @load_swap51(ptr %vp1, ptr %vp2) {
 ; CHECK-P8-LABEL: load_swap51:
 ; CHECK-P8:       # %bb.0:
-; CHECK-P8-NEXT:    addis r3, r2, .LCPI10_0@toc@ha
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r4
+; CHECK-P8-NEXT:    addis r3, r2, .LCPI10_0@toc@ha
 ; CHECK-P8-NEXT:    addi r3, r3, .LCPI10_0@toc@l
-; CHECK-P8-NEXT:    lxvd2x vs1, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
-; CHECK-P8-NEXT:    xxswapd v3, vs1
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v3, vs0
 ; CHECK-P8-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P8-NEXT:    blr
 ;

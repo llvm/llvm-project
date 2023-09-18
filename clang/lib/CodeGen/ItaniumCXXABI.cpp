@@ -1444,8 +1444,8 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                        llvm::Type *StdTypeInfoPtrTy) {
   auto *ClassDecl =
       cast<CXXRecordDecl>(SrcRecordTy->castAs<RecordType>()->getDecl());
-  llvm::Value *Value = CGF.GetVTablePtr(
-      ThisPtr, llvm::PointerType::getUnqual(CGF.getLLVMContext()), ClassDecl);
+  llvm::Value *Value = CGF.GetVTablePtr(ThisPtr, CGM.GlobalsInt8PtrTy,
+                                        ClassDecl);
 
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
     // Load the type info.
@@ -2832,7 +2832,7 @@ static bool isThreadWrapperReplaceable(const VarDecl *VD,
 static llvm::GlobalValue::LinkageTypes
 getThreadLocalWrapperLinkage(const VarDecl *VD, CodeGen::CodeGenModule &CGM) {
   llvm::GlobalValue::LinkageTypes VarLinkage =
-      CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
+      CGM.getLLVMLinkageVarDefinition(VD);
 
   // For internal linkage variables, we don't need an external or weak wrapper.
   if (llvm::GlobalValue::isLocalLinkage(VarLinkage))
@@ -3669,9 +3669,10 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   // Check if the alias exists. If it doesn't, then get or create the global.
   if (CGM.getItaniumVTableContext().isRelativeLayout())
     VTable = CGM.getModule().getNamedAlias(VTableName);
-  if (!VTable)
-    VTable =
-        CGM.getModule().getOrInsertGlobal(VTableName, CGM.GlobalsInt8PtrTy);
+  if (!VTable) {
+    llvm::Type *Ty = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, 0);
+    VTable = CGM.getModule().getOrInsertGlobal(VTableName, Ty);
+  }
 
   CGM.setDSOLocal(cast<llvm::GlobalValue>(VTable->stripPointerCasts()));
 

@@ -38,6 +38,7 @@
 #include <optional>
 
 using namespace llvm::COFF;
+using namespace llvm::opt;
 using namespace llvm;
 using llvm::sys::Process;
 

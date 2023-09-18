@@ -147,8 +147,12 @@ void AccStructureChecker::Leave(const parser::OpenACCBlockConstruct &x) {
     CheckNoBranching(block, GetContext().directive, blockDir.source);
     break;
   case llvm::acc::Directive::ACCD_data:
-    // Restriction - line 1249-1250
-    CheckRequireAtLeastOneOf();
+    // Restriction - 2.6.5 pt 1
+    // Only a warning is emitted here for portability reason.
+    CheckRequireAtLeastOneOf(/*warnInsteadOfError=*/true);
+    // Restriction is not formally in the specification but all compilers emit
+    // an error and it is likely to be omitted from the spec.
+    CheckNoBranching(block, GetContext().directive, blockDir.source);
     break;
   case llvm::acc::Directive::ACCD_host_data:
     // Restriction - line 1746
@@ -327,10 +331,31 @@ void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
   dirContext_.pop_back();
 }
 
+void AccStructureChecker::Enter(const parser::AccAtomicUpdate &x) {
+  const parser::AssignmentStmt &assignment{
+      std::get<parser::Statement<parser::AssignmentStmt>>(x.t).statement};
+  const auto &var{std::get<parser::Variable>(assignment.t)};
+  const auto &expr{std::get<parser::Expr>(assignment.t)};
+  const auto *rhs{GetExpr(context_, expr)};
+  const auto *lhs{GetExpr(context_, var)};
+  if (lhs && rhs) {
+    if (lhs->Rank() != 0)
+      context_.Say(expr.source,
+          "LHS of atomic update statement must be scalar"_err_en_US);
+    if (rhs->Rank() != 0)
+      context_.Say(var.GetSource(),
+          "RHS of atomic update statement must be scalar"_err_en_US);
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
+  if (loopNestLevel == 0) {
+    context_.Say(verbatim.source,
+          "The CACHE directive must be inside a loop"_err_en_US);
+  }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
   dirContext_.pop_back();
@@ -348,7 +373,6 @@ CHECK_SIMPLE_CLAUSE(Delete, ACCC_delete)
 CHECK_SIMPLE_CLAUSE(Detach, ACCC_detach)
 CHECK_SIMPLE_CLAUSE(Device, ACCC_device)
 CHECK_SIMPLE_CLAUSE(DeviceNum, ACCC_device_num)
-CHECK_SIMPLE_CLAUSE(DeviceType, ACCC_device_type)
 CHECK_SIMPLE_CLAUSE(Finalize, ACCC_finalize)
 CHECK_SIMPLE_CLAUSE(Firstprivate, ACCC_firstprivate)
 CHECK_SIMPLE_CLAUSE(Host, ACCC_host)
@@ -482,6 +506,19 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
   }
   CheckMultipleOccurrenceInDeclare(
       modifierClause, llvm::acc::Clause::ACCC_copyout);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::DeviceType &d) {
+  CheckAllowed(llvm::acc::Clause::ACCC_device_type);
+  if (GetContext().directive == llvm::acc::Directive::ACCD_set &&
+      d.v.v.size() > 1) {
+    context_.Say(GetContext().clauseSource,
+        "The %s clause on the %s directive accepts only one value"_err_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_device_type)
+                .str()),
+        ContextDirectiveAsFortran());
+  }
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
@@ -637,6 +674,14 @@ void AccStructureChecker::Enter(const parser::SubroutineSubprogram &) {
 
 void AccStructureChecker::Enter(const parser::SeparateModuleSubprogram &) {
   declareSymbols.clear();
+}
+
+void AccStructureChecker::Enter(const parser::DoConstruct &) {
+  ++loopNestLevel;
+}
+
+void AccStructureChecker::Leave(const parser::DoConstruct &) {
+  --loopNestLevel;
 }
 
 llvm::StringRef AccStructureChecker::getDirectiveName(

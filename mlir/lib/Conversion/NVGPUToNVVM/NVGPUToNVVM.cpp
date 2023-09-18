@@ -20,7 +20,12 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "nvgpu-to-nvvm"
+#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
+#define DBGSE() (llvm::dbgs())
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTNVGPUTONVVMPASS
@@ -206,6 +211,46 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
   return result;
 }
 
+/// Returns whether mbarrier object has shared memory address space.
+static bool isMbarrierShared(nvgpu::MBarrierType barrierType) {
+  return (mlir::nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(
+      barrierType.getMemorySpace()));
+}
+
+/// Returns the memory space attribute of the mbarrier object.
+Attribute nvgpu::getMbarrierMemorySpace(MLIRContext *context,
+                                        nvgpu::MBarrierType barrierType) {
+  Attribute memorySpace = {};
+  if (isMbarrierShared(barrierType)) {
+    memorySpace =
+        IntegerAttr::get(IntegerType::get(context, 64),
+                         nvgpu::NVGPUDialect::kSharedMemoryAddressSpace);
+  }
+  return memorySpace;
+}
+
+/// Returns memref type of the mbarrier object. The type is defined in the
+/// MBarrierType.
+MemRefType nvgpu::getMBarrierMemrefType(MLIRContext *context,
+                                        nvgpu::MBarrierType barrierType) {
+  Attribute memorySpace = nvgpu::getMbarrierMemorySpace(context, barrierType);
+  MemRefLayoutAttrInterface layout;
+  return MemRefType::get({1}, IntegerType::get(context, 64), layout,
+                         memorySpace);
+}
+
+/// Returns the base pointer of the mbarrier object.
+static Value getMbarrierPtr(ConversionPatternRewriter &rewriter,
+                            const LLVMTypeConverter &typeConverter,
+                            TypedValue<nvgpu::MBarrierType> barrier,
+                            Value barrierMemref) {
+  MemRefType memrefType =
+      nvgpu::getMBarrierMemrefType(rewriter.getContext(), barrier.getType());
+  MemRefDescriptor memRefDescriptor(barrierMemref);
+  return memRefDescriptor.bufferPtr(rewriter, barrier.getLoc(), typeConverter,
+                                    memrefType);
+}
+
 namespace {
 
 struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
@@ -353,43 +398,6 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
   }
 };
 
-/// Returns whether mbarrier object has shared memory address space.
-static bool isMbarrierShared(nvgpu::MBarrierType barrierType) {
-  return (mlir::nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(
-      barrierType.getMemorySpace()));
-}
-
-/// Returns whether memory space attribute of the mbarrier object.
-static Attribute getMbarrierMemorySpace(RewriterBase &rewriter,
-                                        nvgpu::MBarrierType barrierType) {
-  Attribute memorySpace = {};
-  if (isMbarrierShared(barrierType)) {
-    memorySpace = rewriter.getI64IntegerAttr(
-        nvgpu::NVGPUDialect::kSharedMemoryAddressSpace);
-  }
-  return memorySpace;
-}
-
-/// Returns memref type of the mbarrier object. The type is defined in the
-/// MBarrierType.
-static MemRefType createMBarrierMemrefType(RewriterBase &rewriter,
-                                           nvgpu::MBarrierType barrierType) {
-  Attribute memorySpace = getMbarrierMemorySpace(rewriter, barrierType);
-  MemRefLayoutAttrInterface layout;
-  return MemRefType::get({1}, rewriter.getI64Type(), layout, memorySpace);
-}
-
-/// Returns the base pointer of the mbarrier object.
-static Value getMbarrierPtr(ConversionPatternRewriter &rewriter,
-                            LLVMTypeConverter &typeConverter,
-                            TypedValue<nvgpu::MBarrierType> barrier,
-                            Value barrierMemref) {
-  MemRefType memrefType = createMBarrierMemrefType(rewriter, barrier.getType());
-  MemRefDescriptor memRefDescriptor(barrierMemref);
-  return memRefDescriptor.bufferPtr(rewriter, barrier.getLoc(), typeConverter,
-                                    memrefType);
-}
-
 struct ConvertNVGPUToNVVMPass
     : public impl::ConvertNVGPUToNVVMPassBase<ConvertNVGPUToNVVMPass> {
   using Base::Base;
@@ -414,8 +422,13 @@ struct ConvertNVGPUToNVVMPass
     converter.addConversion([&](nvgpu::MBarrierTokenType type) -> Type {
       return converter.convertType(IntegerType::get(type.getContext(), 64));
     });
+    converter.addConversion(
+        [&](nvgpu::WarpgroupMatrixDescriptorType type) -> Type {
+          return converter.convertType(IntegerType::get(type.getContext(), 64));
+        });
     converter.addConversion([&](nvgpu::MBarrierType type) -> Type {
-      return converter.convertType(createMBarrierMemrefType(rewriter, type));
+      return converter.convertType(
+          nvgpu::getMBarrierMemrefType(rewriter.getContext(), type));
     });
     converter.addConversion([&](nvgpu::TensorMapDescriptorType type) -> Type {
       return converter.getPointerType(type.getTensor().getElementType());
@@ -748,8 +761,8 @@ struct NVGPUMBarrierCreateLowering
   matchAndRewrite(nvgpu::MBarrierCreateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Operation *funcOp = op->getParentOp();
-    MemRefType barrierType =
-        createMBarrierMemrefType(rewriter, op.getBarrier().getType());
+    MemRefType barrierType = nvgpu::getMBarrierMemrefType(
+        rewriter.getContext(), op.getBarrier().getType());
 
     memref::GlobalOp global;
     if (auto moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>())
@@ -930,6 +943,89 @@ struct NVGPUTmaAsyncLoadOpLowering
     return success();
   }
 };
+struct NVGPUGenerateGmmaDescriptorLowering
+    : public ConvertOpToLLVMPattern<nvgpu::GenerateGmmaDescriptorOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::GenerateGmmaDescriptorOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::GenerateGmmaDescriptorOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Location loc = op->getLoc();
+
+    nvgpu::TensorMapSwizzleKind swizzleKind =
+        op.getTensorMap().getType().getSwizzle();
+
+    unsigned layout =
+        (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_128B)  ? 128
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_64B) ? 64
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_32B) ? 32
+                                                                    : 1;
+    unsigned swizzle =
+        (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_128B)  ? 1
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_64B) ? 2
+        : (swizzleKind == nvgpu::TensorMapSwizzleKind::SWIZZLE_32B) ? 3
+                                                                    : 0;
+
+    auto ti64 = rewriter.getIntegerType(64);
+    auto makeConst = [&](uint64_t index) -> Value {
+      return rewriter.create<LLVM::ConstantOp>(
+          loc, ti64, rewriter.getI64IntegerAttr(index));
+    };
+    auto shiftLeft = [&](Value value, unsigned shift) -> Value {
+      return rewriter.create<LLVM::ShlOp>(loc, ti64, value, makeConst(shift));
+    };
+    auto shiftRight = [&](Value value, unsigned shift) -> Value {
+      return rewriter.create<LLVM::LShrOp>(loc, ti64, value, makeConst(shift));
+    };
+    auto insertBit = [&](Value desc, Value val, int startBit) {
+      return rewriter.create<LLVM::OrOp>(loc, ti64, desc,
+                                         shiftLeft(val, startBit));
+    };
+
+    int ex4LSB = 4;
+    int64_t sizeN = op.getTensorMap().getType().getTensor().getDimSize(0);
+    uint64_t strideDimVal = (layout << 3) >> ex4LSB;
+    uint64_t leadDimVal = (sizeN * layout) >> ex4LSB;
+    uint64_t offsetVal = 0;
+
+    Value strideDim = makeConst(strideDimVal);
+    Value leadDim = makeConst(leadDimVal);
+
+    Value baseAddr = getStridedElementPtr(
+        op->getLoc(), cast<MemRefType>(op.getTensor().getType()),
+        adaptor.getTensor(), {}, rewriter);
+    Value basePtr = rewriter.create<LLVM::PtrToIntOp>(loc, ti64, baseAddr);
+    // Just use 14 bits for base address
+    Value basePtr14bit = shiftRight(shiftLeft(basePtr, 46), 50);
+
+    int startSwizzleBit = 62, startOffsetBit = 49, startStrideBit = 32,
+        startLeadBit = 16, startBaseAddrBit = 0;
+    Value dsc = makeConst(0);
+    // // [62,64)  swizzle type
+    dsc = insertBit(dsc, makeConst(swizzle), startSwizzleBit);
+    // // [49,52)  base_offset
+    dsc = insertBit(dsc, makeConst(offsetVal), startOffsetBit);
+    // // [32,46)  stride
+    dsc = insertBit(dsc, strideDim, startStrideBit);
+    // // [16,30)  leading dimension
+    dsc = insertBit(dsc, leadDim, startLeadBit);
+    // // [0,14)   start_address
+    dsc = insertBit(dsc, basePtr14bit, startBaseAddrBit);
+
+    LLVM_DEBUG(DBGS() << "Generating wgmma.descriptor: "
+                      << "leading_off:" << leadDimVal << "\t"
+                      << "stride_off :" << strideDimVal << "\t"
+                      << "base_offset:" << offsetVal << "\t"
+                      << "layout_type:" << swizzle << " ("
+                      << nvgpu::stringifyTensorMapSwizzleKind(swizzleKind)
+                      << ")\n start_addr :  " << baseAddr << "\n");
+
+    rewriter.replaceOp(op, dsc);
+    return success();
+  }
+};
 
 static Value makeI64Const(RewriterBase &rewriter, Operation *op,
                           int32_t index) {
@@ -1059,7 +1155,7 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
       NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
-      NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
+      NVGPUGenerateGmmaDescriptorLowering,   // nvgpu.wgmma.generate.descriptor
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);

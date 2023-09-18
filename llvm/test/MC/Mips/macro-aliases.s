@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=mips -mcpu=mips32r2 %s -show-inst | FileCheck %s
+# RUN: llvm-mc -triple=mips -mcpu=mips32r2 %s -show-inst | FileCheck %s
 
 # Test that subu accepts constant operands and inverts them when
 # rendering the operand.

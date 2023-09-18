@@ -75,8 +75,7 @@ define i32 @test_explicit_pred(i64 %len) {
 ; CHECK-NEXT:    [[BIN_RDX13:%.*]] = add <4 x i32> [[TMP22]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX14:%.*]] = add <4 x i32> [[TMP23]], [[BIN_RDX13]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX14]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
@@ -235,8 +234,7 @@ define i32 @test_explicit_pred_generic(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -420,8 +418,7 @@ define i32 @test_invariant_address(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <4 x i32> [[TMP102]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP103]], [[BIN_RDX7]]
 ; CHECK-NEXT:    [[TMP105:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX8]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP105]], [[MIDDLE_BLOCK]] ]
@@ -712,8 +709,7 @@ define i32 @test_step_narrower_than_access(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add <4 x i32> [[TMP150]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX38:%.*]] = add <4 x i32> [[TMP151]], [[BIN_RDX37]]
 ; CHECK-NEXT:    [[TMP153:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX38]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP153]], [[MIDDLE_BLOCK]] ]
@@ -1046,8 +1042,7 @@ define i32 @test_non_zero_start(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 3072, 3072
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 1024, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -1295,8 +1290,7 @@ define i32 @test_non_unit_stride(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <4 x i32> [[TMP118]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP119]], [[BIN_RDX7]]
 ; CHECK-NEXT:    [[TMP121:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX8]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 2048, 2048
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP121]], [[MIDDLE_BLOCK]] ]
@@ -1456,8 +1450,7 @@ define i32 @neg_off_by_many(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -1617,8 +1610,7 @@ define i32 @neg_off_by_one_iteration(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -1778,8 +1770,7 @@ define i32 @neg_off_by_one_byte(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -2116,8 +2107,7 @@ define i32 @test_allocsize(i64 %len, ptr %test_base) nofree nosync {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -2278,8 +2268,7 @@ define i32 @test_allocsize_array(i64 %len, ptr %test_base) nofree nosync {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -2450,8 +2439,7 @@ define i32 @test_allocsize_cond_deref(i1 %allzero, ptr %test_base) {
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <4 x i32> [[TMP78]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <4 x i32> [[TMP79]], [[BIN_RDX10]]
 ; CHECK-NEXT:    [[TMP81:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX11]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 4096, 4096
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[PREHEADER]] ], [ [[TMP81]], [[MIDDLE_BLOCK]] ]
@@ -2557,8 +2545,7 @@ define i32 @test_stride_three(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP29]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 35, 32
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP31]], [[MIDDLE_BLOCK]] ]
@@ -2656,8 +2643,7 @@ define i32 @test_non_unit_stride_four(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP29]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 27, 24
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP31]], [[MIDDLE_BLOCK]] ]
@@ -2755,8 +2741,7 @@ define i32 @test_non_unit_stride_five(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP29]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 22, 20
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP31]], [[MIDDLE_BLOCK]] ]
@@ -2878,8 +2863,7 @@ define i32 @neg_test_non_unit_stride_off_by_four_bytes(i64 %len, ptr %test_base)
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP39:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP37]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 52, 52
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 104, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP39]], [[MIDDLE_BLOCK]] ]
@@ -3093,8 +3077,7 @@ define i32 @test_non_unit_stride_with_first_iteration_step_access(i64 %len, ptr 
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add <4 x i32> [[TMP134]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX8:%.*]] = add <4 x i32> [[TMP135]], [[BIN_RDX7]]
 ; CHECK-NEXT:    [[TMP137:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX8]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 152, 144
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 288, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP137]], [[MIDDLE_BLOCK]] ]

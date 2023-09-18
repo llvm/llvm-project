@@ -81,7 +81,7 @@ public:
     TargetOptions Options;
     Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
         Triple::normalize("x86_64--"), "", "", Options, std::nullopt,
-        std::nullopt, CodeGenOpt::Aggressive));
+        std::nullopt, CodeGenOptLevel::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
     auto F =
@@ -3155,7 +3155,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   VLocs[1].Vars.clear();
 
   // Test that we can eliminate PHIs. A PHI will be placed at the loop head
-  // because there's a def in in.
+  // because there's a def in it.
   MInLocs[1][0] = LiveInRsp;
   MOutLocs[1][0] = LiveInRsp;
   VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});

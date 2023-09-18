@@ -12,12 +12,6 @@
 
 #include <__config_site>
 
-#if defined(_MSC_VER) && !defined(__clang__)
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    define _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
-#  endif
-#endif
-
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
 #endif
@@ -170,7 +164,7 @@
 #    endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
-#    if defined(__FreeBSD__)
+#    if defined(__FreeBSD__) && __FreeBSD__ < 14
 #      define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #    endif
 // For XCOFF linkers, we have problems if we see a weak hidden version of a symbol
@@ -208,28 +202,34 @@
 
 // HARDENING {
 
-// TODO(hardening): remove this in LLVM 18.
+// TODO(hardening): remove this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
-// equivalent to setting the hardened mode.
+// equivalent to setting the safe mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
-#    warning "_LIBCPP_ENABLE_ASSERTIONS is deprecated, please use _LIBCPP_ENABLE_HARDENED_MODE instead."
+#    warning "_LIBCPP_ENABLE_ASSERTIONS is deprecated, please use _LIBCPP_ENABLE_SAFE_MODE instead."
 #    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
 #      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
 #    endif
 #    if _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_ENABLE_HARDENED_MODE 1
+#      define _LIBCPP_ENABLE_SAFE_MODE 1
 #    endif
 #  endif
 
 // Enables the hardened mode which consists of all checks intended to be used in production. Hardened mode prioritizes
 // security-critical checks that can be done with relatively little overhead in constant time. Mutually exclusive with
-// `_LIBCPP_ENABLE_DEBUG_MODE`.
+// `_LIBCPP_ENABLE_SAFE_MODE` and `_LIBCPP_ENABLE_DEBUG_MODE`.
 //
 // #define _LIBCPP_ENABLE_HARDENED_MODE 1
 
+// Enables the safe mode which extends the hardened mode with checks that are relatively cheap and prevent common types
+// of errors but are not security-critical. Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and
+// `_LIBCPP_ENABLE_DEBUG_MODE`.
+//
+// #define _LIBCPP_ENABLE_SAFE_MODE 1
+
 // Enables the debug mode which contains all the checks from the hardened mode and additionally more expensive checks
 // that may affect the complexity of algorithms. The debug mode is intended to be used for testing, not in production.
-// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE`.
+// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_SAFE_MODE`.
 //
 // #define _LIBCPP_ENABLE_DEBUG_MODE 1
 
@@ -264,6 +264,13 @@
 #    error "_LIBCPP_ENABLE_HARDENED_MODE must be set to 0 or 1."
 #  endif
 
+#  ifndef _LIBCPP_ENABLE_SAFE_MODE
+#    define _LIBCPP_ENABLE_SAFE_MODE _LIBCPP_ENABLE_SAFE_MODE_DEFAULT
+#  endif
+#  if _LIBCPP_ENABLE_SAFE_MODE != 0 && _LIBCPP_ENABLE_SAFE_MODE != 1
+#    error "_LIBCPP_ENABLE_SAFE_MODE must be set to 0 or 1."
+#  endif
+
 #  ifndef _LIBCPP_ENABLE_DEBUG_MODE
 #    define _LIBCPP_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
 #  endif
@@ -271,13 +278,16 @@
 #    error "_LIBCPP_ENABLE_DEBUG_MODE must be set to 0 or 1."
 #  endif
 
-#  if _LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE
-#    error "Only one of _LIBCPP_ENABLE_HARDENED_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
+#  if (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_SAFE_MODE) ||                                                    \
+      (_LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE) ||                                                   \
+      (_LIBCPP_ENABLE_SAFE_MODE && _LIBCPP_ENABLE_DEBUG_MODE)
+#    error                                                                                                             \
+        "Only one of _LIBCPP_ENABLE_HARDENED_MODE, _LIBCPP_ENABLE_SAFE_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
 #  endif
 
+// clang-format off
 // Hardened mode checks.
 
-// clang-format off
 #  if _LIBCPP_ENABLE_HARDENED_MODE
 
 // Enabled checks.
@@ -290,6 +300,19 @@
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
+
+// Safe mode checks.
+
+#  elif _LIBCPP_ENABLE_SAFE_MODE
+
+// Enabled checks.
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSERT(expression, message)
+// Disabled checks.
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 
 // Debug mode checks.
 
@@ -405,10 +428,8 @@
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#  endif
-
-#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
+#    define _LIBCPP_HAS_NO_INCOMPLETE_TZDB
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.
@@ -425,48 +446,19 @@
 #    include <features.h> // for __NATIVE_ASCII_F
 #  endif
 
-#  ifdef __LITTLE_ENDIAN__
-#    if __LITTLE_ENDIAN__
-#      define _LIBCPP_LITTLE_ENDIAN
-#    endif // __LITTLE_ENDIAN__
-#  endif   // __LITTLE_ENDIAN__
+#  ifndef __BYTE_ORDER__
+#    error                                                                                                             \
+        "Your compiler doesn't seem to define __BYTE_ORDER__, which is required by libc++ to know the endianness of your target platform"
+#  endif
 
-#  ifdef __BIG_ENDIAN__
-#    if __BIG_ENDIAN__
-#      define _LIBCPP_BIG_ENDIAN
-#    endif // __BIG_ENDIAN__
-#  endif   // __BIG_ENDIAN__
-
-#  ifdef __BYTE_ORDER__
-#    if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#      define _LIBCPP_LITTLE_ENDIAN
-#    elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#      define _LIBCPP_BIG_ENDIAN
-#    endif // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#  endif   // __BYTE_ORDER__
-
-#  ifdef __FreeBSD__
-#    include <osreldate.h>
-#    include <sys/endian.h>
-#    if _BYTE_ORDER == _LITTLE_ENDIAN
-#      define _LIBCPP_LITTLE_ENDIAN
-#    else // _BYTE_ORDER == _LITTLE_ENDIAN
-#      define _LIBCPP_BIG_ENDIAN
-#    endif // _BYTE_ORDER == _LITTLE_ENDIAN
-#  endif   // __FreeBSD__
-
-#  if defined(__NetBSD__) || defined(__OpenBSD__)
-#    include <sys/endian.h>
-#    if _BYTE_ORDER == _LITTLE_ENDIAN
-#      define _LIBCPP_LITTLE_ENDIAN
-#    else // _BYTE_ORDER == _LITTLE_ENDIAN
-#      define _LIBCPP_BIG_ENDIAN
-#    endif // _BYTE_ORDER == _LITTLE_ENDIAN
-#  endif   // defined(__NetBSD__) || defined(__OpenBSD__)
+#  if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#    define _LIBCPP_LITTLE_ENDIAN
+#  elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#    define _LIBCPP_BIG_ENDIAN
+#  endif // __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 
 #  if defined(_WIN32)
 #    define _LIBCPP_WIN32API
-#    define _LIBCPP_LITTLE_ENDIAN
 #    define _LIBCPP_SHORT_WCHAR 1
 // Both MinGW and native MSVC provide a "MSVC"-like environment
 #    define _LIBCPP_MSVCRT_LIKE
@@ -538,17 +530,6 @@
 #  else
 #    define _LIBCPP_USING_DEV_RANDOM
 #  endif
-
-#  if !defined(_LIBCPP_LITTLE_ENDIAN) && !defined(_LIBCPP_BIG_ENDIAN)
-#    include <endian.h>
-#    if __BYTE_ORDER == __LITTLE_ENDIAN
-#      define _LIBCPP_LITTLE_ENDIAN
-#    elif __BYTE_ORDER == __BIG_ENDIAN
-#      define _LIBCPP_BIG_ENDIAN
-#    else // __BYTE_ORDER == __BIG_ENDIAN
-#      error unable to determine endian
-#    endif
-#  endif // !defined(_LIBCPP_LITTLE_ENDIAN) && !defined(_LIBCPP_BIG_ENDIAN)
 
 #  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
@@ -685,7 +666,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
-#    define _LIBCPP_ENUM_VIS
+#    define _LIBCPP_TYPE_VISIBILITY_DEFAULT
 
 #  else
 
@@ -713,20 +694,17 @@ typedef __char32_t char32_t;
 #      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    endif
 
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-#      if __has_attribute(__type_visibility__)
-#        define _LIBCPP_TEMPLATE_VIS __attribute__((__type_visibility__("default")))
-#      else
-#        define _LIBCPP_TEMPLATE_VIS __attribute__((__visibility__("default")))
-#      endif
+// GCC doesn't support the type_visibility attribute, so we have to keep the visibility attribute on templates
+#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && !__has_attribute(__type_visibility__)
+#      define _LIBCPP_TEMPLATE_VIS __attribute__((__visibility__("default")))
 #    else
 #      define _LIBCPP_TEMPLATE_VIS
 #    endif
 
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && __has_attribute(__type_visibility__)
-#      define _LIBCPP_ENUM_VIS __attribute__((__type_visibility__("default")))
+#      define _LIBCPP_TYPE_VISIBILITY_DEFAULT __attribute__((__type_visibility__("default")))
 #    else
-#      define _LIBCPP_ENUM_VIS
+#      define _LIBCPP_TYPE_VISIBILITY_DEFAULT
 #    endif
 
 #  endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
@@ -800,7 +778,8 @@ typedef __char32_t char32_t;
 
 // Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
 // clang-format off
-#  define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_ABI_NAMESPACE {
+#  define _LIBCPP_BEGIN_NAMESPACE_STD namespace _LIBCPP_TYPE_VISIBILITY_DEFAULT std {                                  \
+                               inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD }}
 #  define _VSTD std
 
@@ -853,7 +832,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 // clang-format on
 
 #  else // _LIBCPP_CXX03_LANG
-#    define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x
+#    define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class x
 #    define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #  endif // _LIBCPP_CXX03_LANG
 

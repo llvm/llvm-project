@@ -695,6 +695,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             LLVM::AtomicCmpXchgOp,
             LLVM::CallOp,
             LLVM::DbgDeclareOp,
+            LLVM::DbgLabelOp,
             LLVM::DbgValueOp,
             LLVM::FenceOp,
             LLVM::InlineAsmOp,
@@ -763,7 +764,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       return handleByValArgument(builder, callable, argument, elementType,
                                  requestedAlignment);
     }
-    if (std::optional<NamedAttribute> attr =
+    if ([[maybe_unused]] std::optional<NamedAttribute> attr =
             argumentAttrs.getNamed(LLVM::LLVMDialect::getNoAliasAttrName())) {
       if (argument.use_empty())
         return argument;

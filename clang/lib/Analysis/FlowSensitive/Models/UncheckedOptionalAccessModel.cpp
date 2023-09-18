@@ -34,7 +34,6 @@
 #include <memory>
 #include <optional>
 #include <utility>
-#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -458,8 +457,9 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
-  createOptionalValue(State.Env.getResultObjectLocation(*E),
-                      State.Env.getBoolLiteralValue(true), State.Env);
+  State.Env.setValue(
+      *E, createOptionalValue(State.Env.getResultObjectLocation(*E),
+                              State.Env.getBoolLiteralValue(true), State.Env));
 }
 
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
@@ -543,7 +543,10 @@ void transferCallReturningOptional(const CallExpr *E,
     }
   }
 
-  createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
+  RecordValue &Val =
+      createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
+  if (E->isPRValue())
+    State.Env.setValue(*E, Val);
 }
 
 void constructOptionalValue(const Expr &E, Environment &Env,
@@ -909,8 +912,8 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-std::vector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
-                                               const Environment &Env) {
+llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
+                                                     const Environment &Env) {
   if (auto *OptionalVal = getValueBehindPossiblePointer(*ObjectExpr, Env)) {
     auto *Prop = OptionalVal->getProperty("has_value");
     if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
@@ -931,7 +934,8 @@ auto buildDiagnoseMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<const Environment, std::vector<SourceLocation>>()
+  return CFGMatchSwitchBuilder<const Environment,
+                               llvm::SmallVector<SourceLocation>>()
       // optional::value
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           valueCall(IgnorableOptional),

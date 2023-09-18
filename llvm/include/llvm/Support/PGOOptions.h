@@ -32,7 +32,8 @@ struct PGOOptions {
              IntrusiveRefCntPtr<vfs::FileSystem> FS,
              PGOAction Action = NoAction, CSPGOAction CSAction = NoCSAction,
              bool DebugInfoForProfiling = false,
-             bool PseudoProbeForProfiling = false);
+             bool PseudoProbeForProfiling = false,
+             bool AtomicCounterUpdate = false);
   PGOOptions(const PGOOptions &);
   ~PGOOptions();
   PGOOptions &operator=(const PGOOptions &);
@@ -45,6 +46,7 @@ struct PGOOptions {
   CSPGOAction CSAction;
   bool DebugInfoForProfiling;
   bool PseudoProbeForProfiling;
+  bool AtomicCounterUpdate;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 } // namespace llvm

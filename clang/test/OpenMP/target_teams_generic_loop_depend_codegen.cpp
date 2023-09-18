@@ -3126,7 +3126,7 @@ int foo(int n) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK-NEXT:    ret void

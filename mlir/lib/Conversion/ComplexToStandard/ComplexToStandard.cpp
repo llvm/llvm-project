@@ -35,13 +35,18 @@ struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
     auto loc = op.getLoc();
     auto type = op.getType();
 
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
+
     Value real =
         rewriter.create<complex::ReOp>(loc, type, adaptor.getComplex());
     Value imag =
         rewriter.create<complex::ImOp>(loc, type, adaptor.getComplex());
-    Value realSqr = rewriter.create<arith::MulFOp>(loc, real, real);
-    Value imagSqr = rewriter.create<arith::MulFOp>(loc, imag, imag);
-    Value sqNorm = rewriter.create<arith::AddFOp>(loc, realSqr, imagSqr);
+    Value realSqr =
+        rewriter.create<arith::MulFOp>(loc, real, real, fmf.getValue());
+    Value imagSqr =
+        rewriter.create<arith::MulFOp>(loc, imag, imag, fmf.getValue());
+    Value sqNorm =
+        rewriter.create<arith::AddFOp>(loc, realSqr, imagSqr, fmf.getValue());
 
     rewriter.replaceOpWithNewOp<math::SqrtOp>(op, sqNorm);
     return success();
@@ -132,15 +137,16 @@ struct BinaryComplexOpConversion : public OpConversionPattern<BinaryComplexOp> {
     auto type = cast<ComplexType>(adaptor.getLhs().getType());
     auto elementType = cast<FloatType>(type.getElementType());
     mlir::ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    arith::FastMathFlagsAttr fmf = op.getFastMathFlagsAttr();
 
     Value realLhs = b.create<complex::ReOp>(elementType, adaptor.getLhs());
     Value realRhs = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value resultReal =
-        b.create<BinaryStandardOp>(elementType, realLhs, realRhs);
+    Value resultReal = b.create<BinaryStandardOp>(elementType, realLhs, realRhs,
+                                                  fmf.getValue());
     Value imagLhs = b.create<complex::ImOp>(elementType, adaptor.getLhs());
     Value imagRhs = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value resultImag =
-        b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs);
+    Value resultImag = b.create<BinaryStandardOp>(elementType, imagLhs, imagRhs,
+                                                  fmf.getValue());
     rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
                                                    resultImag);
     return success();

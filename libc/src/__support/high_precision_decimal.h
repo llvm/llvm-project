@@ -334,13 +334,24 @@ public:
     if ((*numString | 32) == 'e') {
       ++numString;
       if (isdigit(*numString) || *numString == '+' || *numString == '-') {
-        int32_t add_to_exp = strtointeger<int32_t>(numString, 10);
-        if (add_to_exp > 100000) {
-          add_to_exp = 100000;
-        } else if (add_to_exp < -100000) {
-          add_to_exp = -100000;
+        auto result = strtointeger<int32_t>(numString, 10);
+        if (result.has_error()) {
+          // TODO: handle error
         }
-        this->decimal_point += add_to_exp;
+        int32_t add_to_exponent = result.value;
+
+        // Here we do this operation as int64 to avoid overflow.
+        int64_t temp_exponent = static_cast<int64_t>(this->decimal_point) +
+                                static_cast<int64_t>(add_to_exponent);
+
+        // Theoretically these numbers should be MAX_EXPONENT for long double,
+        // but that should be ~16,000 which is much less than 1 << 30.
+        if (temp_exponent > (1 << 30)) {
+          temp_exponent = (1 << 30);
+        } else if (temp_exponent < -(1 << 30)) {
+          temp_exponent = -(1 << 30);
+        }
+        this->decimal_point = static_cast<int32_t>(temp_exponent);
       }
     }
 

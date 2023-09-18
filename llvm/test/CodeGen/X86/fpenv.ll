@@ -7,6 +7,9 @@ declare void @llvm.set.rounding(i32 %x)
 declare i256 @llvm.get.fpenv.i256()
 declare void @llvm.set.fpenv.i256(i256 %fpenv)
 declare void @llvm.reset.fpenv()
+declare i32 @llvm.get.fpmode.i32()
+declare void @llvm.set.fpmode.i32(i32 %fpmode)
+declare void @llvm.reset.fpmode()
 
 define void @func_01() nounwind {
 ; X86-NOSSE-LABEL: func_01:
@@ -417,6 +420,106 @@ define void @reset_fpenv_01_native() nounwind {
 ; X64-NEXT:    retq
 entry:
   call void @llvm.reset.fpenv()
+  ret void
+}
+
+define i32 @func_get_fpmode() #0 {
+; X86-NOSSE-LABEL: func_get_fpmode:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    subl $12, %esp
+; X86-NOSSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    calll fegetmode
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    addl $12, %esp
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE-LABEL: func_get_fpmode:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    calll fegetmode
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: func_get_fpmode:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq fegetmode@PLT
+; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+entry:
+  %fpmode = call i32 @llvm.get.fpmode.i32()
+  ret i32 %fpmode
+}
+
+define void @func_set_fpmode(i32 %fpmode) #0 {
+; X86-NOSSE-LABEL: func_set_fpmode:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    subl $12, %esp
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    calll fesetmode
+; X86-NOSSE-NEXT:    addl $12, %esp
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE-LABEL: func_set_fpmode:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    calll fesetmode
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: func_set_fpmode:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq fesetmode@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+entry:
+  call void @llvm.set.fpmode.i32(i32 %fpmode)
+  ret void
+}
+
+
+define void @func_reset() #0 {
+; X86-NOSSE-LABEL: func_reset:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    subl $12, %esp
+; X86-NOSSE-NEXT:    movl $-1, (%esp)
+; X86-NOSSE-NEXT:    calll fesetmode
+; X86-NOSSE-NEXT:    addl $12, %esp
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE-LABEL: func_reset:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    movl $-1, (%esp)
+; X86-SSE-NEXT:    calll fesetmode
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: func_reset:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movq $-1, %rdi
+; X64-NEXT:    callq fesetmode@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+entry:
+  call void @llvm.reset.fpmode()
   ret void
 }
 

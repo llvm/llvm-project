@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 
-// rdar://8818236
 namespace rdar8818236 {
 struct S {
   char c2;

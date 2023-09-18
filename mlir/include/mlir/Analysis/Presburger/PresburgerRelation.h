@@ -66,6 +66,14 @@ public:
 
   void insertVarInPlace(VarKind kind, unsigned pos, unsigned num = 1);
 
+  /// Converts variables of the specified kind in the column range [srcPos,
+  /// srcPos + num) to variables of the specified kind at position dstPos. The
+  /// ranges are relative to the kind of variable.
+  ///
+  /// srcKind and dstKind must be different.
+  void convertVarKind(VarKind srcKind, unsigned srcPos, unsigned num,
+                      VarKind dstKind, unsigned dstPos);
+
   /// Return a reference to the list of disjuncts.
   ArrayRef<IntegerRelation> getAllDisjuncts() const;
 
@@ -85,17 +93,22 @@ public:
   /// Return the intersection of this set and the given set.
   PresburgerRelation intersect(const PresburgerRelation &set) const;
 
-  /// Intersect the given `set` with the range in-place.
+  /// Return the range intersection of the given `set` with `this` relation.
   ///
   /// Formally, let the relation `this` be R: A -> B and `set` is C, then this
-  /// operation modifies R to be A -> (B intersection C).
-  PresburgerRelation intersectRange(PresburgerSet &set);
+  /// operation returns A -> (B intersection C).
+  PresburgerRelation intersectRange(const PresburgerSet &set) const;
 
-  /// Intersect the given `set` with the domain in-place.
+  /// Return the domain intersection of the given `set` with `this` relation.
   ///
   /// Formally, let the relation `this` be R: A -> B and `set` is C, then this
-  /// operation modifies R to be (A intersection C) -> B.
-  PresburgerRelation intersectDomain(const PresburgerSet &set);
+  /// operation returns (A intersection C) -> B.
+  PresburgerRelation intersectDomain(const PresburgerSet &set) const;
+
+  /// Return a set corresponding to the domain of the relation.
+  PresburgerSet getDomainSet() const;
+  /// Return a set corresponding to the range of the relation.
+  PresburgerSet getRangeSet() const;
 
   /// Invert the relation, i.e. swap its domain and range.
   ///

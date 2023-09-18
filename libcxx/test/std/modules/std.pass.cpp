@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTEd: c++03, c++11, c++14, c++17, c++20
-// TODO MODULES fix c++26
-// XFAIL: c++26
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// REQUIRES: use_module_std
+// UNSUPPORTED: libcpp-has-no-std-modules
+// UNSUPPORTED: clang-modules-build
 
 // A minimal test to validate import works.
 

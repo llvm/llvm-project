@@ -406,6 +406,32 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
   }
 }
 
+static LLVMValueRef clone_inline_asm(LLVMValueRef Asm, LLVMModuleRef M) {
+
+  if (!LLVMIsAInlineAsm(Asm))
+      report_fatal_error("Expected inline assembly");
+
+  size_t AsmStringSize = 0;
+  const char *AsmString = LLVMGetInlineAsmAsmString(Asm, &AsmStringSize);
+
+  size_t ConstraintStringSize = 0;
+  const char *ConstraintString =
+      LLVMGetInlineAsmConstraintString(Asm, &ConstraintStringSize);
+
+  LLVMInlineAsmDialect AsmDialect = LLVMGetInlineAsmDialect(Asm);
+
+  LLVMTypeRef AsmFunctionType = LLVMGetInlineAsmFunctionType(Asm);
+
+  LLVMBool HasSideEffects = LLVMGetInlineAsmHasSideEffects(Asm);
+  LLVMBool NeedsAlignStack = LLVMGetInlineAsmNeedsAlignedStack(Asm);
+  LLVMBool CanUnwind = LLVMGetInlineAsmCanUnwind(Asm);
+
+  return LLVMGetInlineAsm(AsmFunctionType, AsmString, AsmStringSize,
+                          ConstraintString, ConstraintStringSize,
+                          HasSideEffects, NeedsAlignStack, AsmDialect,
+                          CanUnwind);
+}
+
 struct FunCloner {
   LLVMValueRef Fun;
   LLVMModuleRef M;
@@ -434,6 +460,10 @@ struct FunCloner {
     auto i = VMap.find(Src);
     if (i != VMap.end())
       return i->second;
+
+    // Inline assembly is a Value, but not an Instruction
+    if (LLVMIsAInlineAsm(Src))
+      return clone_inline_asm(Src, M);
 
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");

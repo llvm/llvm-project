@@ -3532,14 +3532,14 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
   case OR_Success: {
     // Record the standard conversion we used and the conversion function.
     CXXConstructorDecl *Constructor = cast<CXXConstructorDecl>(Best->Function);
-    QualType ThisType = Constructor->getThisType();
+    QualType ThisType = Constructor->getThisObjectType();
     // Initializer lists don't have conversions as such.
     User.Before.setAsIdentityConversion();
     User.HadMultipleCandidates = HadMultipleCandidates;
     User.ConversionFunction = Constructor;
     User.FoundConversionFunction = Best->FoundDecl;
     User.After.setAsIdentityConversion();
-    User.After.setFromType(ThisType->castAs<PointerType>()->getPointeeType());
+    User.After.setFromType(ThisType);
     User.After.setAllToTypes(ToType);
     return Result;
   }
@@ -3719,7 +3719,6 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       //   sequence converts the source type to the type required by
       //   the argument of the constructor.
       //
-      QualType ThisType = Constructor->getThisType();
       if (isa<InitListExpr>(From)) {
         // Initializer lists don't have conversions as such.
         User.Before.setAsIdentityConversion();
@@ -3735,7 +3734,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       User.ConversionFunction = Constructor;
       User.FoundConversionFunction = Best->FoundDecl;
       User.After.setAsIdentityConversion();
-      User.After.setFromType(ThisType->castAs<PointerType>()->getPointeeType());
+      User.After.setFromType(Constructor->getThisObjectType());
       User.After.setAllToTypes(ToType);
       return Result;
     }
@@ -5557,9 +5556,11 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
 
   // First check the qualifiers.
   QualType FromTypeCanon = S.Context.getCanonicalType(FromType);
-  if (ImplicitParamType.getCVRQualifiers()
-                                    != FromTypeCanon.getLocalCVRQualifiers() &&
-      !ImplicitParamType.isAtLeastAsQualifiedAs(FromTypeCanon)) {
+  // MSVC ignores __unaligned qualifier for overload candidates; do the same.
+  if (ImplicitParamType.getCVRQualifiers() !=
+          FromTypeCanon.getLocalCVRQualifiers() &&
+      !ImplicitParamType.isAtLeastAsQualifiedAs(
+          withoutUnaligned(S.Context, FromTypeCanon))) {
     ICS.setBad(BadConversionSequence::bad_qualifiers,
                FromType, ImplicitParamType);
     return ICS;
@@ -5639,8 +5640,7 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
                                           NamedDecl *FoundDecl,
                                           CXXMethodDecl *Method) {
   QualType FromRecordType, DestType;
-  QualType ImplicitParamRecordType  =
-    Method->getThisType()->castAs<PointerType>()->getPointeeType();
+  QualType ImplicitParamRecordType = Method->getThisObjectType();
 
   Expr::Classification FromClassification;
   if (const PointerType *PT = From->getType()->getAs<PointerType>()) {
@@ -6699,17 +6699,19 @@ void Sema::AddOverloadCandidate(
   }
 
   // (CUDA B.1): Check for invalid calls between targets.
-  if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true))
-      // Skip the check for callers that are implicit members, because in this
-      // case we may not yet know what the member's target is; the target is
-      // inferred for the member automatically, based on the bases and fields of
-      // the class.
-      if (!Caller->isImplicit() && !IsAllowedCUDACall(Caller, Function)) {
-        Candidate.Viable = false;
-        Candidate.FailureKind = ovl_fail_bad_target;
-        return;
-      }
+  if (getLangOpts().CUDA) {
+    const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    // Skip the check for callers that are implicit members, because in this
+    // case we may not yet know what the member's target is; the target is
+    // inferred for the member automatically, based on the bases and fields of
+    // the class.
+    if (!(Caller && Caller->isImplicit()) &&
+        !IsAllowedCUDACall(Caller, Function)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_bad_target;
+      return;
+    }
+  }
 
   if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
@@ -7221,12 +7223,11 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
 
   // (CUDA B.1): Check for invalid calls between targets.
   if (getLangOpts().CUDA)
-    if (const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true))
-      if (!IsAllowedCUDACall(Caller, Method)) {
-        Candidate.Viable = false;
-        Candidate.FailureKind = ovl_fail_bad_target;
-        return;
-      }
+    if (!IsAllowedCUDACall(getCurFunctionDecl(/*AllowLambda=*/true), Method)) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_bad_target;
+      return;
+    }
 
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
@@ -12497,10 +12498,12 @@ private:
       return false;
 
     if (FunctionDecl *FunDecl = dyn_cast<FunctionDecl>(Fn)) {
-      if (S.getLangOpts().CUDA)
-        if (FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true))
-          if (!Caller->isImplicit() && !S.IsAllowedCUDACall(Caller, FunDecl))
-            return false;
+      if (S.getLangOpts().CUDA) {
+        FunctionDecl *Caller = S.getCurFunctionDecl(/*AllowLambda=*/true);
+        if (!(Caller && Caller->isImplicit()) &&
+            !S.IsAllowedCUDACall(Caller, FunDecl))
+          return false;
+      }
       if (FunDecl->isMultiVersion()) {
         const auto *TA = FunDecl->getAttr<TargetAttr>();
         if (TA && !TA->isDefaultVersion())
@@ -12770,6 +12773,13 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
   DeclAccessPair DAP;
   SmallVector<FunctionDecl *, 2> AmbiguousDecls;
 
+  // Return positive for better, negative for worse, 0 for equal preference.
+  auto CheckCUDAPreference = [&](FunctionDecl *FD1, FunctionDecl *FD2) {
+    FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    return static_cast<int>(IdentifyCUDAPreference(Caller, FD1)) -
+           static_cast<int>(IdentifyCUDAPreference(Caller, FD2));
+  };
+
   auto CheckMoreConstrained = [&](FunctionDecl *FD1,
                                   FunctionDecl *FD2) -> std::optional<bool> {
     if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
@@ -12800,9 +12810,31 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     if (!checkAddressOfFunctionIsAvailable(FD))
       continue;
 
+    // If we found a better result, update Result.
+    auto FoundBetter = [&]() {
+      IsResultAmbiguous = false;
+      DAP = I.getPair();
+      Result = FD;
+    };
+
     // We have more than one result - see if it is more constrained than the
     // previous one.
     if (Result) {
+      // Check CUDA preference first. If the candidates have differennt CUDA
+      // preference, choose the one with higher CUDA preference. Otherwise,
+      // choose the one with more constraints.
+      if (getLangOpts().CUDA) {
+        int PreferenceByCUDA = CheckCUDAPreference(FD, Result);
+        // FD has different preference than Result.
+        if (PreferenceByCUDA != 0) {
+          // FD is more preferable than Result.
+          if (PreferenceByCUDA > 0)
+            FoundBetter();
+          continue;
+        }
+      }
+      // FD has the same CUDA prefernece than Result. Continue check
+      // constraints.
       std::optional<bool> MoreConstrainedThanPrevious =
           CheckMoreConstrained(FD, Result);
       if (!MoreConstrainedThanPrevious) {
@@ -12814,9 +12846,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
         continue;
       // FD is more constrained - replace Result with it.
     }
-    IsResultAmbiguous = false;
-    DAP = I.getPair();
-    Result = FD;
+    FoundBetter();
   }
 
   if (IsResultAmbiguous)
@@ -12826,9 +12856,15 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     SmallVector<const Expr *, 1> ResultAC;
     // We skipped over some ambiguous declarations which might be ambiguous with
     // the selected result.
-    for (FunctionDecl *Skipped : AmbiguousDecls)
+    for (FunctionDecl *Skipped : AmbiguousDecls) {
+      // If skipped candidate has different CUDA preference than the result,
+      // there is no ambiguity. Otherwise check whether they have different
+      // constraints.
+      if (getLangOpts().CUDA && CheckCUDAPreference(Skipped, Result) != 0)
+        continue;
       if (!CheckMoreConstrained(Skipped, Result))
         return nullptr;
+    }
     Pair = DAP;
   }
   return Result;

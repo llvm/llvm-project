@@ -4,4 +4,7 @@ declare_args() {
 
   # libc++ inline ABI namespace. Defaults to __n, where n is the ABI version.
   libcxx_abi_namespace = ""
+
+  # Build timezone database as part of libc++experimental.
+  libcxx_enable_time_zone_database = target_os == "linux"
 }

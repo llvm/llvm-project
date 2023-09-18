@@ -73,13 +73,13 @@ define <1 x i64> @mul1xi64(<1 x i64> %A, <1 x i64> %B) {
 define <2 x i64> @mul2xi64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-LABEL: mul2xi64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x10, d1
+; CHECK-NEXT:    fmov x11, d0
 ; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    mov x11, v0.d[1]
-; CHECK-NEXT:    mul x9, x10, x9
-; CHECK-NEXT:    mul x8, x11, x8
-; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov x9, v0.d[1]
+; CHECK-NEXT:    mul x10, x11, x10
+; CHECK-NEXT:    mul x8, x9, x8
+; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    ret
   %tmp3 = mul <2 x i64> %A, %B;
@@ -164,6 +164,7 @@ define <8 x i8> @sdiv8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-NEXT:    smov w11, v0.b[2]
 ; CHECK-NEXT:    smov w12, v0.b[3]
 ; CHECK-NEXT:    smov w13, v0.b[4]
+; CHECK-NEXT:    smov w14, v0.b[5]
 ; CHECK-NEXT:    sdiv w8, w9, w8
 ; CHECK-NEXT:    smov w9, v1.b[0]
 ; CHECK-NEXT:    sdiv w9, w10, w9
@@ -171,18 +172,17 @@ define <8 x i8> @sdiv8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-NEXT:    sdiv w10, w11, w10
 ; CHECK-NEXT:    smov w11, v1.b[3]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    smov w9, v1.b[5]
+; CHECK-NEXT:    smov w9, v1.b[6]
 ; CHECK-NEXT:    mov v2.b[1], w8
 ; CHECK-NEXT:    sdiv w11, w12, w11
 ; CHECK-NEXT:    smov w12, v1.b[4]
 ; CHECK-NEXT:    mov v2.b[2], w10
 ; CHECK-NEXT:    smov w10, v0.b[6]
 ; CHECK-NEXT:    sdiv w12, w13, w12
-; CHECK-NEXT:    smov w13, v0.b[5]
+; CHECK-NEXT:    smov w13, v1.b[5]
 ; CHECK-NEXT:    mov v2.b[3], w11
 ; CHECK-NEXT:    smov w11, v0.b[7]
-; CHECK-NEXT:    sdiv w8, w13, w9
-; CHECK-NEXT:    smov w9, v1.b[6]
+; CHECK-NEXT:    sdiv w8, w14, w13
 ; CHECK-NEXT:    mov v2.b[4], w12
 ; CHECK-NEXT:    sdiv w9, w10, w9
 ; CHECK-NEXT:    smov w10, v1.b[7]
@@ -207,16 +207,17 @@ define <16 x i8> @sdiv16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    smov w13, v0.b[4]
 ; CHECK-NEXT:    smov w14, v0.b[5]
 ; CHECK-NEXT:    smov w15, v0.b[6]
-; CHECK-NEXT:    sdiv w8, w9, w8
-; CHECK-NEXT:    smov w9, v1.b[0]
 ; CHECK-NEXT:    smov w16, v0.b[7]
 ; CHECK-NEXT:    smov w17, v0.b[8]
+; CHECK-NEXT:    smov w18, v0.b[9]
+; CHECK-NEXT:    sdiv w8, w9, w8
+; CHECK-NEXT:    smov w9, v1.b[0]
 ; CHECK-NEXT:    sdiv w9, w10, w9
 ; CHECK-NEXT:    smov w10, v1.b[2]
 ; CHECK-NEXT:    sdiv w10, w11, w10
 ; CHECK-NEXT:    smov w11, v1.b[3]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    smov w9, v1.b[9]
+; CHECK-NEXT:    smov w9, v1.b[10]
 ; CHECK-NEXT:    mov v2.b[1], w8
 ; CHECK-NEXT:    sdiv w11, w12, w11
 ; CHECK-NEXT:    smov w12, v1.b[4]
@@ -238,10 +239,9 @@ define <16 x i8> @sdiv16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    smov w16, v1.b[8]
 ; CHECK-NEXT:    mov v2.b[6], w14
 ; CHECK-NEXT:    sdiv w16, w17, w16
-; CHECK-NEXT:    smov w17, v0.b[9]
+; CHECK-NEXT:    smov w17, v1.b[9]
 ; CHECK-NEXT:    mov v2.b[7], w15
-; CHECK-NEXT:    sdiv w8, w17, w9
-; CHECK-NEXT:    smov w9, v1.b[10]
+; CHECK-NEXT:    sdiv w8, w18, w17
 ; CHECK-NEXT:    mov v2.b[8], w16
 ; CHECK-NEXT:    sdiv w9, w10, w9
 ; CHECK-NEXT:    smov w10, v1.b[11]
@@ -319,6 +319,7 @@ define <8 x i16> @sdiv8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-NEXT:    smov w11, v0.h[2]
 ; CHECK-NEXT:    smov w12, v0.h[3]
 ; CHECK-NEXT:    smov w13, v0.h[4]
+; CHECK-NEXT:    smov w14, v0.h[5]
 ; CHECK-NEXT:    sdiv w8, w9, w8
 ; CHECK-NEXT:    smov w9, v1.h[0]
 ; CHECK-NEXT:    sdiv w9, w10, w9
@@ -326,18 +327,17 @@ define <8 x i16> @sdiv8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-NEXT:    sdiv w10, w11, w10
 ; CHECK-NEXT:    smov w11, v1.h[3]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    smov w9, v1.h[5]
+; CHECK-NEXT:    smov w9, v1.h[6]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    sdiv w11, w12, w11
 ; CHECK-NEXT:    smov w12, v1.h[4]
 ; CHECK-NEXT:    mov v2.h[2], w10
 ; CHECK-NEXT:    smov w10, v0.h[6]
 ; CHECK-NEXT:    sdiv w12, w13, w12
-; CHECK-NEXT:    smov w13, v0.h[5]
+; CHECK-NEXT:    smov w13, v1.h[5]
 ; CHECK-NEXT:    mov v2.h[3], w11
 ; CHECK-NEXT:    smov w11, v0.h[7]
-; CHECK-NEXT:    sdiv w8, w13, w9
-; CHECK-NEXT:    smov w9, v1.h[6]
+; CHECK-NEXT:    sdiv w8, w14, w13
 ; CHECK-NEXT:    mov v2.h[4], w12
 ; CHECK-NEXT:    sdiv w9, w10, w9
 ; CHECK-NEXT:    smov w10, v1.h[7]
@@ -463,6 +463,7 @@ define <8 x i8> @udiv8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-NEXT:    umov w11, v0.b[2]
 ; CHECK-NEXT:    umov w12, v0.b[3]
 ; CHECK-NEXT:    umov w13, v0.b[4]
+; CHECK-NEXT:    umov w14, v0.b[5]
 ; CHECK-NEXT:    udiv w8, w9, w8
 ; CHECK-NEXT:    umov w9, v1.b[0]
 ; CHECK-NEXT:    udiv w9, w10, w9
@@ -470,18 +471,17 @@ define <8 x i8> @udiv8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-NEXT:    udiv w10, w11, w10
 ; CHECK-NEXT:    umov w11, v1.b[3]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    umov w9, v1.b[5]
+; CHECK-NEXT:    umov w9, v1.b[6]
 ; CHECK-NEXT:    mov v2.b[1], w8
 ; CHECK-NEXT:    udiv w11, w12, w11
 ; CHECK-NEXT:    umov w12, v1.b[4]
 ; CHECK-NEXT:    mov v2.b[2], w10
 ; CHECK-NEXT:    umov w10, v0.b[6]
 ; CHECK-NEXT:    udiv w12, w13, w12
-; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    umov w13, v1.b[5]
 ; CHECK-NEXT:    mov v2.b[3], w11
 ; CHECK-NEXT:    umov w11, v0.b[7]
-; CHECK-NEXT:    udiv w8, w13, w9
-; CHECK-NEXT:    umov w9, v1.b[6]
+; CHECK-NEXT:    udiv w8, w14, w13
 ; CHECK-NEXT:    mov v2.b[4], w12
 ; CHECK-NEXT:    udiv w9, w10, w9
 ; CHECK-NEXT:    umov w10, v1.b[7]
@@ -506,16 +506,17 @@ define <16 x i8> @udiv16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    umov w13, v0.b[4]
 ; CHECK-NEXT:    umov w14, v0.b[5]
 ; CHECK-NEXT:    umov w15, v0.b[6]
-; CHECK-NEXT:    udiv w8, w9, w8
-; CHECK-NEXT:    umov w9, v1.b[0]
 ; CHECK-NEXT:    umov w16, v0.b[7]
 ; CHECK-NEXT:    umov w17, v0.b[8]
+; CHECK-NEXT:    umov w18, v0.b[9]
+; CHECK-NEXT:    udiv w8, w9, w8
+; CHECK-NEXT:    umov w9, v1.b[0]
 ; CHECK-NEXT:    udiv w9, w10, w9
 ; CHECK-NEXT:    umov w10, v1.b[2]
 ; CHECK-NEXT:    udiv w10, w11, w10
 ; CHECK-NEXT:    umov w11, v1.b[3]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    umov w9, v1.b[9]
+; CHECK-NEXT:    umov w9, v1.b[10]
 ; CHECK-NEXT:    mov v2.b[1], w8
 ; CHECK-NEXT:    udiv w11, w12, w11
 ; CHECK-NEXT:    umov w12, v1.b[4]
@@ -537,10 +538,9 @@ define <16 x i8> @udiv16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    umov w16, v1.b[8]
 ; CHECK-NEXT:    mov v2.b[6], w14
 ; CHECK-NEXT:    udiv w16, w17, w16
-; CHECK-NEXT:    umov w17, v0.b[9]
+; CHECK-NEXT:    umov w17, v1.b[9]
 ; CHECK-NEXT:    mov v2.b[7], w15
-; CHECK-NEXT:    udiv w8, w17, w9
-; CHECK-NEXT:    umov w9, v1.b[10]
+; CHECK-NEXT:    udiv w8, w18, w17
 ; CHECK-NEXT:    mov v2.b[8], w16
 ; CHECK-NEXT:    udiv w9, w10, w9
 ; CHECK-NEXT:    umov w10, v1.b[11]
@@ -618,6 +618,7 @@ define <8 x i16> @udiv8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-NEXT:    umov w11, v0.h[2]
 ; CHECK-NEXT:    umov w12, v0.h[3]
 ; CHECK-NEXT:    umov w13, v0.h[4]
+; CHECK-NEXT:    umov w14, v0.h[5]
 ; CHECK-NEXT:    udiv w8, w9, w8
 ; CHECK-NEXT:    umov w9, v1.h[0]
 ; CHECK-NEXT:    udiv w9, w10, w9
@@ -625,18 +626,17 @@ define <8 x i16> @udiv8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-NEXT:    udiv w10, w11, w10
 ; CHECK-NEXT:    umov w11, v1.h[3]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    umov w9, v1.h[5]
+; CHECK-NEXT:    umov w9, v1.h[6]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    udiv w11, w12, w11
 ; CHECK-NEXT:    umov w12, v1.h[4]
 ; CHECK-NEXT:    mov v2.h[2], w10
 ; CHECK-NEXT:    umov w10, v0.h[6]
 ; CHECK-NEXT:    udiv w12, w13, w12
-; CHECK-NEXT:    umov w13, v0.h[5]
+; CHECK-NEXT:    umov w13, v1.h[5]
 ; CHECK-NEXT:    mov v2.h[3], w11
 ; CHECK-NEXT:    umov w11, v0.h[7]
-; CHECK-NEXT:    udiv w8, w13, w9
-; CHECK-NEXT:    umov w9, v1.h[6]
+; CHECK-NEXT:    udiv w8, w14, w13
 ; CHECK-NEXT:    mov v2.h[4], w12
 ; CHECK-NEXT:    udiv w9, w10, w9
 ; CHECK-NEXT:    umov w10, v1.h[7]
@@ -765,37 +765,37 @@ define <8 x i8> @srem8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-NEXT:    smov w15, v0.b[2]
 ; CHECK-NEXT:    smov w17, v1.b[3]
 ; CHECK-NEXT:    smov w18, v0.b[3]
-; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    smov w1, v1.b[4]
 ; CHECK-NEXT:    smov w2, v0.b[4]
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    smov w12, v1.b[5]
+; CHECK-NEXT:    smov w4, v1.b[5]
+; CHECK-NEXT:    smov w5, v0.b[5]
+; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    sdiv w10, w9, w8
-; CHECK-NEXT:    smov w13, v0.b[5]
+; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    smov w13, v1.b[7]
 ; CHECK-NEXT:    fmov s2, w11
 ; CHECK-NEXT:    smov w11, v0.b[6]
+; CHECK-NEXT:    sdiv w16, w15, w14
 ; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    smov w10, v1.b[6]
-; CHECK-NEXT:    sdiv w16, w15, w14
 ; CHECK-NEXT:    mov v2.b[1], w8
-; CHECK-NEXT:    msub w8, w16, w14, w15
-; CHECK-NEXT:    smov w15, v1.b[7]
 ; CHECK-NEXT:    sdiv w0, w18, w17
-; CHECK-NEXT:    smov w16, v0.b[7]
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    smov w14, v0.b[7]
 ; CHECK-NEXT:    mov v2.b[2], w8
-; CHECK-NEXT:    msub w14, w0, w17, w18
 ; CHECK-NEXT:    sdiv w3, w2, w1
-; CHECK-NEXT:    mov v2.b[3], w14
-; CHECK-NEXT:    msub w14, w3, w1, w2
-; CHECK-NEXT:    sdiv w9, w13, w12
-; CHECK-NEXT:    mov v2.b[4], w14
-; CHECK-NEXT:    msub w9, w9, w12, w13
-; CHECK-NEXT:    sdiv w8, w11, w10
-; CHECK-NEXT:    mov v2.b[5], w9
-; CHECK-NEXT:    msub w8, w8, w10, w11
-; CHECK-NEXT:    sdiv w12, w16, w15
+; CHECK-NEXT:    msub w8, w0, w17, w18
+; CHECK-NEXT:    mov v2.b[3], w8
+; CHECK-NEXT:    sdiv w9, w5, w4
+; CHECK-NEXT:    msub w8, w3, w1, w2
+; CHECK-NEXT:    mov v2.b[4], w8
+; CHECK-NEXT:    sdiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w4, w5
+; CHECK-NEXT:    mov v2.b[5], w8
+; CHECK-NEXT:    sdiv w9, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
 ; CHECK-NEXT:    mov v2.b[6], w8
-; CHECK-NEXT:    msub w8, w12, w15, w16
+; CHECK-NEXT:    msub w8, w9, w13, w14
 ; CHECK-NEXT:    mov v2.b[7], w8
 ; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
@@ -806,11 +806,12 @@ define <8 x i8> @srem8x8(<8 x i8> %A, <8 x i8> %B) {
 define <16 x i8> @srem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-LABEL: srem16x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x26, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    stp x28, x27, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -819,6 +820,8 @@ define <16 x i8> @srem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    .cfi_offset w24, -48
 ; CHECK-NEXT:    .cfi_offset w25, -56
 ; CHECK-NEXT:    .cfi_offset w26, -64
+; CHECK-NEXT:    .cfi_offset w27, -72
+; CHECK-NEXT:    .cfi_offset w28, -80
 ; CHECK-NEXT:    smov w11, v1.b[0]
 ; CHECK-NEXT:    smov w12, v0.b[0]
 ; CHECK-NEXT:    smov w8, v1.b[1]
@@ -827,83 +830,84 @@ define <16 x i8> @srem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    smov w15, v0.b[2]
 ; CHECK-NEXT:    smov w17, v1.b[3]
 ; CHECK-NEXT:    smov w18, v0.b[3]
-; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    smov w1, v1.b[4]
 ; CHECK-NEXT:    smov w2, v0.b[4]
 ; CHECK-NEXT:    smov w4, v1.b[5]
 ; CHECK-NEXT:    smov w5, v0.b[5]
+; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    smov w7, v1.b[6]
 ; CHECK-NEXT:    smov w19, v0.b[6]
 ; CHECK-NEXT:    smov w21, v1.b[7]
 ; CHECK-NEXT:    smov w22, v0.b[7]
 ; CHECK-NEXT:    smov w24, v1.b[8]
 ; CHECK-NEXT:    smov w25, v0.b[8]
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    smov w12, v1.b[9]
+; CHECK-NEXT:    smov w27, v1.b[9]
+; CHECK-NEXT:    smov w28, v0.b[9]
 ; CHECK-NEXT:    sdiv w10, w9, w8
-; CHECK-NEXT:    smov w13, v0.b[9]
+; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    smov w13, v1.b[11]
 ; CHECK-NEXT:    fmov s2, w11
 ; CHECK-NEXT:    smov w11, v0.b[10]
+; CHECK-NEXT:    sdiv w16, w15, w14
 ; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    smov w10, v1.b[10]
-; CHECK-NEXT:    sdiv w16, w15, w14
 ; CHECK-NEXT:    mov v2.b[1], w8
-; CHECK-NEXT:    msub w8, w16, w14, w15
-; CHECK-NEXT:    smov w15, v1.b[11]
 ; CHECK-NEXT:    sdiv w0, w18, w17
-; CHECK-NEXT:    smov w16, v0.b[11]
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    smov w14, v0.b[11]
+; CHECK-NEXT:    smov w16, v1.b[12]
 ; CHECK-NEXT:    mov v2.b[2], w8
-; CHECK-NEXT:    msub w14, w0, w17, w18
-; CHECK-NEXT:    smov w18, v1.b[12]
 ; CHECK-NEXT:    sdiv w3, w2, w1
-; CHECK-NEXT:    smov w0, v0.b[12]
-; CHECK-NEXT:    mov v2.b[3], w14
-; CHECK-NEXT:    msub w14, w3, w1, w2
-; CHECK-NEXT:    smov w2, v1.b[13]
+; CHECK-NEXT:    msub w8, w0, w17, w18
+; CHECK-NEXT:    smov w17, v0.b[12]
+; CHECK-NEXT:    smov w0, v1.b[13]
+; CHECK-NEXT:    mov v2.b[3], w8
 ; CHECK-NEXT:    sdiv w6, w5, w4
-; CHECK-NEXT:    smov w3, v0.b[13]
-; CHECK-NEXT:    mov v2.b[4], w14
-; CHECK-NEXT:    msub w17, w6, w4, w5
+; CHECK-NEXT:    msub w8, w3, w1, w2
+; CHECK-NEXT:    smov w1, v0.b[13]
+; CHECK-NEXT:    mov v2.b[4], w8
 ; CHECK-NEXT:    sdiv w20, w19, w7
-; CHECK-NEXT:    mov v2.b[5], w17
-; CHECK-NEXT:    msub w17, w20, w7, w19
+; CHECK-NEXT:    msub w8, w6, w4, w5
+; CHECK-NEXT:    mov v2.b[5], w8
 ; CHECK-NEXT:    sdiv w23, w22, w21
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v2.b[6], w17
-; CHECK-NEXT:    msub w1, w23, w21, w22
+; CHECK-NEXT:    msub w8, w20, w7, w19
+; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v2.b[6], w8
 ; CHECK-NEXT:    sdiv w26, w25, w24
-; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v2.b[7], w1
-; CHECK-NEXT:    msub w1, w26, w24, w25
-; CHECK-NEXT:    sdiv w9, w13, w12
-; CHECK-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v2.b[8], w1
-; CHECK-NEXT:    msub w9, w9, w12, w13
-; CHECK-NEXT:    smov w13, v1.b[15]
-; CHECK-NEXT:    sdiv w8, w11, w10
-; CHECK-NEXT:    mov v2.b[9], w9
-; CHECK-NEXT:    smov w9, v1.b[14]
-; CHECK-NEXT:    msub w8, w8, w10, w11
-; CHECK-NEXT:    smov w10, v0.b[14]
-; CHECK-NEXT:    sdiv w14, w16, w15
+; CHECK-NEXT:    msub w8, w23, w21, w22
+; CHECK-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v2.b[7], w8
+; CHECK-NEXT:    sdiv w9, w28, w27
+; CHECK-NEXT:    msub w8, w26, w24, w25
+; CHECK-NEXT:    ldp x24, x23, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v2.b[8], w8
+; CHECK-NEXT:    sdiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w27, w28
+; CHECK-NEXT:    mov v2.b[9], w8
+; CHECK-NEXT:    sdiv w15, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
+; CHECK-NEXT:    smov w10, v1.b[14]
+; CHECK-NEXT:    smov w11, v0.b[14]
 ; CHECK-NEXT:    mov v2.b[10], w8
-; CHECK-NEXT:    msub w11, w14, w15, w16
+; CHECK-NEXT:    sdiv w18, w17, w16
+; CHECK-NEXT:    msub w8, w15, w13, w14
+; CHECK-NEXT:    smov w13, v1.b[15]
 ; CHECK-NEXT:    smov w14, v0.b[15]
-; CHECK-NEXT:    sdiv w17, w0, w18
-; CHECK-NEXT:    mov v2.b[11], w11
-; CHECK-NEXT:    msub w11, w17, w18, w0
-; CHECK-NEXT:    sdiv w12, w3, w2
-; CHECK-NEXT:    mov v2.b[12], w11
-; CHECK-NEXT:    msub w12, w12, w2, w3
-; CHECK-NEXT:    sdiv w8, w10, w9
-; CHECK-NEXT:    mov v2.b[13], w12
-; CHECK-NEXT:    msub w8, w8, w9, w10
-; CHECK-NEXT:    sdiv w11, w14, w13
+; CHECK-NEXT:    mov v2.b[11], w8
+; CHECK-NEXT:    sdiv w9, w1, w0
+; CHECK-NEXT:    msub w8, w18, w16, w17
+; CHECK-NEXT:    mov v2.b[12], w8
+; CHECK-NEXT:    sdiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w0, w1
+; CHECK-NEXT:    mov v2.b[13], w8
+; CHECK-NEXT:    sdiv w9, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
 ; CHECK-NEXT:    mov v2.b[14], w8
-; CHECK-NEXT:    msub w8, w11, w13, w14
+; CHECK-NEXT:    msub w8, w9, w13, w14
 ; CHECK-NEXT:    mov v2.b[15], w8
 ; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    ldp x26, x25, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 	%tmp3 = srem <16 x i8> %A, %B;
 	ret <16 x i8> %tmp3
@@ -935,19 +939,19 @@ define <4 x i16> @srem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-NEXT:    smov w9, v0.h[1]
 ; CHECK-NEXT:    smov w14, v1.h[2]
 ; CHECK-NEXT:    smov w15, v0.h[2]
+; CHECK-NEXT:    smov w17, v1.h[3]
+; CHECK-NEXT:    smov w18, v0.h[3]
 ; CHECK-NEXT:    sdiv w13, w12, w11
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    smov w12, v1.h[3]
 ; CHECK-NEXT:    sdiv w10, w9, w8
-; CHECK-NEXT:    smov w13, v0.h[3]
+; CHECK-NEXT:    msub w11, w13, w11, w12
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    sdiv w16, w15, w14
+; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    msub w10, w16, w14, w15
-; CHECK-NEXT:    sdiv w9, w13, w12
-; CHECK-NEXT:    mov v0.h[2], w10
-; CHECK-NEXT:    msub w8, w9, w12, w13
+; CHECK-NEXT:    sdiv w9, w18, w17
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    mov v0.h[2], w8
+; CHECK-NEXT:    msub w8, w9, w17, w18
 ; CHECK-NEXT:    mov v0.h[3], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
@@ -966,37 +970,37 @@ define <8 x i16> @srem8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-NEXT:    smov w15, v0.h[2]
 ; CHECK-NEXT:    smov w17, v1.h[3]
 ; CHECK-NEXT:    smov w18, v0.h[3]
-; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    smov w1, v1.h[4]
 ; CHECK-NEXT:    smov w2, v0.h[4]
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    smov w12, v1.h[5]
+; CHECK-NEXT:    smov w4, v1.h[5]
+; CHECK-NEXT:    smov w5, v0.h[5]
+; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    sdiv w10, w9, w8
-; CHECK-NEXT:    smov w13, v0.h[5]
+; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    smov w13, v1.h[7]
 ; CHECK-NEXT:    fmov s2, w11
 ; CHECK-NEXT:    smov w11, v0.h[6]
+; CHECK-NEXT:    sdiv w16, w15, w14
 ; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    smov w10, v1.h[6]
-; CHECK-NEXT:    sdiv w16, w15, w14
 ; CHECK-NEXT:    mov v2.h[1], w8
-; CHECK-NEXT:    msub w8, w16, w14, w15
-; CHECK-NEXT:    smov w15, v1.h[7]
 ; CHECK-NEXT:    sdiv w0, w18, w17
-; CHECK-NEXT:    smov w16, v0.h[7]
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    smov w14, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[2], w8
-; CHECK-NEXT:    msub w14, w0, w17, w18
 ; CHECK-NEXT:    sdiv w3, w2, w1
-; CHECK-NEXT:    mov v2.h[3], w14
-; CHECK-NEXT:    msub w14, w3, w1, w2
-; CHECK-NEXT:    sdiv w9, w13, w12
-; CHECK-NEXT:    mov v2.h[4], w14
-; CHECK-NEXT:    msub w9, w9, w12, w13
-; CHECK-NEXT:    sdiv w8, w11, w10
-; CHECK-NEXT:    mov v2.h[5], w9
-; CHECK-NEXT:    msub w8, w8, w10, w11
-; CHECK-NEXT:    sdiv w12, w16, w15
+; CHECK-NEXT:    msub w8, w0, w17, w18
+; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    sdiv w9, w5, w4
+; CHECK-NEXT:    msub w8, w3, w1, w2
+; CHECK-NEXT:    mov v2.h[4], w8
+; CHECK-NEXT:    sdiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w4, w5
+; CHECK-NEXT:    mov v2.h[5], w8
+; CHECK-NEXT:    sdiv w9, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
 ; CHECK-NEXT:    mov v2.h[6], w8
-; CHECK-NEXT:    msub w8, w12, w15, w16
+; CHECK-NEXT:    msub w8, w9, w13, w14
 ; CHECK-NEXT:    mov v2.h[7], w8
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -1029,8 +1033,8 @@ define <2 x i32> @srem2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    mov w11, v1.s[1]
 ; CHECK-NEXT:    mov w12, v0.s[1]
 ; CHECK-NEXT:    sdiv w10, w9, w8
-; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    sdiv w13, w12, w11
+; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    msub w9, w13, w11, w12
 ; CHECK-NEXT:    mov v0.s[1], w9
@@ -1049,18 +1053,18 @@ define <4 x i32> @srem4x32(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-NEXT:    mov w9, v0.s[1]
 ; CHECK-NEXT:    mov w14, v1.s[2]
 ; CHECK-NEXT:    mov w15, v0.s[2]
-; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    mov w17, v1.s[3]
 ; CHECK-NEXT:    mov w18, v0.s[3]
-; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    sdiv w13, w12, w11
 ; CHECK-NEXT:    sdiv w10, w9, w8
+; CHECK-NEXT:    msub w11, w13, w11, w12
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    sdiv w16, w15, w14
+; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    msub w10, w16, w14, w15
 ; CHECK-NEXT:    sdiv w9, w18, w17
-; CHECK-NEXT:    mov v0.s[2], w10
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    mov v0.s[2], w8
 ; CHECK-NEXT:    msub w8, w9, w17, w18
 ; CHECK-NEXT:    mov v0.s[3], w8
 ; CHECK-NEXT:    ret
@@ -1091,8 +1095,8 @@ define <2 x i64> @srem2x64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-NEXT:    mov x11, v1.d[1]
 ; CHECK-NEXT:    mov x12, v0.d[1]
 ; CHECK-NEXT:    sdiv x10, x9, x8
-; CHECK-NEXT:    msub x8, x10, x8, x9
 ; CHECK-NEXT:    sdiv x13, x12, x11
+; CHECK-NEXT:    msub x8, x10, x8, x9
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    msub x9, x13, x11, x12
 ; CHECK-NEXT:    mov v0.d[1], x9
@@ -1129,37 +1133,37 @@ define <8 x i8> @urem8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-NEXT:    umov w15, v0.b[2]
 ; CHECK-NEXT:    umov w17, v1.b[3]
 ; CHECK-NEXT:    umov w18, v0.b[3]
-; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    umov w1, v1.b[4]
 ; CHECK-NEXT:    umov w2, v0.b[4]
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    umov w12, v1.b[5]
+; CHECK-NEXT:    umov w4, v1.b[5]
+; CHECK-NEXT:    umov w5, v0.b[5]
+; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    udiv w10, w9, w8
-; CHECK-NEXT:    umov w13, v0.b[5]
+; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    umov w13, v1.b[7]
 ; CHECK-NEXT:    fmov s2, w11
 ; CHECK-NEXT:    umov w11, v0.b[6]
+; CHECK-NEXT:    udiv w16, w15, w14
 ; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    umov w10, v1.b[6]
-; CHECK-NEXT:    udiv w16, w15, w14
 ; CHECK-NEXT:    mov v2.b[1], w8
-; CHECK-NEXT:    msub w8, w16, w14, w15
-; CHECK-NEXT:    umov w15, v1.b[7]
 ; CHECK-NEXT:    udiv w0, w18, w17
-; CHECK-NEXT:    umov w16, v0.b[7]
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    umov w14, v0.b[7]
 ; CHECK-NEXT:    mov v2.b[2], w8
-; CHECK-NEXT:    msub w14, w0, w17, w18
 ; CHECK-NEXT:    udiv w3, w2, w1
-; CHECK-NEXT:    mov v2.b[3], w14
-; CHECK-NEXT:    msub w14, w3, w1, w2
-; CHECK-NEXT:    udiv w9, w13, w12
-; CHECK-NEXT:    mov v2.b[4], w14
-; CHECK-NEXT:    msub w9, w9, w12, w13
-; CHECK-NEXT:    udiv w8, w11, w10
-; CHECK-NEXT:    mov v2.b[5], w9
-; CHECK-NEXT:    msub w8, w8, w10, w11
-; CHECK-NEXT:    udiv w12, w16, w15
+; CHECK-NEXT:    msub w8, w0, w17, w18
+; CHECK-NEXT:    mov v2.b[3], w8
+; CHECK-NEXT:    udiv w9, w5, w4
+; CHECK-NEXT:    msub w8, w3, w1, w2
+; CHECK-NEXT:    mov v2.b[4], w8
+; CHECK-NEXT:    udiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w4, w5
+; CHECK-NEXT:    mov v2.b[5], w8
+; CHECK-NEXT:    udiv w9, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
 ; CHECK-NEXT:    mov v2.b[6], w8
-; CHECK-NEXT:    msub w8, w12, w15, w16
+; CHECK-NEXT:    msub w8, w9, w13, w14
 ; CHECK-NEXT:    mov v2.b[7], w8
 ; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
@@ -1170,11 +1174,12 @@ define <8 x i8> @urem8x8(<8 x i8> %A, <8 x i8> %B) {
 define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-LABEL: urem16x8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x26, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    stp x28, x27, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
@@ -1183,6 +1188,8 @@ define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    .cfi_offset w24, -48
 ; CHECK-NEXT:    .cfi_offset w25, -56
 ; CHECK-NEXT:    .cfi_offset w26, -64
+; CHECK-NEXT:    .cfi_offset w27, -72
+; CHECK-NEXT:    .cfi_offset w28, -80
 ; CHECK-NEXT:    umov w11, v1.b[0]
 ; CHECK-NEXT:    umov w12, v0.b[0]
 ; CHECK-NEXT:    umov w8, v1.b[1]
@@ -1191,83 +1198,84 @@ define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-NEXT:    umov w15, v0.b[2]
 ; CHECK-NEXT:    umov w17, v1.b[3]
 ; CHECK-NEXT:    umov w18, v0.b[3]
-; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    umov w1, v1.b[4]
 ; CHECK-NEXT:    umov w2, v0.b[4]
 ; CHECK-NEXT:    umov w4, v1.b[5]
 ; CHECK-NEXT:    umov w5, v0.b[5]
+; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    umov w7, v1.b[6]
 ; CHECK-NEXT:    umov w19, v0.b[6]
 ; CHECK-NEXT:    umov w21, v1.b[7]
 ; CHECK-NEXT:    umov w22, v0.b[7]
 ; CHECK-NEXT:    umov w24, v1.b[8]
 ; CHECK-NEXT:    umov w25, v0.b[8]
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    umov w12, v1.b[9]
+; CHECK-NEXT:    umov w27, v1.b[9]
+; CHECK-NEXT:    umov w28, v0.b[9]
 ; CHECK-NEXT:    udiv w10, w9, w8
-; CHECK-NEXT:    umov w13, v0.b[9]
+; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    umov w13, v1.b[11]
 ; CHECK-NEXT:    fmov s2, w11
 ; CHECK-NEXT:    umov w11, v0.b[10]
+; CHECK-NEXT:    udiv w16, w15, w14
 ; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    umov w10, v1.b[10]
-; CHECK-NEXT:    udiv w16, w15, w14
 ; CHECK-NEXT:    mov v2.b[1], w8
-; CHECK-NEXT:    msub w8, w16, w14, w15
-; CHECK-NEXT:    umov w15, v1.b[11]
 ; CHECK-NEXT:    udiv w0, w18, w17
-; CHECK-NEXT:    umov w16, v0.b[11]
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    umov w14, v0.b[11]
+; CHECK-NEXT:    umov w16, v1.b[12]
 ; CHECK-NEXT:    mov v2.b[2], w8
-; CHECK-NEXT:    msub w14, w0, w17, w18
-; CHECK-NEXT:    umov w18, v1.b[12]
 ; CHECK-NEXT:    udiv w3, w2, w1
-; CHECK-NEXT:    umov w0, v0.b[12]
-; CHECK-NEXT:    mov v2.b[3], w14
-; CHECK-NEXT:    msub w14, w3, w1, w2
-; CHECK-NEXT:    umov w2, v1.b[13]
+; CHECK-NEXT:    msub w8, w0, w17, w18
+; CHECK-NEXT:    umov w17, v0.b[12]
+; CHECK-NEXT:    umov w0, v1.b[13]
+; CHECK-NEXT:    mov v2.b[3], w8
 ; CHECK-NEXT:    udiv w6, w5, w4
-; CHECK-NEXT:    umov w3, v0.b[13]
-; CHECK-NEXT:    mov v2.b[4], w14
-; CHECK-NEXT:    msub w17, w6, w4, w5
+; CHECK-NEXT:    msub w8, w3, w1, w2
+; CHECK-NEXT:    umov w1, v0.b[13]
+; CHECK-NEXT:    mov v2.b[4], w8
 ; CHECK-NEXT:    udiv w20, w19, w7
-; CHECK-NEXT:    mov v2.b[5], w17
-; CHECK-NEXT:    msub w17, w20, w7, w19
+; CHECK-NEXT:    msub w8, w6, w4, w5
+; CHECK-NEXT:    mov v2.b[5], w8
 ; CHECK-NEXT:    udiv w23, w22, w21
-; CHECK-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v2.b[6], w17
-; CHECK-NEXT:    msub w1, w23, w21, w22
+; CHECK-NEXT:    msub w8, w20, w7, w19
+; CHECK-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v2.b[6], w8
 ; CHECK-NEXT:    udiv w26, w25, w24
-; CHECK-NEXT:    ldp x22, x21, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v2.b[7], w1
-; CHECK-NEXT:    msub w1, w26, w24, w25
-; CHECK-NEXT:    udiv w9, w13, w12
-; CHECK-NEXT:    ldp x24, x23, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    mov v2.b[8], w1
-; CHECK-NEXT:    msub w9, w9, w12, w13
-; CHECK-NEXT:    umov w13, v1.b[15]
-; CHECK-NEXT:    udiv w8, w11, w10
-; CHECK-NEXT:    mov v2.b[9], w9
-; CHECK-NEXT:    umov w9, v1.b[14]
-; CHECK-NEXT:    msub w8, w8, w10, w11
-; CHECK-NEXT:    umov w10, v0.b[14]
-; CHECK-NEXT:    udiv w14, w16, w15
+; CHECK-NEXT:    msub w8, w23, w21, w22
+; CHECK-NEXT:    ldp x22, x21, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v2.b[7], w8
+; CHECK-NEXT:    udiv w9, w28, w27
+; CHECK-NEXT:    msub w8, w26, w24, w25
+; CHECK-NEXT:    ldp x24, x23, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v2.b[8], w8
+; CHECK-NEXT:    udiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w27, w28
+; CHECK-NEXT:    mov v2.b[9], w8
+; CHECK-NEXT:    udiv w15, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
+; CHECK-NEXT:    umov w10, v1.b[14]
+; CHECK-NEXT:    umov w11, v0.b[14]
 ; CHECK-NEXT:    mov v2.b[10], w8
-; CHECK-NEXT:    msub w11, w14, w15, w16
+; CHECK-NEXT:    udiv w18, w17, w16
+; CHECK-NEXT:    msub w8, w15, w13, w14
+; CHECK-NEXT:    umov w13, v1.b[15]
 ; CHECK-NEXT:    umov w14, v0.b[15]
-; CHECK-NEXT:    udiv w17, w0, w18
-; CHECK-NEXT:    mov v2.b[11], w11
-; CHECK-NEXT:    msub w11, w17, w18, w0
-; CHECK-NEXT:    udiv w12, w3, w2
-; CHECK-NEXT:    mov v2.b[12], w11
-; CHECK-NEXT:    msub w12, w12, w2, w3
-; CHECK-NEXT:    udiv w8, w10, w9
-; CHECK-NEXT:    mov v2.b[13], w12
-; CHECK-NEXT:    msub w8, w8, w9, w10
-; CHECK-NEXT:    udiv w11, w14, w13
+; CHECK-NEXT:    mov v2.b[11], w8
+; CHECK-NEXT:    udiv w9, w1, w0
+; CHECK-NEXT:    msub w8, w18, w16, w17
+; CHECK-NEXT:    mov v2.b[12], w8
+; CHECK-NEXT:    udiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w0, w1
+; CHECK-NEXT:    mov v2.b[13], w8
+; CHECK-NEXT:    udiv w9, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
 ; CHECK-NEXT:    mov v2.b[14], w8
-; CHECK-NEXT:    msub w8, w11, w13, w14
+; CHECK-NEXT:    msub w8, w9, w13, w14
 ; CHECK-NEXT:    mov v2.b[15], w8
 ; CHECK-NEXT:    mov v0.16b, v2.16b
-; CHECK-NEXT:    ldp x26, x25, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp], #80 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 	%tmp3 = urem <16 x i8> %A, %B;
 	ret <16 x i8> %tmp3
@@ -1299,19 +1307,19 @@ define <4 x i16> @urem4x16(<4 x i16> %A, <4 x i16> %B) {
 ; CHECK-NEXT:    umov w9, v0.h[1]
 ; CHECK-NEXT:    umov w14, v1.h[2]
 ; CHECK-NEXT:    umov w15, v0.h[2]
+; CHECK-NEXT:    umov w17, v1.h[3]
+; CHECK-NEXT:    umov w18, v0.h[3]
 ; CHECK-NEXT:    udiv w13, w12, w11
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    umov w12, v1.h[3]
 ; CHECK-NEXT:    udiv w10, w9, w8
-; CHECK-NEXT:    umov w13, v0.h[3]
+; CHECK-NEXT:    msub w11, w13, w11, w12
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    udiv w16, w15, w14
+; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    msub w10, w16, w14, w15
-; CHECK-NEXT:    udiv w9, w13, w12
-; CHECK-NEXT:    mov v0.h[2], w10
-; CHECK-NEXT:    msub w8, w9, w12, w13
+; CHECK-NEXT:    udiv w9, w18, w17
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    mov v0.h[2], w8
+; CHECK-NEXT:    msub w8, w9, w17, w18
 ; CHECK-NEXT:    mov v0.h[3], w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
@@ -1330,37 +1338,37 @@ define <8 x i16> @urem8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-NEXT:    umov w15, v0.h[2]
 ; CHECK-NEXT:    umov w17, v1.h[3]
 ; CHECK-NEXT:    umov w18, v0.h[3]
-; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    umov w1, v1.h[4]
 ; CHECK-NEXT:    umov w2, v0.h[4]
-; CHECK-NEXT:    msub w11, w13, w11, w12
-; CHECK-NEXT:    umov w12, v1.h[5]
+; CHECK-NEXT:    umov w4, v1.h[5]
+; CHECK-NEXT:    umov w5, v0.h[5]
+; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    udiv w10, w9, w8
-; CHECK-NEXT:    umov w13, v0.h[5]
+; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    umov w13, v1.h[7]
 ; CHECK-NEXT:    fmov s2, w11
 ; CHECK-NEXT:    umov w11, v0.h[6]
+; CHECK-NEXT:    udiv w16, w15, w14
 ; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    umov w10, v1.h[6]
-; CHECK-NEXT:    udiv w16, w15, w14
 ; CHECK-NEXT:    mov v2.h[1], w8
-; CHECK-NEXT:    msub w8, w16, w14, w15
-; CHECK-NEXT:    umov w15, v1.h[7]
 ; CHECK-NEXT:    udiv w0, w18, w17
-; CHECK-NEXT:    umov w16, v0.h[7]
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    umov w14, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[2], w8
-; CHECK-NEXT:    msub w14, w0, w17, w18
 ; CHECK-NEXT:    udiv w3, w2, w1
-; CHECK-NEXT:    mov v2.h[3], w14
-; CHECK-NEXT:    msub w14, w3, w1, w2
-; CHECK-NEXT:    udiv w9, w13, w12
-; CHECK-NEXT:    mov v2.h[4], w14
-; CHECK-NEXT:    msub w9, w9, w12, w13
-; CHECK-NEXT:    udiv w8, w11, w10
-; CHECK-NEXT:    mov v2.h[5], w9
-; CHECK-NEXT:    msub w8, w8, w10, w11
-; CHECK-NEXT:    udiv w12, w16, w15
+; CHECK-NEXT:    msub w8, w0, w17, w18
+; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    udiv w9, w5, w4
+; CHECK-NEXT:    msub w8, w3, w1, w2
+; CHECK-NEXT:    mov v2.h[4], w8
+; CHECK-NEXT:    udiv w12, w11, w10
+; CHECK-NEXT:    msub w8, w9, w4, w5
+; CHECK-NEXT:    mov v2.h[5], w8
+; CHECK-NEXT:    udiv w9, w14, w13
+; CHECK-NEXT:    msub w8, w12, w10, w11
 ; CHECK-NEXT:    mov v2.h[6], w8
-; CHECK-NEXT:    msub w8, w12, w15, w16
+; CHECK-NEXT:    msub w8, w9, w13, w14
 ; CHECK-NEXT:    mov v2.h[7], w8
 ; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
@@ -1393,8 +1401,8 @@ define <2 x i32> @urem2x32(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-NEXT:    mov w11, v1.s[1]
 ; CHECK-NEXT:    mov w12, v0.s[1]
 ; CHECK-NEXT:    udiv w10, w9, w8
-; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    udiv w13, w12, w11
+; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    msub w9, w13, w11, w12
 ; CHECK-NEXT:    mov v0.s[1], w9
@@ -1413,18 +1421,18 @@ define <4 x i32> @urem4x32(<4 x i32> %A, <4 x i32> %B) {
 ; CHECK-NEXT:    mov w9, v0.s[1]
 ; CHECK-NEXT:    mov w14, v1.s[2]
 ; CHECK-NEXT:    mov w15, v0.s[2]
-; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    mov w17, v1.s[3]
 ; CHECK-NEXT:    mov w18, v0.s[3]
-; CHECK-NEXT:    msub w11, w13, w11, w12
+; CHECK-NEXT:    udiv w13, w12, w11
 ; CHECK-NEXT:    udiv w10, w9, w8
+; CHECK-NEXT:    msub w11, w13, w11, w12
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    udiv w16, w15, w14
+; CHECK-NEXT:    msub w8, w10, w8, w9
 ; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    msub w10, w16, w14, w15
 ; CHECK-NEXT:    udiv w9, w18, w17
-; CHECK-NEXT:    mov v0.s[2], w10
+; CHECK-NEXT:    msub w8, w16, w14, w15
+; CHECK-NEXT:    mov v0.s[2], w8
 ; CHECK-NEXT:    msub w8, w9, w17, w18
 ; CHECK-NEXT:    mov v0.s[3], w8
 ; CHECK-NEXT:    ret
@@ -1455,8 +1463,8 @@ define <2 x i64> @urem2x64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-NEXT:    mov x11, v1.d[1]
 ; CHECK-NEXT:    mov x12, v0.d[1]
 ; CHECK-NEXT:    udiv x10, x9, x8
-; CHECK-NEXT:    msub x8, x10, x8, x9
 ; CHECK-NEXT:    udiv x13, x12, x11
+; CHECK-NEXT:    msub x8, x10, x8, x9
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    msub x9, x13, x11, x12
 ; CHECK-NEXT:    mov v0.d[1], x9

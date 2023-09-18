@@ -290,6 +290,10 @@ public:
                                          VectorType *ValTy,
                                          TTI::TargetCostKind CostKind);
 
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         FastMathFlags FMF,
+                                         TTI::TargetCostKind CostKind);
+
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
 

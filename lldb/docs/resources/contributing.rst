@@ -23,7 +23,8 @@ Policy in the following respects.
    `test documentation <test.html>`_ for more details and the ``lldb/test``
    folder on disk for examples.
 
- - **Coding Style**: LLDB's code style differs from LLVM's coding style.
+ - **Coding Style**: LLDB's code style differs from
+   `LLVM's coding style <https://llvm.org/docs/CodingStandards.html>`_.
    Unfortunately there is no document describing the differences. Please be
    consistent with the existing code.
 

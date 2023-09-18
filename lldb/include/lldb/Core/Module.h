@@ -124,8 +124,7 @@ public:
   ///     multiple architectures).
   Module(
       const FileSpec &file_spec, const ArchSpec &arch,
-      const ConstString *object_name = nullptr,
-      lldb::offset_t object_offset = 0,
+      ConstString object_name = ConstString(), lldb::offset_t object_offset = 0,
       const llvm::sys::TimePoint<> &object_mod_time = llvm::sys::TimePoint<>());
 
   Module(const ModuleSpec &module_spec);
@@ -1085,7 +1084,7 @@ protected:
       ModuleList::GetGlobalModuleListProperties().GetSymlinkMappings();
 
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
-                                     /// is used by the ObjectFile and and
+                                     /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};

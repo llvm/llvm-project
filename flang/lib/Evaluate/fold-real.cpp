@@ -184,8 +184,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, T::Scalar::HUGE().Negate());
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {

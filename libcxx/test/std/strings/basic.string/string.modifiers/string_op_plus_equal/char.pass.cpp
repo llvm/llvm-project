@@ -17,12 +17,10 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s, typename S::value_type str, S expected)
-{
-    s += str;
-    LIBCPP_ASSERT(s.__invariants());
-    assert(s == expected);
+TEST_CONSTEXPR_CXX20 void test(S s, typename S::value_type str, S expected) {
+  s += str;
+  LIBCPP_ASSERT(s.__invariants());
+  assert(s == expected);
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -46,8 +44,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

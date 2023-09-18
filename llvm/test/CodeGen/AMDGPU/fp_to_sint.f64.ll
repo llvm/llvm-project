@@ -35,10 +35,9 @@ define amdgpu_kernel void @fp_to_sint_v4f64_v4i32(ptr addrspace(1) %out, <4 x do
 ; FUNC-LABEL: @fp_to_sint_i64_f64
 ; CI-DAG: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]]
 ; CI-DAG: v_trunc_f64_e32 [[TRUNC:v\[[0-9]+:[0-9]+\]]], [[VAL]]
-; CI-DAG: s_mov_b32 s[[K0_LO:[0-9]+]], 0{{$}}
-; CI-DAG: s_mov_b32 s[[K0_HI:[0-9]+]], 0x3df00000
+; CI-DAG: s_movk_i32 [[K0_EXP:s[0-9]+]], 0xffe0
 
-; CI-DAG: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], [[VAL]], s[[[K0_LO]]:[[K0_HI]]]
+; CI-DAG: v_ldexp_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], [[VAL]], [[K0_EXP]]
 ; CI-DAG: v_floor_f64_e32 [[FLOOR:v\[[0-9]+:[0-9]+\]]], [[MUL]]
 
 ; CI-DAG: s_mov_b32 s[[K1_HI:[0-9]+]], 0xc1f00000

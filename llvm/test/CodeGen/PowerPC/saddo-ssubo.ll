@@ -17,11 +17,11 @@ define i1 @test_saddo_i8(i8 %a, i8 %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb 4, 4
 ; CHECK-NEXT:    extsb 3, 3
-; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    extsb 4, 3
 ; CHECK-NEXT:    cmpw 4, 3
-; CHECK-NEXT:    iseleq 3, 0, 5
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    iseleq 3, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 %a, i8 %b) nounwind
@@ -34,11 +34,11 @@ define i1 @test_saddo_i16(i16 %a, i16 %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsh 4, 4
 ; CHECK-NEXT:    extsh 3, 3
-; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    add 3, 3, 4
 ; CHECK-NEXT:    extsh 4, 3
 ; CHECK-NEXT:    cmpw 4, 3
-; CHECK-NEXT:    iseleq 3, 0, 5
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    iseleq 3, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 %a, i16 %b) nounwind
@@ -97,11 +97,11 @@ define i1 @test_ssubo_i8(i8 %a, i8 %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb 3, 3
 ; CHECK-NEXT:    extsb 4, 4
-; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    extsb 4, 3
 ; CHECK-NEXT:    cmpw 4, 3
-; CHECK-NEXT:    iseleq 3, 0, 5
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    iseleq 3, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %a, i8 %b) nounwind
@@ -114,11 +114,11 @@ define i1 @test_ssubo_i16(i16 %a, i16 %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsh 3, 3
 ; CHECK-NEXT:    extsh 4, 4
-; CHECK-NEXT:    li 5, 1
 ; CHECK-NEXT:    sub 3, 3, 4
 ; CHECK-NEXT:    extsh 4, 3
 ; CHECK-NEXT:    cmpw 4, 3
-; CHECK-NEXT:    iseleq 3, 0, 5
+; CHECK-NEXT:    li 3, 1
+; CHECK-NEXT:    iseleq 3, 0, 3
 ; CHECK-NEXT:    blr
 entry:
   %res = call { i16, i1 } @llvm.ssub.with.overflow.i16(i16 %a, i16 %b) nounwind

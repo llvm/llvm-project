@@ -46,8 +46,8 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(builder);
   builder.setInsertionPoint(loop);
-  auto operands = llvm::to_vector(loop.getIterOperands());
-  operands.append(newIterOperands.begin(), newIterOperands.end());
+  auto operands = llvm::to_vector(loop.getInitArgs());
+  llvm::append_range(operands, newIterOperands);
   scf::ForOp newLoop = builder.create<scf::ForOp>(
       loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
       operands, [](OpBuilder &, Location, Value, ValueRange) {});
@@ -515,7 +515,7 @@ LogicalResult mlir::loopUnrollByFactor(
       std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
-                               epilogueForOp.getNumIterOperands(), results);
+                               epilogueForOp.getInitArgs().size(), results);
     (void)epilogueForOp.promoteIfSingleIteration(rewriter);
   }
 
@@ -969,4 +969,69 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   (void)tryIsolateBands(tileLoops);
 
   return tileLoops;
+}
+
+scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
+                                                      scf::ForallOp source,
+                                                      RewriterBase &rewriter) {
+  unsigned numTargetOuts = target.getNumResults();
+  unsigned numSourceOuts = source.getNumResults();
+
+  OperandRange targetOuts = target.getOutputs();
+  OperandRange sourceOuts = source.getOutputs();
+
+  // Create fused shared_outs.
+  SmallVector<Value> fusedOuts;
+  fusedOuts.reserve(numTargetOuts + numSourceOuts);
+  fusedOuts.append(targetOuts.begin(), targetOuts.end());
+  fusedOuts.append(sourceOuts.begin(), sourceOuts.end());
+
+  // Create a new scf::forall op after the source loop.
+  rewriter.setInsertionPointAfter(source);
+  scf::ForallOp fusedLoop = rewriter.create<scf::ForallOp>(
+      source.getLoc(), source.getMixedLowerBound(), source.getMixedUpperBound(),
+      source.getMixedStep(), fusedOuts, source.getMapping());
+
+  // Map control operands.
+  IRMapping fusedMapping;
+  fusedMapping.map(target.getInductionVars(), fusedLoop.getInductionVars());
+  fusedMapping.map(source.getInductionVars(), fusedLoop.getInductionVars());
+
+  // Map shared outs.
+  fusedMapping.map(target.getOutputBlockArguments(),
+                   fusedLoop.getOutputBlockArguments().slice(0, numTargetOuts));
+  fusedMapping.map(
+      source.getOutputBlockArguments(),
+      fusedLoop.getOutputBlockArguments().slice(numTargetOuts, numSourceOuts));
+
+  // Append everything except the terminator into the fused operation.
+  rewriter.setInsertionPointToStart(fusedLoop.getBody());
+  for (Operation &op : target.getLoopBody().begin()->without_terminator())
+    rewriter.clone(op, fusedMapping);
+  for (Operation &op : source.getLoopBody().begin()->without_terminator())
+    rewriter.clone(op, fusedMapping);
+
+  // Fuse the old terminator in_parallel ops into the new one.
+  scf::InParallelOp targetTerm = target.getTerminator();
+  scf::InParallelOp sourceTerm = source.getTerminator();
+  scf::InParallelOp fusedTerm = fusedLoop.getTerminator();
+
+  rewriter.setInsertionPointToStart(fusedTerm.getBody());
+  for (Operation &op : targetTerm.getYieldingOps())
+    rewriter.clone(op, fusedMapping);
+  for (Operation &op : sourceTerm.getYieldingOps())
+    rewriter.clone(op, fusedMapping);
+
+  // Replace all uses of the old loops with the fused loop.
+  rewriter.replaceAllUsesWith(target.getResults(),
+                              fusedLoop.getResults().slice(0, numTargetOuts));
+  rewriter.replaceAllUsesWith(
+      source.getResults(),
+      fusedLoop.getResults().slice(numTargetOuts, numSourceOuts));
+
+  // Erase the old loops.
+  rewriter.eraseOp(target);
+  rewriter.eraseOp(source);
+
+  return fusedLoop;
 }

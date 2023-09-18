@@ -126,10 +126,10 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
-    defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
-    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) ||          \
-    defined(__GNU__) || (defined(__sun__) && defined(__svr4__))
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||      \
+    defined(__FreeBSD_kernel__) || defined(__linux__) || defined(__CYGWIN__) || \
+    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) ||              \
+    (defined(__sun__) && defined(__svr4__))
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
   char fullpath[PATH_MAX];
@@ -233,8 +233,8 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // Fall back to argv[0] if auxiliary vectors are not available.
   if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
-#elif defined(__NetBSD__) || defined(__OpenBSD__) || defined(__minix) ||       \
-    defined(__DragonFly__) || defined(__FreeBSD_kernel__) || defined(_AIX)
+#elif defined(_AIX) || defined(__DragonFly__) || defined(__FreeBSD_kernel__) || \
+    defined(__NetBSD__)
   const char *curproc = "/proc/curproc/file";
   char exe_path[PATH_MAX];
   if (sys::fs::exists(curproc)) {
@@ -282,6 +282,11 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   }
   // Fall back to the classical detection.
   if (getprogpath(exe_path, argv0))
+    return exe_path;
+#elif defined(__OpenBSD__)
+  char exe_path[PATH_MAX];
+  // argv[0] only
+  if (getprogpath(exe_path, argv0) != NULL)
     return exe_path;
 #elif defined(__sun__) && defined(__svr4__)
   char exe_path[PATH_MAX];
@@ -951,7 +956,7 @@ ErrorOr<basic_file_status> directory_entry::status() const {
 // FreeBSD optionally provides /proc/self/fd, but it is incompatible with
 // Linux. The thing to use is realpath.
 //
-#if !defined(__FreeBSD__)
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
 #define TRY_PROC_SELF_FD
 #endif
 

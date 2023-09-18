@@ -54,15 +54,12 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -1830,7 +1827,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
            UnwindBlock->getUniquePredecessor() &&
            "can't safely insert in this block!");
 
-    Builder.SetInsertPoint(&*UnwindBlock->getFirstInsertionPt());
+    Builder.SetInsertPoint(UnwindBlock, UnwindBlock->getFirstInsertionPt());
     Builder.SetCurrentDebugLocation(II->getDebugLoc());
 
     // Attach exceptional gc relocates to the landingpad.
@@ -1845,7 +1842,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
            NormalDest->getUniquePredecessor() &&
            "can't safely insert in this block!");
 
-    Builder.SetInsertPoint(&*NormalDest->getFirstInsertionPt());
+    Builder.SetInsertPoint(NormalDest, NormalDest->getFirstInsertionPt());
 
     // gc relocates will be generated later as if it were regular call
     // statepoint

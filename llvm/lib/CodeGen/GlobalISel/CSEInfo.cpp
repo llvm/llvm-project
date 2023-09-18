@@ -76,9 +76,9 @@ bool CSEConfigConstantOnly::shouldCSEOpc(unsigned Opc) {
 }
 
 std::unique_ptr<CSEConfigBase>
-llvm::getStandardCSEConfigForOpt(CodeGenOpt::Level Level) {
+llvm::getStandardCSEConfigForOpt(CodeGenOptLevel Level) {
   std::unique_ptr<CSEConfigBase> Config;
-  if (Level == CodeGenOpt::None)
+  if (Level == CodeGenOptLevel::None)
     Config = std::make_unique<CSEConfigConstantOnly>();
   else
     Config = std::make_unique<CSEConfigFull>();
@@ -244,8 +244,6 @@ void GISelCSEInfo::changedInstr(MachineInstr &MI) { changingInstr(MI); }
 void GISelCSEInfo::analyze(MachineFunction &MF) {
   setMF(MF);
   for (auto &MBB : MF) {
-    if (MBB.empty())
-      continue;
     for (MachineInstr &MI : MBB) {
       if (!shouldCSE(MI.getOpcode()))
         continue;

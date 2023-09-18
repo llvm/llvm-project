@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins
 
-// rdar://12240916 stack overflow.
 namespace rdar12240916 {
 
 struct S2 {
@@ -37,7 +36,6 @@ S4 foo2() {
 
 }
 
-// rdar://12542261 stack overflow.
 namespace rdar12542261 {
 
 template <class _Tp>

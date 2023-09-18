@@ -395,7 +395,6 @@ namespace test2 {
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN5test211read_memberINS_1AEEEDtptcvPT_Li0E6memberERS2_(
 }
 
-// rdar://problem/9280586
 namespace test3 {
   struct AmbiguousBase { int ab; };
   struct Path1 : AmbiguousBase { float p; };
@@ -477,7 +476,6 @@ namespace test9 {
   }
 }
 
-// <rdar://problem/7825453>
 namespace test10 {
   template <char P1> struct S {};
   template <char P2> void f(struct S<false ? 'a' : P2> ) {}
@@ -527,7 +525,6 @@ namespace test14 {
   }
 }
 
-// rdar://problem/8204122
 namespace test15 {
   enum E { e = 3 };
   template <int I> struct S {};
@@ -538,7 +535,6 @@ namespace test15 {
   template void f<7>(S<7 + e>);
 }
 
-// rdar://problem/8302148
 namespace test17 {
   template <int N> struct A {};
 
@@ -583,7 +579,6 @@ namespace test18 {
   // CHECK-LABEL: define weak_odr void @_ZN6test181fINS_1AEEEvNS_1SIXadsrT_onanEEE
 }
 
-// rdar://problem/8332117
 namespace test19 {
   struct A {
     template <typename T> int f();
@@ -622,7 +617,6 @@ namespace test20 {
   template void test1<int>(decltype(f<>(int())));
 }
 
-// rdar:// 8620510
 namespace test21 {
   // CHECK-LABEL: define{{.*}} void @_ZN6test2112vla_arg_funcEiPA_i(
   void vla_arg_func(int X, int a[X][X]) {}
@@ -633,7 +627,6 @@ namespace test22 {
   void f(decltype(nullptr)) { }
 }
 
-// rdar://problem/8913416
 namespace test23 {
   typedef void * const vpc;
 
@@ -659,7 +652,6 @@ namespace test24 {
   }
 }
 
-// rdar://problem/8806641
 namespace test25 {
   template <void (*fn)()> struct A {
     static void call() { fn(); }

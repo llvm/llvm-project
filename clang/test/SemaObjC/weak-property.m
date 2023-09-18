@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -fobjc-runtime-has-weak -fobjc-arc -verify -Wno-objc-root-class %s
-// rdar://8899430
 
 @interface WeakPropertyTest {
     Class isa;

@@ -26,7 +26,6 @@ struct B : public A {
 static_assert(__builtin_offsetof(B, d) == 12,
   "We can't allocate the bitfield into the padding under ms_struct");
 
-// rdar://16178895
 struct C {
 #ifdef TEST_FOR_ERROR
   // expected-error@-2 {{ms_struct may not produce Microsoft-compatible layouts for classes with base classes or virtual functions}}

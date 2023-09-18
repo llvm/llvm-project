@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -fblocks -verify -Wno-objc-root-class %s
-// rdar://10414277
 
 @protocol P
 void p_foo(void) {} // expected-warning {{function definition inside an Objective-C container is deprecated}}
@@ -24,7 +23,6 @@ inline void v_imp_foo(void) {}
 void cat_imp_foo(void) {} 
 @end
 
-// rdar://16859666
 @interface PrototypeState
 
 @property (strong, readwrite) id moin1; // expected-note {{property declared here}}

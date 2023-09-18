@@ -16,12 +16,6 @@
 
 // Integration tests demonstrating load/store to/from SME ZA tile.
 
-llvm.func @printF64(f64)
-llvm.func @printI64(i64)
-llvm.func @printOpen()
-llvm.func @printClose()
-llvm.func @printComma()
-llvm.func @printNewline()
 llvm.func @printCString(!llvm.ptr<i8>)
 
 // This test verifies a 64-bit element ZA with FP64 data is correctly
@@ -65,19 +59,7 @@ func.func @za0_d_f64() -> i32 {
   // CHECK-ZA0_D-NEXT: ( 1.1, 1.1
   scf.for %i = %c0 to %tilesize step %svl_d {
     %tileslice = vector.load %mem1[%i] : memref<?xf64>, vector<[2]xf64>
-
-    llvm.call @printOpen() : () -> ()
-    scf.for %i2 = %c0 to %svl_d step %c1_index {
-      %elem = vector.extractelement %tileslice[%i2 : index] : vector<[2]xf64>
-      llvm.call @printF64(%elem) : (f64) -> ()
-      %last_i = arith.subi %svl_d, %c1_index : index
-      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
-      scf.if %isNotLastIter {
-        llvm.call @printComma() : () -> ()
-      }
-    }
-    llvm.call @printClose() : () -> ()
-    llvm.call @printNewline() : () -> ()
+    vector.print %tileslice : vector<[2]xf64>
   }
 
   // Load ZA0.D from "mem1"
@@ -117,19 +99,7 @@ func.func @za0_d_f64() -> i32 {
   // CHECK-ZA0_D-NEXT: ( 0, 0
   scf.for %i = %c0 to %tilesize step %svl_d {
     %tileslice = vector.load %mem2[%i] : memref<?xf64>, vector<[2]xf64>
-
-    llvm.call @printOpen() : () -> ()
-    scf.for %i2 = %c0 to %svl_d step %c1_index {
-      %elem = vector.extractelement %tileslice[%i2 : index] : vector<[2]xf64>
-      llvm.call @printF64(%elem) : (f64) -> ()
-      %last_i = arith.subi %svl_d, %c1_index : index
-      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
-      scf.if %isNotLastIter {
-        llvm.call @printComma() : () -> ()
-      }
-    }
-    llvm.call @printClose() : () -> ()
-    llvm.call @printNewline() : () -> ()
+    vector.print %tileslice : vector<[2]xf64>
   }
 
   // Verify "mem1" != "mem2"
@@ -183,19 +153,7 @@ func.func @za0_d_f64() -> i32 {
   // CHECK-ZA0_D-NEXT: ( 1.1, 1.1
   scf.for %i = %c0 to %tilesize step %svl_d {
     %tileslice = vector.load %mem2[%i] : memref<?xf64>, vector<[2]xf64>
-
-    llvm.call @printOpen() : () -> ()
-    scf.for %i2 = %c0 to %svl_d step %c1_index {
-      %elem = vector.extractelement %tileslice[%i2 : index] : vector<[2]xf64>
-      llvm.call @printF64(%elem) : (f64) -> ()
-      %last_i = arith.subi %svl_d, %c1_index : index
-      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
-      scf.if %isNotLastIter {
-        llvm.call @printComma() : () -> ()
-      }
-    }
-    llvm.call @printClose() : () -> ()
-    llvm.call @printNewline() : () -> ()
+    vector.print %tileslice : vector<[2]xf64>
   }
 
   %c0_i32 = arith.constant 0 : i32
@@ -287,20 +245,7 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   // CHECK-NEXT: ( 2, 2, 2, 2
   scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
     %tileslice = vector.load %mem1[%i] : memref<?xi32>, vector<[4]xi32>
-
-    llvm.call @printOpen() : () -> ()
-    scf.for %i2 = %c0 to %svl_s step %c1_index {
-      %elem = vector.extractelement %tileslice[%i2 : index] : vector<[4]xi32>
-      %elem_i64 = llvm.zext %elem : i32 to i64
-      llvm.call @printI64(%elem_i64) : (i64) -> ()
-      %last_i = arith.subi %svl_s, %c1_index : index
-      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
-      scf.if %isNotLastIter {
-        llvm.call @printComma() : () -> ()
-      }
-    }
-    llvm.call @printClose() : () -> ()
-    llvm.call @printNewline() : () -> ()
+    vector.print %tileslice : vector<[4]xi32>
   }
 
   // Load tile 1 from memory
@@ -343,20 +288,7 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   func.call @printTileBegin() : () -> ()
   scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
     %av = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
-
-    llvm.call @printOpen() : () -> ()
-    scf.for %i2 = %c0 to %svl_s step %c1_index {
-      %elem = vector.extractelement %av[%i2 : index] : vector<[4]xi32>
-      %elem_i64 = llvm.zext %elem : i32 to i64
-      llvm.call @printI64(%elem_i64) : (i64) -> ()
-      %last_i = arith.subi %svl_s, %c1_index : index
-      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
-      scf.if %isNotLastIter {
-        llvm.call @printComma() : () -> ()
-      }
-    }
-    llvm.call @printClose() : () -> ()
-    llvm.call @printNewline() : () -> ()
+    vector.print %av : vector<[4]xi32>
 
     %tileSizeMinusStep = arith.subi %size_of_tile, %svl_s : index
     %isNextTile = arith.cmpi eq, %i, %tileSizeMinusStep : index

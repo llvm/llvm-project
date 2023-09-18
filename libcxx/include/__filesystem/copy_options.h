@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-enum class _LIBCPP_ENUM_VIS copy_options : unsigned short {
+enum class copy_options : unsigned short {
   none = 0,
   skip_existing = 1,
   overwrite_existing = 2,

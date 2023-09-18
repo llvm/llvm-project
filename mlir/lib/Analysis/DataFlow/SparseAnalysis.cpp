@@ -99,7 +99,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return visitRegionSuccessors({branch}, branch,
-                                 /*successorIndex=*/std::nullopt,
+                                 /*successor=*/RegionBranchPoint::parent(),
                                  resultLattices);
   }
 
@@ -167,8 +167,8 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
 
     // Check if the lattices can be determined from region control flow.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      return visitRegionSuccessors(
-          block, branch, block->getParent()->getRegionNumber(), argLattices);
+      return visitRegionSuccessors(block, branch, block->getParent(),
+                                   argLattices);
     }
 
     // Otherwise, we can't reason about the data-flow.
@@ -212,8 +212,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
 
 void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
     ProgramPoint point, RegionBranchOpInterface branch,
-    std::optional<unsigned> successorIndex,
-    ArrayRef<AbstractSparseLattice *> lattices) {
+    RegionBranchPoint successor, ArrayRef<AbstractSparseLattice *> lattices) {
   const auto *predecessors = getOrCreateFor<PredecessorState>(point, point);
   assert(predecessors->allPredecessorsKnown() &&
          "unexpected unresolved region successors");
@@ -224,11 +223,11 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
 
     // Check if the predecessor is the parent op.
     if (op == branch) {
-      operands = branch.getSuccessorEntryOperands(successorIndex);
+      operands = branch.getEntrySuccessorOperands(successor);
       // Otherwise, try to deduce the operands from a region return-like op.
-    } else {
-      if (isRegionReturnLike(op))
-        operands = getRegionBranchSuccessorOperands(op, successorIndex);
+    } else if (auto regionTerminator =
+                   dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+      operands = regionTerminator.getSuccessorOperands(successor);
     }
 
     if (!operands) {
@@ -412,18 +411,33 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
     return;
   }
 
-  // For function calls, connect the arguments of the entry blocks
-  // to the operands of the call op.
+  // For function calls, connect the arguments of the entry blocks to the
+  // operands of the call op that are forwarded to these arguments.
   if (auto call = dyn_cast<CallOpInterface>(op)) {
     Operation *callableOp = call.resolveCallable(&symbolTable);
     if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
+      // Not all operands of a call op forward to arguments. Such operands are
+      // stored in `unaccounted`.
+      BitVector unaccounted(op->getNumOperands(), true);
+
+      OperandRange argOperands = call.getArgOperands();
+      MutableArrayRef<OpOperand> argOpOperands =
+          operandsToOpOperands(argOperands);
       Region *region = callable.getCallableRegion();
       if (region && !region->empty()) {
         Block &block = region->front();
-        for (auto [blockArg, operand] :
-             llvm::zip(block.getArguments(), operandLattices)) {
-          meet(operand, *getLatticeElementFor(op, blockArg));
+        for (auto [blockArg, argOpOperand] :
+             llvm::zip(block.getArguments(), argOpOperands)) {
+          meet(getLatticeElement(argOpOperand.get()),
+               *getLatticeElementFor(op, blockArg));
+          unaccounted.reset(argOpOperand.getOperandNumber());
         }
+      }
+      // Handle the operands of the call op that aren't forwarded to any
+      // arguments.
+      for (int index : unaccounted.set_bits()) {
+        OpOperand &opOperand = op->getOpOperand(index);
+        visitCallOperand(opOperand);
       }
       return;
     }
@@ -439,10 +453,9 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   // successor's input. There are two types of successor operands: the operands
   // of this op itself and the operands of the terminators of the regions of
   // this op.
-  if (isa<RegionBranchTerminatorOpInterface>(op) ||
-      op->hasTrait<OpTrait::ReturnLike>()) {
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
-      visitRegionSuccessorsFromTerminator(op, branch);
+      visitRegionSuccessorsFromTerminator(terminator, branch);
       return;
     }
   }
@@ -480,17 +493,14 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   Operation *op = branch.getOperation();
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
-  branch.getSuccessorRegions(/*index=*/{}, operands, successors);
+  branch.getEntrySuccessorRegions(operands, successors);
 
   // All operands not forwarded to any successor. This set can be non-contiguous
   // in the presence of multiple successors.
   BitVector unaccounted(op->getNumOperands(), true);
 
   for (RegionSuccessor &successor : successors) {
-    Region *region = successor.getSuccessor();
-    OperandRange operands =
-        region ? branch.getSuccessorEntryOperands(region->getRegionNumber())
-               : branch.getSuccessorEntryOperands({});
+    OperandRange operands = branch.getEntrySuccessorOperands(successor);
     MutableArrayRef<OpOperand> opoperands = operandsToOpOperands(operands);
     ValueRange inputs = successor.getSuccessorInputs();
     for (auto [operand, input] : llvm::zip(opoperands, inputs)) {
@@ -506,31 +516,25 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
 }
 
 void AbstractSparseBackwardDataFlowAnalysis::
-    visitRegionSuccessorsFromTerminator(Operation *terminator,
-                                        RegionBranchOpInterface branch) {
-  assert(isa<RegionBranchTerminatorOpInterface>(terminator) ||
-         terminator->hasTrait<OpTrait::ReturnLike>() &&
-             "expected a `RegionBranchTerminatorOpInterface` op or a "
-             "return-like op");
+    visitRegionSuccessorsFromTerminator(
+        RegionBranchTerminatorOpInterface terminator,
+        RegionBranchOpInterface branch) {
+  assert(isa<RegionBranchTerminatorOpInterface>(terminator) &&
+         "expected a `RegionBranchTerminatorOpInterface` op");
   assert(terminator->getParentOp() == branch.getOperation() &&
          "expected `branch` to be the parent op of `terminator`");
 
   SmallVector<Attribute> operandAttributes(terminator->getNumOperands(),
                                            nullptr);
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(terminator->getParentRegion()->getRegionNumber(),
-                             operandAttributes, successors);
+  terminator.getSuccessorRegions(operandAttributes, successors);
   // All operands not forwarded to any successor. This set can be
   // non-contiguous in the presence of multiple successors.
   BitVector unaccounted(terminator->getNumOperands(), true);
 
   for (const RegionSuccessor &successor : successors) {
     ValueRange inputs = successor.getSuccessorInputs();
-    Region *region = successor.getSuccessor();
-    OperandRange operands =
-        region ? *getRegionBranchSuccessorOperands(terminator,
-                                                   region->getRegionNumber())
-               : *getRegionBranchSuccessorOperands(terminator, {});
+    OperandRange operands = terminator.getSuccessorOperands(successor);
     MutableArrayRef<OpOperand> opOperands = operandsToOpOperands(operands);
     for (auto [opOperand, input] : llvm::zip(opOperands, inputs)) {
       meet(getLatticeElement(opOperand.get()),

@@ -431,6 +431,7 @@ static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXIMUM:
@@ -492,8 +493,12 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
     return false;
   case Intrinsic::aarch64_neon_uaddlv:
   case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_saddv:
   case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_smaxv:
   case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_sminv:
+  case Intrinsic::aarch64_neon_faddv:
   case Intrinsic::aarch64_neon_fmaxv:
   case Intrinsic::aarch64_neon_fminv:
   case Intrinsic::aarch64_neon_fmaxnmv:
@@ -503,13 +508,6 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
     return SrcTy.getElementType().getSizeInBits() >= 16 &&
            SrcTy.getElementCount().getFixedValue() >= 4;
-  }
-  case Intrinsic::aarch64_neon_saddv:
-  case Intrinsic::aarch64_neon_smaxv:
-  case Intrinsic::aarch64_neon_sminv: {
-    const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
-    return SrcTy.getElementType().getSizeInBits() >= 32 &&
-           SrcTy.getElementCount().getFixedValue() >= 2;
   }
   }
 }
@@ -582,6 +580,25 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return true;
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+    case Intrinsic::aarch64_neon_ld1x2:
+    case Intrinsic::aarch64_neon_ld1x3:
+    case Intrinsic::aarch64_neon_ld1x4:
+    case Intrinsic::aarch64_neon_ld2:
+    case Intrinsic::aarch64_neon_ld2lane:
+    case Intrinsic::aarch64_neon_ld2r:
+    case Intrinsic::aarch64_neon_ld3:
+    case Intrinsic::aarch64_neon_ld3lane:
+    case Intrinsic::aarch64_neon_ld3r:
+    case Intrinsic::aarch64_neon_ld4:
+    case Intrinsic::aarch64_neon_ld4lane:
+    case Intrinsic::aarch64_neon_ld4r:
+      return true;
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -724,10 +741,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     Register ScalarReg = MI.getOperand(1).getReg();
     LLT ScalarTy = MRI.getType(ScalarReg);
     auto ScalarDef = MRI.getVRegDef(ScalarReg);
+    // We want to select dup(load) into LD1R.
+    if (ScalarDef->getOpcode() == TargetOpcode::G_LOAD)
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     // s8 is an exception for G_DUP, which we always want on gpr.
-    if (ScalarTy.getSizeInBits() != 8 &&
-        (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
-         onlyDefinesFP(*ScalarDef, MRI, TRI)))
+    else if (ScalarTy.getSizeInBits() != 8 &&
+             (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
+              onlyDefinesFP(*ScalarDef, MRI, TRI)))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
@@ -996,6 +1016,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMIN:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:
   case TargetOpcode::G_VECREDUCE_ADD:
   case TargetOpcode::G_VECREDUCE_MUL:
   case TargetOpcode::G_VECREDUCE_AND:
@@ -1015,17 +1037,26 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Assign them FPR for now.
     OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR, PMI_FirstFPR};
     break;
-  case TargetOpcode::G_INTRINSIC: {
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
     // Check if we know that the intrinsic has any constraints on its register
     // banks. If it does, then update the mapping accordingly.
     unsigned Idx = 0;
-    if (!isFPIntrinsic(MRI, MI))
-      break;
-    for (const auto &Op : MI.explicit_operands()) {
-      if (Op.isReg())
-        OpRegBankIdx[Idx] = PMI_FirstFPR;
-      ++Idx;
-    }
+    if (onlyDefinesFP(MI, MRI, TRI))
+      for (const auto &Op : MI.defs()) {
+        if (Op.isReg())
+          OpRegBankIdx[Idx] = PMI_FirstFPR;
+        ++Idx;
+      }
+    else
+      Idx += MI.getNumExplicitDefs();
+
+    if (onlyUsesFP(MI, MRI, TRI))
+      for (const auto &Op : MI.explicit_uses()) {
+        if (Op.isReg())
+          OpRegBankIdx[Idx] = PMI_FirstFPR;
+        ++Idx;
+      }
     break;
   }
   case TargetOpcode::G_LROUND:

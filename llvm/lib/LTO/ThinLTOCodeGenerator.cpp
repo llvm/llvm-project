@@ -338,7 +338,7 @@ std::unique_ptr<MemoryBuffer> codegenModule(Module &TheModule,
     PM.add(createObjCARCContractPass());
 
     // Setup the codegen now.
-    if (TM.addPassesToEmitFile(PM, OS, nullptr, CGFT_ObjectFile,
+    if (TM.addPassesToEmitFile(PM, OS, nullptr, CodeGenFileType::ObjectFile,
                                /* DisableVerify */ true))
       report_fatal_error("Failed to setup codegen");
 
@@ -617,11 +617,9 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
 std::unique_ptr<ModuleSummaryIndex> ThinLTOCodeGenerator::linkCombinedIndex() {
   std::unique_ptr<ModuleSummaryIndex> CombinedIndex =
       std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
-  uint64_t NextModuleId = 0;
   for (auto &Mod : Modules) {
     auto &M = Mod->getSingleBitcodeModule();
-    if (Error Err =
-            M.readSummary(*CombinedIndex, Mod->getName(), NextModuleId++)) {
+    if (Error Err = M.readSummary(*CombinedIndex, Mod->getName())) {
       // FIXME diagnose
       logAllUnhandledErrors(
           std::move(Err), errs(),

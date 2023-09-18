@@ -134,6 +134,7 @@ ELF_RELOC(R_AARCH64_TLS_DTPREL64,                    0x405)
 ELF_RELOC(R_AARCH64_TLS_TPREL64,                     0x406)
 ELF_RELOC(R_AARCH64_TLSDESC,                         0x407)
 ELF_RELOC(R_AARCH64_IRELATIVE,                       0x408)
+ELF_RELOC(R_AARCH64_AUTH_ABS64,                      0xe100)
 
 // ELF_RELOC(R_AARCH64_P32_NONE,                         0)
 ELF_RELOC(R_AARCH64_P32_ABS32,                       0x001)

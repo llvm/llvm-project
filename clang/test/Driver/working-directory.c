@@ -6,6 +6,6 @@
 
 // CHECK_NO_FILE: no such file or directory: 'no_such_file.cpp'
 
-// CHECK_WORKS: "-coverage-notes-file" "{{[^"]+}}test{{/|\\\\}}Driver{{/|\\\\}}Inputs{{/|\\\\}}pchfile.gcno"
-// CHECK_WORKS: "-working-directory" "{{[^"]+}}test{{/|\\\\}}Driver{{/|\\\\}}Inputs"
 // CHECK_WORKS: "-fdebug-compilation-dir={{[^"]+}}test{{/|\\\\}}Driver{{/|\\\\}}Inputs"
+// CHECK_WORKS: "-coverage-notes-file={{[^"]+}}test{{/|\\\\}}Driver{{/|\\\\}}Inputs{{/|\\\\}}pchfile.gcno"
+// CHECK_WORKS: "-working-directory" "{{[^"]+}}test{{/|\\\\}}Driver{{/|\\\\}}Inputs"

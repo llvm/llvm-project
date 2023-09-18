@@ -60,7 +60,7 @@ LIBC_INLINE long double sqrt(long double x) {
     // sqrt( negative numbers ) = NaN
     return FPBits<long double>::build_quiet_nan(ONE >> 1);
   } else {
-    int x_exp = bits.get_exponent();
+    int x_exp = bits.get_explicit_exponent();
     UIntType x_mant = bits.get_mantissa();
 
     // Step 1a: Normalize denormal input

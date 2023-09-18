@@ -484,7 +484,7 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
       Check->diag(Begin, "replace macro with enum")
       << FixItHint::CreateInsertion(Begin, "enum {\n");
 
-  for (size_t I = 0u; I < MacroList.size(); ++I) {
+  for (size_t I = 0U; I < MacroList.size(); ++I) {
     const EnumMacro &Macro = MacroList[I];
     SourceLocation DefineEnd =
         Macro.Directive->getMacroInfo()->getDefinitionLoc();

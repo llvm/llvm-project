@@ -19,6 +19,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -971,8 +972,8 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     Diag(Tok, diag::ext_c11_feature) << Tok.getName();
   if (Tok.is(tok::kw_static_assert)) {
     if (!getLangOpts().CPlusPlus) {
-      if (getLangOpts().C2x)
-        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+      if (getLangOpts().C23)
+        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
       else
         Diag(Tok, diag::ext_ms_static_assert) << FixItHint::CreateReplacement(
             Tok.getLocation(), "_Static_assert");
@@ -1004,7 +1005,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
       DiagVal = diag::warn_cxx14_compat_static_assert_no_message;
     else if (getLangOpts().CPlusPlus)
       DiagVal = diag::ext_cxx_static_assert_no_message;
-    else if (getLangOpts().C2x)
+    else if (getLangOpts().C23)
       DiagVal = diag::warn_c17_compat_static_assert_no_message;
     else
       DiagVal = diag::ext_c_static_assert_no_message;
@@ -1022,7 +1023,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
         const Token &T = GetLookAheadToken(I);
         if (T.is(tok::r_paren))
           break;
-        if (T.isNot(tok::string_literal)) {
+        if (!tokenIsLikeStringLiteral(T, getLangOpts())) {
           ParseAsExpression = true;
           break;
         }
@@ -1031,7 +1032,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
 
     if (ParseAsExpression)
       AssertMessage = ParseConstantExpressionInExprEvalContext();
-    else if (isTokenStringLiteral())
+    else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
     else {
       Diag(Tok, diag::err_expected_string_literal)
@@ -1654,7 +1655,9 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_union,
           tok::kw___is_unsigned,
           tok::kw___is_void,
-          tok::kw___is_volatile))
+          tok::kw___is_volatile,
+          tok::kw___reference_binds_to_temporary,
+          tok::kw___reference_constructs_from_temporary))
     // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
     // name of struct templates, but some are keywords in GCC >= 4.3
     // and Clang. Therefore, when we see the token sequence "struct
@@ -4240,7 +4243,7 @@ Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc,
   case tok::code_completion:
     cutOffParsing();
     Actions.CodeCompleteAttribute(getLangOpts().CPlusPlus ? ParsedAttr::AS_CXX11
-                                                          : ParsedAttr::AS_C2x,
+                                                          : ParsedAttr::AS_C23,
                                   Completion, Scope);
     return nullptr;
 
@@ -4398,7 +4401,7 @@ bool Parser::ParseCXX11AttributeArgs(
   SourceLocation LParenLoc = Tok.getLocation();
   const LangOptions &LO = getLangOpts();
   ParsedAttr::Form Form =
-      LO.CPlusPlus ? ParsedAttr::Form::CXX11() : ParsedAttr::Form::C2x();
+      LO.CPlusPlus ? ParsedAttr::Form::CXX11() : ParsedAttr::Form::C23();
 
   // Try parsing microsoft attributes
   if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {
@@ -4411,7 +4414,7 @@ bool Parser::ParseCXX11AttributeArgs(
   // arguments.
   if (Form.getSyntax() != ParsedAttr::AS_Microsoft &&
       !hasAttribute(LO.CPlusPlus ? AttributeCommonInfo::Syntax::AS_CXX11
-                                 : AttributeCommonInfo::Syntax::AS_C2x,
+                                 : AttributeCommonInfo::Syntax::AS_C23,
                     ScopeName, AttrName, getTargetInfo(), getLangOpts())) {
     if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {
     }
@@ -4475,7 +4478,7 @@ bool Parser::ParseCXX11AttributeArgs(
   return true;
 }
 
-/// Parse a C++11 or C2x attribute-specifier.
+/// Parse a C++11 or C23 attribute-specifier.
 ///
 /// [C++11] attribute-specifier:
 ///         '[' '[' attribute-list ']' ']'
@@ -4503,8 +4506,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                                   CachedTokens &OpenMPTokens,
                                                   SourceLocation *EndLoc) {
   if (Tok.is(tok::kw_alignas)) {
-    if (getLangOpts().C2x)
-      Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+    if (getLangOpts().C23)
+      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
     else
       Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
     ParseAlignmentSpecifier(Attrs, EndLoc);
@@ -4527,8 +4530,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     Diag(OpenLoc, getLangOpts().CPlusPlus11 ? diag::warn_cxx98_compat_attribute
                                             : diag::warn_ext_cxx11_attributes);
   } else {
-    Diag(OpenLoc, getLangOpts().C2x ? diag::warn_pre_c2x_compat_attributes
-                                    : diag::warn_ext_c2x_attributes);
+    Diag(OpenLoc, getLangOpts().C23 ? diag::warn_pre_c23_compat_attributes
+                                    : diag::warn_ext_c23_attributes);
   }
 
   ConsumeBracket();
@@ -4613,7 +4616,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
           SourceRange(ScopeLoc.isValid() ? ScopeLoc : AttrLoc, AttrLoc),
           ScopeName, ScopeLoc, nullptr, 0,
           getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
-                                  : ParsedAttr::Form::C2x());
+                                  : ParsedAttr::Form::C23());
       AttrParsed = true;
     }
 
@@ -4639,7 +4642,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     SkipUntil(tok::r_square);
 }
 
-/// ParseCXX11Attributes - Parse a C++11 or C2x attribute-specifier-seq.
+/// ParseCXX11Attributes - Parse a C++11 or C23 attribute-specifier-seq.
 ///
 /// attribute-specifier-seq:
 ///       attribute-specifier-seq[opt] attribute-specifier
@@ -4714,9 +4717,9 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 
   ArgsVector ArgExprs;
-  if (Tok.is(tok::string_literal)) {
+  if (isTokenStringLiteral()) {
     // Easy case: uuid("...") -- quoted string.
-    ExprResult StringResult = ParseStringLiteralExpression();
+    ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
     if (StringResult.isInvalid())
       return;
     ArgExprs.push_back(StringResult.get());
@@ -4771,7 +4774,7 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
     Toks[0].setLiteralData(StrBuffer.data());
     Toks[0].setLength(StrBuffer.size());
     StringLiteral *UuidString =
-        cast<StringLiteral>(Actions.ActOnStringLiteral(Toks, nullptr).get());
+        cast<StringLiteral>(Actions.ActOnUnevaluatedStringLiteral(Toks).get());
     ArgExprs.push_back(UuidString);
   }
 

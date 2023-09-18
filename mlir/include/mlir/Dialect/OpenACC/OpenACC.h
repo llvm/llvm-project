@@ -16,12 +16,14 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.h.inc"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -40,13 +42,14 @@
       mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
       mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
       mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
-      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp
+      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
+      mlir::acc::CacheOp
 #define ACC_COMPUTE_CONSTRUCT_OPS                                              \
   mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp
 #define ACC_DATA_CONSTRUCT_OPS                                                 \
   mlir::acc::DataOp, mlir::acc::EnterDataOp, mlir::acc::ExitDataOp,            \
       mlir::acc::UpdateOp, mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,   \
-      mlir::acc::DeclareExitOp
+      mlir::acc::DeclareExitOp, mlir::acc::DeclareOp
 #define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_OPS
 
@@ -73,9 +76,22 @@ mlir::Value getVarPtr(mlir::Operation *accDataEntryOp);
 std::optional<mlir::acc::DataClause>
 getDataClause(mlir::Operation *accDataEntryOp);
 
+/// Used to find out whether data operation is implicit.
+/// Returns false if not a data operation or if it is a data operation without
+/// implicit flag.
+bool getImplicitFlag(mlir::Operation *accDataEntryOp);
+
 /// Used to obtain the attribute name for declare.
 static constexpr StringLiteral getDeclareAttrName() {
   return StringLiteral("acc.declare");
+}
+
+static constexpr StringLiteral getDeclareActionAttrName() {
+  return StringLiteral("acc.declare_action");
+}
+
+static constexpr StringLiteral getRoutineInfoAttrName() {
+  return StringLiteral("acc.routine_info");
 }
 
 } // namespace acc

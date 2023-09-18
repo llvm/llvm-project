@@ -19,25 +19,22 @@
 #include "test_macros.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s, test_allocator_statistics& alloc_stats)
-{
-    alloc_stats.throw_after = 0;
+TEST_CONSTEXPR_CXX20 void test(S s, test_allocator_statistics& alloc_stats) {
+  alloc_stats.throw_after = 0;
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
+  try
 #endif
-    {
-        while (s.size() < s.capacity())
-            s.push_back(typename S::value_type());
-        assert(s.size() == s.capacity());
-    }
+  {
+    while (s.size() < s.capacity())
+      s.push_back(typename S::value_type());
+    assert(s.size() == s.capacity());
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    catch (...)
-    {
-        assert(false);
-    }
+  catch (...) {
+    assert(false);
+  }
 #endif
-    alloc_stats.throw_after = INT_MAX;
+  alloc_stats.throw_after = INT_MAX;
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -64,8 +61,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

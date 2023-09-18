@@ -1197,8 +1197,7 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; O1VEC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; O1VEC2-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; O1VEC2:       middle.block:
-; O1VEC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 64, 64
-; O1VEC2-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; O1VEC2-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; O1VEC2:       scalar.ph:
 ; O1VEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; O1VEC2-NEXT:    br label [[FOR_BODY:%.*]]
@@ -1237,8 +1236,7 @@ define i32 @nopragma(ptr noalias nocapture %a, ptr noalias nocapture readonly %b
 ; OzVEC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OzVEC2-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OzVEC2:       middle.block:
-; OzVEC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 64, 64
-; OzVEC2-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; OzVEC2-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; OzVEC2:       scalar.ph:
 ; OzVEC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; OzVEC2-NEXT:    br label [[FOR_BODY:%.*]]

@@ -162,9 +162,15 @@ public:
   /// elements attribute, which contains the sizes of the sub ranges.
   MutableOperandRangeRange split(NamedAttribute segmentSizes) const;
 
-  /// Returns the value at the given index.
-  Value operator[](unsigned index) const {
-    return operator OperandRange()[index];
+  /// Returns the OpOperand at the given index.
+  OpOperand &operator[](unsigned index) const;
+
+  OperandRange::iterator begin() const {
+    return static_cast<OperandRange>(*this).begin();
+  }
+
+  OperandRange::iterator end() const {
+    return static_cast<OperandRange>(*this).end();
   }
 
 private:

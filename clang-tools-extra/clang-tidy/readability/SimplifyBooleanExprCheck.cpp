@@ -59,9 +59,9 @@ static StringRef negatedOperator(const BinaryOperator *BinOp) {
   const BinaryOperatorKind Opcode = BinOp->getOpcode();
   for (auto NegatableOp : Opposites) {
     if (Opcode == NegatableOp.first)
-      return BinOp->getOpcodeStr(NegatableOp.second);
+      return BinaryOperator::getOpcodeStr(NegatableOp.second);
     if (Opcode == NegatableOp.second)
-      return BinOp->getOpcodeStr(NegatableOp.first);
+      return BinaryOperator::getOpcodeStr(NegatableOp.first);
   }
   return {};
 }
@@ -613,8 +613,8 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
   const auto *LHS = Op->getLHS()->IgnoreParenImpCasts();
   const auto *RHS = Op->getRHS()->IgnoreParenImpCasts();
 
-  const CXXBoolLiteralExpr *Bool;
-  const Expr *Other;
+  const CXXBoolLiteralExpr *Bool = nullptr;
+  const Expr *Other = nullptr;
   if ((Bool = dyn_cast<CXXBoolLiteralExpr>(LHS)) != nullptr)
     Other = RHS;
   else if ((Bool = dyn_cast<CXXBoolLiteralExpr>(RHS)) != nullptr)

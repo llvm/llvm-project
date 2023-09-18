@@ -542,7 +542,7 @@ public:
   /// value. Otherwise, add a new attribute with the specified name/value.
   void setAttr(StringAttr name, Attribute value) {
     if (getPropertiesStorageSize()) {
-      if (std::optional<Attribute> inherentAttr = getInherentAttr(name)) {
+      if (getInherentAttr(name)) {
         setInherentAttr(name, value);
         return;
       }
@@ -697,6 +697,13 @@ public:
   /// * Otherwise, `results` is filled with the folded results.
   /// If folding was unsuccessful, this function returns "failure".
   LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
+
+  /// Returns true if `InterfaceT` has been promised by the dialect or
+  /// implemented.
+  template <typename InterfaceT>
+  bool hasPromiseOrImplementsInterface() const {
+    return name.hasPromiseOrImplementsInterface<InterfaceT>();
+  }
 
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
@@ -875,8 +882,9 @@ public:
   /// matching the expectations of the properties for this operation. This is
   /// mostly useful for unregistered operations or used when parsing the
   /// generic format. An optional diagnostic can be passed in for richer errors.
-  LogicalResult setPropertiesFromAttribute(Attribute attr,
-                                           InFlightDiagnostic *diagnostic);
+  LogicalResult
+  setPropertiesFromAttribute(Attribute attr,
+                             function_ref<InFlightDiagnostic &()> getDiag);
 
   /// Copy properties from an existing other properties object. The two objects
   /// must be the same type.

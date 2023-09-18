@@ -3114,7 +3114,7 @@ define void @sextw_removal_maskc(i1 %c, i32 signext %arg, i32 signext %arg1) nou
 ; RV64ZICOND-NEXT:    czero.eqz s1, a1, a0
 ; RV64ZICOND-NEXT:  .LBB54_1: # %bb2
 ; RV64ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64ZICOND-NEXT:    sext.w a0, s1
+; RV64ZICOND-NEXT:    mv a0, s1
 ; RV64ZICOND-NEXT:    call bar@plt
 ; RV64ZICOND-NEXT:    sllw s1, s1, s0
 ; RV64ZICOND-NEXT:    bnez a0, .LBB54_1
@@ -3265,7 +3265,7 @@ define void @sextw_removal_maskcn(i1 %c, i32 signext %arg, i32 signext %arg1) no
 ; RV64ZICOND-NEXT:    czero.nez s1, a1, a0
 ; RV64ZICOND-NEXT:  .LBB55_1: # %bb2
 ; RV64ZICOND-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64ZICOND-NEXT:    sext.w a0, s1
+; RV64ZICOND-NEXT:    mv a0, s1
 ; RV64ZICOND-NEXT:    call bar@plt
 ; RV64ZICOND-NEXT:    sllw s1, s1, s0
 ; RV64ZICOND-NEXT:    bnez a0, .LBB55_1

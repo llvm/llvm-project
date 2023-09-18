@@ -233,7 +233,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(&Obj)) {
     auto &ES = getExecutionSession();
 
-    // For all resolved symbols that are not already in the responsibilty set:
+    // For all resolved symbols that are not already in the responsibility set:
     // check whether the symbol is in a comdat section and if so mark it as
     // weak.
     for (auto &Sym : COFFObj->symbols()) {

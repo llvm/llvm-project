@@ -284,10 +284,9 @@ public:
 #endif
      {}
 
-    template <class _Pp, class _Rp, class _MP>
+    template <class _Pp, class _Rp, class _MP, __enable_if_t<is_convertible<_Pp, pointer>::value, int> = 0>
     _LIBCPP_HIDE_FROM_ABI
-    __deque_iterator(const __deque_iterator<value_type, _Pp, _Rp, _MP, difference_type, _BS>& __it,
-                typename enable_if<is_convertible<_Pp, pointer>::value>::type* = 0) _NOEXCEPT
+    __deque_iterator(const __deque_iterator<value_type, _Pp, _Rp, _MP, difference_type, _BS>& __it) _NOEXCEPT
         : __m_iter_(__it.__m_iter_), __ptr_(__it.__ptr_) {}
 
     _LIBCPP_HIDE_FROM_ABI reference operator*() const {return *__ptr_;}
@@ -614,12 +613,10 @@ public:
             __append(__n, __v);
     }
 
-    template <class _InputIter>
-    _LIBCPP_HIDE_FROM_ABI deque(_InputIter __f, _InputIter __l,
-              typename enable_if<__has_input_iterator_category<_InputIter>::value>::type* = 0);
-    template <class _InputIter>
-    _LIBCPP_HIDE_FROM_ABI deque(_InputIter __f, _InputIter __l, const allocator_type& __a,
-              typename enable_if<__has_input_iterator_category<_InputIter>::value>::type* = 0);
+    template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI deque(_InputIter __f, _InputIter __l);
+    template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI deque(_InputIter __f, _InputIter __l, const allocator_type& __a);
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
@@ -662,13 +659,11 @@ public:
     void assign(initializer_list<value_type> __il) {assign(__il.begin(), __il.end());}
 #endif // _LIBCPP_CXX03_LANG
 
-    template <class _InputIter>
-    _LIBCPP_HIDE_FROM_ABI void assign(_InputIter __f, _InputIter __l,
-                    typename enable_if<__has_input_iterator_category<_InputIter>::value &&
-                                      !__has_random_access_iterator_category<_InputIter>::value>::type* = 0);
-    template <class _RAIter>
-    _LIBCPP_HIDE_FROM_ABI void assign(_RAIter __f, _RAIter __l,
-                    typename enable_if<__has_random_access_iterator_category<_RAIter>::value>::type* = 0);
+    template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value &&
+                                              !__has_random_access_iterator_category<_InputIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI void assign(_InputIter __f, _InputIter __l);
+    template <class _RAIter, __enable_if_t<__has_random_access_iterator_category<_RAIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI void assign(_RAIter __f, _RAIter __l);
 
 #if _LIBCPP_STD_VER >= 23
     template <_ContainerCompatibleRange<_Tp> _Range>
@@ -820,15 +815,12 @@ public:
 #endif // _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v);
     _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, size_type __n, const value_type& __v);
-    template <class _InputIter>
-    _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InputIter __f, _InputIter __l,
-                         typename enable_if<__has_exactly_input_iterator_category<_InputIter>::value>::type* = 0);
-    template <class _ForwardIterator>
-    _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l,
-                        typename enable_if<__has_exactly_forward_iterator_category<_ForwardIterator>::value>::type* = 0);
-    template <class _BiIter>
-    _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _BiIter __f, _BiIter __l,
-                         typename enable_if<__has_bidirectional_iterator_category<_BiIter>::value>::type* = 0);
+    template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InputIter __f, _InputIter __l);
+    template <class _ForwardIterator, __enable_if_t<__has_exactly_forward_iterator_category<_ForwardIterator>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l);
+    template <class _BiIter, __enable_if_t<__has_bidirectional_iterator_category<_BiIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _BiIter __f, _BiIter __l);
 
 #if _LIBCPP_STD_VER >= 23
     template <_ContainerCompatibleRange<_Tp> _Range>
@@ -1262,12 +1254,10 @@ public:
     _LIBCPP_HIDE_FROM_ABI
     iterator __insert_bidirectional(const_iterator __p, _BiIter __f, _BiIter __l, size_type __n);
 
-    template <class _InpIter>
-    _LIBCPP_HIDE_FROM_ABI void __append(_InpIter __f, _InpIter __l,
-                 typename enable_if<__has_exactly_input_iterator_category<_InpIter>::value>::type* = 0);
-    template <class _ForIter>
-    _LIBCPP_HIDE_FROM_ABI void __append(_ForIter __f, _ForIter __l,
-                      typename enable_if<__has_forward_iterator_category<_ForIter>::value>::type* = 0);
+    template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI void __append(_InpIter __f, _InpIter __l);
+    template <class _ForIter, __enable_if_t<__has_forward_iterator_category<_ForIter>::value, int> = 0>
+    _LIBCPP_HIDE_FROM_ABI void __append(_ForIter __f, _ForIter __l);
 
     template <class _InputIterator>
     _LIBCPP_HIDE_FROM_ABI void __append_with_size(_InputIterator __from, size_type __n);
@@ -1377,9 +1367,8 @@ deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v)
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIter>
-deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l,
-              typename enable_if<__has_input_iterator_category<_InputIter>::value>::type*)
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> >
+deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l)
     : __start_(0), __size_(0, __default_init_tag())
 {
     __annotate_new(0);
@@ -1387,9 +1376,8 @@ deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l,
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIter>
-deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l, const allocator_type& __a,
-              typename enable_if<__has_input_iterator_category<_InputIter>::value>::type*)
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> >
+deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l, const allocator_type& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0, __a)
 {
     __annotate_new(0);
@@ -1514,11 +1502,10 @@ deque<_Tp, _Allocator>::__move_assign(deque& __c, true_type)
 #endif // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Allocator>
-template <class _InputIter>
+template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value &&
+                                          !__has_random_access_iterator_category<_InputIter>::value, int> >
 void
-deque<_Tp, _Allocator>::assign(_InputIter __f, _InputIter __l,
-                               typename enable_if<__has_input_iterator_category<_InputIter>::value &&
-                                                 !__has_random_access_iterator_category<_InputIter>::value>::type*)
+deque<_Tp, _Allocator>::assign(_InputIter __f, _InputIter __l)
 {
   __assign_with_sentinel(__f, __l);
 }
@@ -1538,10 +1525,9 @@ void deque<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __f, _Sentinel __l
 }
 
 template <class _Tp, class _Allocator>
-template <class _RAIter>
+template <class _RAIter, __enable_if_t<__has_random_access_iterator_category<_RAIter>::value, int> >
 void
-deque<_Tp, _Allocator>::assign(_RAIter __f, _RAIter __l,
-                               typename enable_if<__has_random_access_iterator_category<_RAIter>::value>::type*)
+deque<_Tp, _Allocator>::assign(_RAIter __f, _RAIter __l)
 {
   __assign_with_size_random_access(__f, __l - __f);
 }
@@ -2064,10 +2050,9 @@ deque<_Tp, _Allocator>::insert(const_iterator __p, size_type __n, const value_ty
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIter>
+template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> >
 typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::insert(const_iterator __p, _InputIter __f, _InputIter __l,
-                               typename enable_if<__has_exactly_input_iterator_category<_InputIter>::value>::type*)
+deque<_Tp, _Allocator>::insert(const_iterator __p, _InputIter __f, _InputIter __l)
 {
   return __insert_with_sentinel(__p, __f, __l);
 }
@@ -2084,10 +2069,9 @@ deque<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __p, _Iterator __f
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
+template <class _ForwardIterator, __enable_if_t<__has_exactly_forward_iterator_category<_ForwardIterator>::value, int> >
 typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l,
-                               typename enable_if<__has_exactly_forward_iterator_category<_ForwardIterator>::value>::type*)
+deque<_Tp, _Allocator>::insert(const_iterator __p, _ForwardIterator __f, _ForwardIterator __l)
 {
   return __insert_with_size(__p, __f, std::distance(__f, __l));
 }
@@ -2104,10 +2088,9 @@ deque<_Tp, _Allocator>::__insert_with_size(const_iterator __p, _Iterator __f, si
 }
 
 template <class _Tp, class _Allocator>
-template <class _BiIter>
+template <class _BiIter, __enable_if_t<__has_bidirectional_iterator_category<_BiIter>::value, int> >
 typename deque<_Tp, _Allocator>::iterator
-deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l,
-                               typename enable_if<__has_bidirectional_iterator_category<_BiIter>::value>::type*)
+deque<_Tp, _Allocator>::insert(const_iterator __p, _BiIter __f, _BiIter __l)
 {
   return __insert_bidirectional(__p, __f, __l, std::distance(__f, __l));
 }
@@ -2190,10 +2173,9 @@ deque<_Tp, _Allocator>::__insert_bidirectional(const_iterator __p, _BiIter __f, 
 }
 
 template <class _Tp, class _Allocator>
-template <class _InpIter>
+template <class _InpIter, __enable_if_t<__has_exactly_input_iterator_category<_InpIter>::value, int> >
 void
-deque<_Tp, _Allocator>::__append(_InpIter __f, _InpIter __l,
-                                 typename enable_if<__has_exactly_input_iterator_category<_InpIter>::value>::type*)
+deque<_Tp, _Allocator>::__append(_InpIter __f, _InpIter __l)
 {
   __append_with_sentinel(__f, __l);
 }
@@ -2211,10 +2193,9 @@ void deque<_Tp, _Allocator>::__append_with_sentinel(_InputIterator __f, _Sentine
 }
 
 template <class _Tp, class _Allocator>
-template <class _ForIter>
+template <class _ForIter, __enable_if_t<__has_forward_iterator_category<_ForIter>::value, int> >
 void
-deque<_Tp, _Allocator>::__append(_ForIter __f, _ForIter __l,
-                                 typename enable_if<__has_forward_iterator_category<_ForIter>::value>::type*)
+deque<_Tp, _Allocator>::__append(_ForIter __f, _ForIter __l)
 {
     __append_with_size(__f, std::distance(__f, __l));
 }

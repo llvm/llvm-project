@@ -14,7 +14,6 @@
 #include "RISCVCustomBehaviour.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "RISCV.h"
-#include "RISCVInstrInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
@@ -64,9 +63,9 @@ uint8_t RISCVLMULInstrument::getLMUL() const {
       .Case("M2", 0b001)
       .Case("M4", 0b010)
       .Case("M8", 0b011)
-      .Case("MF2", 0b101)
+      .Case("MF2", 0b111)
       .Case("MF4", 0b110)
-      .Case("MF8", 0b111);
+      .Case("MF8", 0b101);
 }
 
 const llvm::StringRef RISCVSEWInstrument::DESC_NAME = "RISCV-SEW";

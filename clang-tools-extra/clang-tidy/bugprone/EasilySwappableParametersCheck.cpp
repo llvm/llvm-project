@@ -479,7 +479,7 @@ struct MixData {
     return *this;
   }
 
-  template <class F> MixData withCommonTypeTransformed(F &&Func) const {
+  template <typename F> MixData withCommonTypeTransformed(const F &Func) const {
     if (CommonType.isNull())
       return *this;
 
@@ -518,9 +518,9 @@ struct Mix {
 };
 
 // NOLINTNEXTLINE(misc-redundant-expression): Seems to be a bogus warning.
-static_assert(std::is_trivially_copyable<Mix>::value &&
-                  std::is_trivially_move_constructible<Mix>::value &&
-                  std::is_trivially_move_assignable<Mix>::value,
+static_assert(std::is_trivially_copyable_v<Mix> &&
+                  std::is_trivially_move_constructible_v<Mix> &&
+                  std::is_trivially_move_assignable_v<Mix>,
               "Keep frequently used data simple!");
 
 struct MixableParameterRange {
@@ -1952,13 +1952,12 @@ struct FormattedConversionSequence {
   /// The formatted sequence is trivial if it is "Ty1 -> Ty2", but Ty1 and
   /// Ty2 are the types that are shown in the code. A trivial diagnostic
   /// does not need to be printed.
-  bool Trivial;
+  bool Trivial = true;
 
   FormattedConversionSequence(const PrintingPolicy &PP,
                               StringRef StartTypeAsDiagnosed,
                               const model::ConversionSequence &Conv,
                               StringRef DestinationTypeAsDiagnosed) {
-    Trivial = true;
     llvm::raw_string_ostream OS{DiagnosticText};
 
     // Print the type name as it is printed in other places in the diagnostic.

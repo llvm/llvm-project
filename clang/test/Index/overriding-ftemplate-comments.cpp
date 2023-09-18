@@ -2,7 +2,7 @@
 // RUN: mkdir %t
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng %s > %t/out
 // RUN: FileCheck %s < %t/out
-// Test to search overridden methods for documentation when overriding method has none. rdar://12378793
+// Test to search overridden methods for documentation when overriding method has none.
 
 // Ensure that XML we generate is not invalid.
 // RUN: FileCheck %s -check-prefix=WRONG < %t/out

@@ -115,6 +115,9 @@ def ext_predef_outside_function : Warning<
 def ext_init_from_predefined : ExtWarn<
   "initializing an array from a '%0' predefined identifier is a Microsoft extension">,
   InGroup<MicrosoftInitFromPredefined>;
+def ext_string_literal_from_predefined : ExtWarn<
+  "expansion of predefined identifier '%0' to a string literal is a Microsoft extension">,
+  InGroup<MicrosoftStringLiteralFromPredefined>;
 def warn_float_overflow : Warning<
   "magnitude of floating-point constant too large for type %0; maximum is %1">,
    InGroup<LiteralRange>;
@@ -297,9 +300,9 @@ def err_bad_parameter_name : Error<
   "%0 cannot be the name of a parameter">;
 def err_bad_parameter_name_template_id : Error<
   "parameter name cannot have template arguments">;
-def ext_parameter_name_omitted_c2x : ExtWarn<
-  "omitting the parameter name in a function definition is a C2x extension">,
-  InGroup<C2x>;
+def ext_parameter_name_omitted_c23 : ExtWarn<
+  "omitting the parameter name in a function definition is a C23 extension">,
+  InGroup<C23>;
 def err_anyx86_interrupt_attribute : Error<
   "%select{x86|x86-64}0 'interrupt' attribute only applies to functions that "
   "have %select{a 'void' return type|"
@@ -307,10 +310,12 @@ def err_anyx86_interrupt_attribute : Error<
   "a pointer as the first parameter|a %2 type as the second parameter}1">;
 def err_anyx86_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
-def warn_anyx86_interrupt_regsave : Warning<
-  "interrupt service routine should only call a function"
-  " with attribute 'no_caller_saved_registers'">,
-  InGroup<DiagGroup<"interrupt-service-routine">>;
+def warn_anyx86_excessive_regsave : Warning<
+  "%select{interrupt service routine|function with attribute"
+  " 'no_caller_saved_registers'}0 should only call a function"
+  " with attribute 'no_caller_saved_registers'"
+  " or be compiled with '-mgeneral-regs-only'">,
+  InGroup<DiagGroup<"excessive-regsave">>;
 def warn_arm_interrupt_calling_convention : Warning<
    "call to function without interrupt attribute could clobber interruptee's VFP registers">,
    InGroup<Extra>;
@@ -854,6 +859,11 @@ def warn_fortify_source_format_overflow : Warning<
   " but format string expands to at least %2">,
   InGroup<FortifySource>;
 
+def warn_fortify_source_format_truncation: Warning<
+  "'%0' will always be truncated; specified size is %1,"
+  " but format string expands to at least %2">,
+  InGroup<FortifySource>;
+
 def warn_fortify_scanf_overflow : Warning<
   "'%0' may overflow; destination buffer in argument %1 has size "
   "%2, but the corresponding specifier may require size %3">,
@@ -993,6 +1003,9 @@ def warn_cxx_ms_struct :
 def err_pragma_pack_identifer_not_supported : Error<
   "specifying an identifier within `#pragma pack` is not supported on this target">;
 def err_section_conflict : Error<"%0 causes a section type conflict with %1">;
+def warn_section_msvc_compat : Warning<"`#pragma const_seg` for section %1 will"
+  " not apply to %0 due to the presence of a %select{mutable field||non-trivial constructor|non-trivial destructor}2">,
+  InGroup<IncompatibleMSPragmaSection>;
 def err_no_base_classes : Error<"invalid use of '__super', %0 has no base classes">;
 def err_invalid_super_scope : Error<"invalid use of '__super', "
   "this keyword can only be used inside class or member function scope">;
@@ -3627,6 +3640,14 @@ def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
 def err_sme_attr_mismatch : Error<
   "function declared %0 was previously declared %1, which has different SME function attributes">;
+def err_sme_call_in_non_sme_target : Error<
+  "call to a streaming function requires 'sme'">;
+def err_sme_za_call_no_za_state : Error<
+  "call to a shared ZA function requires the caller to have ZA state">;
+def err_sme_definition_using_sm_in_non_sme_target : Error<
+  "function executed in streaming-SVE mode requires 'sme'">;
+def err_sme_definition_using_za_in_non_sme_target : Error<
+  "function using ZA state requires 'sme'">;
 def err_cconv_change : Error<
   "function declared '%0' here was previously declared "
   "%select{'%2'|without calling convention}1">;
@@ -4171,7 +4192,7 @@ def warn_vector_mode_deprecated : Warning<
   "use the 'vector_size' attribute instead">,
   InGroup<DeprecatedAttributes>;
 def warn_deprecated_noreturn_spelling : Warning<
-  "the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use "
+  "the '[[_Noreturn]]' attribute spelling is deprecated in C23; use "
   "'[[noreturn]]' instead">, InGroup<DeprecatedAttributes>;
 def err_complex_mode_vector_type : Error<
   "type of machine mode does not support base vector types">;
@@ -5704,7 +5725,7 @@ def note_sentinel_here : Note<
   "%select{function|method|block}0 has been explicitly marked sentinel here">;
 def warn_strict_uses_without_prototype : Warning<
   "passing arguments to %select{a function|%1}0 without a prototype is "
-  "deprecated in all versions of C and is not supported in C2x">,
+  "deprecated in all versions of C and is not supported in C23">,
   InGroup<DeprecatedNonPrototype>;
 def warn_missing_prototype : Warning<
   "no previous prototype for function %0">,
@@ -5719,8 +5740,8 @@ def warn_strict_prototypes : Extension<
   "%select{in all versions of C|}0">, InGroup<StrictPrototypes>;
 def warn_non_prototype_changes_behavior : Warning<
   "a function %select{declaration|definition}0 without a prototype is "
-  "deprecated in all versions of C %select{and is not supported in C2x|and is "
-  "treated as a zero-parameter prototype in C2x, conflicting with a "
+  "deprecated in all versions of C %select{and is not supported in C23|and is "
+  "treated as a zero-parameter prototype in C23, conflicting with a "
   "%select{previous|subsequent}2 %select{declaration|definition}3}1">,
   InGroup<DeprecatedNonPrototype>;
 def note_conflicting_prototype : Note<"conflicting prototype is here">;
@@ -9782,6 +9803,12 @@ def warn_comparison_bitwise_always : Warning<
 def warn_comparison_bitwise_or : Warning<
   "bitwise or with non-zero value always evaluates to true">,
   InGroup<TautologicalBitwiseCompare>, DefaultIgnore;
+def warn_tautological_negation_and_compare: Warning<
+  "'&&' of a value and its negation always evaluates to false">,
+  InGroup<TautologicalNegationCompare>, DefaultIgnore;
+def warn_tautological_negation_or_compare: Warning<
+  "'||' of a value and its negation always evaluates to true">,
+  InGroup<TautologicalNegationCompare>, DefaultIgnore;
 def warn_tautological_overlap_comparison : Warning<
   "overlapping comparisons always evaluate to %select{false|true}0">,
   InGroup<TautologicalOverlapCompare>, DefaultIgnore;
@@ -9981,7 +10008,7 @@ def warn_second_arg_of_va_start_not_last_named_param : Warning<
   InGroup<Varargs>;
 def warn_c17_compat_ellipsis_only_parameter : Warning<
   "'...' as the only parameter of a function is incompatible with C standards "
-  "before C2x">, DefaultIgnore, InGroup<CPre2xCompat>;
+  "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"
   "an object of reference type|a parameter declared with the 'register' "
@@ -11304,6 +11331,8 @@ def err_module_import_in_implementation : Error<
   "@import of module '%0' in implementation of '%1'; use #import">;
 
 // C++ Modules
+def err_module_import_non_interface_nor_parition : Error<
+  "import of module '%0' imported non C++20 importable modules">;
 def err_module_decl_not_at_start : Error<
   "module declaration must occur at the start of the translation unit">;
 def note_global_module_introducer_missing : Note<
@@ -11842,13 +11871,13 @@ def err_std_source_location_impl_malformed : Error<
   "'std::source_location::__impl' must be standard-layout and have only two 'const char *' fields '_M_file_name' and '_M_function_name', and two integral fields '_M_line' and '_M_column'">;
 
 // HLSL Diagnostics
-def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in %select{Pixel|Vertex|Geometry|Hull|Domain|Compute|Library|RayGeneration|Intersection|AnyHit|ClosestHit|Miss|Callable|Mesh|Amplification|Invalid}1 shaders, requires %2">;
+def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in '%1' shaders, requires %select{|one of the following: }2%3">;
 def err_hlsl_attr_invalid_type : Error<
    "attribute %0 only applies to a field or parameter of type '%1'">;
 def err_hlsl_attr_invalid_ast_node : Error<
    "attribute %0 only applies to %1">;
 def err_hlsl_entry_shader_attr_mismatch : Error<
-   "%0 attribute on entry function does not match the pipeline stage">;
+   "%0 attribute on entry function does not match the target profile">;
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;
@@ -11874,10 +11903,6 @@ def err_non_designated_init_used : Error<
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
-// LoongArch-specific Diagnostics
-def err_loongarch_builtin_requires_la64 : Error<
-  "this builtin requires target: loongarch64">;
-
 // Unsafe buffer usage diagnostics.
 def warn_unsafe_buffer_variable : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
@@ -11898,9 +11923,6 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
 def note_safe_buffer_debug_mode : Note<"safe buffers debug: %0">;
 #endif
-
-def err_loongarch_builtin_requires_la32 : Error<
-  "this builtin requires target: loongarch32">;
 
 def err_builtin_pass_in_regs_non_class : Error<
   "argument %0 is not an unqualified class type">;

@@ -57,6 +57,12 @@ struct BufferizeToAllocationOptions {
   /// a new allocation (and wrapped in "bufferization.to_tensor"), but not the
   /// targeted op itself.
   bool bufferizeDestinationOnly = false;
+
+  /// If set to "true", a `memref.dealloc` operation will be emitted for each
+  /// allocated buffer. Otherwise, the memory is leaked, which is useful if
+  /// the buffer deallocation pipeline should be run after bufferization is
+  /// done.
+  bool emitDealloc = false;
 };
 
 /// Materialize a buffer allocation for the given tensor.pad op and lower the
@@ -291,6 +297,18 @@ struct LinalgPaddingOptions {
     transposePaddings.assign(tp.begin(), tp.end());
     return *this;
   }
+  enum class CopyBackOp : int8_t {
+    None = 0,
+    BufferizationMaterializeInDestination = 1,
+    LinalgCopy = 2
+  };
+  /// The op to be used for copying the padded result to the original
+  /// destination tensor.
+  CopyBackOp copyBackOp = CopyBackOp::BufferizationMaterializeInDestination;
+  LinalgPaddingOptions &setCopyBackOp(CopyBackOp op) {
+    copyBackOp = op;
+    return *this;
+  }
 };
 
 /// Callback function type used to perform the allocation for the promoted
@@ -348,6 +366,13 @@ struct LinalgPromotionOptions {
   std::optional<unsigned> alignment;
   LinalgPromotionOptions &setAlignment(unsigned align) {
     alignment = align;
+    return *this;
+  }
+  /// Memory space of promoted buffer. If `std::nullopt` do not specify memory
+  /// space.
+  std::optional<Attribute> memorySpace;
+  LinalgPromotionOptions &setMemorySpace(Attribute memorySpc) {
+    memorySpace = memorySpc;
     return *this;
   }
   /// Use alloca with the default allocation scheme.
@@ -473,14 +498,13 @@ void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 /// * The unpadded results (extracted slice of the cloned operation) are
 ///   returned via `replacements`.
 /// * The tensor::PadOps are returned via `padOps`.
-/// * If `copyBack` is set to "true", the unpadded result is copied back to the
-///   original destination tensor.
+/// * "options.copyBackOp" specifies the op type for copying back the unpadded
+///   result to the original destination tensor.
 LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                                 const LinalgPaddingOptions &options,
                                 LinalgOp &paddedOp,
                                 SmallVector<Value> &replacements,
-                                SmallVector<tensor::PadOp> &padOps,
-                                bool copyBack);
+                                SmallVector<tensor::PadOp> &padOps);
 
 namespace detail {
 

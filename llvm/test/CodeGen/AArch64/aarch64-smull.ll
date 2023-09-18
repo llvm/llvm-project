@@ -87,12 +87,12 @@ define <8 x i32> @smull_zext_v8i8_v8i32_top_bit_is_1(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    orr v0.8h, #128, lsl #8
-; CHECK-NEXT:    sshll v2.4s, v1.4h, #0
+; CHECK-NEXT:    sshll v3.4s, v1.4h, #0
 ; CHECK-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    mul v1.4s, v3.4s, v1.4s
-; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    ushll v2.4s, v0.4h, #0
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mul v0.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    ret
   %load.A = load <8 x i16>, ptr %A
   %or.A = or <8 x i16> %load.A, <i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000, i16 u0x8000>
@@ -123,26 +123,26 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-NEON-LABEL: smull_zext_v2i32_v2i64:
 ; CHECK-NEON:       // %bb.0:
 ; CHECK-NEON-NEXT:    ldr d0, [x1]
-; CHECK-NEON-NEXT:    ldrh w8, [x0]
-; CHECK-NEON-NEXT:    ldrh w11, [x0, #2]
+; CHECK-NEON-NEXT:    ldrh w9, [x0]
+; CHECK-NEON-NEXT:    ldrh w10, [x0, #2]
 ; CHECK-NEON-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEON-NEXT:    fmov x9, d0
-; CHECK-NEON-NEXT:    mov x10, v0.d[1]
-; CHECK-NEON-NEXT:    smull x8, w8, w9
-; CHECK-NEON-NEXT:    smull x9, w11, w10
-; CHECK-NEON-NEXT:    fmov d0, x8
-; CHECK-NEON-NEXT:    mov v0.d[1], x9
+; CHECK-NEON-NEXT:    fmov x11, d0
+; CHECK-NEON-NEXT:    mov x8, v0.d[1]
+; CHECK-NEON-NEXT:    smull x9, w9, w11
+; CHECK-NEON-NEXT:    smull x8, w10, w8
+; CHECK-NEON-NEXT:    fmov d0, x9
+; CHECK-NEON-NEXT:    mov v0.d[1], x8
 ; CHECK-NEON-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: smull_zext_v2i32_v2i64:
 ; CHECK-SVE:       // %bb.0:
 ; CHECK-SVE-NEXT:    ldrh w8, [x0]
 ; CHECK-SVE-NEXT:    ptrue p0.d, vl2
-; CHECK-SVE-NEXT:    ldr d1, [x1]
-; CHECK-SVE-NEXT:    fmov d0, x8
-; CHECK-SVE-NEXT:    ldrh w8, [x0, #2]
-; CHECK-SVE-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-SVE-NEXT:    mov v0.d[1], x8
+; CHECK-SVE-NEXT:    ldrh w9, [x0, #2]
+; CHECK-SVE-NEXT:    ldr d0, [x1]
+; CHECK-SVE-NEXT:    fmov d1, x8
+; CHECK-SVE-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-SVE-NEXT:    mov v1.d[1], x9
 ; CHECK-SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; CHECK-SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-SVE-NEXT:    ret
@@ -272,8 +272,8 @@ define <2 x i64> @amull_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 define <8 x i16> @smlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlal_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -290,8 +290,8 @@ define <8 x i16> @smlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @smlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlal_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -308,8 +308,8 @@ define <4 x i32> @smlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @smlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlal_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -326,8 +326,8 @@ define <2 x i64> @smlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 define <8 x i16> @umlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlal_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -344,8 +344,8 @@ define <8 x i16> @umlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @umlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlal_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -362,8 +362,8 @@ define <4 x i32> @umlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @umlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlal_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlal v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -380,8 +380,8 @@ define <2 x i64> @umlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 define <8 x i16> @amlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: amlal_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlal v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
@@ -400,12 +400,12 @@ define <8 x i16> @amlal_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @amlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: amlal_v4i16_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ldr d3, [x2]
-; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    smlal v2.4s, v1.4h, v3.4h
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    smlal v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -421,12 +421,12 @@ define <4 x i32> @amlal_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @amlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: amlal_v2i32_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ldr d3, [x2]
-; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
-; CHECK-NEXT:    smlal v2.2d, v1.2s, v3.2s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    smlal v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -442,8 +442,8 @@ define <2 x i64> @amlal_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 define <8 x i16> @smlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlsl_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -460,8 +460,8 @@ define <8 x i16> @smlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @smlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlsl_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -478,8 +478,8 @@ define <4 x i32> @smlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @smlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: smlsl_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -496,8 +496,8 @@ define <2 x i64> @smlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 define <8 x i16> @umlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlsl_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
@@ -514,8 +514,8 @@ define <8 x i16> @umlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @umlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlsl_v4i16_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
@@ -532,8 +532,8 @@ define <4 x i32> @umlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @umlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: umlsl_v2i32_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    umlsl v0.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    ret
@@ -550,8 +550,8 @@ define <2 x i64> @umlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 define <8 x i16> @amlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: amlsl_v8i8_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    ldr d2, [x2]
 ; CHECK-NEXT:    smlsl v0.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    bic v0.8h, #255, lsl #8
@@ -570,12 +570,12 @@ define <8 x i16> @amlsl_v8i8_v8i16(ptr %A, ptr %B, ptr %C) nounwind {
 define <4 x i32> @amlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: amlsl_v4i16_v4i32:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ldr d3, [x2]
-; CHECK-NEXT:    movi v0.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    smlsl v2.4s, v1.4h, v3.4h
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    smlsl v0.4s, v1.4h, v2.4h
+; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i32>, ptr %A
   %tmp2 = load <4 x i16>, ptr %B
@@ -591,12 +591,12 @@ define <4 x i32> @amlsl_v4i16_v4i32(ptr %A, ptr %B, ptr %C) nounwind {
 define <2 x i64> @amlsl_v2i32_v2i64(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-LABEL: amlsl_v2i32_v2i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    ldr q2, [x0]
-; CHECK-NEXT:    ldr d3, [x2]
-; CHECK-NEXT:    movi v0.2d, #0x000000ffffffff
-; CHECK-NEXT:    smlsl v2.2d, v1.2s, v3.2s
-; CHECK-NEXT:    and v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    smlsl v0.2d, v1.2s, v2.2s
+; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp1 = load <2 x i64>, ptr %A
   %tmp2 = load <2 x i32>, ptr %B
@@ -724,9 +724,9 @@ define <4 x i32> @amull_extvec_v4i16_v4i32(<4 x i16> %arg) nounwind {
 ; CHECK-LABEL: amull_extvec_v4i16_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-NEXT:    dup v1.4h, w8
+; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    movi v1.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    dup v2.4h, w8
-; CHECK-NEXT:    smull v0.4s, v0.4h, v2.4h
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp3 = zext <4 x i16> %arg to <4 x i32>
@@ -739,9 +739,9 @@ define <2 x i64> @amull_extvec_v2i32_v2i64(<2 x i32> %arg) nounwind {
 ; CHECK-LABEL: amull_extvec_v2i32_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1234 // =0x4d2
+; CHECK-NEXT:    dup v1.2s, w8
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    movi v1.2d, #0x000000ffffffff
-; CHECK-NEXT:    dup v2.2s, w8
-; CHECK-NEXT:    smull v0.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %tmp3 = zext <2 x i32> %arg to <2 x i64>
@@ -897,11 +897,11 @@ define <4 x i64> @smull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 define <16 x i16> @amull2_i8(<16 x i8> %arg1, <16 x i8> %arg2) {
 ; CHECK-LABEL: amull2_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
-; CHECK-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    smull v2.8h, v0.8b, v1.8b
+; CHECK-NEXT:    smull2 v1.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    bic v2.8h, #255, lsl #8
-; CHECK-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-NEXT:    mov v1.16b, v2.16b
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %arg1_ext = zext <16 x i8> %arg1 to <16 x i16>
   %arg2_ext = zext <16 x i8> %arg2 to <16 x i16>
@@ -914,10 +914,10 @@ define <8 x i32> @amull2_i16(<8 x i16> %arg1, <8 x i16> %arg2) {
 ; CHECK-LABEL: amull2_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.2d, #0x00ffff0000ffff
-; CHECK-NEXT:    smull2 v3.4s, v0.8h, v1.8h
-; CHECK-NEXT:    smull v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    smull v3.4s, v0.4h, v1.4h
+; CHECK-NEXT:    smull2 v0.4s, v0.8h, v1.8h
+; CHECK-NEXT:    and v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    ret
   %arg1_ext = zext <8 x i16> %arg1 to <8 x i32>
   %arg2_ext = zext <8 x i16> %arg2 to <8 x i32>
@@ -930,10 +930,10 @@ define <4 x i64> @amull2_i32(<4 x i32> %arg1, <4 x i32> %arg2) {
 ; CHECK-LABEL: amull2_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-NEXT:    smull2 v3.2d, v0.4s, v1.4s
-; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    and v1.16b, v3.16b, v2.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    smull v3.2d, v0.2s, v1.2s
+; CHECK-NEXT:    smull2 v0.2d, v0.4s, v1.4s
+; CHECK-NEXT:    and v1.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    ret
   %arg1_ext = zext <4 x i32> %arg1 to <4 x i64>
   %arg2_ext = zext <4 x i32> %arg2 to <4 x i64>
@@ -1330,8 +1330,27 @@ entry:
   ret void
 }
 
+define <2 x i32> @do_stuff(<2 x i64> %0, <2 x i64> %1) {
+; CHECK-LABEL: do_stuff:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    smull2 v0.2d, v1.4s, v0.4s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+  %bc.1 = bitcast <2 x i64> %1 to <4 x i32>
+  %trunc.0 = trunc <2 x i64> %0 to <2 x i32>
+  %shuff.hi = shufflevector <4 x i32> %bc.1, <4 x i32> zeroinitializer, <2 x i32> <i32 2, i32 3>
+  %shuff.lo = shufflevector <4 x i32> %bc.1, <4 x i32> zeroinitializer, <2 x i32> <i32 0, i32 1>
+  %smull = tail call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %shuff.hi, <2 x i32> %trunc.0)
+  %trunc.smull = trunc <2 x i64> %smull to <2 x i32>
+  %final = add <2 x i32> %trunc.smull, %shuff.lo
+  ret <2 x i32> %final
+}
+
 declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8>, <8 x i8>)
 declare <8 x i16> @llvm.aarch64.neon.umull.v8i16(<8 x i8>, <8 x i8>)
 declare <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16>, <4 x i16>)
 declare <4 x i32> @llvm.aarch64.neon.umull.v4i32(<4 x i16>, <4 x i16>)
+declare <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32>, <2 x i32>)

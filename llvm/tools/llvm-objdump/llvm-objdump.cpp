@@ -73,6 +73,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -176,6 +177,13 @@ public:
 
 #define DEBUG_TYPE "objdump"
 
+enum class ColorOutput {
+  Auto,
+  Enable,
+  Disable,
+  Invalid,
+};
+
 static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
@@ -188,6 +196,7 @@ bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
 static std::vector<std::string> DisassemblerOptions;
+static ColorOutput DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -234,15 +243,21 @@ StringSet<> objdump::FoundSectionSet;
 static StringRef ToolName;
 
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
-ExitOnError ExitOnErr;
+
+Dumper::Dumper(const object::ObjectFile &O) : O(O) {
+  WarningHandler = [this](const Twine &Msg) {
+    if (Warnings.insert(Msg.str()).second)
+      reportWarning(Msg, this->O.getFileName());
+    return Error::success();
+  };
+}
 
 void Dumper::reportUniqueWarning(Error Err) {
   reportUniqueWarning(toString(std::move(Err)));
 }
 
 void Dumper::reportUniqueWarning(const Twine &Msg) {
-  if (Warnings.insert(StringRef(Msg.str())).second)
-    reportWarning(Msg, O.getFileName());
+  cantFail(WarningHandler(Msg));
 }
 
 static Expected<std::unique_ptr<Dumper>> createDumper(const ObjectFile &Obj) {
@@ -893,6 +908,19 @@ DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
   InstPrinter->setPrintBranchImmAsAddress(true);
   InstPrinter->setSymbolizeOperands(SymbolizeOperands);
   InstPrinter->setMCInstrAnalysis(InstrAnalysis.get());
+
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    InstPrinter->setUseColor(true);
+    break;
+  case ColorOutput::Auto:
+    InstPrinter->setUseColor(outs().has_colors());
+    break;
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    InstPrinter->setUseColor(false);
+    break;
+  };
 }
 
 DisassemblerTarget::DisassemblerTarget(DisassemblerTarget &Other,
@@ -1406,8 +1434,31 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   SourcePrinter &SP, bool InlineRelocs) {
   DisassemblerTarget *DT = &PrimaryTarget;
   bool PrimaryIsThumb = false;
-  if (isArmElf(Obj))
-    PrimaryIsThumb = PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode");
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> CHPECodeMap;
+
+  if (SecondaryTarget) {
+    if (isArmElf(Obj)) {
+      PrimaryIsThumb =
+          PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode");
+    } else if (const auto *COFFObj = dyn_cast<COFFObjectFile>(&Obj)) {
+      const chpe_metadata *CHPEMetadata = COFFObj->getCHPEMetadata();
+      if (CHPEMetadata && CHPEMetadata->CodeMapCount) {
+        uintptr_t CodeMapInt;
+        cantFail(COFFObj->getRvaPtr(CHPEMetadata->CodeMap, CodeMapInt));
+        auto CodeMap = reinterpret_cast<const chpe_range_entry *>(CodeMapInt);
+
+        for (uint32_t i = 0; i < CHPEMetadata->CodeMapCount; ++i) {
+          if (CodeMap[i].getType() == chpe_range_type::Amd64 &&
+              CodeMap[i].Length) {
+            // Store x86_64 CHPE code ranges.
+            uint64_t Start = CodeMap[i].getStart() + COFFObj->getImageBase();
+            CHPECodeMap.emplace_back(Start, Start + CodeMap[i].Length);
+          }
+        }
+        llvm::sort(CHPECodeMap);
+      }
+    }
+  }
 
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
   if (InlineRelocs)
@@ -1870,6 +1921,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       formatted_raw_ostream FOS(outs());
 
+      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
+      // are (incorrectly) written directly to the unbuffered raw_ostream
+      // wrapped by the formatted_raw_ostream.
+      if (DisassemblyColor == ColorOutput::Enable ||
+          DisassemblyColor == ColorOutput::Auto)
+        FOS.SetUnbuffered();
+
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
       if (SymbolizeOperands) {
@@ -1895,6 +1953,24 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             } else if (Kind == 't') {
               DT = PrimaryIsThumb ? &PrimaryTarget : &*SecondaryTarget;
             }
+          }
+        } else if (!CHPECodeMap.empty()) {
+          uint64_t Address = SectionAddr + Index;
+          auto It = partition_point(
+              CHPECodeMap,
+              [Address](const std::pair<uint64_t, uint64_t> &Entry) {
+                return Entry.first <= Address;
+              });
+          if (It != CHPECodeMap.begin() && Address < (It - 1)->second) {
+            DT = &*SecondaryTarget;
+          } else {
+            DT = &PrimaryTarget;
+            // X64 disassembler range may have left Index unaligned, so
+            // make sure that it's aligned when we switch back to ARM64
+            // code.
+            Index = llvm::alignTo(Index, 4);
+            if (Index >= End)
+              break;
           }
         }
 
@@ -2205,6 +2281,24 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
         Features.AddFeature("+thumb-mode");
       SecondaryTarget.emplace(PrimaryTarget, Features);
     }
+  } else if (const auto *COFFObj = dyn_cast<COFFObjectFile>(Obj)) {
+    const chpe_metadata *CHPEMetadata = COFFObj->getCHPEMetadata();
+    if (CHPEMetadata && CHPEMetadata->CodeMapCount) {
+      // Set up x86_64 disassembler for ARM64EC binaries.
+      Triple X64Triple(TripleName);
+      X64Triple.setArch(Triple::ArchType::x86_64);
+
+      std::string Error;
+      const Target *X64Target =
+          TargetRegistry::lookupTarget("", X64Triple, Error);
+      if (X64Target) {
+        SubtargetFeatures X64Features;
+        SecondaryTarget.emplace(X64Target, *Obj, X64Triple.getTriple(), "",
+                                X64Features);
+      } else {
+        reportWarning(Error, Obj->getFileName());
+      }
+    }
   }
 
   const ObjectFile *DbgObj = Obj;
@@ -2461,6 +2555,9 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
     return;
   }
   uint64_t Address = *AddrOrErr;
+  section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
+  if (SecI != O.section_end() && shouldAdjustVA(*SecI))
+    Address += AdjustVMA;
   if ((Address < StartAddress) || (Address > StopAddress))
     return;
   SymbolRef::Type Type =
@@ -3127,6 +3224,16 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     if (DbgVariables == DVInvalid)
       invalidArgValue(A);
   }
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_disassembler_color_EQ)) {
+    DisassemblyColor = StringSwitch<ColorOutput>(A->getValue())
+                           .Case("on", ColorOutput::Enable)
+                           .Case("off", ColorOutput::Disable)
+                           .Case("terminal", ColorOutput::Auto)
+                           .Default(ColorOutput::Invalid);
+    if (DisassemblyColor == ColorOutput::Invalid)
+      invalidArgValue(A);
+  }
+
   parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
 
   parseMachOOptions(InputArgs);
@@ -3182,7 +3289,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     InputFilenames.push_back("a.out");
 }
 
-int main(int argc, char **argv) {
+int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
   using namespace llvm;
   InitLLVM X(argc, argv);
 

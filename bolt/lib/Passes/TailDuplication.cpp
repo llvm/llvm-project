@@ -303,7 +303,7 @@ TailDuplication::aggressiveDuplicate(BinaryBasicBlock &BB,
   if (isInCacheLine(BB, Tail))
     return BlocksToDuplicate;
 
-  BinaryBasicBlock *CurrBB = &BB;
+  BinaryBasicBlock *CurrBB = &Tail;
   while (CurrBB) {
     LLVM_DEBUG(dbgs() << "Aggressive tail duplication: adding "
                       << CurrBB->getName() << " to duplication list\n";);
@@ -607,7 +607,7 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     if (BlocksToDuplicate.empty())
       continue;
 
-    // Apply the the duplication
+    // Apply the duplication
     ModifiedFunction = true;
     DuplicationsDynamicCount += BB->getExecutionCount();
     auto DuplicatedBlocks = duplicateBlocks(*BB, BlocksToDuplicate);

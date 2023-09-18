@@ -518,10 +518,6 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI,
                                          Register VReg) const {
-  DebugLoc DL;
-  if (I != MBB.end())
-    DL = I->getDebugLoc();
-
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -582,7 +578,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    BuildMI(MBB, I, DL, get(Opcode))
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addMemOperand(MMO);
@@ -591,7 +587,7 @@ void RISCVInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-    BuildMI(MBB, I, DL, get(Opcode))
+    BuildMI(MBB, I, DebugLoc(), get(Opcode))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
         .addImm(0)
@@ -605,10 +601,6 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI,
                                           Register VReg) const {
-  DebugLoc DL;
-  if (I != MBB.end())
-    DL = I->getDebugLoc();
-
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -669,7 +661,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MemoryLocation::UnknownSize, MFI.getObjectAlign(FI));
 
     MFI.setStackID(FI, TargetStackID::ScalableVector);
-    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+    BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
         .addFrameIndex(FI)
         .addMemOperand(MMO);
   } else {
@@ -677,7 +669,7 @@ void RISCVInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-    BuildMI(MBB, I, DL, get(Opcode), DstReg)
+    BuildMI(MBB, I, DebugLoc(), get(Opcode), DstReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addMemOperand(MMO);
@@ -897,6 +889,10 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // We can't handle blocks that end in an indirect branch.
   if (I->getDesc().isIndirectBranch())
+    return true;
+
+  // We can't handle Generic branch opcodes from Global ISel.
+  if (I->isPreISelOpcode())
     return true;
 
   // We can't handle blocks with more than 2 terminators.
@@ -2194,9 +2190,9 @@ std::string RISCVInstrInfo::createMIROperandComment(
   case CASE_VFMA_OPCODE_LMULS_MF4(OP, TYPE)
 
 #define CASE_VFMA_SPLATS(OP)                                                   \
-  CASE_VFMA_OPCODE_LMULS_MF4(OP, VF16):                                        \
-  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VF32):                                   \
-  case CASE_VFMA_OPCODE_LMULS_M1(OP, VF64)
+  CASE_VFMA_OPCODE_LMULS_MF4(OP, VFPR16):                                      \
+  case CASE_VFMA_OPCODE_LMULS_MF2(OP, VFPR32):                                 \
+  case CASE_VFMA_OPCODE_LMULS_M1(OP, VFPR64)
 // clang-format on
 
 bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
@@ -2357,9 +2353,9 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, TYPE)
 
 #define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VF16)                        \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VF32)                        \
-  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VF64)
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32)                      \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64)
 
 MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
                                                      bool NewMI,

@@ -40,9 +40,8 @@ define void @test1_pr58811() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_3_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_3_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_2_PREHEADER]] ]
@@ -145,9 +144,8 @@ define void @test2_pr58811() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[INDUCTION_IV_LCSSA]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
@@ -233,9 +231,8 @@ define void @test3_pr58811() {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 196
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 199, 196
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = mul i32 195, [[TMP3]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br i1 false, label [[LOOP_4_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 196, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ]

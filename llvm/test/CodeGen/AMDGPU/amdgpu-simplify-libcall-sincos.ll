@@ -223,11 +223,10 @@ define void @sincos_f32_nocontract(float %x, ptr addrspace(1) nocapture writeonl
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -244,11 +243,10 @@ define void @sincos_v2f32_nocontract(<2 x float> %x, ptr addrspace(1) nocapture 
 ; CHECK-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <2 x float>, align 8, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @_Z6sincosDv2_fPU3AS0S_(<2 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr addrspace(5) [[__SINCOS_]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x float> @_Z6sincosDv2_fPU3AS5S_(<2 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -265,11 +263,10 @@ define void @sincos_f32(float %x, ptr addrspace(1) nocapture writeonly %sin_out,
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -285,11 +282,10 @@ define void @sincos_f32_order1(float %x, ptr addrspace(1) nocapture writeonly %s
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -305,11 +301,10 @@ define void @sincos_v2f32(<2 x float> %x, ptr addrspace(1) nocapture writeonly %
 ; CHECK-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <2 x float>, align 8, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x float> @_Z6sincosDv2_fPU3AS0S_(<2 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr addrspace(5) [[__SINCOS_]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <2 x float> @_Z6sincosDv2_fPU3AS5S_(<2 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -325,12 +320,11 @@ define void @sincos_v3f32(<3 x float> %x, ptr addrspace(1) nocapture writeonly %
 ; CHECK-SAME: (<3 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <3 x float>, align 16, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <3 x float> @_Z6sincosDv3_fPU3AS0S_(<3 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
-; CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <3 x float> @_Z6sincosDv3_fPU3AS5S_(<3 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
+; CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    store <4 x float> [[EXTRACTVEC2]], ptr addrspace(1) [[SIN_OUT]], align 16
-; CHECK-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <3 x float> [[TMP2]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    store <4 x float> [[EXTRACTVEC6]], ptr addrspace(1) [[COS_OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -349,11 +343,10 @@ define void @sincos_v4f32(<4 x float> %x, ptr addrspace(1) nocapture writeonly %
 ; CHECK-SAME: (<4 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <4 x float>, align 16, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <4 x float> @_Z6sincosDv4_fPU3AS0S_(<4 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 16
-; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <4 x float> @_Z6sincosDv4_fPU3AS5S_(<4 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -369,11 +362,10 @@ define void @sincos_v8f32(<8 x float> %x, ptr addrspace(1) nocapture writeonly %
 ; CHECK-SAME: (<8 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <8 x float>, align 32, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <8 x float> @_Z6sincosDv8_fPU3AS0S_(<8 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, ptr addrspace(5) [[__SINCOS_]], align 32
-; CHECK-NEXT:    store <8 x float> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 32
-; CHECK-NEXT:    store <8 x float> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <8 x float> @_Z6sincosDv8_fPU3AS5S_(<8 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr addrspace(5) [[__SINCOS_]], align 32
+; CHECK-NEXT:    store <8 x float> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 32
+; CHECK-NEXT:    store <8 x float> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 32
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -389,11 +381,10 @@ define void @sincos_v16f32(<16 x float> %x, ptr addrspace(1) nocapture writeonly
 ; CHECK-SAME: (<16 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <16 x float>, align 64, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <16 x float> @_Z6sincosDv16_fPU3AS0S_(<16 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x float>, ptr addrspace(5) [[__SINCOS_]], align 64
-; CHECK-NEXT:    store <16 x float> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 64
-; CHECK-NEXT:    store <16 x float> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 64
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <16 x float> @_Z6sincosDv16_fPU3AS5S_(<16 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x float>, ptr addrspace(5) [[__SINCOS_]], align 64
+; CHECK-NEXT:    store <16 x float> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 64
+; CHECK-NEXT:    store <16 x float> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -409,11 +400,10 @@ define void @sincos_f64_nocontract(double %x, ptr addrspace(1) nocapture writeon
 ; CHECK-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca double, align 8, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @_Z6sincosdPU3AS0d(double [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
-; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 8
-; CHECK-NEXT:    store double [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @_Z6sincosdPU3AS5d(double [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store double [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -430,11 +420,10 @@ define void @sincos_v2f64_nocontract(<2 x double> %x, ptr addrspace(1) nocapture
 ; CHECK-SAME: (<2 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <2 x double>, align 16, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @_Z6sincosDv2_dPU3AS0S_(<2 x double> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr addrspace(5) [[__SINCOS_]], align 16
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 16
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x double> @_Z6sincosDv2_dPU3AS5S_(<2 x double> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr addrspace(5) [[__SINCOS_]], align 16
+; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 16
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -450,11 +439,10 @@ define void @sincos_f64(double %x, ptr addrspace(1) nocapture writeonly %sin_out
 ; CHECK-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca double, align 8, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @_Z6sincosdPU3AS0d(double [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
-; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 8
-; CHECK-NEXT:    store double [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract double @_Z6sincosdPU3AS5d(double [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store double [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -470,11 +458,10 @@ define void @sincos_f64_order1(double %x, ptr addrspace(1) nocapture writeonly %
 ; CHECK-SAME: (double [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca double, align 8, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract double @_Z6sincosdPU3AS0d(double [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
-; CHECK-NEXT:    store double [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 8
-; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract double @_Z6sincosdPU3AS5d(double [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store double [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    store double [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -490,11 +477,10 @@ define void @sincos_v2f64(<2 x double> %x, ptr addrspace(1) nocapture writeonly 
 ; CHECK-SAME: (<2 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <2 x double>, align 16, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @_Z6sincosDv2_dPU3AS0S_(<2 x double> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr addrspace(5) [[__SINCOS_]], align 16
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 16
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <2 x double> @_Z6sincosDv2_dPU3AS5S_(<2 x double> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr addrspace(5) [[__SINCOS_]], align 16
+; CHECK-NEXT:    store <2 x double> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 16
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -510,12 +496,11 @@ define void @sincos_v3f64(<3 x double> %x, ptr addrspace(1) nocapture writeonly 
 ; CHECK-SAME: (<3 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <3 x double>, align 32, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <3 x double> @_Z6sincosDv3_dPU3AS0S_(<3 x double> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <3 x double>, ptr addrspace(5) [[__SINCOS_]], align 32
-; CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <3 x double> [[TMP1]], <3 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <3 x double> @_Z6sincosDv3_dPU3AS5S_(<3 x double> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x double>, ptr addrspace(5) [[__SINCOS_]], align 32
+; CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <3 x double> [[TMP0]], <3 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    store <4 x double> [[EXTRACTVEC2]], ptr addrspace(1) [[SIN_OUT]], align 32
-; CHECK-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <3 x double> [[TMP2]], <3 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <3 x double> [[TMP1]], <3 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    store <4 x double> [[EXTRACTVEC6]], ptr addrspace(1) [[COS_OUT]], align 32
 ; CHECK-NEXT:    ret void
 ;
@@ -534,11 +519,10 @@ define void @sincos_v4f64(<4 x double> %x, ptr addrspace(1) nocapture writeonly 
 ; CHECK-SAME: (<4 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <4 x double>, align 32, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <4 x double> @_Z6sincosDv4_dPU3AS0S_(<4 x double> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr addrspace(5) [[__SINCOS_]], align 32
-; CHECK-NEXT:    store <4 x double> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 32
-; CHECK-NEXT:    store <4 x double> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <4 x double> @_Z6sincosDv4_dPU3AS5S_(<4 x double> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr addrspace(5) [[__SINCOS_]], align 32
+; CHECK-NEXT:    store <4 x double> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 32
+; CHECK-NEXT:    store <4 x double> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 32
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -554,11 +538,10 @@ define void @sincos_v8f64(<8 x double> %x, ptr addrspace(1) nocapture writeonly 
 ; CHECK-SAME: (<8 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <8 x double>, align 64, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <8 x double> @_Z6sincosDv8_dPU3AS0S_(<8 x double> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x double>, ptr addrspace(5) [[__SINCOS_]], align 64
-; CHECK-NEXT:    store <8 x double> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 64
-; CHECK-NEXT:    store <8 x double> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 64
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <8 x double> @_Z6sincosDv8_dPU3AS5S_(<8 x double> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr addrspace(5) [[__SINCOS_]], align 64
+; CHECK-NEXT:    store <8 x double> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 64
+; CHECK-NEXT:    store <8 x double> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -574,11 +557,10 @@ define void @sincos_v16f64(<16 x double> %x, ptr addrspace(1) nocapture writeonl
 ; CHECK-SAME: (<16 x double> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <16 x double>, align 128, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract <16 x double> @_Z6sincosDv16_dPU3AS0S_(<16 x double> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x double>, ptr addrspace(5) [[__SINCOS_]], align 128
-; CHECK-NEXT:    store <16 x double> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 128
-; CHECK-NEXT:    store <16 x double> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 128
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract <16 x double> @_Z6sincosDv16_dPU3AS5S_(<16 x double> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x double>, ptr addrspace(5) [[__SINCOS_]], align 128
+; CHECK-NEXT:    store <16 x double> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 128
+; CHECK-NEXT:    store <16 x double> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 128
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -596,17 +578,16 @@ define void @sincos_f32_different_blocks(i1 %cond, float %x, ptr addrspace(1) no
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb0:
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
@@ -629,16 +610,15 @@ define void @sincos_f32_different_blocks_dominating_always_execute(i1 %cond, flo
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[OTHER:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    br i1 [[COND]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[OTHER]], align 4
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -662,11 +642,10 @@ define void @sincos_f32_different_blocks_dominating_conditional_execute(i1 %cond
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]], ptr addrspace(1) nocapture readnone [[OTHER:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], float [[TMP2]], float 0.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], float [[TMP1]], float 0.000000e+00
 ; CHECK-NEXT:    store float [[SPEC_SELECT]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -690,10 +669,9 @@ define float @select_sin_or_cos_f32(i1 %cond, float %x) {
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[TMP1]], float [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[TMP0]], float [[TMP1]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
 entry:
@@ -712,11 +690,10 @@ define void @sincos_f32_value_is_instr(ptr addrspace(1) %value.ptr, ptr addrspac
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    tail call void @func(ptr addrspace(1) [[VALUE_PTR]])
 ; CHECK-NEXT:    [[X:%.*]] = load float, ptr addrspace(1) [[VALUE_PTR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -731,12 +708,13 @@ entry:
 
 define void @sincos_f32_value_is_same_constexpr(ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_same_constexpr
-; CHECK-SAME: (ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: (ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float bitcast (i32 ptrtoint (ptr @func to i32) to float))
-; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call contract float @_Z3cosf(float bitcast (i32 ptrtoint (ptr @func to i32) to float))
-; CHECK-NEXT:    store float [[CALL1]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float bitcast (i32 ptrtoint (ptr @func to i32) to float), ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -767,12 +745,13 @@ entry:
 
 define void @sincos_f32_value_is_same_constantfp(ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_same_constantfp
-; CHECK-SAME: (ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: (ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call contract float @_Z3sinf(float 4.200000e+01)
-; CHECK-NEXT:    store float [[CALL]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call contract float @_Z3cosf(float 4.200000e+01)
-; CHECK-NEXT:    store float [[CALL1]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float 4.200000e+01, ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -824,11 +803,10 @@ define void @sincos_f32_flag_intersect0(float %x, ptr addrspace(1) nocapture wri
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -844,11 +822,10 @@ define void @sincos_f32_flag_intersect1(float %x, ptr addrspace(1) nocapture wri
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call nnan contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -864,11 +841,10 @@ define void @sincos_v2f32_flag_intersect1(<2 x float> %x, ptr addrspace(1) nocap
 ; CHECK-SAME: (<2 x float> [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <2 x float>, align 8, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan contract <2 x float> @_Z6sincosDv2_fPU3AS0S_(<2 x float> [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr addrspace(5) [[__SINCOS_]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 8
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call nnan contract <2 x float> @_Z6sincosDv2_fPU3AS5S_(<2 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(5) [[__SINCOS_]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -888,11 +864,10 @@ define void @sincos_f32_alloca_insertpt(float %x) {
 ; CHECK-NEXT:    [[ALLOCA0:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(5) [[ALLOCA0]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ALLOCA1]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(5) [[ALLOCA0]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(5) [[ALLOCA1]], align 4
 ; CHECK-NEXT:    call void @use_stack_ptrs(ptr addrspace(5) [[ALLOCA0]], ptr addrspace(5) [[ALLOCA1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -912,9 +887,8 @@ define float @sincos_f32_unused_result_cos(float %x) {
 ; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
   %alloca0 = alloca i32, addrspace(5)
@@ -929,10 +903,9 @@ define float @sincos_f32_unused_result_sin(float %x) {
 ; CHECK-SAME: (float [[X:%.*]]) local_unnamed_addr #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
   %alloca0 = alloca i32, addrspace(5)
@@ -946,13 +919,16 @@ define void @sincos_f32_repeated_uses(float %x, ptr addrspace(1) %sin_out, ptr a
 ; CHECK-LABEL: define void @sincos_f32_repeated_uses
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) [[SIN_OUT:%.*]], ptr addrspace(1) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SIN0:%.*]] = tail call contract float @_Z3sinf(float [[X]])
-; CHECK-NEXT:    store volatile float [[SIN0]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store volatile float [[SIN0]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    [[COS0:%.*]] = tail call contract float @_Z3cosf(float [[X]])
-; CHECK-NEXT:    store volatile float [[COS0]], ptr addrspace(1) [[COS_OUT]], align 4
-; CHECK-NEXT:    store volatile float [[COS0]], ptr addrspace(1) [[COS_OUT]], align 4
-; CHECK-NEXT:    store volatile float [[SIN0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[__SINCOS_3:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store volatile float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store volatile float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store volatile float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    store volatile float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    store volatile float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1015,11 +991,10 @@ define void @sincos_f32_preserve_fpmath_0(float %x, ptr addrspace(1) nocapture w
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]), !fpmath !5
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1035,11 +1010,10 @@ define void @sincos_f32_preserve_fpmath_1(float %x, ptr addrspace(1) nocapture w
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]), !fpmath !6
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1056,11 +1030,10 @@ define void @sincos_f32_drop_fpmath(float %x, ptr addrspace(1) nocapture writeon
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1073,17 +1046,16 @@ entry:
 
 define void @sincos_f32_debuginfo(float %x, ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) !dbg !15 {
 ; CHECK-LABEL: define void @sincos_f32_debuginfo
-; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] !dbg [[DBG5:![0-9]+]] {
+; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] !dbg [[DBG7:![0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5), !dbg [[DBG12:![0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr, !dbg [[DBG12]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[TMP0]]), !dbg [[DBG12]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4, !dbg [[DBG13:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata float [[TMP1]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG14:![0-9]+]]
-; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[SIN_OUT]], align 4, !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata float [[TMP2]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    store float [[TMP2]], ptr addrspace(1) [[COS_OUT]], align 4, !dbg [[DBG16:![0-9]+]]
-; CHECK-NEXT:    ret void, !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5), !dbg [[DBG14:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]), !dbg [[DBG14]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4, !dbg [[DBG14]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata float [[TMP0]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4, !dbg [[DBG16:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata float [[TMP1]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4, !dbg [[DBG18:![0-9]+]]
+; CHECK-NEXT:    ret void, !dbg [[DBG19:![0-9]+]]
 ;
 entry:
   %call = tail call contract float @_Z3sinf(float %x), !dbg !19
@@ -1100,9 +1072,9 @@ define float @sin_sincos_private_f32(float %x, ptr addrspace(1) %sin_out, ptr ad
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COS_TMP:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[SIN0:%.*]] = tail call nnan ninf nsz contract float @_Z3sinf(float [[X]]), !fpmath !18
+; CHECK-NEXT:    [[SIN0:%.*]] = tail call nnan ninf nsz contract float @_Z3sinf(float [[X]]), !fpmath !5
 ; CHECK-NEXT:    store float [[SIN0]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    [[SIN1:%.*]] = call nnan contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[COS_TMP]]), !fpmath !19
+; CHECK-NEXT:    [[SIN1:%.*]] = call nnan contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[COS_TMP]]), !fpmath !6
 ; CHECK-NEXT:    [[COS1:%.*]] = load float, ptr addrspace(5) [[COS_TMP]], align 4
 ; CHECK-NEXT:    store float [[COS1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret float [[SIN1]]
@@ -1122,10 +1094,10 @@ define float @sin_sincos_generic_f32(float %x, ptr addrspace(1) %sin_out, ptr ad
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COS_TMP:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[SIN0:%.*]] = tail call nsz contract float @_Z3sinf(float [[X]]), !fpmath !18
+; CHECK-NEXT:    [[SIN0:%.*]] = tail call nsz contract float @_Z3sinf(float [[X]]), !fpmath !5
 ; CHECK-NEXT:    store float [[SIN0]], ptr addrspace(1) [[SIN_OUT]], align 4
 ; CHECK-NEXT:    [[COS_TMP_CAST:%.*]] = addrspacecast ptr addrspace(5) [[COS_TMP]] to ptr
-; CHECK-NEXT:    [[SIN1:%.*]] = call ninf nsz contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[COS_TMP_CAST]]), !fpmath !19
+; CHECK-NEXT:    [[SIN1:%.*]] = call ninf nsz contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[COS_TMP_CAST]]), !fpmath !6
 ; CHECK-NEXT:    [[COS1:%.*]] = load float, ptr addrspace(5) [[COS_TMP]], align 4
 ; CHECK-NEXT:    store float [[COS1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    ret float [[SIN1]]
@@ -1276,17 +1248,15 @@ define float @sincos_mixed_sin_cos_generic_private_f32(float %x, ptr addrspace(1
 ; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COS_TMP0:%.*]] = alloca float, align 4, addrspace(5)
-; CHECK-NEXT:    [[COS_TMP1:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
 ; CHECK-NEXT:    [[SIN0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[COS_TMP0]])
-; CHECK-NEXT:    [[SIN1:%.*]] = call contract float @_Z3sinf(float [[X]])
-; CHECK-NEXT:    store float [[SIN1]], ptr addrspace(1) [[SIN_OUT]], align 4
-; CHECK-NEXT:    [[COS_TMP1_CAST:%.*]] = addrspacecast ptr addrspace(5) [[COS_TMP1]] to ptr
-; CHECK-NEXT:    [[COS1:%.*]] = call contract float @_Z3cosf(float [[X]])
-; CHECK-NEXT:    store float [[COS1]], ptr addrspace(1) [[COS_OUT]], align 4
-; CHECK-NEXT:    [[SIN2:%.*]] = call contract float @_Z6sincosfPU3AS0f(float [[X]], ptr [[COS_TMP1_CAST]])
+; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4
 ; CHECK-NEXT:    [[COS2:%.*]] = load float, ptr addrspace(5) [[COS_TMP0]], align 4
 ; CHECK-NEXT:    store float [[COS2]], ptr addrspace(1) [[COS_OUT]], align 4
-; CHECK-NEXT:    ret float [[SIN2]]
+; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
   %cos.tmp0 = alloca float, addrspace(5)

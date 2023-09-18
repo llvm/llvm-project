@@ -1012,6 +1012,14 @@ public:
     }
   } DelayedDiagnostics;
 
+  enum CUDAFunctionTarget {
+    CFT_Device,
+    CFT_Global,
+    CFT_Host,
+    CFT_HostDevice,
+    CFT_InvalidTarget
+  };
+
   /// A RAII object to temporarily push a declaration context.
   class ContextRAII {
   private:
@@ -3005,7 +3013,13 @@ public:
                                       QualType NewT, QualType OldT);
   void CheckMain(FunctionDecl *FD, const DeclSpec &D);
   void CheckMSVCRTEntryPoint(FunctionDecl *FD);
+  void ActOnHLSLTopLevelFunction(FunctionDecl *FD);
   void CheckHLSLEntryPoint(FunctionDecl *FD);
+  void CheckHLSLSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
+                                   const HLSLAnnotationAttr *AnnotationAttr);
+  void DiagnoseHLSLAttrStageMismatch(
+      const Attr *A, HLSLShaderAttr::ShaderType Stage,
+      std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages);
   Attr *getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
                                                    bool IsDefinition);
   void CheckFunctionOrTemplateParamDeclarator(Scope *S, Declarator &D);
@@ -3022,7 +3036,8 @@ public:
                                  Expr *defarg);
   void ActOnParamUnparsedDefaultArgument(Decl *param, SourceLocation EqualLoc,
                                          SourceLocation ArgLoc);
-  void ActOnParamDefaultArgumentError(Decl *param, SourceLocation EqualLoc);
+  void ActOnParamDefaultArgumentError(Decl *param, SourceLocation EqualLoc,
+                                      Expr* DefaultArg);
   ExprResult ConvertParamDefaultArgument(ParmVarDecl *Param, Expr *DefaultArg,
                                          SourceLocation EqualLoc);
   void SetParamDefaultArgument(ParmVarDecl *Param, Expr *DefaultArg,
@@ -3484,9 +3499,8 @@ public:
 
   void ActOnLastBitfield(SourceLocation DeclStart,
                          SmallVectorImpl<Decl *> &AllIvarDecls);
-  Decl *ActOnIvar(Scope *S, SourceLocation DeclStart,
-                  Declarator &D, Expr *BitfieldWidth,
-                  tok::ObjCKeywordKind visibility);
+  Decl *ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
+                  Expr *BitWidth, tok::ObjCKeywordKind visibility);
 
   // This is used for both record definitions and ObjC interface declarations.
   void ActOnFields(Scope *S, SourceLocation RecLoc, Decl *TagDecl,
@@ -4746,8 +4760,13 @@ public:
   bool isValidPointerAttrType(QualType T, bool RefOkay = false);
 
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
+
+  /// Check validaty of calling convention attribute \p attr. If \p FD
+  /// is not null pointer, use \p FD to determine the CUDA/HIP host/device
+  /// target. Otherwise, it is specified by \p CFT.
   bool CheckCallingConvAttr(const ParsedAttr &attr, CallingConv &CC,
-                            const FunctionDecl *FD = nullptr);
+                            const FunctionDecl *FD = nullptr,
+                            CUDAFunctionTarget CFT = CFT_InvalidTarget);
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
   bool checkStringLiteralArgumentAttr(const AttributeCommonInfo &CI,
@@ -5708,6 +5727,11 @@ public:
                       SourceLocation LitEndLoc,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr);
 
+  // ExpandFunctionLocalPredefinedMacros - Returns a new vector of Tokens,
+  // where Tokens representing function local predefined macros (such as
+  // __FUNCTION__) are replaced (expanded) with string-literal Tokens.
+  std::vector<Token> ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks);
+
   ExprResult BuildPredefinedExpr(SourceLocation Loc,
                                  PredefinedExpr::IdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
@@ -6616,11 +6640,9 @@ public:
   ParsedType getConstructorName(IdentifierInfo &II, SourceLocation NameLoc,
                                 Scope *S, CXXScopeSpec &SS,
                                 bool EnteringContext);
-  ParsedType getDestructorName(SourceLocation TildeLoc,
-                               IdentifierInfo &II, SourceLocation NameLoc,
+  ParsedType getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
                                Scope *S, CXXScopeSpec &SS,
-                               ParsedType ObjectType,
-                               bool EnteringContext);
+                               ParsedType ObjectType, bool EnteringContext);
 
   ParsedType getDestructorTypeForDecltype(const DeclSpec &DS,
                                           ParsedType ObjectType);
@@ -7202,6 +7224,11 @@ public:
 
   CXXMethodDecl *CreateLambdaCallOperator(SourceRange IntroducerRange,
                                           CXXRecordDecl *Class);
+
+  void AddTemplateParametersToLambdaCallOperator(
+      CXXMethodDecl *CallOperator, CXXRecordDecl *Class,
+      TemplateParameterList *TemplateParams);
+
   void CompleteLambdaCallOperator(
       CXXMethodDecl *Method, SourceLocation LambdaLoc,
       SourceLocation CallOperatorLoc, Expr *TrailingRequiresClause,
@@ -7334,6 +7361,16 @@ public:
                                            SourceLocation ConvLocation,
                                            CXXConversionDecl *Conv,
                                            Expr *Src);
+
+  sema::LambdaScopeInfo *RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator);
+
+  class LambdaScopeForCallOperatorInstantiationRAII
+      : private FunctionScopeRAII {
+  public:
+    LambdaScopeForCallOperatorInstantiationRAII(
+        Sema &SemasRef, FunctionDecl *FD, MultiLevelTemplateArgumentList MLTAL,
+        LocalInstantiationScope &Scope);
+  };
 
   /// Check whether the given expression is a valid constraint expression.
   /// A diagnostic is emitted if it is not, false is returned, and
@@ -11544,6 +11581,11 @@ public:
   /// associated statement.
   StmtResult ActOnOpenMPSectionDirective(Stmt *AStmt, SourceLocation StartLoc,
                                          SourceLocation EndLoc);
+  /// Called on well-formed '\#pragma omp scope' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPScopeDirective(ArrayRef<OMPClause *> Clauses,
+                                       Stmt *AStmt, SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
   /// Called on well-formed '\#pragma omp single' after parsing of the
   /// associated statement.
   StmtResult ActOnOpenMPSingleDirective(ArrayRef<OMPClause *> Clauses,
@@ -13244,14 +13286,6 @@ public:
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
 
-  enum CUDAFunctionTarget {
-    CFT_Device,
-    CFT_Global,
-    CFT_Host,
-    CFT_HostDevice,
-    CFT_InvalidTarget
-  };
-
   /// Determines whether the given function is a CUDA device/host/kernel/etc.
   /// function.
   ///
@@ -13269,6 +13303,29 @@ public:
   };
   /// Determines whether the given variable is emitted on host or device side.
   CUDAVariableTarget IdentifyCUDATarget(const VarDecl *D);
+
+  /// Defines kinds of CUDA global host/device context where a function may be
+  /// called.
+  enum CUDATargetContextKind {
+    CTCK_Unknown,       /// Unknown context
+    CTCK_InitGlobalVar, /// Function called during global variable
+                        /// initialization
+  };
+
+  /// Define the current global CUDA host/device context where a function may be
+  /// called. Only used when a function is called outside of any functions.
+  struct CUDATargetContext {
+    CUDAFunctionTarget Target = CFT_HostDevice;
+    CUDATargetContextKind Kind = CTCK_Unknown;
+    Decl *D = nullptr;
+  } CurCUDATargetCtx;
+
+  struct CUDATargetContextRAII {
+    Sema &S;
+    CUDATargetContext SavedCtx;
+    CUDATargetContextRAII(Sema &S_, CUDATargetContextKind K, Decl *D);
+    ~CUDATargetContextRAII() { S.CurCUDATargetCtx = SavedCtx; }
+  };
 
   /// Gets the CUDA target for the current context.
   CUDAFunctionTarget CurrentCUDATarget() {
@@ -13441,7 +13498,9 @@ public:
     PCC_ParenthesizedExpression,
     /// Code completion occurs within a sequence of declaration
     /// specifiers within a function, method, or block.
-    PCC_LocalDeclarationSpecifiers
+    PCC_LocalDeclarationSpecifiers,
+    /// Code completion occurs at top-level in a REPL session
+    PCC_TopLevelOrExpression,
   };
 
   void CodeCompleteModuleImport(SourceLocation ImportLoc, ModuleIdPath Path);
@@ -13694,7 +13753,7 @@ private:
   bool CheckRISCVLMUL(CallExpr *TheCall, unsigned ArgNum);
   bool CheckRISCVBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                      CallExpr *TheCall);
-  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D);
+  void checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D);
   bool CheckLoongArchBuiltinFunctionCall(const TargetInfo &TI,
                                          unsigned BuiltinID, CallExpr *TheCall);
   bool CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,

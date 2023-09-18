@@ -276,8 +276,8 @@ struct TypeBuilderImpl {
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !Fortran::semantics::IsAssumedType(symbol);
     if (ultimate.IsObjectArray()) {
-      auto shapeExpr = Fortran::evaluate::GetShapeHelper{
-          converter.getFoldingContext()}(ultimate);
+      auto shapeExpr =
+          Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
       if (!shapeExpr)
         TODO(loc, "assumed rank symbol type");
       fir::SequenceType::Shape shape;

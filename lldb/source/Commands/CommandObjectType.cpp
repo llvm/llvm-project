@@ -2171,8 +2171,6 @@ public:
                                        "Show a list of current filters.") {}
 };
 
-#if LLDB_ENABLE_PYTHON
-
 // CommandObjectTypeSynthList
 
 class CommandObjectTypeSynthList
@@ -2183,8 +2181,6 @@ public:
             interpreter, "type synthetic list",
             "Show a list of current synthetic providers.") {}
 };
-
-#endif
 
 // CommandObjectTypeFilterDelete
 
@@ -2197,8 +2193,6 @@ public:
   ~CommandObjectTypeFilterDelete() override = default;
 };
 
-#if LLDB_ENABLE_PYTHON
-
 // CommandObjectTypeSynthDelete
 
 class CommandObjectTypeSynthDelete : public CommandObjectTypeFormatterDelete {
@@ -2210,7 +2204,6 @@ public:
   ~CommandObjectTypeSynthDelete() override = default;
 };
 
-#endif
 
 // CommandObjectTypeFilterClear
 
@@ -2222,7 +2215,6 @@ public:
                                         "Delete all existing filter.") {}
 };
 
-#if LLDB_ENABLE_PYTHON
 // CommandObjectTypeSynthClear
 
 class CommandObjectTypeSynthClear : public CommandObjectTypeFormatterClear {
@@ -2393,7 +2385,6 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   return true;
 }
 
-#endif
 #define LLDB_OPTIONS_type_filter_add
 #include "CommandOptions.inc"
 
@@ -2941,8 +2932,6 @@ public:
   ~CommandObjectTypeFormat() override = default;
 };
 
-#if LLDB_ENABLE_PYTHON
-
 class CommandObjectTypeSynth : public CommandObjectMultiword {
 public:
   CommandObjectTypeSynth(CommandInterpreter &interpreter)
@@ -2969,8 +2958,6 @@ public:
 
   ~CommandObjectTypeSynth() override = default;
 };
-
-#endif
 
 class CommandObjectTypeFilter : public CommandObjectMultiword {
 public:
@@ -3056,10 +3043,8 @@ CommandObjectType::CommandObjectType(CommandInterpreter &interpreter)
                  CommandObjectSP(new CommandObjectTypeFormat(interpreter)));
   LoadSubCommand("summary",
                  CommandObjectSP(new CommandObjectTypeSummary(interpreter)));
-#if LLDB_ENABLE_PYTHON
   LoadSubCommand("synthetic",
                  CommandObjectSP(new CommandObjectTypeSynth(interpreter)));
-#endif
   LoadSubCommand("lookup",
                  CommandObjectSP(new CommandObjectTypeLookup(interpreter)));
 }

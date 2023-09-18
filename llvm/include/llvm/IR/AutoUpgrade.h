@@ -52,7 +52,7 @@ namespace llvm {
   /// so that it can update all calls to the old function.
   void UpgradeCallsToIntrinsic(Function* F);
 
-  /// This checks for global variables which should be upgraded. It it requires
+  /// This checks for global variables which should be upgraded. If it requires
   /// upgrading, returns a pointer to the upgraded variable.
   GlobalVariable *UpgradeGlobalVariable(GlobalVariable *GV);
 

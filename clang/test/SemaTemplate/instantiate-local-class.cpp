@@ -453,8 +453,8 @@ namespace PR21332 {
   template void f7<int>();
 }
 
-// rdar://23721638: Ensure that we correctly perform implicit
-// conversions when instantiating the default arguments of local functions.
+// Ensure that we correctly perform implicit conversions when instantiating the
+// default arguments of local functions.
 namespace rdar23721638 {
   struct A {
     A(const char *) = delete;  // expected-note 2 {{explicitly marked deleted here}}

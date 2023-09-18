@@ -773,7 +773,8 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   if (FirstSPAdjustAmount)
     StackSize = FirstSPAdjustAmount;
 
-  if (RVFI->isPushable(MF) && MBBI->getOpcode() == RISCV::CM_POP) {
+  if (RVFI->isPushable(MF) && MBBI != MBB.end() &&
+      MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
     // space.
     unsigned PushStack = RVFI->getRVPushRegs() * (STI.getXLen() / 8);
@@ -1277,7 +1278,8 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
 
 // We would like to split the SP adjustment to reduce prologue/epilogue
 // as following instructions. In this way, the offset of the callee saved
-// register could fit in a single store.
+// register could fit in a single store. Supposed that the first sp adjust
+// amount is 2032.
 //   add     sp,sp,-2032
 //   sw      ra,2028(sp)
 //   sw      s0,2024(sp)
@@ -1301,13 +1303,54 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
   // Return the FirstSPAdjustAmount if the StackSize can not fit in a signed
   // 12-bit and there exists a callee-saved register needing to be pushed.
   if (!isInt<12>(StackSize) && (CSI.size() > 0)) {
-    // FirstSPAdjustAmount is chosen as (2048 - StackAlign) because 2048 will
-    // cause sp = sp + 2048 in the epilogue to be split into multiple
+    // FirstSPAdjustAmount is chosen at most as (2048 - StackAlign) because
+    // 2048 will cause sp = sp + 2048 in the epilogue to be split into multiple
     // instructions. Offsets smaller than 2048 can fit in a single load/store
     // instruction, and we have to stick with the stack alignment. 2048 has
     // 16-byte alignment. The stack alignment for RV32 and RV64 is 16 and for
     // RV32E it is 4. So (2048 - StackAlign) will satisfy the stack alignment.
-    return 2048 - getStackAlign().value();
+    const uint64_t StackAlign = getStackAlign().value();
+
+    // Amount of (2048 - StackAlign) will prevent callee saved and restored
+    // instructions be compressed, so try to adjust the amount to the largest
+    // offset that stack compression instructions accept when target supports
+    // compression instructions.
+    if (STI.hasStdExtCOrZca()) {
+      // The compression extensions may support the following instructions:
+      // riscv32: c.lwsp rd, offset[7:2] => 2^(6 + 2)
+      //          c.swsp rs2, offset[7:2] => 2^(6 + 2)
+      //          c.flwsp rd, offset[7:2] => 2^(6 + 2)
+      //          c.fswsp rs2, offset[7:2] => 2^(6 + 2)
+      // riscv64: c.ldsp rd, offset[8:3] => 2^(6 + 3)
+      //          c.sdsp rs2, offset[8:3] => 2^(6 + 3)
+      //          c.fldsp rd, offset[8:3] => 2^(6 + 3)
+      //          c.fsdsp rs2, offset[8:3] => 2^(6 + 3)
+      const uint64_t RVCompressLen = STI.getXLen() * 8;
+      // Compared with amount (2048 - StackAlign), StackSize needs to
+      // satisfy the following conditions to avoid using more instructions
+      // to adjust the sp after adjusting the amount, such as
+      // StackSize meets the condition (StackSize <= 2048 + RVCompressLen),
+      // case1: Amount is 2048 - StackAlign: use addi + addi to adjust sp.
+      // case2: Amount is RVCompressLen: use addi + addi to adjust sp.
+      auto CanCompress = [&](uint64_t CompressLen) -> bool {
+        if (StackSize <= 2047 + CompressLen ||
+            (StackSize > 2048 * 2 - StackAlign &&
+             StackSize <= 2047 * 2 + CompressLen) ||
+            StackSize > 2048 * 3 - StackAlign)
+          return true;
+
+        return false;
+      };
+      // In the epilogue, addi sp, sp, 496 is used to recover the sp and it
+      // can be compressed(C.ADDI16SP, offset can be [-512, 496]), but
+      // addi sp, sp, 512 can not be compressed. So try to use 496 first.
+      const uint64_t ADDI16SPCompressLen = 496;
+      if (STI.is64Bit() && CanCompress(ADDI16SPCompressLen))
+        return ADDI16SPCompressLen;
+      if (CanCompress(RVCompressLen))
+        return RVCompressLen;
+    }
+    return 2048 - StackAlign;
   }
   return 0;
 }

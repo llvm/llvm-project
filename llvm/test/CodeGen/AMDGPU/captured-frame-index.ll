@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}store_fi_lifetime:
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}

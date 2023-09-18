@@ -9,7 +9,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s -DWARNING
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s -Wno-deprecated -Wdeprecated-increment-bool -DWARNING
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s -pedantic-errors -DERROR
-// rdar://8827606
 
 char *fun(void)
 {

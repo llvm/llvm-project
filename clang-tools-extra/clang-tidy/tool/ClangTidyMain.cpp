@@ -31,9 +31,7 @@
 using namespace clang::tooling;
 using namespace llvm;
 
-static cl::desc desc(StringRef description) {
-  return cl::desc(description.ltrim());
-}
+static cl::desc desc(StringRef description) { return {description.ltrim()}; }
 
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
@@ -527,6 +525,31 @@ static bool verifyFileExtensions(
   return AnyInvalid;
 }
 
+static SmallString<256> makeAbsolute(llvm::StringRef Input) {
+  if (Input.empty())
+    return {};
+  SmallString<256> AbsolutePath(Input);
+  if (std::error_code EC = llvm::sys::fs::make_absolute(AbsolutePath)) {
+    llvm::errs() << "Can't make absolute path from " << Input << ": "
+                 << EC.message() << "\n";
+  }
+  return AbsolutePath;
+}
+
+static llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> createBaseFS() {
+  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS(
+      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
+
+  if (!VfsOverlay.empty()) {
+    IntrusiveRefCntPtr<vfs::FileSystem> VfsFromFile =
+        getVfsFromFile(VfsOverlay, BaseFS);
+    if (!VfsFromFile)
+      return nullptr;
+    BaseFS->pushOverlay(std::move(VfsFromFile));
+  }
+  return BaseFS;
+}
+
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
 
@@ -542,34 +565,16 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
-
-  if (!VfsOverlay.empty()) {
-    IntrusiveRefCntPtr<vfs::FileSystem> VfsFromFile =
-        getVfsFromFile(VfsOverlay, BaseFS);
-    if (!VfsFromFile)
-      return 1;
-    BaseFS->pushOverlay(std::move(VfsFromFile));
-  }
+  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS = createBaseFS();
+  if (!BaseFS)
+    return 1;
 
   auto OwningOptionsProvider = createOptionsProvider(BaseFS);
   auto *OptionsProvider = OwningOptionsProvider.get();
   if (!OptionsProvider)
     return 1;
 
-  auto MakeAbsolute = [](const std::string &Input) -> SmallString<256> {
-    if (Input.empty())
-      return {};
-    SmallString<256> AbsolutePath(Input);
-    if (std::error_code EC = llvm::sys::fs::make_absolute(AbsolutePath)) {
-      llvm::errs() << "Can't make absolute path from " << Input << ": "
-                   << EC.message() << "\n";
-    }
-    return AbsolutePath;
-  };
-
-  SmallString<256> ProfilePrefix = MakeAbsolute(StoreCheckProfile);
+  SmallString<256> ProfilePrefix = makeAbsolute(StoreCheckProfile);
 
   StringRef FileName("dummy");
   auto PathList = OptionsParser->getSourcePathList();
@@ -577,9 +582,9 @@ int clangTidyMain(int argc, const char **argv) {
     FileName = PathList.front();
   }
 
-  SmallString<256> FilePath = MakeAbsolute(std::string(FileName));
-
+  SmallString<256> FilePath = makeAbsolute(FileName);
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
+
   std::vector<std::string> EnabledChecks =
       getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
 

@@ -64,4 +64,7 @@ framework module DependsOnModule {
   explicit module C17 {
     requires c17
   }
+  explicit module C23 {
+    requires c23
+  }
 }

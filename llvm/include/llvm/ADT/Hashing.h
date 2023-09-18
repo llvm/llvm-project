@@ -683,4 +683,16 @@ template <> struct DenseMapInfo<hash_code, void> {
 
 } // namespace llvm
 
+/// Implement std::hash so that hash_code can be used in STL containers.
+namespace std {
+
+template<>
+struct hash<llvm::hash_code> {
+  size_t operator()(llvm::hash_code const& Val) const {
+    return Val;
+  }
+};
+
+} // namespace std;
+
 #endif

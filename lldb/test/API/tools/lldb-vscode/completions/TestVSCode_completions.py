@@ -19,19 +19,18 @@ class TestVSCode_completions(lldbvscode_testcase.VSCodeTestCaseBase):
             self.assertNotIn(not_expected_item, actual_list)
 
     @skipIfWindows
-    @skipIfDarwin  # Skip this test for now until we can figure out why tings aren't working on build bots
     def test_completions(self):
         """
         Tests the completion request at different breakpoints
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
+
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint2_line = line_number(source, "// breakpoint 2")
-        breakpoint_ids = self.set_source_breakpoints(
-            source, [breakpoint1_line, breakpoint2_line]
-        )
+
+        self.set_source_breakpoints(source, [breakpoint1_line, breakpoint2_line])
         self.continue_to_next_stop()
 
         # shouldn't see variables inside main
@@ -40,7 +39,7 @@ class TestVSCode_completions(lldbvscode_testcase.VSCodeTestCaseBase):
             [
                 {
                     "text": "var",
-                    "label": "var -- vector<basic_string<char>> &",
+                    "label": "var -- vector<baz> &",
                 }
             ],
             [
@@ -71,7 +70,7 @@ class TestVSCode_completions(lldbvscode_testcase.VSCodeTestCaseBase):
             [
                 {
                     "text": "var",
-                    "label": "var -- vector<basic_string<char>> &",
+                    "label": "var -- vector<baz> &",
                 }
             ],
         )

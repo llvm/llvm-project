@@ -39,9 +39,9 @@ long long __convert_to_integral(long long __val) { return __val; }
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 unsigned long long __convert_to_integral(unsigned long long __val) {return __val; }
 
-template<typename _Fp>
+template<typename _Fp, __enable_if_t<is_floating_point<_Fp>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename enable_if<is_floating_point<_Fp>::value, long long>::type
+long long
  __convert_to_integral(_Fp __val) { return __val; }
 
 #ifndef _LIBCPP_HAS_NO_INT128

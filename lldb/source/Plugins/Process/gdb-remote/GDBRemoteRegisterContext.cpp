@@ -772,27 +772,28 @@ bool GDBRemoteRegisterContext::AArch64SVEReconfigure() {
   uint32_t vg_reg_num = reg_info->kinds[eRegisterKindLLDB];
   uint64_t vg_reg_value = ReadRegisterAsUnsigned(vg_reg_num, fail_value);
 
-  if (vg_reg_value != fail_value && vg_reg_value <= 32) {
-    const RegisterInfo *reg_info = m_reg_info_sp->GetRegisterInfo("p0");
-    if (!reg_info || vg_reg_value == reg_info->byte_size)
-      return false;
+  if (vg_reg_value == fail_value || vg_reg_value > 32)
+    return false;
 
-    if (m_reg_info_sp->UpdateARM64SVERegistersInfos(vg_reg_value)) {
-      // Make a heap based buffer that is big enough to store all registers
-      m_reg_data.SetData(std::make_shared<DataBufferHeap>(
-          m_reg_info_sp->GetRegisterDataByteSize(), 0));
-      m_reg_data.SetByteOrder(GetByteOrder());
+  reg_info = m_reg_info_sp->GetRegisterInfo("p0");
+  // Predicate registers have 1 bit per byte in the vector so their size is
+  // VL / 8. VG is in units of 8 bytes already, so if the size of p0 == VG
+  // already, we do not have to reconfigure.
+  if (!reg_info || vg_reg_value == reg_info->byte_size)
+    return false;
 
-      InvalidateAllRegisters();
+  m_reg_info_sp->UpdateARM64SVERegistersInfos(vg_reg_value);
+  // Make a heap based buffer that is big enough to store all registers
+  m_reg_data.SetData(std::make_shared<DataBufferHeap>(
+      m_reg_info_sp->GetRegisterDataByteSize(), 0));
+  m_reg_data.SetByteOrder(GetByteOrder());
 
-      return true;
-    }
-  }
+  InvalidateAllRegisters();
 
-  return false;
+  return true;
 }
 
-bool GDBRemoteDynamicRegisterInfo::UpdateARM64SVERegistersInfos(uint64_t vg) {
+void GDBRemoteDynamicRegisterInfo::UpdateARM64SVERegistersInfos(uint64_t vg) {
   // SVE Z register size is vg x 8 bytes.
   uint32_t z_reg_byte_size = vg * 8;
 
@@ -813,5 +814,4 @@ bool GDBRemoteDynamicRegisterInfo::UpdateARM64SVERegistersInfos(uint64_t vg) {
 
   // Re-calculate register offsets
   ConfigureOffsets();
-  return true;
 }

@@ -149,7 +149,7 @@ static constinit __libcpp_mutex_t mut_back[__sp_mut_count] =
     _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER, _LIBCPP_MUTEX_INITIALIZER
 };
 
-_LIBCPP_CONSTEXPR __sp_mut::__sp_mut(void* p) noexcept
+constexpr __sp_mut::__sp_mut(void* p) noexcept
    : __lx_(p)
 {
 }

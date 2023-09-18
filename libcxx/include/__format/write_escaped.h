@@ -118,7 +118,7 @@ template <class _CharT>
   return static_cast<make_unsigned_t<_CharT>>(__value);
 }
 
-enum class _LIBCPP_ENUM_VIS __escape_quotation_mark { __apostrophe, __double_quote };
+enum class __escape_quotation_mark { __apostrophe, __double_quote };
 
 // [format.string.escaped]/2
 template <class _CharT>

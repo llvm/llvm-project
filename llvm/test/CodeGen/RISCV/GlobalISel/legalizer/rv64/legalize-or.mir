@@ -133,25 +133,25 @@ name:            or_i128
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: or_i128
-    ; CHECK: %hi1:_(s64) = COPY $x10
-    ; CHECK-NEXT: %lo1:_(s64) = COPY $x11
-    ; CHECK-NEXT: %hi2:_(s64) = COPY $x12
-    ; CHECK-NEXT: %lo2:_(s64) = COPY $x13
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %hi1, %hi2
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR %lo1, %lo2
+    ; CHECK: %lo1:_(s64) = COPY $x10
+    ; CHECK-NEXT: %hi1:_(s64) = COPY $x11
+    ; CHECK-NEXT: %lo2:_(s64) = COPY $x12
+    ; CHECK-NEXT: %hi2:_(s64) = COPY $x13
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %lo1, %lo2
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR %hi1, %hi2
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
     ; CHECK-NEXT: $x11 = COPY [[OR1]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
-    %hi1:_(s64) = COPY $x10
-    %lo1:_(s64) = COPY $x11
-    %hi2:_(s64) = COPY $x12
-    %lo2:_(s64) = COPY $x13
-    %x1:_(s128) = G_MERGE_VALUES %hi1(s64), %lo1(s64)
-    %x2:_(s128) = G_MERGE_VALUES %hi2(s64), %lo2(s64)
+    %lo1:_(s64) = COPY $x10
+    %hi1:_(s64) = COPY $x11
+    %lo2:_(s64) = COPY $x12
+    %hi2:_(s64) = COPY $x13
+    %x1:_(s128) = G_MERGE_VALUES %lo1(s64), %hi1(s64)
+    %x2:_(s128) = G_MERGE_VALUES %lo2(s64), %hi2(s64)
     %y:_(s128) = G_OR %x1, %x2
-    %hiy:_(s64), %loy:_(s64) = G_UNMERGE_VALUES %y(s128)
-    $x10 = COPY %hiy(s64)
-    $x11 = COPY %loy(s64)
+    %loy:_(s64), %hiy:_(s64) = G_UNMERGE_VALUES %y(s128)
+    $x10 = COPY %loy(s64)
+    $x11 = COPY %hiy(s64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
@@ -160,32 +160,32 @@ name:            or_i192
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: or_i192
-    ; CHECK: %hi1:_(s64) = COPY $x10
+    ; CHECK: %lo1:_(s64) = COPY $x10
     ; CHECK-NEXT: %mid1:_(s64) = COPY $x11
-    ; CHECK-NEXT: %lo1:_(s64) = COPY $x12
-    ; CHECK-NEXT: %hi2:_(s64) = COPY $x13
+    ; CHECK-NEXT: %hi1:_(s64) = COPY $x12
+    ; CHECK-NEXT: %lo2:_(s64) = COPY $x13
     ; CHECK-NEXT: %mid2:_(s64) = COPY $x14
-    ; CHECK-NEXT: %lo2:_(s64) = COPY $x15
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %hi1, %hi2
+    ; CHECK-NEXT: %hi2:_(s64) = COPY $x15
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR %lo1, %lo2
     ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s64) = G_OR %mid1, %mid2
-    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s64) = G_OR %lo1, %lo2
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s64) = G_OR %hi1, %hi2
     ; CHECK-NEXT: $x10 = COPY [[OR]](s64)
     ; CHECK-NEXT: $x11 = COPY [[OR1]](s64)
     ; CHECK-NEXT: $x12 = COPY [[OR2]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11, implicit $x12
-    %hi1:_(s64) = COPY $x10
+    %lo1:_(s64) = COPY $x10
     %mid1:_(s64) = COPY $x11
-    %lo1:_(s64) = COPY $x12
-    %hi2:_(s64) = COPY $x13
+    %hi1:_(s64) = COPY $x12
+    %lo2:_(s64) = COPY $x13
     %mid2:_(s64) = COPY $x14
-    %lo2:_(s64) = COPY $x15
-    %x1:_(s192) = G_MERGE_VALUES %hi1(s64), %mid1(s64), %lo1(s64)
-    %x2:_(s192) = G_MERGE_VALUES %hi2(s64), %mid2(s64), %lo2(s64)
+    %hi2:_(s64) = COPY $x15
+    %x1:_(s192) = G_MERGE_VALUES %lo1(s64), %mid1(s64), %hi1(s64)
+    %x2:_(s192) = G_MERGE_VALUES %lo2(s64), %mid2(s64), %hi2(s64)
     %y:_(s192) = G_OR %x1, %x2
-    %hi:_(s64), %mid:_(s64), %lo:_(s64) = G_UNMERGE_VALUES %y(s192)
-    $x10 = COPY %hi(s64)
+    %lo:_(s64), %mid:_(s64), %hi:_(s64) = G_UNMERGE_VALUES %y(s192)
+    $x10 = COPY %lo(s64)
     $x11 = COPY %mid(s64)
-    $x12 = COPY %lo(s64)
+    $x12 = COPY %hi(s64)
     PseudoRET implicit $x10, implicit $x11, implicit $x12
 
 ...

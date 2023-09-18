@@ -238,12 +238,12 @@ class CXXNameMangler {
   unsigned SeqID = 0;
 
   class FunctionTypeDepthState {
-    unsigned Bits;
+    unsigned Bits = 0;
 
     enum { InResultTypeMask = 1 };
 
   public:
-    FunctionTypeDepthState() : Bits(0) {}
+    FunctionTypeDepthState() = default;
 
     /// The number of function types we're inside.
     unsigned getDepth() const {

@@ -80,6 +80,27 @@ parsePWMAF(ArrayRef<std::pair<StringRef, StringRef>> pieces) {
   return func;
 }
 
+inline IntegerRelation parseRelationFromSet(StringRef set, unsigned numDomain) {
+  IntegerRelation rel = parseIntegerPolyhedron(set);
+
+  rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
+
+  return rel;
+}
+
+inline PresburgerRelation
+parsePresburgerRelationFromPresburgerSet(ArrayRef<StringRef> strs,
+                                         unsigned numDomain) {
+  assert(!strs.empty() && "strs should not be empty");
+
+  IntegerRelation rel = parseIntegerPolyhedron(strs[0]);
+  PresburgerRelation result(rel);
+  for (unsigned i = 1, e = strs.size(); i < e; ++i)
+    result.unionInPlace(parseIntegerPolyhedron(strs[i]));
+  result.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain, 0);
+  return result;
+}
+
 } // namespace presburger
 } // namespace mlir
 

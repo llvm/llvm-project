@@ -95,8 +95,8 @@ void MultiwayPathsCoveredCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
   const auto *Switch = Result.Nodes.getNodeAs<SwitchStmt>("switch");
-  std::size_t SwitchCaseCount;
-  bool SwitchHasDefault;
+  std::size_t SwitchCaseCount = 0;
+  bool SwitchHasDefault = false;
   std::tie(SwitchCaseCount, SwitchHasDefault) = countCaseLabels(Switch);
 
   // Checks the sanity of 'switch' statements that actually do define

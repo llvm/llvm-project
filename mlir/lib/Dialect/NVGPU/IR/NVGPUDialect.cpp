@@ -367,6 +367,42 @@ LogicalResult TmaCreateDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// NVGPU_GenerateGmmaDescriptorOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GenerateGmmaDescriptorOp::verify() {
+  MemRefType memrefType = getTensor().getType();
+  MemRefType tensorMapType = getTensorMap().getType().getTensor();
+
+  if (memrefType != tensorMapType)
+    return emitError() << "memref and tensor map type mismatch";
+
+  if (!memrefType.hasStaticShape() || !tensorMapType.hasStaticShape())
+    return emitError() << "supports only static shapes";
+
+  if (memrefType.getRank() != 2)
+    return emitError() << "supports only 2d memref is supported for now";
+
+  if (getTensorMap().getType().getSwizzle() !=
+      TensorMapSwizzleKind::SWIZZLE_128B) {
+    return emitError() << "supports only "
+                       << stringifyTensorMapSwizzleKind(
+                              TensorMapSwizzleKind::SWIZZLE_128B)
+                       << " is supported for the time being";
+  }
+
+  if (getTensorMap().getType().getInterleave() !=
+      TensorMapInterleaveKind::INTERLEAVE_NONE) {
+    return emitError() << "supports only "
+                       << stringifyTensorMapInterleaveKind(
+                              TensorMapInterleaveKind::INTERLEAVE_NONE)
+                       << " is supported for the time being";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//
 

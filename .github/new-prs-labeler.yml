@@ -1,0 +1,799 @@
+clang:dataflow:
+  - clang/**/Analysis/**/*
+
+clang:frontend:
+  - clang/lib/AST/**/*
+  - clang/include/clang/AST/**/*
+  - clang/lib/Basic/**/*
+  - clang/include/clang/Basic/**/*
+  - clang/lib/Interpreter/**/*
+  - clang/include/clang/Interpreter/**/*
+  - clang/lib/Lex/**/*
+  - clang/include/clang/Lex/**/*
+  - clang/lib/Parse/**/*
+  - clang/include/clang/Parse/**/*
+  - clang/lib/Sema/**/*
+  - clang/include/clang/Sema/**/*
+
+clang:headers:
+  - clang/lib/Headers/**/*
+
+compiler-rt:
+  - compiler-rt/**/*
+
+flang:
+  - flang/**/*
+
+flang:frontend:
+  - flang/Parser/**/*
+  - flang/Evaluate/**/*
+  - flang/Semantics/**/*
+
+HLSL:
+  - clang/*HLSL*/**/*
+  - clang/**/*HLSL*
+  - llvm/**/Frontend/HLSL/**/*
+
+lld:
+  - lld/**/*
+
+llvm-lit:
+  - llvm/utils/lit/**/*
+
+mlir:afine:
+  - mlir/**/Affine/**/*
+
+mlir:python:
+  - mlir/python/**/*
+
+mlir:vectorops:
+  - mlir/**/Vector/**/*
+
+PGO:
+  - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
+  - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
+  - llvm/lib/Transforms/Instrumentation/IndirectCallPromotion.cpp
+  - llvm/lib/Transforms/Instrumentation/InstrProfiling.cpp
+  - llvm/lib/Transforms/Instrumentation/PGO*
+  - llvm/lib/Transforms/Instrumentation/ValueProfile*
+  - llvm/test/Instrumentation/InstrProfiling/**/*
+  - llvm/test/Transforms/PGOProfile/**/*
+  - llvm/**/llvm-profdata/**/*
+  - llvm/**/llvm-profgen/**/*
+  - llvm/unittests/ProfileData/**/*
+
+vectorization:
+  - llvm/lib/Transforms/Vectorize/**/*
+  - llvm/include/llvm/Transforms/Vectorize/**/*
+
+# IMPORTED FROM CODEOWNERS
+LTO:
+  - llvm/*/LTO/**
+  - llvm/*/Linker/**
+  - llvm/*/ThinLTO/**
+  - llvm/lib/Transforms/*/FunctionImport*
+  - llvm/tools/gold/**
+
+mc:
+  - llvm/*/MC/**
+
+clang:driver:
+  - clang/*/Driver/**
+
+compiler-rt:sanitizer:
+  - llvm/lib/Transforms/Instrumentation/*Sanitizer*
+  - compiler-rt/lib/interception/**
+  - compiler-rt/lib/*san*/**
+  - compiler-rt/test/*san*/**
+  - compiler-rt/lib/fuzzer/**
+  - compiler-rt/test/fuzzer/**
+  - compiler-rt/lib/scudo/**
+  - compiler-rt/test/scudo/**
+
+xray:
+  - llvm/tools/llvm-xray/**
+  - compiler-rt/*/xray/**
+  - clang/include/clang/Basic/XRay*
+  - clang/lib/Basic/XRay*
+  - compiler-rt/*/xray/**
+  - llvm/include/llvm/XRay/**
+  - llvm/lib/XRay/**
+  - llvm/tools/llvm-xray/**
+  - llvm/unittests/XRay/**
+  - compiler-rt/*/xray/**
+
+clang:codegen:
+  - clang/lib/CodeGen/**
+  - clang/include/clang/CodeGen/**
+
+mlir:
+  - mlir/**
+
+mlir:core:
+  - mlir/include/mlir/Support/**
+  - mlir/lib/Support/**
+  - mlir/include/mlir/Parser/**
+  - mlir/lib/Parser/**
+  - mlir/include/mlir/IR/**
+  - mlir/lib/IR/**
+  - mlir/include/mlir/Bytecode/**
+  - mlir/lib/Bytecode/**
+  - mlir/include/mlir/AsmParser/**
+  - mlir/lib/AsmParser/**
+  - mlir/include/mlir/Pass/**
+  - mlir/lib/Pass/**
+  - mlir/include/mlir/Tools/**
+  - mlir/lib/Tools/**
+  - mlir/include/mlir/Reducer/**
+  - mlir/lib/Reducer/**
+  - mlir/include/mlir/Transforms/**
+  - mlir/lib/Transforms/**
+  - mlir/include/mlir/Debug/**
+  - mlir/lib/Debug/**
+  - mlir/tools/**
+
+mlir:ods:
+  - mlir/TableGen/**
+  - mlir/tblgen/**
+  - mlir/include/mlir/IR/*.td
+
+mlir:bindings:
+  - mlir/Bindings/**
+
+mlir:gpu:
+  - mlir/**/*GPU*/**
+
+mlir:amdgpu:
+  - mlir/**/AMDGPU/**
+
+mlir:amx:
+  - mlir/**/AMX/**
+
+mlir:affine:
+  - mlir/**/Affine/**
+
+mlir:arith:
+  - mlir/**/Arith/**
+
+mlir:neon:
+  - mlir/**/ArmNeon/**
+
+mlir:sme:
+  - mlir/**/ArmSME/**
+
+mlir:sve:
+  - mlir/**/ArmSVE/**
+
+mlir:async:
+  - mlir/**/Async/**
+  - mlir/**/Async/**
+
+mlir:bufferization:
+  - mlir/**/Bufferization/**
+
+mlir:complex:
+  - mlir/**/Complex/**
+
+mlir:cf:
+  - mlir/**/ControlFlow/**
+
+mlir:dlti:
+  - mlir/**/DLTI/**
+
+mlir:emitc:
+  - mlir/**/EmitC/**
+  - mlir/lib/Target/Cpp/**
+
+mlir:func:
+  - mlir/**/Func/**
+
+mlir:irdl:
+  - mlir/**/IRDL/**
+
+mlir:index:
+  - mlir/**/Index/**
+
+mlir:llvm:
+  - mlir/**/LLVM*
+  - mlir/**/LLVM*/**
+
+mlir:linalg:
+  - mlir/**/*linalg/**
+  - mlir/**/*Linalg/**
+
+mlir:mlprogram:
+  - mlir/**/MLProgram/**
+
+mlir:math:
+  - mlir/**/Math/**
+
+mlir:memref:
+  - mlir/**/MemRef/**
+
+mlir:nvgpu:
+  - mlir/**/NVGPU/**
+
+mlir:openacc:
+  - mlir/**/*OpenACC*
+  - mlir/**/*OpenACC*/**
+
+mlir:openmp:
+  - mlir/**/*OpenMP*
+  - mlir/**/*OpenMP*/**
+
+mlir:pdl:
+  - mlir/**/PDL/**
+
+mlir:quant:
+  - mlir/**/Quant/**
+
+mlir:scf:
+  - mlir/**/SCF/**
+
+mlir:spirv:
+  - mlir/**/SPIRV/**
+  - mlir/**/SPIRVTo*/**
+  - mlir/**/*ToSPIRV/**
+  - mlir/tools/mlir-spirv-cpu-runner/**
+  - mlir/tools/mlir-vulkan-runner/**
+  - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
+
+mlir:shape:
+  - mlir/**/Shape/**
+
+mlir:sparse:
+  - mlir/**/SparseTensor/**
+
+mlir:tensor:
+  - mlir/**/Tensor/**
+
+mlir:tosa:
+  - mlir/**/Tosa/**
+
+mlir:ub:
+  - mlir/**/UB/**
+
+mlir:vector:
+  - mlir/**/*Vector/**
+
+mlir:execution-engine:
+  - mlir/**/ExecutionEngine/**
+
+coroutines:
+  - clang/docs/DebuggingCoroutines.rst
+  - clang/lib/Sema/SemaCoroutine.cpp
+  - clang/lib/CodeGen/CGCoroutine.cpp
+  - clang/test/CodeGenCoroutines/**
+  - llvm/docs/Coroutines.rst
+  - llvm/include/llvm/Transforms/Coroutines/**
+  - llvm/lib/Transforms/Coroutines/**
+  - llvm/test/Transforms/Coroutines/*
+
+clang:modules:
+  - clang/docs/StandardCPlusPlusModules.rst
+  - clang/include/clang/AST/AbstractBasicReader.h
+  - clang/include/clang/AST/AbstractBasicWriter.h
+  - clang/include/clang/AST/AbstractTypeReader.h
+  - clang/include/clang/AST/AbstractTypeWriter.h
+  - clang/include/clang/AST/PropertiesBase.td
+  - clang/include/clang/AST/ODRHash.h
+  - clang/include/clang/AST/TypeProperties.td
+  - clang/include/clang/Basic/Module.h
+  - clang/include/clang/Frontend/PrecompiledPreamble.h
+  - clang/include/clang/Lex/ModuleLoader.h
+  - clang/include/clang/Lex/ModuleMap.h
+  - clang/include/clang/Serialization/**
+  - clang/lib/AST/ODRHash.cpp
+  - clang/lib/AST/StmtProfile.cpp
+  - clang/lib/Basic/Module.cpp
+  - clang/lib/Frontend/ModuleDependencyCollector.cpp
+  - clang/lib/Frontend/PrecompiledPreamble.cpp
+  - clang/lib/Lex/ModuleMap.cpp
+  - clang/lib/Sema/SemaModule.cpp
+  - clang/lib/Serialization/**
+  - clang/test/CXX/module/**
+  - clang/test/Modules/**
+  - clang/unittests/Serialization/*
+
+clang-tidy:
+  - clang-tools-extra/clang-tidy/**
+  - clang-tools-extra/docs/clang-tidy/**
+  - clang-tools-extra/test/clang-tidy/**
+
+tools:llvm-mca:
+  - llvm/tools/llvm-mca/**
+  - llvm/include/llvm/MCA/**
+  - llvm/lib/MCA/**
+
+vectorizers:
+  - llvm/lib/Transforms/Vectorize/**
+  - llvm/include/llvm/Transforms/Vectorize/**
+
+clang:
+  - any:
+    - clang/**
+    - '!clang/**/Format/**'
+    - '!clang/tools/clang-format/**'
+
+testing-tools:
+  - llvm/include/llvm/FileCheck/**
+  - llvm/lib/FileCheck/**
+  - llvm/test/FileCheck/**
+  - llvm/unittests/FileCheck/**
+  - llvm/utils/lit/**
+  - llvm/utils/split-file/**
+  - llvm/utils/not/**
+  - llvm/utils/count/**
+  - llvm/utils/FileCheck/**
+  - llvm/docs/CommandGuide/FileCheck.rst
+  - llvm/docs/CommandGuide/lit.rst
+  - llvm/docs/TestingGuide.rst
+  - llvm/test/Other/FileCheck-space.txt
+  - llvm/utils/UpdateTestChecks/**
+  - llvm/utils/update*_test_checks.py
+
+debuginfo:
+  - clang/lib/CodeGen/CGDebugInfo.*
+  - llvm/include/llvm/BinaryFormat/Dwarf.*
+  - llvm/include/llvm/CodeGen/*Debug*.*
+  - llvm/include/llvm/DebugInfo/**
+  - llvm/include/llvm/Debuginfod/**
+  - llvm/include/llvm/Frontend/Debug/**
+  - llvm/include/llvm/IR/Debug*.*
+  - llvm/include/llvm/Object/*Debug*.*
+  - llvm/include/llvm/ObjectYAML/*Debug*.*
+  - llvm/include/llvm/Transforms/Utils/*Debug*.*
+  - llvm/include/llvm-c/DebugInfo.h
+  - llvm/lib/BinaryFormat/Dwarf.cpp
+  - llvm/lib/CodeGen/AsmPrinter/*Debug*.*
+  - llvm/lib/CodeGen/AsmPrinter/Dwarf*.*
+  - llvm/lib/CodeGen/AsmPrinter/DIE*.*
+  - llvm/lib/CodeGen/LiveDebugValues/**
+  - llvm/lib/CodeGen/*Debug*.*
+  - llvm/lib/CodeGen/DwarfEHPrepare.cpp
+  - llvm/lib/DebugInfo/**
+  - llvm/lib/Debuginfod/**
+  - llvm/lib/DWARFLinkerParallel/**
+  - llvm/lib/IR/Debug*.cpp
+  - llvm/lib/MC/MCDwarf.cpp
+  - llvm/lib/Transforms/Utils/*Debug*.*
+  - llvm/test/DebugInfo/**
+  - llvm/test/tools/dsymutil/**
+  - llvm/test/tools/llvm-debuginfo-analyzer/**
+  - llvm/test/tools/llvm-debuginfod/**
+  - llvm/test/tools/llvm-debuginfod-find/**
+  - llvm/test/tools/llvm-dwarfdump/**
+  - llvm/test/tools/llvm-dwarfutil/**
+  - llvm/test/tools/llvm-dwp/**
+  - llvm/test/tools/llvm-gsymutil/**
+  - llvm/test/tools/llvm-pdbuti/**
+  - llvm/tools/dsymutil/**
+  - llvm/tools/llvm-debuginfo-analyzer/**
+  - llvm/tools/llvm-debuginfod/**
+  - llvm/tools/llvm-debuginfod-find/**
+  - llvm/tools/llvm-dwarfdump/**
+  - llvm/tools/llvm-dwarfutil/**
+  - llvm/tools/llvm-dwp/**
+  - llvm/tools/llvm-gsymutil/**
+  - llvm/tools/llvm-pdbutil/**
+
+github:workflow:
+  - .github/workflows/**
+
+cmake:
+  - cmake/**
+  - llvm/cmake/**
+  - runtimes/**
+
+flang:driver:
+  - flang/tools/flang-driver/**
+  - flang/unittests/Frontend/**
+  - flang/lib/FrontendTool/**
+  - flang/lib/Frontend/**
+  - flang/include/flang/Frontend/**
+  - flang/include/flang/FrontendTool/**
+  - flang/test/Driver/**
+
+backend:m68k:
+  - llvm/lib/Target/M68k/**
+  - clang/lib/Basic/Targets/M68k.*
+  - clang/lib/CodeGen/Targets/M68k.cpp
+  - llvm/test/CodeGen/M68k/**
+  - llvm/test/MC/Disassembler/M68k/**
+  - llvm/test/MC/M68k/**
+
+libc++:
+  - libcxx/**
+
+libc++abi:
+  - libcxxabi/**
+
+libunwind:
+  - libunwind/**
+
+objectyaml:
+  - llvm/include/llvm/ObjectYAML/**
+  - llvm/lib/ObjectYAML/**
+  - llvm/test/tools/obj2yaml/**
+  - llvm/test/tools/yaml2obj/**
+  - llvm/tools/obj2yaml/**
+  - llvm/tools/yaml2obj/**
+
+clang:analysis:
+  - clang/include/clang/Analysis/**
+  - clang/lib/Analysis/**
+
+clang:static analyzer:
+  - clang/include/clang/StaticAnalyzer/**
+  - clang/lib/StaticAnalyzer/**
+  - clang/tools/scan-build/**
+  - clang/utils/analyzer/**
+  - clang/docs/analyzer/**
+
+pgo:
+  - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
+  - llvm/lib/Transforms/Instrumentation/ControlHeightReduction.cpp
+  - llvm/lib/Transforms/Instrumentation/IndirectCallPromotion.cpp
+  - llvm/lib/Transforms/Instrumentation/InstrProfiling.cpp
+  - llvm/lib/Transforms/Instrumentation/PGO*
+  - llvm/lib/Transforms/Instrumentation/ValueProfile*
+  - llvm/test/Instrumentation/InstrProfiling/**
+  - llvm/test/Transforms/PGOProfile/**
+  - compiler-rt/lib/profile/**
+  - compiler-rt/lib/memprof/**
+  - compiler-rt/test/profile/**
+  - compiler-rt/test/memprof/**
+  - llvm/tools/llvm-profdata/**
+  - llvm/tools/llvm-profgen/**
+  - llvm/test/tools/llvm-profdata/**
+  - llvm/test/tools/llvm-profgen/**
+  - llvm/unittests/ProfileData/*
+
+openacc:
+  - flang/**/OpenACC/**
+  - flang/include/flang/Lower/OpenACC.h
+  - flang/docs/OpenACC.md
+  - flang/lib/Parser/openacc-parsers.cpp
+  - flang/lib/Lower/OpenACC.cpp
+  - llvm/**/Frontend/OpenACC/**
+  - llvm/unittests/Frontend/OpenACCTest.cpp
+  - mlir/test/Target/LLVMIR/openacc-llvm.mlir
+  - mlir/**/*OpenACC/**
+
+flang:runtime:
+  - flang/runtime/**
+
+flang:parser:
+  - flang/**/Parser/**
+
+flang:semantics:
+  - flang/**/Evaluate/**
+  - flang/**/Semantics/**
+
+flang:fir-hlfir:
+  - flang/**/Lower/**
+  - flang/**/Optimizer/**
+
+flang:codegen:
+  - flang/**/CodeGen/**
+
+llvm:globalisel:
+  - llvm/**/GlobalISel/**
+  - llvm/utils/TableGen/GlobalISel*
+
+function-specialization:
+  - llvm/include/llvm/Transforms/Utils/SCCPSolver.h
+  - llvm/lib/Transforms/Utils/SCCPSolver.cpp
+  - llvm/include/llvm/Transforms/IPO/FunctionSpecialization.h
+  - llvm/lib/Transforms/IPO/FunctionSpecialization.cpp
+  - llvm/test/Transforms/FunctionSpecialization/*
+
+libc:
+  - libc/**
+  - utils/bazel/llvm-project-overlay/libc/**
+
+clang-format:
+  - clang/**/Format/**
+  - clang/tools/clang-format/**
+
+flang:openmp:
+  - flang/test/**/OpenMP/**
+  - flang/lib/Lower/OpenMP.cpp
+  - flang/lib/Semantics/resolve-directives.cpp
+  - flang/lib/Semantics/check-omp-structure.cpp
+  - flang/lib/Optimizer/Transforms/OMP*
+  - flang/test/Fir/convert-to-llvm-openmp-and-fir.fir
+  - flang/test/Lower/OpenMP/**
+  - flang/test/Transforms/omp*
+  - mlir/**/*OpenMP*
+  - mlir/test/Target/LLVMIR/openmp*
+  - llvm/lib/Frontend/OpenMP/**
+  - llvm/include/llvm/Frontend/OpenMP/**
+  - llvm/unittests/Frontend/OpenMP*
+
+llvm:ir:
+  - llvm/lib/IR/**
+  - llvm/include/llvm/IR/**
+  - llvm/docs/LangRef.rst
+  - llvm/unittests/IR/**
+
+llvm:analysis:
+  - llvm/lib/Analysis/**
+  - llvm/include/llvm/Analysis/**
+  - llvm/test/Analysis/**
+  - llvm/unittests/Analysis/**
+
+llvm:adt:
+  - llvm/**/ADT/*
+
+llvm:support:
+  - llvm/**/Support/**
+
+llvm:transforms:
+  - llvm/lib/Transforms/**
+  - llvm/include/llvm/Transforms/**
+  - llvm/test/Transforms/**
+  - llvm/unittests/Transforms/**
+
+clangd:
+  - clang-tools-extra/clangd/**
+
+hlsl:
+  - clang/test/ParserHLSL/**
+  - clang/test/SemaHLSL/**
+  - clang/test/AST/HLSL/**
+  - clang/test/CodeGenHLSL/**
+  - clang/cmake/caches/HLSL.cmake
+  - clang/include/clang/Basic/HLSL*.h
+  - clang/include/clang/Sema/HLSL*.h
+  - clang/docs/HLSL/**
+  - clang/lib/Driver/ToolChains/HLSL*
+  - clang/lib/Parse/ParseHLSL.cpp
+  - clang/lib/Sema/HLSLExternalSemaSource.cpp
+  - clang/lib/Sema/SemaHLSL.cpp
+  - clang/lib/CodeGen/CGHLSLRuntime.*
+  - llvm/include/llvm/Frontend/HLSL/**
+  - llvm/lib/Frontend/HLSL/**
+
+llvm:SelectionDAG:
+  - llvm/include/llvm/CodeGen/SelectionDAG*.h
+  - llvm/include/llvm/CodeGen/SDNodeProperties.td
+  - llvm/include/llvm/Target/TargetSelectionDAG.td
+  - llvm/lib/CodeGen/SelectionDAG/**
+  - llvm/utils/TableGen/CodeGenDAG*
+  - llvm/utils/TableGen/DAGISel*
+  - llvm/include/llvm/CodeGen/DAGCombine.h
+  - llvm/include/llvm/CodeGen/ISDOpcodes.h
+
+backend:DirectX:
+  - '**/*DirectX*'
+  - '**/*DXIL*'
+  - '**/*dxil*'
+  - '**/*DirectX*/**'
+  - '**/*DXIL*/**'
+  - '**/*dxil*/**'
+
+backend:SPIR-V:
+  - clang/lib/Driver/ToolChains/SPIRV.*
+  - llvm/lib/Target/SPIRV/**
+  - llvm/test/CodeGen/SPIRV/**
+  - llvm/test/Frontend/HLSL/**
+  - llvm/docs/SPIRVUsage.rst
+
+mlgo:
+  - llvm/lib/Analysis/ML*
+  - llvm/include/llvm/Analysis/ML*
+  - llvm/lib/Analysis/*Runner.cpp
+  - llvm/include/llvm/Analysis/*Runner.h
+  - llvm/unittests/Analysis/ML*
+  - llvm/lib/Analysis/FunctionPropertiesAnalysis.cpp
+  - llvm/include/llvm/Analysis/FunctionPropertiesAnalysis.h
+  - llvm/test/Analysis/FunctionPropertiesAnalysis/*
+  - llvm/unittests/Analysis/FunctionPropertiesAnalysisTest.cpp
+  - llvm/test/Transforms/inline/ML/**
+  - llvm/lib/CodeGen/ML*
+  - llvm/unittests/CodeGen/ML*
+  - llvm/test/CodeGen/MLRegAlloc/**
+
+tools:llvm-exegesis:
+  - llvm/tools/llvm-exegesis/**
+  - llvm/test/tools/llvm-exegesis/**
+  - llvm/unittests/tools/llvm-exegesis/**
+
+platform:windows:
+  - lld/COFF/**
+  - clang/lib/Driver/MSVC.cpp
+  - clang/lib/Driver/MinGW.cpp
+  - llvm/lib/DebugInfo/CodeView/**
+  - llvm/lib/DebugInfo/PDB/**
+  - llvm/lib/WindowsDriver/**
+  - llvm/lib/Support/Windows/**
+  - llvm/lib/BinaryFormat/COFF.cpp
+
+llvm:regalloc:
+  - llvm/**/CodeGen/CalcSpillWeights*
+  - llvm/**/CodeGen/InlineSpiller*
+  - llvm/**/CodeGen/InterferenceCache*
+  - llvm/**/CodeGen/LiveInterval*
+  - llvm/**/CodeGen/LiveRange*
+  - llvm/**/CodeGen/LiveReg*
+  - llvm/**/CodeGen/LiveVariables*
+  - llvm/**/CodeGen/MachineCopyPropagation*
+  - llvm/**/CodeGen/PHIElimination*
+  - llvm/**/CodeGen/ProcessImplicitDefs.cpp
+  - llvm/**/CodeGen/Register*
+  - llvm/**/CodeGen/RegUsage*
+  - llvm/**/CodeGen/RenameIndependentSubregs.cpp
+  - llvm/**/CodeGen/SlotIndexes.h
+  - llvm/**/CodeGen/SpillPlacement*
+  - llvm/**/CodeGen/SplitKit*
+  - llvm/**/CodeGen/VirtRegMap.h
+  - llvm/include/PBQP/**
+  - llvm/include/PBQPRAConstraint.h
+  - llvm/include/llvm/CodeGen/Spiller.h
+  - llvm/**/*RegAlloc
+
+mlir:presburger:
+  - mlir/**/*Presburger
+
+lldb:
+  - lldb/**
+
+backend:AMDGPU:
+  - '**/*amdgpu*'
+  - '**/*AMDGPU*'
+  - '**/*amdgpu*/**'
+  - '**/*AMDGPU*/**'
+
+backend:RISC-V:
+  - clang/**/*riscv*
+  - clang/**/*RISCV*
+  - llvm/**/*riscv*
+  - llvm/**/*RISCV*
+
+lld:coff:
+  - lld/**/COFF/**
+  - lld/Common/**
+
+lld:elf:
+  - lld/**/ELF/**
+  - lld/Common/**
+
+lld:macho:
+  - lld/**/MachO/**
+  - lld/Common/**
+
+lld:wasm:
+  - lld/**/wasm/**
+  - lld/Common/**
+
+backend:ARM:
+  - llvm/include/llvm/IR/IntrinsicsARM.td
+  - llvm/test/MC/ARM/**
+  - llvm/lib/Target/ARM/**
+  - llvm/test/CodeGen/ARM/**
+  - clang/lib/Basic/Targets/ARM*
+  - clang/lib/Driver/ToolChains/Arch/ARM.*
+  - clang/lib/CodeGen/Targets/ARM.cpp
+  - clang/include/clang/Basic/BuiltinsARM*
+  - llvm/test/MC/DisasemblerARM/**
+
+backend:AArch64:
+  - llvm/include/llvm/IR/IntrinsicsAArch64.td
+  - llvm/test/MC/AArch64/**
+  - llvm/lib/Target/AArch64/**
+  - llvm/test/CodeGen/AArch64/**
+  - clang/lib/Basic/Targets/AArch64*
+  - clang/lib/Driver/ToolChains/Arch/AArch64.*
+  - clang/lib/CodeGen/Targets/AArch64.cpp
+  - clang/include/clang/Basic/BuiltinsAArch64*
+  - llvm/test/MC/Disassembler/AArch64/**
+
+backend:loongarch:
+  - llvm/include/llvm/IR/IntrinsicsLoongArch.td
+  - llvm/test/MC/LoongArch/**
+  - llvm/lib/Target/LoongArch/**
+  - llvm/test/CodeGen/LoongArch/**
+  - clang/lib/Basic/Targets/LoongArch*
+  - clang/lib/Driver/ToolChains/Arch/LoongArch.*
+  - clang/lib/CodeGen/Targets/LoongArch.cpp
+  - clang/include/clang/Basic/BuiltinsLoongArch*
+
+backend:MSP430:
+  - llvm/include/llvm/IR/IntrinsicsMSP430.td
+  - llvm/test/MC/MSP430/**
+  - llvm/lib/Target/MSP430/**
+  - llvm/test/CodeGen/MSP430/**
+  - clang/lib/Basic/Targets/MSP430*
+  - clang/lib/Driver/ToolChains/Arch/MSP430.*
+  - clang/lib/CodeGen/Targets/MSP430.cpp
+  - clang/include/clang/Basic/BuiltinsMSP430*
+  - llvm/test/MC/Disassembler/MSP430/**
+
+backend:Sparc:
+  - llvm/include/llvm/IR/IntrinsicsSparc.td
+  - llvm/test/MC/Sparc/**
+  - llvm/lib/Target/Sparc/**
+  - llvm/test/CodeGen/Sparc/**
+  - clang/lib/Basic/Targets/Sparc*
+  - clang/lib/Driver/ToolChains/Arch/Sparc.*
+  - clang/lib/CodeGen/Targets/Sparc.cpp
+  - clang/include/clang/Basic/BuiltinsSparc*
+  - llvm/test/MC/Disassembler/Sparc/**
+
+backend:WebAssembly:
+  - llvm/lib/Target/WebAssembly/**
+  - llvm/test/CodeGen/WebAssembly/**
+  - clang/lib/Basic/Targets/WebAssembly*
+  - clang/include/clang/Basic/BuiltinsWebAssembly.def
+  - clang/include/clang/Basic/WebAssemblyReferenceTypes.def
+  - clang/lib/CodeGen/Targets/WebAssembly*
+  - llvm/include/llvm/IR/IntinsicsWebAssembly.td
+  - llvm/include/llvm/Object/Wasm*
+  - llvm/lib/CodeGen/AsmPrinter/Wasm*
+  - llvm/lib/CodeGen/Wasm*
+  - llvm/lib/MC/MCParser/Wasm*
+  - llvm/lib/MC/Wasm*
+  - llvm/lib/ObjCopy/wasm/**
+  - llvm/lib/Object/Wasm*
+  - clang/lib/Driver/Toolchains/WebAssembly*
+  - clang/lib/Headers/wasm_simd128.h
+  - clang/test/CodeGen/WebAssembly/**
+  - clang/test/SemaCXX/*wasm*
+  - clang/test/Sema/*wasm*
+  - llvm/include/llvm/BinaryFormat/Wasm.h
+  - llvm/unittests/Target/WebAssembly/**
+  - llvm/test/DebugInfo/WebAssembly/**
+  - llvm/test/MC/WebAssembly/**
+
+backend:X86:
+  - llvm/include/llvm/IR/IntrinsicsX86.td
+  - llvm/lib/Target/X86/**
+  - llvm/test/CodeGen/X86/**
+  - llvm/test/MC/X86/**
+  - llvm/test/MC/Disassembler/X86/**
+  - llvm/test/Analysis/CostModel/X86/**
+  - llvm/test/tools/llvm-mca/X86/**
+  - clang/lib/Basic/Targets/X86/**
+  - clang/lib/Driver/ToolChains/Arch/X86.*
+  - clang/lib/CodeGen/Targets/X86.*
+  - clang/lib/Headers/**
+  - clang/test/CodeGen/X86/**
+  - clang/include/clang/Basic/BuiltinsX86*
+  - llvm/include/llvm/Support/X86DisassemblerDecoderCommon.h
+  - llvm/include/llvm/TargetParser/X86*
+  - llvm/lib/TargetParser/X86*
+  - llvm/utils/TableGen/X86*
+
+third-party:unittests:
+  - third-party/unittests/**
+
+llvm:binary-utilities:
+  - llvm/docs/CommandGuide/llvm-*
+  - llvm/include/llvm/BinaryFormat/**
+  - llvm/include/llvm/DebugInfo/Symbolize/**
+  - llvm/include/llvm/ObjCopy/**
+  - llvm/include/llvm/Object/**
+  - llvm/lib/BinaryFormat/**
+  - llvm/lib/DebugInfo/Symbolize/**
+  - llvm/lib/ObjCopy/**
+  - llvm/lib/Object/**
+  - llvm/test/Object/**
+  - llvm/test/tools/llvm-ar/**
+  - llvm/test/tools/llvm-cxxfilt/**
+  - llvm/test/tools/llvm-nm/**
+  - llvm/test/tools/llvm-objcopy/**
+  - llvm/test/tools/llvm-objdump/**
+  - llvm/test/tools/llvm-readobj/**
+  - llvm/test/tools/llvm-size/**
+  - llvm/test/tools/llvm-strings/**
+  - llvm/test/tools/llvm-symbolizer/**
+  - llvm/tools/llvm-ar/**
+  - llvm/tools/llvm-cxxfilt/**
+  - llvm/tools/llvm-nm/**
+  - llvm/tools/llvm-objcopy/**
+  - llvm/tools/llvm-objdump/**
+  - llvm/tools/llvm-readobj/**
+  - llvm/tools/llvm-size/**
+  - llvm/tools/llvm-strings/**
+  - llvm/tools/llvm-symbolizer/**

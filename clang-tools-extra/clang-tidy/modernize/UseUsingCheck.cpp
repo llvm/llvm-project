@@ -120,8 +120,10 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
         Type.substr(0, FirstTypedefType.size()) == FirstTypedefType)
       Type = FirstTypedefName + Type.substr(FirstTypedefType.size() + 1);
   }
-  if (!ReplaceRange.getEnd().isMacroID())
-    LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Name.size());
+  if (!ReplaceRange.getEnd().isMacroID()) {
+    const SourceLocation::IntTy Offset = MatchedDecl->getFunctionType() ? 0 : Name.size();
+    LastReplacementEnd = ReplaceRange.getEnd().getLocWithOffset(Offset);
+  }
 
   auto Diag = diag(ReplaceRange.getBegin(), UseUsingWarning);
 

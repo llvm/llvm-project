@@ -3180,6 +3180,7 @@ def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
 def : Pat<(int_ppc_readflm), (MFFS)>;
+def : Pat<(int_ppc_mffsl), (MFFSL)>;
 
 // Hi and Lo for Darwin Global Addresses.
 def : Pat<(PPChi tglobaladdr:$in, 0), (LIS tglobaladdr:$in)>;
@@ -3251,8 +3252,8 @@ def GETtlsTpointer32AIX : PPCEmitTimePseudo<(outs gprc:$rD), (ins),
                           "GETtlsTpointer32AIX",
                           [(set i32:$rD, (PPCgetTpointer))]>;
 
-// The following pattern matches local-exec TLS accesses on 32-bit AIX.
-// PPCaddTls is used in local-exec accesses in order to:
+// The following pattern matches local- and initial-exec TLS accesses on 32-bit AIX.
+// PPCaddTls is used in local- and initial-exec accesses in order to:
 //   - Get the address of a variable (add the variable offset to the thread
 //     pointer, retrieved by calling .__get_tpointer).
 //   - Create an opportunity to optimize the user of the loaded address.
@@ -5027,12 +5028,12 @@ def : Pat<(atomic_load_16 XForm:$src), (LHZX memrr:$src)>;
 def : Pat<(atomic_load_32 XForm:$src), (LWZX memrr:$src)>;
 
 // Atomic stores
-def : Pat<(atomic_store_8  DForm:$ptr, i32:$val), (STB  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_16 DForm:$ptr, i32:$val), (STH  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_32 DForm:$ptr, i32:$val), (STW  gprc:$val, memri:$ptr)>;
-def : Pat<(atomic_store_8  XForm:$ptr, i32:$val), (STBX gprc:$val, memrr:$ptr)>;
-def : Pat<(atomic_store_16 XForm:$ptr, i32:$val), (STHX gprc:$val, memrr:$ptr)>;
-def : Pat<(atomic_store_32 XForm:$ptr, i32:$val), (STWX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_8  i32:$val, DForm:$ptr), (STB  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_16 i32:$val, DForm:$ptr), (STH  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_32 i32:$val, DForm:$ptr), (STW  gprc:$val, memri:$ptr)>;
+def : Pat<(atomic_store_8  i32:$val, XForm:$ptr), (STBX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_16 i32:$val, XForm:$ptr), (STHX gprc:$val, memrr:$ptr)>;
+def : Pat<(atomic_store_32 i32:$val, XForm:$ptr), (STWX gprc:$val, memrr:$ptr)>;
 
 let Predicates = [IsISA3_0] in {
 

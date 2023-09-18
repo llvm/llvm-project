@@ -298,17 +298,5 @@ private:
   std::map<CharBlock, const CookedSource &, CharBlockPointerComparator> index_;
 };
 
-// For use as a Comparator for maps, sets, sorting, &c.
-class CharBlockComparator {
-public:
-  explicit CharBlockComparator(const AllCookedSources &all) : all_{all} {}
-  bool operator()(CharBlock x, CharBlock y) const {
-    return all_.Precedes(x, y);
-  }
-
-private:
-  const AllCookedSources &all_;
-};
-
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PROVENANCE_H_

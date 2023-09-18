@@ -21,26 +21,39 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
+#include <array>
 #include <variant>
 
 namespace llvm {
 namespace object {
 
 namespace DirectX {
+
+namespace detail {
+template <typename T>
+std::enable_if_t<std::is_arithmetic<T>::value, void> swapBytes(T &value) {
+  sys::swapByteOrder(value);
+}
+
+template <typename T>
+std::enable_if_t<std::is_class<T>::value, void> swapBytes(T &value) {
+  value.swapBytes();
+}
+} // namespace detail
 class PSVRuntimeInfo {
 
   // This class provides a view into the underlying resource array. The Resource
   // data is little-endian encoded and may not be properly aligned to read
   // directly from. The dereference operator creates a copy of the data and byte
   // swaps it as appropriate.
-  struct ResourceArray {
+  template <typename T> struct ViewArray {
     StringRef Data;
-    uint32_t Stride; // size of each element in the list.
+    uint32_t Stride = sizeof(T); // size of each element in the list.
 
-    ResourceArray() = default;
-    ResourceArray(StringRef D, size_t S) : Data(D), Stride(S) {}
+    ViewArray() = default;
+    ViewArray(StringRef D, size_t S) : Data(D), Stride(S) {}
 
-    using value_type = dxbc::PSV::v2::ResourceBindInfo;
+    using value_type = T;
     static constexpr uint32_t MaxStride() {
       return static_cast<uint32_t>(sizeof(value_type));
     }
@@ -50,7 +63,7 @@ class PSVRuntimeInfo {
       uint32_t Stride; // size of each element in the list.
       const char *Current;
 
-      iterator(const ResourceArray &A, const char *C)
+      iterator(const ViewArray &A, const char *C)
           : Data(A.Data), Stride(A.Stride), Current(C) {}
       iterator(const iterator &) = default;
 
@@ -58,13 +71,14 @@ class PSVRuntimeInfo {
         // Explicitly zero the structure so that unused fields are zeroed. It is
         // up to the user to know if the fields are used by verifying the PSV
         // version.
-        value_type Val = {{0, 0, 0, 0}, 0, 0};
+        value_type Val;
+        std::memset(&Val, 0, sizeof(value_type));
         if (Current >= Data.end())
           return Val;
         memcpy(static_cast<void *>(&Val), Current,
                std::min(Stride, MaxStride()));
         if (sys::IsBigEndianHost)
-          Val.swapBytes();
+          detail::swapBytes(Val);
         return Val;
       }
 
@@ -103,6 +117,9 @@ class PSVRuntimeInfo {
     size_t size() const { return Data.size() / Stride; }
   };
 
+  using ResourceArray = ViewArray<dxbc::PSV::v2::ResourceBindInfo>;
+  using SigElementArray = ViewArray<dxbc::PSV::v0::SignatureElement>;
+
   StringRef Data;
   uint32_t Size;
   using InfoStruct =
@@ -110,6 +127,17 @@ class PSVRuntimeInfo {
                    dxbc::PSV::v1::RuntimeInfo, dxbc::PSV::v2::RuntimeInfo>;
   InfoStruct BasicInfo;
   ResourceArray Resources;
+  StringRef StringTable;
+  SmallVector<uint32_t> SemanticIndexTable;
+  SigElementArray SigInputElements;
+  SigElementArray SigOutputElements;
+  SigElementArray SigPatchOrPrimElements;
+
+  std::array<ViewArray<uint32_t>, 4> OutputVectorMasks;
+  ViewArray<uint32_t> PatchOrPrimMasks;
+  std::array<ViewArray<uint32_t>, 4> InputOutputMap;
+  ViewArray<uint32_t> InputPatchMap;
+  ViewArray<uint32_t> PatchOutputMap;
 
 public:
   PSVRuntimeInfo(StringRef D) : Data(D), Size(0) {}
@@ -130,6 +158,78 @@ public:
   uint32_t getResourceStride() const { return Resources.Stride; }
 
   const InfoStruct &getInfo() const { return BasicInfo; }
+
+  template <typename T> const T *getInfoAs() const {
+    if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
+      return static_cast<const T *>(P);
+    if (std::is_same<T, dxbc::PSV::v2::RuntimeInfo>::value)
+      return nullptr;
+
+    if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
+      return static_cast<const T *>(P);
+    if (std::is_same<T, dxbc::PSV::v1::RuntimeInfo>::value)
+      return nullptr;
+
+    if (const auto *P = std::get_if<dxbc::PSV::v0::RuntimeInfo>(&BasicInfo))
+      return static_cast<const T *>(P);
+    return nullptr;
+  }
+
+  StringRef getStringTable() const { return StringTable; }
+  ArrayRef<uint32_t> getSemanticIndexTable() const {
+    return SemanticIndexTable;
+  }
+
+  uint8_t getSigInputCount() const;
+  uint8_t getSigOutputCount() const;
+  uint8_t getSigPatchOrPrimCount() const;
+
+  SigElementArray getSigInputElements() const { return SigInputElements; }
+  SigElementArray getSigOutputElements() const { return SigOutputElements; }
+  SigElementArray getSigPatchOrPrimElements() const {
+    return SigPatchOrPrimElements;
+  }
+
+  ViewArray<uint32_t> getOutputVectorMasks(size_t Idx) const {
+    assert(Idx < 4);
+    return OutputVectorMasks[Idx];
+  }
+
+  ViewArray<uint32_t> getPatchOrPrimMasks() const { return PatchOrPrimMasks; }
+
+  ViewArray<uint32_t> getInputOutputMap(size_t Idx) const {
+    assert(Idx < 4);
+    return InputOutputMap[Idx];
+  }
+
+  ViewArray<uint32_t> getInputPatchMap() const { return InputPatchMap; }
+  ViewArray<uint32_t> getPatchOutputMap() const { return PatchOutputMap; }
+
+  uint32_t getSigElementStride() const { return SigInputElements.Stride; }
+
+  bool usesViewID() const {
+    if (const auto *P = getInfoAs<dxbc::PSV::v1::RuntimeInfo>())
+      return P->UsesViewID != 0;
+    return false;
+  }
+
+  uint8_t getInputVectorCount() const {
+    if (const auto *P = getInfoAs<dxbc::PSV::v1::RuntimeInfo>())
+      return P->SigInputVectors;
+    return 0;
+  }
+
+  ArrayRef<uint8_t> getOutputVectorCounts() const {
+    if (const auto *P = getInfoAs<dxbc::PSV::v1::RuntimeInfo>())
+      return ArrayRef<uint8_t>(P->SigOutputVectors);
+    return ArrayRef<uint8_t>();
+  }
+
+  uint8_t getPatchConstOrPrimVectorCount() const {
+    if (const auto *P = getInfoAs<dxbc::PSV::v1::RuntimeInfo>())
+      return P->GeomData.SigPatchConstOrPrimVectors;
+    return 0;
+  }
 };
 
 } // namespace DirectX

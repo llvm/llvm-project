@@ -78,7 +78,7 @@ class ResourcePressureView : public InstructionView {
   llvm::DenseMap<unsigned, unsigned> Resource2VecIndex;
 
   // Table of resources used by instructions.
-  std::vector<ResourceCycles> ResourceUsage;
+  std::vector<ReleaseAtCycles> ResourceUsage;
   unsigned NumResourceUnits;
 
   void printResourcePressurePerIter(llvm::raw_ostream &OS) const;

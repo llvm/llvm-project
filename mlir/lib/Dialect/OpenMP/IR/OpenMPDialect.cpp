@@ -13,6 +13,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
@@ -1266,6 +1267,9 @@ LogicalResult OrderedRegionOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult AtomicReadOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+
   if (auto mo = getMemoryOrderVal()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Release) {
@@ -1273,9 +1277,6 @@ LogicalResult AtomicReadOp::verify() {
           "memory-order must not be acq_rel or release for atomic reads");
     }
   }
-  if (getX() == getV())
-    return emitError(
-        "read and write must not be to the same location for atomic reads");
   return verifySynchronizationHint(*this, getHintVal());
 }
 
@@ -1284,6 +1285,9 @@ LogicalResult AtomicReadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult AtomicWriteOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+
   if (auto mo = getMemoryOrderVal()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
@@ -1291,30 +1295,12 @@ LogicalResult AtomicWriteOp::verify() {
           "memory-order must not be acq_rel or acquire for atomic writes");
     }
   }
-  Type elementType =
-      llvm::cast<PointerLikeType>(getAddress().getType()).getElementType();
-  if (elementType && elementType != getValue().getType())
-    return emitError("address must dereference to value type");
   return verifySynchronizationHint(*this, getHintVal());
 }
 
 //===----------------------------------------------------------------------===//
 // Verifier for AtomicUpdateOp
 //===----------------------------------------------------------------------===//
-
-bool AtomicUpdateOp::isNoOp() {
-  YieldOp yieldOp = dyn_cast<omp::YieldOp>(getFirstOp());
-  return (yieldOp &&
-          yieldOp.getResults().front() == getRegion().front().getArgument(0));
-}
-
-Value AtomicUpdateOp::getWriteOpVal() {
-  YieldOp yieldOp = dyn_cast<omp::YieldOp>(getFirstOp());
-  if (yieldOp &&
-      yieldOp.getResults().front() != getRegion().front().getArgument(0))
-    return yieldOp.getResults().front();
-  return nullptr;
-}
 
 LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
                                            PatternRewriter &rewriter) {
@@ -1332,6 +1318,9 @@ LogicalResult AtomicUpdateOp::canonicalize(AtomicUpdateOp op,
 }
 
 LogicalResult AtomicUpdateOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+
   if (auto mo = getMemoryOrderVal()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
@@ -1340,43 +1329,16 @@ LogicalResult AtomicUpdateOp::verify() {
     }
   }
 
-  if (getRegion().getNumArguments() != 1)
-    return emitError("the region must accept exactly one argument");
-
-  Type elementType =
-      llvm::cast<PointerLikeType>(getX().getType()).getElementType();
-  if (elementType && elementType != getRegion().getArgument(0).getType()) {
-    return emitError("the type of the operand must be a pointer type whose "
-                     "element type is the same as that of the region argument");
-  }
-
   return verifySynchronizationHint(*this, getHintVal());
 }
 
 LogicalResult AtomicUpdateOp::verifyRegions() {
-
-  YieldOp yieldOp = *getRegion().getOps<YieldOp>().begin();
-
-  if (yieldOp.getResults().size() != 1)
-    return emitError("only updated value must be returned");
-  if (yieldOp.getResults().front().getType() !=
-      getRegion().getArgument(0).getType())
-    return emitError("input and yielded value must have the same type");
-  return success();
+  return verifyRegionsCommon();
 }
 
 //===----------------------------------------------------------------------===//
 // Verifier for AtomicCaptureOp
 //===----------------------------------------------------------------------===//
-
-Operation *AtomicCaptureOp::getFirstOp() {
-  return &getRegion().front().getOperations().front();
-}
-
-Operation *AtomicCaptureOp::getSecondOp() {
-  auto &ops = getRegion().front().getOperations();
-  return ops.getNextNode(ops.front());
-}
 
 AtomicReadOp AtomicCaptureOp::getAtomicReadOp() {
   if (auto op = dyn_cast<AtomicReadOp>(getFirstOp()))
@@ -1401,39 +1363,8 @@ LogicalResult AtomicCaptureOp::verify() {
 }
 
 LogicalResult AtomicCaptureOp::verifyRegions() {
-  Block::OpListType &ops = getRegion().front().getOperations();
-  if (ops.size() != 3)
-    return emitError()
-           << "expected three operations in omp.atomic.capture region (one "
-              "terminator, and two atomic ops)";
-  auto &firstOp = ops.front();
-  auto &secondOp = *ops.getNextNode(firstOp);
-  auto firstReadStmt = dyn_cast<AtomicReadOp>(firstOp);
-  auto firstUpdateStmt = dyn_cast<AtomicUpdateOp>(firstOp);
-  auto secondReadStmt = dyn_cast<AtomicReadOp>(secondOp);
-  auto secondUpdateStmt = dyn_cast<AtomicUpdateOp>(secondOp);
-  auto secondWriteStmt = dyn_cast<AtomicWriteOp>(secondOp);
-
-  if (!((firstUpdateStmt && secondReadStmt) ||
-        (firstReadStmt && secondUpdateStmt) ||
-        (firstReadStmt && secondWriteStmt)))
-    return ops.front().emitError()
-           << "invalid sequence of operations in the capture region";
-  if (firstUpdateStmt && secondReadStmt &&
-      firstUpdateStmt.getX() != secondReadStmt.getX())
-    return firstUpdateStmt.emitError()
-           << "updated variable in omp.atomic.update must be captured in "
-              "second operation";
-  if (firstReadStmt && secondUpdateStmt &&
-      firstReadStmt.getX() != secondUpdateStmt.getX())
-    return firstReadStmt.emitError()
-           << "captured variable in omp.atomic.read must be updated in second "
-              "operation";
-  if (firstReadStmt && secondWriteStmt &&
-      firstReadStmt.getX() != secondWriteStmt.getAddress())
-    return firstReadStmt.emitError()
-           << "captured variable in omp.atomic.read must be updated in "
-              "second operation";
+  if (verifyRegionsCommon().failed())
+    return mlir::failure();
 
   if (getFirstOp()->getAttr("hint_val") || getSecondOp()->getAttr("hint_val"))
     return emitOpError(

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
-// rdar://11777609
 
 typedef struct {} Z;
 
@@ -17,8 +16,6 @@ typedef struct {} Z;
 // CHECK: private unnamed_addr constant [14 x i8] c"v16@0:8{?=}16
 // CHECK: private unnamed_addr constant [26 x i8] c"v32@0:8{?=}16*16{?=}24d24
 
-
-// rdar://13190095
 @interface NSObject @end
 
 @class BABugExample;
@@ -36,7 +33,6 @@ typedef BABugExample BABugExampleRedefinition;
 
 // CHECK: private unnamed_addr constant [8 x i8] c"@16
 
-// rdar://14408244
 @class SCNCamera;
 typedef SCNCamera C3DCamera;
 typedef struct
@@ -54,7 +50,6 @@ typedef struct
 @end
 // CHECK: private unnamed_addr constant [39 x i8] c"{?=\22presentationInstance\22@\22SCNCamera\22}\00"
 
-// rdar://16655340
 int i;
 typeof(@encode(typeof(i))) e = @encode(typeof(i));
 const char * Test(void)

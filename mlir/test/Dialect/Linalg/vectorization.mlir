@@ -13,8 +13,7 @@ func.func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memre
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-  %2 = transform.structured.vectorize %1  { disable_multi_reduction_to_contract_patterns } : (!transform.any_op) -> !transform.any_op
+  transform.structured.masked_vectorize %0  : !transform.any_op
 }
 
 // -----
@@ -1173,7 +1172,7 @@ transform.sequence failures(propagate) {
 func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
   // CHECK: tensor.empty() : tensor<4xf32>
-  // CHECK: vector.multi_reduction <maxf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.multi_reduction <maximumf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant -3.40282e+38 : f32
   %init = tensor.empty() : tensor<4xf32>
@@ -1183,7 +1182,7 @@ func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):
-    %max = arith.maxf %in0, %out0 : f32
+    %max = arith.maximumf %in0, %out0 : f32
     linalg.yield %max : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>
@@ -1204,7 +1203,7 @@ func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMAXF:.+]] = arith.constant dense<3.402820e+38> : vector<4xf32>
   // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
-  // CHECK: vector.multi_reduction <minf>, {{.*}}, %[[CMAXF]] [1] : vector<4x4xf32> to vector<4xf32>
+  // CHECK: vector.multi_reduction <minimumf>, {{.*}}, %[[CMAXF]] [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %maxf32 = arith.constant 3.40282e+38 : f32
   %init = tensor.empty() : tensor<4xf32>
@@ -1214,7 +1213,7 @@ func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
                          iterator_types = ["parallel", "reduction"]}
                          ins(%arg0 : tensor<4x4xf32>) outs(%fill : tensor<4xf32>) {
   ^bb0(%in0: f32, %out0: f32):
-    %min = arith.minf %out0, %in0 : f32
+    %min = arith.minimumf %out0, %in0 : f32
     linalg.yield %min : f32
   } -> tensor<4xf32>
   return %red : tensor<4xf32>

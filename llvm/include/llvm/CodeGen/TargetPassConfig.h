@@ -155,7 +155,7 @@ public:
   //
   void setInitialized() { Initialized = true; }
 
-  CodeGenOpt::Level getOptLevel() const;
+  CodeGenOptLevel getOptLevel() const;
 
   /// Returns true if one of the `-start-after`, `-start-before`, `-stop-after`
   /// or `-stop-before` options is set.
@@ -401,7 +401,7 @@ protected:
   /// all virtual registers.
   ///
   /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
-  /// be honored. This is also not generally used for the the fast variant,
+  /// be honored. This is also not generally used for the fast variant,
   /// where the allocation and rewriting are done in one pass.
   virtual bool addPreRewrite() {
     return false;

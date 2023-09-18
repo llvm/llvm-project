@@ -15,15 +15,16 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "WebAssembly.h"
-#include "WebAssemblyMachineFunctionInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
@@ -39,7 +40,7 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
 
 void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
                                           MCRegister Reg) const {
-  assert(Reg.id() != WebAssemblyFunctionInfo::UnusedReg);
+  assert(Reg.id() != WebAssembly::UnusedReg);
   // Note that there's an implicit local.get/local.set here!
   OS << "$" << Reg.id();
 }
@@ -297,9 +298,9 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (int(WAReg) >= 0)
       printRegName(O, WAReg);
     else if (OpNo >= Desc.getNumDefs() && !IsVariadicDef)
-      O << "$pop" << WebAssemblyFunctionInfo::getWARegStackId(WAReg);
-    else if (WAReg != WebAssemblyFunctionInfo::UnusedReg)
-      O << "$push" << WebAssemblyFunctionInfo::getWARegStackId(WAReg);
+      O << "$pop" << WebAssembly::getWARegStackId(WAReg);
+    else if (WAReg != WebAssembly::UnusedReg)
+      O << "$push" << WebAssembly::getWARegStackId(WAReg);
     else
       O << "$drop";
     // Add a '=' suffix if this is a def.

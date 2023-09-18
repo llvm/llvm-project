@@ -231,12 +231,9 @@ public:
 
     OpAdaptor(const OneToNTypeMapping *operandMapping,
               const OneToNTypeMapping *resultMapping,
-              const ValueRange *convertedOperands, RangeT values,
-              DictionaryAttr attrs = nullptr, Properties &properties = {},
-              RegionRange regions = {})
-        : BaseT(values, attrs, properties, regions),
-          operandMapping(operandMapping), resultMapping(resultMapping),
-          convertedOperands(convertedOperands) {}
+              const ValueRange *convertedOperands, RangeT values, SourceOp op)
+        : BaseT(values, op), operandMapping(operandMapping),
+          resultMapping(resultMapping), convertedOperands(convertedOperands) {}
 
     /// Get the type mapping of the original operands to the converted operands.
     const OneToNTypeMapping &getOperandMapping() const {
@@ -276,8 +273,7 @@ public:
       valueRanges.push_back(values);
     }
     OpAdaptor adaptor(&operandMapping, &resultMapping, &convertedOperands,
-                      valueRanges, op->getAttrDictionary(),
-                      cast<SourceOp>(op).getProperties(), op->getRegions());
+                      valueRanges, cast<SourceOp>(op));
 
     // Call overload implemented by the derived class.
     return matchAndRewrite(cast<SourceOp>(op), adaptor, rewriter);

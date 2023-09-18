@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -73,6 +74,33 @@ struct ShaderHash {
 
 using ResourceBindInfo = dxbc::PSV::v2::ResourceBindInfo;
 
+struct SignatureElement {
+  SignatureElement() = default;
+
+  SignatureElement(dxbc::PSV::v0::SignatureElement El, StringRef StringTable,
+                   ArrayRef<uint32_t> IdxTable)
+      : Name(StringTable.substr(El.NameOffset,
+                                StringTable.find('\0', El.NameOffset) -
+                                    El.NameOffset)),
+        Indices(IdxTable.slice(El.IndicesOffset, El.Rows)),
+        StartRow(El.StartRow), Cols(El.Cols), StartCol(El.StartCol),
+        Allocated(El.Allocated != 0), Kind(El.Kind), Type(El.Type),
+        Mode(El.Mode), DynamicMask(El.DynamicMask), Stream(El.Stream) {}
+  StringRef Name;
+  SmallVector<uint32_t> Indices;
+
+  uint8_t StartRow;
+  uint8_t Cols;
+  uint8_t StartCol;
+  bool Allocated;
+  dxbc::PSV::SemanticKind Kind;
+
+  dxbc::PSV::ComponentType Type;
+  dxbc::PSV::InterpolationMode Mode;
+  llvm::yaml::Hex8 DynamicMask;
+  uint8_t Stream;
+};
+
 struct PSVInfo {
   // The version field isn't actually encoded in the file, but it is inferred by
   // the size of data regions. We include it in the yaml because it simplifies
@@ -81,7 +109,17 @@ struct PSVInfo {
 
   dxbc::PSV::v2::RuntimeInfo Info;
   uint32_t ResourceStride;
-  std::vector<ResourceBindInfo> Resources;
+  SmallVector<ResourceBindInfo> Resources;
+  SmallVector<SignatureElement> SigInputElements;
+  SmallVector<SignatureElement> SigOutputElements;
+  SmallVector<SignatureElement> SigPatchOrPrimElements;
+
+  using MaskVector = SmallVector<llvm::yaml::Hex32>;
+  std::array<MaskVector, 4> OutputVectorMasks;
+  MaskVector PatchOrPrimMasks;
+  std::array<MaskVector, 4> InputOutputMap;
+  MaskVector InputPatchMap;
+  MaskVector PatchOutputMap;
 
   void mapInfoForVersion(yaml::IO &IO);
 
@@ -112,6 +150,12 @@ struct Object {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::Part)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
+
 namespace llvm {
 
 class raw_ostream;
@@ -152,6 +196,10 @@ template <> struct MappingTraits<DXContainerYAML::Object> {
 
 template <> struct MappingTraits<DXContainerYAML::ResourceBindInfo> {
   static void mapping(IO &IO, DXContainerYAML::ResourceBindInfo &Res);
+};
+
+template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::SignatureElement &El);
 };
 
 } // namespace yaml

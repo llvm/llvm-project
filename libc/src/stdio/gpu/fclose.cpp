@@ -1,0 +1,29 @@
+//===-- GPU Implementation of fclose --------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "src/stdio/fclose.h"
+#include "src/stdio/gpu/file.h"
+
+#include <stdio.h>
+
+namespace __llvm_libc {
+
+LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
+  uint64_t ret = 0;
+  uintptr_t file = reinterpret_cast<uintptr_t>(stream);
+  rpc::Client::Port port = rpc::client.open<RPC_CLOSE_FILE>();
+  port.send_and_recv([=](rpc::Buffer *buffer) { buffer->data[0] = file; },
+                     [&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  port.close();
+
+  if (ret != 0)
+    return EOF;
+  return static_cast<int>(ret);
+}
+
+} // namespace __llvm_libc

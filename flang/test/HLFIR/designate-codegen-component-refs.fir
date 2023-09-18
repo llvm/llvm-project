@@ -51,9 +51,9 @@ func.func @test_array(%arg0: !fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,sca
 // CHECK:  %[[VAL_7:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_8:.*]] = arith.constant 1 : index
 // CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index
-// CHECK:  %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, index) -> (index, index, index)
+// CHECK:  %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, index) -> (index, index, index)
 // CHECK:  %[[VAL_11:.*]] = fir.slice %[[VAL_8]], %[[VAL_10]]#1, %[[VAL_7]] path %[[VAL_6]] : (index, index, index, !fir.field) -> !fir.slice<1>
-// CHECK:  %[[VAL_12:.*]] = fir.rebox %[[VAL_1]] {{\[}}%[[VAL_11]]] : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:  %[[VAL_12:.*]] = fir.rebox %[[VAL_2]] {{\[}}%[[VAL_11]]] : (!fir.box<!fir.array<?x!fir.type<t1{scalar_i:i32,scalar_x:f32}>>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 
 func.func @test_array_char(%arg0: !fir.ref<!fir.array<?x!fir.type<t_char{scalar_i:i32,scalar_char:!fir.char<1,5>}>>>, %n : index) {
   %5 = fir.shape %n : (index) -> !fir.shape<1>

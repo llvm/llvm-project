@@ -61,6 +61,9 @@ protected:
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
 
+  static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags);
+  static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
+                                     SDNodeFlags Flags);
   SDValue getIsLtSmallestNormal(SelectionDAG &DAG, SDValue Op,
                                 SDNodeFlags Flags) const;
   SDValue getIsFinite(SelectionDAG &DAG, SDValue Op, SDNodeFlags Flags) const;
@@ -72,7 +75,7 @@ protected:
   SDValue LowerFLOGCommon(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOG10(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
-                          double Log2BaseInverted, SDNodeFlags Flags) const;
+                          bool IsLog10, SDNodeFlags Flags) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerFEXPUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
@@ -242,9 +245,7 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                  SelectionDAG &DAG) const;
-
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
   void ReplaceNodeResults(SDNode * N,
@@ -409,6 +410,10 @@ enum NodeType : unsigned {
 
   // Return with values from a non-entry function.
   RET_GLUE,
+
+  // Convert a unswizzled wave uniform stack address to an address compatible
+  // with a vector offset for use in stack access.
+  WAVE_ADDRESS,
 
   DWORDADDR,
   FRACT,

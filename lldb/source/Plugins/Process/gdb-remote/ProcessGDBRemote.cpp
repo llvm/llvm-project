@@ -28,7 +28,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -36,6 +35,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -129,8 +129,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(ProcessGDBRemote::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return ProcessGDBRemote::GetPluginNameStatic();
   }
 
   PluginProperties() : Properties() {
@@ -899,11 +899,8 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
              process_arch.GetTriple().getTriple());
   }
 
-  if (int addressable_bits = m_gdb_comm.GetAddressingBits()) {
-    lldb::addr_t address_mask = ~((1ULL << addressable_bits) - 1);
-    SetCodeAddressMask(address_mask);
-    SetDataAddressMask(address_mask);
-  }
+  AddressableBits addressable_bits = m_gdb_comm.GetAddressableBits();
+  addressable_bits.SetProcessMasks(*this);
 
   if (process_arch.IsValid()) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
@@ -1929,24 +1926,23 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
 lldb::ThreadSP
 ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
-  static ConstString g_key_tid("tid");
-  static ConstString g_key_name("name");
-  static ConstString g_key_reason("reason");
-  static ConstString g_key_metype("metype");
-  static ConstString g_key_medata("medata");
-  static ConstString g_key_qaddr("qaddr");
-  static ConstString g_key_dispatch_queue_t("dispatch_queue_t");
-  static ConstString g_key_associated_with_dispatch_queue(
+  static constexpr llvm::StringLiteral g_key_tid("tid");
+  static constexpr llvm::StringLiteral g_key_name("name");
+  static constexpr llvm::StringLiteral g_key_reason("reason");
+  static constexpr llvm::StringLiteral g_key_metype("metype");
+  static constexpr llvm::StringLiteral g_key_medata("medata");
+  static constexpr llvm::StringLiteral g_key_qaddr("qaddr");
+  static constexpr llvm::StringLiteral g_key_dispatch_queue_t(
+      "dispatch_queue_t");
+  static constexpr llvm::StringLiteral g_key_associated_with_dispatch_queue(
       "associated_with_dispatch_queue");
-  static ConstString g_key_queue_name("qname");
-  static ConstString g_key_queue_kind("qkind");
-  static ConstString g_key_queue_serial_number("qserialnum");
-  static ConstString g_key_registers("registers");
-  static ConstString g_key_memory("memory");
-  static ConstString g_key_address("address");
-  static ConstString g_key_bytes("bytes");
-  static ConstString g_key_description("description");
-  static ConstString g_key_signal("signal");
+  static constexpr llvm::StringLiteral g_key_queue_name("qname");
+  static constexpr llvm::StringLiteral g_key_queue_kind("qkind");
+  static constexpr llvm::StringLiteral g_key_queue_serial_number("qserialnum");
+  static constexpr llvm::StringLiteral g_key_registers("registers");
+  static constexpr llvm::StringLiteral g_key_memory("memory");
+  static constexpr llvm::StringLiteral g_key_description("description");
+  static constexpr llvm::StringLiteral g_key_signal("signal");
 
   // Stop with signal and thread info
   lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
@@ -1974,7 +1970,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
                         &thread_dispatch_qaddr, &queue_vars_valid,
                         &associated_with_dispatch_queue, &dispatch_queue_t,
                         &queue_name, &queue_kind, &queue_serial_number](
-                           ConstString key,
+                           llvm::StringRef key,
                            StructuredData::Object *object) -> bool {
     if (key == g_key_tid) {
       // thread in big endian hex
@@ -2032,10 +2028,10 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
 
       if (registers_dict) {
         registers_dict->ForEach(
-            [&expedited_register_map](ConstString key,
+            [&expedited_register_map](llvm::StringRef key,
                                       StructuredData::Object *object) -> bool {
               uint32_t reg;
-              if (llvm::to_integer(key.AsCString(), reg))
+              if (llvm::to_integer(key, reg))
                 expedited_register_map[reg] =
                     std::string(object->GetStringValue());
               return true; // Keep iterating through all array items
@@ -2092,7 +2088,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
   switch (stop_type) {
   case 'T':
   case 'S': {
-    // This is a bit of a hack, but is is required. If we did exec, we need to
+    // This is a bit of a hack, but it is required. If we did exec, we need to
     // clear our thread lists and also know to rebuild our dynamic register
     // info before we lookup and threads and populate the expedited register
     // values so we need to know this right away so we can cleanup and update
@@ -2125,6 +2121,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     QueueKind queue_kind = eQueueKindUnknown;
     uint64_t queue_serial_number = 0;
     ExpeditedRegisterMap expedited_register_map;
+    AddressableBits addressable_bits;
     while (stop_packet.GetNameColonValue(key, value)) {
       if (key.compare("metype") == 0) {
         // exception type in big endian hex
@@ -2272,9 +2269,17 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
       } else if (key.compare("addressing_bits") == 0) {
         uint64_t addressing_bits;
         if (!value.getAsInteger(0, addressing_bits)) {
-          addr_t address_mask = ~((1ULL << addressing_bits) - 1);
-          SetCodeAddressMask(address_mask);
-          SetDataAddressMask(address_mask);
+          addressable_bits.SetAddressableBits(addressing_bits);
+        }
+      } else if (key.compare("low_mem_addressing_bits") == 0) {
+        uint64_t addressing_bits;
+        if (!value.getAsInteger(0, addressing_bits)) {
+          addressable_bits.SetLowmemAddressableBits(addressing_bits);
+        }
+      } else if (key.compare("high_mem_addressing_bits") == 0) {
+        uint64_t addressing_bits;
+        if (!value.getAsInteger(0, addressing_bits)) {
+          addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
@@ -2302,6 +2307,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         tid = m_thread_ids.front();
       }
     }
+
+    addressable_bits.SetProcessMasks(*this);
 
     ThreadSP thread_sp = SetThreadStopInfo(
         tid, expedited_register_map, signo, thread_name, reason, description,
@@ -3371,23 +3378,20 @@ void ProcessGDBRemote::MonitorDebugserverProcess(
 
   if (state != eStateInvalid && state != eStateUnloaded &&
       state != eStateExited && state != eStateDetached) {
-    char error_str[1024];
-    if (signo) {
-      const char *signal_cstr =
-          process_sp->GetUnixSignals()->GetSignalAsCString(signo);
-      if (signal_cstr)
-        ::snprintf(error_str, sizeof(error_str),
-                   DEBUGSERVER_BASENAME " died with signal %s", signal_cstr);
+    StreamString stream;
+    if (signo == 0)
+      stream.Format(DEBUGSERVER_BASENAME " died with an exit status of {0:x8}",
+                    exit_status);
+    else {
+      llvm::StringRef signal_name =
+          process_sp->GetUnixSignals()->GetSignalAsStringRef(signo);
+      const char *format_str = DEBUGSERVER_BASENAME " died with signal {0}";
+      if (!signal_name.empty())
+        stream.Format(format_str, signal_name);
       else
-        ::snprintf(error_str, sizeof(error_str),
-                   DEBUGSERVER_BASENAME " died with signal %i", signo);
-    } else {
-      ::snprintf(error_str, sizeof(error_str),
-                 DEBUGSERVER_BASENAME " died with an exit status of 0x%8.8x",
-                 exit_status);
+        stream.Format(format_str, signo);
     }
-
-    process_sp->SetExitStatus(-1, error_str);
+    process_sp->SetExitStatus(-1, stream.GetString());
   }
   // Debugserver has exited we need to let our ProcessGDBRemote know that it no
   // longer has a debugserver instance

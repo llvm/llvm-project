@@ -344,7 +344,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::MaximumOp
   if (isa<tosa::MaximumOp>(op) && isa<FloatType>(elementTy)) {
-    return rewriter.create<arith::MaxFOp>(loc, args[0], args[1]);
+    return rewriter.create<arith::MaximumFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
@@ -355,7 +355,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::MinimumOp
   if (isa<tosa::MinimumOp>(op) && isa<FloatType>(elementTy)) {
-    return rewriter.create<arith::MinFOp>(loc, args[0], args[1]);
+    return rewriter.create<arith::MinimumFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
@@ -481,12 +481,14 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
     if (arith::FPToSIOp::areCastCompatible(srcTy, dstTy)) {
       auto intMin = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getF32FloatAttr(
+          loc, rewriter.getFloatAttr(
+                   getElementTypeOrSelf(srcTy),
                    APInt::getSignedMinValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
       auto intMax = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getF32FloatAttr(
+          loc, rewriter.getFloatAttr(
+                   getElementTypeOrSelf(srcTy),
                    APInt::getSignedMaxValue(dstTy.getIntOrFloatBitWidth())
                        .getSExtValue()));
 
@@ -929,7 +931,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMinOp>(op) && isa<FloatType>(elementTy)) {
-    return rewriter.create<arith::MinFOp>(loc, args[0], args[1]);
+    return rewriter.create<arith::MinimumFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMinOp>(op) && isa<IntegerType>(elementTy)) {
@@ -939,7 +941,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<FloatType>(elementTy)) {
-    return rewriter.create<arith::MaxFOp>(loc, args[0], args[1]);
+    return rewriter.create<arith::MaximumFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && isa<IntegerType>(elementTy)) {

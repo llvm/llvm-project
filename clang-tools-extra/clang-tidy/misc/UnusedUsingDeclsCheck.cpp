@@ -84,7 +84,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   // We don't emit warnings on unused-using-decls from headers, so bail out if
   // the main file is a header.
-  if (const auto *MainFile = Result.SourceManager->getFileEntryForID(
+  if (auto MainFile = Result.SourceManager->getFileEntryRefForID(
           Result.SourceManager->getMainFileID());
       utils::isFileExtension(MainFile->getName(), HeaderFileExtensions))
     return;
@@ -126,10 +126,14 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     // Also remove variants of Used.
     if (const auto *FD = dyn_cast<FunctionDecl>(Used)) {
       removeFromFoundDecls(FD->getPrimaryTemplate());
-    } else if (const auto *Specialization =
-                   dyn_cast<ClassTemplateSpecializationDecl>(Used)) {
+      return;
+    }
+    if (const auto *Specialization =
+            dyn_cast<ClassTemplateSpecializationDecl>(Used)) {
       removeFromFoundDecls(Specialization->getSpecializedTemplate());
-    } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
+      return;
+    }
+    if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
       if (const auto *ET = ECD->getType()->getAs<EnumType>())
         removeFromFoundDecls(ET->getDecl());
     }
@@ -151,10 +155,16 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     if (Used->getKind() == TemplateArgument::Template) {
       if (const auto *TD = Used->getAsTemplate().getAsTemplateDecl())
         removeFromFoundDecls(TD);
-    } else if (Used->getKind() == TemplateArgument::Type) {
+      return;
+    }
+
+    if (Used->getKind() == TemplateArgument::Type) {
       if (auto *RD = Used->getAsType()->getAsCXXRecordDecl())
         removeFromFoundDecls(RD);
-    } else if (Used->getKind() == TemplateArgument::Declaration) {
+      return;
+    }
+
+    if (Used->getKind() == TemplateArgument::Declaration) {
       RemoveNamedDecl(Used->getAsDecl());
     }
     return;

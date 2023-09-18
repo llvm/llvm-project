@@ -226,7 +226,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add ptr addrspace(1) %inout, i32 5 acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i32 5 syncscope("agent") acq_rel
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -493,7 +493,7 @@ define amdgpu_kernel void @add_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add ptr addrspace(1) %inout, i32 %additive acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i32 %additive syncscope("agent") acq_rel
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -823,7 +823,7 @@ define amdgpu_kernel void @add_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw add ptr addrspace(1) %inout, i32 %lane acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i32 %lane  syncscope("agent") acq_rel
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -1062,7 +1062,7 @@ define amdgpu_kernel void @add_i64_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add ptr addrspace(1) %inout, i64 5 acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i64 5  syncscope("agent") acq_rel
   store i64 %old, ptr addrspace(1) %out
   ret void
 }
@@ -1381,7 +1381,7 @@ define amdgpu_kernel void @add_i64_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw add ptr addrspace(1) %inout, i64 %additive acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i64 %additive  syncscope("agent") acq_rel
   store i64 %old, ptr addrspace(1) %out
   ret void
 }
@@ -1475,7 +1475,7 @@ define amdgpu_kernel void @add_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %zext = zext i32 %lane to i64
-  %old = atomicrmw add ptr addrspace(1) %inout, i64 %zext acq_rel
+  %old = atomicrmw add ptr addrspace(1) %inout, i64 %zext syncscope("agent") acq_rel
   store i64 %old, ptr addrspace(1) %out
   ret void
 }
@@ -1735,7 +1735,7 @@ define amdgpu_kernel void @sub_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub ptr addrspace(1) %inout, i32 5 acq_rel
+  %old = atomicrmw sub ptr addrspace(1) %inout, i32 5 syncscope("agent") acq_rel
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -2006,7 +2006,7 @@ define amdgpu_kernel void @sub_i32_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub ptr addrspace(1) %inout, i32 %subitive acq_rel
+  %old = atomicrmw sub ptr addrspace(1) %inout, i32 %subitive syncscope("agent") acq_rel
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -2336,7 +2336,7 @@ define amdgpu_kernel void @sub_i32_varying(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = atomicrmw sub ptr addrspace(1) %inout, i32 %lane acq_rel
+  %old = atomicrmw sub ptr addrspace(1) %inout, i32 %lane syncscope("agent") acq_rel
   store i32 %old, ptr addrspace(1) %out
   ret void
 }
@@ -2627,7 +2627,7 @@ define amdgpu_kernel void @sub_i64_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub ptr addrspace(1) %inout, i64 5 acq_rel
+  %old = atomicrmw sub ptr addrspace(1) %inout, i64 5 syncscope("agent") acq_rel
   store i64 %old, ptr addrspace(1) %out
   ret void
 }
@@ -2959,7 +2959,7 @@ define amdgpu_kernel void @sub_i64_uniform(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
-  %old = atomicrmw sub ptr addrspace(1) %inout, i64 %subitive acq_rel
+  %old = atomicrmw sub ptr addrspace(1) %inout, i64 %subitive syncscope("agent") acq_rel
   store i64 %old, ptr addrspace(1) %out
   ret void
 }
@@ -3053,7 +3053,7 @@ define amdgpu_kernel void @sub_i64_varying(ptr addrspace(1) %out, ptr addrspace(
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %zext = zext i32 %lane to i64
-  %old = atomicrmw sub ptr addrspace(1) %inout, i64 %zext acq_rel
+  %old = atomicrmw sub ptr addrspace(1) %inout, i64 %zext syncscope("agent") acq_rel
   store i64 %old, ptr addrspace(1) %out
   ret void
 }

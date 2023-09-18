@@ -113,6 +113,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("c99", LangOpts.C99)
                         .Case("c11", LangOpts.C11)
                         .Case("c17", LangOpts.C17)
+                        .Case("c23", LangOpts.C23)
                         .Case("freestanding", LangOpts.Freestanding)
                         .Case("gnuinlineasm", LangOpts.GNUAsm)
                         .Case("objc", LangOpts.ObjC)

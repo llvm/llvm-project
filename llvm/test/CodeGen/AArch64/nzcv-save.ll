@@ -6,20 +6,20 @@
 define void @f(ptr nocapture %a, ptr nocapture %b, ptr nocapture %cc, ptr nocapture %dd) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp x9, x8, [x2]
-; CHECK-NEXT:    ldp x11, x10, [x3]
+; CHECK-NEXT:    ldp x8, x10, [x2]
+; CHECK-NEXT:    ldp x9, x11, [x3]
 ; CHECK-NEXT:    ldp x13, x12, [x2, #16]
-; CHECK-NEXT:    ldp x14, x15, [x3, #16]
-; CHECK-NEXT:    adds x9, x9, x11
-; CHECK-NEXT:    adcs x8, x8, x10
-; CHECK-NEXT:    adcs x10, x13, x14
-; CHECK-NEXT:    adc x11, x12, x15
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    ldp x14, x9, [x3, #16]
+; CHECK-NEXT:    adcs x10, x10, x11
+; CHECK-NEXT:    stp x8, x10, [x0]
+; CHECK-NEXT:    adcs x11, x13, x14
+; CHECK-NEXT:    adc x13, x12, x9
 ; CHECK-NEXT:    orr x12, x12, #0x100
-; CHECK-NEXT:    adc x12, x12, x15
-; CHECK-NEXT:    stp x9, x8, [x0]
-; CHECK-NEXT:    stp x10, x11, [x0, #16]
-; CHECK-NEXT:    stp x10, x12, [x1, #16]
-; CHECK-NEXT:    stp x9, x8, [x1]
+; CHECK-NEXT:    adc x9, x12, x9
+; CHECK-NEXT:    stp x11, x13, [x0, #16]
+; CHECK-NEXT:    stp x11, x9, [x1, #16]
+; CHECK-NEXT:    stp x8, x10, [x1]
 ; CHECK-NEXT:    ret
 entry:
   %c = load i256, ptr %cc

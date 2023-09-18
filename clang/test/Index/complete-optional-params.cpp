@@ -79,7 +79,7 @@ int main() {
 // CHECK-CC5-NEXT: Objective-C interface
 
 // RUN: c-index-test -code-completion-at=%s:17:11 %s | FileCheck -check-prefix=CHECK-CC6 %s
-// CHECK-CC6: FunctionDecl:{ResultType void}{TypedText foo_2}{LeftParen (}{Optional {Placeholder Bar1 b1 = Bar1()}{Optional {Comma , }{Placeholder Bar2 b2}}}{RightParen )} (50)
+// CHECK-CC6: FunctionDecl:{ResultType void}{TypedText foo_2}{LeftParen (}{Optional {Placeholder Bar1 b1 = Bar1()}{Optional {Comma , }{Placeholder Bar2 b2 = Bar2()}}}{RightParen )} (50)
 // CHECK-CC6: Completion contexts:
 // CHECK-CC6-NEXT: Any type
 // CHECK-CC6-NEXT: Any value

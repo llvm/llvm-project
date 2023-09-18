@@ -15,6 +15,7 @@
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
+#include "mlir/InitAllExtensions.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
 #include <cstdlib>
@@ -35,6 +36,7 @@ int main(int argc, char **argv) {
   // Register all "core" dialects and our transform dialect extension.
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
+  mlir::registerAllExtensions(registry);
   registerMyExtension(registry);
 
   // Register a handful of cleanup passes that we can run to make the output IR

@@ -61,8 +61,8 @@ def main():
     parser.add_argument(
         "-iregex",
         metavar="PATTERN",
-        default=r".*\.(cpp|cc|c\+\+|cxx|cppm|ccm|cxxm|c\+\+m|c|cl|h|hh|hpp|hxx"
-        r"|m|mm|inc|js|ts|proto|protodevel|java|cs|json)",
+        default=r".*\.(?:cpp|cc|c\+\+|cxx|cppm|ccm|cxxm|c\+\+m|c|cl|h|hh|hpp"
+        r"|hxx|m|mm|inc|js|ts|proto|protodevel|java|cs|json|s?vh?)",
         help="custom pattern selecting file paths to reformat "
         "(case insensitive, overridden by -regex)",
     )

@@ -307,7 +307,7 @@ public:
           JITTargetMachineBuilder JTMB)>;
 
   using ProcessSymbolsJITDylibSetupFunction =
-      std::function<Error(JITDylib &JD)>;
+      unique_function<Expected<JITDylibSP>(LLJIT &J)>;
 
   using PlatformSetupFunction = unique_function<Expected<JITDylibSP>(LLJIT &J)>;
 

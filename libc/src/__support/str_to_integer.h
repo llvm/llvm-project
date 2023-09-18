@@ -49,7 +49,7 @@ LIBC_INLINE bool is_hex_start(const char *__restrict src) {
 // base.
 LIBC_INLINE int infer_base(const char *__restrict *__restrict src) {
   // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
-  // sequence of the deimal digits and the letters a (or A) through f (or F)
+  // sequence of the decimal digits and the letters a (or A) through f (or F)
   // with values 10 through 15 respectively." (C standard 6.4.4.1)
   if (is_hex_start(*src)) {
     (*src) += 2;

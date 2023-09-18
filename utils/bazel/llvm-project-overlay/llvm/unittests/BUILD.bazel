@@ -294,7 +294,10 @@ cc_test(
         ],
         allow_empty = False,
     ),
-    args = ["--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections"],
+    args = [
+        # keep one-per-line
+        "--gtest_filter=-ObjectLinkingLayerTest.TestSetProcessAllSections",
+    ],
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
@@ -627,7 +630,10 @@ cc_test(
             "Support/ParallelTest.cpp",
         ],
     ),
-    args = ["--gtest_filter=-ProgramTest.CreateProcessTrailingSlash"],
+    args = [
+        # keep one-per-line
+        "--gtest_filter=-ProgramTest.CreateProcessTrailingSlash",
+    ],
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],

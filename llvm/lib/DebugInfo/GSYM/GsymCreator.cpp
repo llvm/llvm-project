@@ -270,11 +270,9 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
           }
         } else {
           if (Prev.Range.size() == 0 && Curr.Range.contains(Prev.Range.start())) {
-            if (!Quiet) {
-              OS << "warning: removing symbol:\n"
-                << Prev << "\nKeeping:\n"
-                << Curr << "\n";
-            }
+            // Symbols on macOS don't have address ranges, so if the range
+            // doesn't match and the size is zero, then we replace the empty
+            // symbol function info with the current one.
             std::swap(Prev, Curr);
           } else {
             FinalizedFuncs.emplace_back(std::move(Curr));

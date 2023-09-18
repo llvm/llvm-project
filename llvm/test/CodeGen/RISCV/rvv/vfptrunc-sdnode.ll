@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+v -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
 define <vscale x 1 x half> @vfptrunc_nxv1f32_nxv1f16(<vscale x 1 x float> %va) {
 ;

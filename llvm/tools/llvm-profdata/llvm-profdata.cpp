@@ -407,8 +407,8 @@ static void
 mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
                   SymbolRemapper *Remapper, StringRef OutputFilename,
                   ProfileFormat OutputFormat, uint64_t TraceReservoirSize,
-                  uint64_t MaxTraceLength, bool OutputSparse,
-                  unsigned NumThreads, FailureMode FailMode,
+                  uint64_t MaxTraceLength, int MaxDbgCorrelationWarnings,
+                  bool OutputSparse, unsigned NumThreads, FailureMode FailMode,
                   const StringRef ProfiledBinary) {
   if (OutputFormat == PF_Compact_Binary)
     exitWithError("Compact Binary is deprecated");
@@ -421,7 +421,7 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
     if (auto Err =
             InstrProfCorrelator::get(DebugInfoFilename).moveInto(Correlator))
       exitWithError(std::move(Err), DebugInfoFilename);
-    if (auto Err = Correlator->correlateProfileData())
+    if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       exitWithError(std::move(Err), DebugInfoFilename);
   }
 
@@ -594,7 +594,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   auto checkSampleProfileHasFUnique = [&Reader]() {
     for (const auto &PD : Reader->getProfiles()) {
-      auto &FContext = PD.first;
+      auto &FContext = PD.second.getContext();
       if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
           std::string::npos) {
         return true;
@@ -1270,6 +1270,11 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<std::string> DebugInfoFilename(
       "debug-info", cl::init(""),
       cl::desc("Use the provided debug info to correlate the raw profile."));
+  cl::opt<unsigned> MaxDbgCorrelationWarnings(
+      "max-debug-info-correlation-warnings",
+      cl::desc("The maximum number of warnings to emit when correlating "
+               "profile from debug info (0 = no limit)"),
+      cl::init(5));
   cl::opt<std::string> ProfiledBinary(
       "profiled-binary", cl::init(""),
       cl::desc("Path to binary from which the profile was collected."));
@@ -1331,8 +1336,8 @@ static int merge_main(int argc, const char *argv[]) {
     mergeInstrProfile(WeightedInputs, DebugInfoFilename, Remapper.get(),
                       OutputFilename, OutputFormat,
                       TemporalProfTraceReservoirSize,
-                      TemporalProfMaxTraceLength, OutputSparse, NumThreads,
-                      FailureMode, ProfiledBinary);
+                      TemporalProfMaxTraceLength, MaxDbgCorrelationWarnings,
+                      OutputSparse, NumThreads, FailureMode, ProfiledBinary);
   else
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
                        OutputFormat, ProfileSymbolListFile, CompressAllSections,
@@ -1375,35 +1380,31 @@ struct SampleOverlapStats {
   SampleContext BaseName;
   SampleContext TestName;
   // Number of overlap units
-  uint64_t OverlapCount;
+  uint64_t OverlapCount = 0;
   // Total samples of overlap units
-  uint64_t OverlapSample;
+  uint64_t OverlapSample = 0;
   // Number of and total samples of units that only present in base or test
   // profile
-  uint64_t BaseUniqueCount;
-  uint64_t BaseUniqueSample;
-  uint64_t TestUniqueCount;
-  uint64_t TestUniqueSample;
+  uint64_t BaseUniqueCount = 0;
+  uint64_t BaseUniqueSample = 0;
+  uint64_t TestUniqueCount = 0;
+  uint64_t TestUniqueSample = 0;
   // Number of units and total samples in base or test profile
-  uint64_t BaseCount;
-  uint64_t BaseSample;
-  uint64_t TestCount;
-  uint64_t TestSample;
+  uint64_t BaseCount = 0;
+  uint64_t BaseSample = 0;
+  uint64_t TestCount = 0;
+  uint64_t TestSample = 0;
   // Number of and total samples of units that present in at least one profile
-  uint64_t UnionCount;
-  uint64_t UnionSample;
+  uint64_t UnionCount = 0;
+  uint64_t UnionSample = 0;
   // Weighted similarity
-  double Similarity;
+  double Similarity = 0.0;
   // For SampleOverlapStats instances representing functions, weights of the
   // function in base and test profiles
-  double BaseWeight;
-  double TestWeight;
+  double BaseWeight = 0.0;
+  double TestWeight = 0.0;
 
-  SampleOverlapStats()
-      : OverlapCount(0), OverlapSample(0), BaseUniqueCount(0),
-        BaseUniqueSample(0), TestUniqueCount(0), TestUniqueSample(0),
-        BaseCount(0), BaseSample(0), TestCount(0), TestSample(0), UnionCount(0),
-        UnionSample(0), Similarity(0.0), BaseWeight(0.0), TestWeight(0.0) {}
+  SampleOverlapStats() = default;
 };
 } // end anonymous namespace
 
@@ -2833,7 +2834,8 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
           "be printed");
 
     // TODO: parse context string to support filtering by contexts.
-    Reader->dumpFunctionProfile(StringRef(ShowFunction), OS);
+    FunctionSamples *FS = Reader->getSamplesFor(StringRef(ShowFunction));
+    Reader->dumpFunctionProfile(FS ? *FS : FunctionSamples(), OS);
   }
 
   if (ShowProfileSymbolList) {
@@ -2877,6 +2879,7 @@ static int showMemProfProfile(const std::string &Filename,
 static int showDebugInfoCorrelation(const std::string &Filename,
                                     bool ShowDetailedSummary,
                                     bool ShowProfileSymbolList,
+                                    int MaxDbgCorrelationWarnings,
                                     ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
@@ -2884,12 +2887,12 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
-    if (auto Err = Correlator->dumpYaml(OS))
+    if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))
       exitWithError(std::move(Err), Filename);
     return 0;
   }
 
-  if (auto Err = Correlator->correlateProfileData())
+  if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
     exitWithError(std::move(Err), Filename);
 
   InstrProfSymtab Symtab;
@@ -2989,6 +2992,11 @@ static int show_main(int argc, const char *argv[]) {
       "debug-info", cl::init(""),
       cl::desc("Read and extract profile metadata from debug info and show "
                "the functions it found."));
+  cl::opt<unsigned> MaxDbgCorrelationWarnings(
+      "max-debug-info-correlation-warnings",
+      cl::desc("The maximum number of warnings to emit when correlating "
+               "profile from debug info (0 = no limit)"),
+      cl::init(5));
   cl::opt<bool> ShowCovered(
       "covered", cl::init(false),
       cl::desc("Show only the functions that have been executed."));
@@ -3022,7 +3030,8 @@ static int show_main(int argc, const char *argv[]) {
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, ShowDetailedSummary,
-                                    ShowProfileSymbolList, SFormat, OS);
+                                    ShowProfileSymbolList,
+                                    MaxDbgCorrelationWarnings, SFormat, OS);
 
   if (ProfileKind == instr)
     return showInstrProfile(

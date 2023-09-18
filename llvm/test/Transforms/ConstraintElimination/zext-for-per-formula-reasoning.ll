@@ -9,7 +9,6 @@ define i1 @test(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP_0:%.*]] = icmp uge i8 [[ADD]], 10
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[X]] to i16
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[EXT]], 0
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i16 [[EXT]], 1
 ; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    ret i1 [[RES]]
@@ -31,9 +30,7 @@ define i1 @test2(i8 %x, i8 %y) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[X]] to i16
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i16 [[EXT]], 1
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i16 [[ADD_1]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i16 [[ADD_1]], 2
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i16 [[ADD_1]], 1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_1]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], false
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i16 [[ADD_1]], 1
@@ -63,8 +60,6 @@ define i1 @gep_zext_idx(ptr %p, i8 %cnt, i8 %off) {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[CNT]] to i16
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i16 [[EXT]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[ADD_PTR]], [[P]]
-; CHECK-NEXT:    [[F_1:%.*]] = icmp ult ptr [[ADD_PTR]], [[P]]
 ; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i32, ptr [[P]], i16 11
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt ptr [[ADD_PTR]], [[GEP_11]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false

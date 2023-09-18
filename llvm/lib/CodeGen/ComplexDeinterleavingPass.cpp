@@ -60,6 +60,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -258,7 +259,7 @@ private:
   ///
   /// %OutsideUser can be `llvm.vector.reduce.fadd` or `fadd` preceding
   /// `llvm.vector.reduce.fadd` when unroll factor isn't one.
-  std::map<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
+  MapVector<Instruction *, std::pair<PHINode *, Instruction *>> ReductionInfo;
 
   /// In the process of detecting a reduction, we consider a pair of
   /// %ReductionOP, which we refer to as real and imag (or vice versa), and
@@ -1424,7 +1425,17 @@ bool ComplexDeinterleavingGraph::identifyNodes(Instruction *RootI) {
   // CompositeNode we should choose only one either Real or Imag instruction to
   // use as an anchor for generating complex instruction.
   auto It = RootToNode.find(RootI);
-  if (It != RootToNode.end() && It->second->Real == RootI) {
+  if (It != RootToNode.end()) {
+    auto RootNode = It->second;
+    assert(RootNode->Operation ==
+           ComplexDeinterleavingOperation::ReductionOperation);
+    // Find out which part, Real or Imag, comes later, and only if we come to
+    // the latest part, add it to OrderedRoots.
+    auto *R = cast<Instruction>(RootNode->Real);
+    auto *I = cast<Instruction>(RootNode->Imag);
+    auto *ReplacementAnchor = R->comesBefore(I) ? I : R;
+    if (ReplacementAnchor != RootI)
+      return false;
     OrderedRoots.push_back(RootI);
     return true;
   }

@@ -4,6 +4,7 @@ include "mlir/IR/OpBase.td"
 
 def TestDialect : Dialect {
   let name = "test";
+  let usePropertiesForAttributes = 0;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
@@ -82,3 +83,21 @@ def OptionalGroupB : TestFormat_Op<[{
 def OptionalGroupC : TestFormat_Op<[{
   ($a^)? attr-dict
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
+
+// CHECK-LABEL: OptionalGroupD::parse
+// CHECK: if (auto result = [&]() -> ::mlir::OptionalParseResult {
+// CHECK:   auto odsResult = parseCustom(parser, aOperand, bOperand);
+// CHECK:   if (!odsResult) return {};
+// CHECK:   if (::mlir::failed(*odsResult)) return ::mlir::failure();
+// CHECK:   return ::mlir::success();
+// CHECK: }(); result.has_value() && ::mlir::failed(*result)) {
+// CHECK:   return ::mlir::failure();
+// CHECK: } else if (result.has_value()) {
+
+// CHECK-LABEL: OptionalGroupD::print
+// CHECK-NEXT: if (((getA()) || (getB()))) {
+// CHECK-NEXT:   odsPrinter << ' ';
+// CHECK-NEXT:   printCustom
+def OptionalGroupD : TestFormat_Op<[{
+  (custom<Custom>($a, $b)^)? attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<I64>:$a, Optional<I64>:$b)>;

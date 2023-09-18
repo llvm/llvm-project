@@ -328,7 +328,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i16 0, ptr [[AA]], align 2
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca float, i64 [[TMP2]], align 4
 // CHECK1-NEXT:    store i64 [[TMP2]], ptr [[__VLA_EXPR0]], align 8
@@ -562,7 +562,7 @@ int bar(int n){
 // CHECK1:       omp_if.end20:
 // CHECK1-NEXT:    [[TMP115:%.*]] = load i32, ptr [[A]], align 4
 // CHECK1-NEXT:    [[TMP116:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP116]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP116]])
 // CHECK1-NEXT:    ret i32 [[TMP115]]
 //
 //
@@ -607,38 +607,38 @@ int bar(int n){
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META15:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]])
 // CHECK1-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META19:![0-9]+]])
-// CHECK1-NEXT:    store i32 [[TMP2]], ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias [[META21:![0-9]+]]
-// CHECK1-NEXT:    store ptr [[TMP5]], ptr [[DOTPART_ID__ADDR_I]], align 8, !noalias [[META21]]
-// CHECK1-NEXT:    store ptr null, ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias [[META21]]
-// CHECK1-NEXT:    store ptr null, ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias [[META21]]
-// CHECK1-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 8, !noalias [[META21]]
-// CHECK1-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META21]]
-// CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META21]]
-// CHECK1-NEXT:    store i32 2, ptr [[KERNEL_ARGS_I]], align 4, !noalias [[META21]]
+// CHECK1-NEXT:    store i32 [[TMP2]], ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !21
+// CHECK1-NEXT:    store ptr [[TMP5]], ptr [[DOTPART_ID__ADDR_I]], align 8, !noalias !21
+// CHECK1-NEXT:    store ptr null, ptr [[DOTPRIVATES__ADDR_I]], align 8, !noalias !21
+// CHECK1-NEXT:    store ptr null, ptr [[DOTCOPY_FN__ADDR_I]], align 8, !noalias !21
+// CHECK1-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 8, !noalias !21
+// CHECK1-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !21
+// CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias !21
+// CHECK1-NEXT:    store i32 2, ptr [[KERNEL_ARGS_I]], align 4, !noalias !21
 // CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 1
-// CHECK1-NEXT:    store i32 0, ptr [[TMP9]], align 4, !noalias [[META21]]
+// CHECK1-NEXT:    store i32 0, ptr [[TMP9]], align 4, !noalias !21
 // CHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 2
-// CHECK1-NEXT:    store ptr null, ptr [[TMP10]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store ptr null, ptr [[TMP10]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 3
-// CHECK1-NEXT:    store ptr null, ptr [[TMP11]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store ptr null, ptr [[TMP11]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 4
-// CHECK1-NEXT:    store ptr null, ptr [[TMP12]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store ptr null, ptr [[TMP12]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 5
-// CHECK1-NEXT:    store ptr null, ptr [[TMP13]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store ptr null, ptr [[TMP13]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 6
-// CHECK1-NEXT:    store ptr null, ptr [[TMP14]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store ptr null, ptr [[TMP14]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 7
-// CHECK1-NEXT:    store ptr null, ptr [[TMP15]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store ptr null, ptr [[TMP15]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 8
-// CHECK1-NEXT:    store i64 0, ptr [[TMP16]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store i64 0, ptr [[TMP16]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 9
-// CHECK1-NEXT:    store i64 1, ptr [[TMP17]], align 8, !noalias [[META21]]
+// CHECK1-NEXT:    store i64 1, ptr [[TMP17]], align 8, !noalias !21
 // CHECK1-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 10
-// CHECK1-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP18]], align 4, !noalias [[META21]]
+// CHECK1-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP18]], align 4, !noalias !21
 // CHECK1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 11
-// CHECK1-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP19]], align 4, !noalias [[META21]]
+// CHECK1-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP19]], align 4, !noalias !21
 // CHECK1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 12
-// CHECK1-NEXT:    store i32 0, ptr [[TMP20]], align 4, !noalias [[META21]]
+// CHECK1-NEXT:    store i32 0, ptr [[TMP20]], align 4, !noalias !21
 // CHECK1-NEXT:    [[TMP21:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l100.region_id, ptr [[KERNEL_ARGS_I]])
 // CHECK1-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
 // CHECK1-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__EXIT:%.*]]
@@ -920,7 +920,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[B]], align 4
 // CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[N_ADDR]], align 4
 // CHECK1-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP3:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP3]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[TMP4:%.*]] = mul nuw i64 2, [[TMP2]]
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP4]], align 2
@@ -1017,7 +1017,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP46:%.*]] = load i32, ptr [[B]], align 4
 // CHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV]], [[TMP46]]
 // CHECK1-NEXT:    [[TMP47:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP47]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP47]])
 // CHECK1-NEXT:    ret i32 [[ADD3]]
 //
 //
@@ -1430,7 +1430,7 @@ int bar(int n){
 // CHECK3-NEXT:    store i32 0, ptr [[A]], align 4
 // CHECK3-NEXT:    store i16 0, ptr [[AA]], align 2
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, ptr [[N_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK3-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK3-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 4
 // CHECK3-NEXT:    [[VLA:%.*]] = alloca float, i32 [[TMP1]], align 4
 // CHECK3-NEXT:    store i32 [[TMP1]], ptr [[__VLA_EXPR0]], align 4
@@ -1665,7 +1665,7 @@ int bar(int n){
 // CHECK3:       omp_if.end20:
 // CHECK3-NEXT:    [[TMP115:%.*]] = load i32, ptr [[A]], align 4
 // CHECK3-NEXT:    [[TMP116:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// CHECK3-NEXT:    call void @llvm.stackrestore(ptr [[TMP116]])
+// CHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP116]])
 // CHECK3-NEXT:    ret i32 [[TMP115]]
 //
 //
@@ -1710,38 +1710,38 @@ int bar(int n){
 // CHECK3-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META16:![0-9]+]])
 // CHECK3-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META18:![0-9]+]])
 // CHECK3-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META20:![0-9]+]])
-// CHECK3-NEXT:    store i32 [[TMP2]], ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias [[META22:![0-9]+]]
-// CHECK3-NEXT:    store ptr [[TMP5]], ptr [[DOTPART_ID__ADDR_I]], align 4, !noalias [[META22]]
-// CHECK3-NEXT:    store ptr null, ptr [[DOTPRIVATES__ADDR_I]], align 4, !noalias [[META22]]
-// CHECK3-NEXT:    store ptr null, ptr [[DOTCOPY_FN__ADDR_I]], align 4, !noalias [[META22]]
-// CHECK3-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 4, !noalias [[META22]]
-// CHECK3-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 4, !noalias [[META22]]
-// CHECK3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 4, !noalias [[META22]]
-// CHECK3-NEXT:    store i32 2, ptr [[KERNEL_ARGS_I]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store i32 [[TMP2]], ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    store ptr [[TMP5]], ptr [[DOTPART_ID__ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    store ptr null, ptr [[DOTPRIVATES__ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    store ptr null, ptr [[DOTCOPY_FN__ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 4, !noalias !22
+// CHECK3-NEXT:    store i32 2, ptr [[KERNEL_ARGS_I]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 1
-// CHECK3-NEXT:    store i32 0, ptr [[TMP9]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store i32 0, ptr [[TMP9]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 2
-// CHECK3-NEXT:    store ptr null, ptr [[TMP10]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store ptr null, ptr [[TMP10]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 3
-// CHECK3-NEXT:    store ptr null, ptr [[TMP11]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store ptr null, ptr [[TMP11]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 4
-// CHECK3-NEXT:    store ptr null, ptr [[TMP12]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store ptr null, ptr [[TMP12]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 5
-// CHECK3-NEXT:    store ptr null, ptr [[TMP13]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store ptr null, ptr [[TMP13]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 6
-// CHECK3-NEXT:    store ptr null, ptr [[TMP14]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store ptr null, ptr [[TMP14]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 7
-// CHECK3-NEXT:    store ptr null, ptr [[TMP15]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store ptr null, ptr [[TMP15]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 8
-// CHECK3-NEXT:    store i64 0, ptr [[TMP16]], align 8, !noalias [[META22]]
+// CHECK3-NEXT:    store i64 0, ptr [[TMP16]], align 8, !noalias !22
 // CHECK3-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 9
-// CHECK3-NEXT:    store i64 1, ptr [[TMP17]], align 8, !noalias [[META22]]
+// CHECK3-NEXT:    store i64 1, ptr [[TMP17]], align 8, !noalias !22
 // CHECK3-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 10
-// CHECK3-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP18]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store [3 x i32] [i32 1, i32 0, i32 0], ptr [[TMP18]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 11
-// CHECK3-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP19]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP19]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS_I]], i32 0, i32 12
-// CHECK3-NEXT:    store i32 0, ptr [[TMP20]], align 4, !noalias [[META22]]
+// CHECK3-NEXT:    store i32 0, ptr [[TMP20]], align 4, !noalias !22
 // CHECK3-NEXT:    [[TMP21:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l100.region_id, ptr [[KERNEL_ARGS_I]])
 // CHECK3-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
 // CHECK3-NEXT:    br i1 [[TMP22]], label [[OMP_OFFLOAD_FAILED_I:%.*]], label [[DOTOMP_OUTLINED__EXIT:%.*]]
@@ -2022,7 +2022,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
 // CHECK3-NEXT:    store i32 [[ADD]], ptr [[B]], align 4
 // CHECK3-NEXT:    [[TMP1:%.*]] = load i32, ptr [[N_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK3-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK3-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 4
 // CHECK3-NEXT:    [[TMP3:%.*]] = mul nuw i32 2, [[TMP1]]
 // CHECK3-NEXT:    [[VLA:%.*]] = alloca i16, i32 [[TMP3]], align 2
@@ -2120,7 +2120,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP46:%.*]] = load i32, ptr [[B]], align 4
 // CHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV]], [[TMP46]]
 // CHECK3-NEXT:    [[TMP47:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// CHECK3-NEXT:    call void @llvm.stackrestore(ptr [[TMP47]])
+// CHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP47]])
 // CHECK3-NEXT:    ret i32 [[ADD3]]
 //
 //

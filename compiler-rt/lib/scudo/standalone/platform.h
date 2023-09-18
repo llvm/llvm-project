@@ -63,6 +63,20 @@
 #define SCUDO_CAN_USE_MTE (SCUDO_LINUX || SCUDO_TRUSTY)
 #endif
 
+// Use smaller table sizes for fuzzing in order to reduce input size.
+// Trusty just has less available memory.
+#ifndef SCUDO_SMALL_STACK_DEPOT
+#if defined(SCUDO_FUZZ) || SCUDO_TRUSTY
+#define SCUDO_SMALL_STACK_DEPOT 1
+#else
+#define SCUDO_SMALL_STACK_DEPOT 0
+#endif
+#endif
+
+#ifndef SCUDO_ENABLE_HOOKS
+#define SCUDO_ENABLE_HOOKS 0
+#endif
+
 #ifndef SCUDO_MIN_ALIGNMENT_LOG
 // We force malloc-type functions to be aligned to std::max_align_t, but there
 // is no reason why the minimum alignment for all other functions can't be 8

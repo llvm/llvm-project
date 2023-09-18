@@ -2317,7 +2317,10 @@ multiclass sve_fp_3op_p_zds_a<bits<2> opc, string asm, string Ps,
            SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
 
   def : SVE_4_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Pat<nxv4f16, op, nxv4i1, nxv4f16, nxv4f16, nxv4f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Pat<nxv2f16, op, nxv2i1, nxv2f16, nxv2f16, nxv2f16, !cast<Instruction>(NAME # _H)>;
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, nxv2f32, nxv2f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_4_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
@@ -7199,6 +7202,10 @@ multiclass sve_int_perm_cpy_v<string asm, SDPatternOperator op> {
                   (!cast<Instruction>(NAME # _D) ZPR64:$Zd, PPR3bAny:$Pg, FPR64:$Vn), 1>;
 
   def : Pat<(nxv8f16 (op nxv8i1:$pg, f16:$splat, nxv8f16:$passthru)),
+            (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
+  def : Pat<(nxv4f16 (op nxv4i1:$pg, f16:$splat, nxv4f16:$passthru)),
+            (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
+  def : Pat<(nxv2f16 (op nxv2i1:$pg, f16:$splat, nxv2f16:$passthru)),
             (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
   def : Pat<(nxv2f32 (op nxv2i1:$pg, f32:$splat, nxv2f32:$passthru)),
             (!cast<Instruction>(NAME # _S) $passthru, $pg, $splat)>;

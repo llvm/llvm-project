@@ -72,7 +72,6 @@ void test4(id x) {
   (void) [x test4]; //expected-warning {{multiple methods named 'test4' found}}
 }
 
-// rdar://19265296
 #pragma clang diagnostic ignored "-Wobjc-multiple-method-names"
 @interface NSObject 
 + (id)alloc;

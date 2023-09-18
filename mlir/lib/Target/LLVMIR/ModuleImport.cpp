@@ -29,6 +29,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
@@ -482,6 +483,10 @@ ModuleImport::lookupAliasScopeAttrs(const llvm::MDNode *node) const {
   return aliasScopes;
 }
 
+void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
+  debugIntrinsics.insert(intrinsic);
+}
+
 LogicalResult ModuleImport::convertMetadata() {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
@@ -838,7 +843,7 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   globalInsertionOp = globalOp;
 
   if (globalVar->hasInitializer() && !valueAttr) {
-    clearBlockAndValueMapping();
+    clearRegionState();
     Block *block = builder.createBlock(&globalOp.getInitializerRegion());
     setConstantInsertionPointToStart(block);
     FailureOr<Value> initializer =
@@ -983,6 +988,11 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant)) {
     Type type = convertType(nullPtr->getType());
     return builder.create<NullOp>(loc, type).getResult();
+  }
+
+  // Convert none token constants.
+  if (auto *noneToken = dyn_cast<llvm::ConstantTokenNone>(constant)) {
+    return builder.create<NoneTokenOp>(loc).getResult();
   }
 
   // Convert poison.
@@ -1490,14 +1500,11 @@ LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData.
   // FIXME: Add support for call / operand attributes.
   // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
-  // callbr, vaarg, landingpad, catchpad, cleanuppad instructions.
+  // callbr, vaarg, catchpad, cleanuppad instructions.
 
   // Convert LLVM intrinsics calls to MLIR intrinsics.
-  if (auto *callInst = dyn_cast<llvm::CallInst>(inst)) {
-    llvm::Function *callee = callInst->getCalledFunction();
-    if (callee && callee->isIntrinsic())
-      return convertIntrinsic(callInst);
-  }
+  if (auto *intrinsic = dyn_cast<llvm::IntrinsicInst>(inst))
+    return convertIntrinsic(intrinsic);
 
   // Convert all remaining LLVM instructions to MLIR operations.
   return convertInstruction(inst);
@@ -1654,7 +1661,7 @@ void ModuleImport::convertParameterAttributes(llvm::Function *func,
 }
 
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
-  clearBlockAndValueMapping();
+  clearRegionState();
 
   auto functionType =
       dyn_cast<LLVMFunctionType>(convertType(func->getFunctionType()));
@@ -1736,11 +1743,97 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // value once a block is translated.
   SetVector<llvm::BasicBlock *> blocks = getTopologicallySortedBlocks(func);
   setConstantInsertionPointToStart(lookupBlock(blocks.front()));
-  for (llvm::BasicBlock *bb : blocks) {
+  for (llvm::BasicBlock *bb : blocks)
     if (failed(processBasicBlock(bb, lookupBlock(bb))))
       return failure();
-  }
 
+  // Process the debug intrinsics that require a delayed conversion after
+  // everything else was converted.
+  if (failed(processDebugIntrinsics()))
+    return failure();
+
+  return success();
+}
+
+/// Checks if `dbgIntr` is a kill location that holds metadata instead of an SSA
+/// value.
+static bool isMetadataKillLocation(llvm::DbgVariableIntrinsic *dbgIntr) {
+  if (!dbgIntr->isKillLocation())
+    return false;
+  llvm::Value *value = dbgIntr->getArgOperand(0);
+  auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value);
+  if (!nodeAsVal)
+    return false;
+  return !isa<llvm::ValueAsMetadata>(nodeAsVal->getMetadata());
+}
+
+LogicalResult
+ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
+                                    DominanceInfo &domInfo) {
+  Location loc = translateLoc(dbgIntr->getDebugLoc());
+  auto emitUnsupportedWarning = [&]() {
+    if (emitExpensiveWarnings)
+      emitWarning(loc) << "dropped intrinsic: " << diag(*dbgIntr);
+    return success();
+  };
+  // Drop debug intrinsics with a non-empty debug expression.
+  // TODO: Support debug intrinsics that evaluate a debug expression.
+  if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
+    return emitUnsupportedWarning();
+  // Kill locations can have metadata nodes as location operand. This
+  // cannot be converted to poison as the type cannot be reconstructed.
+  // TODO: find a way to support this case.
+  if (isMetadataKillLocation(dbgIntr))
+    return emitUnsupportedWarning();
+  FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
+  if (failed(argOperand))
+    return emitError(loc) << "failed to convert a debug intrinsic operand: "
+                          << diag(*dbgIntr);
+
+  // Ensure that the debug instrinsic is inserted right after its operand is
+  // defined. Otherwise, the operand might not necessarily dominate the
+  // intrinsic. If the defining operation is a terminator, insert the intrinsic
+  // into a dominated block.
+  OpBuilder::InsertionGuard guard(builder);
+  if (Operation *op = argOperand->getDefiningOp();
+      op && op->hasTrait<OpTrait::IsTerminator>()) {
+    // Find a dominated block that can hold the debug intrinsic.
+    auto dominatedBlocks = domInfo.getNode(op->getBlock())->children();
+    // If no block is dominated by the terminator, this intrinisc cannot be
+    // converted.
+    if (dominatedBlocks.empty())
+      return emitUnsupportedWarning();
+    // Set insertion point before the terminator, to avoid inserting something
+    // before landingpads.
+    Block *dominatedBlock = (*dominatedBlocks.begin())->getBlock();
+    builder.setInsertionPoint(dominatedBlock->getTerminator());
+  } else {
+    builder.setInsertionPointAfterValue(*argOperand);
+  }
+  DILocalVariableAttr localVariableAttr =
+      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  Operation *op =
+      llvm::TypeSwitch<llvm::DbgVariableIntrinsic *, Operation *>(dbgIntr)
+          .Case([&](llvm::DbgDeclareInst *) {
+            return builder.create<LLVM::DbgDeclareOp>(loc, *argOperand,
+                                                      localVariableAttr);
+          })
+          .Case([&](llvm::DbgValueInst *) {
+            return builder.create<LLVM::DbgValueOp>(loc, *argOperand,
+                                                    localVariableAttr);
+          });
+  mapNoResultOp(dbgIntr, op);
+  setNonDebugMetadataAttrs(dbgIntr, op);
+  return success();
+}
+
+LogicalResult ModuleImport::processDebugIntrinsics() {
+  DominanceInfo domInfo;
+  for (llvm::Instruction *inst : debugIntrinsics) {
+    auto *intrCall = cast<llvm::DbgVariableIntrinsic>(inst);
+    if (failed(processDebugIntrinsic(intrCall, domInfo)))
+      return failure();
+  }
   return success();
 }
 
@@ -1750,6 +1843,11 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   for (llvm::Instruction &inst : *bb) {
     if (failed(processInstruction(&inst)))
       return failure();
+
+    // Skip additional processing when the instructions is a debug intrinsics
+    // that was not yet converted.
+    if (debugIntrinsics.contains(&inst))
+      continue;
 
     // Set the non-debug metadata attributes on the imported operation and emit
     // a warning if an instruction other than a phi instruction is dropped

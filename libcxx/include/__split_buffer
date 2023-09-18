@@ -160,15 +160,13 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n, const_reference __x);
 
-  template <class _InputIter>
+  template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-      __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value>
-      __construct_at_end(_InputIter __first, _InputIter __last);
+  void __construct_at_end(_InputIter __first, _InputIter __last);
 
-  template <class _ForwardIterator>
+  template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-      __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value>
-      __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
+  void __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
 
   template <class _Iterator, class _Sentinel>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
@@ -283,9 +281,9 @@ __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n, const_referen
 }
 
 template <class _Tp, class _Allocator>
-template <class _InputIter>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value>
-__split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIter __last)
+template <class _InputIter, __enable_if_t<__has_exactly_input_iterator_category<_InputIter>::value, int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+void __split_buffer<_Tp, _Allocator>::__construct_at_end(_InputIter __first, _InputIter __last)
 {
   __construct_at_end_with_sentinel(__first, __last);
 }
@@ -312,9 +310,9 @@ void __split_buffer<_Tp, _Allocator>::__construct_at_end_with_sentinel(_Iterator
     }
 }
 template <class _Tp, class _Allocator>
-template <class _ForwardIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value>
-__split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
+template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> >
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+void __split_buffer<_Tp, _Allocator>::__construct_at_end(_ForwardIterator __first, _ForwardIterator __last)
 {
   __construct_at_end_with_size(__first, std::distance(__first, __last));
 }

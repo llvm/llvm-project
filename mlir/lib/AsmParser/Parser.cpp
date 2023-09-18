@@ -18,8 +18,10 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Support/InterfaceSupport.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
@@ -29,6 +31,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
+#include <memory>
 #include <optional>
 
 using namespace mlir;
@@ -1443,12 +1446,17 @@ Operation *OperationParser::parseGenericOperation() {
   // Try setting the properties for the operation, using a diagnostic to print
   // errors.
   if (properties) {
-    InFlightDiagnostic diagnostic =
-        mlir::emitError(srcLocation, "invalid properties ")
-        << properties << " for op " << name << ": ";
-    if (failed(op->setPropertiesFromAttribute(properties, &diagnostic)))
+    std::unique_ptr<InFlightDiagnostic> diagnostic;
+    auto getDiag = [&]() -> InFlightDiagnostic & {
+      if (!diagnostic) {
+        diagnostic = std::make_unique<InFlightDiagnostic>(
+            mlir::emitError(srcLocation, "invalid properties ")
+            << properties << " for op " << name << ": ");
+      }
+      return *diagnostic;
+    };
+    if (failed(op->setPropertiesFromAttribute(properties, getDiag)))
       return nullptr;
-    diagnostic.abandon();
   }
 
   return op;
@@ -2001,12 +2009,18 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Try setting the properties for the operation.
   if (properties) {
-    InFlightDiagnostic diagnostic =
-        mlir::emitError(srcLocation, "invalid properties ")
-        << properties << " for op " << op->getName().getStringRef() << ": ";
-    if (failed(op->setPropertiesFromAttribute(properties, &diagnostic)))
+    std::unique_ptr<InFlightDiagnostic> diagnostic;
+    auto getDiag = [&]() -> InFlightDiagnostic & {
+      if (!diagnostic) {
+        diagnostic = std::make_unique<InFlightDiagnostic>(
+            mlir::emitError(srcLocation, "invalid properties ")
+            << properties << " for op " << op->getName().getStringRef()
+            << ": ");
+      }
+      return *diagnostic;
+    };
+    if (failed(op->setPropertiesFromAttribute(properties, getDiag)))
       return nullptr;
-    diagnostic.abandon();
   }
   return op;
 }
@@ -2020,6 +2034,8 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
            << "expected location, but found dialect attribute: '#" << identifier
            << "'";
   }
+  if (state.asmState)
+    state.asmState->addAttrAliasUses(identifier, tok.getLocRange());
 
   // If this alias can be resolved, do it now.
   Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
@@ -2527,6 +2543,7 @@ ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
     return emitError("attribute names with a '.' are reserved for "
                      "dialect-defined names");
 
+  SMRange location = getToken().getLocRange();
   consumeToken(Token::hash_identifier);
 
   // Parse the '='.
@@ -2538,6 +2555,9 @@ ParseResult TopLevelOperationParser::parseAttributeAliasDef() {
   if (!attr)
     return failure();
 
+  // Register this alias with the parser state.
+  if (state.asmState)
+    state.asmState->addAttrAliasDefinition(aliasName, location, attr);
   state.symbols.attributeAliasDefinitions[aliasName] = attr;
   return success();
 }
@@ -2554,6 +2574,8 @@ ParseResult TopLevelOperationParser::parseTypeAliasDef() {
   if (aliasName.contains('.'))
     return emitError("type names with a '.' are reserved for "
                      "dialect-defined names");
+
+  SMRange location = getToken().getLocRange();
   consumeToken(Token::exclamation_identifier);
 
   // Parse the '='.
@@ -2566,6 +2588,8 @@ ParseResult TopLevelOperationParser::parseTypeAliasDef() {
     return failure();
 
   // Register this alias with the parser state.
+  if (state.asmState)
+    state.asmState->addTypeAliasDefinition(aliasName, location, aliasedType);
   state.symbols.typeAliasDefinitions.try_emplace(aliasName, aliasedType);
   return success();
 }

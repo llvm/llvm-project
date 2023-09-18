@@ -22,6 +22,9 @@
 #RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
 
+#RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
+
 #CHECK: DW_AT_call_return_pc  (0x0000000100000f72)
 #CHECK: DW_AT_call_return_pc  (0x0000000100000f78)
 

@@ -26,6 +26,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "../../types.h"
+
 struct LVal {
   constexpr int operator()(int&) { return 1; }
   int operator()(const int&)  = delete;
@@ -98,11 +100,17 @@ concept has_transform_error =
       { std::forward<E>(e).transform_error(std::forward<F>(f)) };
     };
 
+// clang-format off
 // [LWG 3877] https://cplusplus.github.io/LWG/issue3877, check constraint failing but not compile error inside the function body.
 static_assert(!has_transform_error<const std::expected<std::unique_ptr<int>, int>&, int()>);
 static_assert(!has_transform_error<const std::expected<std::unique_ptr<int>, int>&&, int()>);
 
-// clang-format off
+// [LWG 3983] https://cplusplus.github.io/LWG/issue3938, check std::expected monadic ops well-formed with move-only error_type.
+static_assert(has_transform_error<std::expected<int, MoveOnlyErrorType>&, int(MoveOnlyErrorType &)>);
+static_assert(has_transform_error<const std::expected<int, MoveOnlyErrorType>&, int(const MoveOnlyErrorType &)>);
+static_assert(has_transform_error<std::expected<int, MoveOnlyErrorType>&&, int(MoveOnlyErrorType&&)>);
+static_assert(has_transform_error<const std::expected<int, MoveOnlyErrorType>&&, int(const MoveOnlyErrorType&&)>);
+
 constexpr void test_val_types() {
   // Test & overload
   {
@@ -206,10 +214,42 @@ constexpr void test_sfinae() {
   std::move(ce1).transform_error(never_called);
 }
 
+constexpr void test_move_only_error_type() {
+  // Test &
+  {
+      std::expected<int, MoveOnlyErrorType> e;
+      auto l = [](MoveOnlyErrorType&) { return 0; };
+      e.transform_error(l);
+  }
+
+  // Test const&
+  {
+      const std::expected<int, MoveOnlyErrorType> e;
+      auto l = [](const MoveOnlyErrorType&) { return 0; };
+      e.transform_error(l);
+  }
+
+  // Test &&
+  {
+      std::expected<int, MoveOnlyErrorType> e;
+      auto l = [](MoveOnlyErrorType&&) { return 0; };
+      std::move(e).transform_error(l);
+  }
+
+  // Test const&&
+  {
+      const std::expected<int, MoveOnlyErrorType> e;
+      auto l = [](const MoveOnlyErrorType&&) { return 0; };
+      std::move(e).transform_error(l);
+  }
+}
+
 constexpr bool test() {
   test_sfinae();
   test_val_types();
   test_direct_non_list_init();
+  test_move_only_error_type();
+
   return true;
 }
 

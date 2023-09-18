@@ -14,6 +14,7 @@
 #include "index/SymbolCollector.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/IndexingOptions.h"
@@ -702,9 +703,9 @@ TEST_F(SymbolCollectorTest, ObjCFrameworkIncludeHeader) {
   EXPECT_THAT(
       Symbols,
       UnorderedElementsAre(
-          AllOf(qName("NSObject"), includeHeader("\"Foundation/NSObject.h\"")),
+          AllOf(qName("NSObject"), includeHeader("<Foundation/NSObject.h>")),
           AllOf(qName("PrivateClass"),
-                includeHeader("\"Foundation/NSObject+Private.h\"")),
+                includeHeader("<Foundation/NSObject+Private.h>")),
           AllOf(qName("Container"))));
 
   // After adding the umbrella headers, we should use that spelling instead.
@@ -722,13 +723,13 @@ TEST_F(SymbolCollectorTest, ObjCFrameworkIncludeHeader) {
                "Foundation_Private.h"),
       0, llvm::MemoryBuffer::getMemBuffer(PrivateUmbrellaHeader));
   runSymbolCollector(Header, Main, {"-F", FrameworksPath, "-xobjective-c++"});
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(
-                  AllOf(qName("NSObject"),
-                        includeHeader("\"Foundation/Foundation.h\"")),
-                  AllOf(qName("PrivateClass"),
-                        includeHeader("\"Foundation/Foundation_Private.h\"")),
-                  AllOf(qName("Container"))));
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          AllOf(qName("NSObject"), includeHeader("<Foundation/Foundation.h>")),
+          AllOf(qName("PrivateClass"),
+                includeHeader("<Foundation/Foundation_Private.h>")),
+          AllOf(qName("Container"))));
 
   runSymbolCollector(Header, Main,
                      {"-iframework", FrameworksPath, "-xobjective-c++"});
@@ -1554,6 +1555,8 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
         // Move overloads have special handling.
         template <typename _T> T&& move(_T&& __value);
         template <typename _I, typename _O> _O move(_I, _I, _O);
+        template <typename _T, typename _O, typename _I> _O move(
+          _T&&, _O, _O, _I);
       }
       )cpp",
       /*Main=*/"");
@@ -1565,7 +1568,8 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
                 includeHeader("<string>")),
           // Parameter names are demangled.
           AllOf(labeled("move(T &&value)"), includeHeader("<utility>")),
-          AllOf(labeled("move(I, I, O)"), includeHeader("<algorithm>"))));
+          AllOf(labeled("move(I, I, O)"), includeHeader("<algorithm>")),
+          AllOf(labeled("move(T &&, O, O, I)"), includeHeader("<algorithm>"))));
 }
 
 TEST_F(SymbolCollectorTest, IWYUPragma) {
@@ -1592,7 +1596,7 @@ TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
                                  includeHeader("\"the/good/header.h\""))));
 }
 
-TEST_F(SymbolCollectorTest, DISABLED_IWYUPragmaExport) {
+TEST_F(SymbolCollectorTest, IWYUPragmaExport) {
   CollectorOpts.CollectIncludePath = true;
   const std::string Header = R"cpp(#pragma once
     #include "exporter.h"
@@ -1978,6 +1982,24 @@ TEST_F(SymbolCollectorTest, Concepts) {
                   qName("A"), hasKind(clang::index::SymbolKind::Concept))));
 }
 
+TEST_F(SymbolCollectorTest, IncludeHeaderForwardDecls) {
+  CollectorOpts.CollectIncludePath = true;
+  const std::string Header = R"cpp(#pragma once 
+struct Foo;
+#include "full.h"
+)cpp";
+  auto FullFile = testPath("full.h");
+  InMemoryFileSystem->addFile(FullFile, 0,
+                              llvm::MemoryBuffer::getMemBuffer(R"cpp(
+#pragma once 
+struct Foo {};)cpp"));
+  runSymbolCollector(Header, /*Main=*/"",
+                     /*ExtraArgs=*/{"-I", testRoot()});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(
+                           qName("Foo"),
+                           includeHeader(URI::create(FullFile).toString()))))
+      << *Symbols.begin();
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

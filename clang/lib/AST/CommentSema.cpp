@@ -664,12 +664,12 @@ void Sema::checkDeprecatedCommand(const BlockCommandComment *Command) {
       return;
 
     const LangOptions &LO = FD->getLangOpts();
-    const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C2x;
+    const bool DoubleSquareBracket = LO.CPlusPlus14 || LO.C23;
     StringRef AttributeSpelling =
         DoubleSquareBracket ? "[[deprecated]]" : "__attribute__((deprecated))";
     if (PP) {
       // Try to find a replacement macro:
-      // - In C2x/C++14 we prefer [[deprecated]].
+      // - In C23/C++14 we prefer [[deprecated]].
       // - If not found or an older C/C++ look for __attribute__((deprecated)).
       StringRef MacroName;
       if (DoubleSquareBracket) {

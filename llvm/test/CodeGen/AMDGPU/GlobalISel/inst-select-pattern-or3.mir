@@ -20,17 +20,18 @@ body: |
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX8-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def $scc
+    ; GFX8-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
+    ; GFX8-NEXT: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def dead $scc
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[S_OR_B32_1]]
+    ;
     ; GFX9-LABEL: name: or_s32_sgpr_sgpr_sgpr
     ; GFX9: liveins: $sgpr0, $sgpr1, $sgpr2
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; GFX9-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX9-NEXT: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def $scc
+    ; GFX9-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
+    ; GFX9-NEXT: [[S_OR_B32_1:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_OR_B32_]], [[COPY2]], implicit-def dead $scc
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_OR_B32_1]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -59,6 +60,7 @@ body: |
     ; GFX8-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; GFX8-NEXT: [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_OR_B32_e64_]], [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_OR_B32_e64_1]]
+    ;
     ; GFX9-LABEL: name: or_s32_vgpr_vgpr_vgpr
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX9-NEXT: {{  $}}
@@ -94,6 +96,7 @@ body: |
     ; GFX8-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; GFX8-NEXT: [[V_OR_B32_e64_1:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 [[V_OR_B32_e64_]], [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_OR_B32_e64_1]], implicit [[V_OR_B32_e64_]]
+    ;
     ; GFX9-LABEL: name: or_s32_vgpr_vgpr_vgpr_multi_use
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX9-NEXT: {{  $}}

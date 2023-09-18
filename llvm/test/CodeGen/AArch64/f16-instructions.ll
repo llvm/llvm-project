@@ -480,8 +480,8 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 ; CHECK-CVT-NEXT: fmov  s2, #5.00000000
 ; CHECK-CVT-NEXT: fcmp  s1, s2
 ; CHECK-CVT-NEXT: fmov  s2, #8.00000000
-; CHECK-CVT-NEXT: adrp x8
 ; CHECK-CVT-NEXT: fccmp s1, s2, #4, mi
+; CHECK-CVT-NEXT: adrp x8
 ; CHECK-CVT-NEXT: ldr h1, [x8,
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, gt
 ; CHECK-CVT-NEXT: str   h0, [x0]

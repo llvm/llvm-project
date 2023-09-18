@@ -181,6 +181,13 @@ bool hlfir::isMaskArgument(mlir::Type type) {
   return mlir::isa<fir::LogicalType>(elementType) || isI1Type(elementType);
 }
 
+bool hlfir::isPolymorphicObject(mlir::Type type) {
+  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+    return exprType.isPolymorphic();
+
+  return fir::isPolymorphicType(type);
+}
+
 mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
                                 const mlir::Location &loc,
                                 const hlfir::ExprType &expr) {

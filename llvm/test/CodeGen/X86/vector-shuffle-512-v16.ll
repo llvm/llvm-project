@@ -832,9 +832,8 @@ define <16 x i32> @mask_shuffle_v16i32_00_01_02_03_16_17_18_19_08_09_10_11_12_13
 define <16 x i32> @mask_shuffle_v4i32_v16i32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03(<4 x i32> %a) {
 ; ALL-LABEL: mask_shuffle_v4i32_v16i32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; ALL-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; ALL-NEXT:    retq
   %res = shufflevector <4 x i32> %a, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <16 x i32> %res
@@ -843,9 +842,8 @@ define <16 x i32> @mask_shuffle_v4i32_v16i32_00_01_02_03_00_01_02_03_00_01_02_03
 define <16 x float> @mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03(<4 x float> %a) {
 ; ALL-LABEL: mask_shuffle_v4f32_v16f32_00_01_02_03_00_01_02_03_00_01_02_03_00_01_02_03:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; ALL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; ALL-NEXT:    retq
   %res = shufflevector <4 x float> %a, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <16 x float> %res
@@ -867,7 +865,7 @@ define void @ispc_1864(ptr %arg) {
 ; ALL-NEXT:    vbroadcastss {{.*#+}} ymm0 = [-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0,-5.0E+0]
 ; ALL-NEXT:    vmulps 32(%rdi), %ymm0, %ymm0
 ; ALL-NEXT:    vcvtps2pd %ymm0, %zmm0
-; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[2,3,4,5,0,1,0,1]
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[2,3,4,5,4,5,6,7]
 ; ALL-NEXT:    vmovapd %ymm0, {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    movq %rbp, %rsp
 ; ALL-NEXT:    popq %rbp

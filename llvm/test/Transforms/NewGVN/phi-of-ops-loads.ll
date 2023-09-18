@@ -77,55 +77,18 @@ bb237:
   ret void
 }
 
-define void @clobber-in-loop2(ptr %p, ptr %q, i1 %a) {
-; CHECK-LABEL: @clobber-in-loop2(
-; CHECK-NEXT:  bb56:
-; CHECK-NEXT:    br label [[BB57:%.*]]
-; CHECK:       bb57:
-; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229:%.*]] ], [ true, [[BB56:%.*]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ 0, [[BB56]] ], [ [[INC:%.*]], [[BB229]] ]
-; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    br i1 [[A:%.*]], label [[BB229]], label [[BB237:%.*]]
-; CHECK:       bb229:
-; CHECK-NEXT:    [[N60:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[N62:%.*]] = icmp ne i8 [[N60]], 2
-; CHECK-NEXT:    [[N63:%.*]] = or i1 [[N59]], [[N62]]
-; CHECK-NEXT:    [[INC]] = add i8 [[IDX]], 1
-; CHECK-NEXT:    br i1 [[N63]], label [[BB57]], label [[BB237]]
-; CHECK:       bb237:
-; CHECK-NEXT:    ret void
-;
-bb56:
-  br label %bb57
-
-bb57:
-  %n59 = phi i1 [ false, %bb229 ], [ true, %bb56 ]
-  %idx = phi i8 [0, %bb56], [%inc, %bb229]
-  call void @f()
-  br i1 %a, label %bb229, label %bb237
-
-bb229:
-  %n60 = load i8, ptr %p
-  %n62 = icmp ne i8 %n60, 2
-  %n63 = or i1 %n59, %n62
-  %inc = add i8 %idx, 1
-  br i1 %n63, label %bb57, label %bb237
-
-bb237:
-  ret void
-}
-
+; TODO: we should support this case
 define void @no-alias-store-in-loop(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @no-alias-store-in-loop(
 ; CHECK-NEXT:  bb56:
 ; CHECK-NEXT:    br label [[BB57:%.*]]
 ; CHECK:       bb57:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ true, [[BB56:%.*]] ], [ [[N62:%.*]], [[BB229:%.*]] ]
-; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229]] ], [ true, [[BB56]] ]
+; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229:%.*]] ], [ true, [[BB56:%.*]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ 0, [[BB56]] ], [ [[INC:%.*]], [[BB229]] ]
 ; CHECK-NEXT:    [[N60:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[N62]] = icmp ne i8 [[N60]], 2
-; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[BB229]], label [[BB237:%.*]]
+; CHECK-NEXT:    [[N62:%.*]] = icmp ne i8 [[N60]], 2
+; CHECK-NEXT:    [[N63:%.*]] = or i1 [[N59]], [[N62]]
+; CHECK-NEXT:    br i1 [[N63]], label [[BB229]], label [[BB237:%.*]]
 ; CHECK:       bb229:
 ; CHECK-NEXT:    [[INC]] = add i8 [[IDX]], 1
 ; CHECK-NEXT:    store i8 [[INC]], ptr [[Q:%.*]], align 1
@@ -187,16 +150,17 @@ bb237:
   ret void
 }
 
+; TODO: we should support this case
 define void @nowrite-function-in-loop(ptr %p) {
 ; CHECK-LABEL: @nowrite-function-in-loop(
 ; CHECK-NEXT:  bb56:
 ; CHECK-NEXT:    br label [[BB57:%.*]]
 ; CHECK:       bb57:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi i1 [ true, [[BB56:%.*]] ], [ [[N62:%.*]], [[BB229:%.*]] ]
-; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229]] ], [ true, [[BB56]] ]
+; CHECK-NEXT:    [[N59:%.*]] = phi i1 [ false, [[BB229:%.*]] ], [ true, [[BB56:%.*]] ]
 ; CHECK-NEXT:    [[N60:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[N62]] = icmp ne i8 [[N60]], 2
-; CHECK-NEXT:    br i1 [[PHIOFOPS]], label [[BB229]], label [[BB237:%.*]]
+; CHECK-NEXT:    [[N62:%.*]] = icmp ne i8 [[N60]], 2
+; CHECK-NEXT:    [[N63:%.*]] = or i1 [[N59]], [[N62]]
+; CHECK-NEXT:    br i1 [[N63]], label [[BB229]], label [[BB237:%.*]]
 ; CHECK:       bb229:
 ; CHECK-NEXT:    call void @f() #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[BB57]]
@@ -235,7 +199,9 @@ define void @issfeoperand(ptr nocapture readonly %array, i1 %cond1, i1 %cond2, p
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ [[LD1]], [[COND_TRUE]] ], [ 0, [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX42:%.*]] = getelementptr inbounds [3 x [2 x [1 x i8]]], ptr [[ARRAY]], i64 109, i64 0, i64 0, i64 undef
 ; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[ARRAYIDX42]], align 1
-; CHECK-NEXT:    store i32 0, ptr [[P2:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[LD2]], [[PHI1]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i32
+; CHECK-NEXT:    store i32 [[ZEXT]], ptr [[P2:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[COND_END:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[LD3:%.*]] = load i16, ptr [[P1:%.*]], align 2
@@ -275,60 +241,5 @@ exit:                                             ; preds = %cond.end, %cond.fal
   %cmp2 = icmp eq i8 %ld2, 0
   %sel = select i1 %cmp2, i32 %phi2, i32 0
   store i32 %sel, ptr %p3, align 4
-  ret void
-}
-
-define void @function-in-branch-in-loop(ptr %p, i8 %a, i8 %x) {
-; CHECK-LABEL: @function-in-branch-in-loop(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[WHILE:%.*]]
-; CHECK:       while:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[BODY2:%.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[I2:%.*]], [[BODY2]] ]
-; CHECK-NEXT:    [[WHILE_COND:%.*]] = icmp ule i8 [[I]], [[X:%.*]]
-; CHECK-NEXT:    br i1 [[WHILE_COND]], label [[BODY:%.*]], label [[EXIT:%.*]]
-; CHECK:       body:
-; CHECK-NEXT:    [[IF_COND:%.*]] = icmp sgt i8 [[A:%.*]], 0
-; CHECK-NEXT:    br i1 [[IF_COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    br label [[BODY2]]
-; CHECK:       if.else:
-; CHECK-NEXT:    br label [[BODY2]]
-; CHECK:       body2:
-; CHECK-NEXT:    [[I2]] = add i8 [[I]], 1
-; CHECK-NEXT:    [[LD:%.*]] = load i1, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[PHI]], [[LD]]
-; CHECK-NEXT:    br i1 [[OR]], label [[WHILE]], label [[EXIT]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret void
-;
-entry:
-  br label %while
-
-while:
-  %phi = phi i1 [ true, %entry ], [ false, %body2 ]
-  %i = phi i8 [ 0, %entry ], [ %i2, %body2 ]
-  %while.cond = icmp ule i8 %i, %x
-  br i1 %while.cond, label %body, label %exit
-
-body:
-  %if.cond = icmp sgt i8 %a, 0
-  br i1 %if.cond, label %if.then, label %if.else
-
-if.then:
-  call void @f()
-  br label %body2
-
-if.else:
-  br label %body2
-
-body2:
-  %i2 = add i8 %i, 1
-  %ld = load i1, ptr %p
-  %or = or i1 %phi, %ld
-  br i1 %or, label %while, label %exit
-
-exit:
   ret void
 }

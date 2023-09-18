@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-// <rdar://problem/10204947>
 namespace N {
   class X;
 };

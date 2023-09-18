@@ -2,9 +2,6 @@
 // REQUIRES: ompt
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
-// UNSUPPORTED: x86_64-pc-linux-gnu
-// UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
-// UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 /*
  * Example OpenMP program that shows that both EMI and non-EMI
@@ -63,10 +60,12 @@ int main() {
 /// CHECK: Callback Target EMI: kind=1 endpoint=1
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback Submit: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=1
@@ -82,10 +81,12 @@ int main() {
 /// CHECK: Callback Target EMI: kind=1 endpoint=1
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=1
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=1
+/// CHECK-NOT: dest=(nil)
 /// CHECK: Callback DataOp EMI: endpoint=1 optype=2
 /// CHECK: Callback DataOp EMI: endpoint=2 optype=2
 /// CHECK: Callback Submit: target_id=[[TARGET_ID:[0-9]+]] host_op_id=[[HOST_OP_ID:[0-9]+]] req_num_teams=0

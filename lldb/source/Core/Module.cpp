@@ -233,21 +233,18 @@ Module::Module(const ModuleSpec &module_spec)
 }
 
 Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
-               const ConstString *object_name, lldb::offset_t object_offset,
+               ConstString object_name, lldb::offset_t object_offset,
                const llvm::sys::TimePoint<> &object_mod_time)
     : m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
-      m_arch(arch), m_file(file_spec), m_object_offset(object_offset),
-      m_object_mod_time(object_mod_time), m_file_has_changed(false),
-      m_first_file_changed_log(false) {
+      m_arch(arch), m_file(file_spec), m_object_name(object_name),
+      m_object_offset(object_offset), m_object_mod_time(object_mod_time),
+      m_file_has_changed(false), m_first_file_changed_log(false) {
   // Scope for locker below...
   {
     std::lock_guard<std::recursive_mutex> guard(
         GetAllocationModuleCollectionMutex());
     GetModuleCollection().push_back(this);
   }
-
-  if (object_name)
-    m_object_name = *object_name;
 
   Log *log(GetLog(LLDBLog::Object | LLDBLog::Modules));
   if (log != nullptr)

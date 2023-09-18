@@ -1392,17 +1392,23 @@ static uint64_t rotateSign(APInt Val) {
   return I < 0 ? ~(U << 1) : U << 1;
 }
 
-static uint64_t rotateSign(DISubrange::BoundType Val) {
-  return rotateSign(Val.get<ConstantInt *>()->getValue());
-}
-
 void DXILBitcodeWriter::writeDISubrange(const DISubrange *N,
                                         SmallVectorImpl<uint64_t> &Record,
                                         unsigned Abbrev) {
   Record.push_back(N->isDistinct());
+
+  // TODO: Do we need to handle DIExpression here? What about cases where Count
+  // isn't specified but UpperBound and such are?
+  ConstantInt *Count = N->getCount().dyn_cast<ConstantInt *>();
+  assert(Count && "Count is missing or not ConstantInt");
+  Record.push_back(Count->getValue().getSExtValue());
+
+  // TODO: Similarly, DIExpression is allowed here now
+  DISubrange::BoundType LowerBound = N->getLowerBound();
+  assert((LowerBound.isNull() || LowerBound.is<ConstantInt *>()) &&
+         "Lower bound provided but not ConstantInt");
   Record.push_back(
-      N->getCount().get<ConstantInt *>()->getValue().getSExtValue());
-  Record.push_back(rotateSign(N->getLowerBound()));
+      LowerBound ? rotateSign(LowerBound.get<ConstantInt *>()->getValue()) : 0);
 
   Stream.EmitRecord(bitc::METADATA_SUBRANGE, Record, Abbrev);
   Record.clear();
@@ -1766,14 +1772,18 @@ unsigned DXILBitcodeWriter::createMetadataStringsAbbrev() {
 
 void DXILBitcodeWriter::writeMetadataStrings(
     ArrayRef<const Metadata *> Strings, SmallVectorImpl<uint64_t> &Record) {
+  if (Strings.empty())
+    return;
+
+  unsigned MDSAbbrev = createMetadataStringsAbbrev();
+
   for (const Metadata *MD : Strings) {
     const MDString *MDS = cast<MDString>(MD);
     // Code: [strchar x N]
     Record.append(MDS->bytes_begin(), MDS->bytes_end());
 
     // Emit the finished record.
-    Stream.EmitRecord(bitc::METADATA_STRING_OLD, Record,
-                      createMetadataStringsAbbrev());
+    Stream.EmitRecord(bitc::METADATA_STRING_OLD, Record, MDSAbbrev);
     Record.clear();
   }
 }

@@ -19,6 +19,11 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
+# Defining a global namespace to enclose all libc functions.
+set(LIBC_NAMESPACE "__llvm_libc_${LLVM_VERSION_MAJOR}_${LLVM_VERSION_MINOR}_${LLVM_VERSION_PATCH}_${LLVM_VERSION_SUFFIX}"
+  CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
+)
+
 if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
@@ -44,14 +49,20 @@ if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR
 endif()
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
-       "Log details warnings and notifications during CMake configuration." OFF)
+  "Log details warnings and notifications during CMake configuration." OFF)
+
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
+if(NOT LIBC_NAMESPACE MATCHES "^__llvm_libc")
+  message(FATAL_ERROR "Invalid LIBC_NAMESPACE. Must start with '__llvm_libc' was '${LIBC_NAMESPACE}'")
+endif()
+
+message(STATUS "Setting LIBC_NAMESPACE namespace to '${LIBC_NAMESPACE}'")
+add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
+
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
-
-include(common_libc_tuners.cmake)
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
@@ -71,9 +82,13 @@ if(COMMAND_RETURN_CODE EQUAL 0)
   message(STATUS "Set COMPILER_RESOURCE_DIR to "
                  "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
 else()
-  set(COMPILER_RESOURCE_DIR OFF)
-  message(STATUS "COMPILER_RESOURCE_DIR not set
-                  --print-resource-dir not supported by host compiler")
+  if (LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+  else()
+    set(COMPILER_RESOURCE_DIR OFF)
+    message(STATUS "COMPILER_RESOURCE_DIR not set
+                    --print-resource-dir not supported by host compiler")
+  endif()
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
@@ -88,6 +103,47 @@ set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
+
+include(LibcConfig)
+# Config loading happens in three steps:
+# 1. Load the config file config/config.json and set up config vars.
+# 2. Load config/${LIBC_TARGET_OS}/config.json if available and override
+#    vars as suitable.
+# 3. Load config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCH}/config.json is
+#    available and override vars as suitable.
+# All the three steps will not override options already set from the
+# CMake command line. That is, the CMake command line option values take
+# precedence over the values in config.json files.
+set(main_config_file ${LIBC_SOURCE_DIR}/config/config.json)
+read_libc_config(${main_config_file} global_config)
+foreach(opt IN LISTS global_config)
+  string(JSON opt_name ERROR_VARIABLE json_error MEMBER ${opt} 0)
+  if(json_error)
+    message(FATAL_ERROR ${json_error})
+  endif()
+  if(DEFINED ${opt_name})
+    # The option is already defined from the command line so we ignore it here.
+    # We still make note of it so that further config load can also ignore
+    # this option.
+    message(STATUS "${opt_name}: ${${opt_name}} (from command line)")
+    list(APPEND cmd_line_conf ${opt_name})
+    continue()
+  endif()
+
+  string(JSON opt_object ERROR_VARIABLE json_error GET ${opt} ${opt_name})
+  if(json_error)
+    message(FATAL_ERROR "Error reading info of option '${opt_name}': ${json_error}")
+  endif()
+  string(JSON opt_value ERROR_VARIABLE json_error GET ${opt_object} "value")
+  if(json_error)
+    message(FATAL_ERROR ${json_error})
+  endif()
+  message(STATUS "${opt_name}: ${opt_value}")
+  set(${opt_name} ${opt_value})
+endforeach()
+generate_config_doc(${main_config_file} ${LIBC_SOURCE_DIR}/docs/configure.rst)
+load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/config.json ${cmd_line_conf})
+load_libc_config(${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/${LIBC_TARGET_ARCHITECTURE}/config.json ${cmd_line_conf})
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
@@ -134,10 +190,21 @@ if(LLVM_LIBC_ENABLE_LINTING)
     if(LLVM_LIBC_CLANG_TIDY)
       # Check clang-tidy major version.
       execute_process(COMMAND ${LLVM_LIBC_CLANG_TIDY} "--version"
-                      OUTPUT_VARIABLE CLANG_TIDY_OUTPUT)
+        OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
+        ERROR_VARIABLE CLANG_TIDY_ERROR
+        RESULT_VARIABLE CLANG_TIDY_RESULT)
+
+      if(CLANG_TIDY_RESULT AND NOT CLANG_TIDY_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to execute '${LLVM_LIBC_CLANG_TIDY} --version'
+          output : '${CLANG_TIDY_OUTPUT}'
+          error  : '${CLANG_TIDY_ERROR}'
+          result : '${CLANG_TIDY_RESULT}'
+          ")
+      endif()
       string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
       string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
-             "${CMAKE_CXX_COMPILER_VERSION}")
+        "${CMAKE_CXX_COMPILER_VERSION}")
+
       if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
         set(LLVM_LIBC_ENABLE_LINTING OFF)
         message(WARNING "
@@ -229,7 +296,6 @@ endif()
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all
 # of the other directories.
-# TODO: Add testing support for the libc GPU target.
 add_subdirectory(lib)
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

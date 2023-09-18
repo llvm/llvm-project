@@ -8,8 +8,6 @@
 
 #include "Futex.h"
 
-#include "include/sys/syscall.h" // For syscall numbers.
-#include "include/threads.h"     // For call_once related type definition.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
@@ -18,6 +16,8 @@
 
 #include <limits.h>
 #include <linux/futex.h>
+#include <sys/syscall.h> // For syscall numbers.
+#include <threads.h>     // For call_once related type definition.
 
 namespace __llvm_libc {
 

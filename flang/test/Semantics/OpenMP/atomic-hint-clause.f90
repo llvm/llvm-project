@@ -95,6 +95,7 @@ program sample
         x = 10 * y
 
     !$omp atomic write hint(a)
+    !ERROR: RHS expression on atomic assignment statement cannot access 'x'
         x = y + x
 
     !$omp atomic hint(abs(-1)) write

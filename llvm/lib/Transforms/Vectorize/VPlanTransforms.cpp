@@ -501,6 +501,26 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
   }
 }
 
+static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
+                                    ScalarEvolution &SE, Instruction *TruncI,
+                                    Type *IVTy, VPValue *StartV,
+                                    VPValue *Step) {
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  auto IP = HeaderVPBB->getFirstNonPhi();
+  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  Type *TruncTy = TruncI ? TruncI->getType() : IVTy;
+  VPValue *BaseIV = CanonicalIV;
+  if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step, TruncTy)) {
+    BaseIV = new VPDerivedIVRecipe(ID, StartV, CanonicalIV, Step,
+                                   TruncI ? TruncI->getType() : nullptr);
+    HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
+  }
+
+  VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
+  HeaderVPBB->insert(Steps, IP);
+  return Steps;
+}
+
 void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -514,23 +534,10 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
         }))
       continue;
 
-    auto IP = HeaderVPBB->getFirstNonPhi();
-    VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-    Type *ResultTy = WideIV->getPHINode()->getType();
-    if (Instruction *TruncI = WideIV->getTruncInst())
-      ResultTy = TruncI->getType();
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Step = WideIV->getStepValue();
-    VPValue *BaseIV = CanonicalIV;
-    if (!CanonicalIV->isCanonical(ID.getKind(), WideIV->getStartValue(), Step,
-                                  ResultTy)) {
-      BaseIV = new VPDerivedIVRecipe(ID, WideIV->getStartValue(), CanonicalIV,
-                                     Step, ResultTy);
-      HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
-    }
-
-    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
-    HeaderVPBB->insert(Steps, IP);
+    VPValue *Steps = createScalarIVSteps(
+        Plan, ID, SE, WideIV->getTruncInst(), WideIV->getPHINode()->getType(),
+        WideIV->getStartValue(), WideIV->getStepValue());
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure
     // the list of users doesn't contain duplicates.

@@ -244,7 +244,7 @@ Value *MVEGatherScatterLowering::decomposePtr(Value *Ptr, Value *&Offsets,
   if (PtrTy->getNumElements() != 4 || MemoryTy->getScalarSizeInBits() == 32)
     return nullptr;
   Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
-  Value *BasePtr = Builder.CreateIntToPtr(Zero, Builder.getInt8PtrTy());
+  Value *BasePtr = Builder.CreateIntToPtr(Zero, Builder.getPtrTy());
   Offsets = Builder.CreatePtrToInt(
       Ptr, FixedVectorType::get(Builder.getInt32Ty(), 4));
   Scale = 0;
@@ -1224,7 +1224,7 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
     // pointer.
     if (Offsets && Base && Base != GEP) {
       assert(Scale == 1 && "Expected to fold GEP to a scale of 1");
-      Type *BaseTy = Builder.getInt8PtrTy();
+      Type *BaseTy = Builder.getPtrTy();
       if (auto *VecTy = dyn_cast<FixedVectorType>(Base->getType()))
         BaseTy = FixedVectorType::get(BaseTy, VecTy);
       GetElementPtrInst *NewAddress = GetElementPtrInst::Create(

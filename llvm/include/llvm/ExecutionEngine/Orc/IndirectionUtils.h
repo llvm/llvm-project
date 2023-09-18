@@ -475,7 +475,7 @@ Expected<std::unique_ptr<JITCompileCallbackManager>>
 createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
                                   ExecutorAddr ErrorHandlerAddress);
 
-/// Create a local indriect stubs manager builder.
+/// Create a local indirect stubs manager builder.
 ///
 /// The given target triple will determine the ABI.
 std::function<std::unique_ptr<IndirectStubsManager>()>

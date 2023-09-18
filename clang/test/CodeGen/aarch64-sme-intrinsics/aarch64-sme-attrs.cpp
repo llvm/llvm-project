@@ -255,7 +255,7 @@ int call() { return 0; }
 
 template <typename T, typename... Other>
 __attribute__((always_inline))
-int call(T f, Other... other) {
+int call(T f, Other... other) __arm_shared_za {
     return f() + call(other...);
 }
 
@@ -270,7 +270,7 @@ int call(T f, Other... other) {
 // CHECK-NEXT: add nsw
 // CHECK-NEXT: add nsw
 // CHECK-NEXT: ret
-int test_variadic_template() {
+int test_variadic_template() __arm_shared_za {
   return call(normal_callee,
               streaming_decl,
               streaming_compatible_decl,

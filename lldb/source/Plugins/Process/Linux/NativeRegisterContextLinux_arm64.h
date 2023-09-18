@@ -181,6 +181,8 @@ private:
   void ConfigureRegisterContext();
 
   uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
+
+  Status CacheAllRegisters(uint32_t &cached_size);
 };
 
 } // namespace process_linux

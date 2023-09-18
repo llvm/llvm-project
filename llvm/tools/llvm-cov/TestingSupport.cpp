@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
@@ -51,6 +53,28 @@ int convertForTestingMain(int argc, const char *argv[]) {
   int FoundSectionCount = 0;
   SectionRef ProfileNames, CoverageMapping, CoverageRecords;
   auto ObjFormat = OF->getTripleObjectFormat();
+
+  auto ProfileNamesSection = getInstrProfSectionName(IPSK_name, ObjFormat,
+                                                     /*AddSegmentInfo=*/false);
+  auto CoverageMappingSection =
+      getInstrProfSectionName(IPSK_covmap, ObjFormat, /*AddSegmentInfo=*/false);
+  auto CoverageRecordsSection =
+      getInstrProfSectionName(IPSK_covfun, ObjFormat, /*AddSegmentInfo=*/false);
+  if (isa<object::COFFObjectFile>(OF)) {
+    // On COFF, the object file section name may end in "$M". This tells the
+    // linker to sort these sections between "$A" and "$Z". The linker removes
+    // the dollar and everything after it in the final binary. Do the same to
+    // match.
+    auto Strip = [](std::string &Str) {
+      auto Pos = Str.find('$');
+      if (Pos != std::string::npos)
+        Str.resize(Pos);
+    };
+    Strip(ProfileNamesSection);
+    Strip(CoverageMappingSection);
+    Strip(CoverageRecordsSection);
+  }
+
   for (const auto &Section : OF->sections()) {
     StringRef Name;
     if (Expected<StringRef> NameOrErr = Section.getName()) {
@@ -60,16 +84,13 @@ int convertForTestingMain(int argc, const char *argv[]) {
       return 1;
     }
 
-    if (Name == llvm::getInstrProfSectionName(IPSK_name, ObjFormat,
-                                              /*AddSegmentInfo=*/false)) {
+    if (Name == ProfileNamesSection)
       ProfileNames = Section;
-    } else if (Name == llvm::getInstrProfSectionName(
-                           IPSK_covmap, ObjFormat, /*AddSegmentInfo=*/false)) {
+    else if (Name == CoverageMappingSection)
       CoverageMapping = Section;
-    } else if (Name == llvm::getInstrProfSectionName(
-                           IPSK_covfun, ObjFormat, /*AddSegmentInfo=*/false)) {
+    else if (Name == CoverageRecordsSection)
       CoverageRecords = Section;
-    } else
+    else
       continue;
     ++FoundSectionCount;
   }
@@ -100,25 +121,22 @@ int convertForTestingMain(int argc, const char *argv[]) {
     return 1;
   }
 
+  // If this is a linked PE/COFF file, then we have to skip over the null byte
+  // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  if (isa<COFFObjectFile>(OF) && !OF->isRelocatableObject())
+    ProfileNamesData = ProfileNamesData.drop_front(1);
+
   int FD;
   if (auto Err = sys::fs::openFileForWrite(OutputFilename, FD)) {
     errs() << "error: " << Err.message() << "\n";
     return 1;
   }
 
+  coverage::TestingFormatWriter Writer(ProfileNamesAddress, ProfileNamesData,
+                                       CoverageMappingData,
+                                       CoverageRecordsData);
   raw_fd_ostream OS(FD, true);
-  OS << "llvmcovmtestdata";
-  encodeULEB128(ProfileNamesData.size(), OS);
-  encodeULEB128(ProfileNamesAddress, OS);
-  OS << ProfileNamesData;
-  // Coverage mapping data is expected to have an alignment of 8.
-  for (unsigned Pad = offsetToAlignment(OS.tell(), Align(8)); Pad; --Pad)
-    OS.write(uint8_t(0));
-  OS << CoverageMappingData;
-  // Coverage records data is expected to have an alignment of 8.
-  for (unsigned Pad = offsetToAlignment(OS.tell(), Align(8)); Pad; --Pad)
-    OS.write(uint8_t(0));
-  OS << CoverageRecordsData;
+  Writer.write(OS);
 
   return 0;
 }

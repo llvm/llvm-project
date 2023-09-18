@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -Woverriding-method-mismatch -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://6191214
 
 @protocol Xint
 -(void) setX: (int) arg0; // expected-note {{previous declaration is here}}

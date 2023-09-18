@@ -525,6 +525,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(EXP_F);
   case TargetOpcode::G_FEXP2:
     RTLIBCASE(EXP2_F);
+  case TargetOpcode::G_FEXP10:
+    RTLIBCASE(EXP10_F);
   case TargetOpcode::G_FREM:
     RTLIBCASE(REM_F);
   case TargetOpcode::G_FPOW:
@@ -689,7 +691,7 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
     LLT OpLLT = MRI.getType(Reg);
     Type *OpTy = nullptr;
     if (OpLLT.isPointer())
-      OpTy = Type::getInt8PtrTy(Ctx, OpLLT.getAddressSpace());
+      OpTy = PointerType::get(Ctx, OpLLT.getAddressSpace());
     else
       OpTy = IntegerType::get(Ctx, OpLLT.getSizeInBits());
     Args.push_back({Reg, OpTy, 0});
@@ -830,6 +832,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP10:
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FMINNUM:
@@ -2493,6 +2496,17 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
   }
   case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    if (TypeIdx == 0) {
+      Observer.changingInstr(MI);
+      const LLT WideEltTy = WideTy.getElementType();
+
+      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+      widenScalarSrc(MI, WideEltTy, 2, TargetOpcode::G_ANYEXT);
+      widenScalarDst(MI, WideTy, 0);
+      Observer.changedInstr(MI);
+      return Legalized;
+    }
+
     if (TypeIdx == 1) {
       Observer.changingInstr(MI);
 
@@ -2545,6 +2559,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP10:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
@@ -2647,6 +2662,22 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_VECREDUCE_FMIN:
+  case TargetOpcode::G_VECREDUCE_FMAX:
+  case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    Register VecReg = MI.getOperand(1).getReg();
+    LLT VecTy = MRI.getType(VecReg);
+    LLT WideVecTy = VecTy.isVector()
+                        ? LLT::vector(VecTy.getElementCount(), WideTy)
+                        : WideTy;
+    widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT);
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
   }
 }
 
@@ -3420,12 +3451,25 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   }
   case G_UADDE: {
     auto [Res, CarryOut, LHS, RHS, CarryIn] = MI.getFirst5Regs();
-    LLT Ty = MRI.getType(Res);
+    const LLT CondTy = MRI.getType(CarryOut);
+    const LLT Ty = MRI.getType(Res);
 
+    // Initial add of the two operands.
     auto TmpRes = MIRBuilder.buildAdd(Ty, LHS, RHS);
+
+    // Initial check for carry.
+    auto Carry = MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, TmpRes, LHS);
+
+    // Add the sum and the carry.
     auto ZExtCarryIn = MIRBuilder.buildZExt(Ty, CarryIn);
     MIRBuilder.buildAdd(Res, TmpRes, ZExtCarryIn);
-    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CarryOut, Res, LHS);
+
+    // Second check for carry. We can only carry if the initial sum is all 1s
+    // and the carry is set, resulting in a new sum of 0.
+    auto Zero = MIRBuilder.buildConstant(Ty, 0);
+    auto ResEqZero = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, Res, Zero);
+    auto Carry2 = MIRBuilder.buildAnd(CondTy, ResEqZero, CarryIn);
+    MIRBuilder.buildOr(CarryOut, Carry, Carry2);
 
     MI.eraseFromParent();
     return Legalized;
@@ -3444,13 +3488,23 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     const LLT CondTy = MRI.getType(BorrowOut);
     const LLT Ty = MRI.getType(Res);
 
+    // Initial subtract of the two operands.
     auto TmpRes = MIRBuilder.buildSub(Ty, LHS, RHS);
+
+    // Initial check for borrow.
+    auto Borrow = MIRBuilder.buildICmp(CmpInst::ICMP_UGT, CondTy, TmpRes, LHS);
+
+    // Subtract the borrow from the first subtract.
     auto ZExtBorrowIn = MIRBuilder.buildZExt(Ty, BorrowIn);
     MIRBuilder.buildSub(Res, TmpRes, ZExtBorrowIn);
 
-    auto LHS_EQ_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, LHS, RHS);
-    auto LHS_ULT_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, LHS, RHS);
-    MIRBuilder.buildSelect(BorrowOut, LHS_EQ_RHS, BorrowIn, LHS_ULT_RHS);
+    // Second check for borrow. We can only borrow if the initial difference is
+    // 0 and the borrow is set, resulting in a new difference of all 1s.
+    auto Zero = MIRBuilder.buildConstant(Ty, 0);
+    auto TmpResEqZero =
+        MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, TmpRes, Zero);
+    auto Borrow2 = MIRBuilder.buildAnd(CondTy, TmpResEqZero, BorrowIn);
+    MIRBuilder.buildOr(BorrowOut, Borrow, Borrow2);
 
     MI.eraseFromParent();
     return Legalized;
@@ -3502,6 +3556,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerShuffleVector(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
+  case G_STACKSAVE:
+    return lowerStackSave(MI);
+  case G_STACKRESTORE:
+    return lowerStackRestore(MI);
   case G_EXTRACT:
     return lowerExtract(MI);
   case G_INSERT:
@@ -3558,6 +3616,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerMemCpyFamily(MI);
   case G_MEMCPY_INLINE:
     return lowerMemcpyInline(MI);
+  case G_ZEXT:
+  case G_SEXT:
+  case G_ANYEXT:
+    return lowerEXT(MI);
   GISEL_VECREDUCE_CASES_NONSEQ
     return lowerVectorReduction(MI);
   }
@@ -4167,6 +4229,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FPOW:
   case G_FEXP:
   case G_FEXP2:
+  case G_FEXP10:
   case G_FLOG:
   case G_FLOG2:
   case G_FLOG10:
@@ -4424,73 +4487,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
   return Legalized;
 }
 
-static unsigned getScalarOpcForReduction(unsigned Opc) {
-  unsigned ScalarOpc;
-  switch (Opc) {
-  case TargetOpcode::G_VECREDUCE_FADD:
-    ScalarOpc = TargetOpcode::G_FADD;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMUL:
-    ScalarOpc = TargetOpcode::G_FMUL;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMAX:
-    ScalarOpc = TargetOpcode::G_FMAXNUM;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMIN:
-    ScalarOpc = TargetOpcode::G_FMINNUM;
-    break;
-  case TargetOpcode::G_VECREDUCE_ADD:
-    ScalarOpc = TargetOpcode::G_ADD;
-    break;
-  case TargetOpcode::G_VECREDUCE_MUL:
-    ScalarOpc = TargetOpcode::G_MUL;
-    break;
-  case TargetOpcode::G_VECREDUCE_AND:
-    ScalarOpc = TargetOpcode::G_AND;
-    break;
-  case TargetOpcode::G_VECREDUCE_OR:
-    ScalarOpc = TargetOpcode::G_OR;
-    break;
-  case TargetOpcode::G_VECREDUCE_XOR:
-    ScalarOpc = TargetOpcode::G_XOR;
-    break;
-  case TargetOpcode::G_VECREDUCE_SMAX:
-    ScalarOpc = TargetOpcode::G_SMAX;
-    break;
-  case TargetOpcode::G_VECREDUCE_SMIN:
-    ScalarOpc = TargetOpcode::G_SMIN;
-    break;
-  case TargetOpcode::G_VECREDUCE_UMAX:
-    ScalarOpc = TargetOpcode::G_UMAX;
-    break;
-  case TargetOpcode::G_VECREDUCE_UMIN:
-    ScalarOpc = TargetOpcode::G_UMIN;
-    break;
-  default:
-    llvm_unreachable("Unhandled reduction");
-  }
-  return ScalarOpc;
-}
-
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     MachineInstr &MI, unsigned int TypeIdx, LLT NarrowTy) {
-  unsigned Opc = MI.getOpcode();
-  assert(Opc != TargetOpcode::G_VECREDUCE_SEQ_FADD &&
-         Opc != TargetOpcode::G_VECREDUCE_SEQ_FMUL &&
-         "Sequential reductions not expected");
+  auto &RdxMI = cast<GVecReduce>(MI);
 
   if (TypeIdx != 1)
     return UnableToLegalize;
 
   // The semantics of the normal non-sequential reductions allow us to freely
   // re-associate the operation.
-  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  auto [DstReg, DstTy, SrcReg, SrcTy] = RdxMI.getFirst2RegLLTs();
 
   if (NarrowTy.isVector() &&
       (SrcTy.getNumElements() % NarrowTy.getNumElements() != 0))
     return UnableToLegalize;
 
-  unsigned ScalarOpc = getScalarOpcForReduction(Opc);
+  unsigned ScalarOpc = RdxMI.getScalarOpcForReduction();
   SmallVector<Register> SplitSrcs;
   // If NarrowTy is a scalar then we're being asked to scalarize.
   const unsigned NumParts =
@@ -4535,9 +4547,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   SmallVector<Register> PartialReductions;
   for (unsigned Part = 0; Part < NumParts; ++Part) {
     PartialReductions.push_back(
-        MIRBuilder.buildInstr(Opc, {DstTy}, {SplitSrcs[Part]}).getReg(0));
+        MIRBuilder.buildInstr(RdxMI.getOpcode(), {DstTy}, {SplitSrcs[Part]})
+            .getReg(0));
   }
-
 
   // If the types involved are powers of 2, we can generate intermediate vector
   // ops, before generating a final reduction operation.
@@ -4835,7 +4847,9 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_MUL:
   case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FDIV:
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_USUBSAT:
   case TargetOpcode::G_SADDSAT:
@@ -4885,6 +4899,14 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FREEZE:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FNEARBYINT:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
@@ -5955,6 +5977,48 @@ LegalizerHelper::lowerFunnelShift(MachineInstr &MI) {
   return Result;
 }
 
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerEXT(MachineInstr &MI) {
+  auto [Dst, Src] = MI.getFirst2Regs();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  uint32_t DstTySize = DstTy.getSizeInBits();
+  uint32_t DstTyScalarSize = DstTy.getScalarSizeInBits();
+  uint32_t SrcTyScalarSize = SrcTy.getScalarSizeInBits();
+
+  if (!isPowerOf2_32(DstTySize) || !isPowerOf2_32(DstTyScalarSize) ||
+      !isPowerOf2_32(SrcTyScalarSize))
+    return UnableToLegalize;
+
+  // The step between extend is too large, split it by creating an intermediate
+  // extend instruction
+  if (SrcTyScalarSize * 2 < DstTyScalarSize) {
+    LLT MidTy = SrcTy.changeElementSize(SrcTyScalarSize * 2);
+    // If the destination type is illegal, split it into multiple statements
+    // zext x -> zext(merge(zext(unmerge), zext(unmerge)))
+    auto NewExt = MIRBuilder.buildInstr(MI.getOpcode(), {MidTy}, {Src});
+    // Unmerge the vector
+    LLT EltTy = MidTy.changeElementCount(
+        MidTy.getElementCount().divideCoefficientBy(2));
+    auto UnmergeSrc = MIRBuilder.buildUnmerge(EltTy, NewExt);
+
+    // ZExt the vectors
+    LLT ZExtResTy = DstTy.changeElementCount(
+        DstTy.getElementCount().divideCoefficientBy(2));
+    auto ZExtRes1 = MIRBuilder.buildInstr(MI.getOpcode(), {ZExtResTy},
+                                          {UnmergeSrc.getReg(0)});
+    auto ZExtRes2 = MIRBuilder.buildInstr(MI.getOpcode(), {ZExtResTy},
+                                          {UnmergeSrc.getReg(1)});
+
+    // Merge the ending vectors
+    MIRBuilder.buildMergeLikeInstr(Dst, {ZExtRes1, ZExtRes2});
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+  return UnableToLegalize;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerRotateWithReverseRotate(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy, Amt, AmtTy] = MI.getFirst3RegLLTs();
@@ -6726,26 +6790,9 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   LLT IdxTy = LLT::scalar(32);
 
   ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-
-  if (DstTy.isScalar()) {
-    if (Src0Ty.isVector())
-      return UnableToLegalize;
-
-    // This is just a SELECT.
-    assert(Mask.size() == 1 && "Expected a single mask element");
-    Register Val;
-    if (Mask[0] < 0 || Mask[0] > 1)
-      Val = MIRBuilder.buildUndef(DstTy).getReg(0);
-    else
-      Val = Mask[0] == 0 ? Src0Reg : Src1Reg;
-    MIRBuilder.buildCopy(DstReg, Val);
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
   Register Undef;
   SmallVector<Register, 32> BuildVec;
-  LLT EltTy = DstTy.getElementType();
+  LLT EltTy = DstTy.getScalarType();
 
   for (int Idx : Mask) {
     if (Idx < 0) {
@@ -6767,7 +6814,10 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
     }
   }
 
-  MIRBuilder.buildBuildVector(DstReg, BuildVec);
+  if (DstTy.isScalar())
+    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
+  else
+    MIRBuilder.buildBuildVector(DstReg, BuildVec);
   MI.eraseFromParent();
   return Legalized;
 }
@@ -6805,6 +6855,28 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
   MIRBuilder.buildCopy(SPReg, SPTmp);
   MIRBuilder.buildCopy(Dst, SPTmp);
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerStackSave(MachineInstr &MI) {
+  Register StackPtr = TLI.getStackPointerRegisterToSaveRestore();
+  if (!StackPtr)
+    return UnableToLegalize;
+
+  MIRBuilder.buildCopy(MI.getOperand(0), StackPtr);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerStackRestore(MachineInstr &MI) {
+  Register StackPtr = TLI.getStackPointerRegisterToSaveRestore();
+  if (!StackPtr)
+    return UnableToLegalize;
+
+  MIRBuilder.buildCopy(StackPtr, MI.getOperand(0));
   MI.eraseFromParent();
   return Legalized;
 }

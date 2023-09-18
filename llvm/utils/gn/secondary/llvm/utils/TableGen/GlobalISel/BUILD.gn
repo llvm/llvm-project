@@ -4,14 +4,5 @@ static_library("GlobalISel") {
     "//llvm/lib/CodeGen:CodeGenTypes",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "CodeExpander.cpp",
-    "GIMatchDag.cpp",
-    "GIMatchDagEdge.cpp",
-    "GIMatchDagInstr.cpp",
-    "GIMatchDagOperands.cpp",
-    "GIMatchDagPredicate.cpp",
-    "GIMatchDagPredicateDependencyEdge.cpp",
-    "GIMatchTree.cpp",
-  ]
+  sources = [ "CodeExpander.cpp" ]
 }

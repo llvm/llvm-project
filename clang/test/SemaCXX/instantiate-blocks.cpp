@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify %s
-// rdar: // 6182276
 
 template <typename T, typename T1> void foo(T t, T1 r)
 {
@@ -12,7 +11,6 @@ template <typename T, typename T1> void foo(T t, T1 r)
          return block_arg+arg; };
 }
 
-// rdar://10466373
 template <typename T, typename T1> void noret(T t, T1 r)
 {
     (void) ^{

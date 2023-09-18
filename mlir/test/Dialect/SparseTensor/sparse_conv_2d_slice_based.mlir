@@ -4,7 +4,7 @@
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 // CHECK-LABEL:   func.func @conv2d_all_sparse_CSR(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<8x8xi32, #sparse_tensor.encoding<{{.*}}>>,
@@ -142,9 +142,7 @@
 // CHECK:                   scf.yield %[[VAL_132]], %[[VAL_131]] : index, i32
 // CHECK:                 }
 // CHECK:                 %[[VAL_133:.*]] = arith.addi %[[VAL_105]], %[[VAL_7]] : index
-// CHECK:                 %[[VAL_134:.*]] = memref.load %[[VAL_18]]{{\[}}%[[VAL_7]]] : memref<11xindex>
-// CHECK:                 %[[VAL_135:.*]] = arith.addi %[[VAL_134]], %[[VAL_5]] : index
-// CHECK:                 memref.store %[[VAL_135]], %[[VAL_18]]{{\[}}%[[VAL_7]]] : memref<11xindex>
+// CHECK:                 memref.store %[[VAL_112]], %[[VAL_18]]{{\[}}%[[VAL_7]]] : memref<11xindex>
 // CHECK:                 scf.yield %[[VAL_133]], %[[VAL_136:.*]]#1, %[[VAL_2]] : index, i32, i1
 // CHECK:               }
 // CHECK:               %[[VAL_137:.*]] = scf.if %[[VAL_138:.*]]#2 -> (tensor<6x6xi32, #sparse_tensor.encoding<{{.*}}>>) {

@@ -113,6 +113,22 @@ define i32 @notailcall() {
   ret i32 %1
 }
 
+define i32 @call_inline_asm(i32 %0) {
+	; Test Intel syntax
+	%2 = tail call i32 asm sideeffect inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0)
+	%3 = tail call i32 asm sideeffect inteldialect "lea $0, [$1+$2]", "=r,r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0, i32 %2)
+	%4 = tail call i32 asm inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %3)
+	%5 = tail call i32 asm inteldialect unwind "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %4)
+	%6 = tail call i32 asm alignstack inteldialect "mov $0, $1", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %5)
+
+	; Test AT&T syntax
+	%7 = tail call i32 asm "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %6)
+	%8 = tail call i32 asm sideeffect "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %7)
+	%9 = tail call i32 asm alignstack "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %8)
+	%10 = tail call i32 asm alignstack unwind "mov $1, $0", "=r,r,~{dirflag},~{fpsr},~{flags}"(i32 %9)
+	ret i32 %10
+}
+
 define i32 @cond(i32 %a, i32 %b) {
   br label %br
 unreachable:

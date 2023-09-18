@@ -27,7 +27,9 @@ entry:
   %b.i1 = alloca %struct.B, align 4
   %b.i = alloca %struct.B, align 4
   store i32 4, ptr %b.i
-  br i1 icmp eq (i64 and (i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), i64 4294967296), i64 0), label %_Z3fooiM1BFvvE.exit, label %cond_true.i
+  %and1 = and i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), 4294967296
+  %cmp1 = icmp eq i64 %and1, 0
+  br i1 %cmp1, label %_Z3fooiM1BFvvE.exit, label %cond_true.i
 
 cond_true.i:
   %ctg23.i = getelementptr i8, ptr %b.i, i32 ashr (i32 trunc (i64 lshr (i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), i64 32) to i32), i32 1)
@@ -41,7 +43,9 @@ _Z3fooiM1BFvvE.exit:
   %ctg25.i = getelementptr i8, ptr %b.i, i32 ashr (i32 trunc (i64 lshr (i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), i64 32) to i32), i32 1)
   call void %iftmp.2.0.i(ptr %ctg25.i)
   store i32 6, ptr %b.i29
-  br i1 icmp eq (i64 and (i64 zext (i32 ptrtoint (ptr @_ZN1B1jEv to i32) to i64), i64 4294967296), i64 0), label %_Z3fooiM1BFvvE.exit56, label %cond_true.i46
+  %and2 = and i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), 4294967296
+  %cmp2 = icmp eq i64 %and2, 0
+  br i1 %cmp2, label %_Z3fooiM1BFvvE.exit56, label %cond_true.i46
 
 cond_true.i46:
   %ctg23.i36 = getelementptr i8, ptr %b.i29, i32 ashr (i32 trunc (i64 lshr (i64 zext (i32 ptrtoint (ptr @_ZN1B1jEv to i32) to i64), i64 32) to i32), i32 1)
@@ -55,7 +59,9 @@ _Z3fooiM1BFvvE.exit56:
   %ctg25.i54 = getelementptr i8, ptr %b.i29, i32 ashr (i32 trunc (i64 lshr (i64 zext (i32 ptrtoint (ptr @_ZN1B1jEv to i32) to i64), i64 32) to i32), i32 1)
   call void %iftmp.2.0.i49(ptr %ctg25.i54)
   store i32 -1, ptr %b.i1
-  br i1 icmp eq (i64 and (i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), i64 4294967296), i64 0), label %_Z3fooiM1BFvvE.exit28, label %cond_true.i18
+  %and3 = and i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), 4294967296
+  %cmp3 = icmp eq i64 %and3, 0
+  br i1 %cmp3, label %_Z3fooiM1BFvvE.exit28, label %cond_true.i18
 
 cond_true.i18:
   %ctg23.i8 = getelementptr i8, ptr %b.i1, i32 ashr (i32 trunc (i64 lshr (i64 zext (i32 ptrtoint (ptr @_ZN1B1iEv to i32) to i64), i64 32) to i32), i32 1)

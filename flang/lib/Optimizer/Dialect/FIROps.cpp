@@ -128,9 +128,8 @@ static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
     parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
     return mlir::failure();
   }
-  result.addAttribute(
-      "operand_segment_sizes",
-      builder.getDenseI32ArrayAttr({typeparamsSize, shapeSize}));
+  result.addAttribute("operandSegmentSizes", builder.getDenseI32ArrayAttr(
+                                                 {typeparamsSize, shapeSize}));
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.addTypeToList(restype, result.types))
     return mlir::failure();
@@ -149,7 +148,7 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
     p << ", ";
     p.printOperand(sh);
   }
-  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operand_segment_sizes"});
+  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
 //===----------------------------------------------------------------------===//
@@ -3462,43 +3461,47 @@ void fir::IfOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
   }
 }
 
-// These 2 functions copied from scf.if implementation.
+// These 3 functions copied from scf.if implementation.
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
+/// during the flow of control.
 void fir::IfOp::getSuccessorRegions(
-    std::optional<unsigned> index, llvm::ArrayRef<mlir::Attribute> operands,
+    mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
-  if (index) {
+  if (!point.isParent()) {
     regions.push_back(mlir::RegionSuccessor(getResults()));
     return;
   }
 
   // Don't consider the else region if it is empty.
+  regions.push_back(mlir::RegionSuccessor(&getThenRegion()));
+
+  // Don't consider the else region if it is empty.
   mlir::Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    elseRegion = nullptr;
+    regions.push_back(mlir::RegionSuccessor());
+  else
+    regions.push_back(mlir::RegionSuccessor(elseRegion));
+}
 
-  // Otherwise, the successor is dependent on the condition.
-  bool condition;
-  if (auto condAttr = operands.front().dyn_cast_or_null<mlir::IntegerAttr>()) {
-    condition = condAttr.getValue().isOne();
-  } else {
-    // If the condition isn't constant, both regions may be executed.
-    regions.push_back(mlir::RegionSuccessor(&getThenRegion()));
-    // If the else region does not exist, it is not a viable successor.
-    if (elseRegion)
-      regions.push_back(mlir::RegionSuccessor(elseRegion));
-    return;
+void fir::IfOp::getEntrySuccessorRegions(
+    llvm::ArrayRef<mlir::Attribute> operands,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  FoldAdaptor adaptor(operands);
+  auto boolAttr =
+      mlir::dyn_cast_or_null<mlir::BoolAttr>(adaptor.getCondition());
+  if (!boolAttr || boolAttr.getValue())
+    regions.emplace_back(&getThenRegion());
+
+  // If the else region is empty, execution continues after the parent op.
+  if (!boolAttr || !boolAttr.getValue()) {
+    if (!getElseRegion().empty())
+      regions.emplace_back(&getElseRegion());
+    else
+      regions.emplace_back(getResults());
   }
-
-  // Add the successor regions using the condition.
-  regions.push_back(
-      mlir::RegionSuccessor(condition ? &getThenRegion() : elseRegion));
 }
 
 void fir::IfOp::getRegionInvocationBounds(

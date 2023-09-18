@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -358,7 +359,7 @@ public:
   /// Creates an LLVM pointer type which may either be a typed pointer or an
   /// opaque pointer, depending on what options the converter was constructed
   /// with.
-  LLVM::LLVMPointerType getPointerType(Type elementType) {
+  LLVM::LLVMPointerType getPointerType(Type elementType) const {
     if (llvmOpaquePointers)
       return LLVM::LLVMPointerType::get(elementType.getContext());
     return LLVM::LLVMPointerType::get(elementType);
@@ -387,13 +388,14 @@ class AsyncOpConversionPattern : public OpConversionPattern<SourceOp> {
   using Base = OpConversionPattern<SourceOp>;
 
 public:
-  AsyncOpConversionPattern(AsyncRuntimeTypeConverter &typeConverter,
+  AsyncOpConversionPattern(const AsyncRuntimeTypeConverter &typeConverter,
                            MLIRContext *context)
       : Base(typeConverter, context) {}
 
   /// Returns the 'AsyncRuntimeTypeConverter' of the pattern.
-  AsyncRuntimeTypeConverter *getTypeConverter() const {
-    return static_cast<AsyncRuntimeTypeConverter *>(Base::getTypeConverter());
+  const AsyncRuntimeTypeConverter *getTypeConverter() const {
+    return static_cast<const AsyncRuntimeTypeConverter *>(
+        Base::getTypeConverter());
   }
 };
 
@@ -532,11 +534,12 @@ public:
     // We are not in the block that is part of the unwind sequence.
     auto constFalse = rewriter.create<LLVM::ConstantOp>(
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
+    auto noneToken = rewriter.create<LLVM::NoneTokenOp>(op->getLoc());
 
     // Mark the end of a coroutine: @llvm.coro.end.
     auto coroHdl = adaptor.getHandle();
     rewriter.create<LLVM::CoroEndOp>(op->getLoc(), rewriter.getI1Type(),
-                                     ValueRange({coroHdl, constFalse}));
+                                     ValueRange({coroHdl, constFalse, noneToken}));
     rewriter.eraseOp(op);
 
     return success();
@@ -652,7 +655,7 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeCreateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type resultType = op->getResultTypes()[0];
 
     // Tokens creation maps to a simple function call.
@@ -705,7 +708,7 @@ public:
   LogicalResult
   matchAndRewrite(RuntimeCreateGroupOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TypeConverter *converter = getTypeConverter();
+    const TypeConverter *converter = getTypeConverter();
     Type resultType = op.getResult().getType();
 
     rewriter.replaceOpWithNewOp<func::CallOp>(
@@ -1039,8 +1042,8 @@ namespace {
 template <typename RefCountingOp>
 class RefCountingOpLowering : public OpConversionPattern<RefCountingOp> {
 public:
-  explicit RefCountingOpLowering(TypeConverter &converter, MLIRContext *ctx,
-                                 StringRef apiFunctionName)
+  explicit RefCountingOpLowering(const TypeConverter &converter,
+                                 MLIRContext *ctx, StringRef apiFunctionName)
       : OpConversionPattern<RefCountingOp>(converter, ctx),
         apiFunctionName(apiFunctionName) {}
 
@@ -1064,14 +1067,16 @@ private:
 
 class RuntimeAddRefOpLowering : public RefCountingOpLowering<RuntimeAddRefOp> {
 public:
-  explicit RuntimeAddRefOpLowering(TypeConverter &converter, MLIRContext *ctx)
+  explicit RuntimeAddRefOpLowering(const TypeConverter &converter,
+                                   MLIRContext *ctx)
       : RefCountingOpLowering(converter, ctx, kAddRef) {}
 };
 
 class RuntimeDropRefOpLowering
     : public RefCountingOpLowering<RuntimeDropRefOp> {
 public:
-  explicit RuntimeDropRefOpLowering(TypeConverter &converter, MLIRContext *ctx)
+  explicit RuntimeDropRefOpLowering(const TypeConverter &converter,
+                                    MLIRContext *ctx)
       : RefCountingOpLowering(converter, ctx, kDropRef) {}
 };
 } // namespace

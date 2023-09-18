@@ -1,4 +1,4 @@
-! RUN: %flang --target=powerpc64le-unknown-linux-gnu -mcpu=pwr10 -emit-llvm -S %s -o - | FileCheck --check-prefixes="CHECK" %s
+! RUN: %flang_fc1 -triple powerpc64le-unknown-unknown -target-cpu pwr10 -emit-llvm %s -o - | FileCheck --check-prefixes="CHECK" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 ! mma_assemble_acc

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple arm64 %s -verify -emit-llvm -o - -Wno-c99-designator | FileCheck %s
 // expected-no-diagnostics
 
-// Make sure we don't enter an infinite loop (rdar://21942503)
+// Make sure we don't enter an infinite loop
 
 int vals1[] = {
   [__objc_yes] = 1,

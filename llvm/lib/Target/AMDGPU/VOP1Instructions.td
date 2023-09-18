@@ -326,7 +326,7 @@ defm V_LOG_F32 : VOP1Inst <"v_log_f32", VOP_F32_F32, AMDGPUlog>;
 defm V_RCP_F32 : VOP1Inst <"v_rcp_f32", VOP_F32_F32, AMDGPUrcp>;
 defm V_RCP_IFLAG_F32 : VOP1Inst <"v_rcp_iflag_f32", VOP_F32_F32, AMDGPUrcp_iflag>;
 defm V_RSQ_F32 : VOP1Inst <"v_rsq_f32", VOP_F32_F32, AMDGPUrsq>;
-defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
+defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans32]
 
 let TRANS = 1, SchedRW = [WriteTrans64] in {
@@ -584,18 +584,28 @@ let SubtargetPredicate = HasFP8Insts, mayRaiseFPException = 0,
 }
 
 class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
-    VOP1_Pseudo inst_e32, VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
+    VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
     (f32 (node i32:$src, index)),
-    !if (index,
-         (inst_sdwa 0, $src, 0, 0, index),
-         (inst_e32 $src))
+    (inst_sdwa 0, $src, 0, 0, index)
 >;
 
-foreach Index = [0, 1, 2, 3] in {
-  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index,
-                       V_CVT_F32_FP8_e32, V_CVT_F32_FP8_sdwa>;
-  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index,
-                       V_CVT_F32_BF8_e32, V_CVT_F32_BF8_sdwa>;
+let OtherPredicates = [HasCvtFP8VOP1Bug] in {
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
+               (V_CVT_F32_FP8_sdwa 0, $src, 0, 0, 0)>;
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
+               (V_CVT_F32_BF8_sdwa 0, $src, 0, 0, 0)>;
+}
+
+let OtherPredicates = [HasNoCvtFP8VOP1Bug] in {
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
+               (V_CVT_F32_FP8_e32 $src)>;
+  def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
+               (V_CVT_F32_BF8_e32 $src)>;
+}
+
+foreach Index = [1, 2, 3] in {
+  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index, V_CVT_F32_FP8_sdwa>;
+  def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index, V_CVT_F32_BF8_sdwa>;
 }
 
 class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
@@ -1163,7 +1173,7 @@ defm V_CVT_NORM_U16_F16  : VOP1_Real_vi<0x4e>;
 
 defm V_ACCVGPR_MOV_B32   : VOP1Only_Real_vi<0x52>;
 
-let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0] in {
+let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0], Size = V_MOV_B32_e32.Size in {
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,
@@ -1193,14 +1203,19 @@ def : GCNPat <
                        (as_i1timm $bound_ctrl))
 >;
 
-def : GCNPat <
-  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl,
+class UpdateDPPPat<ValueType vt> : GCNPat <
+  (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl,
                               timm:$row_mask, timm:$bank_mask,
                               timm:$bound_ctrl)),
   (V_MOV_B32_dpp VGPR_32:$old, VGPR_32:$src, (as_i32timm $dpp_ctrl),
                  (as_i32timm $row_mask), (as_i32timm $bank_mask),
                  (as_i1timm $bound_ctrl))
 >;
+
+def : UpdateDPPPat<i32>;
+def : UpdateDPPPat<f32>;
+def : UpdateDPPPat<v2i16>;
+def : UpdateDPPPat<v2f16>;
 
 } // End OtherPredicates = [isGFX8Plus]
 

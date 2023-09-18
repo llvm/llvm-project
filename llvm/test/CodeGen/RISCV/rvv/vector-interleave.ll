@@ -71,13 +71,13 @@ define <vscale x 8 x i32> @vector_interleave_nxv8i32_nxv4i32(<vscale x 4 x i32> 
 define <vscale x 4 x i64> @vector_interleave_nxv4i64_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: vector_interleave_nxv4i64_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vsrl.vi v16, v12, 1
-; CHECK-NEXT:    vand.vi v12, v12, 1
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vand.vi v13, v12, 1
+; CHECK-NEXT:    vmsne.vi v0, v13, 0
+; CHECK-NEXT:    vsrl.vi v16, v12, 1
 ; CHECK-NEXT:    vadd.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
@@ -177,13 +177,13 @@ define <vscale x 16 x i64> @vector_interleave_nxv16i64_nxv8i64(<vscale x 8 x i64
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vmv8r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vid.v v24
-; CHECK-NEXT:    vsrl.vi v8, v24, 1
-; CHECK-NEXT:    vand.vi v24, v24, 1
-; CHECK-NEXT:    vmsne.vi v10, v24, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vid.v v24
+; CHECK-NEXT:    vand.vi v26, v24, 1
+; CHECK-NEXT:    vmsne.vi v10, v26, 0
+; CHECK-NEXT:    vsrl.vi v8, v24, 1
 ; CHECK-NEXT:    vmv8r.v v24, v0
 ; CHECK-NEXT:    vmv4r.v v12, v4
 ; CHECK-NEXT:    vmv1r.v v0, v10
@@ -289,13 +289,13 @@ define <vscale x 8 x float> @vector_interleave_nxv8f32_nxv4f32(<vscale x 4 x flo
 define <vscale x 4 x double> @vector_interleave_nxv4f64_nxv2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: vector_interleave_nxv4f64_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vid.v v12
-; CHECK-NEXT:    vsrl.vi v16, v12, 1
-; CHECK-NEXT:    vand.vi v12, v12, 1
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vand.vi v13, v12, 1
+; CHECK-NEXT:    vmsne.vi v0, v13, 0
+; CHECK-NEXT:    vsrl.vi v16, v12, 1
 ; CHECK-NEXT:    vadd.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
@@ -355,13 +355,13 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vmv8r.v v0, v8
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vid.v v24
-; CHECK-NEXT:    vsrl.vi v8, v24, 1
-; CHECK-NEXT:    vand.vi v24, v24, 1
-; CHECK-NEXT:    vmsne.vi v10, v24, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vid.v v24
+; CHECK-NEXT:    vand.vi v26, v24, 1
+; CHECK-NEXT:    vmsne.vi v10, v26, 0
+; CHECK-NEXT:    vsrl.vi v8, v24, 1
 ; CHECK-NEXT:    vmv8r.v v24, v0
 ; CHECK-NEXT:    vmv4r.v v12, v4
 ; CHECK-NEXT:    vmv1r.v v0, v10

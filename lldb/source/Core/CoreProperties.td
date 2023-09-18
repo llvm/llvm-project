@@ -65,6 +65,14 @@ let Definition = "debugger" in {
     DefaultEnumValue<"OptionValueString::eOptionEncodeCharacterEscapeSequences">,
     DefaultStringValue<"(lldb) ">,
     Desc<"The debugger command line prompt displayed for the user.">;
+  def PromptAnsiPrefix: Property<"prompt-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the prompt.">;
+  def PromptAnsiSuffix: Property<"prompt-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the prompt.">;
   def ScriptLanguage: Property<"script-lang", "Enum">,
     Global,
     DefaultEnumValue<"eScriptLanguagePython">,
@@ -173,8 +181,8 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will print the values of variables declared in an expression. Currently only supported in the REPL (default: true).">;
   def TabSize: Property<"tab-size", "UInt64">,
     Global,
-    DefaultUnsignedValue<4>,
-    Desc<"The tab size to use when indenting code in multi-line input mode (default: 4).">;
+    DefaultUnsignedValue<2>,
+    Desc<"The tab size to use when indenting code in multi-line input mode (default: 2).">;
   def EscapeNonPrintables: Property<"escape-non-printables", "Boolean">,
     Global,
     DefaultTrue,

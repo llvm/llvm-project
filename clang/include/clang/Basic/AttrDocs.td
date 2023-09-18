@@ -2777,7 +2777,7 @@ On x86 targets, this attribute changes the calling convention to
 as possible in registers. It also tries to utilize registers for the
 return value whenever it is possible.
 
-.. _`__regcall`: https://software.intel.com/en-us/node/693069
+.. _`__regcall`: https://www.intel.com/content/www/us/en/docs/dpcpp-cpp-compiler/developer-guide-reference/2023-2/c-c-sycl-calling-conventions.html
   }];
 }
 
@@ -4801,6 +4801,54 @@ Marking virtual functions as ``disable_tail_calls`` is legal.
   }];
 }
 
+def AnyX86InterruptDocs : Documentation {
+    let Category = DocCatFunction;
+    let Heading = "interrupt (X86)";
+    let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt))`` attribute on X86
+targets. This attribute may be attached to a function definition and instructs
+the backend to generate appropriate function entry/exit code so that it can be
+used directly as an interrupt service routine.
+
+Interrupt handlers have access to the stack frame pushed onto the stack by the processor,
+and return using the ``IRET`` instruction. All registers in an interrupt handler are callee-saved.
+Exception handlers also have access to the error code pushed onto the stack by the processor,
+when applicable.
+
+An interrupt handler must take the following arguments:
+
+  .. code-block:: c
+
+   __attribute__ ((interrupt))
+   void f (struct stack_frame *frame) {
+       ...
+   }
+
+  Where ``struct stack_frame`` is a suitable struct matching the stack frame pushed by the
+  processor.
+
+An exception handler must take the following arguments:
+
+  .. code-block:: c
+
+   __attribute__ ((interrupt))
+   void g (struct stack_frame *frame, unsigned long code) {
+       ...
+   }
+
+  On 32-bit targets, the ``code`` argument should be of type ``unsigned int``.
+
+Exception handlers should only be used when an error code is pushed by the processor.
+Using the incorrect handler type will crash the system.
+
+Interrupt and exception handlers cannot be called by other functions and must have return type ``void``.
+
+Interrupt and exception handlers should only call functions with the 'no_caller_saved_registers'
+attribute, or should be compiled with the '-mgeneral-regs-only' flag to avoid saving unused
+non-GPR registers.
+    }];
+}
+
 def AnyX86NoCallerSavedRegistersDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -4814,6 +4862,10 @@ passing or returning arguments to the function.
 The user can call functions specified with the 'no_caller_saved_registers'
 attribute from an interrupt handler without saving and restoring all
 call-clobbered registers.
+
+Functions specified with the 'no_caller_saved_registers' attribute should only
+call other functions with the 'no_caller_saved_registers' attribute, or should be
+compiled with the '-mgeneral-regs-only' flag to avoid saving unused non-GPR registers.
 
 Note that 'no_caller_saved_registers' attribute is not a calling convention.
 In fact, it only overrides the decision of which registers should be saved by

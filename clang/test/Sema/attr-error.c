@@ -15,7 +15,7 @@ int bad2(void) {
   __attribute__((error("bad2"))); // expected-error {{'error' attribute cannot be applied to a statement}}
 }
 
-__attribute__((error(3))) // expected-error {{'error' attribute requires a string}}
+__attribute__((error(3))) // expected-error {{expected string literal as argument of 'error' attribute}}
 int
 bad3(void);
 

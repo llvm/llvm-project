@@ -26,7 +26,8 @@
 # NONE-NOT: foo
 # NONE:     functions.cpp:2:0
 
-# ERR: none
+# ERR: ??
+# ERR-NEXT: ??:0
 
 # The assembly below is a stripped down version of the output of:
 #   clang -S -g --target=x86_64-pc-linux

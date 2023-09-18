@@ -202,14 +202,14 @@ define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic_store(ptr addrspace(1) 
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %tid
-  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i32 1 seq_cst
+  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i32 1 syncscope("agent") seq_cst
   %tmp0 = insertelement <4 x i32> undef, i32 %in.1, i32 0
   %tmp1 = insertelement <4 x i32> %tmp0, i32 0, i32 1
   %tmp2 = insertelement <4 x i32> %tmp1, i32 0, i32 2
   %tmp3 = insertelement <4 x i32> %tmp2, i32 0, i32 3
   %mai.1 = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %tmp3, i32 0, i32 0, i32 0)
   %elt = extractelement <4 x i32> %mai.1, i32 0
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %elt seq_cst
+  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 %elt syncscope("agent") seq_cst
   store i32 %val, ptr addrspace(1) %arg
   ret void
 }
@@ -225,7 +225,7 @@ define amdgpu_kernel void @test_atomic_mfma_4xi32_atomic64_store(ptr addrspace(1
 bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i64, ptr addrspace(1) %arg, i32 %tid
-  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 1 seq_cst
+  %in.1 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 1 syncscope("agent") seq_cst
   %tmp0 = insertelement <2 x i64> undef, i64 %in.1, i32 0
   %tmp1 = insertelement <2 x i64> %tmp0, i64 0, i32 1
   %tmp2 = bitcast <2 x i64> %tmp0 to <4 x i32>
@@ -235,7 +235,7 @@ bb:
   %v2.1 = insertelement <2 x i32> undef, i32 %elt.1, i32 0
   %v2.2 = insertelement <2 x i32> %v2.1, i32 %elt.2, i32 1
   %v2 = bitcast <2 x i32> %v2.2 to i64
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i64 %v2 seq_cst
+  %val = atomicrmw volatile add ptr addrspace(1) %gep, i64 %v2 syncscope("agent") seq_cst
   store i64 %val, ptr addrspace(1) %arg
   ret void
 }

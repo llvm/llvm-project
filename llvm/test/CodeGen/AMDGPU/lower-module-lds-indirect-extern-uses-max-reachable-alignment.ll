@@ -15,7 +15,7 @@
 ; CHECK: %llvm.amdgcn.module.lds.t = type { i32 }
 ; CHECK: @dynamic_kernel_only = external addrspace(3) global [0 x double]
 ; CHECK: @dynamic_shared8 = external addrspace(3) global [0 x i64], align 8
-; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t undef, align 4, !absolute_symbol !0
+; CHECK: @llvm.amdgcn.module.lds = internal addrspace(3) global %llvm.amdgcn.module.lds.t poison, align 4, !absolute_symbol !0
 ; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr addrspacecast (ptr addrspace(3) @llvm.amdgcn.module.lds to ptr)], section "llvm.metadata"
 
 ; Alignment of these must be the maximum of the alignment of the reachable symbols
@@ -75,7 +75,7 @@ define void @use_shared2() #0 {
 }
 
 ; Include a normal variable so that the new variables aren't all at the same absolute_symbol
-@static_shared = addrspace(3) global i32 undef
+@static_shared = addrspace(3) global i32 poison
 define void @use_shared4() #0 {
 ; CHECK-LABEL: @use_shared4() #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()

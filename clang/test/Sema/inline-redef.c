@@ -8,7 +8,7 @@
 #endif
 
 // PR5253
-// rdar://9559708 (same extension in C99 mode)
+// (same extension in C99 mode)
 // GNU Extension: check that we can redefine an extern inline function
 GNU_INLINE extern inline int f(int a) {return a;}
 int f(int b) {return b;} // expected-note{{previous definition is here}}

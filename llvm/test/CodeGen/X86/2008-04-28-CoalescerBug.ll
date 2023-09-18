@@ -46,7 +46,6 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:    je LBB0_4
 ; CHECK-NEXT:  ## %bb.8: ## %bb13236
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
-; CHECK-NEXT:    cmpw $-1, %cx
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_4
 ; CHECK-NEXT:  ## %bb.9: ## %bb13572

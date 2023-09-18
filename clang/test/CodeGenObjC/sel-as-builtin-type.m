@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o %t %s
 // pr5025
-// radar 7405040
 
 typedef const struct objc_selector {
   void *sel_id;

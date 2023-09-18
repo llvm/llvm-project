@@ -817,6 +817,26 @@ public:
   /// Determine whether this type is const-qualified.
   bool isConstQualified() const;
 
+  enum class NonConstantStorageReason {
+    MutableField,
+    NonConstNonReferenceType,
+    NonTrivialCtor,
+    NonTrivialDtor,
+  };
+  /// Determine whether instances of this type can be placed in immutable
+  /// storage.
+  /// If ExcludeCtor is true, the duration when the object's constructor runs
+  /// will not be considered. The caller will need to verify that the object is
+  /// not written to during its construction. ExcludeDtor works similarly.
+  std::optional<NonConstantStorageReason>
+  isNonConstantStorage(const ASTContext &Ctx, bool ExcludeCtor,
+                       bool ExcludeDtor);
+
+  bool isConstantStorage(const ASTContext &Ctx, bool ExcludeCtor,
+                         bool ExcludeDtor) {
+    return !isNonConstantStorage(Ctx, ExcludeCtor, ExcludeDtor);
+  }
+
   /// Determine whether this particular QualType instance has the
   /// "restrict" qualifier set, without looking through typedefs that may have
   /// added "restrict" at a different level.
@@ -1011,7 +1031,7 @@ public:
   /// type.  To strip qualifiers even from within a sugared array type, use
   /// ASTContext::getUnqualifiedArrayType.
   ///
-  /// Note: In C, the _Atomic qualifier is special (see C2x 6.2.5p29 for
+  /// Note: In C, the _Atomic qualifier is special (see C23 6.2.5p32 for
   /// details), and it is not stripped by this function. Use
   /// getAtomicUnqualifiedType() to strip qualifiers including _Atomic.
   inline QualType getUnqualifiedType() const;
@@ -2055,7 +2075,7 @@ public:
   /// Determines if this is a sizeless type supported by the
   /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
   /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
-  bool isVLSTBuiltinType() const;
+  bool isSveVLSBuiltinType() const;
 
   /// Returns the representative type for the element of an SVE builtin type.
   /// This is used to represent fixed-length SVE vectors created with the
@@ -2264,7 +2284,7 @@ public:
   bool isCARCBridgableType() const;
   bool isTemplateTypeParmType() const;          // C++ template type parameter
   bool isNullPtrType() const;                   // C++11 std::nullptr_t or
-                                                // C2x nullptr_t
+                                                // C23   nullptr_t
   bool isNothrowT() const;                      // C++   std::nothrow_t
   bool isAlignValT() const;                     // C++17 std::align_val_t
   bool isStdByteType() const;                   // C++17 std::byte
@@ -3618,7 +3638,7 @@ public:
   QualType getElementType() const { return ElementType; }
 
   /// Valid elements types are the following:
-  /// * an integer type (as in C2x 6.2.5p19), but excluding enumerated types
+  /// * an integer type (as in C23 6.2.5p22), but excluding enumerated types
   ///   and _Bool
   /// * the standard floating types float or double
   /// * a half-precision floating point type, if one is supported on the target
@@ -4695,8 +4715,8 @@ public:
   }
 };
 
-/// Represents a `typeof` (or __typeof__) expression (a C2x feature and GCC
-/// extension) or a `typeof_unqual` expression (a C2x feature).
+/// Represents a `typeof` (or __typeof__) expression (a C23 feature and GCC
+/// extension) or a `typeof_unqual` expression (a C23 feature).
 class TypeOfExprType : public Type {
   Expr *TOExpr;
 
@@ -4746,8 +4766,8 @@ public:
                       Expr *E, bool IsUnqual);
 };
 
-/// Represents `typeof(type)`, a C2x feature and GCC extension, or
-/// `typeof_unqual(type), a C2x feature.
+/// Represents `typeof(type)`, a C23 feature and GCC extension, or
+/// `typeof_unqual(type), a C23 feature.
 class TypeOfType : public Type {
   friend class ASTContext; // ASTContext creates these.
 

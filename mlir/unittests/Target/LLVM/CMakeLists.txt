@@ -1,4 +1,6 @@
 add_mlir_unittest(MLIRTargetLLVMTests
+  SerializeNVVMTarget.cpp
+  SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
 )
 
@@ -7,9 +9,16 @@ llvm_map_components_to_libnames(llvm_libs nativecodegen)
 target_link_libraries(MLIRTargetLLVMTests
   PRIVATE
   MLIRTargetLLVM
+  MLIRNVVMTarget
+  MLIRROCDLTarget
+  MLIRGPUDialect
+  MLIRNVVMDialect
   MLIRLLVMDialect
   MLIRLLVMToLLVMIRTranslation
   MLIRBuiltinToLLVMIRTranslation
+  MLIRNVVMToLLVMIRTranslation
+  MLIRROCDLToLLVMIRTranslation
+  MLIRGPUToLLVMIRTranslation
   ${llvm_libs}
 )
 

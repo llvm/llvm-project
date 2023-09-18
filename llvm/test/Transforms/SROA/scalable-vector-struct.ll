@@ -20,3 +20,34 @@ define %struct.test @alloca(<vscale x 1 x i32> %x, <vscale x 1 x i32> %y) {
   %val = load %struct.test, %struct.test* %addr, align 4
   ret %struct.test %val
 }
+
+
+define { <vscale x 2 x i32>, <vscale x 2 x i32> } @return_tuple(<vscale x 2 x i32> %v_tuple.coerce0, <vscale x 2 x i32> %v_tuple.coerce1) {
+; CHECK-LABEL: @return_tuple(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> [[V_TUPLE_COERCE0:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP0]], <vscale x 2 x i32> [[V_TUPLE_COERCE1:%.*]], 1
+; CHECK-NEXT:    [[COERCE_EXTRACT0:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], 0
+; CHECK-NEXT:    [[COERCE_EXTRACT1:%.*]] = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } [[TMP1]], 1
+; CHECK-NEXT:    [[CALL:%.*]] = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @foo(<vscale x 2 x i32> [[COERCE_EXTRACT0]], <vscale x 2 x i32> [[COERCE_EXTRACT1]])
+; CHECK-NEXT:    ret { <vscale x 2 x i32>, <vscale x 2 x i32> } [[CALL]]
+;
+entry:
+  %v_tuple = alloca { <vscale x 2 x i32>, <vscale x 2 x i32> }, align 4
+  %v_tuple.addr = alloca { <vscale x 2 x i32>, <vscale x 2 x i32> }, align 4
+  %coerce = alloca { <vscale x 2 x i32>, <vscale x 2 x i32> }, align 4
+  %0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } poison, <vscale x 2 x i32> %v_tuple.coerce0, 0
+  %1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %0, <vscale x 2 x i32> %v_tuple.coerce1, 1
+  store { <vscale x 2 x i32>, <vscale x 2 x i32> } %1, ptr %v_tuple, align 4
+  %v_tuple1 = load { <vscale x 2 x i32>, <vscale x 2 x i32> }, ptr %v_tuple, align 4
+  store { <vscale x 2 x i32>, <vscale x 2 x i32> } %v_tuple1, ptr %v_tuple.addr, align 4
+  %2 = load { <vscale x 2 x i32>, <vscale x 2 x i32> }, ptr %v_tuple.addr, align 4
+  store { <vscale x 2 x i32>, <vscale x 2 x i32> } %2, ptr %coerce, align 4
+  %coerce.tuple = load { <vscale x 2 x i32>, <vscale x 2 x i32> }, ptr %coerce, align 4
+  %coerce.extract0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %coerce.tuple, 0
+  %coerce.extract1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %coerce.tuple, 1
+  %call = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @foo(<vscale x 2 x i32> %coerce.extract0, <vscale x 2 x i32> %coerce.extract1)
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32> } %call
+}
+
+declare { <vscale x 2 x i32>, <vscale x 2 x i32> } @foo(<vscale x 2 x i32>, <vscale x 2 x i32>)

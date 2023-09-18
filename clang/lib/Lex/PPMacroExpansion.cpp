@@ -1695,6 +1695,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Case("__array_rank", true)
               .Case("__array_extent", true)
               .Case("__reference_binds_to_temporary", true)
+              .Case("__reference_constructs_from_temporary", true)
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
 #include "clang/Basic/TransformTypeTraits.def"
               .Default(false);
@@ -1781,7 +1782,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
           AttributeCommonInfo::Syntax Syntax =
               IsCXX ? AttributeCommonInfo::Syntax::AS_CXX11
-                    : AttributeCommonInfo::Syntax::AS_C2x;
+                    : AttributeCommonInfo::Syntax::AS_C23;
           return II ? hasAttribute(Syntax, ScopeII, II, getTargetInfo(),
                                    getLangOpts())
                     : 0;

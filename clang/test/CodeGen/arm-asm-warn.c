@@ -15,7 +15,6 @@ void t1(int x, char y) {
   __asm__ volatile("ldrb %0, [%1]" : "=r" (y) : "r" (x)); // no warning
 }
 
-// <rdar://problem/12284092>
 typedef __attribute__((neon_vector_type(2))) long long int64x2_t;
 typedef struct int64x2x4_t {
   int64x2_t val[4];

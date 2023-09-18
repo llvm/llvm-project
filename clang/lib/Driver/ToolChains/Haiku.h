@@ -22,16 +22,23 @@ public:
   Haiku(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
 
-  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
-    return getTriple().getArch() == llvm::Triple::x86_64;
-  }
+  bool IsMathErrnoDefault() const override { return false; }
+  bool IsObjCNonFragileABIDefault() const override { return true; }
+  bool isPICDefault() const override { return true; }
 
+  void AddClangSystemIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
   void addLibCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
   void addLibStdCxxIncludePaths(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
+
+  unsigned GetDefaultDwarfVersion() const override { return 4; }
+
+  bool GetDefaultStandaloneDebug() const override { return true; }
 };
 
 } // end namespace toolchains

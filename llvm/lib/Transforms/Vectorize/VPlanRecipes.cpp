@@ -114,6 +114,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
     return false;
+  case VPInstructionSC:
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::ICmp:
+    case VPInstruction::Not:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrement:
+    case VPInstruction::CanonicalIVIncrementForPart:
+      return false;
+    default:
+      return true;
+    }
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();
@@ -156,8 +167,13 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
   if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  assert(MiddleVPBB->getNumSuccessors() == 0 &&
+         "the middle block must not have any successors");
+  BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
   Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
-                   State.Builder.GetInsertBlock());
+                   MiddleBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -230,10 +246,29 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
+                             VPValue *A, VPValue *B, DebugLoc DL,
+                             const Twine &Name)
+    : VPRecipeWithIRFlags(VPDef::VPInstructionSC, ArrayRef<VPValue *>({A, B}),
+                          Pred, DL),
+      VPValue(this), Opcode(Opcode), Name(Name.str()) {
+  assert(Opcode == Instruction::ICmp &&
+         "only ICmp predicates supported at the moment");
+}
+
+VPInstruction::VPInstruction(unsigned Opcode,
+                             std::initializer_list<VPValue *> Operands,
+                             FastMathFlags FMFs, DebugLoc DL, const Twine &Name)
+    : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, FMFs, DL),
+      VPValue(this), Opcode(Opcode), Name(Name.str()) {
+  // Make sure the VPInstruction is a floating-point operation.
+  assert(isFPMathOp() && "this op can't take fast-math flags");
+}
+
 Value *VPInstruction::generateInstruction(VPTransformState &State,
                                           unsigned Part) {
   IRBuilderBase &Builder = State.Builder;
-  Builder.SetCurrentDebugLocation(DL);
+  Builder.SetCurrentDebugLocation(getDebugLoc());
 
   if (Instruction::isBinaryOp(getOpcode())) {
     Value *A = State.get(getOperand(0), Part);
@@ -246,10 +281,10 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *A = State.get(getOperand(0), Part);
     return Builder.CreateNot(A, Name);
   }
-  case VPInstruction::ICmpULE: {
-    Value *IV = State.get(getOperand(0), Part);
-    Value *TC = State.get(getOperand(1), Part);
-    return Builder.CreateICmpULE(IV, TC, Name);
+  case Instruction::ICmp: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
     Value *Cond = State.get(getOperand(0), Part);
@@ -373,10 +408,24 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   }
 }
 
+#if !defined(NDEBUG)
+bool VPInstruction::isFPMathOp() const {
+  // Inspired by FPMathOperator::classof. Notable differences are that we don't
+  // support Call, PHI and Select opcodes here yet.
+  return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
+         Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
+         Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
+         Opcode == Instruction::FCmp;
+}
+#endif
+
 void VPInstruction::execute(VPTransformState &State) {
   assert(!State.Instance && "VPInstruction executing an Instance");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  State.Builder.setFastMathFlags(FMF);
+  assert(hasFastMathFlags() == isFPMathOp() &&
+         "Recipe not a FPMathOp but has fast-math flags?");
+  if (hasFastMathFlags())
+    State.Builder.setFastMathFlags(getFastMathFlags());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *GeneratedValue = generateInstruction(State, Part);
     if (!hasResult())
@@ -404,9 +453,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   switch (getOpcode()) {
   case VPInstruction::Not:
     O << "not";
-    break;
-  case VPInstruction::ICmpULE:
-    O << "icmp ule";
     break;
   case VPInstruction::SLPLoad:
     O << "combined load";
@@ -439,33 +485,22 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << Instruction::getOpcodeName(getOpcode());
   }
 
-  O << FMF;
   printFlags(O);
   printOperands(O, SlotTracker);
 
-  if (DL) {
+  if (auto DL = getDebugLoc()) {
     O << ", !dbg ";
     DL.print(O);
   }
 }
 #endif
 
-void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
-  // Make sure the VPInstruction is a floating-point operation.
-  assert((Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
-          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
-          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-          Opcode == Instruction::FCmp) &&
-         "this op can't take fast-math flags");
-  FMF = FMFNew;
-}
-
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   auto &CI = *cast<CallInst>(getUnderlyingInstr());
   assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
-  State.setDebugLocFromInst(&CI);
+  State.setDebugLocFrom(CI.getDebugLoc());
 
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     SmallVector<Type *, 2> TysForDecl;
@@ -556,8 +591,7 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  auto &I = *cast<SelectInst>(getUnderlyingInstr());
-  State.setDebugLocFromInst(&I);
+  State.setDebugLocFrom(getDebugLoc());
 
   // The condition can be loop invariant but still defined inside the
   // loop. This means that we can't just use the original 'cond' value.
@@ -572,13 +606,27 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
     Value *Op1 = State.get(getOperand(2), Part);
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
     State.set(this, Sel, Part);
-    State.addMetadata(Sel, &I);
+    State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
   }
+}
+
+VPRecipeWithIRFlags::FastMathFlagsTy::FastMathFlagsTy(
+    const FastMathFlags &FMF) {
+  AllowReassoc = FMF.allowReassoc();
+  NoNaNs = FMF.noNaNs();
+  NoInfs = FMF.noInfs();
+  NoSignedZeros = FMF.noSignedZeros();
+  AllowReciprocal = FMF.allowReciprocal();
+  AllowContract = FMF.allowContract();
+  ApproxFunc = FMF.approxFunc();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
+  case OperationType::Cmp:
+    O << " " << CmpInst::getPredicateName(getPredicate());
+    break;
   case OperationType::PossiblyExactOp:
     if (ExactFlags.IsExact)
       O << " exact";
@@ -605,9 +653,9 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
 #endif
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  auto &I = *cast<Instruction>(getUnderlyingValue());
+  State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
-  switch (I.getOpcode()) {
+  switch (Opcode) {
   case Instruction::Call:
   case Instruction::Br:
   case Instruction::PHI:
@@ -634,28 +682,24 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   case Instruction::Or:
   case Instruction::Xor: {
     // Just widen unops and binops.
-    State.setDebugLocFromInst(&I);
-
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       SmallVector<Value *, 2> Ops;
       for (VPValue *VPOp : operands())
         Ops.push_back(State.get(VPOp, Part));
 
-      Value *V = Builder.CreateNAryOp(I.getOpcode(), Ops);
+      Value *V = Builder.CreateNAryOp(Opcode, Ops);
 
       if (auto *VecOp = dyn_cast<Instruction>(V))
         setFlags(VecOp);
 
       // Use this vector value for all users of the original instruction.
       State.set(this, V, Part);
-      State.addMetadata(V, &I);
+      State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     }
 
     break;
   }
   case Instruction::Freeze: {
-    State.setDebugLocFromInst(&I);
-
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *Op = State.get(getOperand(0), Part);
 
@@ -667,9 +711,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   case Instruction::ICmp:
   case Instruction::FCmp: {
     // Widen compares. Generate vector compares.
-    bool FCmp = (I.getOpcode() == Instruction::FCmp);
-    auto *Cmp = cast<CmpInst>(&I);
-    State.setDebugLocFromInst(Cmp);
+    bool FCmp = Opcode == Instruction::FCmp;
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       Value *A = State.get(getOperand(0), Part);
       Value *B = State.get(getOperand(1), Part);
@@ -677,20 +719,22 @@ void VPWidenRecipe::execute(VPTransformState &State) {
       if (FCmp) {
         // Propagate fast math flags.
         IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-        Builder.setFastMathFlags(Cmp->getFastMathFlags());
-        C = Builder.CreateFCmp(Cmp->getPredicate(), A, B);
+        if (auto *I = dyn_cast_or_null<Instruction>(getUnderlyingValue()))
+          Builder.setFastMathFlags(I->getFastMathFlags());
+        C = Builder.CreateFCmp(getPredicate(), A, B);
       } else {
-        C = Builder.CreateICmp(Cmp->getPredicate(), A, B);
+        C = Builder.CreateICmp(getPredicate(), A, B);
       }
       State.set(this, C, Part);
-      State.addMetadata(C, &I);
+      State.addMetadata(C, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     }
 
     break;
   }
   default:
     // This instruction is not vectorized by simple widening.
-    LLVM_DEBUG(dbgs() << "LV: Found an unhandled instruction: " << I);
+    LLVM_DEBUG(dbgs() << "LV: Found an unhandled opcode : "
+                      << Instruction::getOpcodeName(Opcode));
     llvm_unreachable("Unhandled instruction!");
   } // end of switch.
 }
@@ -699,19 +743,14 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
-  const Instruction *UI = getUnderlyingInstr();
-  O << " = " << UI->getOpcodeName();
+  O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
-  if (auto *Cmp = dyn_cast<CmpInst>(UI))
-    O << Cmp->getPredicate() << " ";
   printOperands(O, SlotTracker);
 }
 #endif
 
 void VPWidenCastRecipe::execute(VPTransformState &State) {
-  auto *I = cast_or_null<Instruction>(getUnderlyingValue());
-  if (I)
-    State.setDebugLocFromInst(I);
+  State.setDebugLocFrom(getDebugLoc());
   auto &Builder = State.Builder;
   /// Vectorize casts.
   assert(State.VF.isVector() && "Not vectorizing?");
@@ -721,7 +760,7 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
     Value *A = State.get(getOperand(0), Part);
     Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
     State.set(this, Cast, Part);
-    State.addMetadata(Cast, I);
+    State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
   }
 }
 
@@ -734,7 +773,178 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
 }
+#endif
 
+/// This function adds
+/// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
+/// to each vector element of Val. The sequence starts at StartIndex.
+/// \p Opcode is relevant for FP induction variable.
+static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
+                            Instruction::BinaryOps BinOp, ElementCount VF,
+                            IRBuilderBase &Builder) {
+  assert(VF.isVector() && "only vector VFs are supported");
+
+  // Create and check the types.
+  auto *ValVTy = cast<VectorType>(Val->getType());
+  ElementCount VLen = ValVTy->getElementCount();
+
+  Type *STy = Val->getType()->getScalarType();
+  assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
+         "Induction Step must be an integer or FP");
+  assert(Step->getType() == STy && "Step has wrong type");
+
+  SmallVector<Constant *, 8> Indices;
+
+  // Create a vector of consecutive numbers from zero to VF.
+  VectorType *InitVecValVTy = ValVTy;
+  if (STy->isFloatingPointTy()) {
+    Type *InitVecValSTy =
+        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
+    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
+  }
+  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
+
+  // Splat the StartIdx
+  Value *StartIdxSplat = Builder.CreateVectorSplat(VLen, StartIdx);
+
+  if (STy->isIntegerTy()) {
+    InitVec = Builder.CreateAdd(InitVec, StartIdxSplat);
+    Step = Builder.CreateVectorSplat(VLen, Step);
+    assert(Step->getType() == Val->getType() && "Invalid step vec");
+    // FIXME: The newly created binary instructions should contain nsw/nuw
+    // flags, which can be found from the original scalar operations.
+    Step = Builder.CreateMul(InitVec, Step);
+    return Builder.CreateAdd(Val, Step, "induction");
+  }
+
+  // Floating point induction.
+  assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
+         "Binary Opcode should be specified for FP induction");
+  InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
+  InitVec = Builder.CreateFAdd(InitVec, StartIdxSplat);
+
+  Step = Builder.CreateVectorSplat(VLen, Step);
+  Value *MulOp = Builder.CreateFMul(InitVec, Step);
+  return Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
+}
+
+/// A helper function that returns an integer or floating-point constant with
+/// value C.
+static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
+  return Ty->isIntegerTy() ? ConstantInt::getSigned(Ty, C)
+                           : ConstantFP::get(Ty, C);
+}
+
+static Value *getRuntimeVFAsFloat(IRBuilderBase &B, Type *FTy,
+                                  ElementCount VF) {
+  assert(FTy->isFloatingPointTy() && "Expected floating point type!");
+  Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
+  Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
+  return B.CreateUIToFP(RuntimeVF, FTy);
+}
+
+void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Int or FP induction being replicated.");
+
+  Value *Start = getStartValue()->getLiveInIRValue();
+  const InductionDescriptor &ID = getInductionDescriptor();
+  TruncInst *Trunc = getTruncInst();
+  IRBuilderBase &Builder = State.Builder;
+  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+  assert(State.VF.isVector() && "must have vector VF");
+
+  // The value from the original loop to which we are mapping the new induction
+  // variable.
+  Instruction *EntryVal = Trunc ? cast<Instruction>(Trunc) : IV;
+
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(Builder);
+  if (ID.getInductionBinOp() && isa<FPMathOperator>(ID.getInductionBinOp()))
+    Builder.setFastMathFlags(ID.getInductionBinOp()->getFastMathFlags());
+
+  // Now do the actual transformations, and start with fetching the step value.
+  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
+
+  assert((isa<PHINode>(EntryVal) || isa<TruncInst>(EntryVal)) &&
+         "Expected either an induction phi-node or a truncate of it!");
+
+  // Construct the initial value of the vector IV in the vector loop preheader
+  auto CurrIP = Builder.saveIP();
+  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+  Builder.SetInsertPoint(VectorPH->getTerminator());
+  if (isa<TruncInst>(EntryVal)) {
+    assert(Start->getType()->isIntegerTy() &&
+           "Truncation requires an integer type");
+    auto *TruncType = cast<IntegerType>(EntryVal->getType());
+    Step = Builder.CreateTrunc(Step, TruncType);
+    Start = Builder.CreateCast(Instruction::Trunc, Start, TruncType);
+  }
+
+  Value *Zero = getSignedIntOrFpConstant(Start->getType(), 0);
+  Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
+  Value *SteppedStart = getStepVector(
+      SplatStart, Zero, Step, ID.getInductionOpcode(), State.VF, State.Builder);
+
+  // We create vector phi nodes for both integer and floating-point induction
+  // variables. Here, we determine the kind of arithmetic we will perform.
+  Instruction::BinaryOps AddOp;
+  Instruction::BinaryOps MulOp;
+  if (Step->getType()->isIntegerTy()) {
+    AddOp = Instruction::Add;
+    MulOp = Instruction::Mul;
+  } else {
+    AddOp = ID.getInductionOpcode();
+    MulOp = Instruction::FMul;
+  }
+
+  // Multiply the vectorization factor by the step using integer or
+  // floating-point arithmetic as appropriate.
+  Type *StepType = Step->getType();
+  Value *RuntimeVF;
+  if (Step->getType()->isFloatingPointTy())
+    RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
+  else
+    RuntimeVF = getRuntimeVF(Builder, StepType, State.VF);
+  Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
+
+  // Create a vector splat to use in the induction update.
+  //
+  // FIXME: If the step is non-constant, we create the vector splat with
+  //        IRBuilder. IRBuilder can constant-fold the multiply, but it doesn't
+  //        handle a constant vector splat.
+  Value *SplatVF = isa<Constant>(Mul)
+                       ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
+                       : Builder.CreateVectorSplat(State.VF, Mul);
+  Builder.restoreIP(CurrIP);
+
+  // We may need to add the step a number of times, depending on the unroll
+  // factor. The last of those goes into the PHI.
+  PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind");
+  VecInd->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
+  VecInd->setDebugLoc(EntryVal->getDebugLoc());
+  Instruction *LastInduction = VecInd;
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    State.set(this, LastInduction, Part);
+
+    if (isa<TruncInst>(EntryVal))
+      State.addMetadata(LastInduction, EntryVal);
+
+    LastInduction = cast<Instruction>(
+        Builder.CreateBinOp(AddOp, LastInduction, SplatVF, "step.add"));
+    LastInduction->setDebugLoc(EntryVal->getDebugLoc());
+  }
+
+  LastInduction->setName("vec.ind.next");
+  VecInd->addIncoming(SteppedStart, VectorPH);
+  // Add induction update using an incorrect block temporarily. The phi node
+  // will be fixed after VPlan execution. Note that at this point the latch
+  // block cannot be used, as it does not exist yet.
+  // TODO: Model increment value in VPlan, by turning the recipe into a
+  // multi-def and a subclass of VPHeaderPHIRecipe.
+  VecInd->addIncoming(LastInduction, VectorPH);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-INDUCTION";
@@ -774,17 +984,112 @@ void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
 
-  if (IndDesc.getStep()->getType() != ResultTy)
-    O << " (truncated to " << *ResultTy << ")";
+  if (TruncResultTy)
+    O << " (truncated to " << *TruncResultTy << ")";
 }
 #endif
+
+void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
+  // Fast-math-flags propagate from the original induction instruction.
+  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
+  if (hasFastMathFlags())
+    State.Builder.setFastMathFlags(getFastMathFlags());
+
+  /// Compute scalar induction steps. \p ScalarIV is the scalar induction
+  /// variable on which to base the steps, \p Step is the size of the step.
+
+  Value *BaseIV = State.get(getOperand(0), VPIteration(0, 0));
+  Value *Step = State.get(getStepValue(), VPIteration(0, 0));
+  IRBuilderBase &Builder = State.Builder;
+
+  // Ensure step has the same type as that of scalar IV.
+  Type *BaseIVTy = BaseIV->getType()->getScalarType();
+  if (BaseIVTy != Step->getType()) {
+    // TODO: Also use VPDerivedIVRecipe when only the step needs truncating, to
+    // avoid separate truncate here.
+    assert(Step->getType()->isIntegerTy() &&
+           "Truncation requires an integer step");
+    Step = State.Builder.CreateTrunc(Step, BaseIVTy);
+  }
+
+  // We build scalar steps for both integer and floating-point induction
+  // variables. Here, we determine the kind of arithmetic we will perform.
+  Instruction::BinaryOps AddOp;
+  Instruction::BinaryOps MulOp;
+  if (BaseIVTy->isIntegerTy()) {
+    AddOp = Instruction::Add;
+    MulOp = Instruction::Mul;
+  } else {
+    AddOp = InductionOpcode;
+    MulOp = Instruction::FMul;
+  }
+
+  // Determine the number of scalars we need to generate for each unroll
+  // iteration.
+  bool FirstLaneOnly = vputils::onlyFirstLaneUsed(this);
+  // Compute the scalar steps and save the results in State.
+  Type *IntStepTy =
+      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
+  Type *VecIVTy = nullptr;
+  Value *UnitStepVec = nullptr, *SplatStep = nullptr, *SplatIV = nullptr;
+  if (!FirstLaneOnly && State.VF.isScalable()) {
+    VecIVTy = VectorType::get(BaseIVTy, State.VF);
+    UnitStepVec =
+        Builder.CreateStepVector(VectorType::get(IntStepTy, State.VF));
+    SplatStep = Builder.CreateVectorSplat(State.VF, Step);
+    SplatIV = Builder.CreateVectorSplat(State.VF, BaseIV);
+  }
+
+  unsigned StartPart = 0;
+  unsigned EndPart = State.UF;
+  unsigned StartLane = 0;
+  unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
+  if (State.Instance) {
+    StartPart = State.Instance->Part;
+    EndPart = StartPart + 1;
+    StartLane = State.Instance->Lane.getKnownLane();
+    EndLane = StartLane + 1;
+  }
+  for (unsigned Part = StartPart; Part < EndPart; ++Part) {
+    Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
+
+    if (!FirstLaneOnly && State.VF.isScalable()) {
+      auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
+      auto *InitVec = Builder.CreateAdd(SplatStartIdx, UnitStepVec);
+      if (BaseIVTy->isFloatingPointTy())
+        InitVec = Builder.CreateSIToFP(InitVec, VecIVTy);
+      auto *Mul = Builder.CreateBinOp(MulOp, InitVec, SplatStep);
+      auto *Add = Builder.CreateBinOp(AddOp, SplatIV, Mul);
+      State.set(this, Add, Part);
+      // It's useful to record the lane values too for the known minimum number
+      // of elements so we do those below. This improves the code quality when
+      // trying to extract the first element, for example.
+    }
+
+    if (BaseIVTy->isFloatingPointTy())
+      StartIdx0 = Builder.CreateSIToFP(StartIdx0, BaseIVTy);
+
+    for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
+      Value *StartIdx = Builder.CreateBinOp(
+          AddOp, StartIdx0, getSignedIntOrFpConstant(BaseIVTy, Lane));
+      // The step returned by `createStepForVF` is a runtime-evaluated value
+      // when VF is scalable. Otherwise, it should be folded into a Constant.
+      assert((State.VF.isScalable() || isa<Constant>(StartIdx)) &&
+             "Expected StartIdx to be folded to a constant when VF is not "
+             "scalable");
+      auto *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+      auto *Add = Builder.CreateBinOp(AddOp, BaseIV, Mul);
+      State.set(this, Add, VPIteration(Part, Lane));
+    }
+  }
+}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarIVStepsRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << Indent << "= SCALAR-STEPS ";
+  O << " = SCALAR-STEPS ";
   printOperands(O, SlotTracker);
 }
 #endif
@@ -878,7 +1183,7 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPBlendRecipe::execute(VPTransformState &State) {
-  State.setDebugLocFromInst(Phi);
+  State.setDebugLocFrom(getDebugLoc());
   // We know that all PHIs in non-header blocks are converted into
   // selects, so we don't have to worry about the insertion order and we
   // can just use the builder.
@@ -920,7 +1225,7 @@ void VPBlendRecipe::execute(VPTransformState &State) {
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "BLEND ";
-  Phi->printAsOperand(O, false);
+  printAsOperand(O, SlotTracker);
   O << " =";
   if (getNumIncomingValues() == 1) {
     // Not a User of any mask: not really blending, this is a
@@ -946,14 +1251,14 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce." << Instruction::getOpcodeName(RdxDesc->getOpcode()) << " (";
+  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (getCondOp()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
-  if (RdxDesc->IntermediateStore)
+  if (RdxDesc.IntermediateStore)
     O << " (with final reduction value stored in invariant address sank "
          "outside of loop)";
 }
@@ -1097,12 +1402,12 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
   Value *Start = getStartValue()->getLiveInIRValue();
-  PHINode *EntryPart = PHINode::Create(
-      Start->getType(), 2, "index", &*State.CFG.PrevBB->getFirstInsertionPt());
+  PHINode *EntryPart = PHINode::Create(Start->getType(), 2, "index");
+  EntryPart->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
 
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   EntryPart->addIncoming(Start, VectorPH);
-  EntryPart->setDebugLoc(DL);
+  EntryPart->setDebugLoc(getDebugLoc());
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(this, EntryPart, Part);
 }
@@ -1225,8 +1530,8 @@ void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
   }
 
   // Create a phi node for the new recurrence.
-  PHINode *EntryPart = PHINode::Create(
-      VecTy, 2, "vector.recur", &*State.CFG.PrevBB->getFirstInsertionPt());
+  PHINode *EntryPart = PHINode::Create(VecTy, 2, "vector.recur");
+  EntryPart->insertBefore(State.CFG.PrevBB->getFirstInsertionPt());
   EntryPart->addIncoming(VectorInit, VectorPH);
   State.set(this, EntryPart, 0);
 }
@@ -1258,8 +1563,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
          "recipe must be in the vector loop header");
   unsigned LastPartForNewPhi = isOrdered() ? 1 : State.UF;
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-    Value *EntryPart =
-        PHINode::Create(VecTy, 2, "vec.phi", &*HeaderBB->getFirstInsertionPt());
+    Instruction *EntryPart = PHINode::Create(VecTy, 2, "vec.phi");
+    EntryPart->insertBefore(HeaderBB->getFirstInsertionPt());
     State.set(this, EntryPart, Part);
   }
 
@@ -1372,7 +1677,7 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
     PHINode *EntryPart =
         State.Builder.CreatePHI(StartMask->getType(), 2, "active.lane.mask");
     EntryPart->addIncoming(StartMask, VectorPH);
-    EntryPart->setDebugLoc(DL);
+    EntryPart->setDebugLoc(getDebugLoc());
     State.set(this, EntryPart, Part);
   }
 }

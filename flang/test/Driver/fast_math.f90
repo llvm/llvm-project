@@ -70,7 +70,7 @@
 ! UNSUPPORTED: system-windows
 ! UNSUPPORTED: target=powerpc{{.*}}
 ! RUN: %flang -ffast-math -### %s -o %t 2>&1 \
-! RUN:           --target=x86_64-unknown-linux -no-pie --gcc-toolchain="" \
+! RUN:           --target=x86_64-unknown-linux -no-pie \
 ! RUN:           --sysroot=%S/../../../clang/test/Driver/Inputs/basic_linux_tree \
 ! RUN:     | FileCheck --check-prefix=CHECK-CRT %s
 ! CHECK-CRT: {{crtbegin.?\.o}}

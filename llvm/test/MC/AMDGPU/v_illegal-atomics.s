@@ -1,5 +1,5 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX1030 %s
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX1100 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck --check-prefix=GFX1030 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck --check-prefix=GFX1100 %s
 
 v_illegal
 // GFX1030: encoding: [0x00,0x00,0x00,0x00]

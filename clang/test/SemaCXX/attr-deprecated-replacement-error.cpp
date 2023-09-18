@@ -5,13 +5,13 @@
 #endif
 
 int a1 [[deprecated("warning", "fixit")]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
-int a2 [[deprecated("warning", 1)]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
+int a2 [[deprecated("warning", 1)]]; // expected-error{{expected string literal as argument of 'deprecated' attribute}}
 
 int b1 [[gnu::deprecated("warning", "fixit")]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
-int b2 [[gnu::deprecated("warning", 1)]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
+int b2 [[gnu::deprecated("warning", 1)]]; // expected-error{{expected string literal as argument of 'deprecated' attribute}}
 
 __declspec(deprecated("warning", "fixit")) int c1; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
-__declspec(deprecated("warning", 1)) int c2; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
+__declspec(deprecated("warning", 1)) int c2; // expected-error{{expected string literal as argument of 'deprecated' attribute}}
 
 int d1 __attribute__((deprecated("warning", "fixit")));
-int d2 __attribute__((deprecated("warning", 1))); // expected-error{{'deprecated' attribute requires a string}}
+int d2 __attribute__((deprecated("warning", 1))); // expected-error{{expected string literal as argument of 'deprecated' attribute}}

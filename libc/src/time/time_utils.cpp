@@ -48,20 +48,20 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
 
-  if (sizeof(time_t) == 4) {
-    if (total_seconds < 0x80000000)
-      return time_utils::out_of_range();
-    if (total_seconds > 0x7FFFFFFF)
-      return time_utils::out_of_range();
-  } else {
-    if (total_seconds <
-            INT_MIN * static_cast<int64_t>(
-                          TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR) ||
-        total_seconds >
-            INT_MAX * static_cast<int64_t>(
-                          TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR))
-      return time_utils::out_of_range();
-  }
+  constexpr time_t time_min =
+      (sizeof(time_t) == 4)
+          ? INT_MIN
+          : INT_MIN * static_cast<int64_t>(
+                          TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
+  constexpr time_t time_max =
+      (sizeof(time_t) == 4)
+          ? INT_MAX
+          : INT_MAX * static_cast<int64_t>(
+                          TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
+
+  time_t ts = static_cast<time_t>(total_seconds);
+  if (ts < time_min || ts > time_max)
+    return time_utils::out_of_range();
 
   int64_t seconds =
       total_seconds - TimeConstants::SECONDS_UNTIL2000_MARCH_FIRST;

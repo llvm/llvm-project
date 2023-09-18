@@ -22,10 +22,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <utility>
 
 namespace clang {
@@ -50,6 +48,23 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
   return Result;
 }
 
+// Whether to consider equivalent two values with an unknown relation.
+//
+// FIXME: this function is a hack enabling unsoundness to support
+// convergence. Once we have widening support for the reference/pointer and
+// struct built-in models, this should be unconditionally `false` (and inlined
+// as such at its call sites).
+static bool equateUnknownValues(Value::Kind K) {
+  switch (K) {
+  case Value::Kind::Integer:
+  case Value::Kind::Pointer:
+  case Value::Kind::Record:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool compareDistinctValues(QualType Type, Value &Val1,
                                   const Environment &Env1, Value &Val2,
                                   const Environment &Env2,
@@ -66,18 +81,7 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
   case ComparisonResult::Different:
     return false;
   case ComparisonResult::Unknown:
-    switch (Val1.getKind()) {
-    case Value::Kind::Integer:
-    case Value::Kind::Pointer:
-    case Value::Kind::Record:
-      // FIXME: this choice intentionally introduces unsoundness to allow
-      // for convergence. Once we have widening support for the
-      // reference/pointer and struct built-in models, this should be
-      // `false`.
-      return true;
-    default:
-      return false;
-    }
+    return equateUnknownValues(Val1.getKind());
   }
   llvm_unreachable("All cases covered in switch");
 }
@@ -121,18 +125,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   Value *MergedVal = nullptr;
   if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
-    [[maybe_unused]] auto *RecordVal2 = cast<RecordValue>(&Val2);
+    auto *RecordVal2 = cast<RecordValue>(&Val2);
 
-    // Values to be merged are always associated with the same location in
-    // `LocToVal`. The location stored in `RecordVal` should therefore also
-    // be the same.
-    assert(&RecordVal1->getLoc() == &RecordVal2->getLoc());
-
-    // `RecordVal1` and `RecordVal2` may have different properties associated
-    // with them. Create a new `RecordValue` without any properties so that we
-    // soundly approximate both values. If a particular analysis needs to merge
-    // properties, it should do so in `DataflowAnalysis::merge()`.
-    MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    if (&RecordVal1->getLoc() == &RecordVal2->getLoc())
+      // `RecordVal1` and `RecordVal2` may have different properties associated
+      // with them. Create a new `RecordValue` with the same location but
+      // without any properties so that we soundly approximate both values. If a
+      // particular analysis needs to merge properties, it should do so in
+      // `DataflowAnalysis::merge()`.
+      MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    else
+      // If the locations for the two records are different, need to create a
+      // completely new value.
+      MergedVal = MergedEnv.createValue(Type);
   } else {
     MergedVal = MergedEnv.createValue(Type);
   }
@@ -167,8 +172,106 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
   if (auto *W = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
     return *W;
 
-  // Default of widening is a no-op: leave the current value unchanged.
-  return Current;
+  return equateUnknownValues(Prev.getKind()) ? Prev : Current;
+}
+
+// Returns whether the values in `Map1` and `Map2` compare equal for those
+// keys that `Map1` and `Map2` have in common.
+template <typename Key>
+bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
+                           const llvm::MapVector<Key, Value *> &Map2,
+                           const Environment &Env1, const Environment &Env2,
+                           Environment::ValueModel &Model) {
+  for (auto &Entry : Map1) {
+    Key K = Entry.first;
+    assert(K != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = Map2.find(K);
+    if (It == Map2.end())
+      continue;
+    assert(It->second != nullptr);
+
+    if (!areEquivalentValues(*Val, *It->second) &&
+        !compareDistinctValues(K->getType(), *Val, Env1, *It->second, Env2,
+                               Model))
+      return false;
+  }
+
+  return true;
+}
+
+// Perform a join on either `LocToVal` or `ExprToVal`. `Key` must be either
+// `const StorageLocation *` or `const Expr *`.
+template <typename Key>
+llvm::MapVector<Key, Value *>
+joinKeyToValueMap(const llvm::MapVector<Key, Value *> &Map1,
+                  const llvm::MapVector<Key, Value *> &Map2,
+                  const Environment &Env1, const Environment &Env2,
+                  Environment &JoinedEnv, Environment::ValueModel &Model) {
+  llvm::MapVector<Key, Value *> MergedMap;
+  for (auto &Entry : Map1) {
+    Key K = Entry.first;
+    assert(K != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = Map2.find(K);
+    if (It == Map2.end())
+      continue;
+    assert(It->second != nullptr);
+
+    if (areEquivalentValues(*Val, *It->second)) {
+      MergedMap.insert({K, Val});
+      continue;
+    }
+
+    if (Value *MergedVal = mergeDistinctValues(
+            K->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
+      MergedMap.insert({K, MergedVal});
+    }
+  }
+
+  return MergedMap;
+}
+
+// Perform widening on either `LocToVal` or `ExprToVal`. `Key` must be either
+// `const StorageLocation *` or `const Expr *`.
+template <typename Key>
+llvm::MapVector<Key, Value *>
+widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
+                   const llvm::MapVector<Key, Value *> &PrevMap,
+                   Environment &CurEnv, const Environment &PrevEnv,
+                   Environment::ValueModel &Model, LatticeJoinEffect &Effect) {
+  llvm::MapVector<Key, Value *> WidenedMap;
+  for (auto &Entry : CurMap) {
+    Key K = Entry.first;
+    assert(K != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto PrevIt = PrevMap.find(K);
+    if (PrevIt == PrevMap.end())
+      continue;
+    assert(PrevIt->second != nullptr);
+
+    if (areEquivalentValues(*Val, *PrevIt->second)) {
+      WidenedMap.insert({K, Val});
+      continue;
+    }
+
+    Value &WidenedVal = widenDistinctValues(K->getType(), *PrevIt->second,
+                                            PrevEnv, *Val, CurEnv, Model);
+    WidenedMap.insert({K, &WidenedVal});
+    if (&WidenedVal != PrevIt->second)
+      Effect = LatticeJoinEffect::Changed;
+  }
+
+  return WidenedMap;
 }
 
 /// Initializes a global storage value.
@@ -183,6 +286,15 @@ static void insertIfFunction(const Decl &D,
                              llvm::DenseSet<const FunctionDecl *> &Funcs) {
   if (auto *FD = dyn_cast<FunctionDecl>(&D))
     Funcs.insert(FD);
+}
+
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  if (!Body || Body->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    return dyn_cast<MemberExpr>(RS->getRetValue()->IgnoreParenImpCasts());
+  return nullptr;
 }
 
 static void
@@ -221,6 +333,12 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();
@@ -384,13 +502,13 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 }
 
 void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
-  // We ignore `DACtx` because it's already the same in both. We don't want the
-  // callee's `DeclCtx`, `ReturnVal`, `ReturnLoc` or `ThisPointeeLoc`. We don't
-  // bring back `DeclToLoc` and `ExprToLoc` because we want to be able to later
-  // analyze the same callee in a different context, and `setStorageLocation`
-  // requires there to not already be a storage location assigned. Conceptually,
-  // these maps capture information from the local scope, so when popping that
-  // scope, we do not propagate the maps.
+  // We ignore some entries of `CalleeEnv`:
+  // - `DACtx` because is already the same in both
+  // - We don't want the callee's `DeclCtx`, `ReturnVal`, `ReturnLoc` or
+  //   `ThisPointeeLoc` because they don't apply to us.
+  // - `DeclToLoc`, `ExprToLoc`, and `ExprToVal` capture information from the
+  //   callee's local scope, so when popping that scope, we do not propagate
+  //   the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
 
@@ -433,24 +551,11 @@ bool Environment::equivalentTo(const Environment &Other,
   if (ExprToLoc != Other.ExprToLoc)
     return false;
 
-  // Compare the contents for the intersection of their domains.
-  for (auto &Entry : LocToVal) {
-    const StorageLocation *Loc = Entry.first;
-    assert(Loc != nullptr);
+  if (!compareKeyToValueMaps(ExprToVal, Other.ExprToVal, *this, Other, Model))
+    return false;
 
-    Value *Val = Entry.second;
-    assert(Val != nullptr);
-
-    auto It = Other.LocToVal.find(Loc);
-    if (It == Other.LocToVal.end())
-      continue;
-    assert(It->second != nullptr);
-
-    if (!areEquivalentValues(*Val, *It->second) &&
-        !compareDistinctValues(Loc->getType(), *Val, *this, *It->second, Other,
-                               Model))
-      return false;
-  }
+  if (!compareKeyToValueMaps(LocToVal, Other.LocToVal, *this, Other, Model))
+    return false;
 
   return true;
 }
@@ -468,39 +573,21 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
   // By the API, `PrevEnv` is a previous version of the environment for the same
   // block, so we have some guarantees about its shape. In particular, it will
   // be the result of a join or widen operation on previous values for this
-  // block. For `DeclToLoc` and `ExprToLoc`, join guarantees that these maps are
-  // subsets of the maps in `PrevEnv`. So, as long as we maintain this property
-  // here, we don't need change their current values to widen.
+  // block. For `DeclToLoc`, `ExprToVal`, and `ExprToLoc`, join guarantees that
+  // these maps are subsets of the maps in `PrevEnv`. So, as long as we maintain
+  // this property here, we don't need change their current values to widen.
   assert(DeclToLoc.size() <= PrevEnv.DeclToLoc.size());
+  assert(ExprToVal.size() <= PrevEnv.ExprToVal.size());
   assert(ExprToLoc.size() <= PrevEnv.ExprToLoc.size());
 
-  llvm::MapVector<const StorageLocation *, Value *> WidenedLocToVal;
-  for (auto &Entry : LocToVal) {
-    const StorageLocation *Loc = Entry.first;
-    assert(Loc != nullptr);
+  ExprToVal = widenKeyToValueMap(ExprToVal, PrevEnv.ExprToVal, *this, PrevEnv,
+                                 Model, Effect);
 
-    Value *Val = Entry.second;
-    assert(Val != nullptr);
-
-    auto PrevIt = PrevEnv.LocToVal.find(Loc);
-    if (PrevIt == PrevEnv.LocToVal.end())
-      continue;
-    assert(PrevIt->second != nullptr);
-
-    if (areEquivalentValues(*Val, *PrevIt->second)) {
-      WidenedLocToVal.insert({Loc, Val});
-      continue;
-    }
-
-    Value &WidenedVal = widenDistinctValues(Loc->getType(), *PrevIt->second,
-                                            PrevEnv, *Val, *this, Model);
-    WidenedLocToVal.insert({Loc, &WidenedVal});
-    if (&WidenedVal != PrevIt->second)
-      Effect = LatticeJoinEffect::Changed;
-  }
-  LocToVal = std::move(WidenedLocToVal);
+  LocToVal = widenKeyToValueMap(LocToVal, PrevEnv.LocToVal, *this, PrevEnv,
+                                Model, Effect);
   if (DeclToLoc.size() != PrevEnv.DeclToLoc.size() ||
       ExprToLoc.size() != PrevEnv.ExprToLoc.size() ||
+      ExprToVal.size() != PrevEnv.ExprToVal.size() ||
       LocToVal.size() != PrevEnv.LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
 
@@ -559,28 +646,11 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.FlowConditionToken = EnvA.DACtx->joinFlowConditions(
       EnvA.FlowConditionToken, EnvB.FlowConditionToken);
 
-  for (auto &Entry : EnvA.LocToVal) {
-    const StorageLocation *Loc = Entry.first;
-    assert(Loc != nullptr);
+  JoinedEnv.ExprToVal = joinKeyToValueMap(EnvA.ExprToVal, EnvB.ExprToVal, EnvA,
+                                          EnvB, JoinedEnv, Model);
 
-    Value *Val = Entry.second;
-    assert(Val != nullptr);
-
-    auto It = EnvB.LocToVal.find(Loc);
-    if (It == EnvB.LocToVal.end())
-      continue;
-    assert(It->second != nullptr);
-
-    if (areEquivalentValues(*Val, *It->second)) {
-      JoinedEnv.LocToVal.insert({Loc, Val});
-      continue;
-    }
-
-    if (Value *MergedVal = mergeDistinctValues(
-            Loc->getType(), *Val, EnvA, *It->second, EnvB, JoinedEnv, Model)) {
-      JoinedEnv.LocToVal.insert({Loc, MergedVal});
-    }
-  }
+  JoinedEnv.LocToVal = joinKeyToValueMap(EnvA.LocToVal, EnvB.LocToVal, EnvA,
+                                         EnvB, JoinedEnv, Model);
 
   return JoinedEnv;
 }
@@ -663,26 +733,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 
 void Environment::setValue(const Expr &E, Value &Val) {
   assert(E.isPRValue());
-
-  if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
-    if ([[maybe_unused]] auto *ExistingVal =
-            cast_or_null<RecordValue>(getValue(E)))
-      assert(&ExistingVal->getLoc() == &RecordVal->getLoc());
-    if ([[maybe_unused]] StorageLocation *ExistingLoc =
-            getStorageLocationInternal(E))
-      assert(ExistingLoc == &RecordVal->getLoc());
-    else
-      setStorageLocationInternal(E, RecordVal->getLoc());
-    setValue(RecordVal->getLoc(), Val);
-    return;
-  }
-
-  StorageLocation *Loc = getStorageLocationInternal(E);
-  if (Loc == nullptr) {
-    Loc = &createStorageLocation(E);
-    setStorageLocationInternal(E, *Loc);
-  }
-  setValue(*Loc, Val);
+  ExprToVal[&E] = &Val;
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
@@ -697,6 +748,11 @@ Value *Environment::getValue(const ValueDecl &D) const {
 }
 
 Value *Environment::getValue(const Expr &E) const {
+  if (E.isPRValue()) {
+    auto It = ExprToVal.find(&ignoreCFGOmittedNodes(E));
+    return It == ExprToVal.end() ? nullptr : It->second;
+  }
+
   auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
   if (It == ExprToLoc.end())
     return nullptr;
@@ -878,6 +934,10 @@ void Environment::dump(raw_ostream &OS) const {
   OS << "ExprToLoc:\n";
   for (auto [E, L] : ExprToLoc)
     OS << "  [" << E << ", " << L << "]\n";
+
+  OS << "ExprToVal:\n";
+  for (auto [E, V] : ExprToVal)
+    OS << "  [" << E << ", " << V << ": " << *V << "]\n";
 
   OS << "LocToVal:\n";
   for (auto [L, V] : LocToVal) {

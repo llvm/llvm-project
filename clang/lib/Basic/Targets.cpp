@@ -142,15 +142,15 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<DarwinAArch64TargetInfo>(Triple, Opts);
 
     switch (os) {
-    case llvm::Triple::CloudABI:
-      return std::make_unique<CloudABITargetInfo<AArch64leTargetInfo>>(Triple,
-                                                                       Opts);
     case llvm::Triple::FreeBSD:
       return std::make_unique<FreeBSDTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                       Opts);
     case llvm::Triple::Fuchsia:
       return std::make_unique<FuchsiaTargetInfo<AArch64leTargetInfo>>(Triple,
                                                                       Opts);
+    case llvm::Triple::Haiku:
+      return std::make_unique<HaikuTargetInfo<AArch64leTargetInfo>>(Triple,
+                                                                    Opts);
     case llvm::Triple::Linux:
       switch (Triple.getEnvironment()) {
       default:
@@ -202,9 +202,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<DarwinARMTargetInfo>(Triple, Opts);
 
     switch (os) {
-    case llvm::Triple::CloudABI:
-      return std::make_unique<CloudABITargetInfo<ARMleTargetInfo>>(Triple,
-                                                                   Opts);
     case llvm::Triple::Linux:
       switch (Triple.getEnvironment()) {
       default:
@@ -455,6 +452,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Fuchsia:
       return std::make_unique<FuchsiaTargetInfo<RISCV64TargetInfo>>(Triple,
                                                                     Opts);
+    case llvm::Triple::Haiku:
+      return std::make_unique<HaikuTargetInfo<RISCV64TargetInfo>>(Triple,
+                                                                  Opts);
     case llvm::Triple::Linux:
       switch (Triple.getEnvironment()) {
       default:
@@ -541,11 +541,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<DarwinI386TargetInfo>(Triple, Opts);
 
     switch (os) {
-    case llvm::Triple::Ananas:
-      return std::make_unique<AnanasTargetInfo<X86_32TargetInfo>>(Triple, Opts);
-    case llvm::Triple::CloudABI:
-      return std::make_unique<CloudABITargetInfo<X86_32TargetInfo>>(Triple,
-                                                                    Opts);
     case llvm::Triple::Linux: {
       switch (Triple.getEnvironment()) {
       default:
@@ -571,8 +566,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::KFreeBSD:
       return std::make_unique<KFreeBSDTargetInfo<X86_32TargetInfo>>(Triple,
                                                                     Opts);
-    case llvm::Triple::Minix:
-      return std::make_unique<MinixTargetInfo<X86_32TargetInfo>>(Triple, Opts);
     case llvm::Triple::Solaris:
       return std::make_unique<SolarisTargetInfo<X86_32TargetInfo>>(Triple,
                                                                    Opts);
@@ -607,11 +600,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<DarwinX86_64TargetInfo>(Triple, Opts);
 
     switch (os) {
-    case llvm::Triple::Ananas:
-      return std::make_unique<AnanasTargetInfo<X86_64TargetInfo>>(Triple, Opts);
-    case llvm::Triple::CloudABI:
-      return std::make_unique<CloudABITargetInfo<X86_64TargetInfo>>(Triple,
-                                                                    Opts);
     case llvm::Triple::Linux: {
       switch (Triple.getEnvironment()) {
       default:
@@ -676,6 +664,9 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
       return nullptr;
     return std::make_unique<SPIR64TargetInfo>(Triple, Opts);
+  }
+  case llvm::Triple::spirv: {
+    return std::make_unique<SPIRVTargetInfo>(Triple, Opts);
   }
   case llvm::Triple::spirv32: {
     if (os != llvm::Triple::UnknownOS ||

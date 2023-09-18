@@ -1054,6 +1054,12 @@ namespace llvm {
 
     bool preferABDSToABSWithNSW(EVT VT) const override;
 
+    bool preferSextInRegOfTruncate(EVT TruncVT, EVT VT,
+                                   EVT ExtVT) const override;
+
+    bool isXAndYEqZeroPreferableToXAndYEqY(ISD::CondCode Cond,
+                                           EVT VT) const override;
+
     /// Return true if the target has native support for
     /// the specified value type and it is 'desirable' to use the type for the
     /// given node type. e.g. On x86 i16 is legal, but undesirable since i16
@@ -1273,10 +1279,10 @@ namespace llvm {
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "v")
-        return InlineAsm::Constraint_v;
+        return InlineAsm::ConstraintCode::v;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 
@@ -1556,9 +1562,8 @@ namespace llvm {
     bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
-    SDValue expandIndirectJTBranch(const SDLoc& dl, SDValue Value,
-                                   SDValue Addr, SelectionDAG &DAG)
-                                   const override;
+    SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
+                                   int JTI, SelectionDAG &DAG) const override;
 
     Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
@@ -1631,8 +1636,8 @@ namespace llvm {
     SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
 
-    unsigned getGlobalWrapperKind(const GlobalValue *GV = nullptr,
-                                  const unsigned char OpFlags = 0) const;
+    unsigned getGlobalWrapperKind(const GlobalValue *GV,
+                                  const unsigned char OpFlags) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -1748,8 +1753,6 @@ namespace llvm {
     bool lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const override;
 
     bool needsCmpXchgNb(Type *MemType) const;
-
-    template<typename T> bool isSoftFP16(T VT) const;
 
     void SetupEntryBlockForSjLj(MachineInstr &MI, MachineBasicBlock *MBB,
                                 MachineBasicBlock *DispatchBB, int FI) const;

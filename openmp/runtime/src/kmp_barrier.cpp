@@ -2591,7 +2591,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
                      __kmp_gtid_from_thread(this_thr),
                      this_thr->th.th_current_place));
     } else {
-      __kmp_affinity_set_place(gtid);
+      __kmp_affinity_bind_place(gtid);
     }
   }
 #endif // KMP_AFFINITY_SUPPORTED

@@ -122,7 +122,7 @@ RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(AssumeInst &Assume,
   return getKnowledgeFromBundle(Assume, BOI);
 }
 
-bool llvm::isAssumeWithEmptyBundle(AssumeInst &Assume) {
+bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {
   return none_of(Assume.bundle_op_infos(),
                  [](const CallBase::BundleOpInfo &BOI) {
                    return BOI.Tag->getKey() != IgnoreBundleTag;

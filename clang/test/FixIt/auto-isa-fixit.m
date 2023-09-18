@@ -1,7 +1,6 @@
 // RUN: cp %s %t
 // RUN: %clang_cc1 -x objective-c -fixit %t
 // RUN: %clang_cc1 -x objective-c -Werror %t
-// rdar://13503456
 
 void object_setClass(id, id);
 Class object_getClass(id);

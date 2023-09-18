@@ -2,9 +2,6 @@
 Base class for gdb-remote test cases.
 """
 
-from __future__ import division, print_function
-
-
 import errno
 import os
 import os.path

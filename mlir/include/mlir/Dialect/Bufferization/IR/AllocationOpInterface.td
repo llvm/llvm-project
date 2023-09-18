@@ -51,6 +51,25 @@ def AllocationOpInterface : OpInterface<"AllocationOpInterface"> {
       "::std::optional<::mlir::Value>", "buildClone",
       (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
       /*defaultImplementation=*/[{ return std::nullopt; }]
+    >,
+    StaticInterfaceMethod<[{
+        Returns the kind of hoisting supported for the buffer allocated by this
+        operation.
+      }],
+      "::mlir::HoistingKind", "getHoistingKind",
+      (ins), [{}],
+      /*defaultImplementation=*/[{ return HoistingKind::None; }]
+    >,
+    StaticInterfaceMethod<[{
+        Builds a stack allocation operation using the provided builder and the
+        current allocation value (which refers to the current Op implementing this
+        interface). The allocation value is a result of the current
+        operation implementing this interface. If there is no compatible
+        stack allocation operation, this method can return ::std::nullopt.
+      }],
+      "::std::optional<::mlir::Operation*>", "buildPromotedAlloc",
+      (ins "::mlir::OpBuilder&":$builder, "::mlir::Value":$alloc), [{}],
+      /*defaultImplementation=*/[{ return std::nullopt; }]
     >
   ];
 }

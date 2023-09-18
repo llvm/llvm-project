@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
-// rdar://8881826
-// rdar://9423507
 
 @interface I
 {

@@ -166,6 +166,13 @@ class VectorLegalizer {
   /// truncated back to the original type.
   void PromoteFP_TO_INT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
+  /// Implements vector reduce operation promotion.
+  ///
+  /// All vector operands are promoted to a vector type with larger element
+  /// type, and the start value is promoted to a larger scalar type. Then the
+  /// result is truncated back to the original scalar type.
+  void PromoteReduction(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
 public:
   VectorLegalizer(SelectionDAG& dag) :
       DAG(dag), TLI(dag.getTargetLoweringInfo()) {}
@@ -385,6 +392,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FLOG10:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
@@ -551,6 +559,50 @@ bool VectorLegalizer::LowerOperationWrapper(SDNode *Node,
   return true;
 }
 
+void VectorLegalizer::PromoteReduction(SDNode *Node,
+                                       SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(1).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+  MVT ScalarVT = Node->getSimpleValueType(0);
+  MVT NewScalarVT = NewVecVT.getVectorElementType();
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 4> Operands(Node->getNumOperands());
+
+  // promote the initial value.
+  if (Node->getOperand(0).getValueType().isFloatingPoint())
+    Operands[0] =
+        DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(0));
+  else
+    Operands[0] =
+        DAG.getNode(ISD::ANY_EXTEND, DL, NewScalarVT, Node->getOperand(0));
+
+  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
+    if (Node->getOperand(j).getValueType().isVector() &&
+        !(ISD::isVPOpcode(Node->getOpcode()) &&
+          ISD::getVPMaskIdx(Node->getOpcode()) == j)) // Skip mask operand.
+      // promote the vector operand.
+      if (Node->getOperand(j).getValueType().isFloatingPoint())
+        Operands[j] =
+            DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
+      else
+        Operands[j] =
+            DAG.getNode(ISD::ANY_EXTEND, DL, NewVecVT, Node->getOperand(j));
+    else
+      Operands[j] = Node->getOperand(j); // Skip VL operand.
+
+  SDValue Res = DAG.getNode(Node->getOpcode(), DL, NewScalarVT, Operands,
+                            Node->getFlags());
+
+  if (ScalarVT.isFloatingPoint())
+    Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
+                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  else
+    Res = DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, Res);
+
+  Results.push_back(Res);
+}
+
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
@@ -568,6 +620,23 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
     PromoteFP_TO_INT(Node, Results);
+    return;
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_SEQ_FADD:
+    // Promote the operation by extending the operand.
+    PromoteReduction(Node, Results);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
@@ -589,7 +658,10 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   SmallVector<SDValue, 4> Operands(Node->getNumOperands());
 
   for (unsigned j = 0; j != Node->getNumOperands(); ++j) {
-    if (Node->getOperand(j).getValueType().isVector())
+    // Do not promote the mask operand of a VP OP.
+    bool SkipPromote = ISD::isVPOpcode(Node->getOpcode()) &&
+                       ISD::getVPMaskIdx(Node->getOpcode()) == j;
+    if (Node->getOperand(j).getValueType().isVector() && !SkipPromote)
       if (Node->getOperand(j)
               .getValueType()
               .getVectorElementType()

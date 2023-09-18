@@ -637,6 +637,9 @@ void MVT::dump() const {
 #endif
 
 void MVT::print(raw_ostream &OS) const {
-  OS << EVT(*this).getEVTString();
+  if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)
+    OS << "invalid";
+  else
+    OS << EVT(*this).getEVTString();
 }
 

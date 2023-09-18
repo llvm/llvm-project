@@ -60,74 +60,58 @@ int main() {
 
   return 0;
 }
-// CHECK-LABEL: define dso_local void @{{.+}}parallel_loop
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3:[0-9]+]], i32 0, ptr {{.+}}parallel_loop{{.+}}.omp_outlined{{.*}})
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}parallel_loop{{.+}}
+// CHECK:    call {{.+}}__kmpc_fork_call({{.+}}parallel_loop{{.+}}.omp_outlined{{.*}})
 //
 //
-// CHECK-LABEL: define internal void {{.+}}parallel_loop{{.+}}.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
-// CHECK:         call void @__kmpc_for_static_init_4
+// CHECK-LABEL: define {{.+}}parallel_loop{{.+}}.omp_outlined{{.+}}
+// CHECK:         call {{.+}}__kmpc_for_static_init_4
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.loop.exit:
-// CHECK-NEXT:    call void @__kmpc_for_static_fini
-// CHECK-NEXT:    call void @__kmpc_barrier
-// CHECK-NEXT:    ret void
+// CHECK-NEXT:    call {{.+}}__kmpc_for_static_fini
+// CHECK-NEXT:    call {{.+}}__kmpc_barrier
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}parallel_loop_orphan{{.+}}
-// CHECK-NEXT:  entry:
-// CHECK:         [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num
-// CHECK:         call void @__kmpc_for_static_init_4
+// CHECK-LABEL: define {{.+}}parallel_loop_orphan{{.+}}
+// CHECK:         [[TMP0:%.*]] = call {{.+}}__kmpc_global_thread_num
+// CHECK:         call {{.+}}__kmpc_for_static_init_4
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.inner.for.end:
 // CHECK:       omp.loop.exit:
-// CHECK-NEXT:    call void @__kmpc_for_static_fini
-// CHECK-NEXT:    call void @__kmpc_barrier
-// CHECK-NEXT:    ret void
+// CHECK-NEXT:    call {{.+}}__kmpc_for_static_fini
+// CHECK-NEXT:    call {{.+}}__kmpc_barrier
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}teams_loop{{.+}}
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB3]], i32 0, ptr {{.+}}teams_loop{{.+}}.omp_outlined{{.*}})
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}teams_loop{{.+}}
+// CHECK:    call {{.+}}__kmpc_fork_teams({{.+}}teams_loop{{.+}}.omp_outlined{{.*}})
 //
 //
-// CHECK-LABEL: define internal void {{.+}}teams_loop{{.+}}.omp_outlined{{.+}}
-// CHECK-NEXT:  entry:
-// CHECK:         call void @__kmpc_for_static_init_4
+// CHECK-LABEL: define {{.+}}teams_loop{{.+}}.omp_outlined{{.+}}
+// CHECK:         call {{.+}}__kmpc_for_static_init_4
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.loop.exit:
-// CHECK-NEXT:    call void @__kmpc_for_static_fini
+// CHECK-NEXT:    call {{.+}}__kmpc_for_static_fini
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}thread_loop{{.+}}
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 0, ptr {{.+}}thread_loop{{.+}}.omp_outlined{{.*}})
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}thread_loop{{.+}}
+// CHECK:    call {{.+}}__kmpc_fork_call({{.+}}thread_loop{{.+}}.omp_outlined{{.*}})
 //
 //
-// CHECK-LABEL: define internal void {{.+}}thread_loop{{.+}}.omp_outlined{{.+}}
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define {{.+}}thread_loop{{.+}}.omp_outlined{{.+}}
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.inner.for.end:
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}thread_loop_orphan{{.+}}
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define {{.+}}thread_loop_orphan{{.+}}
 // CHECK:       omp.inner.for.cond:
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.inner.for.end:
 //
 //
 // CHECK-LABEL: define {{.+}}main{{.+}}
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK:         call void {{.+}}parallel_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}parallel_loop_orphan{{.+}}()
-// CHECK-NEXT:    call void {{.+}}teams_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}thread_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}thread_loop_orphan{{.+}}()
-// CHECK-NEXT:    ret i32 0
+// CHECK:         call {{.+}}parallel_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}parallel_loop_orphan{{.+}}()
+// CHECK-NEXT:    call {{.+}}teams_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}thread_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}thread_loop_orphan{{.+}}()
 //

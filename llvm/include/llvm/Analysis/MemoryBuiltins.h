@@ -198,7 +198,7 @@ class ObjectSizeOffsetVisitor
   ObjectSizeOpts Options;
   unsigned IntTyBits;
   APInt Zero;
-  SmallPtrSet<Instruction *, 8> SeenInsts;
+  SmallDenseMap<Instruction *, SizeOffsetType, 8> SeenInsts;
 
   APInt align(APInt Size, MaybeAlign Align);
 

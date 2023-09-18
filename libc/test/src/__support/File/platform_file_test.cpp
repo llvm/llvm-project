@@ -201,8 +201,3 @@ TEST(LlvmLibcPlatformFileTest, IncorrectOperation) {
   ASSERT_TRUE(file->error());
   ASSERT_EQ(file->close(), 0);
 }
-
-TEST(LlvmLibcPlatformFileTest, StdOutStdErrSmokeTest) {
-  EXPECT_FALSE(__llvm_libc::stdout == nullptr);
-  EXPECT_FALSE(__llvm_libc::stderr == nullptr);
-}

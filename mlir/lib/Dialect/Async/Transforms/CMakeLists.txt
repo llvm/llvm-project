@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRAsyncTransforms
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRFuncDialect
+  MLIRFunctionInterfaces
   MLIRIR
   MLIRPass
   MLIRSCFDialect

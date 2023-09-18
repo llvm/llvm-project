@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wunused-macros -Wunused-parameter -Wno-uninitialized -verify %s
 
-// rdar://8365684
 struct S {
     void m1() { int b; while (b==b); } // expected-warning {{always evaluates to true}}
 
@@ -69,7 +68,6 @@ struct S2 {
 
 //------------------------------------------------------------------------------
 
-// rdar://8790245
 #define MYMACRO \
     _Pragma("clang diagnostic push") \
     _Pragma("clang diagnostic ignored \"-Wunknown-pragmas\"") \

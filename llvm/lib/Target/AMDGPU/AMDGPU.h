@@ -16,6 +16,7 @@
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
@@ -53,7 +54,8 @@ FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
-ModulePass *createAMDGPULowerModuleLDSPass();
+ModulePass *
+createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
 
@@ -112,10 +114,13 @@ struct AMDGPULowerKernelAttributesPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeAMDGPULowerModuleLDSPass(PassRegistry &);
-extern char &AMDGPULowerModuleLDSID;
+void initializeAMDGPULowerModuleLDSLegacyPass(PassRegistry &);
+extern char &AMDGPULowerModuleLDSLegacyPassID;
 
 struct AMDGPULowerModuleLDSPass : PassInfoMixin<AMDGPULowerModuleLDSPass> {
+  const AMDGPUTargetMachine &TM;
+  AMDGPULowerModuleLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -210,8 +215,7 @@ private:
 };
 
 Pass *createAMDGPUStructurizeCFGPass();
-FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
 struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
@@ -229,6 +233,16 @@ private:
 
 public:
   AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
+class AMDGPULowerKernelArgumentsPass
+    : public PassInfoMixin<AMDGPULowerKernelArgumentsPass> {
+private:
+  TargetMachine &TM;
+
+public:
+  AMDGPULowerKernelArgumentsPass(TargetMachine &TM) : TM(TM){};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -272,9 +286,16 @@ extern char &AMDGPURemoveIncompatibleFunctionsID;
 void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareID;
 
-FunctionPass *createAMDGPURewriteUndefForPHIPass();
-void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
-extern char &AMDGPURewriteUndefForPHIPassID;
+FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
+void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
+extern char &AMDGPURewriteUndefForPHILegacyPassID;
+
+class AMDGPURewriteUndefForPHIPass
+    : public PassInfoMixin<AMDGPURewriteUndefForPHIPass> {
+public:
+  AMDGPURewriteUndefForPHIPass() = default;
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;

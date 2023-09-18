@@ -674,11 +674,11 @@ static bool usedInOneFunc(const User *U, Function const *&oneFunc) {
  * Currently, this is valid for CUDA shared variables, which have local
  * scope and global lifetime. So the conditions to check are :
  * 1. Is the global variable in shared address space?
- * 2. Does it have internal linkage?
+ * 2. Does it have local linkage?
  * 3. Is the global variable referenced only in one function?
  */
 static bool canDemoteGlobalVar(const GlobalVariable *gv, Function const *&f) {
-  if (!gv->hasInternalLinkage())
+  if (!gv->hasLocalLinkage())
     return false;
   PointerType *Pty = gv->getType();
   if (Pty->getAddressSpace() != ADDRESS_SPACE_SHARED)
@@ -2200,9 +2200,9 @@ bool NVPTXAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
+void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
                                    raw_ostream &O) {
-  const MachineOperand &MO = MI->getOperand(opNum);
+  const MachineOperand &MO = MI->getOperand(OpNum);
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     if (MO.getReg().isPhysical()) {
@@ -2236,19 +2236,19 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, int opNum,
   }
 }
 
-void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, int opNum,
+void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
                                       raw_ostream &O, const char *Modifier) {
-  printOperand(MI, opNum, O);
+  printOperand(MI, OpNum, O);
 
   if (Modifier && strcmp(Modifier, "add") == 0) {
     O << ", ";
-    printOperand(MI, opNum + 1, O);
+    printOperand(MI, OpNum + 1, O);
   } else {
-    if (MI->getOperand(opNum + 1).isImm() &&
-        MI->getOperand(opNum + 1).getImm() == 0)
+    if (MI->getOperand(OpNum + 1).isImm() &&
+        MI->getOperand(OpNum + 1).getImm() == 0)
       return; // don't print ',0' or '+0'
     O << "+";
-    printOperand(MI, opNum + 1, O);
+    printOperand(MI, OpNum + 1, O);
   }
 }
 

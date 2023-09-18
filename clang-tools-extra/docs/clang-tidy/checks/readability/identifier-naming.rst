@@ -17,7 +17,8 @@ Casing types include:
  - ``CamelCase``,
  - ``camel_Snake_Back``,
  - ``Camel_Snake_Case``,
- - ``aNy_CasE``.
+ - ``aNy_CasE``,
+ - ``Leading_upper_snake_case``.
 
 It also supports a fixed prefix and suffix that will be prepended or appended
 to the identifiers, regardless of the casing.
@@ -29,6 +30,10 @@ falling back to a more generic rule if the specific case is not configured.
 The naming of virtual methods is reported where they occur in the base class,
 but not where they are overridden, as it can't be fixed locally there.
 This also applies for pseudo-override patterns like CRTP.
+
+``Leading_upper_snake_case`` is a naming convention where the first word is capitalized
+followed by lower case word(s) seperated by underscore(s) '_'. Examples include:
+Cap_snake_case, Cobra_case, Foo_bar_baz, and Master_copy_8gb.
 
 Options
 -------

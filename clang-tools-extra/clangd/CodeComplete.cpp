@@ -821,6 +821,7 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_Symbol:
   case CodeCompletionContext::CCC_SymbolOrNewName:
   case CodeCompletionContext::CCC_ObjCClassForwardDecl:
+  case CodeCompletionContext::CCC_TopLevelOrExpression:
     return true;
   case CodeCompletionContext::CCC_OtherWithMacros:
   case CodeCompletionContext::CCC_DotMemberAccess:
@@ -1355,11 +1356,11 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   auto &FrontendOpts = CI->getFrontendOpts();
   FrontendOpts.SkipFunctionBodies = true;
   // Disable typo correction in Sema.
-  CI->getLangOpts()->SpellChecking = false;
+  CI->getLangOpts().SpellChecking = false;
   // Code completion won't trigger in delayed template bodies.
   // This is on-by-default in windows to allow parsing SDK headers; we're only
   // disabling it for the main-file (not preamble).
-  CI->getLangOpts()->DelayedTemplateParsing = false;
+  CI->getLangOpts().DelayedTemplateParsing = false;
   // Setup code completion.
   FrontendOpts.CodeCompleteOpts = Options;
   FrontendOpts.CodeCompletionAt.FileName = std::string(Input.FileName);
@@ -1379,7 +1380,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   // overriding the preamble will break sema completion. Fortunately we can just
   // skip all includes in this case; these completions are really simple.
   PreambleBounds PreambleRegion =
-      ComputePreambleBounds(*CI->getLangOpts(), *ContentsBuffer, 0);
+      ComputePreambleBounds(CI->getLangOpts(), *ContentsBuffer, 0);
   bool CompletingInPreamble = Input.Offset < PreambleRegion.Size ||
                               (!PreambleRegion.PreambleEndsAtStartOfLine &&
                                Input.Offset == PreambleRegion.Size);

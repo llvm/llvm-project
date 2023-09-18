@@ -214,8 +214,8 @@ entry:
 define i32 @foo15(i32 %a, i32 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo15:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cinc w0, w8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -227,8 +227,8 @@ entry:
 define i32 @foo16(i32 %a, i32 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cinc w0, w8, le
 ; CHECK-NEXT:    ret
 entry:
@@ -240,8 +240,8 @@ entry:
 define i64 @foo17(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo17:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    cinc x0, x8, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -253,8 +253,8 @@ entry:
 define i64 @foo18(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    cinc x0, x8, le
 ; CHECK-NEXT:    ret
 entry:
@@ -267,8 +267,8 @@ entry:
 define i64 @foo18_overflow1(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    csel x0, x8, xzr, gt
 ; CHECK-NEXT:    ret
 entry:
@@ -281,8 +281,8 @@ entry:
 define i64 @foo18_overflow2(i64 %a, i64 %b) nounwind readnone optsize ssp {
 ; CHECK-LABEL: foo18_overflow2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    mov x8, #9223372036854775807 // =0x7fffffffffffffff
+; CHECK-NEXT:    cmp x0, x1
 ; CHECK-NEXT:    csel x0, xzr, x8, gt
 ; CHECK-NEXT:    ret
 entry:

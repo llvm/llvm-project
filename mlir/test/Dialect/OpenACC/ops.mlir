@@ -213,7 +213,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 
 // -----
 
-func.func @testloopop() -> () {
+func.func @testloopop(%a : memref<10xf32>) -> () {
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 128 : i32
   %idxValue = arith.constant 8 : index
@@ -279,6 +279,11 @@ func.func @testloopop() -> () {
     acc.yield
   }
   acc.loop gang(dim=%i64Value : i64, static=%i64Value: i64) {
+    "test.openacc_dummy_op"() : () -> ()
+    acc.yield
+  }
+  %b = acc.cache varPtr(%a : memref<10xf32>) -> memref<10xf32>
+  acc.loop cache(%b : memref<10xf32>) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
   }
@@ -349,6 +354,11 @@ func.func @testloopop() -> () {
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
 // CHECK:      acc.loop gang(dim=[[I64VALUE]] : i64, static=[[I64VALUE]] : i64) {
+// CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
+// CHECK-NEXT:   acc.yield
+// CHECK-NEXT: }
+// CHECK:      %{{.*}} = acc.cache varPtr(%{{.*}} : memref<10xf32>) -> memref<10xf32>
+// CHECK-NEXT: acc.loop cache(%{{.*}} : memref<10xf32>) {
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
 // CHECK-NEXT: }
@@ -1664,3 +1674,211 @@ acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(
 // CHECK: acc.routine @acc_func_rout7 func(@acc_func) bind("acc_func_gpu_imp_gang") gang implicit
 // CHECK: acc.routine @acc_func_rout8 func(@acc_func) bind("acc_func_gpu_vector_nohost") vector nohost
 // CHECK: acc.routine @acc_func_rout9 func(@acc_func) bind("acc_func_gpu_gang_dim1") gang(dim = 1 : i32)
+
+// -----
+
+func.func @acc_func() -> () {
+  "test.openacc_dummy_op"() {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>} : () -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @acc_func
+// CHECK: "test.openacc_dummy_op"() {acc.declare_action = #acc.declare_action<postAlloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc>}
+
+// -----
+
+func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>, %d: memref<10xf32>) {
+  %lb = arith.constant 0 : index
+  %st = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %numGangs = arith.constant 10 : i64
+  %numWorkers = arith.constant 10 : i64
+
+  %c20 = arith.constant 20 : i32
+  %alloc = llvm.alloca %c20 x i32 { acc.declare = #acc.declare<dataClause = acc_create, implicit = true> } : (i32) -> !llvm.ptr<i32>
+  %createlocal = acc.create varPtr(%alloc : !llvm.ptr<i32>) -> !llvm.ptr<i32> {implicit = true}
+
+  %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
+  %pb = acc.present varPtr(%b : memref<10x10xf32>) -> memref<10x10xf32>
+  %pc = acc.present varPtr(%c : memref<10xf32>) -> memref<10xf32>
+  %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
+  acc.declare dataOperands(%pa, %pb, %pc, %pd, %createlocal: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>, !llvm.ptr<i32>) {
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @compute3
+// CHECK: acc.declare dataOperands(
+
+// -----
+
+%i64Value = arith.constant 1 : i64
+%i32Value = arith.constant 1 : i32
+%i32Value2 = arith.constant 2 : i32
+%idxValue = arith.constant 1 : index
+%ifCond = arith.constant true
+acc.set device_type(%i32Value : i32)
+acc.set device_num(%i64Value : i64)
+acc.set device_num(%i32Value : i32)
+acc.set device_num(%idxValue : index)
+acc.set device_num(%idxValue : index) if(%ifCond)
+acc.set default_async(%i32Value : i32)
+
+// CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
+// CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
+// CHECK: [[I32VALUE2:%.*]] = arith.constant 2 : i32
+// CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
+// CHECK: [[IFCOND:%.*]] = arith.constant true
+// CHECK: acc.set device_type([[I32VALUE]] : i32)
+// CHECK: acc.set device_num([[I64VALUE]] : i64)
+// CHECK: acc.set device_num([[I32VALUE]] : i32)
+// CHECK: acc.set device_num([[IDXVALUE]] : index)
+// CHECK: acc.set device_num([[IDXVALUE]] : index) if([[IFCOND]])
+// CHECK: acc.set default_async([[I32VALUE]] : i32)
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_read
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>)
+func.func @acc_atomic_read(%v: memref<i32>, %x: memref<i32>) {
+  // CHECK: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  acc.atomic.read %v = %x : memref<i32>, i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_write
+// CHECK-SAME: (%[[ADDR:.*]]: memref<i32>, %[[VAL:.*]]: i32)
+func.func @acc_atomic_write(%addr : memref<i32>, %val : i32) {
+  // CHECK: acc.atomic.write %[[ADDR]] = %[[VAL]] : memref<i32>, i32
+  acc.atomic.write %addr = %val : memref<i32>, i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_update
+// CHECK-SAME: (%[[X:.*]]: memref<i32>, %[[EXPR:.*]]: i32, %[[XBOOL:.*]]: memref<i1>, %[[EXPRBOOL:.*]]: i1)
+func.func @acc_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>, %exprBool : i1) {
+  // CHECK: acc.atomic.update %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+  // CHECK: acc.atomic.update %[[XBOOL]] : memref<i1>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i1):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.and %[[XVAL]], %[[EXPRBOOL]] : i1
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i1
+  acc.atomic.update %xBool : memref<i1> {
+  ^bb0(%xval: i1):
+    %newval = llvm.and %xval, %exprBool : i1
+    acc.yield %newval : i1
+  }
+  // CHECK: acc.atomic.update %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.shl %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  // CHECK-NEXT: }
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.shl %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+  // CHECK: acc.atomic.update %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.intr.smax(%[[XVAL]], %[[EXPR]]) : (i32, i32) -> i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  // CHECK-NEXT: }
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.intr.smax(%xval, %expr) : (i32, i32) -> i32
+    acc.yield %newval : i32
+  }
+
+  // CHECK: acc.atomic.update %[[XBOOL]] : memref<i1>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i1):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.icmp "eq" %[[XVAL]], %[[EXPRBOOL]] : i1
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i1
+  // }
+  acc.atomic.update %xBool : memref<i1> {
+  ^bb0(%xval: i1):
+    %newval = llvm.icmp "eq" %xval, %exprBool : i1
+    acc.yield %newval : i1
+  }
+
+  // CHECK: acc.atomic.update %[[X]] : memref<i32> {
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   acc.yield %[[XVAL]] : i32
+  // CHECK-NEXT: }
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval:i32):
+    acc.yield %xval : i32
+  }
+
+  // CHECK: acc.atomic.update %[[X]] : memref<i32> {
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   acc.yield %{{.+}} : i32
+  // CHECK-NEXT: }
+  %const = arith.constant 42 : i32
+  acc.atomic.update %x : memref<i32> {
+  ^bb0(%xval:i32):
+    acc.yield %const : i32
+  }
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @acc_atomic_capture
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>, %[[expr:.*]]: i32)
+func.func @acc_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   acc.yield %[[newval]] : i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+    acc.atomic.read %v = %x : memref<i32>, i32
+  }
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: acc.atomic.update %[[x]] : memref<i32>
+  // CHECK-NEXT: (%[[xval:.*]]: i32):
+  // CHECK-NEXT:   %[[newval:.*]] = llvm.add %[[xval]], %[[expr]] : i32
+  // CHECK-NEXT:   acc.yield %[[newval]] : i32
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.update %x : memref<i32> {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      acc.yield %newval : i32
+    }
+  }
+  // CHECK: acc.atomic.capture {
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: acc.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  acc.atomic.capture {
+    acc.atomic.read %v = %x : memref<i32>, i32
+    acc.atomic.write %x = %expr : memref<i32>, i32
+  }
+
+  return
+}

@@ -55,6 +55,7 @@ struct TestVectorToVectorLowering
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect>();
+    registry.insert<vector::VectorDialect>();
   }
 
   Option<bool> unroll{*this, "unroll", llvm::cl::desc("Include unrolling"),
@@ -680,7 +681,8 @@ struct TestCreateVectorBroadcast
       auto targetShape =
           cast<VectorType>(op->getResult(0).getType()).getShape();
       auto arrayAttr =
-          cast<DenseI64ArrayAttr>(op->getAttr("broadcast_dims")).asArrayRef();
+          cast<DenseI64ArrayAttr>(op->getDiscardableAttr("broadcast_dims"))
+              .asArrayRef();
       llvm::SetVector<int64_t> broadcastedDims;
       broadcastedDims.insert(arrayAttr.begin(), arrayAttr.end());
       OpBuilder b(op);

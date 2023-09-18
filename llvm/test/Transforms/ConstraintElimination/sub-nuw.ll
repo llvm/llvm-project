@@ -19,10 +19,8 @@ define void @test.not.uge.ult(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_2]])
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ult i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -67,16 +65,12 @@ define void @test.not.uge.ule(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[T_1]])
 ; CHECK-NEXT:    [[START_2:%.*]] = sub nuw i8 [[START]], 2
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[START_5:%.*]] = sub nuw i8 [[START]], 5
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i8 [[START_5]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
@@ -126,16 +120,12 @@ define void @test.not.uge.ugt(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_1]])
 ; CHECK-NEXT:    [[START_2:%.*]] = sub nuw i8 [[START]], 2
-; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp ugt i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[F_4:%.*]] = icmp ugt i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_5:%.*]] = sub nuw i8 [[START]], 5
-; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i8 [[START_5]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -192,13 +182,10 @@ define void @test.not.uge.uge(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 [[F_2]])
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[START_5:%.*]] = sub nuw i8 [[START]], 5
-; CHECK-NEXT:    [[C_5:%.*]] = icmp uge i8 [[START_5]], [[HIGH]]
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -283,7 +270,6 @@ define i1 @sub_nuw_i16_simp(i16 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -310,7 +296,6 @@ define i1 @sub_nuw_i64_simp(i64 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -334,7 +319,6 @@ define i1 @sub_nuw_neg_i16(i16 %a) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 0, [[NEG2]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0

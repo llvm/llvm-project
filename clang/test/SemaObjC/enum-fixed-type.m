@@ -33,20 +33,17 @@ void test(void) {
   Enumeration e = value;
 }
 
-// <rdar://10381507>
 typedef enum : long { Foo } IntegerEnum;
 int arr[(sizeof(__typeof__(Foo)) == sizeof(__typeof__(IntegerEnum)))? 1 : -1];
 int arr1[(sizeof(__typeof__(Foo)) == sizeof(__typeof__(long)))? 1 : -1];
 int arr2[(sizeof(__typeof__(IntegerEnum)) == sizeof(__typeof__(long)))? 1 : -1];
 
-// <rdar://problem/10760113>
 typedef enum : long long { Bar = -1 } LongLongEnum;
 int arr3[(long long)Bar == (long long)-1 ? 1 : -1];
 
 typedef enum : Integer { BaseElem } BaseEnum;
 typedef enum : BaseEnum { DerivedElem } DerivedEnum; // expected-error {{non-integral type 'BaseEnum' is an invalid underlying type}}
 
-// <rdar://problem/24999533>
 enum MyEnum : _Bool {
   MyThing = 0
 };

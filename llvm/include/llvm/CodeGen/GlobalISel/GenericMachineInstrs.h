@@ -400,6 +400,90 @@ public:
   }
 };
 
+// Represents a (non-sequential) vector reduction operation.
+class GVecReduce : public GenericMachineInstr {
+public:
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_VECREDUCE_FADD:
+    case TargetOpcode::G_VECREDUCE_FMUL:
+    case TargetOpcode::G_VECREDUCE_FMAX:
+    case TargetOpcode::G_VECREDUCE_FMIN:
+    case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+    case TargetOpcode::G_VECREDUCE_FMINIMUM:
+    case TargetOpcode::G_VECREDUCE_ADD:
+    case TargetOpcode::G_VECREDUCE_MUL:
+    case TargetOpcode::G_VECREDUCE_AND:
+    case TargetOpcode::G_VECREDUCE_OR:
+    case TargetOpcode::G_VECREDUCE_XOR:
+    case TargetOpcode::G_VECREDUCE_SMAX:
+    case TargetOpcode::G_VECREDUCE_SMIN:
+    case TargetOpcode::G_VECREDUCE_UMAX:
+    case TargetOpcode::G_VECREDUCE_UMIN:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /// Get the opcode for the equivalent scalar operation for this reduction.
+  /// E.g. for G_VECREDUCE_FADD, this returns G_FADD.
+  unsigned getScalarOpcForReduction() {
+    unsigned ScalarOpc;
+    switch (getOpcode()) {
+    case TargetOpcode::G_VECREDUCE_FADD:
+      ScalarOpc = TargetOpcode::G_FADD;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMUL:
+      ScalarOpc = TargetOpcode::G_FMUL;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMAX:
+      ScalarOpc = TargetOpcode::G_FMAXNUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMIN:
+      ScalarOpc = TargetOpcode::G_FMINNUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMAXIMUM:
+      ScalarOpc = TargetOpcode::G_FMAXIMUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_FMINIMUM:
+      ScalarOpc = TargetOpcode::G_FMINIMUM;
+      break;
+    case TargetOpcode::G_VECREDUCE_ADD:
+      ScalarOpc = TargetOpcode::G_ADD;
+      break;
+    case TargetOpcode::G_VECREDUCE_MUL:
+      ScalarOpc = TargetOpcode::G_MUL;
+      break;
+    case TargetOpcode::G_VECREDUCE_AND:
+      ScalarOpc = TargetOpcode::G_AND;
+      break;
+    case TargetOpcode::G_VECREDUCE_OR:
+      ScalarOpc = TargetOpcode::G_OR;
+      break;
+    case TargetOpcode::G_VECREDUCE_XOR:
+      ScalarOpc = TargetOpcode::G_XOR;
+      break;
+    case TargetOpcode::G_VECREDUCE_SMAX:
+      ScalarOpc = TargetOpcode::G_SMAX;
+      break;
+    case TargetOpcode::G_VECREDUCE_SMIN:
+      ScalarOpc = TargetOpcode::G_SMIN;
+      break;
+    case TargetOpcode::G_VECREDUCE_UMAX:
+      ScalarOpc = TargetOpcode::G_UMAX;
+      break;
+    case TargetOpcode::G_VECREDUCE_UMIN:
+      ScalarOpc = TargetOpcode::G_UMIN;
+      break;
+    default:
+      llvm_unreachable("Unhandled reduction");
+    }
+    return ScalarOpc;
+  }
+};
+
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

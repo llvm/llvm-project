@@ -356,9 +356,9 @@ namespace llvm {
     /// ADDIS_TLSGD_L_ADDR until after register assignment.
     GET_TLS_ADDR,
 
-    /// %x3 = GET_TPOINTER - Used for the local-exec TLS model on 32-bit AIX,
-    /// produces a call to .__get_tpointer to retrieve the thread pointer
-    /// At the end of the call, the thread pointer is found in R3.
+    /// %x3 = GET_TPOINTER - Used for the local- and initial-exec TLS model on
+    /// 32-bit AIX, produces a call to .__get_tpointer to retrieve the thread
+    /// pointer. At the end of the call, the thread pointer is found in R3.
     GET_TPOINTER,
 
     /// G8RC = ADDI_TLSGD_L_ADDR G8RReg, Symbol, Symbol - Op that
@@ -791,6 +791,11 @@ namespace llvm {
       return true;
     }
 
+    bool
+    shallExtractConstSplatVectorElementToStore(Type *VectorTy,
+                                               unsigned ElemSizeInBits,
+                                               unsigned &Index) const override;
+
     bool isCtlzFast() const override {
       return true;
     }
@@ -975,16 +980,16 @@ namespace llvm {
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "es")
-        return InlineAsm::Constraint_es;
+        return InlineAsm::ConstraintCode::es;
       else if (ConstraintCode == "Q")
-        return InlineAsm::Constraint_Q;
+        return InlineAsm::ConstraintCode::Q;
       else if (ConstraintCode == "Z")
-        return InlineAsm::Constraint_Z;
+        return InlineAsm::ConstraintCode::Z;
       else if (ConstraintCode == "Zy")
-        return InlineAsm::Constraint_Zy;
+        return InlineAsm::ConstraintCode::Zy;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 

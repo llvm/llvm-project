@@ -21,14 +21,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template<class _InputIterator, class _Size, class _OutputIterator>
+template<class _InputIterator, class _Size, class _OutputIterator,
+         __enable_if_t<__has_input_iterator_category<_InputIterator>::value &&
+                       !__has_random_access_iterator_category<_InputIterator>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __has_input_iterator_category<_InputIterator>::value &&
-   !__has_random_access_iterator_category<_InputIterator>::value,
-    _OutputIterator
->::type
+_OutputIterator
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {
     typedef decltype(_VSTD::__convert_to_integral(__orig_n)) _IntegralSize;
@@ -47,13 +44,10 @@ copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
     return __result;
 }
 
-template<class _InputIterator, class _Size, class _OutputIterator>
+template<class _InputIterator, class _Size, class _OutputIterator,
+         __enable_if_t<__has_random_access_iterator_category<_InputIterator>::value, int> = 0>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
-typename enable_if
-<
-    __has_random_access_iterator_category<_InputIterator>::value,
-    _OutputIterator
->::type
+_OutputIterator
 copy_n(_InputIterator __first, _Size __orig_n, _OutputIterator __result)
 {
     typedef typename iterator_traits<_InputIterator>::difference_type difference_type;

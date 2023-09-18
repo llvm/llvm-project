@@ -203,7 +203,8 @@ public:
   BinaryCoverageReader &operator=(const BinaryCoverageReader &) = delete;
 
   static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
-  create(MemoryBufferRef ObjectBuffer, StringRef Arch,
+  create(MemoryBufferRef ObjectBuffer, IndexedInstrProfReader &ProfileReader,
+         StringRef Arch,
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
          StringRef CompilationDir = "",
          SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);

@@ -1250,13 +1250,16 @@ define <4 x i16> @f35(<4 x i16> %a0, <4 x i16> %a1, <4 x i16> %a2) #1 {
 ; CHECK-NEXT:     p0 = vcmph.eq(r1:0,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = vcmph.eq(r3:2,r7:6)
+; CHECK-NEXT:     p1 = vcmph.eq(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = vcmph.eq(r5:4,r7:6)
+; CHECK-NEXT:     p2 = vcmph.eq(r3:2,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = and(p2,and(p0,!p1))
+; CHECK-NEXT:     p0 = and(p0,p1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = and(p0,!p2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = mask(p0)
@@ -1364,13 +1367,16 @@ define <4 x i16> @f38(<4 x i16> %a0, <4 x i16> %a1, <4 x i16> %a2) #1 {
 ; CHECK-NEXT:     p0 = vcmph.eq(r1:0,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = vcmph.eq(r3:2,r7:6)
+; CHECK-NEXT:     p1 = vcmph.eq(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = vcmph.eq(r5:4,r7:6)
+; CHECK-NEXT:     p2 = vcmph.eq(r3:2,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = or(p2,or(p0,!p1))
+; CHECK-NEXT:     p0 = or(p0,p1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = or(p0,!p2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = mask(p0)
@@ -1712,13 +1718,16 @@ define <8 x i8> @f48(<8 x i8> %a0, <8 x i8> %a1, <8 x i8> %a2) #1 {
 ; CHECK-NEXT:     p0 = vcmpb.eq(r1:0,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = vcmpb.eq(r3:2,r7:6)
+; CHECK-NEXT:     p1 = vcmpb.eq(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = vcmpb.eq(r5:4,r7:6)
+; CHECK-NEXT:     p2 = vcmpb.eq(r3:2,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = and(p2,and(p0,!p1))
+; CHECK-NEXT:     p0 = and(p0,p1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = and(p0,!p2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = mask(p0)
@@ -1826,13 +1835,16 @@ define <8 x i8> @f51(<8 x i8> %a0, <8 x i8> %a1, <8 x i8> %a2) #1 {
 ; CHECK-NEXT:     p0 = vcmpb.eq(r1:0,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = vcmpb.eq(r3:2,r7:6)
+; CHECK-NEXT:     p1 = vcmpb.eq(r5:4,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = vcmpb.eq(r5:4,r7:6)
+; CHECK-NEXT:     p2 = vcmpb.eq(r3:2,r7:6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = or(p2,or(p0,!p1))
+; CHECK-NEXT:     p0 = or(p0,p1)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = or(p0,!p2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1:0 = mask(p0)

@@ -527,7 +527,6 @@ namespace NontrivialSubsequence {
   }
 }
 
-// rdar://rdar8499524
 namespace rdar8499524 {
   struct W {};
   struct S {

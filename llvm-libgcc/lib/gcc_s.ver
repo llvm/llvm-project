@@ -70,11 +70,7 @@ GCC_4.3.0 { __bswapdi2; __bswapsi2; __emutls_get_address;                 };
 #endif
 
 #if defined(GLOBAL_X86)
-  GCC_3.0 {
-    __deregister_frame_info_bases; __fixunsxfdi; __register_frame_info_bases;
-    __register_frame_info_table_bases;
-  };
-
+  GCC_3.0 { __fixunsxfdi; };
   GCC_4.0.0 { __divxc3; __mulxc3; __powixf2; };
   GCC_4.8.0 { __cpu_indicator_init;          };
 #endif
@@ -148,17 +144,11 @@ GCC_4.3.0 { __bswapdi2; __bswapsi2; __emutls_get_address;                 };
 #if defined(__i386__)
   GCC_3.0   { __fixunsxfsi; __fixxfdi; __floatdixf; };
   GCC_4.2.0 { __floatundixf; };
-
-  GLIBC_2.0 {
-    __register_frame_info; __register_frame_info_table; __register_frame_table;
-    __deregister_frame_info;
-  };
 #endif
 
 #if defined(__x86_64__)
   GCC_3.0 {
-    __register_frame_info; __register_frame_info_table; __register_frame_table;
-    __deregister_frame;    __deregister_frame_info;     __register_frame;
+    __deregister_frame;    __register_frame;
     __fixunsxfti;          __fixxfti;                   __floattixf;
   };
 

@@ -34,14 +34,13 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, i1 %mask) vscale_
 define void @select_v32i8(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.b, w2
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    cmpne p1.b, p1/z, z2.b, #0
-; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z2.b }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.b, p1/z, z0.b, #0
+; CHECK-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <32 x i8>, ptr %a
@@ -54,32 +53,30 @@ define void @select_v32i8(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 define void @select_v64i8(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_256-NEXT:    and w9, w2, #0x1
+; VBITS_GE_256-NEXT:    mov z0.b, w2
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p1.b
-; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
-; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
-; VBITS_GE_256-NEXT:    ld1b { z3.b }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z4.b, w9
-; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z4.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0, x8]
+; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1b { z3.b }, p0/z, [x1, x8]
+; VBITS_GE_256-NEXT:    cmpne p1.b, p1/z, z0.b, #0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sel z1.b, p1, z1.b, z3.b
-; VBITS_GE_256-NEXT:    sel z0.b, p1, z0.b, z2.b
-; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0, x8]
-; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov z0.b, p1/m, z2.b
+; VBITS_GE_256-NEXT:    st1b { z1.b }, p0, [x0, x8]
+; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: select_v64i8:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    and w8, w2, #0x1
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl64
-; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.b, w2
 ; VBITS_GE_512-NEXT:    ptrue p1.b
-; VBITS_GE_512-NEXT:    mov z2.b, w8
-; VBITS_GE_512-NEXT:    cmpne p1.b, p1/z, z2.b, #0
-; VBITS_GE_512-NEXT:    sel z0.b, p1, z0.b, z1.b
+; VBITS_GE_512-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1b { z2.b }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    cmpne p1.b, p1/z, z0.b, #0
+; VBITS_GE_512-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load volatile <64 x i8>, ptr %a
@@ -92,14 +89,13 @@ define void @select_v64i8(ptr %a, ptr %b, i1 %mask) #0 {
 define void @select_v128i8(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v128i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.b, vl128
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.b, w2
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    cmpne p1.b, p1/z, z2.b, #0
-; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z2.b }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.b, p1/z, z0.b, #0
+; CHECK-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <128 x i8>, ptr %a
@@ -112,14 +108,13 @@ define void @select_v128i8(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 define void @select_v256i8(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v256i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.b, vl256
-; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
-; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.b, w2
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    mov z2.b, w8
-; CHECK-NEXT:    cmpne p1.b, p1/z, z2.b, #0
-; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
+; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z2.b }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.b, p1/z, z0.b, #0
+; CHECK-NEXT:    sel z0.b, p1, z1.b, z2.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <256 x i8>, ptr %a
@@ -158,14 +153,14 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, i1 %mask) vscale_
 define void @select_v16i16(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <16 x i16>, ptr %a
@@ -178,32 +173,32 @@ define void @select_v16i16(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 define void @select_v32i16(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    and w9, w2, #0x1
+; VBITS_GE_256-NEXT:    mov z0.h, w2
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p1.h
-; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z4.h, w9
-; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z4.h, #0
+; VBITS_GE_256-NEXT:    and z0.h, z0.h, #0x1
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sel z1.h, p1, z1.h, z3.h
-; VBITS_GE_256-NEXT:    sel z0.h, p1, z0.h, z2.h
-; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, p1/m, z2.h
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0, x8, lsl #1]
+; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: select_v32i16:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    and w8, w2, #0x1
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
-; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    mov z0.h, w2
 ; VBITS_GE_512-NEXT:    ptrue p1.h
-; VBITS_GE_512-NEXT:    mov z2.h, w8
-; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z2.h, #0
-; VBITS_GE_512-NEXT:    sel z0.h, p1, z0.h, z1.h
+; VBITS_GE_512-NEXT:    and z0.h, z0.h, #0x1
+; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1h { z2.h }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; VBITS_GE_512-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load volatile <32 x i16>, ptr %a
@@ -216,14 +211,14 @@ define void @select_v32i16(ptr %a, ptr %b, i1 %mask) #0 {
 define void @select_v64i16(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v64i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <64 x i16>, ptr %a
@@ -236,14 +231,14 @@ define void @select_v64i16(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 define void @select_v128i16(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v128i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.h, vl128
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.h, w2
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    cmpne p1.h, p1/z, z2.h, #0
-; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    and z0.h, z0.h, #0x1
+; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z2.h }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.h, p1/z, z0.h, #0
+; CHECK-NEXT:    sel z0.h, p1, z1.h, z2.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <128 x i16>, ptr %a
@@ -282,14 +277,14 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, i1 %mask) vscale_
 define void @select_v8i32(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpne p1.s, p1/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, w8
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <8 x i32>, ptr %a
@@ -302,32 +297,32 @@ define void @select_v8i32(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 define void @select_v16i32(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    and w9, w2, #0x1
+; VBITS_GE_256-NEXT:    and w8, w2, #0x1
 ; VBITS_GE_256-NEXT:    ptrue p1.s
-; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z4.s, w9
-; VBITS_GE_256-NEXT:    cmpne p1.s, p1/z, z4.s, #0
+; VBITS_GE_256-NEXT:    mov z0.s, w8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sel z1.s, p1, z1.s, z3.s
-; VBITS_GE_256-NEXT:    sel z0.s, p1, z0.s, z2.s
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov z0.s, p1/m, z2.s
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: select_v16i32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    and w8, w2, #0x1
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
-; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    and w8, w2, #0x1
 ; VBITS_GE_512-NEXT:    ptrue p1.s
-; VBITS_GE_512-NEXT:    mov z2.s, w8
-; VBITS_GE_512-NEXT:    cmpne p1.s, p1/z, z2.s, #0
-; VBITS_GE_512-NEXT:    sel z0.s, p1, z0.s, z1.s
+; VBITS_GE_512-NEXT:    mov z0.s, w8
+; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; VBITS_GE_512-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load volatile <16 x i32>, ptr %a
@@ -340,14 +335,14 @@ define void @select_v16i32(ptr %a, ptr %b, i1 %mask) #0 {
 define void @select_v32i32(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v32i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpne p1.s, p1/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, w8
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <32 x i32>, ptr %a
@@ -360,14 +355,14 @@ define void @select_v32i32(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 define void @select_v64i32(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v64i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    and w8, w2, #0x1
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    cmpne p1.s, p1/z, z2.s, #0
-; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    mov z0.s, w8
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.s, p1/z, z0.s, #0
+; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <64 x i32>, ptr %a
@@ -406,15 +401,15 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, i1 %mask) vscale_
 define void @select_v4i64(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <4 x i64>, ptr %a
@@ -427,34 +422,34 @@ define void @select_v4i64(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 define void @select_v8i64(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
-; VBITS_GE_256-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    and x9, x2, #0x1
+; VBITS_GE_256-NEXT:    // kill: def $w2 killed $w2 def $x2
+; VBITS_GE_256-NEXT:    and x8, x2, #0x1
 ; VBITS_GE_256-NEXT:    ptrue p1.d
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    mov z4.d, x9
-; VBITS_GE_256-NEXT:    cmpne p1.d, p1/z, z4.d, #0
+; VBITS_GE_256-NEXT:    mov z0.d, x8
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    sel z1.d, p1, z1.d, z3.d
-; VBITS_GE_256-NEXT:    sel z0.d, p1, z0.d, z2.d
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov z0.d, p1/m, z2.d
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: select_v8i64:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
+; VBITS_GE_512-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; VBITS_GE_512-NEXT:    and x8, x2, #0x1
-; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; VBITS_GE_512-NEXT:    ptrue p1.d
-; VBITS_GE_512-NEXT:    mov z2.d, x8
-; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z2.d, #0
-; VBITS_GE_512-NEXT:    sel z0.d, p1, z0.d, z1.d
+; VBITS_GE_512-NEXT:    mov z0.d, x8
+; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; VBITS_GE_512-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; VBITS_GE_512-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load volatile <8 x i64>, ptr %a
@@ -467,15 +462,15 @@ define void @select_v8i64(ptr %a, ptr %b, i1 %mask) #0 {
 define void @select_v16i64(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    ptrue p0.d, vl16
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <16 x i64>, ptr %a
@@ -488,15 +483,15 @@ define void @select_v16i64(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 define void @select_v32i64(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v32i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    ptrue p0.d, vl32
+; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; CHECK-NEXT:    and x8, x2, #0x1
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
-; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x1]
+; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
+; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %op1 = load volatile <32 x i64>, ptr %a

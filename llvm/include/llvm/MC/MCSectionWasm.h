@@ -33,7 +33,7 @@ class MCSectionWasm final : public MCSection {
   // itself and does not include the size of the section header.
   uint64_t SectionOffset = 0;
 
-  // For data sections, this is the index of of the corresponding wasm data
+  // For data sections, this is the index of the corresponding wasm data
   // segment
   uint32_t SegmentIndex = 0;
 

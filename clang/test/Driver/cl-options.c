@@ -564,16 +564,10 @@
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"
 
-// This test was super sneaky: "/Z7" means "line-tables", but "-gdwarf" occurs
-// later on the command line, so it should win. Interestingly the cc1 arguments
-// came out right, but had wrong semantics, because an invariant assumed by
-// CompilerInvocation was violated: it expects that at most one of {gdwarfN,
-// line-tables-only} appear. If you assume that, then you can safely use
-// Args.hasArg to test whether a boolean flag is present without caring
-// where it appeared. And for this test, it appeared to the left of -gdwarf
-// which made it "win". This test could not detect that bug.
+// If We specify both /Z7 and -gdwarf we should get dwarf, not codeview.
 // RUN: %clang_cl /Z7 -gdwarf /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7_gdwarf %s
-// Z7_gdwarf: "-gcodeview"
+// RUN: %clang_cl -gdwarf /Z7 /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7_gdwarf %s
+// Z7_gdwarf-NOT: "-gcodeview"
 // Z7_gdwarf: "-debug-info-kind=constructor"
 // Z7_gdwarf: "-dwarf-version=
 

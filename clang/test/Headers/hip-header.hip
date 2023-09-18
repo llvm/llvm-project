@@ -31,7 +31,14 @@
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
-// RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,MALLOC %s
+// RUN:   -D__HIPCC_RTC__ -disable-llvm-passes | FileCheck -check-prefixes=MALLOC %s
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
+// RUN:   -disable-llvm-passes | FileCheck -check-prefixes=MALLOC %s
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
@@ -40,6 +47,13 @@
 // RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
 // RUN:   -fsanitize=address -disable-llvm-passes -D__HIPCC_RTC__ \
 // RUN:   | FileCheck -check-prefixes=MALLOC-ASAN %s
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -aux-triple amdgcn-amd-amdhsa -triple x86_64-unknown-unknown \
+// RUN:   -emit-llvm %s -o - \
+// RUN:   -DHIP_VERSION_MAJOR=4 -DHIP_VERSION_MINOR=5 \
+// RUN:   -disable-llvm-passes | FileCheck -check-prefixes=MALLOC-HOST %s
 
 // expected-no-diagnostics
 
@@ -148,9 +162,10 @@ __device__ double test_isnan() {
 
 // Check that device malloc and free do not conflict with std headers.
 #include <cstdlib>
-// CHECK-LABEL: define{{.*}}@_Z11test_malloc
-// CHECK: call {{.*}}ptr @malloc(i64
-// CHECK-LABEL: define weak {{.*}}ptr @malloc(i64
+// MALLOC-LABEL: define{{.*}}@_Z11test_malloc
+// MALLOC: call {{.*}}ptr @malloc(i64
+// MALLOC: call {{.*}}ptr @malloc(i64
+// MALLOC-LABEL: define weak {{.*}}ptr @malloc(i64
 // MALLOC:  call i64 @__ockl_dm_alloc
 // NOMALLOC:  call void @llvm.trap
 // MALLOC-ASAN-LABEL: define weak {{.*}}ptr @malloc(i64
@@ -158,11 +173,13 @@ __device__ double test_isnan() {
 // MALLOC-ASAN:  call i64 @__asan_malloc_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_malloc(void *a) {
   a = malloc(42);
+  a = std::malloc(42);
 }
 
-// CHECK-LABEL: define{{.*}}@_Z9test_free
-// CHECK: call {{.*}}void @free(ptr
-// CHECK-LABEL: define weak {{.*}}void @free(ptr
+// MALLOC-LABEL: define{{.*}}@_Z9test_free
+// MALLOC: call {{.*}}void @free(ptr
+// MALLOC: call {{.*}}void @free(ptr
+// MALLOC-LABEL: define weak {{.*}}void @free(ptr
 // MALLOC:  call void @__ockl_dm_dealloc
 // NOMALLOC: call void @llvm.trap
 // MALLOC-ASAN-LABEL: define weak {{.*}}void @free(ptr
@@ -170,4 +187,17 @@ __device__ void test_malloc(void *a) {
 // MALLOC-ASAN:  call void @__asan_free_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_free(void *a) {
   free(a);
+  std::free(a);
+}
+
+// MALLOC-HOST-LABEL: define{{.*}}@_Z16test_malloc_host
+// MALLOC-HOST: call {{.*}}ptr @_Z6mallocm(i64
+// MALLOC-HOST: call {{.*}}void @_Z4freePv(ptr
+// MALLOC-HOST: call {{.*}}ptr @_Z6mallocm(i64
+// MALLOC-HOST: call {{.*}}void @_Z4freePv(ptr
+void test_malloc_host(void *a) {
+  a = malloc(42);
+  free(a);
+  a = std::malloc(42);
+  std::free(a);
 }

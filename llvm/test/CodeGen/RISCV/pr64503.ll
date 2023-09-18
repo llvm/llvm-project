@@ -5,11 +5,6 @@ define i1 @f(i64 %LGV1) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    beqz a1, .LBB0_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    snez a0, a1
-; CHECK-NEXT:    xori a0, a0, 1
-; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    ret
   %B1 = xor i64 %LGV1, %LGV1
   %B2 = srem i64 1, %B1
@@ -22,10 +17,6 @@ define i64 @g(ptr %A, i64 %0) {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    beqz a2, .LBB1_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    slti a0, a2, 1
-; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    sb a0, 0(zero)
 ; CHECK-NEXT:    ret
   store i64 poison, ptr %A, align 4

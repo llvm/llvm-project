@@ -1304,7 +1304,7 @@ _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code __xlcxx_personality_v1(
     __attribute__((__alias__("__gxx_personality_v0")));
 #endif
 
-}  // extern "C"
+} // extern "C"
 
 }  // __cxxabiv1
 

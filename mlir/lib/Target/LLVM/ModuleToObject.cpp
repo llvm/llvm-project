@@ -143,7 +143,7 @@ LogicalResult ModuleToObject::optimizeModule(llvm::Module &module,
     return getOperation().emitError()
            << "Invalid optimization level: " << optLevel << ".";
 
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
 
   auto transformer =
       makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
@@ -170,7 +170,7 @@ ModuleToObject::translateToISA(llvm::Module &llvmModule,
     llvm::legacy::PassManager codegenPasses;
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                          llvm::CGFT_AssemblyFile))
+                                          llvm::CodeGenFileType::AssemblyFile))
       return std::nullopt;
 
     codegenPasses.run(llvmModule);
@@ -212,7 +212,7 @@ std::optional<SmallVector<char, 0>> ModuleToObject::run() {
     auto libs = loadBitcodeFiles(*llvmModule, *targetMachine);
     if (!libs)
       return std::nullopt;
-    if (libs->size())
+    if (!libs->empty())
       if (failed(linkFiles(*llvmModule, std::move(*libs))))
         return std::nullopt;
     handleModulePostLink(*llvmModule, *targetMachine);

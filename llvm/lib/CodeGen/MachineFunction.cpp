@@ -1206,7 +1206,7 @@ bool MachineFunction::shouldUseDebugInstrRef() const {
   // have optimized code inlined into this unoptimized code, however with
   // fewer and less aggressive optimizations happening, coverage and accuracy
   // should not suffer.
-  if (getTarget().getOptLevel() == CodeGenOpt::None)
+  if (getTarget().getOptLevel() == CodeGenOptLevel::None)
     return false;
 
   // Don't use instr-ref if this function is marked optnone.
@@ -1244,6 +1244,7 @@ unsigned MachineJumpTableInfo::getEntrySize(const DataLayout &TD) const {
   case MachineJumpTableInfo::EK_BlockAddress:
     return TD.getPointerSize();
   case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+  case MachineJumpTableInfo::EK_LabelDifference64:
     return 8;
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:
@@ -1264,6 +1265,7 @@ unsigned MachineJumpTableInfo::getEntryAlignment(const DataLayout &TD) const {
   case MachineJumpTableInfo::EK_BlockAddress:
     return TD.getPointerABIAlignment(0).value();
   case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+  case MachineJumpTableInfo::EK_LabelDifference64:
     return TD.getABIIntegerTypeAlignment(64).value();
   case MachineJumpTableInfo::EK_GPRel32BlockAddress:
   case MachineJumpTableInfo::EK_LabelDifference32:

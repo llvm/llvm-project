@@ -20,13 +20,13 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import lit_header_restrictions, public_headers
 
 import re
 
 # To re-generate the list of expected headers, temporarily set this to True, and run this test.
 # Note that this needs to be done for all supported language versions of libc++:
-# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26; do <build>/bin/llvm-lit --param std=$std ${path_to_this_file}; done
+# for std in c++03 c++11 c++14 c++17 c++20 c++23 c++26; do <build>/bin/llvm-lit --param std=$std libcxx/test/libcxx/transitive_includes.gen.py; done
 regenerate_expected_results = False
 
 BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
@@ -64,11 +64,11 @@ else:
 {lit_header_restrictions.get(header, '')}
 
 // TODO: Fix this test to make it work with localization or wide characters disabled
-// UNSUPPORTED{BLOCKLIT}: no-localization, no-wide-characters
+// UNSUPPORTED{BLOCKLIT}: no-localization, no-wide-characters, no-threads, no-filesystem, libcpp-has-no-incomplete-tzdb, no-tzdb
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
-// UNSUPPORTED{BLOCKLIT}: modules-build
+// UNSUPPORTED{BLOCKLIT}: clang-modules-build
 
 // This test uses --trace-includes, which is not supported by GCC.
 // UNSUPPORTED{BLOCKLIT}: gcc

@@ -103,7 +103,6 @@ int main (void) {
     return 0;
 }
 
-// rdar://11363363
 @interface rdar11363363
 {
   id R;
@@ -126,7 +125,6 @@ int main (void) {
 - (id) Meth {
   self.P = 0; // expected-warning {{property 'P' not found on object of type 'rdar11363363 *'; did you mean to access property p?}}
   self.q = 0; // expected-warning {{property 'q' not found on object of type 'rdar11363363 *'; did you mean to access property Q?}}
-// rdar://11528439
   self.t = 0; // expected-error {{synthesized properties 't' and 'T' both claim setter 'setT:'}}
   self.T = 0; // expected-error {{synthesized properties 'T' and 't' both claim setter 'setT:'}}
   self.Pxyz = 0; // expected-error {{synthesized properties 'Pxyz' and 'pxyz' both claim setter 'setPxyz:'}}
@@ -137,7 +135,6 @@ int main (void) {
 }
 @end
 
-// rdar://11499742
 @class BridgeFormatter;
 
 @interface FMXBridgeFormatter 

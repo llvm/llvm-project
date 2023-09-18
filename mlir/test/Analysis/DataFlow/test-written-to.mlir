@@ -286,4 +286,21 @@ llvm.func @decl(i64)
 llvm.func @func(%lb : i64) -> () {
   llvm.call @decl(%lb) : (i64) -> ()
   llvm.return
-} 
+}
+
+// -----
+
+func.func private @callee(%arg0 : i32, %arg1 : i32) -> i32 {
+  func.return %arg0 : i32
+}
+
+// CHECK-LABEL: test_tag: a
+// CHECK-LABEL:  operand #0: [b]
+// CHECK-LABEL:  operand #1: []
+// CHECK-LABEL:  operand #2: [callarg2]
+// CHECK-LABEL:  result #0: [b]
+func.func @test_call_on_device(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
+  %0 = test.call_on_device @callee(%arg0, %arg1), %device {tag = "a"} : (i32, i32, i32) -> (i32)
+  memref.store %0, %m0[] {tag_name = "b"} : memref<i32>
+  return
+}

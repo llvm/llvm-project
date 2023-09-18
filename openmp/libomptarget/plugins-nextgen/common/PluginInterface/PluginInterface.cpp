@@ -267,6 +267,53 @@ public:
 
 } RecordReplay;
 
+// Extract the mapping of host function pointers to device function pointers
+// from the entry table. Functions marked as 'indirect' in OpenMP will have
+// offloading entries generated for them which map the host's function pointer
+// to a global containing the corresponding function pointer on the device.
+static Expected<std::pair<void *, uint64_t>>
+setupIndirectCallTable(GenericPluginTy &Plugin, GenericDeviceTy &Device,
+                       DeviceImageTy &Image) {
+  GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
+
+  llvm::ArrayRef<__tgt_offload_entry> Entries(Image.getTgtImage()->EntriesBegin,
+                                              Image.getTgtImage()->EntriesEnd);
+  llvm::SmallVector<std::pair<void *, void *>> IndirectCallTable;
+  for (const auto &Entry : Entries) {
+    if (Entry.size == 0 || !(Entry.flags & OMP_DECLARE_TARGET_INDIRECT))
+      continue;
+
+    assert(Entry.size == sizeof(void *) && "Global not a function pointer?");
+    auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
+
+    GlobalTy DeviceGlobal(Entry.name, Entry.size);
+    if (auto Err =
+            Handler.getGlobalMetadataFromDevice(Device, Image, DeviceGlobal))
+      return std::move(Err);
+
+    HstPtr = Entry.addr;
+    if (auto Err = Device.dataRetrieve(&DevPtr, DeviceGlobal.getPtr(),
+                                       Entry.size, nullptr))
+      return std::move(Err);
+  }
+
+  // If we do not have any indirect globals we exit early.
+  if (IndirectCallTable.empty())
+    return std::pair{nullptr, 0};
+
+  // Sort the array to allow for more efficient lookup of device pointers.
+  llvm::sort(IndirectCallTable,
+             [](const auto &x, const auto &y) { return x.first < y.first; });
+
+  uint64_t TableSize =
+      IndirectCallTable.size() * sizeof(std::pair<void *, void *>);
+  void *DevicePtr = Device.allocate(TableSize, nullptr, TARGET_ALLOC_DEVICE);
+  if (auto Err = Device.dataSubmit(DevicePtr, IndirectCallTable.data(),
+                                   TableSize, nullptr))
+    return std::move(Err);
+  return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
+}
+
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
@@ -327,8 +374,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                                     KernelArgs.NumArgs, Args, Ptrs);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
-  uint64_t NumBlocks = getNumBlocks(GenericDevice, KernelArgs.NumTeams,
-                                    KernelArgs.Tripcount, NumThreads);
+  uint64_t NumBlocks =
+      getNumBlocks(GenericDevice, KernelArgs.NumTeams, KernelArgs.Tripcount,
+                   NumThreads, KernelArgs.ThreadLimit[0] > 0);
 
   if (auto Err =
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
@@ -371,7 +419,8 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
 uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint32_t NumTeamsClause[3],
                                        uint64_t LoopTripCount,
-                                       uint32_t &NumThreads) const {
+                                       uint32_t &NumThreads,
+                                       bool IsNumThreadsFromUser) const {
   assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
 
@@ -396,11 +445,13 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
 
       // Honor the thread_limit clause; only lower the number of threads.
       [[maybe_unused]] auto OldNumThreads = NumThreads;
-      if (LoopTripCount >= DefaultNumBlocks * NumThreads) {
+      if (LoopTripCount >= DefaultNumBlocks * NumThreads ||
+          IsNumThreadsFromUser) {
         // Enough parallelism for teams and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
-        assert(TripCountNumBlocks >= DefaultNumBlocks &&
-               "Expected sufficient outer parallelism.");
+        assert(IsNumThreadsFromUser ||
+               TripCountNumBlocks >= DefaultNumBlocks &&
+                   "Expected sufficient outer parallelism.");
       } else if (LoopTripCount >= DefaultNumBlocks * MinThreads) {
         // Enough parallelism for teams, limit threads.
 
@@ -491,7 +542,8 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
       performOmptCallback(device_initialize,
-                          /* device_num */ DeviceId,
+                          /* device_num */ DeviceId +
+                              Plugin.getDeviceIdStartIndex(),
                           /* type */ getComputeUnitKind().c_str(),
                           /* device */ reinterpret_cast<ompt_device_t *>(this),
                           /* lookup */ ompt::lookupCallbackByName,
@@ -536,7 +588,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
-Error GenericDeviceTy::deinit() {
+Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
   // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
   if (MemoryManager)
@@ -554,7 +606,9 @@ Error GenericDeviceTy::deinit() {
   if (ompt::Initialized) {
     bool ExpectedStatus = true;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, /* device_num */ DeviceId);
+      performOmptCallback(device_finalize,
+                          /* device_num */ DeviceId +
+                              Plugin.getDeviceIdStartIndex());
   }
 #endif
 
@@ -605,7 +659,8 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     size_t Bytes =
         getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
     performOmptCallback(device_load,
-                        /* device_num */ DeviceId,
+                        /* device_num */ DeviceId +
+                            Plugin.getDeviceIdStartIndex(),
                         /* FileName */ nullptr,
                         /* File Offset */ 0,
                         /* VmaInFile */ nullptr,
@@ -626,6 +681,11 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   if (!shouldSetupDeviceEnvironment())
     return Plugin::success();
 
+  // Obtain a table mapping host function pointers to device function pointers.
+  auto CallTablePairOrErr = setupIndirectCallTable(Plugin, *this, Image);
+  if (!CallTablePairOrErr)
+    return CallTablePairOrErr.takeError();
+
   DeviceEnvironmentTy DeviceEnvironment;
   DeviceEnvironment.DebugKind = OMPX_DebugKind;
   DeviceEnvironment.NumDevices = Plugin.getNumDevices();
@@ -633,6 +693,10 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironment.DeviceNum = DeviceId;
   DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;
   DeviceEnvironment.ClockFrequency = getClockFrequency();
+  DeviceEnvironment.IndirectCallTable =
+      reinterpret_cast<uintptr_t>(CallTablePairOrErr->first);
+  DeviceEnvironment.IndirectCallTableSize = CallTablePairOrErr->second;
+  DeviceEnvironment.HardwareParallelism = getHardwareParallelism();
 
   // Create the metainfo of the device environment global.
   GlobalTy DevEnvGlobal("__omp_rtl_device_environment",
@@ -1302,7 +1366,7 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
     return Plugin::success();
 
   // Deinitialize the device and release its resources.
-  if (auto Err = Devices[DeviceId]->deinit())
+  if (auto Err = Devices[DeviceId]->deinit(*this))
     return Err;
 
   // Delete the device and invalidate its reference.
@@ -1751,6 +1815,12 @@ int32_t __tgt_rtl_init_device_info(int32_t DeviceId,
            DPxPTR(DeviceInfo), DeviceId, toString(std::move(Err)).data());
     return OFFLOAD_FAIL;
   }
+
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_set_device_offset(int32_t DeviceIdOffset) {
+  Plugin::get().setDeviceIdStartIndex(DeviceIdOffset);
 
   return OFFLOAD_SUCCESS;
 }

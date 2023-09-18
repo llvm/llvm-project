@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -fms-extensions | FileCheck -allow-deprecated-dag-overlap %s
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 -fms-extensions | FileCheck %s -check-prefix=X64
+// RUN: %clang_cc1 -std=c++17 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=x86_64-pc-win32 -fms-extensions | FileCheck %s -check-prefix=X64
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -fms-extensions -verify
 // RUN: %clang_cc1 -std=c++11 -Wno-uninitialized -fno-rtti -emit-llvm %s -o - -triple=i386-pc-win32 -DINCOMPLETE_VIRTUAL -DMEMFUN -fms-extensions -verify
 
@@ -933,4 +934,33 @@ class A {
 };
 void A::printd() { JSMethod<A, &A::printd>(); }
 // CHECK-LABEL: @"??$JSMethod@VA@PMFInTemplateArgument@@$1?printd@12@AAEHH@Z@PMFInTemplateArgument@@YAXXZ"(
+}
+
+namespace MissingMSInheritanceAttr {
+// This is a regression test for an assertion failure that occurred when
+// compiling for C++17. The issue concerned a failure to propagate a
+// MSInheritanceAttr attribute for the explicit template instantiation
+// definition prior to it being required to complete the specialization
+// definition in order to determine its alignment so as to resolve a
+// lookup for a deallocation function for the virtual destructor.
+template <typename>
+class a;
+struct b {
+  typedef void (a<int>::*f)();
+  f d;
+};
+template <typename>
+class a {
+  virtual ~a();
+  b e;
+};
+extern template class a<int>;
+template class a<int>;
+#ifdef _WIN64
+static_assert(sizeof(b::d) == 24, "");
+static_assert(sizeof(void (a<int>::*)()) == 24, "");
+#else
+static_assert(sizeof(b::d) == 16, "");
+static_assert(sizeof(void (a<int>::*)()) == 16, "");
+#endif
 }

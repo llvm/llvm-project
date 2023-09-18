@@ -11,7 +11,7 @@
 # RUN: not llvm-ifs --input-format=IFS --output-ifs=- --exclude='[' %s 2>&1 | \
 # RUN: FileCheck %s --check-prefix=BAD-GLOB
 
-# BAD-GLOB: error: invalid glob pattern: [
+# BAD-GLOB: error: invalid glob pattern, unmatched '['
 
 --- !ifs-v1
 SoName: somelib.so

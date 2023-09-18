@@ -180,6 +180,7 @@ class kmp_stats_list;
 
 #define KMP_NSEC_PER_SEC 1000000000L
 #define KMP_USEC_PER_SEC 1000000L
+#define KMP_NSEC_PER_USEC 1000L
 
 /*!
 @ingroup BASIC_TYPES
@@ -1169,6 +1170,10 @@ extern void __kmp_init_target_task();
 #elif KMP_ARCH_X86_64
 #define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #define KMP_BACKUP_STKSIZE ((size_t)(2 * 1024 * 1024))
+#elif KMP_ARCH_VE
+// Minimum stack size for pthread for VE is 4MB.
+//   https://www.hpc.nec/documents/veos/en/glibc/Difference_Points_glibc.htm
+#define KMP_DEFAULT_STKSIZE ((size_t)(4 * 1024 * 1024))
 #else
 #define KMP_DEFAULT_STKSIZE ((size_t)(1024 * 1024))
 #endif
@@ -1190,13 +1195,13 @@ extern void __kmp_init_target_task();
 #define KMP_MAX_STKPADDING (2 * 1024 * 1024)
 
 #define KMP_BLOCKTIME_MULTIPLIER                                               \
-  (1000) /* number of blocktime units per second */
+  (1000000) /* number of blocktime units per second */
 #define KMP_MIN_BLOCKTIME (0)
 #define KMP_MAX_BLOCKTIME                                                      \
   (INT_MAX) /* Must be this for "infinite" setting the work */
 
-/* __kmp_blocktime is in milliseconds */
-#define KMP_DEFAULT_BLOCKTIME (__kmp_is_hybrid_cpu() ? (0) : (200))
+/* __kmp_blocktime is in microseconds */
+#define KMP_DEFAULT_BLOCKTIME (__kmp_is_hybrid_cpu() ? (0) : (200000))
 
 #if KMP_USE_MONITOR
 #define KMP_DEFAULT_MONITOR_STKSIZE ((size_t)(64 * 1024))
@@ -1223,22 +1228,21 @@ extern void __kmp_init_target_task();
 #if KMP_OS_UNIX && (KMP_ARCH_X86 || KMP_ARCH_X86_64)
 // HW TSC is used to reduce overhead (clock tick instead of nanosecond).
 extern kmp_uint64 __kmp_ticks_per_msec;
+extern kmp_uint64 __kmp_ticks_per_usec;
 #if KMP_COMPILER_ICC || KMP_COMPILER_ICX
 #define KMP_NOW() ((kmp_uint64)_rdtsc())
 #else
 #define KMP_NOW() __kmp_hardware_timestamp()
 #endif
-#define KMP_NOW_MSEC() (KMP_NOW() / __kmp_ticks_per_msec)
 #define KMP_BLOCKTIME_INTERVAL(team, tid)                                      \
-  (KMP_BLOCKTIME(team, tid) * __kmp_ticks_per_msec)
+  ((kmp_uint64)KMP_BLOCKTIME(team, tid) * __kmp_ticks_per_usec)
 #define KMP_BLOCKING(goal, count) ((goal) > KMP_NOW())
 #else
 // System time is retrieved sporadically while blocking.
 extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NOW() __kmp_now_nsec()
-#define KMP_NOW_MSEC() (KMP_NOW() / KMP_USEC_PER_SEC)
 #define KMP_BLOCKTIME_INTERVAL(team, tid)                                      \
-  (KMP_BLOCKTIME(team, tid) * KMP_USEC_PER_SEC)
+  ((kmp_uint64)KMP_BLOCKTIME(team, tid) * (kmp_uint64)KMP_NSEC_PER_USEC)
 #define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
 #endif
 #endif // KMP_USE_MONITOR
@@ -2111,6 +2115,7 @@ typedef struct kmp_internal_control {
   int nproc; /* internal control for #threads for next parallel region (per
                 thread) */
   int thread_limit; /* internal control for thread-limit-var */
+  int task_thread_limit; /* internal control for thread-limit-var of a task*/
   int max_active_levels; /* internal control for max_active_levels */
   kmp_r_sched_t
       sched; /* internal control for runtime schedule {sched,chunk} pair */
@@ -3340,6 +3345,7 @@ extern int __kmp_sys_max_nth; /* system-imposed maximum number of threads */
 extern int __kmp_max_nth;
 // maximum total number of concurrently-existing threads in a contention group
 extern int __kmp_cg_max_nth;
+extern int __kmp_task_max_nth; // max threads used in a task
 extern int __kmp_teams_max_nth; // max threads used in a teams construct
 extern int __kmp_threads_capacity; /* capacity of the arrays __kmp_threads and
                                       __kmp_root */
@@ -3351,9 +3357,22 @@ extern int __kmp_tp_capacity; /* capacity of __kmp_threads if threadprivate is
                                  used (fixed) */
 extern int __kmp_tp_cached; /* whether threadprivate cache has been created
                                (__kmpc_threadprivate_cached()) */
-extern int __kmp_dflt_blocktime; /* number of milliseconds to wait before
+extern int __kmp_dflt_blocktime; /* number of microseconds to wait before
                                     blocking (env setting) */
+extern char __kmp_blocktime_units; /* 'm' or 'u' to note units specified */
 extern bool __kmp_wpolicy_passive; /* explicitly set passive wait policy */
+
+// Convert raw blocktime from ms to us if needed.
+static inline void __kmp_aux_convert_blocktime(int *bt) {
+  if (__kmp_blocktime_units == 'm') {
+    if (*bt > INT_MAX / 1000) {
+      *bt = INT_MAX / 1000;
+      KMP_INFORM(MaxValueUsing, "kmp_set_blocktime(ms)", bt);
+    }
+    *bt = *bt * 1000;
+  }
+}
+
 #if KMP_USE_MONITOR
 extern int
     __kmp_monitor_wakeups; /* number of times monitor wakes up per second */
@@ -3601,6 +3620,9 @@ extern void __kmp_warn(char const *format, ...);
 
 extern void __kmp_set_num_threads(int new_nth, int gtid);
 
+extern bool __kmp_detect_shm();
+extern bool __kmp_detect_tmp();
+
 // Returns current thread (pointer to kmp_info_t). Current thread *must* be
 // registered.
 static inline kmp_info_t *__kmp_entry_thread() {
@@ -3782,7 +3804,8 @@ extern void __kmp_affinity_initialize(kmp_affinity_t &affinity);
 extern void __kmp_affinity_uninitialize(void);
 extern void __kmp_affinity_set_init_mask(
     int gtid, int isa_root); /* set affinity according to KMP_AFFINITY */
-extern void __kmp_affinity_set_place(int gtid);
+void __kmp_affinity_bind_init_mask(int gtid);
+extern void __kmp_affinity_bind_place(int gtid);
 extern void __kmp_affinity_determine_capable(const char *env_var);
 extern int __kmp_aux_set_affinity(void **mask);
 extern int __kmp_aux_get_affinity(void **mask);
@@ -3798,7 +3821,8 @@ static inline void __kmp_assign_root_init_mask() {
   int gtid = __kmp_entry_gtid();
   kmp_root_t *r = __kmp_threads[gtid]->th.th_root;
   if (r->r.r_uber_thread == __kmp_threads[gtid] && !r->r.r_affinity_assigned) {
-    __kmp_affinity_set_init_mask(gtid, TRUE);
+    __kmp_affinity_set_init_mask(gtid, /*isa_root=*/TRUE);
+    __kmp_affinity_bind_init_mask(gtid);
     r->r.r_affinity_assigned = TRUE;
   }
 }
@@ -4282,6 +4306,8 @@ KMP_EXPORT void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
 KMP_EXPORT void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
                                       kmp_int32 num_teams,
                                       kmp_int32 num_threads);
+KMP_EXPORT void __kmpc_set_thread_limit(ident_t *loc, kmp_int32 global_tid,
+                                        kmp_int32 thread_limit);
 /* Function for OpenMP 5.1 num_teams clause */
 KMP_EXPORT void __kmpc_push_num_teams_51(ident_t *loc, kmp_int32 global_tid,
                                          kmp_int32 num_teams_lb,

@@ -2744,7 +2744,15 @@ TEST_F(OpenMPIRBuilderTest, CriticalDirective) {
   PointerType *CriticalNamePtrTy =
       PointerType::getUnqual(ArrayType::get(Type::getInt32Ty(Ctx), 8));
   EXPECT_EQ(CriticalEndCI->getArgOperand(2), CriticalEntryCI->getArgOperand(2));
-  EXPECT_EQ(CriticalEndCI->getArgOperand(2)->getType(), CriticalNamePtrTy);
+  GlobalVariable *GV =
+      dyn_cast<GlobalVariable>(CriticalEndCI->getArgOperand(2));
+  ASSERT_NE(GV, nullptr);
+  EXPECT_EQ(GV->getType(), CriticalNamePtrTy);
+  const DataLayout &DL = M->getDataLayout();
+  const llvm::Align TypeAlign = DL.getABITypeAlign(CriticalNamePtrTy);
+  const llvm::Align PtrAlign = DL.getPointerABIAlignment(GV->getAddressSpace());
+  if (const llvm::MaybeAlign Alignment = GV->getAlign())
+    EXPECT_EQ(*Alignment, std::max(TypeAlign, PtrAlign));
 }
 
 TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
@@ -5095,11 +5103,32 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+namespace {
+// Some basic handling of argument mapping for the moment
+void CreateDefaultMapInfos(llvm::OpenMPIRBuilder &OmpBuilder,
+                           llvm::SmallVectorImpl<llvm::Value *> &Args,
+                           llvm::OpenMPIRBuilder::MapInfosTy &CombinedInfo) {
+  for (auto Arg : Args) {
+    CombinedInfo.BasePointers.emplace_back(Arg);
+    CombinedInfo.Pointers.emplace_back(Arg);
+    uint32_t SrcLocStrSize;
+    CombinedInfo.Names.emplace_back(OmpBuilder.getOrCreateSrcLocStr(
+        "Unknown loc - stub implementation", SrcLocStrSize));
+    CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM));
+    CombinedInfo.Sizes.emplace_back(OmpBuilder.Builder.getInt64(
+        OmpBuilder.M.getDataLayout().getTypeAllocSize(Arg->getType())));
+  }
+}
+} // namespace
+
 TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
-  OpenMPIRBuilderConfig Config(false, false, false, false);
+  OpenMPIRBuilderConfig Config(false, false, false, false, false, false, false);
   OMPBuilder.setConfig(Config);
   F->setName("func");
   IRBuilder<> Builder(BB);
@@ -5126,34 +5155,59 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   Inputs.push_back(BPtr);
   Inputs.push_back(CPtr);
 
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfos;
+  auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
+      -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    CreateDefaultMapInfos(OMPBuilder, Inputs, CombinedInfos);
+    return CombinedInfos;
+  };
+
   TargetRegionEntryInfo EntryInfo("func", 42, 4711, 17);
   OpenMPIRBuilder::LocationDescription OmpLoc({Builder.saveIP(), DL});
-  Builder.restoreIP(OMPBuilder.createTarget(OmpLoc, Builder.saveIP(), EntryInfo,
-                                            -1, -1, Inputs, BodyGenCB));
+  Builder.restoreIP(OMPBuilder.createTarget(OmpLoc, Builder.saveIP(),
+                                            Builder.saveIP(), EntryInfo, -1, 0,
+                                            Inputs, GenMapInfoCB, BodyGenCB));
   OMPBuilder.finalize();
   Builder.CreateRetVoid();
 
-  // Check the outlined call
+  // Check the kernel launch sequence
   auto Iter = F->getEntryBlock().rbegin();
-  CallInst *Call = dyn_cast<CallInst>(&*(++Iter));
-  EXPECT_NE(Call, nullptr);
+  EXPECT_TRUE(isa<BranchInst>(&*(Iter)));
+  BranchInst *Branch = dyn_cast<BranchInst>(&*(Iter));
+  EXPECT_TRUE(isa<CmpInst>(&*(++Iter)));
+  EXPECT_TRUE(isa<CallInst>(&*(++Iter)));
+  CallInst *Call = dyn_cast<CallInst>(&*(Iter));
+
+  // Check that the kernel launch function is called
+  Function *KernelLaunchFunc = Call->getCalledFunction();
+  EXPECT_NE(KernelLaunchFunc, nullptr);
+  StringRef FunctionName = KernelLaunchFunc->getName();
+  EXPECT_TRUE(FunctionName.startswith("__tgt_target_kernel"));
+
+  // Check the fallback call
+  BasicBlock *FallbackBlock = Branch->getSuccessor(0);
+  Iter = FallbackBlock->rbegin();
+  CallInst *FCall = dyn_cast<CallInst>(&*(++Iter));
+  EXPECT_NE(FCall, nullptr);
 
   // Check that the correct aguments are passed in
-  for (auto ArgInput : zip(Call->args(), Inputs)) {
+  for (auto ArgInput : zip(FCall->args(), Inputs)) {
     EXPECT_EQ(std::get<0>(ArgInput), std::get<1>(ArgInput));
   }
 
   // Check that the outlined function exists with the expected prefix
-  Function *OutlinedFunc = Call->getCalledFunction();
+  Function *OutlinedFunc = FCall->getCalledFunction();
   EXPECT_NE(OutlinedFunc, nullptr);
-  StringRef FunctionName = OutlinedFunc->getName();
-  EXPECT_TRUE(FunctionName.startswith("__omp_offloading"));
+  StringRef FunctionName2 = OutlinedFunc->getName();
+  EXPECT_TRUE(FunctionName2.startswith("__omp_offloading"));
+
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.setConfig(OpenMPIRBuilderConfig(true, false, false, false));
+  OMPBuilder.setConfig(
+      OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
   OMPBuilder.initialize();
 
   F->setName("func");
@@ -5165,6 +5219,13 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   llvm::SmallVector<llvm::Value *, 2> CapturedArgs = {
       Constant::getNullValue(PointerType::get(Ctx, 0)),
       Constant::getNullValue(PointerType::get(Ctx, 0))};
+
+  llvm::OpenMPIRBuilder::MapInfosTy CombinedInfos;
+  auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
+      -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    CreateDefaultMapInfos(OMPBuilder, CapturedArgs, CombinedInfos);
+    return CombinedInfos;
+  };
 
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
                        OpenMPIRBuilder::InsertPointTy CodeGenIP)
@@ -5180,9 +5241,10 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   TargetRegionEntryInfo EntryInfo("parent", /*DeviceID=*/1, /*FileID=*/2,
                                   /*Line=*/3, /*Count=*/0);
 
-  Builder.restoreIP(
-      OMPBuilder.createTarget(Loc, EntryIP, EntryInfo, /*NumTeams=*/-1,
-                              /*NumThreads=*/-1, CapturedArgs, BodyGenCB));
+  Builder.restoreIP(OMPBuilder.createTarget(
+      Loc, EntryIP, EntryIP, EntryInfo, /*NumTeams=*/-1,
+      /*NumThreads=*/0, CapturedArgs, GenMapInfoCB, BodyGenCB));
+
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
 
@@ -5335,19 +5397,29 @@ TEST_F(OpenMPIRBuilderTest, CreateTask) {
   ConstantInt *DataSize =
       dyn_cast<ConstantInt>(TaskAllocCall->getArgOperand(3));
   ASSERT_NE(DataSize, nullptr);
-  EXPECT_EQ(DataSize->getSExtValue(), 24); // 64-bit pointer + 128-bit integer
+  EXPECT_EQ(DataSize->getSExtValue(), 40);
 
-  // TODO: Verify size of shared clause variables
+  ConstantInt *SharedsSize =
+      dyn_cast<ConstantInt>(TaskAllocCall->getOperand(4));
+  EXPECT_EQ(SharedsSize->getSExtValue(),
+            24); // 64-bit pointer + 128-bit integer
 
   // Verify Wrapper function
   Function *WrapperFunc =
       dyn_cast<Function>(TaskAllocCall->getArgOperand(5)->stripPointerCasts());
   ASSERT_NE(WrapperFunc, nullptr);
+
+  LoadInst *SharedsLoad = dyn_cast<LoadInst>(WrapperFunc->begin()->begin());
+  ASSERT_NE(SharedsLoad, nullptr);
+  EXPECT_EQ(SharedsLoad->getPointerOperand(), WrapperFunc->getArg(1));
+
   EXPECT_FALSE(WrapperFunc->isDeclaration());
-  CallInst *OutlinedFnCall = dyn_cast<CallInst>(WrapperFunc->begin()->begin());
+  CallInst *OutlinedFnCall =
+      dyn_cast<CallInst>(++WrapperFunc->begin()->begin());
   ASSERT_NE(OutlinedFnCall, nullptr);
   EXPECT_EQ(WrapperFunc->getArg(0)->getType(), Builder.getInt32Ty());
-  EXPECT_EQ(OutlinedFnCall->getArgOperand(0), WrapperFunc->getArg(1));
+  EXPECT_EQ(OutlinedFnCall->getArgOperand(0),
+            WrapperFunc->getArg(1)->uses().begin()->getUser());
 
   // Verify the presence of `trunc` and `icmp` instructions in Outlined function
   Function *OutlinedFn = OutlinedFnCall->getCalledFunction();
@@ -5835,7 +5907,8 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
 
 TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
   OpenMPIRBuilder OMPBuilder(*M);
-  OMPBuilder.setConfig(OpenMPIRBuilderConfig(true, false, false, false));
+  OMPBuilder.setConfig(
+      OpenMPIRBuilderConfig(true, false, false, false, false, false, false));
   OffloadEntriesInfoManager &InfoManager = OMPBuilder.OffloadInfoManager;
   TargetRegionEntryInfo EntryInfo("parent", 1, 2, 4, 0);
   InfoManager.initializeTargetRegionEntryInfo(EntryInfo, 0);
@@ -5858,7 +5931,7 @@ TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
 TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
-  OpenMPIRBuilderConfig Config(false, false, false, false);
+  OpenMPIRBuilderConfig Config(false, false, false, false, false, false, false);
   OMPBuilder.setConfig(Config);
 
   std::vector<llvm::Triple> TargetTriple;
@@ -5935,8 +6008,11 @@ TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {
   OMPBuilder.initialize();
   OpenMPIRBuilderConfig Config(/* IsTargetDevice = */ true,
                                /* IsGPU = */ true,
+                               /* OpenMPOffloadMandatory = */ false,
+                               /* HasRequiresReverseOffload = */ false,
+                               /* HasRequiresUnifiedAddress = */ false,
                                /* HasRequiresUnifiedSharedMemory = */ false,
-                               /* OpenMPOffloadMandatory = */ false);
+                               /* HasRequiresDynamicAllocators = */ false);
   OMPBuilder.setConfig(Config);
 
   FunctionCallee FnTypeAndCallee =
@@ -5970,6 +6046,46 @@ TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {
   // Check kernel attributes
   EXPECT_TRUE(Fn->hasFnAttribute("kernel"));
   EXPECT_TRUE(Fn->hasFnAttribute(Attribute::MustProgress));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateRegisterRequires) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  OpenMPIRBuilderConfig Config(/* IsTargetDevice = */ false,
+                               /* IsGPU = */ false,
+                               /* OpenMPOffloadMandatory = */ false,
+                               /* HasRequiresReverseOffload = */ true,
+                               /* HasRequiresUnifiedAddress = */ false,
+                               /* HasRequiresUnifiedSharedMemory = */ true,
+                               /* HasRequiresDynamicAllocators = */ false);
+  OMPBuilder.setConfig(Config);
+
+  auto FName =
+      OMPBuilder.createPlatformSpecificName({"omp_offloading", "requires_reg"});
+  EXPECT_EQ(FName, ".omp_offloading.requires_reg");
+
+  Function *Fn = OMPBuilder.createRegisterRequires(FName);
+  EXPECT_NE(Fn, nullptr);
+  EXPECT_EQ(FName, Fn->getName());
+
+  EXPECT_EQ(Fn->getSection(), ".text.startup");
+  EXPECT_TRUE(Fn->hasInternalLinkage());
+  EXPECT_TRUE(Fn->hasFnAttribute(Attribute::NoInline));
+  EXPECT_TRUE(Fn->hasFnAttribute(Attribute::NoUnwind));
+  EXPECT_EQ(Fn->size(), 1u);
+
+  BasicBlock *Entry = &Fn->getEntryBlock();
+  EXPECT_FALSE(Entry->empty());
+  EXPECT_EQ(Fn->getReturnType()->getTypeID(), Type::VoidTyID);
+
+  CallInst *Call = &cast<CallInst>(*Entry->begin());
+  EXPECT_EQ(Call->getCalledFunction()->getName(), "__tgt_register_requires");
+  EXPECT_EQ(Call->getNumOperands(), 2u);
+
+  Value *Flags = Call->getArgOperand(0);
+  EXPECT_EQ(cast<ConstantInt>(Flags)->getSExtValue(),
+            OMPBuilder.Config.getRequiresFlags());
 }
 
 } // namespace

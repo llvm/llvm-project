@@ -14,8 +14,8 @@
 
 namespace clang::tidy::readability {
 
-/// Checks whether a call to the `size()` method can be replaced with a call to
-/// `empty()`.
+/// Checks whether a call to the `size()`/`length()` method can be replaced with
+/// a call to `empty()`.
 ///
 /// The emptiness of a container should be checked using the `empty()` method
 /// instead of the `size()` method. It is not guaranteed that `size()` is a

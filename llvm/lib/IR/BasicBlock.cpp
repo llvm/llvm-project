@@ -220,6 +220,10 @@ const Instruction* BasicBlock::getFirstNonPHI() const {
   return nullptr;
 }
 
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
+  return getFirstNonPHI()->getIterator();
+}
+
 const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
   for (const Instruction &I : *this) {
     if (isa<PHINode>(I) || isa<DbgInfoIntrinsic>(I))
@@ -396,8 +400,9 @@ bool BasicBlock::isLegalToHoistInto() const {
   // If the block has no successors, there can be no instructions to hoist.
   assert(Term->getNumSuccessors() > 0);
 
-  // Instructions should not be hoisted across exception handling boundaries.
-  return !Term->isExceptionalTerminator();
+  // Instructions should not be hoisted across special terminators, which may
+  // have side effects or return values.
+  return !Term->isSpecialTerminator();
 }
 
 bool BasicBlock::isEntryBlock() const {

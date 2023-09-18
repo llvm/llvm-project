@@ -27,12 +27,12 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/OperatorKinds.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Debug.h"
+#include <assert.h>
 #include <cassert>
-#include <memory>
-#include <tuple>
+
+#define DEBUG_TYPE "dataflow"
 
 namespace clang {
 namespace dataflow {
@@ -43,7 +43,20 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   if (!CFCtx.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   const auto &State = BlockToState[BlockIt->getSecond()->getBlockID()];
-  assert(State);
+  if (!(State)) {
+    LLVM_DEBUG({
+      // State can be null when this block is unreachable from the block that
+      // called this method.
+      bool hasUnreachableEdgeFromPred = false;
+      for (auto B : BlockIt->getSecond()->preds())
+        if (!B) {
+          hasUnreachableEdgeFromPred = true;
+          break;
+        }
+      assert(hasUnreachableEdgeFromPred);
+    });
+    return nullptr;
+  }
   return &State->Env;
 }
 
@@ -175,12 +188,16 @@ public:
     const ValueDecl *VD = S->getDecl();
     assert(VD != nullptr);
 
-    // `DeclRefExpr`s to fields and non-static methods aren't glvalues, and
-    // there's also no sensible `Value` we can assign to them, so skip them.
-    if (isa<FieldDecl>(VD))
-      return;
-    if (auto *Method = dyn_cast<CXXMethodDecl>(VD);
-        Method && !Method->isStatic())
+    // Some `DeclRefExpr`s aren't glvalues, so we can't associate them with a
+    // `StorageLocation`, and there's also no sensible `Value` that we can
+    // assign to them. Examples:
+    // - Non-static member variables
+    // - Non static member functions
+    //   Note: Member operators are an exception to this, but apparently only
+    //   if the `DeclRefExpr` is used within the callee of a
+    //   `CXXOperatorCallExpr`. In other cases, for example when applying the
+    //   address-of operator, the `DeclRefExpr` is a prvalue.
+    if (!S->isGLValue())
       return;
 
     auto *DeclLoc = Env.getStorageLocation(*VD);
@@ -272,8 +289,7 @@ public:
 
     case CK_LValueToRValue: {
       // When an L-value is used as an R-value, it may result in sharing, so we
-      // need to unpack any nested `Top`s. We also need to strip off the
-      // `ReferenceValue` associated with the lvalue.
+      // need to unpack any nested `Top`s.
       auto *SubExprVal = maybeUnpackLValueExpr(*SubExpr, Env);
       if (SubExprVal == nullptr)
         break;
@@ -484,6 +500,7 @@ public:
     // we've got a record type.
     if (S->getType()->isRecordType()) {
       auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
+      Env.setValue(*S, InitialVal);
       copyRecord(InitialVal.getLoc(), Env.getResultObjectLocation(*S), Env);
     }
 
@@ -513,6 +530,13 @@ public:
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
+
+      // The assignment operators are different from the type of the destination
+      // in this model (i.e. in one of their base classes). This must be very rare
+      // and we just bail.
+      if (Method->getThisObjectType().getCanonicalType().getUnqualifiedType() !=
+          LocDst->getType().getCanonicalType().getUnqualifiedType())
+        return;
 
       if (LocSrc != nullptr && LocDst != nullptr) {
         copyRecord(*LocSrc, *LocDst, Env);
@@ -625,16 +649,65 @@ public:
       return;
     }
 
-    std::vector<FieldDecl *> Fields =
-        getFieldsForInitListExpr(Type->getAsRecordDecl());
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
 
-    for (auto [Field, Init] : llvm::zip(Fields, S->inits())) {
-      assert(Field != nullptr);
-      assert(Init != nullptr);
+    // This only contains the direct fields for the given type.
+    std::vector<FieldDecl *> FieldsForInit =
+        getFieldsForInitListExpr(Type->getAsRecordDecl());
 
-      FieldLocs.insert({Field, &Env.createObject(Field->getType(), Init)});
+    // `S->inits()` contains all the initializer epressions, including the
+    // ones for direct base classes.
+    auto Inits = S->inits();
+    size_t InitIdx = 0;
+
+    // Initialize base classes.
+    if (auto* R = S->getType()->getAsCXXRecordDecl()) {
+      assert(FieldsForInit.size() + R->getNumBases() == Inits.size());
+      for ([[maybe_unused]] const CXXBaseSpecifier &Base : R->bases()) {
+        assert(InitIdx < Inits.size());
+        auto Init = Inits[InitIdx++];
+        assert(Base.getType().getCanonicalType() ==
+               Init->getType().getCanonicalType());
+        auto* BaseVal = cast_or_null<RecordValue>(Env.getValue(*Init));
+        if (!BaseVal)
+          BaseVal = cast<RecordValue>(Env.createValue(Init->getType()));
+        // Take ownership of the fields of the `RecordValue` for the base class
+        // and incorporate them into the "flattened" set of fields for the
+        // derived class.
+        auto Children = BaseVal->getLoc().children();
+        FieldLocs.insert(Children.begin(), Children.end());
+      }
     }
+
+    assert(FieldsForInit.size() == Inits.size() - InitIdx);
+    for (auto Field : FieldsForInit) {
+      assert(InitIdx < Inits.size());
+      auto Init = Inits[InitIdx++];
+      assert(
+          // The types are same, or
+          Field->getType().getCanonicalType().getUnqualifiedType() ==
+              Init->getType().getCanonicalType() ||
+          // The field's type is T&, and initializer is T
+          (Field->getType()->isReferenceType() &&
+              Field->getType().getCanonicalType()->getPointeeType() ==
+              Init->getType().getCanonicalType()));
+      auto& Loc = Env.createObject(Field->getType(), Init);
+      FieldLocs.insert({Field, &Loc});
+    }
+
+    LLVM_DEBUG({
+      // Check that we satisfy the invariant that a `RecordStorageLoation`
+      // contains exactly the set of modeled fields for that type.
+      // `ModeledFields` includes fields from all the bases, but only the
+      // modeled ones. However, if a class type is initialized with an
+      // `InitListExpr`, all fields in the class, including those from base
+      // classes, are included in the set of modeled fields. The code above
+      // should therefore populate exactly the modeled fields.
+      auto ModeledFields = Env.getDataflowAnalysisContext().getModeledFields(Type);
+      assert(ModeledFields.size() == FieldLocs.size());
+      for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
+        assert(ModeledFields.contains(cast_or_null<FieldDecl>(Field)));
+    });
 
     auto &Loc =
         Env.getDataflowAnalysisContext().arena().create<RecordStorageLocation>(

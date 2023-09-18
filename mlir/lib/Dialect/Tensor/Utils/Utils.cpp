@@ -98,8 +98,13 @@ bool mlir::tensor::isCastLikeExtractSliceOp(ExtractSliceOp op) {
   int64_t resultDim = 0;
   // Source dims and result dims (apart from dropped dims) must have the same
   // size.
-  for (int64_t dim = 0; dim < op.getSourceType().getRank(); ++dim) {
+  RankedTensorType sourceType = op.getSourceType();
+  for (int64_t dim = 0, e = sourceType.getRank(); dim < e; ++dim) {
     if (droppedDims.test(dim)) {
+      // ExtractSlice may drop unit dimensions that result from taking a size-1
+      // slice from a non-size-1 source dimension.
+      if (sourceType.getDimSize(dim) != 1)
+        return false;
       continue;
     }
     FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(

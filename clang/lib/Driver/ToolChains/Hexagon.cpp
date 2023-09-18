@@ -369,12 +369,12 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       if (NeedsSanitizerDeps) {
-        linkSanitizerRuntimeDeps(HTC, CmdArgs);
+        linkSanitizerRuntimeDeps(HTC, Args, CmdArgs);
 
         CmdArgs.push_back("-lunwind");
       }
       if (NeedsXRayDeps)
-        linkXRayRuntimeDeps(HTC, CmdArgs);
+        linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
       CmdArgs.push_back("-lc");

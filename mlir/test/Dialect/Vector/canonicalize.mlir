@@ -8,7 +8,6 @@ func.func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
   %0 = vector.create_mask %c3, %c2 : vector<4x3xi1>
   return %0 : vector<4x3xi1>
 }
-
 // -----
 
 // CHECK-LABEL: create_scalable_vector_mask_to_constant_mask
@@ -670,6 +669,18 @@ func.func @dont_fold_0d_extract_shapecast(%arg0 : vector<f32>) -> f32 {
 
 // -----
 
+// CHECK-LABEL: fold_extract_shapecast_to_shapecast
+//  CHECK-SAME: (%[[ARG:.+]]: vector<3x4xf32>)
+//       CHECK:   %[[R:.+]] = vector.shape_cast %[[ARG]] : vector<3x4xf32> to vector<12xf32>
+//       CHECK:   return %[[R]]
+func.func @fold_extract_shapecast_to_shapecast(%arg0 : vector<3x4xf32>) -> vector<12xf32> {
+  %0 = vector.shape_cast %arg0 : vector<3x4xf32> to vector<1x12xf32>
+  %r = vector.extract %0[0] : vector<1x12xf32>
+  return %r : vector<12xf32>
+}
+
+// -----
+
 // CHECK-LABEL: dont_fold_expand_collapse
 //       CHECK:   %[[A:.*]] = vector.shape_cast %{{.*}} : vector<1x1x64xf32> to vector<1x1x8x8xf32>
 //       CHECK:   %[[B:.*]] = vector.shape_cast %{{.*}} : vector<1x1x8x8xf32> to vector<8x8xf32>
@@ -715,13 +726,24 @@ func.func @dont_fold_broadcast_shapecast_diff_shape(%arg0: vector<4xf32>) -> vec
 
 // -----
 
-// CHECK-LABEL: func @canonicalize_broadcast_shapecast
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_broadcast
 //       CHECK:   vector.broadcast
 //   CHECK-NOT:   vector.shape_cast
-func.func @canonicalize_broadcast_shapecast(%arg0: vector<3xf32>) -> vector<8x3xf32> {
+func.func @canonicalize_broadcast_shapecast_to_broadcast(%arg0: vector<3xf32>) -> vector<8x3xf32> {
     %0 = vector.broadcast %arg0 : vector<3xf32> to vector<2x4x3xf32>
     %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
     return %1 : vector<8x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapecast
+//   CHECK-NOT:   vector.broadcast
+//       CHECK:   vector.shape_cast {{.+}} : vector<3x4xf32> to vector<1x12xf32>
+func.func @canonicalize_broadcast_shapecast_to_shapecast(%arg0: vector<3x4xf32>) -> vector<1x12xf32> {
+    %0 = vector.broadcast %arg0 : vector<3x4xf32> to vector<1x1x3x4xf32>
+    %1 = vector.shape_cast %0 : vector<1x1x3x4xf32> to vector<1x12xf32>
+    return %1 : vector<1x12xf32>
 }
 
 // -----
@@ -1318,6 +1340,24 @@ func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32
 
 //       CHECK:     return %[[RESULT]] : vector<5x4x20xf32>
     return %0 : vector<5x4x20xf32>
+}
+
+// -----
+// CHECK-LABEL:   func.func @vector_multi_reduction_scalable(
+// CHECK-SAME:     %[[VAL_0:.*]]: vector<1x[4]x1xf32>,
+// CHECK-SAME:     %[[VAL_1:.*]]: vector<1x[4]xf32>,
+// CHECK-SAME:     %[[VAL_2:.*]]: vector<1x[4]x1xi1>)
+func.func @vector_multi_reduction_scalable(%source: vector<1x[4]x1xf32>,
+                                           %acc: vector<1x[4]xf32>,
+                                           %mask: vector<1x[4]x1xi1>) -> vector<1x[4]xf32> {
+// CHECK:           %[[VAL_3:.*]] = vector.shape_cast %[[VAL_2]] : vector<1x[4]x1xi1> to vector<1x[4]xi1>
+// CHECK:           %[[VAL_4:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x[4]x1xf32> to vector<1x[4]xf32>
+// CHECK:           %[[VAL_5:.*]] = arith.addf %[[VAL_1]], %[[VAL_4]] : vector<1x[4]xf32>
+// CHECK:           %[[VAL_6:.*]] = arith.select %[[VAL_3]], %[[VAL_5]], %[[VAL_4]] : vector<1x[4]xi1>, vector<1x[4]xf32>
+    %0 = vector.mask %mask { vector.multi_reduction <add>, %source, %acc [2] : vector<1x[4]x1xf32> to vector<1x[4]xf32> } :
+          vector<1x[4]x1xi1> -> vector<1x[4]xf32>
+
+    return %0 : vector<1x[4]xf32>
 }
 
 // -----
@@ -1952,13 +1992,13 @@ func.func @dont_reduce_one_element_vector(%a : vector<4xf32>) -> f32 {
 
 // -----
 
-// CHECK-LABEL: func @reduce_one_element_vector_maxf
+// CHECK-LABEL: func @reduce_one_element_vector_maximumf
 //  CHECK-SAME: (%[[V:.+]]: vector<1xf32>, %[[B:.+]]: f32)
 //       CHECK:   %[[A:.+]] = vector.extract %[[V]][0] : vector<1xf32>
-//       CHECK:   %[[S:.+]] = arith.maxf %[[A]], %[[B]] : f32
+//       CHECK:   %[[S:.+]] = arith.maximumf %[[A]], %[[B]] : f32
 //       CHECK:   return %[[S]]
-func.func @reduce_one_element_vector_maxf(%a : vector<1xf32>, %b: f32) -> f32 {
-  %s = vector.reduction <maxf>, %a, %b : vector<1xf32> into f32
+func.func @reduce_one_element_vector_maximumf(%a : vector<1xf32>, %b: f32) -> f32 {
+  %s = vector.reduction <maximumf>, %a, %b : vector<1xf32> into f32
   return %s : f32
 }
 
@@ -2178,4 +2218,67 @@ func.func @all_true_vector_mask(%a : vector<3x4xf32>) -> vector<3x4xf32> {
   %all_true = vector.constant_mask [3, 4] : vector<3x4xi1>
   %0 = vector.mask %all_true { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
   return %0 : vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask(
+// CHECK-SAME:     %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x4xi1> {
+func.func @fold_shape_cast_with_mask(%arg0: tensor<1x?xf32>) -> vector<1x4xi1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:     %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:     %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:     %[[VAL_3:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_2]] : vector<1x4xi1>
+// CHECK:     return %[[VAL_3]] : vector<1x4xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x4x1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x4x1x1xi1> to vector<1x4xi1>
+  return %2 : vector<1x4xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_scalable(
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[4]xi1> {
+func.func @fold_shape_cast_with_mask_scalable(%arg0: tensor<1x?xf32>) -> vector<1x[4]xi1> {
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_2]] : vector<1x[4]xi1>
+// CHECK:           return %[[VAL_3]] : vector<1x[4]xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x[4]x1x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x[4]x1x1xi1> to vector<1x[4]xi1>
+  return %2 : vector<1x[4]xi1>
+}
+
+// -----
+
+// Check that scalable "1" (i.e. [1]) is not folded
+// CHECK-LABEL:   func.func @fold_shape_cast_with_mask_scalable_one(
+// CHECK-SAME:    %[[VAL_0:.*]]: tensor<1x?xf32>) -> vector<1x[1]xi1> {
+func.func @fold_shape_cast_with_mask_scalable_one(%arg0: tensor<1x?xf32>) -> vector<1x[1]xi1>{
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<1x?xf32>
+// CHECK:           %[[VAL_3:.*]] = vector.create_mask %[[VAL_1]], %[[VAL_2]] : vector<1x[1]xi1>
+// CHECK:           return %[[VAL_3]] : vector<1x[1]xi1>
+  %c1 = arith.constant 1 : index
+  %dim = tensor.dim %arg0, %c1 : tensor<1x?xf32>
+  %1 = vector.create_mask %c1, %dim, %c1 : vector<1x[1]x1xi1>
+  %2 = vector.shape_cast %1 : vector<1x[1]x1xi1> to vector<1x[1]xi1>
+  return %2 : vector<1x[1]xi1>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1> {
+func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1>{
+// CHECK-NOT: vector.shape_cast
+// CHECK:           %[[VAL_0:.*]] = vector.constant_mask [1] : vector<4xi1>
+// CHECK:           return %[[VAL_0]] : vector<4xi1>
+  %1 = vector.constant_mask [1, 1, 1] : vector<4x1x1xi1>
+  %2 = vector.shape_cast %1 : vector<4x1x1xi1> to vector<4xi1>
+  return %2 : vector<4xi1>
 }

@@ -53,8 +53,7 @@ public:
                 detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
 #endif
   iterator_range(Container &&c)
-      : begin_iterator(adl_begin(std::forward<Container>(c))),
-        end_iterator(adl_end(std::forward<Container>(c))) {
+      : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {
   }
   iterator_range(IteratorT begin_iterator, IteratorT end_iterator)
       : begin_iterator(std::move(begin_iterator)),

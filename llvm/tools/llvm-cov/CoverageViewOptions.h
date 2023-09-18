@@ -38,6 +38,7 @@ struct CoverageViewOptions {
   bool ShowBranchSummary;
   bool ShowRegionSummary;
   bool ShowInstantiationSummary;
+  bool ShowDirectoryCoverage;
   bool ExportSummaryOnly;
   bool SkipExpansions;
   bool SkipFunctions;

@@ -57,6 +57,14 @@ kDevNull = "/dev/null"
 kPdbgRegex = "%dbg\\(([^)'\"]*)\\)(.*)"
 
 
+def buildPdbgCommand(msg, cmd):
+    res = f"%dbg({msg}) {cmd}"
+    assert re.fullmatch(
+        kPdbgRegex, res
+    ), f"kPdbgRegex expected to match actual %dbg usage: {res}"
+    return res
+
+
 class ShellEnvironment(object):
 
     """Mutable shell environment containing things like CWD and env vars.
@@ -202,7 +210,7 @@ def expand_glob_expressions(args, cwd):
 
 
 def quote_windows_command(seq):
-    """
+    r"""
     Reimplement Python's private subprocess.list2cmdline for MSys compatibility
 
     Based on CPython implementation here:
@@ -985,7 +993,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
     cmds = []
     for i, ln in enumerate(commands):
-        match = re.match(kPdbgRegex, ln)
+        match = re.fullmatch(kPdbgRegex, ln)
         if match:
             command = match.group(2)
             ln = commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
@@ -1067,24 +1075,9 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 def executeScript(test, litConfig, tmpBase, commands, cwd):
     bashPath = litConfig.getBashPath()
     isWin32CMDEXE = litConfig.isWindows and not bashPath
-    coverage_index = 0  # Counter for coverage file index
     script = tmpBase + ".script"
     if isWin32CMDEXE:
         script += ".bat"
-
-    # Set unique LLVM_PROFILE_FILE for each run command
-    for j, ln in enumerate(commands):
-        match = re.match(kPdbgRegex, ln)
-        if match:
-            command = match.group(2)
-            commands[j] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
-            if litConfig.per_test_coverage:
-                # Extract the test case name from the test object
-                test_case_name = test.path_in_suite[-1]
-                test_case_name = test_case_name.rsplit(".", 1)[0]  # Remove the file extension
-                llvm_profile_file = f"{test_case_name}{coverage_index}.profraw"
-                commands[j] = f"export LLVM_PROFILE_FILE={llvm_profile_file} && {commands[j]}"
-                coverage_index += 1
 
     # Write script file
     mode = "w"
@@ -1096,7 +1089,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
                 command = match.group(2)
                 commands[i] = match.expand(
@@ -1109,7 +1102,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
                 command = match.group(2)
                 commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
@@ -1563,7 +1556,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             return cond, ln
 
         def tryParseElse(ln):
-            match = _caching_re_compile("^\s*%else\s*(%{)?").search(ln)
+            match = _caching_re_compile(r"^\s*%else\s*(%{)?").search(ln)
             if not match:
                 return False, ln
             if not match.group(1):
@@ -1837,13 +1830,7 @@ class IntegratedTestKeywordParser(object):
         if not output or not output[-1].add_continuation(line_number, keyword, line):
             if output is None:
                 output = []
-            pdbg = "%dbg({keyword} at line {line_number})".format(
-                keyword=keyword, line_number=line_number
-            )
-            assert re.match(
-                kPdbgRegex + "$", pdbg
-            ), "kPdbgRegex expected to match actual %dbg usage"
-            line = "{pdbg} {real_command}".format(pdbg=pdbg, real_command=line)
+            line = buildPdbgCommand(f"{keyword} at line {line_number}", line)
             output.append(CommandDirective(line_number, line_number, keyword, line))
         return output
 
@@ -2048,6 +2035,27 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     def runOnce(execdir):
+        # Set unique LLVM_PROFILE_FILE for each run command
+        if litConfig.per_test_coverage:
+            # Extract the test case name from the test object, and remove the
+            # file extension.
+            test_case_name = test.path_in_suite[-1]
+            test_case_name = test_case_name.rsplit(".", 1)[0]
+            coverage_index = 0  # Counter for coverage file index
+            for i, ln in enumerate(script):
+                match = re.fullmatch(kPdbgRegex, ln)
+                if match:
+                    dbg = match.group(1)
+                    command = match.group(2)
+                else:
+                    command = ln
+                profile = f"{test_case_name}{coverage_index}.profraw"
+                coverage_index += 1
+                command = f"export LLVM_PROFILE_FILE={profile}; {command}"
+                if match:
+                    command = buildPdbgCommand(dbg, command)
+                script[i] = command
+
         if useExternalSh:
             res = executeScript(test, litConfig, tmpBase, script, execdir)
         else:
@@ -2071,7 +2079,14 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
     attempts = test.allowed_retries + 1
+    scriptInit = script
     for i in range(attempts):
+        # runOnce modifies script, but applying the modifications again to the
+        # result can corrupt script, so we restore the original upon a retry.
+        # A cleaner solution would be for runOnce to encapsulate operating on a
+        # copy of script, but we actually want it to modify the original script
+        # so we can print the modified version under "Script:" below.
+        script = scriptInit[:]
         res = runOnce(execdir)
         if isinstance(res, lit.Test.Result):
             return res

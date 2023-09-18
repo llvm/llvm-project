@@ -432,9 +432,9 @@ TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
 //                               acq_rel
 //                               relaxed
 TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
-    "SEQ_CST" >> pure(OmpAtomicDefaultMemOrderClause::Type::SeqCst) ||
-    "ACQ_REL" >> pure(OmpAtomicDefaultMemOrderClause::Type::AcqRel) ||
-    "RELAXED" >> pure(OmpAtomicDefaultMemOrderClause::Type::Relaxed)))
+    "SEQ_CST" >> pure(common::OmpAtomicDefaultMemOrderType::SeqCst) ||
+    "ACQ_REL" >> pure(common::OmpAtomicDefaultMemOrderType::AcqRel) ||
+    "RELAXED" >> pure(common::OmpAtomicDefaultMemOrderType::Relaxed)))
 
 // 2.17.7 Atomic construct
 //        atomic-clause -> memory-order-clause | HINT(hint-expression)
@@ -610,7 +610,7 @@ TYPE_PARSER(
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
-    verbatim("REQUIRES"_tok), some(Parser<OmpClause>{} / maybe(","_tok)))))
+    verbatim("REQUIRES"_tok), Parser<OmpClauseList>{})))
 
 // 2.15.2 Threadprivate directive
 TYPE_PARSER(sourced(construct<OpenMPThreadprivate>(

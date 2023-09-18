@@ -1,4 +1,5 @@
-// RUN: mlir-opt --convert-nvvm-to-llvm --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-nvvm-to-llvm --convert-arith-to-llvm --split-input-file %s | FileCheck %s
+
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck %s
@@ -102,4 +103,226 @@ func.func @wgmma_execute() {
   // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.commit_group.sync.aligned;", ""
   // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.wait_group.sync.aligned %0;", "n" %{{.*}} : (i32)
   return
+}
+
+// -----
+
+!mat64f32 = !llvm.struct<(
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32)>
+
+// CHECK-LABEL: @wgmma_f32_f16_f16(
+// CHECK-SAME: %[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64
+func.func @wgmma_f32_f16_f16(%descA : i64, %descB : i64) -> !mat64f32{  
+  // CHECK: %[[RES:.*]] = llvm.mlir.undef : !llvm.struct
+  // CHECK: %[[A1:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[A2:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: %[[A3:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: %[[A4:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[A5:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[V0:.*]] = llvm.extractvalue %[[RES]][0] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[V4:.*]] = llvm.extractvalue %[[RES]][4] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[V11:.*]] = llvm.extractvalue %[[RES]][11] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>  
+  // CHECK: %[[V13:.*]] = llvm.extractvalue %[[RES]][13] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[RES1:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $34, 0;\0Awgmma.mma_async.sync.aligned.m64n32k16.f32.f16.f16 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}, $32, $33, p, $35,  $36, $37,  $38;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,l,l,n,n,n,n,n" %[[V0]], %{{.*}}, %{{.*}}, %{{.*}}, %[[V4]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[V11]], %{{.*}}, %[[V13]], %{{.*}}, %{{.*}}, %[[ARG0]], %[[ARG1]], %[[A1]], %[[A2]], %[[A3]], %[[A4]], %[[A5]] : (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, i64, i64, i32, i32, i32, i32, i32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
+  // CHECK: %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
+  // CHECK: %[[DESCa:.+]] = llvm.add %[[ARG0]], %[[C2]] : i64
+  // CHECK: %[[DESCb:.+]] = llvm.add %[[ARG1]], %[[C2]] : i64
+  // CHECK: %[[V0_2:.*]] = llvm.extractvalue %[[RES1]][0] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[V4_2:.*]] = llvm.extractvalue %[[RES1]][4] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[V11_2:.*]] = llvm.extractvalue %[[RES1]][11] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>  
+  // CHECK: %[[V13_2:.*]] = llvm.extractvalue %[[RES1]][13] : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)> 
+  // CHECK: %[[RES_2:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $34, 0;\0Awgmma.mma_async.sync.aligned.m64n32k16.f32.f16.f16 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15}, $32, $33, p, $35,  $36, $37,  $38;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,l,l,n,n,n,n,n" %[[V0_2]], %{{.*}}, %{{.*}}, %{{.*}}, %[[V4_2]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[V11_2]], %{{.*}}, %[[V13_2]], %{{.*}}, %{{.*}}, %[[DESCa]], %[[DESCb]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, i64, i64, i32, i32, i32, i32, i32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)>
+  %result = llvm.mlir.undef : !mat64f32
+  %result1 = nvvm.wgmma.mma_async 
+      %descA, %descB, 
+      #nvvm.shape<m = 64, n = 32, k = 16>, 
+      D [%result, #nvvm.wgmma_scale_out<zero>],
+      A [<f16>, #nvvm.wgmma_scale_in<neg>, <col>], 
+      B [<f16>, #nvvm.wgmma_scale_in<neg>, <col>]
+      :!mat64f32 -> !mat64f32
+  %c2 = arith.constant 2 : i64
+  %descAnext = arith.addi %descA, %c2 : i64
+  %descBnext = arith.addi %descB, %c2 : i64
+  %result2 = nvvm.wgmma.mma_async 
+      %descAnext, %descBnext, 
+      #nvvm.shape<m = 64, n = 32, k = 16>, 
+      D [%result1, #nvvm.wgmma_scale_out<zero>],
+      A [<f16>, #nvvm.wgmma_scale_in<neg>, <col>], 
+      B [<f16>, #nvvm.wgmma_scale_in<neg>, <col>]
+      : !mat64f32 -> !mat64f32
+  return %result2 : !mat64f32
+}
+
+// -----
+
+!mat16i32 = !llvm.struct<(i32, i32, i32, i32)>
+
+// CHECK-LABEL: @wgmma_s32_s8_s8_satfinite(
+// CHECK-SAME: %[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64
+func.func @wgmma_s32_s8_s8_satfinite(%descA : i64, %descB : i64) -> !mat16i32{  
+  %result = llvm.mlir.undef : !mat16i32
+// CHECK: %[[RES:.*]] = llvm.mlir.undef : !llvm.struct
+// CHECK: %[[A1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[V0:.*]] = llvm.extractvalue %[[RES]][0]
+// CHECK: %[[V1:.*]] = llvm.extractvalue %[[RES]][1]
+// CHECK: %[[V2:.*]] = llvm.extractvalue %[[RES]][2]
+// CHECK: %[[V3:.*]] = llvm.extractvalue %[[RES]][3]
+// CHECK: %[[RES_2:.*]] =  llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $10, 0;\0Awgmma.mma_async.sync.aligned.m64n8k32.s32.s8.s8.satfinite {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0]], %[[V1]], %[[V2]], %[[V3]], %[[ARG0]], %[[ARG1]], %[[A1]] : (i32, i32, i32, i32, i64, i64, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+// CHECK: %[[V0_2:.*]] = llvm.extractvalue %[[RES_2]][0]
+// CHECK: %[[V1_2:.*]] = llvm.extractvalue %[[RES_2]][1]
+// CHECK: %[[V2_2:.*]] = llvm.extractvalue %[[RES_2]][2]
+// CHECK: %[[V3_2:.*]] = llvm.extractvalue %[[RES_2]][3]
+// CHECK: %[[RES_3:.*]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $10, 0;\0Awgmma.mma_async.sync.aligned.m64n8k32.s32.s8.s8.satfinite {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0_2]], %[[V1_2]], %[[V2_2]], %[[V3_2]], %[[ARG0]], %[[ARG1]], %{{.*}}
+// CHECK: %[[V0_3:.*]] = llvm.extractvalue %[[RES_3]][0]
+// CHECK: %[[V1_3:.*]] = llvm.extractvalue %[[RES_3]][1]
+// CHECK: %[[V2_3:.*]] = llvm.extractvalue %[[RES_3]][2]
+// CHECK: %[[V3_3:.*]] = llvm.extractvalue %[[RES_3]][3]
+// CHECK: %[[RES1:.*]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $10, 0;\0Awgmma.mma_async.sync.aligned.m64n8k32.s32.s8.s8.satfinite {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0_3]], %[[V1_3]], %[[V2_3]], %[[V3_3]], %[[ARG0]], %[[ARG1]], %{{.*}} 
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 32>, 
+      D [%result, #nvvm.wgmma_scale_out<one>, <satfinite>],
+      A [<s8>, #nvvm.wgmma_scale_in<one>, <row>], 
+      B [<s8>, #nvvm.wgmma_scale_in<one>, <row>]
+      : !mat16i32 -> !mat16i32
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 32>, 
+      D [%result1, #nvvm.wgmma_scale_out<one>, <satfinite>],
+      A [<s8>, #nvvm.wgmma_scale_in<one>, <row>], 
+      B [<s8>, #nvvm.wgmma_scale_in<one>, <row>]
+      : !mat16i32 -> !mat16i32
+  %result3 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 32>, 
+      D [%result2, #nvvm.wgmma_scale_out<one>, <satfinite>],
+      A [<s8>, #nvvm.wgmma_scale_in<one>, <row>], 
+      B [<s8>, #nvvm.wgmma_scale_in<one>, <row>]
+      : !mat16i32 -> !mat16i32
+  return %result3 : !mat16i32
+}
+
+// CHECK-LABEL: @wgmma_s32_u8_u8(
+  // CHECK-SAME: %[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64
+func.func @wgmma_s32_u8_u8(%descA : i64, %descB : i64) -> !mat16i32 {  
+// CHECK: %[[RES:.*]] = llvm.mlir.undef : !llvm.struct
+// CHECK: %[[A1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK: %[[V0:.*]] = llvm.extractvalue %[[RES]][0]
+// CHECK: %[[V1:.*]] = llvm.extractvalue %[[RES]][1]
+// CHECK: %[[V2:.*]] = llvm.extractvalue %[[RES]][2]
+// CHECK: %[[V3:.*]] = llvm.extractvalue %[[RES]][3]
+// CHECK: %[[RES_2:.*]] =  llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $10, 0;\0Awgmma.mma_async.sync.aligned.m64n8k32.s32.u8.u8 {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0]], %[[V1]], %[[V2]], %[[V3]], %[[ARG0]], %[[ARG1]], %[[A1]] : (i32, i32, i32, i32, i64, i64, i32) -> !llvm.struct<(i32, i32, i32, i32)>
+// CHECK: %[[V0_2:.*]] = llvm.extractvalue %[[RES_2]][0]
+// CHECK: %[[V1_2:.*]] = llvm.extractvalue %[[RES_2]][1]
+// CHECK: %[[V2_2:.*]] = llvm.extractvalue %[[RES_2]][2]
+// CHECK: %[[V3_2:.*]] = llvm.extractvalue %[[RES_2]][3]
+// CHECK: %[[RES_3:.*]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $10, 0;\0Awgmma.mma_async.sync.aligned.m64n8k32.s32.u8.u8 {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0_2]], %[[V1_2]], %[[V2_2]], %[[V3_2]], %[[ARG0]], %[[ARG1]], %{{.*}}
+// CHECK: %[[V0_3:.*]] = llvm.extractvalue %[[RES_3]][0]
+// CHECK: %[[V1_3:.*]] = llvm.extractvalue %[[RES_3]][1]
+// CHECK: %[[V2_3:.*]] = llvm.extractvalue %[[RES_3]][2]
+// CHECK: %[[V3_3:.*]] = llvm.extractvalue %[[RES_3]][3]
+// CHECK: %[[RES1:.*]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $10, 0;\0Awgmma.mma_async.sync.aligned.m64n8k32.s32.u8.u8 {$0, $1, $2, $3}, $8, $9, p;\0A}\0A", "=r,=r,=r,=r,0,1,2,3,l,l,n" %[[V0_3]], %[[V1_3]], %[[V2_3]], %[[V3_3]], %[[ARG0]], %[[ARG1]], %{{.*}} 
+  %result = llvm.mlir.undef : !mat16i32
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 32>, 
+      D [%result, #nvvm.wgmma_scale_out<one>],
+      A [<u8>, #nvvm.wgmma_scale_in<one>, <row>], 
+      B [<u8>, #nvvm.wgmma_scale_in<one>, <row>]
+      : !mat16i32 -> !mat16i32
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 32>, 
+      D [%result1, #nvvm.wgmma_scale_out<one>],
+      A [<u8>, #nvvm.wgmma_scale_in<one>, <row>], 
+      B [<u8>, #nvvm.wgmma_scale_in<one>, <row>]
+      : !mat16i32 -> !mat16i32
+  %result3 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 8, k = 32>, 
+      D [%result2, #nvvm.wgmma_scale_out<one>],
+      A [<u8>, #nvvm.wgmma_scale_in<one>, <row>], 
+      B [<u8>, #nvvm.wgmma_scale_in<one>, <row>]
+      : !mat16i32 -> !mat16i32
+  return %result3 : !mat16i32
+}
+
+// -----
+
+!mat32f32 = !llvm.struct<(
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32)>
+
+// CHECK-LABEL: @wgmma_f32_tf32_tf32
+func.func @wgmma_f32_tf32_tf32(%descA : i64, %descB : i64) -> !mat32f32 {  
+  // CHECK: %[[RES:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;\0Awgmma.mma_async.sync.aligned.m64n64k8.f32.tf32.tf32 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
+  // CHECK: %[[RES_2:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;\0Awgmma.mma_async.sync.aligned.m64n64k8.f32.tf32.tf32 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
+  %result = llvm.mlir.undef : !mat32f32
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 64, k = 8>, 
+      D [%result, #nvvm.wgmma_scale_out<one>],
+      A [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
+      B [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+       : !mat32f32 -> !mat32f32
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 64, k = 8>, 
+      D [%result1, #nvvm.wgmma_scale_out<one>],
+      A [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
+      B [#nvvm.wgmma_type<tf32>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      : !mat32f32 -> !mat32f32
+  return %result2 : !mat32f32
+}
+
+
+// -----
+
+!mat32f32 = !llvm.struct<(
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32)>
+
+// CHECK-LABEL: @wgmma_f32_e4m3_e4m3
+func.func @wgmma_f32_e4m3_e4m3(%descA : i64, %descB : i64) -> !mat32f32 {  
+  // CHECK: %[[RES:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;\0Awgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
+  // CHECK: %[[RES_2:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;\0Awgmma.mma_async.sync.aligned.m64n64k32.f32.e4m3.e4m3 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
+  %result = llvm.mlir.undef : !mat32f32
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 64, k = 32>, 
+      D [%result, #nvvm.wgmma_scale_out<one>],
+      A [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+       : !mat32f32 -> !mat32f32
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 64, k = 32>, 
+      D [%result1, #nvvm.wgmma_scale_out<one>],
+      A [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      : !mat32f32 -> !mat32f32
+  return %result2 : !mat32f32
+}
+
+// -----
+
+!mat32f32 = !llvm.struct<(
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32, 
+  f32, f32, f32, f32, f32, f32, f32, f32)>
+
+// CHECK-LABEL: @wgmma_f32_e5m2_e4m3
+func.func @wgmma_f32_e5m2_e4m3(%descA : i64, %descB : i64) -> !mat32f32 {  
+  // CHECK: %[[RES:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;\0Awgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e4m3 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
+  // CHECK: %[[RES_2:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "{\0A.reg .pred p;\0Asetp.ne.b32 p, $66, 0;\0Awgmma.mma_async.sync.aligned.m64n64k32.f32.e5m2.e4m3 {$0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31}, $64, $65, p, $67,  $68;\0A}\0A", "=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,=f,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,l,l,n,n,n"
+  %result = llvm.mlir.undef : !mat32f32
+  %result1 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 64, k = 32>, 
+      D [%result, #nvvm.wgmma_scale_out<one>],
+      A [#nvvm.wgmma_type<e5m2>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+       : !mat32f32 -> !mat32f32
+  %result2 = nvvm.wgmma.mma_async %descA, %descB, 
+      #nvvm.shape<m = 64, n = 64, k = 32>, 
+      D [%result1, #nvvm.wgmma_scale_out<one>],
+      A [#nvvm.wgmma_type<e5m2>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>], 
+      B [#nvvm.wgmma_type<e4m3>, #nvvm.wgmma_scale_in<one>, #nvvm.mma_layout<row>]
+      : !mat32f32 -> !mat32f32
+  return %result2 : !mat32f32
 }

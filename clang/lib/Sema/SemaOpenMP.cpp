@@ -3709,6 +3709,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
         S->getDirectiveKind() == OMPD_section ||
         S->getDirectiveKind() == OMPD_master ||
         S->getDirectiveKind() == OMPD_masked ||
+        S->getDirectiveKind() == OMPD_scope ||
         isOpenMPLoopTransformationDirective(S->getDirectiveKind())) {
       Visit(S->getAssociatedStmt());
       return;
@@ -4319,6 +4320,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_distribute:
   case OMPD_distribute_simd:
   case OMPD_ordered:
+  case OMPD_scope:
   case OMPD_target_data:
   case OMPD_dispatch: {
     Sema::CapturedParamNameType Params[] = {
@@ -5130,7 +5132,10 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
                        diag::note_omp_previous_critical_region);
         return true;
       }
-    } else if (CurrentRegion == OMPD_barrier) {
+    } else if (CurrentRegion == OMPD_barrier || CurrentRegion == OMPD_scope) {
+      // OpenMP 5.1 [2.22, Nesting of Regions]
+      // A scope region may not be closely nested inside a worksharing, loop,
+      // task, taskloop, critical, ordered, atomic, or masked region.
       // OpenMP 5.1 [2.22, Nesting of Regions]
       // A barrier region may not be closely nested inside a worksharing, loop,
       // task, taskloop, critical, ordered, atomic, or masked region.
@@ -6448,6 +6453,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     AllowedNameModifiers.push_back(OMPD_parallel);
     if (LangOpts.OpenMP >= 50)
       AllowedNameModifiers.push_back(OMPD_simd);
+    break;
+  case OMPD_scope:
+    Res =
+        ActOnOpenMPScopeDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
     break;
   case OMPD_parallel_master:
     Res = ActOnOpenMPParallelMasterDirective(ClausesWithImplicit, AStmt,
@@ -15898,6 +15907,11 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_teams_distribute_parallel_for:
     case OMPD_target_teams_distribute_parallel_for_simd:
     case OMPD_target_teams_loop:
+    case OMPD_target_simd:
+    case OMPD_target_parallel:
+    case OMPD_target_parallel_for:
+    case OMPD_target_parallel_for_simd:
+    case OMPD_target_parallel_loop:
       CaptureRegion = OMPD_target;
       break;
     case OMPD_teams_distribute_parallel_for:
@@ -15933,11 +15947,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_parallel_loop:
-    case OMPD_target_simd:
-    case OMPD_target_parallel:
-    case OMPD_target_parallel_for:
-    case OMPD_target_parallel_for_simd:
-    case OMPD_target_parallel_loop:
     case OMPD_threadprivate:
     case OMPD_allocate:
     case OMPD_taskyield:
@@ -23902,6 +23911,17 @@ OMPClause *Sema::ActOnOpenMPNontemporalClause(ArrayRef<Expr *> VarList,
 
   return OMPNontemporalClause::Create(Context, StartLoc, LParenLoc, EndLoc,
                                       Vars);
+}
+
+StmtResult Sema::ActOnOpenMPScopeDirective(ArrayRef<OMPClause *> Clauses,
+                                           Stmt *AStmt, SourceLocation StartLoc,
+                                           SourceLocation EndLoc) {
+  if (!AStmt)
+    return StmtError();
+
+  setFunctionHasBranchProtectedScope();
+
+  return OMPScopeDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt);
 }
 
 OMPClause *Sema::ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,

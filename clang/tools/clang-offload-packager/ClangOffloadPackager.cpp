@@ -126,11 +126,11 @@ static Error bundleImages() {
         ImageBinary.StringData[Key] = Value;
       }
     }
-    std::unique_ptr<MemoryBuffer> Buffer = OffloadBinary::write(ImageBinary);
-    if (Buffer->getBufferSize() % OffloadBinary::getAlignment() != 0)
+    llvm::SmallString<0> Buffer = OffloadBinary::write(ImageBinary);
+    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
       return createStringError(inconvertibleErrorCode(),
                                "Offload binary has invalid size alignment");
-    OS << Buffer->getBuffer();
+    OS << Buffer;
   }
 
   if (Error E = writeFile(OutputFile,
@@ -192,9 +192,9 @@ static Error unbundleImages() {
             Binary->getImage(),
             Binary->getMemoryBufferRef().getBufferIdentifier()));
 
-      if (Error E = writeArchive(Args["file"], Members, true,
-                                 Archive::getDefaultKindForHost(), true, false,
-                                 nullptr))
+      if (Error E = writeArchive(
+              Args["file"], Members, SymtabWritingMode::NormalSymtab,
+              Archive::getDefaultKindForHost(), true, false, nullptr))
         return E;
     } else if (Args.count("file")) {
       if (Extracted.size() > 1)

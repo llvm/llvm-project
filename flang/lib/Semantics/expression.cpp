@@ -260,11 +260,11 @@ MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
           symbolRank, symbol.name(), subscripts);
     }
     return std::nullopt;
-  } else if (const auto *object{
-                 symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+  } else if (symbol.has<semantics::ObjectEntityDetails>() ||
+      symbol.has<semantics::AssocEntityDetails>()) {
     // C928 & C1002
     if (Triplet *last{std::get_if<Triplet>(&ref.subscript().back().u)}) {
-      if (!last->upper() && object->IsAssumedSize()) {
+      if (!last->upper() && IsAssumedSizeArray(symbol)) {
         Say("Assumed-size array '%s' must have explicit final "
             "subscript upper bound value"_err_en_US,
             symbol.name());
@@ -924,10 +924,30 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   } else {
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
-      // A bare reference to a derived type parameter (within a parameterized
-      // derived type definition)
+      // A bare reference to a derived type parameter within a parameterized
+      // derived type definition.
+      auto dyType{DynamicType::From(ultimate)};
+      if (!dyType) {
+        // When the integer kind of this type parameter is not known now,
+        // it's either an error or because it depends on earlier-declared kind
+        // type parameters.  So assume that it's a subscript integer for now
+        // while processing other specification expressions in the PDT
+        // definition; the right kind value will be used later in each of its
+        // instantiations.
+        int kind{SubscriptInteger::kind};
+        if (const auto *typeSpec{ultimate.GetType()}) {
+          if (const semantics::IntrinsicTypeSpec *
+              intrinType{typeSpec->AsIntrinsic()}) {
+            if (auto k{ToInt64(Fold(semantics::KindExpr{intrinType->kind()}))};
+                k && IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+              kind = *k;
+            }
+          }
+        }
+        dyType = DynamicType{TypeCategory::Integer, kind};
+      }
       return Fold(ConvertToType(
-          ultimate, AsGenericExpr(TypeParamInquiry{std::nullopt, ultimate})));
+          *dyType, AsGenericExpr(TypeParamInquiry{std::nullopt, ultimate})));
     } else {
       if (n.symbol->attrs().test(semantics::Attr::VOLATILE)) {
         if (const semantics::Scope *pure{semantics::FindPureProcedureContaining(
@@ -2608,10 +2628,10 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     resolution = symbol;
   }
   if (!resolution || resolution->attrs().test(semantics::Attr::INTRINSIC)) {
-    // Not generic, or no resolution; may be intrinsic
+    auto name{resolution ? resolution->name() : ultimate.name()};
     if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
-            CallCharacteristics{ultimate.name().ToString(), isSubroutine},
-            arguments, GetFoldingContext())}) {
+            CallCharacteristics{name.ToString(), isSubroutine}, arguments,
+            GetFoldingContext())}) {
       CheckBadExplicitType(*specificCall, *symbol);
       return CalleeAndArguments{
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
@@ -2722,7 +2742,7 @@ const Symbol *AssumedTypeDummy<parser::Name>(const parser::Name &name) {
 template <typename A>
 static const Symbol *AssumedTypePointerOrAllocatableDummy(const A &object) {
   // It is illegal for allocatable of pointer objects to be TYPE(*), but at that
-  // point it is is not guaranteed that it has been checked the object has
+  // point it is not guaranteed that it has been checked the object has
   // POINTER or ALLOCATABLE attribute, so do not assume nullptr can be directly
   // returned.
   return common::visit(
@@ -3584,7 +3604,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
     if (expr.typedExpr) {
       return expr.typedExpr->v;
     }
-    if (!wasIterativelyAnalyzing && !context_.anyDefinedIntrinsicOperator()) {
+    if (!wasIterativelyAnalyzing) {
       iterativelyAnalyzingSubexpressions_ = true;
       result = IterativelyAnalyzeSubexpressions(expr);
     }

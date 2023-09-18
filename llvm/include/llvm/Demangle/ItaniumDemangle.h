@@ -55,13 +55,13 @@ template <class T, size_t N> class PODSmallVector {
     if (isInline()) {
       auto *Tmp = static_cast<T *>(std::malloc(NewCap * sizeof(T)));
       if (Tmp == nullptr)
-        std::terminate();
+        std::abort();
       std::copy(First, Last, Tmp);
       First = Tmp;
     } else {
       First = static_cast<T *>(std::realloc(First, NewCap * sizeof(T)));
       if (First == nullptr)
-        std::terminate();
+        std::abort();
     }
     Last = First + S;
     Cap = First + NewCap;
@@ -5129,7 +5129,8 @@ template <>
 struct FloatData<long double>
 {
 #if defined(__mips__) && defined(__mips_n64) || defined(__aarch64__) || \
-    defined(__wasm__) || defined(__riscv) || defined(__loongarch__)
+    defined(__wasm__) || defined(__riscv) || defined(__loongarch__) || \
+    defined(__ve__)
     static const size_t mangled_size = 32;
 #elif defined(__arm__) || defined(__mips__) || defined(__hexagon__)
     static const size_t mangled_size = 16;

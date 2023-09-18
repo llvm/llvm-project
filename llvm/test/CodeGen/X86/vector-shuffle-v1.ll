@@ -604,7 +604,7 @@ define i8 @shuf8i1_0_1_4_5_u_u_u_u(i8 %a) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    kmovw %edi, %k1
 ; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5,0,1,0,1]
+; AVX512F-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,4,5,4,5,6,7]
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax

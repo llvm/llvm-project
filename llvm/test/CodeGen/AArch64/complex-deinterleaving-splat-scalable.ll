@@ -8,23 +8,23 @@ target triple = "aarch64-arm-none-eabi"
 define <vscale x 4 x double> @complex_mul_const(<vscale x 4 x double> %a, <vscale x 4 x double> %b) {
 ; CHECK-LABEL: complex_mul_const:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.d, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z5.d, z4.d
+; CHECK-NEXT:    mov z4.d, #0 // =0x0
+; CHECK-NEXT:    fmov z7.d, #3.00000000
+; CHECK-NEXT:    fmov z24.d, #11.00000000
 ; CHECK-NEXT:    mov z6.d, z4.d
-; CHECK-NEXT:    fcmla z5.d, p0/m, z0.d, z2.d, #0
+; CHECK-NEXT:    mov z5.d, z4.d
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z1.d, z3.d, #0
-; CHECK-NEXT:    fcmla z5.d, p0/m, z0.d, z2.d, #90
+; CHECK-NEXT:    fcmla z5.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z1.d, z3.d, #90
-; CHECK-NEXT:    fmov z1.d, #3.00000000
-; CHECK-NEXT:    fmov z2.d, #11.00000000
-; CHECK-NEXT:    zip2 z3.d, z2.d, z1.d
+; CHECK-NEXT:    zip2 z1.d, z24.d, z7.d
+; CHECK-NEXT:    fcmla z5.d, p0/m, z0.d, z2.d, #90
+; CHECK-NEXT:    zip1 z2.d, z24.d, z7.d
 ; CHECK-NEXT:    mov z0.d, z4.d
-; CHECK-NEXT:    zip1 z1.d, z2.d, z1.d
-; CHECK-NEXT:    fcmla z4.d, p0/m, z6.d, z3.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z1.d, #0
-; CHECK-NEXT:    fcmla z4.d, p0/m, z6.d, z3.d, #90
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z1.d, #90
+; CHECK-NEXT:    fcmla z4.d, p0/m, z6.d, z1.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z2.d, #0
+; CHECK-NEXT:    fcmla z4.d, p0/m, z6.d, z1.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z2.d, #90
 ; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
 entry:
@@ -55,24 +55,24 @@ entry:
 define <vscale x 4 x double> @complex_mul_non_const(<vscale x 4 x double> %a, <vscale x 4 x double> %b, [2 x double] %c) {
 ; CHECK-LABEL: complex_mul_non_const:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z6.d, #0 // =0x0
 ; CHECK-NEXT:    // kill: def $d5 killed $d5 def $z5
 ; CHECK-NEXT:    // kill: def $d4 killed $d4 def $z4
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z7.d, z6.d
-; CHECK-NEXT:    mov z24.d, z6.d
 ; CHECK-NEXT:    mov z5.d, d5
 ; CHECK-NEXT:    mov z4.d, d4
-; CHECK-NEXT:    fcmla z7.d, p0/m, z0.d, z2.d, #0
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
-; CHECK-NEXT:    fcmla z7.d, p0/m, z0.d, z2.d, #90
-; CHECK-NEXT:    zip2 z2.d, z4.d, z5.d
-; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
-; CHECK-NEXT:    mov z0.d, z6.d
+; CHECK-NEXT:    mov z24.d, z6.d
+; CHECK-NEXT:    mov z7.d, z6.d
+; CHECK-NEXT:    zip2 z25.d, z4.d, z5.d
 ; CHECK-NEXT:    zip1 z4.d, z4.d, z5.d
-; CHECK-NEXT:    fcmla z6.d, p0/m, z24.d, z2.d, #0
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
+; CHECK-NEXT:    fcmla z7.d, p0/m, z0.d, z2.d, #0
+; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
+; CHECK-NEXT:    fcmla z7.d, p0/m, z0.d, z2.d, #90
+; CHECK-NEXT:    mov z0.d, z6.d
+; CHECK-NEXT:    fcmla z6.d, p0/m, z24.d, z25.d, #0
 ; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #0
-; CHECK-NEXT:    fcmla z6.d, p0/m, z24.d, z2.d, #90
+; CHECK-NEXT:    fcmla z6.d, p0/m, z24.d, z25.d, #90
 ; CHECK-NEXT:    fcmla z0.d, p0/m, z7.d, z4.d, #90
 ; CHECK-NEXT:    mov z1.d, z6.d
 ; CHECK-NEXT:    ret

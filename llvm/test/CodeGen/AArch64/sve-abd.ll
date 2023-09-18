@@ -251,9 +251,9 @@ define <vscale x 4 x i32> @uabd_non_matching_extension(<vscale x 4 x i32> %a, <v
 ; CHECK-NEXT:    and z1.s, z1.s, #0xff
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpkhi z3.d, z1.s
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sub z0.d, z0.d, z1.d
 ; CHECK-NEXT:    sub z1.d, z2.d, z3.d
 ; CHECK-NEXT:    abs z1.d, p0/m, z1.d

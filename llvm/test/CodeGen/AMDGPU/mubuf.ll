@@ -159,7 +159,7 @@ define amdgpu_kernel void @store_sgpr_ptr_large_offset(ptr addrspace(1) %out) {
 ; CHECK: buffer_atomic_add v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, [[SOFFSET]]
 define amdgpu_kernel void @store_sgpr_ptr_large_offset_atomic(ptr addrspace(1) %out) {
   %gep = getelementptr i32, ptr addrspace(1) %out, i32 32768
-  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 5 seq_cst
+  %val = atomicrmw volatile add ptr addrspace(1) %gep, i32 5 syncscope("agent") seq_cst
   ret void
 }
 

@@ -11,7 +11,6 @@
 @synthesize prop = _prop;
 @end
 
-// rdar://11015325
 @interface I1
 __attribute__((something)) @interface I2 @end
 @end
@@ -48,7 +47,6 @@ int test1() {
 }
 @end
 
-// rdar://25372906
 @class I5;
 @interface I5
 -(void)meth;
@@ -68,19 +66,19 @@ int test1() {
 // CHECK: [indexDeclaration]: kind: objc-instance-method | name: setProp: | {{.*}} | loc: 11:13 | {{.*}} | lexical-container: [I:10:17]
 // CHECK: [indexDeclaration]: kind: objc-ivar | name: _prop | {{.*}} | loc: 11:20
 
-// CHECK: [indexDeclaration]: kind: objc-ivar | name: _auto_prop | {{.*}} | loc: 20:33
-// CHECK: [indexEntityReference]: kind: objc-ivar | name: _auto_prop | {{.*}} | loc: 25:3
+// CHECK: [indexDeclaration]: kind: objc-ivar | name: _auto_prop | {{.*}} | loc: 19:33
+// CHECK: [indexEntityReference]: kind: objc-ivar | name: _auto_prop | {{.*}} | loc: 24:3
 
-// CHECK: [indexDeclaration]: kind: function | name: test1 | {{.*}} | loc: 29:5
-// CHECK: [indexDeclaration]: kind: variable | name: extvar | {{.*}} | loc: 30:14
-// CHECK: [indexEntityReference]: kind: variable | name: extvar | {{.*}} | loc: 31:3
-// CHECK: [indexDeclaration]: kind: function | name: extfn | {{.*}} | loc: 32:14
-// CHECK: [indexEntityReference]: kind: function | name: extfn | {{.*}} | loc: 33:10
+// CHECK: [indexDeclaration]: kind: function | name: test1 | {{.*}} | loc: 28:5
+// CHECK: [indexDeclaration]: kind: variable | name: extvar | {{.*}} | loc: 29:14
+// CHECK: [indexEntityReference]: kind: variable | name: extvar | {{.*}} | loc: 30:3
+// CHECK: [indexDeclaration]: kind: function | name: extfn | {{.*}} | loc: 31:14
+// CHECK: [indexEntityReference]: kind: function | name: extfn | {{.*}} | loc: 32:10
 
-// CHECK: [indexDeclaration]: kind: objc-class | name: I4 | {{.*}} | loc: 36:12
-// CHECK: [indexEntityReference]: kind: objc-property | name: prop | {{.*}} | cursor: ObjCSynthesizeDecl=prop:37:34 (Definition) | loc: 43:13 | <parent>:: kind: objc-class | name: I4 | {{.*}} | container: [I4:42:17] | refkind: direct
-// CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 37:
-// CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 43:
+// CHECK: [indexDeclaration]: kind: objc-class | name: I4 | {{.*}} | loc: 35:12
+// CHECK: [indexEntityReference]: kind: objc-property | name: prop | {{.*}} | cursor: ObjCSynthesizeDecl=prop:36:34 (Definition) | loc: 42:13 | <parent>:: kind: objc-class | name: I4 | {{.*}} | container: [I4:41:17] | refkind: direct
+// CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 36:
+// CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 42:
 
-// CHECK: [indexDeclaration]: kind: objc-instance-method | name: meth | {{.*}} loc: 54:8 | {{.*}} | isRedecl: 0 | isDef: 0 |
-// CHECK: [indexDeclaration]: kind: objc-property | name: c | USR: c:objc(cs)I5(cpy)c | lang: ObjC | cursor: ObjCPropertyDecl=c:55:23 [class,] | loc: 55:23
+// CHECK: [indexDeclaration]: kind: objc-instance-method | name: meth | {{.*}} loc: 52:8 | {{.*}} | isRedecl: 0 | isDef: 0 |
+// CHECK: [indexDeclaration]: kind: objc-property | name: c | USR: c:objc(cs)I5(cpy)c | lang: ObjC | cursor: ObjCPropertyDecl=c:53:23 [class,] | loc: 53:23

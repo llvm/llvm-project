@@ -204,20 +204,28 @@ public:
 
   bool isXRaySupported() const override { return true; }
 
-  /// Returns true if the function has the streaming attribute.
+  /// Returns true if the function has a streaming body.
   bool isStreaming() const { return StreamingSVEMode; }
 
-  /// Returns true if the function has the streaming-compatible attribute.
-  bool isStreamingCompatible() const { return StreamingCompatibleSVEMode; }
+  /// Returns true if the function has a streaming-compatible body.
+  bool isStreamingCompatible() const;
 
   /// Returns true if the target has NEON and the function at runtime is known
   /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
   /// mode, which disables NEON instructions).
   bool isNeonAvailable() const;
 
+  /// Returns true if the target has SVE and can use the full range of SVE
+  /// instructions, for example because it knows the function is known not to be
+  /// in streaming-SVE mode or when the target has FEAT_FA64 enabled.
+  bool isSVEAvailable() const;
+
   unsigned getMinVectorRegisterBitWidth() const {
-    // Don't assume any minimum vector size when PSTATE.SM may not be 0.
-    if (StreamingSVEMode || StreamingCompatibleSVEMode)
+    // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
+    // we don't yet support streaming-compatible codegen support that we trust
+    // is safe for functions that may be executed in streaming-SVE mode.
+    // By returning '0' here, we disable vectorization.
+    if (!isSVEAvailable() && !isNeonAvailable())
       return 0;
     return MinVectorRegisterBitWidth;
   }
@@ -394,10 +402,10 @@ public:
 
   bool useSVEForFixedLengthVectors() const {
     if (!isNeonAvailable())
-      return true;
+      return hasSVEorSME();
 
     // Prefer NEON unless larger SVE registers are available.
-    return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
+    return hasSVEorSME() && getMinSVEVectorSizeInBits() >= 256;
   }
 
   bool useSVEForFixedLengthVectors(EVT VT) const {

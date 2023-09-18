@@ -10,7 +10,7 @@
 #define FORTRAN_RUNTIME_TYPE_CODE_H_
 
 #include "flang/Common/Fortran.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include <optional>
 #include <utility>
 
@@ -53,10 +53,19 @@ public:
   RT_API_ATTRS std::optional<std::pair<TypeCategory, int>>
   GetCategoryAndKind() const;
 
-  RT_API_ATTRS bool operator==(const TypeCode &that) const {
-    return raw_ == that.raw_;
+  RT_API_ATTRS bool operator==(TypeCode that) const {
+    if (raw_ == that.raw_) { // fast path
+      return true;
+    } else {
+      // Multiple raw CFI_type_... codes can represent the same Fortran
+      // type category + kind type parameter, e.g. CFI_type_int and
+      // CFI_type_int32_t.
+      auto thisCK{GetCategoryAndKind()};
+      auto thatCK{that.GetCategoryAndKind()};
+      return thisCK && thatCK && *thisCK == *thatCK;
+    }
   }
-  bool operator!=(const TypeCode &that) const { return raw_ != that.raw_; }
+  bool operator!=(TypeCode that) const { return !(*this == that); }
 
 private:
   ISO::CFI_type_t raw_{CFI_type_other};

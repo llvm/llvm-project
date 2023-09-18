@@ -54,7 +54,7 @@ private:
                       const CXXConstructExpr *Construct, const QualType *Type,
                       const CXXNewExpr *New);
   void checkReset(SourceManager &SM, ASTContext *Ctx,
-                  const CXXMemberCallExpr *Member, const CXXNewExpr *New);
+                  const CXXMemberCallExpr *Reset, const CXXNewExpr *New);
 
   /// Returns true when the fixes for replacing CXXNewExpr are generated.
   bool replaceNew(DiagnosticBuilder &Diag, const CXXNewExpr *New,

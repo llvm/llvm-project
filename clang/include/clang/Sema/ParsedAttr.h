@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/VersionTuple.h"
+#include <bitset>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -909,6 +910,20 @@ public:
 
 private:
   VecTy AttrList;
+};
+
+struct ParsedAttributeArgumentsProperties {
+  ParsedAttributeArgumentsProperties(uint32_t StringLiteralBits)
+      : StringLiterals(StringLiteralBits) {}
+  bool isStringLiteralArg(unsigned I) const {
+    // If the last bit is set, assume we have a variadic parameter
+    if (I >= StringLiterals.size())
+      return StringLiterals.test(StringLiterals.size() - 1);
+    return StringLiterals.test(I);
+  }
+
+private:
+  std::bitset<32> StringLiterals;
 };
 
 /// ParsedAttributes - A collection of parsed attributes.  Currently

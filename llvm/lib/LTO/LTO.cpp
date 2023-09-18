@@ -142,8 +142,8 @@ void llvm::computeLTOCacheKey(
     AddUnsigned(-1);
   for (const auto &S : Conf.MllvmArgs)
     AddString(S);
-  AddUnsigned(Conf.CGOptLevel);
-  AddUnsigned(Conf.CGFileType);
+  AddUnsigned(static_cast<int>(Conf.CGOptLevel));
+  AddUnsigned(static_cast<int>(Conf.CGFileType));
   AddUnsigned(Conf.OptLevel);
   AddUnsigned(Conf.Freestanding);
   AddString(Conf.OptPipeline);
@@ -183,7 +183,7 @@ void llvm::computeLTOCacheKey(
       return ModIt->second;
     }
 
-    const ModuleHash &getHash() const { return ModInfo->second.second; }
+    const ModuleHash &getHash() const { return ModInfo->second; }
   };
 
   std::vector<ImportModule> ImportModulesVector;
@@ -468,24 +468,13 @@ static void thinLTOInternalizeAndPromoteGUID(
     if (!EnableLTOInternalization)
       continue;
 
-    // Ignore local and appending linkage values since the linker
-    // doesn't resolve them (and there is no need to internalize if this is
-    // already internal).
-    if (GlobalValue::isLocalLinkage(S->linkage()) ||
-        S->linkage() == GlobalValue::AppendingLinkage)
+    // Non-exported values with external linkage can be internalized.
+    if (GlobalValue::isExternalLinkage(S->linkage())) {
+      S->setLinkage(GlobalValue::InternalLinkage);
       continue;
+    }
 
-    // We can't internalize available_externally globals because this
-    // can break function pointer equality.
-    if (S->linkage() == GlobalValue::AvailableExternallyLinkage)
-      continue;
-
-    bool IsPrevailing = isPrevailing(VI.getGUID(), S.get());
-
-    if (GlobalValue::isInterposableLinkage(S->linkage()) && !IsPrevailing)
-      continue;
-
-    // Non-exported functions and variables with linkonce_odr or weak_odr
+    // Non-exported function and variable definitions with a weak-for-linker
     // linkage can be internalized in certain cases. The minimum legality
     // requirements would be that they are not address taken to ensure that we
     // don't break pointer equality checks, and that variables are either read-
@@ -494,7 +483,7 @@ static void thinLTOInternalizeAndPromoteGUID(
     // (which is how this is guaranteed for variables, when analyzing whether
     // they are read or write-only).
     //
-    // However, we only get to this code for weak/linkonce ODR values in one of
+    // However, we only get to this code for weak-for-linkage values in one of
     // two cases:
     // 1) The prevailing copy is not in IR (it is in native code).
     // 2) The prevailing copy in IR is not exported from its module.
@@ -506,10 +495,10 @@ static void thinLTOInternalizeAndPromoteGUID(
     // duplicate linkonce_odr copies as exported via the tool, so we need
     // to handle that case below by checking the number of copies.
     //
-    // Generally, we only want to internalize a linkonce/weak ODR value in case
+    // Generally, we only want to internalize a weak-for-linker value in case
     // 2, because in case 1 we cannot see how the value is used to know if it
     // is read or write-only. We also don't want to bloat the binary with
-    // multiple internalized copies of non-prevailing linkonce_odr functions.
+    // multiple internalized copies of non-prevailing linkonce/weak functions.
     // Note if we don't internalize, we will convert non-prevailing copies to
     // available_externally anyway, so that we drop them after inlining. The
     // only reason to internalize such a function is if we indeed have a single
@@ -520,18 +509,16 @@ static void thinLTOInternalizeAndPromoteGUID(
     // already perform this elsewhere in the ThinLTO backend handling for
     // read or write-only variables (processGlobalForThinLTO).
     //
-    // Therefore, only internalize linkonce/weak ODR if there is a single copy,
-    // that is prevailing in this IR module. We can do so aggressively, without
+    // Therefore, only internalize linkonce/weak if there is a single copy, that
+    // is prevailing in this IR module. We can do so aggressively, without
     // requiring the address to be insignificant, or that a variable be read or
     // write-only.
-    if ((S->linkage() == GlobalValue::WeakODRLinkage ||
-         S->linkage() == GlobalValue::LinkOnceODRLinkage) &&
-        // We can have only one copy in ThinLTO that isn't prevailing, if the
-        // prevailing copy is in a native object.
-        (!IsPrevailing || ExternallyVisibleCopies > 1))
+    if (!GlobalValue::isWeakForLinker(S->linkage()) ||
+        GlobalValue::isExternalWeakLinkage(S->linkage()))
       continue;
 
-    S->setLinkage(GlobalValue::InternalLinkage);
+    if (isPrevailing(VI.getGUID(), S.get()) && ExternallyVisibleCopies == 1)
+      S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
 
@@ -778,7 +765,7 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
 
   // Regular LTO module summaries are added to a dummy module that represents
   // the combined regular LTO module.
-  if (Error Err = BM.readSummary(ThinLTO.CombinedIndex, "", -1ull))
+  if (Error Err = BM.readSummary(ThinLTO.CombinedIndex, ""))
     return Err;
   RegularLTO.ModsWithSummaries.push_back(std::move(*ModOrErr));
   return Error::success();
@@ -1026,16 +1013,14 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     }
   }
 
-  uint64_t ModuleId = ThinLTO.ModuleMap.size();
   if (Error Err =
           BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
-                         ModuleId, [&](GlobalValue::GUID GUID) {
+                         [&](GlobalValue::GUID GUID) {
                            return ThinLTO.PrevailingModuleForGUID[GUID] ==
                                   BM.getModuleIdentifier();
                          }))
     return Err;
-  LLVM_DEBUG(dbgs() << "Module " << ModuleId << ": " << BM.getModuleIdentifier()
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
 
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);

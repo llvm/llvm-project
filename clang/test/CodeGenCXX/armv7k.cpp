@@ -5,7 +5,6 @@
 // RUN: %clang_cc1 %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck -check-prefix=CHECK-GLOBALS %s
 
 // __cxa_guard_acquire argument is 64-bit
-// rdar://11540122
 struct A {
   A();
 };
@@ -16,7 +15,6 @@ void f() {
 }
 
 // ARM64 uses the C++11 definition of POD.
-// rdar://12650514
 namespace test1 {
   // This class is POD in C++11 and cannot have objects allocated in
   // its tail-padding.
@@ -42,7 +40,7 @@ namespace std {
 }
 
 // ARM64 uses string comparisons for what would otherwise be
-// default-visibility weak RTTI.  rdar://12650568
+// default-visibility weak RTTI.
 namespace test2 {
   struct A {
     virtual void foo();

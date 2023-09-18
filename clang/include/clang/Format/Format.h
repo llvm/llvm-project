@@ -593,6 +593,47 @@ struct FormatStyle {
   /// \version 3.3
   bool AllowAllParametersOfDeclarationOnNextLine;
 
+  /// Different ways to break before a noexcept specifier.
+  enum BreakBeforeNoexceptSpecifierStyle : int8_t {
+    /// No line break allowed.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2) noexcept(
+    ///       noexcept(baz(arg1)) &&
+    ///       noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Never,
+    /// For a simple ``noexcept`` there is no line break allowed, but when we
+    /// have a condition it is.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_OnlyWithParen,
+    /// Line breaks are allowed. But note that because of the associated
+    /// penalties ``clang-format`` often prefers not to break before the
+    /// ``noexcept``.
+    /// \code
+    ///   void foo(int arg1,
+    ///            double arg2) noexcept;
+    ///
+    ///   void bar(int arg1, double arg2)
+    ///       noexcept(noexcept(baz(arg1)) &&
+    ///                noexcept(baz(arg2)));
+    /// \endcode
+    BBNSS_Always,
+  };
+
+  /// Controls if there could be a line break before a ``noexcept`` specifier.
+  /// \version 18
+  BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -971,13 +1012,13 @@ struct FormatStyle {
   /// For example:
   /// \code
   ///   x = (char *__capability)&y;
-  ///   int function(void) __ununsed;
+  ///   int function(void) __unused;
   ///   void only_writes_to_buffer(char *__output buffer);
   /// \endcode
   ///
   /// In the .clang-format configuration file, this can be configured like:
   /// \code{.yaml}
-  ///   AttributeMacros: ['__capability', '__output', '__ununsed']
+  ///   AttributeMacros: ['__capability', '__output', '__unused']
   /// \endcode
   ///
   /// \version 12
@@ -2008,6 +2049,8 @@ struct FormatStyle {
   bool BreakAfterJavaFieldAnnotations;
 
   /// Allow breaking string literals when formatting.
+  ///
+  /// In C, C++, and Objective-C:
   /// \code
   ///    true:
   ///    const char* x = "veryVeryVeryVeryVeryVe"
@@ -2016,8 +2059,35 @@ struct FormatStyle {
   ///
   ///    false:
   ///    const char* x =
-  ///      "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
   /// \endcode
+  ///
+  /// In C# and Java:
+  /// \code
+  ///    true:
+  ///    string x = "veryVeryVeryVeryVeryVe" +
+  ///               "ryVeryVeryVeryVeryVery" +
+  ///               "VeryLongString";
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
+  /// C# interpolated strings are not broken.
+  ///
+  /// In Verilog:
+  /// \code
+  ///    true:
+  ///    string x = {"veryVeryVeryVeryVeryVe",
+  ///                "ryVeryVeryVeryVeryVery",
+  ///                "VeryLongString"};
+  ///
+  ///    false:
+  ///    string x =
+  ///        "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  /// \endcode
+  ///
   /// \version 3.9
   bool BreakStringLiterals;
 
@@ -2963,7 +3033,7 @@ struct FormatStyle {
   ///    A(a, b); // will not be expanded.
   /// \endcode
   ///
-  /// \version 17.0
+  /// \version 17
   std::vector<std::string> Macros;
 
   /// The maximum number of consecutive empty lines to keep.
@@ -4015,7 +4085,7 @@ struct FormatStyle {
   ///     AfterFunctionDefinitionName: true
   /// \endcode
   struct SpaceBeforeParensCustom {
-    /// If ``true``, put space betwee control statement keywords
+    /// If ``true``, put space between control statement keywords
     /// (for/if/while...) and opening parentheses.
     /// \code
     ///    true:                                  false:
@@ -4281,7 +4351,7 @@ struct FormatStyle {
     SIPO_Custom,
   };
 
-  /// If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
   /// This option is **deprecated**. The previous behavior is preserved by using
   /// ``SpacesInParens`` with ``Custom`` and by setting all
   /// ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
@@ -4340,17 +4410,15 @@ struct FormatStyle {
           InEmptyParentheses(false), Other(false) {}
 
     SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
-        bool InEmptyParentheses, bool Other)
+                         bool InEmptyParentheses, bool Other)
         : InConditionalStatements(InConditionalStatements),
-          InCStyleCasts(InCStyleCasts),
-          InEmptyParentheses(InEmptyParentheses),
+          InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
       return InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
-             InEmptyParentheses == R.InEmptyParentheses &&
-             Other == R.Other;
+             InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
     }
     bool operator!=(const SpacesInParensCustom &R) const {
       return !(*this == R);
@@ -4549,6 +4617,8 @@ struct FormatStyle {
            AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
+           AllowBreakBeforeNoexceptSpecifier ==
+               R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&

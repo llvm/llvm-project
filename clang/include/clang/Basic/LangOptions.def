@@ -86,7 +86,7 @@
 LANGOPT(C99               , 1, 0, "C99")
 LANGOPT(C11               , 1, 0, "C11")
 LANGOPT(C17               , 1, 0, "C17")
-LANGOPT(C2x               , 1, 0, "C2x")
+LANGOPT(C23               , 1, 0, "C23")
 LANGOPT(MSVCCompat        , 1, 0, "Microsoft Visual C++ full compatibility mode")
 LANGOPT(Kernel            , 1, 0, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, "Microsoft C++ extensions")
@@ -449,6 +449,9 @@ LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 
 LANGOPT(RelativeCXXABIVTables, 1, 0,
         "Use an ABI-incompatible v-table layout that uses relative references")
+
+LANGOPT(OmitVTableRTTI, 1, 0,
+        "Use an ABI-incompatible v-table layout that omits the RTTI component")
 
 LANGOPT(VScaleMin, 32, 0, "Minimum vscale value")
 LANGOPT(VScaleMax, 32, 0, "Maximum vscale value")

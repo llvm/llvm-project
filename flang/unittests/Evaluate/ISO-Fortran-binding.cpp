@@ -1,5 +1,5 @@
 #include "testing.h"
-#include "flang/ISO_Fortran_binding.h"
+#include "flang/ISO_Fortran_binding_wrapper.h"
 #include "flang/Runtime/descriptor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>

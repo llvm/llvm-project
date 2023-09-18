@@ -9,14 +9,16 @@
 // Tests for *scanf interceptors implementation in sanitizer_common.
 //
 //===----------------------------------------------------------------------===//
+#include <wchar.h>
+
 #include <algorithm>
 #include <vector>
 
-#include "interception/interception.h"
-#include "sanitizer_test_utils.h"
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_common.h"
 #include "gtest/gtest.h"
+#include "interception/interception.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_libc.h"
+#include "sanitizer_test_utils.h"
 
 using namespace __sanitizer;
 
@@ -206,21 +208,35 @@ TEST(SanitizerCommonInterceptors, Scanf) {
 
 TEST(SanitizerCommonInterceptors, ScanfAllocate) {
   const char *buf = "123456";
+  const wchar_t *wbuf = L"123";
 
   // Can not use testScanf() because this case needs a valid pointer to a string
   // in the scanf argument.
   {
     std::vector<unsigned> scanf_sizes;
-    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%ms", &buf);
-    verifyFormatResults("%ms", 2, scanf_sizes,
-                        {P, (unsigned)(strlen(buf) + 1)});
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%mc", &buf);
+    verifyFormatResults("%mc", 2, scanf_sizes, {P, 1u});
   }
-
   {
     std::vector<unsigned> scanf_sizes;
-    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%mc", &buf);
-    verifyFormatResults("%mc", 2, scanf_sizes,
-                        {P, (unsigned)(strlen(buf) + 1)});
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%mC", &wbuf);
+    verifyFormatResults("%mC", 2, scanf_sizes, {P, (unsigned)sizeof(wchar_t)});
+  }
+  {
+    std::vector<unsigned> scanf_sizes;
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%ms", &buf);
+    verifyFormatResults("%ms", 2, scanf_sizes, {P, unsigned(strlen(buf) + 1)});
+    scanf_sizes.clear();
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%m[0-9]",
+               &buf);
+    verifyFormatResults("%m[0-9]", 2, scanf_sizes,
+                        {P, unsigned(strlen(buf) + 1)});
+  }
+  {
+    std::vector<unsigned> scanf_sizes;
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%mS", &wbuf);
+    verifyFormatResults("%mS", 2, scanf_sizes,
+                        {P, unsigned((wcslen(wbuf) + 1) * sizeof(wchar_t))});
   }
 }
 

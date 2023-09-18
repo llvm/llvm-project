@@ -32,7 +32,7 @@ int a;
 extern int X\UAAAAAAAA; // expected-error {{not allowed in an identifier}}
 int Y = '\UAAAAAAAA'; // expected-error {{invalid universal character}}
 
-#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202000L)
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L)
 
 extern int ༀ;
 extern int 𑩐;

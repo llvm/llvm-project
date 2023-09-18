@@ -65,10 +65,10 @@ Parser::ParseObjCAtDirectives(ParsedAttributes &DeclAttrs,
   case tok::objc_implementation:
     break;
   default:
-    llvm::for_each(DeclAttrs, [this](const auto &Attr) {
+    for (const auto &Attr : DeclAttrs) {
       if (Attr.isGNUAttribute())
         Diag(Tok.getLocation(), diag::err_objc_unexpected_attr);
-    });
+    }
   }
 
   Decl *SingleDecl = nullptr;
@@ -3764,6 +3764,8 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
       while (Tok.getLocation() != OrigLoc && Tok.isNot(tok::eof))
         ConsumeAnyToken();
   }
-  // Clean up the remaining EOF token.
-  ConsumeAnyToken();
+  // Clean up the remaining EOF token, only if it's inserted by us. Otherwise
+  // this might be code-completion token, which must be propagated to callers.
+  if (Tok.is(tok::eof) && Tok.getEofData() == MCDecl)
+    ConsumeAnyToken();
 }

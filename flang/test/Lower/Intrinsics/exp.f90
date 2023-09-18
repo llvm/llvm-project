@@ -2,7 +2,7 @@
 ! RUN: bbc -emit-fir --math-runtime=precise -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
 ! RUN: bbc -emit-fir --force-mlir-complex -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-MLIR"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -fapprox-func -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-APPROX"
+! RUN: %flang_fc1 -fapprox-func -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-APPROX"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST,CMPLX-MLIR"
 
@@ -61,8 +61,11 @@ end subroutine
 ! CMPLX-MLIR-LABEL: private @fir.exp.contract.z4.z4
 ! CMPLX-SAME: (%[[ARG32_OUTLINE:.*]]: !fir.complex<4>) -> !fir.complex<4>
 ! CMPLX-FAST: %[[C:.*]] = fir.convert %[[ARG32_OUTLINE]] : (!fir.complex<4>) -> complex<f32>
-! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] : complex<f32>
+! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] fastmath<contract> : complex<f32>
 ! CMPLX-FAST: %[[RESULT32_OUTLINE:.*]] = fir.convert %[[E]] : (complex<f32>) -> !fir.complex<4>
+! CMPLX-APPROX: %[[C:.*]] = fir.convert %[[ARG32_OUTLINE]] : (!fir.complex<4>) -> complex<f32>
+! CMPLX-APPROX: %[[E:.*]] = complex.exp %[[C]] fastmath<contract,afn> : complex<f32>
+! CMPLX-APPROX: %[[RESULT32_OUTLINE:.*]] = fir.convert %[[E]] : (complex<f32>) -> !fir.complex<4>
 ! CMPLX-PRECISE: %[[RESULT32_OUTLINE:.*]] = fir.call @cexpf(%[[ARG32_OUTLINE]]) fastmath<contract> : (!fir.complex<4>) -> !fir.complex<4>
 ! CMPLX: return %[[RESULT32_OUTLINE]] : !fir.complex<4>
 
@@ -71,7 +74,10 @@ end subroutine
 ! CMPLX-MLIR-LABEL: private @fir.exp.contract.z8.z8
 ! CMPLX-SAME: (%[[ARG64_OUTLINE:.*]]: !fir.complex<8>) -> !fir.complex<8>
 ! CMPLX-FAST: %[[C:.*]] = fir.convert %[[ARG64_OUTLINE]] : (!fir.complex<8>) -> complex<f64>
-! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] : complex<f64>
+! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] fastmath<contract> : complex<f64>
 ! CMPLX-FAST: %[[RESULT64_OUTLINE:.*]] = fir.convert %[[E]] : (complex<f64>) -> !fir.complex<8>
+! CMPLX-APPROX: %[[C:.*]] = fir.convert %[[ARG64_OUTLINE]] : (!fir.complex<8>) -> complex<f64>
+! CMPLX-APPROX: %[[E:.*]] = complex.exp %[[C]] fastmath<contract,afn> : complex<f64>
+! CMPLX-APPROX: %[[RESULT64_OUTLINE:.*]] = fir.convert %[[E]] : (complex<f64>) -> !fir.complex<8>
 ! CMPLX-PRECISE: %[[RESULT64_OUTLINE:.*]] = fir.call @cexp(%[[ARG64_OUTLINE]]) fastmath<contract> : (!fir.complex<8>) -> !fir.complex<8>
 ! CMPLX: return %[[RESULT64_OUTLINE]] : !fir.complex<8>

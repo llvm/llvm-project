@@ -42,6 +42,7 @@ public:
     case ELF::R_RISCV_GOT_HI20:
     case ELF::R_RISCV_PCREL_HI20:
     case ELF::R_RISCV_PCREL_LO12_I:
+    case ELF::R_RISCV_PCREL_LO12_S:
       return true;
     default:
       llvm_unreachable("Unexpected RISCV relocation type in code");
@@ -61,6 +62,29 @@ public:
 
   bool isNoop(const MCInst &Inst) const override {
     return isNop(Inst) || isCNop(Inst);
+  }
+
+  bool isPseudo(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    default:
+      return MCPlusBuilder::isPseudo(Inst);
+    case RISCV::PseudoCALL:
+    case RISCV::PseudoTAIL:
+      return false;
+    }
+  }
+
+  bool isIndirectCall(const MCInst &Inst) const override {
+    if (!isCall(Inst))
+      return false;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::JALR:
+    case RISCV::C_JALR:
+      return true;
+    }
   }
 
   bool hasPCRelOperand(const MCInst &Inst) const override {
@@ -171,6 +195,30 @@ public:
     return true;
   }
 
+  StringRef getTrapFillValue() const override {
+    return StringRef("\0\0\0\0", 4);
+  }
+
+  bool createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
+                  MCContext *Ctx) {
+    Inst.setOpcode(Opcode);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(RISCVMCExpr::create(
+        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
+        RISCVMCExpr::VK_RISCV_CALL, *Ctx)));
+    return true;
+  }
+
+  bool createCall(MCInst &Inst, const MCSymbol *Target,
+                  MCContext *Ctx) override {
+    return createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
+  }
+
+  bool createTailCall(MCInst &Inst, const MCSymbol *Target,
+                      MCContext *Ctx) override {
+    return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+  }
+
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
                      MCInst *&CondBranch,
@@ -230,6 +278,7 @@ public:
     case RISCV::C_J:
       OpNum = 0;
       return true;
+    case RISCV::AUIPC:
     case RISCV::JAL:
     case RISCV::C_BEQZ:
     case RISCV::C_BNEZ:
@@ -271,7 +320,7 @@ public:
     if (!Op.isExpr())
       return nullptr;
 
-    return MCPlusBuilder::getTargetSymbol(Op.getExpr());
+    return getTargetSymbol(Op.getExpr());
   }
 
   bool lowerTailCall(MCInst &Inst) override {
@@ -348,6 +397,7 @@ public:
     case ELF::R_RISCV_PCREL_HI20:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
+    case ELF::R_RISCV_PCREL_LO12_S:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
     case ELF::R_RISCV_CALL:
       return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_RISCV_CALL, Ctx);

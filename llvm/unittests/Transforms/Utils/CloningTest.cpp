@@ -927,7 +927,7 @@ protected:
     // Add ifuncs
     {
       const unsigned AddrSpace = 123;
-      auto *FuncPtrTy = Type::getInt8Ty(C)->getPointerTo(123);
+      auto *FuncPtrTy = PointerType::get(C, AddrSpace);
       auto *FuncTy = FunctionType::get(FuncPtrTy, false);
 
       auto *ResolverF = Function::Create(FuncTy, GlobalValue::PrivateLinkage,

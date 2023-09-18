@@ -1,18 +1,12 @@
-=========================================
-Libc++ 17.0.0 (In-Progress) Release Notes
-=========================================
+============================
+Libc++ 17.0.0  Release Notes
+============================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `Libc++ Team <https://libcxx.llvm.org>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming libc++ 17 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -70,15 +64,28 @@ Implemented Papers
 - P0408R7 - Efficient Access to ``basic_stringbuf``'s Buffer
 - P2474R2 - ``views::repeat``
 - P0009R18 - ``mdspan`` (``layout_stride`` is not done yet)
+- P2093R14 - Formatted output (the ``ostream`` overload is not done yet)
+- P2539R4 - Should the output of ``std::print`` to a terminal be synchronized
+  with the underlying stream? (the ``ostream`` overload is not done yet)
+
+With the ``format`` library  being marked as stable, the
+following papers are now available by default without using
+``-fexperimental-library``:
+
+- P0645 - Text Formatting
+- P1652 - Printf corner cases in std::format
+- P1892 - Extended locale-specific presentation specifiers for std::format
+- P1868 - width: clarifying units of width and precision in std::format
+- P2216 - std::format improvements
+- P2418 - Add support for std::generator-like types to std::format
+- P2286R8 - Formatting Ranges
+- P2508R1 - Exposing std::basic-format-string
 
 Improvements and New Features
 -----------------------------
 - ``std::equal``, ``std::ranges::equal``, ``std::find``, and
   ``std::ranges::find``  are now forwarding to ``std::memcmp`` for trivially
   equality comparable types, which can lead up to 40x performance improvements.
-
-- ``std::string_view`` now provides iterators that check for out-of-bounds accesses when the safe
-  libc++ mode is enabled.
 
 - The performance of ``dynamic_cast`` on its hot paths is greatly improved and is as efficient as the
   ``libsupc++`` implementation. Note that the performance improvements are shipped in ``libcxxabi``.
@@ -95,19 +102,6 @@ Improvements and New Features
   Anything that does not rely on having an actual filesystem available will now work, such as ``std::filesystem::path``,
   ``std::filesystem::perms`` and similar classes.
 
-- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
-  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
-  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
-  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
-  ``libcxx/docs/Hardening.rst`` for more details.
-
-- The library now provides a debug mode which is a superset of the hardened mode, additionally enabling more expensive
-  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
-  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
-  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
-  Users can control whether the debug mode is enabled on a per translation unit basis using the
-  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See ``libcxx/docs/Hardening.rst`` for more details.
-
 - ASan container annotations have been extended to cover all allocators in ``std::vector``.
 
 - ASan annotations have been added to the ``std::deque`` container, to detect container overflows.
@@ -118,14 +112,8 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
-- The "safe" mode is replaced by the hardened mode in this release. The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable is
-  deprecated and setting it will trigger an error; use ``LIBCXX_HARDENING_MODE`` instead. Similarly, the
-  ``_LIBCPP_ENABLE_ASSERTIONS`` macro is deprecated and setting it to ``1`` now enables the hardened mode. See
-  ``libcxx/docs/Hardening.rst`` for more details.
-
-- The legacy debug mode has been removed in this release. Setting the macro ``_LIBCPP_ENABLE_DEBUG_MODE`` to ``1`` now
-  enables the new debug mode which is part of hardening (see the "Improvements and New Features" section above). The
-  ``LIBCXX_ENABLE_DEBUG_MODE`` CMake variable has been removed. For additional context, refer to the `Discourse post
+- The legacy debug mode has been removed in this release. The ``LIBCXX_ENABLE_DEBUG_MODE`` CMake variable has been
+  removed. For additional context, refer to the `Discourse post
   <https://discourse.llvm.org/t/rfc-removing-the-legacy-debug-mode-from-libc/71026>`_.
 
 - The ``<experimental/coroutine>`` header has been removed in this release. The ``<coroutine>`` header

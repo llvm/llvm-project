@@ -525,7 +525,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // deopt argument length, deopt arguments.., gc arguments...
 
   // Figure out what lowering strategy we're going to use for each part
-  // Note: Is is conservatively correct to lower both "live-in" and "live-out"
+  // Note: It is conservatively correct to lower both "live-in" and "live-out"
   // as "live-through". A "live-through" variable is one which is "live-in",
   // "live-out", and live throughout the lifetime of the call (i.e. we can find
   // it from any PC within the transitive callee of the statepoint).  In
@@ -715,7 +715,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   assert((GFI || SI.Bases.empty()) &&
          "No gc specified, so cannot relocate pointers!");
 
-  LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
+  LLVM_DEBUG(if (SI.StatepointInstr) dbgs()
+             << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
   for (const auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
@@ -1156,6 +1157,7 @@ void SelectionDAGBuilder::LowerCallSiteWithDeoptBundleImpl(
 
   // NB! The GC arguments are deliberately left empty.
 
+  LLVM_DEBUG(dbgs() << "Lowering call with deopt bundle " << *Call << "\n");
   if (SDValue ReturnVal = LowerAsSTATEPOINT(SI)) {
     ReturnVal = lowerRangeToAssertZExt(DAG, *Call, ReturnVal);
     setValue(Call, ReturnVal);

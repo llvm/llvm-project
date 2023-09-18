@@ -904,11 +904,57 @@ void LLVMAppendModuleInlineAsm(LLVMModuleRef M, const char *Asm, size_t Len);
  *
  * @see InlineAsm::get()
  */
-LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty, char *AsmString,
-                              size_t AsmStringSize, char *Constraints,
+LLVMValueRef LLVMGetInlineAsm(LLVMTypeRef Ty, const char *AsmString,
+                              size_t AsmStringSize, const char *Constraints,
                               size_t ConstraintsSize, LLVMBool HasSideEffects,
                               LLVMBool IsAlignStack,
                               LLVMInlineAsmDialect Dialect, LLVMBool CanThrow);
+
+/**
+ * Get the template string used for an inline assembly snippet
+ *
+ */
+const char *LLVMGetInlineAsmAsmString(LLVMValueRef InlineAsmVal, size_t *Len);
+
+/**
+ * Get the raw constraint string for an inline assembly snippet
+ *
+ */
+const char *LLVMGetInlineAsmConstraintString(LLVMValueRef InlineAsmVal,
+                                             size_t *Len);
+
+/**
+ * Get the dialect used by the inline asm snippet
+ *
+ */
+LLVMInlineAsmDialect LLVMGetInlineAsmDialect(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get the function type of the inline assembly snippet. The same type that
+ * was passed into LLVMGetInlineAsm originally
+ *
+ * @see LLVMGetInlineAsm
+ *
+ */
+LLVMTypeRef LLVMGetInlineAsmFunctionType(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get if the inline asm snippet has side effects
+ *
+ */
+LLVMBool LLVMGetInlineAsmHasSideEffects(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get if the inline asm snippet needs an aligned stack
+ *
+ */
+LLVMBool LLVMGetInlineAsmNeedsAlignedStack(LLVMValueRef InlineAsmVal);
+
+/**
+ * Get if the inline asm snippet may unwind the stack
+ *
+ */
+LLVMBool LLVMGetInlineAsmCanUnwind(LLVMValueRef InlineAsmVal);
 
 /**
  * Obtain the context to which this module is associated.
@@ -2230,8 +2276,6 @@ LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant)
 LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstAnd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstOr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
                            LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);

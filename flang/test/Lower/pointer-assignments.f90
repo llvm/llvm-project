@@ -364,7 +364,7 @@ subroutine issue1180(x)
   integer, target :: x
   integer, pointer :: p
   common /some_common/ p
-  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QCsome_common) : !fir.ref<!fir.array<24xi8>>
+  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@some_common_) : !fir.ref<!fir.array<24xi8>>
   ! CHECK: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.array<?xi8>>
   ! CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
   ! CHECK: %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

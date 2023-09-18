@@ -1013,19 +1013,24 @@ public:
 
 /// Check if it is legal to scalarize a memory access to \p VecTy at index \p
 /// Idx. \p Idx must access a valid vector element.
-static ScalarizationResult canScalarizeAccess(FixedVectorType *VecTy,
-                                              Value *Idx, Instruction *CtxI,
+static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
+                                              Instruction *CtxI,
                                               AssumptionCache &AC,
                                               const DominatorTree &DT) {
+  // We do checks for both fixed vector types and scalable vector types.
+  // This is the number of elements of fixed vector types,
+  // or the minium number of elements of scalable vector types.
+  uint64_t NumElements = VecTy->getElementCount().getKnownMinValue();
+
   if (auto *C = dyn_cast<ConstantInt>(Idx)) {
-    if (C->getValue().ult(VecTy->getNumElements()))
+    if (C->getValue().ult(NumElements))
       return ScalarizationResult::safe();
     return ScalarizationResult::unsafe();
   }
 
   unsigned IntWidth = Idx->getType()->getScalarSizeInBits();
   APInt Zero(IntWidth, 0);
-  APInt MaxElts(IntWidth, VecTy->getNumElements());
+  APInt MaxElts(IntWidth, NumElements);
   ConstantRange ValidIndices(Zero, MaxElts);
   ConstantRange IdxRange(IntWidth, true);
 
@@ -1074,8 +1079,7 @@ static Align computeAlignmentAfterScalarization(Align VectorAlignment,
 //   store i32 %b, i32* %1
 bool VectorCombine::foldSingleElementStore(Instruction &I) {
   auto *SI = cast<StoreInst>(&I);
-  if (!SI->isSimple() ||
-      !isa<FixedVectorType>(SI->getValueOperand()->getType()))
+  if (!SI->isSimple() || !isa<VectorType>(SI->getValueOperand()->getType()))
     return false;
 
   // TODO: Combine more complicated patterns (multiple insert) by referencing
@@ -1089,7 +1093,7 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     return false;
 
   if (auto *Load = dyn_cast<LoadInst>(Source)) {
-    auto VecTy = cast<FixedVectorType>(SI->getValueOperand()->getType());
+    auto VecTy = cast<VectorType>(SI->getValueOperand()->getType());
     const DataLayout &DL = I.getModule()->getDataLayout();
     Value *SrcAddr = Load->getPointerOperand()->stripPointerCasts();
     // Don't optimize for atomic/volatile load or store. Ensure memory is not
@@ -1130,14 +1134,14 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!match(&I, m_Load(m_Value(Ptr))))
     return false;
 
-  auto *FixedVT = cast<FixedVectorType>(I.getType());
+  auto *VecTy = cast<VectorType>(I.getType());
   auto *LI = cast<LoadInst>(&I);
   const DataLayout &DL = I.getModule()->getDataLayout();
-  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(FixedVT))
+  if (LI->isVolatile() || !DL.typeSizeEqualsStoreSize(VecTy))
     return false;
 
   InstructionCost OriginalCost =
-      TTI.getMemoryOpCost(Instruction::Load, FixedVT, LI->getAlign(),
+      TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
                           LI->getPointerAddressSpace());
   InstructionCost ScalarizedCost = 0;
 
@@ -1168,7 +1172,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       LastCheckedInst = UI;
     }
 
-    auto ScalarIdx = canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC, DT);
+    auto ScalarIdx = canScalarizeAccess(VecTy, UI->getOperand(1), &I, AC, DT);
     if (!ScalarIdx.isSafe()) {
       // TODO: Freeze index if it is safe to do so.
       ScalarIdx.discard();
@@ -1178,12 +1182,12 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     OriginalCost +=
-        TTI.getVectorInstrCost(Instruction::ExtractElement, FixedVT, CostKind,
+        TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
                                Index ? Index->getZExtValue() : -1);
     ScalarizedCost +=
-        TTI.getMemoryOpCost(Instruction::Load, FixedVT->getElementType(),
+        TTI.getMemoryOpCost(Instruction::Load, VecTy->getElementType(),
                             Align(1), LI->getPointerAddressSpace());
-    ScalarizedCost += TTI.getAddressComputationCost(FixedVT->getElementType());
+    ScalarizedCost += TTI.getAddressComputationCost(VecTy->getElementType());
   }
 
   if (ScalarizedCost >= OriginalCost)
@@ -1196,12 +1200,12 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 
     Value *Idx = EI->getOperand(1);
     Value *GEP =
-        Builder.CreateInBoundsGEP(FixedVT, Ptr, {Builder.getInt32(0), Idx});
+        Builder.CreateInBoundsGEP(VecTy, Ptr, {Builder.getInt32(0), Idx});
     auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
-        FixedVT->getElementType(), GEP, EI->getName() + ".scalar"));
+        VecTy->getElementType(), GEP, EI->getName() + ".scalar"));
 
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
-        LI->getAlign(), FixedVT->getElementType(), Idx, DL);
+        LI->getAlign(), VecTy->getElementType(), Idx, DL);
     NewLoad->setAlignment(ScalarOpAlignment);
 
     replaceValue(*EI, *NewLoad);
@@ -1723,9 +1727,6 @@ bool VectorCombine::run() {
       case Instruction::ShuffleVector:
         MadeChange |= widenSubvectorLoad(I);
         break;
-      case Instruction::Load:
-        MadeChange |= scalarizeLoadExtract(I);
-        break;
       default:
         break;
       }
@@ -1733,12 +1734,13 @@ bool VectorCombine::run() {
 
     // This transform works with scalable and fixed vectors
     // TODO: Identify and allow other scalable transforms
-    if (isa<VectorType>(I.getType()))
+    if (isa<VectorType>(I.getType())) {
       MadeChange |= scalarizeBinopOrCmp(I);
+      MadeChange |= scalarizeLoadExtract(I);
+    }
 
     if (Opcode == Instruction::Store)
       MadeChange |= foldSingleElementStore(I);
-
 
     // If this is an early pipeline invocation of this pass, we are done.
     if (TryEarlyFoldsOnly)

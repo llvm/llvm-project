@@ -1,5 +1,4 @@
 libcxx/include/__algorithm/binary_search.h
-libcxx/include/__algorithm/clamp.h
 libcxx/include/__algorithm/comp_ref_type.h
 libcxx/include/__algorithm/copy_backward.h
 libcxx/include/__algorithm/copy_if.h
@@ -109,7 +108,6 @@ libcxx/include/__bit/countl.h
 libcxx/include/__bit/countr.h
 libcxx/include/__bit/endian.h
 libcxx/include/__bit/popcount.h
-libcxx/include/__bit/rotate.h
 libcxx/include/bitset
 libcxx/include/cctype
 libcxx/include/chrono
@@ -168,7 +166,6 @@ libcxx/include/experimental/memory_resource
 libcxx/include/experimental/propagate_const
 libcxx/include/experimental/regex
 libcxx/include/experimental/set
-libcxx/include/experimental/simd
 libcxx/include/experimental/string
 libcxx/include/experimental/type_traits
 libcxx/include/experimental/unordered_map
@@ -286,7 +283,6 @@ libcxx/include/__iterator/ostreambuf_iterator.h
 libcxx/include/__iterator/ostream_iterator.h
 libcxx/include/__iterator/permutable.h
 libcxx/include/__iterator/prev.h
-libcxx/include/__iterator/projected.h
 libcxx/include/__iterator/readable_traits.h
 libcxx/include/__iterator/reverse_access.h
 libcxx/include/__iterator/reverse_iterator.h
@@ -352,24 +348,6 @@ libcxx/include/__numeric/transform_inclusive_scan.h
 libcxx/include/__numeric/transform_reduce.h
 libcxx/include/optional
 libcxx/include/ostream
-libcxx/include/__pstl/internal/numeric_impl.h
-libcxx/include/__pstl/internal/omp/parallel_for_each.h
-libcxx/include/__pstl/internal/omp/parallel_for.h
-libcxx/include/__pstl/internal/omp/parallel_invoke.h
-libcxx/include/__pstl/internal/omp/parallel_merge.h
-libcxx/include/__pstl/internal/omp/parallel_reduce.h
-libcxx/include/__pstl/internal/omp/parallel_scan.h
-libcxx/include/__pstl/internal/omp/parallel_stable_partial_sort.h
-libcxx/include/__pstl/internal/omp/parallel_stable_sort.h
-libcxx/include/__pstl/internal/omp/parallel_transform_reduce.h
-libcxx/include/__pstl/internal/omp/parallel_transform_scan.h
-libcxx/include/__pstl/internal/omp/util.h
-libcxx/include/__pstl/internal/parallel_backend.h
-libcxx/include/__pstl/internal/parallel_backend_serial.h
-libcxx/include/__pstl/internal/parallel_backend_tbb.h
-libcxx/include/__pstl/internal/parallel_backend_utils.h
-libcxx/include/__pstl/internal/unseq_backend_simd.h
-libcxx/include/__pstl/internal/utils.h
 libcxx/include/queue
 libcxx/include/__random/bernoulli_distribution.h
 libcxx/include/__random/binomial_distribution.h
@@ -555,10 +533,8 @@ libcxx/src/pstl/libdispatch.cpp
 libcxx/src/random.cpp
 libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
-libcxx/src/stdexcept.cpp
 libcxx/src/std_stream.h
 libcxx/src/string.cpp
-libcxx/src/strstream.cpp
 libcxx/src/support/ibm/mbsnrtowcs.cpp
 libcxx/src/support/ibm/wcsnrtombs.cpp
 libcxx/src/support/ibm/xlocale_zos.cpp

@@ -370,6 +370,29 @@ public:
   }
 };
 
+/// Determine the list of imports and exports for each module.
+class ModuleImportsManager final {
+  function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+      IsPrevailing;
+  const ModuleSummaryIndex &Index;
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
+
+public:
+  ModuleImportsManager(
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          IsPrevailing,
+      const ModuleSummaryIndex &Index,
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr)
+      : IsPrevailing(IsPrevailing), Index(Index), ExportLists(ExportLists) {}
+
+  /// Given the list of globals defined in a module, compute the list of imports
+  /// as well as the list of "exports", i.e. the list of symbols referenced from
+  /// another module (that may require promotion).
+  void computeImportForModule(const GVSummaryMapTy &DefinedGVSummaries,
+                              StringRef ModName,
+                              FunctionImporter::ImportMapTy &ImportList);
+};
+
 static const char *
 getFailureName(FunctionImporter::ImportFailureReason Reason) {
   switch (Reason) {
@@ -482,7 +505,7 @@ static void computeImportForFunction(
         continue;
       }
 
-      FunctionImporter::ImportFailureReason Reason;
+      FunctionImporter::ImportFailureReason Reason{};
       CalleeSummary = selectCallee(Index, VI.getSummaryList(), NewThreshold,
                                    Summary.modulePath(), Reason);
       if (!CalleeSummary) {
@@ -567,20 +590,13 @@ static void computeImportForFunction(
   }
 }
 
-/// Given the list of globals defined in a module, compute the list of imports
-/// as well as the list of "exports", i.e. the list of symbols referenced from
-/// another module (that may require promotion).
-static void ComputeImportForModule(
-    const GVSummaryMapTy &DefinedGVSummaries,
-    function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-        isPrevailing,
-    const ModuleSummaryIndex &Index, StringRef ModName,
-    FunctionImporter::ImportMapTy &ImportList,
-    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
+void ModuleImportsManager::computeImportForModule(
+    const GVSummaryMapTy &DefinedGVSummaries, StringRef ModName,
+    FunctionImporter::ImportMapTy &ImportList) {
   // Worklist contains the list of function imported in this module, for which
   // we will analyse the callees and may import further down the callgraph.
   SmallVector<EdgeInfo, 128> Worklist;
-  GlobalsImporter GVI(Index, DefinedGVSummaries, isPrevailing, ImportList,
+  GlobalsImporter GVI(Index, DefinedGVSummaries, IsPrevailing, ImportList,
                       ExportLists);
   FunctionImporter::ImportThresholdsTy ImportThresholds;
 
@@ -603,7 +619,7 @@ static void ComputeImportForModule(
       continue;
     LLVM_DEBUG(dbgs() << "Initialize import for " << VI << "\n");
     computeImportForFunction(*FuncSummary, Index, ImportInstrLimit,
-                             DefinedGVSummaries, isPrevailing, Worklist, GVI,
+                             DefinedGVSummaries, IsPrevailing, Worklist, GVI,
                              ImportList, ExportLists, ImportThresholds);
   }
 
@@ -615,7 +631,7 @@ static void ComputeImportForModule(
 
     if (auto *FS = dyn_cast<FunctionSummary>(Summary))
       computeImportForFunction(*FS, Index, Threshold, DefinedGVSummaries,
-                               isPrevailing, Worklist, GVI, ImportList,
+                               IsPrevailing, Worklist, GVI, ImportList,
                                ExportLists, ImportThresholds);
   }
 
@@ -717,13 +733,14 @@ void llvm::ComputeCrossModuleImport(
         isPrevailing,
     DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
     DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
+  ModuleImportsManager MIS(isPrevailing, Index, &ExportLists);
   // For each module that has function defined, compute the import/export lists.
   for (const auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
     auto &ImportList = ImportLists[DefinedGVSummaries.first];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
                       << DefinedGVSummaries.first << "'\n");
-    ComputeImportForModule(DefinedGVSummaries.second, isPrevailing, Index,
-                           DefinedGVSummaries.first, ImportList, &ExportLists);
+    MIS.computeImportForModule(DefinedGVSummaries.second,
+                               DefinedGVSummaries.first, ImportList);
   }
 
   // When computing imports we only added the variables and functions being
@@ -818,8 +835,15 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
 }
 #endif
 
-/// Compute all the imports for the given module in the Index.
-void llvm::ComputeCrossModuleImportForModule(
+/// Compute all the imports for the given module using the Index.
+///
+/// \p isPrevailing is a callback that will be called with a global value's GUID
+/// and summary and should return whether the module corresponding to the
+/// summary contains the linker-prevailing copy of that value.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+static void ComputeCrossModuleImportForModuleForTest(
     StringRef ModulePath,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
@@ -832,17 +856,20 @@ void llvm::ComputeCrossModuleImportForModule(
 
   // Compute the import list for this module.
   LLVM_DEBUG(dbgs() << "Computing import for Module '" << ModulePath << "'\n");
-  ComputeImportForModule(FunctionSummaryMap, isPrevailing, Index, ModulePath,
-                         ImportList);
+  ModuleImportsManager MIS(isPrevailing, Index);
+  MIS.computeImportForModule(FunctionSummaryMap, ModulePath, ImportList);
 
 #ifndef NDEBUG
   dumpImportListForModule(Index, ModulePath, ImportList);
 #endif
 }
 
-// Mark all external summaries in Index for import into the given module.
-// Used for distributed builds using a distributed index.
-void llvm::ComputeCrossModuleImportForModuleFromIndex(
+/// Mark all external summaries in \p Index for import into the given module.
+/// Used for testing the case of distributed builds using a distributed index.
+///
+/// \p ImportList will be populated with a map that can be passed to
+/// FunctionImporter::importFunctions() above (see description there).
+static void ComputeCrossModuleImportForModuleFromIndexForTest(
     StringRef ModulePath, const ModuleSummaryIndex &Index,
     FunctionImporter::ImportMapTy &ImportList) {
   for (const auto &GlobalList : Index) {
@@ -1459,7 +1486,7 @@ Expected<bool> FunctionImporter::importFunctions(
   return ImportedCount;
 }
 
-static bool doImportingForModule(
+static bool doImportingForModuleForTest(
     Module &M, function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
                    isPrevailing) {
   if (SummaryFile.empty())
@@ -1479,11 +1506,11 @@ static bool doImportingForModule(
   // when testing distributed backend handling via the opt tool, when
   // we have distributed indexes containing exactly the summaries to import.
   if (ImportAllIndex)
-    ComputeCrossModuleImportForModuleFromIndex(M.getModuleIdentifier(), *Index,
-                                               ImportList);
+    ComputeCrossModuleImportForModuleFromIndexForTest(M.getModuleIdentifier(),
+                                                      *Index, ImportList);
   else
-    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), isPrevailing,
-                                      *Index, ImportList);
+    ComputeCrossModuleImportForModuleForTest(M.getModuleIdentifier(),
+                                             isPrevailing, *Index, ImportList);
 
   // Conservatively mark all internal values as promoted. This interface is
   // only used when doing importing via the function importing pass. The pass
@@ -1531,7 +1558,7 @@ PreservedAnalyses FunctionImportPass::run(Module &M,
   auto isPrevailing = [](GlobalValue::GUID, const GlobalValueSummary *) {
     return true;
   };
-  if (!doImportingForModule(M, isPrevailing))
+  if (!doImportingForModuleForTest(M, isPrevailing))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

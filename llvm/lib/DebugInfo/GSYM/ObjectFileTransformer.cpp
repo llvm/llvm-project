@@ -68,7 +68,7 @@ static std::vector<uint8_t> getUUID(const object::ObjectFile &Obj) {
 }
 
 llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
-                                           raw_ostream &Log,
+                                           raw_ostream *Log,
                                            GsymCreator &Gsym) {
   using namespace llvm::object;
 
@@ -99,7 +99,11 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
     const uint64_t size = IsELF ? ELFSymbolRef(Sym).getSize() : 0;
     Expected<StringRef> Name = Sym.getName();
     if (!Name) {
-      logAllUnhandledErrors(Name.takeError(), Log, "ObjectFileTransformer: ");
+      if (Log)
+        logAllUnhandledErrors(Name.takeError(), *Log,
+                              "ObjectFileTransformer: ");
+      else
+        consumeError(Name.takeError());
       continue;
     }
     // Remove the leading '_' character in any symbol names if there is one
@@ -110,6 +114,8 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
         FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
   }
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
-  Log << "Loaded " << FunctionsAddedCount << " functions from symbol table.\n";
+  if (Log)
+    *Log << "Loaded " << FunctionsAddedCount
+         << " functions from symbol table.\n";
   return Error::success();
 }

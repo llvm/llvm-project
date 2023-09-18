@@ -223,9 +223,9 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
     // uses all the registers that are livein to the successor blocks.
     for (const MachineBasicBlock *Succ : BB->successors()) {
       for (const auto &LI : Succ->liveins()) {
-        // TODO: Use LI.LaneMask to refine this.
-        for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-          if (!Uses.contains(Unit))
+        for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+          auto [Unit, Mask] = *U;
+          if ((Mask & LI.LaneMask).any() && !Uses.contains(Unit))
             Uses.insert(PhysRegSUOper(&ExitSU, -1, Unit));
         }
       }
@@ -249,7 +249,8 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
                             !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
   for (MCRegUnit Unit : TRI->regunits(Reg)) {
-    for (Reg2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end(); ++I) {
+    for (RegUnit2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end();
+         ++I) {
       SUnit *UseSU = I->SU;
       if (UseSU == SU)
         continue;
@@ -308,7 +309,8 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   //       there's no cost for reusing registers.
   SDep::Kind Kind = MO.isUse() ? SDep::Anti : SDep::Output;
   for (MCRegUnit Unit : TRI->regunits(Reg)) {
-    for (Reg2SUnitsMap::iterator I = Defs.find(Unit); I != Defs.end(); ++I) {
+    for (RegUnit2SUnitsMap::iterator I = Defs.find(Unit); I != Defs.end();
+         ++I) {
       SUnit *DefSU = I->SU;
       if (DefSU == &ExitSU)
         continue;
@@ -353,9 +355,9 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
       // the block. Instead, we leave only one call at the back of the
       // DefList.
       for (MCRegUnit Unit : TRI->regunits(Reg)) {
-        Reg2SUnitsMap::RangePair P = Defs.equal_range(Unit);
-        Reg2SUnitsMap::iterator B = P.first;
-        Reg2SUnitsMap::iterator I = P.second;
+        RegUnit2SUnitsMap::RangePair P = Defs.equal_range(Unit);
+        RegUnit2SUnitsMap::iterator B = P.first;
+        RegUnit2SUnitsMap::iterator I = P.second;
         for (bool isBegin = I == B; !isBegin; /* empty */) {
           isBegin = (--I) == B;
           if (!I->SU->isCall)

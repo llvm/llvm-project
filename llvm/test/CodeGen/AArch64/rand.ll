@@ -7,9 +7,9 @@ define  i32 @rndr(ptr %__addr) {
 ; CHECK-NEXT:    mrs x10, RNDR
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    str x10, [x9]
 ; CHECK-NEXT:    and w8, w8, #0x1
 ; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    str x10, [x9]
 ; CHECK-NEXT:    ret
   %1 = tail call { i64, i1 } @llvm.aarch64.rndr()
   %2 = extractvalue { i64, i1 } %1, 0
@@ -26,9 +26,9 @@ define  i32 @rndrrs(ptr  %__addr) {
 ; CHECK-NEXT:    mrs x10, RNDRRS
 ; CHECK-NEXT:    mov x9, x0
 ; CHECK-NEXT:    cset w8, eq
+; CHECK-NEXT:    str x10, [x9]
 ; CHECK-NEXT:    and w8, w8, #0x1
 ; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    str x10, [x9]
 ; CHECK-NEXT:    ret
   %1 = tail call { i64, i1 } @llvm.aarch64.rndrrs()
   %2 = extractvalue { i64, i1 } %1, 0

@@ -614,11 +614,11 @@ entry:
 define i16 @test_vqrdmlahh_s16(i16 %a, i16 %b, i16 %c) {
 ; CHECK-LABEL: test_vqrdmlahh_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    sqrdmlah v1.4h, v0.4h, v2.4h
-; CHECK-NEXT:    umov w0, v1.h[0]
+; CHECK-NEXT:    sqrdmlah v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
@@ -632,11 +632,11 @@ entry:
 define i32 @test_vqrdmlahs_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test_vqrdmlahs_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    sqrdmlah s1, s0, s2
-; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    sqrdmlah s0, s1, s2
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %vqrdmlahs_s32.i = tail call i32 @llvm.aarch64.neon.sqrdmlah.i32(i32 %a, i32 %b, i32 %c) #4
@@ -646,11 +646,11 @@ entry:
 define i16 @test_vqrdmlahh_lane_s16(i16 %a, i16 %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_vqrdmlahh_lane_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqrdmlah v2.4h, v1.4h, v0.h[3]
-; CHECK-NEXT:    umov w0, v2.h[0]
+; CHECK-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[3]
+; CHECK-NEXT:    umov w0, v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
@@ -664,11 +664,11 @@ entry:
 define i32 @test_vqrdmlahs_lane_s32(i32 %a, i32 %b, <2 x i32> %c) {
 ; CHECK-LABEL: test_vqrdmlahs_lane_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqrdmlah s2, s1, v0.s[1]
-; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    sqrdmlah s1, s2, v0.s[1]
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
 entry:
   %vget_lane = extractelement <2 x i32> %c, i64 1
@@ -679,10 +679,10 @@ entry:
 define i16 @test_vqrdmlahh_laneq_s16(i16 %a, i16 %b, <8 x i16> %c) {
 ; CHECK-LABEL: test_vqrdmlahh_laneq_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
-; CHECK-NEXT:    sqrdmlah v2.4h, v1.4h, v0.h[7]
-; CHECK-NEXT:    umov w0, v2.h[0]
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    sqrdmlah v1.4h, v2.4h, v0.h[7]
+; CHECK-NEXT:    umov w0, v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
@@ -696,10 +696,10 @@ entry:
 define i32 @test_vqrdmlahs_laneq_s32(i32 %a, i32 %b, <4 x i32> %c) {
 ; CHECK-LABEL: test_vqrdmlahs_laneq_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
-; CHECK-NEXT:    sqrdmlah s2, s1, v0.s[3]
-; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    sqrdmlah s1, s2, v0.s[3]
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
 entry:
   %vgetq_lane = extractelement <4 x i32> %c, i64 3
@@ -754,11 +754,11 @@ entry:
 define i16 @test_vqrdmlshh_s16(i16 %a, i16 %b, i16 %c) {
 ; CHECK-LABEL: test_vqrdmlshh_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    sqrdmlsh v1.4h, v0.4h, v2.4h
-; CHECK-NEXT:    umov w0, v1.h[0]
+; CHECK-NEXT:    sqrdmlsh v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
@@ -772,11 +772,11 @@ entry:
 define i32 @test_vqrdmlshs_s32(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test_vqrdmlshs_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w1
-; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w2
-; CHECK-NEXT:    sqrdmlsh s1, s0, s2
-; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    sqrdmlsh s0, s1, s2
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %vqrdmlshs_s32.i = tail call i32 @llvm.aarch64.neon.sqrdmlsh.i32(i32 %a, i32 %b, i32 %c) #4
@@ -786,11 +786,11 @@ entry:
 define i16 @test_vqrdmlshh_lane_s16(i16 %a, i16 %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_vqrdmlshh_lane_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqrdmlsh v2.4h, v1.4h, v0.h[3]
-; CHECK-NEXT:    umov w0, v2.h[0]
+; CHECK-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[3]
+; CHECK-NEXT:    umov w0, v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
@@ -804,11 +804,11 @@ entry:
 define i32 @test_vqrdmlshs_lane_s32(i32 %a, i32 %b, <2 x i32> %c) {
 ; CHECK-LABEL: test_vqrdmlshs_lane_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqrdmlsh s2, s1, v0.s[1]
-; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    sqrdmlsh s1, s2, v0.s[1]
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
 entry:
   %vget_lane = extractelement <2 x i32> %c, i64 1
@@ -819,10 +819,10 @@ entry:
 define i16 @test_vqrdmlshh_laneq_s16(i16 %a, i16 %b, <8 x i16> %c) {
 ; CHECK-LABEL: test_vqrdmlshh_laneq_s16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
-; CHECK-NEXT:    sqrdmlsh v2.4h, v1.4h, v0.h[7]
-; CHECK-NEXT:    umov w0, v2.h[0]
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    sqrdmlsh v1.4h, v2.4h, v0.h[7]
+; CHECK-NEXT:    umov w0, v1.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = insertelement <4 x i16> undef, i16 %a, i64 0
@@ -836,10 +836,10 @@ entry:
 define i32 @test_vqrdmlshs_laneq_s32(i32 %a, i32 %b, <4 x i32> %c) {
 ; CHECK-LABEL: test_vqrdmlshs_laneq_s32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s1, w1
-; CHECK-NEXT:    fmov s2, w0
-; CHECK-NEXT:    sqrdmlsh s2, s1, v0.s[3]
-; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w1
+; CHECK-NEXT:    sqrdmlsh s1, s2, v0.s[3]
+; CHECK-NEXT:    fmov w0, s1
 ; CHECK-NEXT:    ret
 entry:
   %vgetq_lane = extractelement <4 x i32> %c, i64 3

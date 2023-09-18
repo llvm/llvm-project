@@ -510,6 +510,117 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   dl_iterate_phdr(dl_iterate_phdr_cb, &data);
   return true;
 }
+
+class DSOMarkupPrinter {
+  llvm::raw_ostream &OS;
+  const char *MainExecutableName;
+  size_t ModuleCount = 0;
+  bool IsFirst = true;
+
+public:
+  DSOMarkupPrinter(llvm::raw_ostream &OS, const char *MainExecutableName)
+      : OS(OS), MainExecutableName(MainExecutableName) {}
+
+  /// Print llvm-symbolizer markup describing the layout of the given DSO.
+  void printDSOMarkup(dl_phdr_info *Info) {
+    ArrayRef<uint8_t> BuildID = findBuildID(Info);
+    if (BuildID.empty())
+      return;
+    OS << format("{{{module:%d:%s:elf:", ModuleCount,
+                 IsFirst ? MainExecutableName : Info->dlpi_name);
+    for (uint8_t X : BuildID)
+      OS << format("%02x", X);
+    OS << "}}}\n";
+
+    for (int I = 0; I < Info->dlpi_phnum; I++) {
+      const auto *Phdr = &Info->dlpi_phdr[I];
+      if (Phdr->p_type != PT_LOAD)
+        continue;
+      uintptr_t StartAddress = Info->dlpi_addr + Phdr->p_vaddr;
+      uintptr_t ModuleRelativeAddress = Phdr->p_vaddr;
+      std::array<char, 4> ModeStr = modeStrFromFlags(Phdr->p_flags);
+      OS << format("{{{mmap:%#016x:%#x:load:%d:%s:%#016x}}}\n", StartAddress,
+                   Phdr->p_memsz, ModuleCount, &ModeStr[0],
+                   ModuleRelativeAddress);
+    }
+    IsFirst = false;
+    ModuleCount++;
+  }
+
+  /// Callback for use with dl_iterate_phdr. The last dl_iterate_phdr argument
+  /// must be a pointer to an instance of this class.
+  static int printDSOMarkup(dl_phdr_info *Info, size_t Size, void *Arg) {
+    static_cast<DSOMarkupPrinter *>(Arg)->printDSOMarkup(Info);
+    return 0;
+  }
+
+  // Returns the build ID for the given DSO as an array of bytes. Returns an
+  // empty array if none could be found.
+  ArrayRef<uint8_t> findBuildID(dl_phdr_info *Info) {
+    for (int I = 0; I < Info->dlpi_phnum; I++) {
+      const auto *Phdr = &Info->dlpi_phdr[I];
+      if (Phdr->p_type != PT_NOTE)
+        continue;
+
+      ArrayRef<uint8_t> Notes(
+          reinterpret_cast<const uint8_t *>(Info->dlpi_addr + Phdr->p_vaddr),
+          Phdr->p_memsz);
+      while (Notes.size() > 12) {
+        uint32_t NameSize = *reinterpret_cast<const uint32_t *>(Notes.data());
+        Notes = Notes.drop_front(4);
+        uint32_t DescSize = *reinterpret_cast<const uint32_t *>(Notes.data());
+        Notes = Notes.drop_front(4);
+        uint32_t Type = *reinterpret_cast<const uint32_t *>(Notes.data());
+        Notes = Notes.drop_front(4);
+
+        ArrayRef<uint8_t> Name = Notes.take_front(NameSize);
+        auto CurPos = reinterpret_cast<uintptr_t>(Notes.data());
+        uint32_t BytesUntilDesc =
+            alignToPowerOf2(CurPos + NameSize, 4) - CurPos;
+        if (BytesUntilDesc >= Notes.size())
+          break;
+        Notes = Notes.drop_front(BytesUntilDesc);
+
+        ArrayRef<uint8_t> Desc = Notes.take_front(DescSize);
+        CurPos = reinterpret_cast<uintptr_t>(Notes.data());
+        uint32_t BytesUntilNextNote =
+            alignToPowerOf2(CurPos + DescSize, 4) - CurPos;
+        if (BytesUntilNextNote > Notes.size())
+          break;
+        Notes = Notes.drop_front(BytesUntilNextNote);
+
+        if (Type == 3 /*NT_GNU_BUILD_ID*/ && Name.size() >= 3 &&
+            Name[0] == 'G' && Name[1] == 'N' && Name[2] == 'U')
+          return Desc;
+      }
+    }
+    return {};
+  }
+
+  // Returns a symbolizer markup string describing the permissions on a DSO
+  // with the given p_flags.
+  std::array<char, 4> modeStrFromFlags(uint32_t Flags) {
+    std::array<char, 4> Mode;
+    char *Cur = &Mode[0];
+    if (Flags & PF_R)
+      *Cur++ = 'r';
+    if (Flags & PF_W)
+      *Cur++ = 'w';
+    if (Flags & PF_X)
+      *Cur++ = 'x';
+    *Cur = '\0';
+    return Mode;
+  }
+};
+
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  OS << "{{{reset}}}\n";
+  DSOMarkupPrinter MP(OS, MainExecutableName);
+  dl_iterate_phdr(DSOMarkupPrinter::printDSOMarkup, &MP);
+  return true;
+}
+
 #elif ENABLE_BACKTRACES && defined(__APPLE__) && defined(__LP64__)
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
@@ -544,6 +655,11 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
   }
   return true;
 }
+
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
+  return false;
+}
 #else
 /// Backtraces are not enabled or we don't yet know how to find all loaded DSOs
 /// on this platform.
@@ -551,6 +667,11 @@ static bool findModulesAndOffsets(void **StackTrace, int Depth,
                                   const char **Modules, intptr_t *Offsets,
                                   const char *MainExecutableName,
                                   StringSaver &StrPool) {
+  return false;
+}
+
+static bool printMarkupContext(llvm::raw_ostream &OS,
+                               const char *MainExecutableName) {
   return false;
 }
 #endif // ENABLE_BACKTRACES && ... (findModulesAndOffsets variants)
@@ -613,6 +734,8 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   // backtrace() for printing a symbolized stack trace.
   if (!Depth)
     Depth = depth;
+  if (printMarkupStackTrace(Argv0, StackTrace, Depth, OS))
+    return;
   if (printSymbolizedStackTrace(Argv0, StackTrace, Depth, OS))
     return;
   OS << "Stack dump without symbol names (ensure you have llvm-symbolizer in "

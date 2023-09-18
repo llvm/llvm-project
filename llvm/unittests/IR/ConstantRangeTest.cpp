@@ -1373,6 +1373,13 @@ TEST_F(ConstantRangeTest, Shl) {
       ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
   EXPECT_EQ(One.shl(WrapNullMax), Full);
 
+  ConstantRange NegOne(APInt(16, 0xffff));
+  EXPECT_EQ(NegOne.shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xfff0), APInt(16, 0)));
+  EXPECT_EQ(ConstantRange(APInt(16, 0xfffe), APInt(16, 0))
+                .shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xffe0), APInt(16, 0)));
+
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
         return CR1.shl(CR2);

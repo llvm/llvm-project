@@ -556,7 +556,7 @@ public:
 
   unsigned combineRepeatedFPDivisors() const override { return 2; }
 
-  bool allowFMA(MachineFunction &MF, CodeGenOpt::Level OptLevel) const;
+  bool allowFMA(MachineFunction &MF, CodeGenOptLevel OptLevel) const;
   bool allowUnsafeFPMath(MachineFunction &MF) const;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -617,6 +617,7 @@ private:
   Align getArgumentAlignment(SDValue Callee, const CallBase *CB, Type *Ty,
                              unsigned Idx, const DataLayout &DL) const;
 };
+
 } // namespace llvm
 
 #endif

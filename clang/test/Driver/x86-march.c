@@ -108,6 +108,10 @@
 // RUN:   | FileCheck %s -check-prefix=lunarlake
 // lunarlake: "-target-cpu" "lunarlake"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=gracemont 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=gracemont
+// gracemont: "-target-cpu" "gracemont"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"

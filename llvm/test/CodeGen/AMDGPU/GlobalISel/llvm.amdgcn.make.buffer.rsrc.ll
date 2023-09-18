@@ -11,7 +11,7 @@ define amdgpu_ps ptr addrspace(8) @basic_raw_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_2]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_2]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
@@ -38,7 +38,7 @@ define amdgpu_ps float @read_raw_buffer(ptr addrspace(1) inreg %p) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_1]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_AND_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_]], 4, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; CHECK-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -58,9 +58,9 @@ define amdgpu_ps ptr addrspace(8) @basic_struct_buffer(ptr inreg %p) {
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5678
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1234
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_2]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_2]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 262144
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_3]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_3]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY2]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
@@ -88,9 +88,9 @@ define amdgpu_ps ptr addrspace(8) @variable_top_half(ptr inreg %p, i32 inreg %nu
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 262144
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_1]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY4]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
@@ -119,10 +119,10 @@ define amdgpu_ps ptr addrspace(8) @general_case(ptr inreg %p, i16 inreg %stride,
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], [[S_MOV_B32_1]], implicit-def $scc
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_LSHL_B32_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_LSHL_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY5]], implicit $exec
   ; CHECK-NEXT:   $sgpr0 = COPY [[V_READFIRSTLANE_B32_]]
@@ -151,10 +151,10 @@ define amdgpu_ps float @general_case_load(ptr inreg %p, i16 inreg %stride, i32 i
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr4
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], [[S_MOV_B32_1]], implicit-def $scc
-  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_LSHL_B32_]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_LSHL_B32_:%[0-9]+]]:sreg_32 = S_LSHL_B32 [[COPY2]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], [[S_LSHL_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
@@ -203,7 +203,7 @@ define amdgpu_ps float @general_case_load_with_waterfall(ptr %p, i16 %stride, i3
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[REG_SEQUENCE1]].sub2_sub3
   ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY10]], [[COPY8]], implicit $exec
   ; CHECK-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY11]], [[COPY9]], implicit $exec
-  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:

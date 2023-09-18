@@ -536,7 +536,7 @@ define <vscale x 4 x float> @splat_nxv4f32_fold(<vscale x 4 x float> %x) {
 define <vscale x 2 x float> @splat_nxv2f32_fmov_fold() {
 ; CHECK-LABEL: splat_nxv2f32_fmov_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 2 x float> undef, float 4.200000e+01, i32 0
@@ -547,7 +547,7 @@ define <vscale x 2 x float> @splat_nxv2f32_fmov_fold() {
 define <vscale x 4 x float> @splat_nxv4f32_fmov_fold() {
 ; CHECK-LABEL: splat_nxv4f32_fmov_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1109917696
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 4 x float> undef, float 4.200000e+01, i32 0
@@ -558,7 +558,7 @@ define <vscale x 4 x float> @splat_nxv4f32_fmov_fold() {
 define <vscale x 2 x double> @splat_nxv2f64_fmov_fold() {
 ; CHECK-LABEL: splat_nxv2f64_fmov_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4631107791820423168
+; CHECK-NEXT:    mov x8, #4631107791820423168 // =0x4045000000000000
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 2 x double> undef, double 4.200000e+01, i32 0
@@ -571,7 +571,7 @@ define <vscale x 2 x double> @splat_nxv2f64_fmov_fold() {
 define <vscale x 2 x float> @splat_nxv2f32_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f32_imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #7864
+; CHECK-NEXT:    mov w8, #7864 // =0x1eb8
 ; CHECK-NEXT:    movk w8, #16469, lsl #16
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    ret
@@ -583,7 +583,7 @@ define <vscale x 2 x float> @splat_nxv2f32_imm_out_of_range() {
 define <vscale x 4 x float> @splat_nxv4f32_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv4f32_imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #7864
+; CHECK-NEXT:    mov w8, #7864 // =0x1eb8
 ; CHECK-NEXT:    movk w8, #16469, lsl #16
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    ret
@@ -595,9 +595,9 @@ define <vscale x 4 x float> @splat_nxv4f32_imm_out_of_range() {
 define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    adrp x8, .LCPI57_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI57_0
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 2 x double> undef, double 3.33, i32 0

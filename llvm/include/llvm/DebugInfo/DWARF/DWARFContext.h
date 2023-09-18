@@ -25,6 +25,7 @@
 #include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <memory>
+#include <mutex>
 
 namespace llvm {
 
@@ -45,68 +46,85 @@ class DWARFUnitIndex;
 /// This data structure is the top level entity that deals with dwarf debug
 /// information parsing. The actual data is supplied through DWARFObj.
 class DWARFContext : public DIContext {
-  DWARFUnitVector NormalUnits;
-  std::optional<DenseMap<uint64_t, DWARFTypeUnit *>> NormalTypeUnits;
-  std::unique_ptr<DWARFUnitIndex> CUIndex;
-  std::unique_ptr<DWARFGdbIndex> GdbIndex;
-  std::unique_ptr<DWARFUnitIndex> TUIndex;
-  std::unique_ptr<DWARFDebugAbbrev> Abbrev;
-  std::unique_ptr<DWARFDebugLoc> Loc;
-  std::unique_ptr<DWARFDebugAranges> Aranges;
-  std::unique_ptr<DWARFDebugLine> Line;
-  std::unique_ptr<DWARFDebugFrame> DebugFrame;
-  std::unique_ptr<DWARFDebugFrame> EHFrame;
-  std::unique_ptr<DWARFDebugMacro> Macro;
-  std::unique_ptr<DWARFDebugMacro> Macinfo;
-  std::unique_ptr<DWARFDebugNames> Names;
-  std::unique_ptr<AppleAcceleratorTable> AppleNames;
-  std::unique_ptr<AppleAcceleratorTable> AppleTypes;
-  std::unique_ptr<AppleAcceleratorTable> AppleNamespaces;
-  std::unique_ptr<AppleAcceleratorTable> AppleObjC;
+public:
+  /// DWARFContextState
+  /// This structure contains all member variables for DWARFContext that need
+  /// to be protected in multi-threaded environments. Threading support can be
+  /// enabled by setting the ThreadSafe to true when constructing a
+  /// DWARFContext to allow DWARRContext to be able to be used in a
+  /// multi-threaded environment, or not enabled to allow for maximum
+  /// performance in single threaded environments.
+  class DWARFContextState {
+  protected:
+    /// Helper enum to distinguish between macro[.dwo] and macinfo[.dwo]
+    /// section.
+    enum MacroSecType {
+      MacinfoSection,
+      MacinfoDwoSection,
+      MacroSection,
+      MacroDwoSection
+    };
 
-  DWARFUnitVector DWOUnits;
-  std::optional<DenseMap<uint64_t, DWARFTypeUnit *>> DWOTypeUnits;
-  std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
-  std::unique_ptr<DWARFDebugMacro> MacinfoDWO;
-  std::unique_ptr<DWARFDebugMacro> MacroDWO;
+    DWARFContext &D;
+  public:
+    DWARFContextState(DWARFContext &DC) : D(DC) {}
+    virtual ~DWARFContextState() = default;
+    virtual DWARFUnitVector &getNormalUnits() = 0;
+    virtual DWARFUnitVector &getDWOUnits(bool Lazy = false) = 0;
+    virtual const DWARFDebugAbbrev *getDebugAbbrevDWO() = 0;
+    virtual const DWARFUnitIndex &getCUIndex() = 0;
+    virtual const DWARFUnitIndex &getTUIndex() = 0;
+    virtual DWARFGdbIndex &getGdbIndex() = 0;
+    virtual const DWARFDebugAbbrev *getDebugAbbrev() = 0;
+    virtual const DWARFDebugLoc *getDebugLoc() = 0;
+    virtual const DWARFDebugAranges *getDebugAranges() = 0;
+    virtual Expected<const DWARFDebugLine::LineTable *>
+        getLineTableForUnit(DWARFUnit *U,
+                            function_ref<void(Error)> RecoverableErrHandler) = 0;
+    virtual void clearLineTableForUnit(DWARFUnit *U) = 0;
+    virtual Expected<const DWARFDebugFrame *> getDebugFrame() = 0;
+    virtual Expected<const DWARFDebugFrame *> getEHFrame() = 0;
+    virtual const DWARFDebugMacro *getDebugMacinfo() = 0;
+    virtual const DWARFDebugMacro *getDebugMacinfoDWO() = 0;
+    virtual const DWARFDebugMacro *getDebugMacro() = 0;
+    virtual const DWARFDebugMacro *getDebugMacroDWO() = 0;
+    virtual const DWARFDebugNames &getDebugNames() = 0;
+    virtual const AppleAcceleratorTable &getAppleNames() = 0;
+    virtual const AppleAcceleratorTable &getAppleTypes() = 0;
+    virtual const AppleAcceleratorTable &getAppleNamespaces() = 0;
+    virtual const AppleAcceleratorTable &getAppleObjC() = 0;
+    virtual std::shared_ptr<DWARFContext>
+        getDWOContext(StringRef AbsolutePath) = 0;
+    virtual const DenseMap<uint64_t, DWARFTypeUnit *> &
+    getTypeUnitMap(bool IsDWO) = 0;
+
+    /// Parse a macro[.dwo] or macinfo[.dwo] section.
+    std::unique_ptr<DWARFDebugMacro>
+    parseMacroOrMacinfo(MacroSecType SectionType);
+
+  };
+  friend class DWARFContextState;
+
+private:
+  /// All important state for a DWARFContext that needs to be threadsafe needs
+  /// to go into DWARFContextState.
+  std::unique_ptr<DWARFContextState> State;
 
   /// The maximum DWARF version of all units.
   unsigned MaxVersion = 0;
 
-  struct DWOFile {
-    object::OwningBinary<object::ObjectFile> File;
-    std::unique_ptr<DWARFContext> Context;
-  };
-  StringMap<std::weak_ptr<DWOFile>> DWOFiles;
-  std::weak_ptr<DWOFile> DWP;
-  bool CheckedForDWP = false;
-  std::string DWPName;
   std::function<void(Error)> RecoverableErrorHandler =
       WithColor::defaultErrorHandler;
   std::function<void(Error)> WarningHandler = WithColor::defaultWarningHandler;
-
-  /// Read compile units from the debug_info section (if necessary)
-  /// and type units from the debug_types sections (if necessary)
-  /// and store them in NormalUnits.
-  void parseNormalUnits();
 
   /// Read compile units from the debug_info.dwo section (if necessary)
   /// and type units from the debug_types.dwo section (if necessary)
   /// and store them in DWOUnits.
   /// If \p Lazy is true, set up to parse but don't actually parse them.
   enum { EagerParse = false, LazyParse = true };
-  void parseDWOUnits(bool Lazy = false);
+  DWARFUnitVector &getDWOUnits(bool Lazy = false);
 
   std::unique_ptr<const DWARFObject> DObj;
-
-  /// Helper enum to distinguish between macro[.dwo] and macinfo[.dwo]
-  /// section.
-  enum MacroSecType {
-    MacinfoSection,
-    MacinfoDwoSection,
-    MacroSection,
-    MacroDwoSection
-  };
 
   // When set parses debug_info.dwo/debug_abbrev.dwo manually and populates CU
   // Index, and TU Index for DWARF5.
@@ -118,7 +136,8 @@ public:
                std::function<void(Error)> RecoverableErrorHandler =
                    WithColor::defaultErrorHandler,
                std::function<void(Error)> WarningHandler =
-                   WithColor::defaultWarningHandler);
+                   WithColor::defaultWarningHandler,
+               bool ThreadSafe = false);
   ~DWARFContext() override;
 
   DWARFContext(DWARFContext &) = delete;
@@ -147,20 +166,19 @@ public:
 
   /// Get units from .debug_info in this context.
   unit_iterator_range info_section_units() {
-    parseNormalUnits();
+    DWARFUnitVector &NormalUnits = State->getNormalUnits();
     return unit_iterator_range(NormalUnits.begin(),
                                NormalUnits.begin() +
                                    NormalUnits.getNumInfoUnits());
   }
 
   const DWARFUnitVector &getNormalUnitsVector() {
-    parseNormalUnits();
-    return NormalUnits;
+    return State->getNormalUnits();
   }
 
   /// Get units from .debug_types in this context.
   unit_iterator_range types_section_units() {
-    parseNormalUnits();
+    DWARFUnitVector &NormalUnits = State->getNormalUnits();
     return unit_iterator_range(
         NormalUnits.begin() + NormalUnits.getNumInfoUnits(), NormalUnits.end());
   }
@@ -175,25 +193,24 @@ public:
 
   /// Get all normal compile/type units in this context.
   unit_iterator_range normal_units() {
-    parseNormalUnits();
+    DWARFUnitVector &NormalUnits = State->getNormalUnits();
     return unit_iterator_range(NormalUnits.begin(), NormalUnits.end());
   }
 
   /// Get units from .debug_info..dwo in the DWO context.
   unit_iterator_range dwo_info_section_units() {
-    parseDWOUnits();
+    DWARFUnitVector &DWOUnits = State->getDWOUnits();
     return unit_iterator_range(DWOUnits.begin(),
                                DWOUnits.begin() + DWOUnits.getNumInfoUnits());
   }
 
   const DWARFUnitVector &getDWOUnitsVector() {
-    parseDWOUnits();
-    return DWOUnits;
+    return State->getDWOUnits();
   }
 
   /// Get units from .debug_types.dwo in the DWO context.
   unit_iterator_range dwo_types_section_units() {
-    parseDWOUnits();
+    DWARFUnitVector &DWOUnits = State->getDWOUnits();
     return unit_iterator_range(DWOUnits.begin() + DWOUnits.getNumInfoUnits(),
                                DWOUnits.end());
   }
@@ -209,44 +226,38 @@ public:
 
   /// Get all units in the DWO context.
   unit_iterator_range dwo_units() {
-    parseDWOUnits();
+    DWARFUnitVector &DWOUnits = State->getDWOUnits();
     return unit_iterator_range(DWOUnits.begin(), DWOUnits.end());
   }
 
   /// Get the number of compile units in this context.
   unsigned getNumCompileUnits() {
-    parseNormalUnits();
-    return NormalUnits.getNumInfoUnits();
+    return State->getNormalUnits().getNumInfoUnits();
   }
 
   /// Get the number of type units in this context.
   unsigned getNumTypeUnits() {
-    parseNormalUnits();
-    return NormalUnits.getNumTypesUnits();
+    return State->getNormalUnits().getNumTypesUnits();
   }
 
   /// Get the number of compile units in the DWO context.
   unsigned getNumDWOCompileUnits() {
-    parseDWOUnits();
-    return DWOUnits.getNumInfoUnits();
+    return State->getDWOUnits().getNumInfoUnits();
   }
 
   /// Get the number of type units in the DWO context.
   unsigned getNumDWOTypeUnits() {
-    parseDWOUnits();
-    return DWOUnits.getNumTypesUnits();
+    return State->getDWOUnits().getNumTypesUnits();
   }
 
   /// Get the unit at the specified index.
   DWARFUnit *getUnitAtIndex(unsigned index) {
-    parseNormalUnits();
-    return NormalUnits[index].get();
+    return State->getNormalUnits()[index].get();
   }
 
   /// Get the unit at the specified index for the DWO units.
   DWARFUnit *getDWOUnitAtIndex(unsigned index) {
-    parseDWOUnits();
-    return DWOUnits[index].get();
+    return State->getDWOUnits()[index].get();
   }
 
   DWARFCompileUnit *getDWOCompileUnitForHash(uint64_t Hash);
@@ -424,7 +435,8 @@ public:
          std::function<void(Error)> RecoverableErrorHandler =
              WithColor::defaultErrorHandler,
          std::function<void(Error)> WarningHandler =
-             WithColor::defaultWarningHandler);
+             WithColor::defaultWarningHandler,
+         bool ThreadSafe = false);
 
   static std::unique_ptr<DWARFContext>
   create(const StringMap<std::unique_ptr<MemoryBuffer>> &Sections,
@@ -432,7 +444,8 @@ public:
          std::function<void(Error)> RecoverableErrorHandler =
              WithColor::defaultErrorHandler,
          std::function<void(Error)> WarningHandler =
-             WithColor::defaultWarningHandler);
+             WithColor::defaultWarningHandler,
+         bool ThreadSafe = false);
 
   /// Get address size from CUs.
   /// TODO: refactor compile_units() to make this const.
@@ -466,10 +479,6 @@ public:
   void setParseCUTUIndexManually(bool PCUTU) { ParseCUTUIndexManually = PCUTU; }
 
 private:
-  /// Parse a macro[.dwo] or macinfo[.dwo] section.
-  std::unique_ptr<DWARFDebugMacro>
-  parseMacroOrMacinfo(MacroSecType SectionType);
-
   void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,
                        std::vector<DILocal> &Result);
 };

@@ -125,7 +125,7 @@ multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ResourceCycles = Res;
+    let ReleaseAtCycles = Res;
     let NumMicroOps = UOps;
   }
 
@@ -133,7 +133,7 @@ multiclass JWriteResIntPair<X86FoldableSchedWrite SchedRW,
   // latency.
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 3);
-    let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
+    let ReleaseAtCycles = !if(!empty(Res), [], !listconcat([1], Res));
     let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
@@ -145,7 +145,7 @@ multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ResourceCycles = Res;
+    let ReleaseAtCycles = Res;
     let NumMicroOps = UOps;
   }
 
@@ -153,7 +153,7 @@ multiclass JWriteResFpuPair<X86FoldableSchedWrite SchedRW,
   // latency.
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 5);
-    let ResourceCycles = !if(!empty(Res), [], !listconcat([1], Res));
+    let ReleaseAtCycles = !if(!empty(Res), [], !listconcat([1], Res));
     let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
@@ -165,7 +165,7 @@ multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
   // Register variant is using a single cycle on ExePort.
   def : WriteRes<SchedRW, ExePorts> {
     let Latency = Lat;
-    let ResourceCycles = Res;
+    let ReleaseAtCycles = Res;
     let NumMicroOps = UOps;
   }
 
@@ -173,7 +173,7 @@ multiclass JWriteResYMMPair<X86FoldableSchedWrite SchedRW,
   // latency.
   def : WriteRes<SchedRW.Folded, !listconcat([JLAGU], ExePorts)> {
     let Latency = !add(Lat, 5);
-    let ResourceCycles = !listconcat([2], Res);
+    let ReleaseAtCycles = !listconcat([2], Res);
     let NumMicroOps = !add(UOps, LoadUOps);
   }
 }
@@ -313,49 +313,49 @@ def : WriteRes<WriteNop, [JALU01]> { let Latency = 1; }
 
 def JWriteCMPXCHG8rr : SchedWriteRes<[JALU01]> {
   let Latency = 3;
-  let ResourceCycles = [3];
+  let ReleaseAtCycles = [3];
   let NumMicroOps = 3;
 }
 
 def JWriteLOCK_CMPXCHG8rm : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 16;
-  let ResourceCycles = [3,16,16];
+  let ReleaseAtCycles = [3,16,16];
   let NumMicroOps = 5;
 }
 
 def JWriteLOCK_CMPXCHGrm : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 17;
-  let ResourceCycles = [3,17,17];
+  let ReleaseAtCycles = [3,17,17];
   let NumMicroOps = 6;
 }
 
 def JWriteCMPXCHG8rm : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 11;
-  let ResourceCycles = [3,1,1];
+  let ReleaseAtCycles = [3,1,1];
   let NumMicroOps = 5;
 }
 
 def JWriteCMPXCHG8B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 11;
-  let ResourceCycles = [3,1,1];
+  let ReleaseAtCycles = [3,1,1];
   let NumMicroOps = 18;
 }
 
 def JWriteCMPXCHG16B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 32;
-  let ResourceCycles = [6,1,1];
+  let ReleaseAtCycles = [6,1,1];
   let NumMicroOps = 28;
 }
 
 def JWriteLOCK_CMPXCHG8B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 19;
-  let ResourceCycles = [3,19,19];
+  let ReleaseAtCycles = [3,19,19];
   let NumMicroOps = 18;
 }
 
 def JWriteLOCK_CMPXCHG16B : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 38;
-  let ResourceCycles = [6,38,38];
+  let ReleaseAtCycles = [6,38,38];
   let NumMicroOps = 28;
 }
 
@@ -394,7 +394,7 @@ def : InstRW<[JWriteCMPXCHGVariant,
 
 def JWriteLOCK_ALURMW : SchedWriteRes<[JALU01, JLAGU, JSAGU]> {
   let Latency = 19;
-  let ResourceCycles = [1,19,19];
+  let ReleaseAtCycles = [1,19,19];
   let NumMicroOps = 1;
 }
 
@@ -409,7 +409,7 @@ def : InstRW<[JWriteLOCK_ALURMWVariant], (instrs INC8m, INC16m, INC32m, INC64m,
 
 def JWriteXCHG8rr_XADDrr : SchedWriteRes<[JALU01]> {
   let Latency = 2;
-  let ResourceCycles = [3];
+  let ReleaseAtCycles = [3];
   let NumMicroOps = 3;
 }
 def : InstRW<[JWriteXCHG8rr_XADDrr], (instrs XCHG8rr, XADD8rr, XADD16rr,
@@ -434,7 +434,7 @@ def : InstRW<[JWriteXCHG8rr_XADDrr], (instrs XCHG8rr, XADD8rr, XADD16rr,
 // latency is assumed to be 3cy.
 def JWriteXADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
   let Latency = 3;  // load-to-use latency
-  let ResourceCycles = [3];
+  let ReleaseAtCycles = [3];
   let NumMicroOps = 3;
 }
 
@@ -451,7 +451,7 @@ def JWriteXADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
 // execution. This write is used to specifically set that operand latency. 
 def JWriteLOCK_XADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
   let Latency = 11;
-  let ResourceCycles = [3];
+  let ReleaseAtCycles = [3];
   let NumMicroOps = 3;
 }
 
@@ -463,19 +463,19 @@ def JWriteLOCK_XADDrm_XCHG_Part : SchedWriteRes<[JALU01]> {
 // set the instruction latency to 16cy.
 def JWriteXCHGrm_XCHG_Part : SchedWriteRes<[JALU01]> {
   let Latency = 11;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
   let NumMicroOps = 2;
 }
 
 def JWriteXADDrm_LdSt_Part : SchedWriteRes<[JLAGU, JSAGU]> {
   let Latency = 11;
-  let ResourceCycles = [1, 1];
+  let ReleaseAtCycles = [1, 1];
   let NumMicroOps = 1;
 }
 
 def JWriteXCHGrm_LdSt_Part : SchedWriteRes<[JLAGU, JSAGU]> {
   let Latency = 16;
-  let ResourceCycles = [16, 16];
+  let ReleaseAtCycles = [16, 16];
   let NumMicroOps = 1;
 }
 
@@ -798,7 +798,7 @@ defm : JWriteResFpuPair<WriteCLMul,       [JFPU0, JVIMUL], 2>;
 
 def JWriteINSERTQ: SchedWriteRes<[JFPU01, JVALU]> {
   let Latency = 2;
-  let ResourceCycles = [1, 4];
+  let ReleaseAtCycles = [1, 4];
 }
 def : InstRW<[JWriteINSERTQ], (instrs INSERTQ, INSERTQI)>;
 
@@ -811,7 +811,7 @@ def : InstRW<[JWriteVecExtractF128], (instrs VEXTRACTF128rr)>;
 
 def JWriteVBROADCASTYLd: SchedWriteRes<[JLAGU, JFPU01, JFPX]> {
   let Latency = 6;
-  let ResourceCycles = [1, 2, 4];
+  let ReleaseAtCycles = [1, 2, 4];
   let NumMicroOps = 2;
 }
 def : InstRW<[JWriteVBROADCASTYLd], (instrs VBROADCASTSDYrm,
@@ -836,7 +836,7 @@ def : InstRW<[JWriteJVZEROUPPER], (instrs VZEROUPPER)>;
 
 def JWriteMASKMOVDQU: SchedWriteRes<[JFPU0, JFPA, JFPU1, JSTC, JLAGU, JSAGU, JALU01]> {
   let Latency = 34;
-  let ResourceCycles = [1, 1, 2, 2, 2, 16, 42];
+  let ReleaseAtCycles = [1, 1, 2, 2, 2, 16, 42];
   let NumMicroOps = 63;
 }
 def : InstRW<[JWriteMASKMOVDQU], (instrs MASKMOVDQU, MASKMOVDQU64,
@@ -960,7 +960,7 @@ def : InstRW<[JWriteLEA], (instrs LEA32r, LEA64r, LEA64_32r)>;
 
 def JSlowLEA16r : SchedWriteRes<[JALU01]> {
   let Latency = 3;
-  let ResourceCycles = [4];
+  let ReleaseAtCycles = [4];
 }
 
 def : InstRW<[JSlowLEA16r], (instrs LEA16r)>;

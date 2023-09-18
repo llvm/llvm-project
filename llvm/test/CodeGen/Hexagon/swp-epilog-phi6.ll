@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -debug-only=pipeliner -hexagon-initial-cfg-cleanup=0 < %s -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc -march=hexagon -O2 -debug-only=pipeliner -hexagon-initial-cfg-cleanup=0 -disable-cgp-delete-phis < %s -o - 2>&1 > /dev/null | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the phi in the first epilog block is getter the correct

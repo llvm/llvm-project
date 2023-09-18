@@ -14,7 +14,6 @@
 #include <string>
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -256,7 +255,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       target->GetUserExpressionForLanguage(expr, full_prefix, language,
                                            desired_type, options, ctx_obj,
                                            error));
-  if (error.Fail()) {
+  if (error.Fail() || !user_expression_sp) {
     LLDB_LOG(log, "== [UserExpression::Evaluate] Getting expression: {0} ==",
              error.AsCString());
     return lldb::eExpressionSetupError;

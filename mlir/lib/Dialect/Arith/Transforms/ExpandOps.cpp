@@ -161,7 +161,7 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
 };
 
 template <typename OpTy, arith::CmpFPredicate pred>
-struct MaxMinFOpConverter : public OpRewritePattern<OpTy> {
+struct MaximumMinimumFOpConverter : public OpRewritePattern<OpTy> {
 public:
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
@@ -179,7 +179,8 @@ public:
     Value select = rewriter.create<arith::SelectOp>(loc, cmp, lhs, rhs);
 
     // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
-    Value isNaN = rewriter.create<arith::IsNanOp>(loc, rhs, op.getFastmath());
+    Value isNaN = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::UNO,
+                                                 rhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }
@@ -320,8 +321,8 @@ struct ArithExpandOpsPass
       arith::CeilDivSIOp,
       arith::CeilDivUIOp,
       arith::FloorDivSIOp,
-      arith::MaxFOp,
-      arith::MinFOp
+      arith::MaximumFOp,
+      arith::MinimumFOp
     >();
 
     if (includeBf16) {
@@ -366,8 +367,8 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
   populateCeilFloorDivExpandOpsPatterns(patterns);
   // clang-format off
   patterns.add<
-    MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::UGT>,
-    MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::ULT>
+    MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
+    MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>
    >(patterns.getContext());
   // clang-format on
 }

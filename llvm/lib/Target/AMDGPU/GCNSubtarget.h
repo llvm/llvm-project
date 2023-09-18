@@ -22,6 +22,7 @@
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -125,7 +126,7 @@ protected:
   bool HasSDWAOutModsVOPC = false;
   bool HasDPP = false;
   bool HasDPP8 = false;
-  bool Has64BitDPP = false;
+  bool HasDPALU_DPP = false;
   bool HasPackedFP32Ops = false;
   bool HasImageInsts = false;
   bool HasExtendedImageInsts = false;
@@ -908,12 +909,17 @@ public:
     return HasDPP8;
   }
 
-  bool has64BitDPP() const {
-    return Has64BitDPP;
+  bool hasDPALU_DPP() const {
+    return HasDPALU_DPP;
   }
 
   bool hasPackedFP32Ops() const {
     return HasPackedFP32Ops;
+  }
+
+  // Has V_PK_MOV_B32 opcode
+  bool hasPkMovB32() const {
+    return GFX90AInsts;
   }
 
   bool hasFmaakFmamkF32Insts() const {
@@ -1172,6 +1178,9 @@ public:
   // \returns true if the target supports the pre-NGG legacy geometry path.
   bool hasLegacyGeometry() const { return getGeneration() < GFX11; }
 
+  // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
+  bool hasCvtFP8VOP1Bug() const { return true; }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
@@ -1368,6 +1377,79 @@ public:
     // the nop.
     return true;
   }
+};
+
+class GCNUserSGPRUsageInfo {
+public:
+  unsigned getNumUsedUserSGPRs() const;
+
+  bool hasImplicitBufferPtr() const { return ImplicitBufferPtr; }
+
+  bool hasPrivateSegmentBuffer() const { return PrivateSegmentBuffer; }
+
+  bool hasDispatchPtr() const { return DispatchPtr; }
+
+  bool hasQueuePtr() const { return QueuePtr; }
+
+  bool hasKernargSegmentPtr() const { return KernargSegmentPtr; }
+
+  bool hasDispatchID() const { return DispatchID; }
+
+  bool hasFlatScratchInit() const { return FlatScratchInit; }
+
+  enum UserSGPRID : unsigned {
+    ImplicitBufferPtrID = 0,
+    PrivateSegmentBufferID = 1,
+    DispatchPtrID = 2,
+    QueuePtrID = 3,
+    KernargSegmentPtrID = 4,
+    DispatchIdID = 5,
+    FlatScratchInitID = 6,
+    PrivateSegmentSizeID = 7
+  };
+
+  // Returns the size in number of SGPRs for preload user SGPR field.
+  static unsigned getNumUserSGPRForField(UserSGPRID ID) {
+    switch (ID) {
+    case ImplicitBufferPtrID:
+      return 2;
+    case PrivateSegmentBufferID:
+      return 4;
+    case DispatchPtrID:
+      return 2;
+    case QueuePtrID:
+      return 2;
+    case KernargSegmentPtrID:
+      return 2;
+    case DispatchIdID:
+      return 2;
+    case FlatScratchInitID:
+      return 2;
+    case PrivateSegmentSizeID:
+      return 1;
+    }
+    llvm_unreachable("Unknown UserSGPRID.");
+  }
+
+  GCNUserSGPRUsageInfo(const Function &F, const GCNSubtarget &ST);
+
+private:
+  // Private memory buffer
+  // Compute directly in sgpr[0:1]
+  // Other shaders indirect 64-bits at sgpr[0:1]
+  bool ImplicitBufferPtr = false;
+
+  bool PrivateSegmentBuffer = false;
+
+  bool DispatchPtr = false;
+
+  bool QueuePtr = false;
+
+  bool KernargSegmentPtr = false;
+
+  bool DispatchID = false;
+
+  bool FlatScratchInit = false;
 };
 
 } // end namespace llvm

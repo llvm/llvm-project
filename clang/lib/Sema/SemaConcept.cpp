@@ -13,12 +13,14 @@
 #include "clang/Sema/SemaConcept.h"
 #include "TreeTransform.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
@@ -183,6 +185,7 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
   ConstraintExpr = ConstraintExpr->IgnoreParenImpCasts();
 
   if (LogicalBinOp BO = ConstraintExpr) {
+    auto EffectiveDetailEnd = Satisfaction.Details.end();
     ExprResult LHSRes = calculateConstraintSatisfaction(
         S, BO.getLHS(), Satisfaction, Evaluator);
 
@@ -215,6 +218,19 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
         S, BO.getRHS(), Satisfaction, std::forward<AtomicEvaluator>(Evaluator));
     if (RHSRes.isInvalid())
       return ExprError();
+
+    bool IsRHSSatisfied = Satisfaction.IsSatisfied;
+    // Current implementation adds diagnostic information about the falsity
+    // of each false atomic constraint expression when it evaluates them.
+    // When the evaluation results to `false || true`, the information
+    // generated during the evaluation of left-hand side is meaningless
+    // because the whole expression evaluates to true.
+    // The following code removes the irrelevant diagnostic information.
+    // FIXME: We should probably delay the addition of diagnostic information
+    // until we know the entire expression is false.
+    if (BO.isOr() && IsRHSSatisfied)
+      Satisfaction.Details.erase(EffectiveDetailEnd,
+                                 Satisfaction.Details.end());
 
     return BO.recreateBinOp(S, LHSRes, RHSRes);
   }
@@ -540,11 +556,6 @@ bool Sema::addInstantiatedCapturesToScope(
   auto AddSingleCapture = [&](const ValueDecl *CapturedPattern,
                               unsigned Index) {
     ValueDecl *CapturedVar = LambdaClass->getCapture(Index)->getCapturedVar();
-    if (cast<CXXMethodDecl>(Function)->isConst()) {
-      QualType T = CapturedVar->getType();
-      T.addConst();
-      CapturedVar->setType(T);
-    }
     if (CapturedVar->isInitCapture())
       Scope.InstantiatedLocal(CapturedPattern, CapturedVar);
   };
@@ -603,11 +614,6 @@ bool Sema::SetupConstraintScope(
       if (addInstantiatedParametersToScope(FD, FromMemTempl->getTemplatedDecl(),
                                            Scope, MLTAL))
         return true;
-      // Make sure the captures are also added to the instantiation scope.
-      if (isLambdaCallOperator(FD) &&
-          addInstantiatedCapturesToScope(FD, FromMemTempl->getTemplatedDecl(),
-                                         Scope, MLTAL))
-        return true;
     }
 
     return false;
@@ -631,11 +637,6 @@ bool Sema::SetupConstraintScope(
     // Case where this was not a template, but instantiated as a
     // child-function.
     if (addInstantiatedParametersToScope(FD, InstantiatedFrom, Scope, MLTAL))
-      return true;
-
-    // Make sure the captures are also added to the instantiation scope.
-    if (isLambdaCallOperator(FD) &&
-        addInstantiatedCapturesToScope(FD, InstantiatedFrom, Scope, MLTAL))
       return true;
   }
 
@@ -714,6 +715,10 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
     Record = const_cast<CXXRecordDecl *>(Method->getParent());
   }
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
+
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
+      *this, const_cast<FunctionDecl *>(FD), *MLTAL, Scope);
+
   return CheckConstraintSatisfaction(
       FD, {FD->getTrailingRequiresClause()}, *MLTAL,
       SourceRange(UsageLoc.isValid() ? UsageLoc : FD->getLocation()),
@@ -900,12 +905,10 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
     ThisQuals = Method->getMethodQualifiers();
     Record = Method->getParent();
   }
+
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-  FunctionScopeRAII FuncScope(*this);
-  if (isLambdaCallOperator(Decl))
-    PushLambdaScope();
-  else
-    FuncScope.disable();
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
+      *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
 
   llvm::SmallVector<Expr *, 1> Converted;
   return CheckConstraintSatisfaction(Template, TemplateAC, Converted, *MLTAL,

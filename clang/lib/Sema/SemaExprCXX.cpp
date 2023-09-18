@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
@@ -138,9 +139,7 @@ ParsedType Sema::getConstructorName(IdentifierInfo &II,
   return ParsedType::make(T);
 }
 
-ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
-                                   IdentifierInfo &II,
-                                   SourceLocation NameLoc,
+ParsedType Sema::getDestructorName(IdentifierInfo &II, SourceLocation NameLoc,
                                    Scope *S, CXXScopeSpec &SS,
                                    ParsedType ObjectTypePtr,
                                    bool EnteringContext) {
@@ -866,12 +865,20 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
 
 ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
                                bool IsThrownVarInScope) {
-  // Don't report an error if 'throw' is used in system headers.
-  if (!getLangOpts().CXXExceptions &&
+  const llvm::Triple &T = Context.getTargetInfo().getTriple();
+  const bool IsOpenMPGPUTarget =
+      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+  // Don't report an error if 'throw' is used in system headers or in an OpenMP
+  // target region compiled for a GPU architecture.
+  if (!IsOpenMPGPUTarget && !getLangOpts().CXXExceptions &&
       !getSourceManager().isInSystemHeader(OpLoc) && !getLangOpts().CUDA) {
     // Delay error emission for the OpenMP device code.
     targetDiag(OpLoc, diag::err_exceptions_disabled) << "throw";
   }
+
+  // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
+  if (IsOpenMPGPUTarget)
+    targetDiag(OpLoc, diag::warn_throw_not_valid_on_target) << T.str();
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
@@ -1210,7 +1217,7 @@ QualType Sema::getCurrentThisType() {
 
   if (CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(DC)) {
     if (method && method->isInstance())
-      ThisTy = method->getThisType();
+      ThisTy = method->getThisType().getNonReferenceType();
   }
 
   if (ThisTy.isNull() && isLambdaCallOperator(CurContext) &&
@@ -1252,7 +1259,8 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
   QualType T = S.Context.getRecordType(Record);
   T = S.getASTContext().getQualifiedType(T, CXXThisTypeQuals);
 
-  S.CXXThisTypeOverride = S.Context.getPointerType(T);
+  S.CXXThisTypeOverride =
+      S.Context.getLangOpts().HLSL ? T : S.Context.getPointerType(T);
 
   this->Enabled = true;
 }
@@ -1399,14 +1407,7 @@ ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
 
 Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,
                              bool IsImplicit) {
-  if (getLangOpts().HLSL && Type.getTypePtr()->isPointerType()) {
-    auto *This = new (Context)
-        CXXThisExpr(Loc, Type.getTypePtr()->getPointeeType(), IsImplicit);
-    This->setValueKind(ExprValueKind::VK_LValue);
-    MarkThisReferenced(This);
-    return This;
-  }
-  auto *This = new (Context) CXXThisExpr(Loc, Type, IsImplicit);
+  auto *This = CXXThisExpr::Create(Context, Loc, Type, IsImplicit);
   MarkThisReferenced(This);
   return This;
 }
@@ -3959,7 +3960,7 @@ void Sema::CheckVirtualDtorCall(CXXDestructorDecl *dtor, SourceLocation Loc,
   if (getSourceManager().isInSystemHeader(PointeeRD->getLocation()))
     return;
 
-  QualType ClassType = dtor->getThisType()->getPointeeType();
+  QualType ClassType = dtor->getThisObjectType();
   if (PointeeRD->isAbstract()) {
     // If the class is abstract, we warn by default, because we're
     // sure the code has undefined behavior.
@@ -5409,14 +5410,15 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   if (Kind <= UTT_Last)
     return EvaluateUnaryTypeTrait(S, Kind, KWLoc, Args[0]->getType());
 
-  // Evaluate BTT_ReferenceBindsToTemporary alongside the IsConstructible
-  // traits to avoid duplication.
-  if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary)
+  // Evaluate ReferenceBindsToTemporary and ReferenceConstructsFromTemporary
+  // alongside the IsConstructible traits to avoid duplication.
+  if (Kind <= BTT_Last && Kind != BTT_ReferenceBindsToTemporary && Kind != BTT_ReferenceConstructsFromTemporary)
     return EvaluateBinaryTypeTrait(S, Kind, Args[0]->getType(),
                                    Args[1]->getType(), RParenLoc);
 
   switch (Kind) {
   case clang::BTT_ReferenceBindsToTemporary:
+  case clang::BTT_ReferenceConstructsFromTemporary:
   case clang::TT_IsConstructible:
   case clang::TT_IsNothrowConstructible:
   case clang::TT_IsTriviallyConstructible: {
@@ -5493,11 +5495,23 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     if (Kind == clang::TT_IsConstructible)
       return true;
 
-    if (Kind == clang::BTT_ReferenceBindsToTemporary) {
+    if (Kind == clang::BTT_ReferenceBindsToTemporary || Kind == clang::BTT_ReferenceConstructsFromTemporary) {
       if (!T->isReferenceType())
         return false;
 
-      return !Init.isDirectReferenceBinding();
+      if (!Init.isDirectReferenceBinding())
+        return true;
+
+      if (Kind == clang::BTT_ReferenceBindsToTemporary)
+        return false;
+
+      QualType U = Args[1]->getType();
+      if (U->isReferenceType())
+        return false;
+
+      QualType TPtr = S.Context.getPointerType(S.BuiltinRemoveReference(T, UnaryTransformType::RemoveCVRef, {}));
+      QualType UPtr = S.Context.getPointerType(S.BuiltinRemoveReference(U, UnaryTransformType::RemoveCVRef, {}));
+      return EvaluateBinaryTypeTrait(S, TypeTrait::BTT_IsConvertibleTo, UPtr, TPtr, RParenLoc);
     }
 
     if (Kind == clang::TT_IsNothrowConstructible)
@@ -6305,7 +6319,7 @@ static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
 
 static bool isValidSizelessVectorForConditionalCondition(ASTContext &Ctx,
                                                          QualType CondTy) {
-  if (!CondTy->isVLSTBuiltinType())
+  if (!CondTy->isSveVLSBuiltinType())
     return false;
   const QualType EltTy =
       cast<BuiltinType>(CondTy.getCanonicalType())->getSveEltType(Ctx);
@@ -6417,10 +6431,10 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
 
   QualType LHSType = LHS.get()->getType();
   const auto *LHSBT =
-      LHSType->isVLSTBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
+      LHSType->isSveVLSBuiltinType() ? LHSType->getAs<BuiltinType>() : nullptr;
   QualType RHSType = RHS.get()->getType();
   const auto *RHSBT =
-      RHSType->isVLSTBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
+      RHSType->isSveVLSBuiltinType() ? RHSType->getAs<BuiltinType>() : nullptr;
 
   QualType ResultType;
 
@@ -6462,7 +6476,7 @@ QualType Sema::CheckSizelessVectorConditionalTypes(ExprResult &Cond,
     RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
   }
 
-  assert(!ResultType.isNull() && ResultType->isVLSTBuiltinType() &&
+  assert(!ResultType.isNull() && ResultType->isSveVLSBuiltinType() &&
          "Result should have been a vector type");
   auto *ResultBuiltinTy = ResultType->castAs<BuiltinType>();
   QualType ResultElementTy = ResultBuiltinTy->getSveEltType(Context);
@@ -9072,16 +9086,24 @@ Sema::BuildExprRequirement(
     MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray(),
                                          /*Final=*/false);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
-    Expr *IDC = Param->getTypeConstraint()->getImmediatelyDeclaredConstraint();
+    const TypeConstraint *TC = Param->getTypeConstraint();
+    assert(TC && "Type Constraint cannot be null here");
+    auto *IDC = TC->getImmediatelyDeclaredConstraint();
+    assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     if (Constraint.isInvalid()) {
-      Status = concepts::ExprRequirement::SS_ExprSubstitutionFailure;
-    } else {
-      SubstitutedConstraintExpr =
-          cast<ConceptSpecializationExpr>(Constraint.get());
-      if (!SubstitutedConstraintExpr->isSatisfied())
-        Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
+      return new (Context) concepts::ExprRequirement(
+          concepts::createSubstDiagAt(*this, IDC->getExprLoc(),
+                                      [&](llvm::raw_ostream &OS) {
+                                        IDC->printPretty(OS, /*Helper=*/nullptr,
+                                                         getPrintingPolicy());
+                                      }),
+          IsSimple, NoexceptLoc, ReturnTypeRequirement);
     }
+    SubstitutedConstraintExpr =
+        cast<ConceptSpecializationExpr>(Constraint.get());
+    if (!SubstitutedConstraintExpr->isSatisfied())
+      Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
   }
   return new (Context) concepts::ExprRequirement(E, IsSimple, NoexceptLoc,
                                                  ReturnTypeRequirement, Status,

@@ -2147,7 +2147,7 @@ def fir_DoLoopOp : region_Op<"do_loop",
 }
 
 def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-    "getRegionInvocationBounds"]>, RecursiveMemoryEffects,
+    "getRegionInvocationBounds", "getEntrySuccessorRegions"]>, RecursiveMemoryEffects,
     NoRegionArguments]> {
   let summary = "if-then-else conditional operation";
   let description = [{
@@ -2919,7 +2919,13 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+// fir.declare leads to no codegen so the side effects implementation should be
+// Pure. However, this would allow dead code elimination to remove these
+// operations if the values are unused. fir.declare may be used to generate
+// debug information so we would like to keep this around even if the value
+// is not used.
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
     DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 

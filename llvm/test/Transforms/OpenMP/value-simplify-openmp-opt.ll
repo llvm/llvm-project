@@ -664,7 +664,7 @@ define void @kernel_unknown_and_aligned1(i1 %c) "kernel" {
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
-; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    call void @sync()
@@ -676,7 +676,7 @@ define void @kernel_unknown_and_aligned1(i1 %c) "kernel" {
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
-; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    call void @sync()
@@ -704,7 +704,7 @@ define void @kernel_unknown_and_aligned2(i1 %c) "kernel" {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
 ; TUNIT-NEXT:    call void @sync()
-; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    call void @sync()
@@ -717,7 +717,7 @@ define void @kernel_unknown_and_aligned2(i1 %c) "kernel" {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
 ; CGSCC-NEXT:    call void @sync()
-; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    call void @sync()

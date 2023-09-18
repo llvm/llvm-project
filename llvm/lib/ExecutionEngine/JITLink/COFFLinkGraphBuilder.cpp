@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic COFF LinkGraph buliding code.
+// Generic COFF LinkGraph building code.
 //
 //===----------------------------------------------------------------------===//
 #include "COFFLinkGraphBuilder.h"
@@ -606,7 +606,7 @@ COFFLinkGraphBuilder::exportCOMDATSymbol(COFFSymbolIndex SymIndex,
                                          object::COFFSymbolRef Symbol) {
   Block *B = getGraphBlock(Symbol.getSectionNumber());
   auto &PendingComdatExport = PendingComdatExports[Symbol.getSectionNumber()];
-  // NOTE: ComdatDef->Legnth is the size of "section" not size of symbol.
+  // NOTE: ComdatDef->Length is the size of "section" not size of symbol.
   // We use zero symbol size to not reach out of bound of block when symbol
   // offset is non-zero.
   auto GSym = &G->addDefinedSymbol(

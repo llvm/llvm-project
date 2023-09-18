@@ -27,9 +27,9 @@ L2:
 define void @test_add_cbz_multiple_use(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_add_cbz_multiple_use:
 ; CHECK:       // %bb.0: // %common.ret
-; CHECK-NEXT:    mov w8, #10
-; CHECK-NEXT:    adds w9, w0, w1
-; CHECK-NEXT:    csel w8, w8, w9, ne
+; CHECK-NEXT:    adds w8, w0, w1
+; CHECK-NEXT:    mov w9, #10 // =0xa
+; CHECK-NEXT:    csel w8, w9, w8, ne
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %c = add nsw i32 %a, %b

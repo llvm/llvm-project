@@ -285,7 +285,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
       .setRelocationModel(triple.isOSBinFormatMachO() ? llvm::Reloc::PIC_
                                                       : llvm::Reloc::Static)
       .setMCJITMemoryManager(std::make_unique<MemoryManager>(*this))
-      .setOptLevel(llvm::CodeGenOpt::Less);
+      .setOptLevel(llvm::CodeGenOptLevel::Less);
 
   llvm::StringRef mArch;
   llvm::StringRef mCPU;
@@ -419,7 +419,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   if (m_failed_lookups.size()) {
     StreamString ss;
 
-    ss.PutCString("Couldn't lookup symbols:\n");
+    ss.PutCString("Couldn't look up symbols:\n");
 
     bool emitNewLine = false;
 

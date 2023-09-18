@@ -168,6 +168,30 @@ SVBOOL_TEST_UPL(__SVInt32_t, s) ;
 SVBOOL_TEST_UPL(__SVInt64_t, d) ;
 // CHECK: call <vscale x 16 x i1> asm sideeffect "fadd $0.d, $1.d, $2.d, $3.d\0A", "=w,@3Upl,w,w"(<vscale x 16 x i1> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3)
 
+#define SVBOOL_TEST_UPH(DT, KIND)\
+__SVBool_t func_bool_uph_##KIND(__SVBool_t in1, DT in2, DT in3)\
+{\
+  __SVBool_t out;\
+  asm volatile (\
+    "fadd %[out]." #KIND ", %[in1]." #KIND ", %[in2]." #KIND ", %[in3]." #KIND "\n"\
+    : [out] "=w" (out)\
+    :  [in1] "Uph" (in1),\
+      [in2] "w" (in2),\
+      [in3] "w" (in3)\
+    :);\
+  return out;\
+}
+
+SVBOOL_TEST_UPH(__SVInt8_t, b) ;
+// CHECK: call <vscale x 16 x i1> asm sideeffect "fadd $0.b, $1.b, $2.b, $3.b\0A", "=w,@3Uph,w,w"(<vscale x 16 x i1> %in1, <vscale x 16 x i8> %in2, <vscale x 16 x i8> %in3)
+SVBOOL_TEST_UPH(__SVInt16_t, h) ;
+// CHECK: call <vscale x 16 x i1> asm sideeffect "fadd $0.h, $1.h, $2.h, $3.h\0A", "=w,@3Uph,w,w"(<vscale x 16 x i1> %in1, <vscale x 8 x i16> %in2, <vscale x 8 x i16> %in3)
+SVBOOL_TEST_UPH(__SVInt32_t, s) ;
+// CHECK: call <vscale x 16 x i1> asm sideeffect "fadd $0.s, $1.s, $2.s, $3.s\0A", "=w,@3Uph,w,w"(<vscale x 16 x i1> %in1, <vscale x 4 x i32> %in2, <vscale x 4 x i32> %in3)
+SVBOOL_TEST_UPH(__SVInt64_t, d) ;
+// CHECK: call <vscale x 16 x i1> asm sideeffect "fadd $0.d, $1.d, $2.d, $3.d\0A", "=w,@3Uph,w,w"(<vscale x 16 x i1> %in1, <vscale x 2 x i64> %in2, <vscale x 2 x i64> %in3)
+
+
 #define SVFLOAT_TEST(DT,KIND)\
 DT func_float_##DT##KIND(DT inout1, DT in2)\
 {\

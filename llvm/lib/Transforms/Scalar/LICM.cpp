@@ -993,7 +993,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   // loop invariant). If so make them unconditional by moving them to their
   // immediate dominator. We iterate through the instructions in reverse order
   // which ensures that when we rehoist an instruction we rehoist its operands,
-  // and also keep track of where in the block we are rehoisting to to make sure
+  // and also keep track of where in the block we are rehoisting to make sure
   // that we rehoist instructions before the instructions that use them.
   Instruction *HoistPoint = nullptr;
   if (ControlFlowHoisting) {
@@ -1039,7 +1039,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 // invariant.start has no uses.
 static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
                                   Loop *CurLoop) {
-  Value *Addr = LI->getOperand(0);
+  Value *Addr = LI->getPointerOperand();
   const DataLayout &DL = LI->getModule()->getDataLayout();
   const TypeSize LocSizeInBits = DL.getTypeSizeInBits(LI->getType());
 
@@ -1055,21 +1055,6 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   if (LocSizeInBits.isScalable())
     return false;
 
-  // if the type is ptr addrspace(x), we know this is the type of
-  // llvm.invariant.start operand
-  auto *PtrASXTy = PointerType::get(LI->getContext(),
-                                    LI->getPointerAddressSpace());
-  unsigned BitcastsVisited = 0;
-  // Look through bitcasts until we reach the PtrASXTy type (this is
-  // invariant.start operand type).
-  // FIXME: We shouldn't really find such bitcasts with opaque pointers.
-  while (Addr->getType() != PtrASXTy) {
-    auto *BC = dyn_cast<BitCastInst>(Addr);
-    // Avoid traversing high number of bitcast uses.
-    if (++BitcastsVisited > MaxNumUsesTraversed || !BC)
-      return false;
-    Addr = BC->getOperand(0);
-  }
   // If we've ended up at a global/constant, bail. We shouldn't be looking at
   // uselists for non-local Values in a loop pass.
   if (isa<Constant>(Addr))
@@ -1489,8 +1474,9 @@ static Instruction *cloneInstructionInExitBlock(
     if (LI->wouldBeOutOfLoopUseRequiringLCSSA(Op.get(), PN.getParent())) {
       auto *OInst = cast<Instruction>(Op.get());
       PHINode *OpPN =
-        PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
-                        OInst->getName() + ".lcssa", &ExitBlock.front());
+          PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
+                          OInst->getName() + ".lcssa");
+      OpPN->insertBefore(ExitBlock.begin());
       for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
         OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
       Op = OpPN;
@@ -1832,7 +1818,8 @@ class LoopPromoter : public LoadAndStorePromoter {
     // We need to create an LCSSA PHI node for the incoming value and
     // store that.
     PHINode *PN = PHINode::Create(I->getType(), PredCache.size(BB),
-                                  I->getName() + ".lcssa", &BB->front());
+                                  I->getName() + ".lcssa");
+    PN->insertBefore(BB->begin());
     for (BasicBlock *Pred : PredCache.get(BB))
       PN->addIncoming(I, Pred);
     return PN;
@@ -1941,23 +1928,6 @@ bool isNotVisibleOnUnwindInLoop(const Value *Object, const Loop *L,
 
   return !RequiresNoCaptureBeforeUnwind ||
          isNotCapturedBeforeOrInLoop(Object, L, DT);
-}
-
-// We don't consider globals as writable: While the physical memory is writable,
-// we may not have provenance to perform the write.
-bool isWritableObject(const Value *Object) {
-  // TODO: Alloca might not be writable after its lifetime ends.
-  // See https://github.com/llvm/llvm-project/issues/51838.
-  if (isa<AllocaInst>(Object))
-    return true;
-
-  // TODO: Also handle sret.
-  if (auto *A = dyn_cast<Argument>(Object))
-    return A->hasByValAttr();
-
-  // TODO: Noalias has nothing to do with writability, this should check for
-  // an allocator function.
-  return isNoAliasCall(Object);
 }
 
 bool isThreadLocalObject(const Value *Object, const Loop *L, DominatorTree *DT,
@@ -2696,7 +2666,7 @@ static bool hoistFPAssociation(Instruction &I, Loop &L,
   Value *VariantOp = nullptr, *InvariantOp = nullptr;
 
   if (!match(&I, m_FMul(m_Value(VariantOp), m_Value(InvariantOp))) ||
-      !I.hasAllowReassoc())
+      !I.hasAllowReassoc() || !I.hasNoSignedZeros())
     return false;
   if (L.isLoopInvariant(VariantOp))
     std::swap(VariantOp, InvariantOp);
@@ -2711,7 +2681,7 @@ static bool hoistFPAssociation(Instruction &I, Loop &L,
     Worklist.push_back(VariantBinOp);
   while (!Worklist.empty()) {
     BinaryOperator *BO = Worklist.pop_back_val();
-    if (!BO->hasOneUse() || !BO->hasAllowReassoc())
+    if (!BO->hasOneUse() || !BO->hasAllowReassoc() || !BO->hasNoSignedZeros())
       return false;
     BinaryOperator *Op0, *Op1;
     if (match(BO, m_FAdd(m_BinOp(Op0), m_BinOp(Op1)))) {

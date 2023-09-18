@@ -868,16 +868,18 @@ static unsigned PrintUnexpected(DiagnosticsEngine &Diags, SourceManager *SourceM
       OS << "\n  (frontend)";
     else {
       OS << "\n ";
-      if (const FileEntry *File = SourceMgr->getFileEntryForID(
-                                                SourceMgr->getFileID(I->first)))
+      if (OptionalFileEntryRef File =
+              SourceMgr->getFileEntryRefForID(SourceMgr->getFileID(I->first)))
         OS << " File " << File->getName();
       OS << " Line " << SourceMgr->getPresumedLineNumber(I->first);
     }
     OS << ": " << I->second;
   }
 
+  std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-    << Kind << /*Unexpected=*/true << OS.str();
+      << KindStr << /*Unexpected=*/true << OS.str();
   return std::distance(diag_begin, diag_end);
 }
 
@@ -907,8 +909,10 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
     OS << ": " << D->Text;
   }
 
+  std::string Prefix = *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+  std::string KindStr = Prefix + "-" + Kind;
   Diags.Report(diag::err_verify_inconsistent_diags).setForceEmit()
-    << Kind << /*Unexpected=*/false << OS.str();
+      << KindStr << /*Unexpected=*/false << OS.str();
   return DL.size();
 }
 
@@ -1026,12 +1030,12 @@ void VerifyDiagnosticConsumer::UpdateParsedFileStatus(SourceManager &SM,
   if (FID.isInvalid())
     return;
 
-  const FileEntry *FE = SM.getFileEntryForID(FID);
+  OptionalFileEntryRef FE = SM.getFileEntryRefForID(FID);
 
   if (PS == IsParsed) {
     // Move the FileID from the unparsed set to the parsed set.
     UnparsedFiles.erase(FID);
-    ParsedFiles.insert(std::make_pair(FID, FE));
+    ParsedFiles.insert(std::make_pair(FID, FE ? &FE->getFileEntry() : nullptr));
   } else if (!ParsedFiles.count(FID) && !UnparsedFiles.count(FID)) {
     // Add the FileID to the unparsed set if we haven't seen it before.
 
@@ -1072,17 +1076,17 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Iterate through list of unparsed files.
     for (const auto &I : UnparsedFiles) {
       const UnparsedFileStatus &Status = I.second;
-      const FileEntry *FE = Status.getFile();
+      OptionalFileEntryRef FE = Status.getFile();
 
       // Skip files that have been parsed via an alias.
-      if (FE && ParsedFileCache.count(FE))
+      if (FE && ParsedFileCache.count(*FE))
         continue;
 
       // Report a fatal error if this file contained directives.
       if (Status.foundDirectives()) {
-        llvm::report_fatal_error(Twine("-verify directives found after rather"
-                                       " than during normal parsing of ",
-                                 StringRef(FE ? FE->getName() : "(unknown)")));
+        llvm::report_fatal_error("-verify directives found after rather"
+                                 " than during normal parsing of " +
+                                 (FE ? FE->getName() : "(unknown)"));
       }
     }
 

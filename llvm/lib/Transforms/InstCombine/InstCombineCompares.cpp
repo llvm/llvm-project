@@ -514,7 +514,8 @@ static bool canRewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
 static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
                               bool Before = true) {
   if (auto *PHI = dyn_cast<PHINode>(V)) {
-    Builder.SetInsertPoint(&*PHI->getParent()->getFirstInsertionPt());
+    BasicBlock *Parent = PHI->getParent();
+    Builder.SetInsertPoint(Parent, Parent->getFirstInsertionPt());
     return;
   }
   if (auto *I = dyn_cast<Instruction>(V)) {
@@ -526,7 +527,7 @@ static void setInsertionPoint(IRBuilder<> &Builder, Value *V,
   if (auto *A = dyn_cast<Argument>(V)) {
     // Set the insertion point in the entry block.
     BasicBlock &Entry = A->getParent()->getEntryBlock();
-    Builder.SetInsertPoint(&*Entry.getFirstInsertionPt());
+    Builder.SetInsertPoint(&Entry, Entry.getFirstInsertionPt());
     return;
   }
   // Otherwise, this is a constant and we don't need to set a new
@@ -3893,12 +3894,8 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
           Constant::getNullValue(LHSI->getOperand(0)->getType()));
     break;
   case Instruction::PHI:
-    // Only fold icmp into the PHI if the phi and icmp are in the same
-    // block.  If in the same block, we're encouraging jump threading.  If
-    // not, we are just pessimizing the code by making an i1 phi.
-    if (LHSI->getParent() == I.getParent())
-      if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
-        return NV;
+    if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
+      return NV;
     break;
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, 0
@@ -4430,6 +4427,66 @@ static Instruction *foldICmpXNegX(ICmpInst &I,
   return nullptr;
 }
 
+static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
+                                  InstCombinerImpl &IC) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
+  // Normalize and operand as operand 0.
+  CmpInst::Predicate Pred = I.getPredicate();
+  if (match(Op1, m_c_And(m_Specific(Op0), m_Value()))) {
+    std::swap(Op0, Op1);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  if (!match(Op0, m_c_And(m_Specific(Op1), m_Value(A))))
+    return nullptr;
+
+  // (icmp (X & Y) u< X --> (X & Y) != X
+  if (Pred == ICmpInst::ICMP_ULT)
+    return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+
+  // (icmp (X & Y) u>= X --> (X & Y) == X
+  if (Pred == ICmpInst::ICMP_UGE)
+    return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
+
+  return nullptr;
+}
+
+static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
+                                 InstCombinerImpl &IC) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
+
+  // Normalize or operand as operand 0.
+  CmpInst::Predicate Pred = I.getPredicate();
+  if (match(Op1, m_c_Or(m_Specific(Op0), m_Value(A)))) {
+    std::swap(Op0, Op1);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  } else if (!match(Op0, m_c_Or(m_Specific(Op1), m_Value(A)))) {
+    return nullptr;
+  }
+
+  // icmp (X | Y) u<= X --> (X | Y) == X
+  if (Pred == ICmpInst::ICMP_ULE)
+    return new ICmpInst(ICmpInst::ICMP_EQ, Op0, Op1);
+
+  // icmp (X | Y) u> X --> (X | Y) != X
+  if (Pred == ICmpInst::ICMP_UGT)
+    return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
+
+  if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
+    // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
+    if (IC.isFreeToInvert(Op1, Op1->hasOneUse()))
+      return new ICmpInst(Pred,
+                          IC.Builder.CreateAnd(A, IC.Builder.CreateNot(Op1)),
+                          Constant::getNullValue(Op1->getType()));
+    // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
+    if (IC.isFreeToInvert(A, A->hasOneUse()))
+      return new ICmpInst(Pred,
+                          IC.Builder.CreateOr(Op1, IC.Builder.CreateNot(A)),
+                          Constant::getAllOnesValue(Op1->getType()));
+  }
+  return nullptr;
+}
+
 static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
                                   InstCombinerImpl &IC) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1), *A;
@@ -4752,6 +4809,8 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
 
   if (Instruction * R = foldICmpXorXX(I, Q, *this))
     return R;
+  if (Instruction *R = foldICmpOrXX(I, Q, *this))
+    return R;
 
   {
     // Try to remove shared multiplier from comparison:
@@ -4921,6 +4980,9 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   if (Value *V = foldICmpWithLowBitMaskedVal(I, Builder))
     return replaceInstUsesWith(I, V);
 
+  if (Instruction *R = foldICmpAndXX(I, Q, *this))
+    return R;
+
   if (Value *V = foldICmpWithTruncSignExtendedVal(I, Builder))
     return replaceInstUsesWith(I, V);
 
@@ -4930,88 +4992,131 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   return nullptr;
 }
 
-/// Fold icmp Pred min|max(X, Y), X.
-static Instruction *foldICmpWithMinMax(ICmpInst &Cmp) {
+/// Fold icmp Pred min|max(X, Y), Z.
+Instruction *
+InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
+                                         MinMaxIntrinsic *MinMax, Value *Z,
+                                         ICmpInst::Predicate Pred) {
+  Value *X = MinMax->getLHS();
+  Value *Y = MinMax->getRHS();
+  if (ICmpInst::isSigned(Pred) && !MinMax->isSigned())
+    return nullptr;
+  if (ICmpInst::isUnsigned(Pred) && MinMax->isSigned())
+    return nullptr;
+  SimplifyQuery Q = SQ.getWithInstruction(&I);
+  auto IsCondKnownTrue = [](Value *Val) -> std::optional<bool> {
+    if (!Val)
+      return std::nullopt;
+    if (match(Val, m_One()))
+      return true;
+    if (match(Val, m_Zero()))
+      return false;
+    return std::nullopt;
+  };
+  auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
+  auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
+  if (!CmpXZ.has_value() && !CmpYZ.has_value())
+    return nullptr;
+  if (!CmpXZ.has_value()) {
+    std::swap(X, Y);
+    std::swap(CmpXZ, CmpYZ);
+  }
+
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_NE: {
+    // If X == Z:
+    //     Expr       Result
+    // min(X, Y) == Z X <= Y
+    // max(X, Y) == Z X >= Y
+    // min(X, Y) != Z X > Y
+    // max(X, Y) != Z X < Y
+    if ((Pred == ICmpInst::ICMP_EQ) == *CmpXZ) {
+      ICmpInst::Predicate NewPred =
+          ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+      if (Pred == ICmpInst::ICMP_NE)
+        NewPred = ICmpInst::getInversePredicate(NewPred);
+      return ICmpInst::Create(Instruction::ICmp, NewPred, X, Y);
+    }
+    // Otherwise (X != Z, nofold):
+    //       Expr      Result
+    // min(X, Y) == Z X > Y || Y == Z
+    // max(X, Y) == Z X < Y || Y == Z
+    // min(X, Y) != Z X <= Y && Y != Z
+    // max(X, Y) != Z X >= Y && Y != Z
+    break;
+  }
+  case ICmpInst::ICMP_SLT:
+  case ICmpInst::ICMP_ULT:
+  case ICmpInst::ICMP_SLE:
+  case ICmpInst::ICMP_ULE:
+  case ICmpInst::ICMP_SGT:
+  case ICmpInst::ICMP_UGT:
+  case ICmpInst::ICMP_SGE:
+  case ICmpInst::ICMP_UGE: {
+    auto FoldIntoCmpYZ = [&]() -> Instruction * {
+      if (CmpYZ.has_value())
+        return replaceInstUsesWith(I,
+                                   ConstantInt::getBool(I.getType(), *CmpYZ));
+      return ICmpInst::Create(Instruction::ICmp, Pred, Y, Z);
+    };
+
+    bool IsSame = MinMax->getPredicate() == ICmpInst::getStrictPredicate(Pred);
+    if (*CmpXZ) {
+      if (IsSame) {
+        //      Expr        Fact    Result
+        // min(X, Y) < Z    X < Z   true
+        // min(X, Y) <= Z   X <= Z  true
+        // max(X, Y) > Z    X > Z   true
+        // max(X, Y) >= Z   X >= Z  true
+        return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+      } else {
+        //      Expr        Fact    Result
+        // max(X, Y) < Z    X < Z   Y < Z
+        // max(X, Y) <= Z   X <= Z  Y <= Z
+        // min(X, Y) > Z    X > Z   Y > Z
+        // min(X, Y) >= Z   X >= Z  Y >= Z
+        return FoldIntoCmpYZ();
+      }
+    } else {
+      if (IsSame) {
+        //      Expr        Fact    Result
+        // min(X, Y) < Z    X >= Z  Y < Z
+        // min(X, Y) <= Z   X > Z   Y <= Z
+        // max(X, Y) > Z    X <= Z  Y > Z
+        // max(X, Y) >= Z   X < Z   Y >= Z
+        return FoldIntoCmpYZ();
+      } else {
+        //      Expr        Fact    Result
+        // max(X, Y) < Z    X >= Z  false
+        // max(X, Y) <= Z   X > Z   false
+        // min(X, Y) > Z    X <= Z  false
+        // min(X, Y) >= Z   X < Z   false
+        return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+      }
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+Instruction *InstCombinerImpl::foldICmpWithMinMax(ICmpInst &Cmp) {
   ICmpInst::Predicate Pred = Cmp.getPredicate();
-  Value *Op0 = Cmp.getOperand(0);
-  Value *X = Cmp.getOperand(1);
+  Value *Lhs = Cmp.getOperand(0);
+  Value *Rhs = Cmp.getOperand(1);
 
-  // Canonicalize minimum or maximum operand to LHS of the icmp.
-  if (match(X, m_c_SMin(m_Specific(Op0), m_Value())) ||
-      match(X, m_c_SMax(m_Specific(Op0), m_Value())) ||
-      match(X, m_c_UMin(m_Specific(Op0), m_Value())) ||
-      match(X, m_c_UMax(m_Specific(Op0), m_Value()))) {
-    std::swap(Op0, X);
-    Pred = Cmp.getSwappedPredicate();
+  if (MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(Lhs)) {
+    if (Instruction *Res = foldICmpWithMinMaxImpl(Cmp, MinMax, Rhs, Pred))
+      return Res;
   }
 
-  Value *Y;
-  if (match(Op0, m_c_SMin(m_Specific(X), m_Value(Y)))) {
-    // smin(X, Y)  == X --> X s<= Y
-    // smin(X, Y) s>= X --> X s<= Y
-    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SGE)
-      return new ICmpInst(ICmpInst::ICMP_SLE, X, Y);
-
-    // smin(X, Y) != X --> X s> Y
-    // smin(X, Y) s< X --> X s> Y
-    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SLT)
-      return new ICmpInst(ICmpInst::ICMP_SGT, X, Y);
-
-    // These cases should be handled in InstSimplify:
-    // smin(X, Y) s<= X --> true
-    // smin(X, Y) s> X --> false
-    return nullptr;
-  }
-
-  if (match(Op0, m_c_SMax(m_Specific(X), m_Value(Y)))) {
-    // smax(X, Y)  == X --> X s>= Y
-    // smax(X, Y) s<= X --> X s>= Y
-    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_SLE)
-      return new ICmpInst(ICmpInst::ICMP_SGE, X, Y);
-
-    // smax(X, Y) != X --> X s< Y
-    // smax(X, Y) s> X --> X s< Y
-    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_SGT)
-      return new ICmpInst(ICmpInst::ICMP_SLT, X, Y);
-
-    // These cases should be handled in InstSimplify:
-    // smax(X, Y) s>= X --> true
-    // smax(X, Y) s< X --> false
-    return nullptr;
-  }
-
-  if (match(Op0, m_c_UMin(m_Specific(X), m_Value(Y)))) {
-    // umin(X, Y)  == X --> X u<= Y
-    // umin(X, Y) u>= X --> X u<= Y
-    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_UGE)
-      return new ICmpInst(ICmpInst::ICMP_ULE, X, Y);
-
-    // umin(X, Y) != X --> X u> Y
-    // umin(X, Y) u< X --> X u> Y
-    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_ULT)
-      return new ICmpInst(ICmpInst::ICMP_UGT, X, Y);
-
-    // These cases should be handled in InstSimplify:
-    // umin(X, Y) u<= X --> true
-    // umin(X, Y) u> X --> false
-    return nullptr;
-  }
-
-  if (match(Op0, m_c_UMax(m_Specific(X), m_Value(Y)))) {
-    // umax(X, Y)  == X --> X u>= Y
-    // umax(X, Y) u<= X --> X u>= Y
-    if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_ULE)
-      return new ICmpInst(ICmpInst::ICMP_UGE, X, Y);
-
-    // umax(X, Y) != X --> X u< Y
-    // umax(X, Y) u> X --> X u< Y
-    if (Pred == CmpInst::ICMP_NE || Pred == CmpInst::ICMP_UGT)
-      return new ICmpInst(ICmpInst::ICMP_ULT, X, Y);
-
-    // These cases should be handled in InstSimplify:
-    // umax(X, Y) u>= X --> true
-    // umax(X, Y) u< X --> false
-    return nullptr;
+  if (MinMaxIntrinsic *MinMax = dyn_cast<MinMaxIntrinsic>(Rhs)) {
+    if (Instruction *Res = foldICmpWithMinMaxImpl(
+            Cmp, MinMax, Lhs, ICmpInst::getSwappedPredicate(Pred)))
+      return Res;
   }
 
   return nullptr;
@@ -7538,12 +7643,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
     case Instruction::PHI:
-      // Only fold fcmp into the PHI if the phi and fcmp are in the same
-      // block.  If in the same block, we're encouraging jump threading.  If
-      // not, we are just pessimizing the code by making an i1 phi.
-      if (LHSI->getParent() == I.getParent())
-        if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
-          return NV;
+      if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))
+        return NV;
       break;
     case Instruction::SIToFP:
     case Instruction::UIToFP:

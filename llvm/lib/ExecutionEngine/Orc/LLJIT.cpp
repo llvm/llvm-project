@@ -752,6 +752,12 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::x86_64:
       UseJITLink = !TT.isOSBinFormatCOFF();
       break;
+    case Triple::ppc64:
+      UseJITLink = TT.isPPC64ELFv2ABI();
+      break;
+    case Triple::ppc64le:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -787,13 +793,15 @@ Error LLJITBuilderState::prepareForConstruction() {
       dbgs() << ")\n";
     });
 
-    SetupProcessSymbolsJITDylib = [this](JITDylib &JD) -> Error {
+    SetupProcessSymbolsJITDylib = [this](LLJIT &J) -> Expected<JITDylibSP> {
+      auto &JD =
+          J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       auto G = orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
           DL->getGlobalPrefix());
       if (!G)
         return G.takeError();
       JD.addGenerator(std::move(*G));
-      return Error::success();
+      return &JD;
     };
   }
 
@@ -998,9 +1006,10 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
   }
 
   if (S.SetupProcessSymbolsJITDylib) {
-    ProcessSymbols = &ES->createBareJITDylib("<Process Symbols>");
-    if (auto Err2 = S.SetupProcessSymbolsJITDylib(*ProcessSymbols)) {
-      Err = std::move(Err2);
+    if (auto ProcSymsJD = S.SetupProcessSymbolsJITDylib(*this)) {
+      ProcessSymbols = ProcSymsJD->get();
+    } else {
+      Err = ProcSymsJD.takeError();
       return;
     }
   }

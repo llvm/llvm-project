@@ -36,8 +36,6 @@ public:
     Integer,
     Pointer,
     Record,
-    // Deprecated synonym for `Record`
-    Struct = Record,
 
     // TODO: Top values should not be need to be type-specific.
     TopBool,
@@ -83,8 +81,8 @@ private:
 /// transitivity. It does *not* include comparison of `Properties`.
 ///
 /// Computes equivalence for these subclasses:
-/// * ReferenceValue, PointerValue -- pointee locations are equal. Does not
-///   compute deep equality of `Value` at said location.
+/// * PointerValue -- pointee locations are equal. Does not compute deep
+///   equality of `Value` at said location.
 /// * TopBoolValue -- both are `TopBoolValue`s.
 ///
 /// Otherwise, falls back to pointer equality.
@@ -227,21 +225,9 @@ public:
   /// Returns the storage location that this `RecordValue` is associated with.
   RecordStorageLocation &getLoc() const { return Loc; }
 
-  /// Deprecated synonym for `getLoc()`.
-  RecordStorageLocation &getAggregateLoc() const { return Loc; }
-
-  /// Convenience function that returns the child storage location for `Field`.
-  /// See also the documentation for `RecordStorageLocation::getChild()`.
-  StorageLocation *getChild(const ValueDecl &Field) const {
-    return Loc.getChild(Field);
-  }
-
 private:
   RecordStorageLocation &Loc;
 };
-
-/// Deprecated synonym for `RecordValue`.
-using StructValue = RecordValue;
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val);
 

@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fdebugger-support -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fdebugger-support -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// rdar://10997647
 
 @interface I
 {

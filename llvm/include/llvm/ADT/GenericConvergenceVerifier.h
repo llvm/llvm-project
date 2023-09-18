@@ -63,9 +63,11 @@ private:
   // and not the token values.
   DenseMap<const InstructionT *, const InstructionT *> Tokens;
 
+  bool SeenFirstConvOp = false;
+
+  static bool isInsideConvergentFunction(const InstructionT &I);
+  static bool isConvergent(const InstructionT &I);
   const InstructionT *findAndCheckConvergenceTokenUsed(const InstructionT &I);
-  bool isControlledConvergent(const InstructionT &I);
-  bool isConvergent(const InstructionT &I) const;
 
   void reportFailure(const Twine &Message, ArrayRef<Printable> Values);
 };

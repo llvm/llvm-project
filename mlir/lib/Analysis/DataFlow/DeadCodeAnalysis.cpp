@@ -259,7 +259,8 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (isRegionOrCallableReturn(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a region.
-      visitRegionTerminator(op, branch);
+      visitRegionTerminator(cast<RegionBranchTerminatorOpInterface>(op),
+                            branch);
     } else if (auto callable =
                    dyn_cast<CallableOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a callable.
@@ -361,7 +362,7 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(/*index=*/{}, *operands, successors);
+  branch.getEntrySuccessorRegions(*operands, successors);
   for (const RegionSuccessor &successor : successors) {
     // The successor can be either an entry block or the parent operation.
     ProgramPoint point = successor.getSuccessor()
@@ -378,15 +379,14 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   }
 }
 
-void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
-                                             RegionBranchOpInterface branch) {
+void DeadCodeAnalysis::visitRegionTerminator(
+    RegionBranchTerminatorOpInterface op, RegionBranchOpInterface branch) {
   std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(op->getParentRegion()->getRegionNumber(),
-                             *operands, successors);
+  op.getSuccessorRegions(*operands, successors);
 
   // Mark successor region entry blocks as executable and add this op to the
   // list of predecessors.

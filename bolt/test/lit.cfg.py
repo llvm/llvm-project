@@ -72,6 +72,9 @@ if config.bolt_enable_runtime:
 if config.gnu_ld:
     config.available_features.add("gnu_ld")
 
+if lit.util.which("fuser"):
+    config.available_features.add("fuser")
+
 llvm_config.use_default_substitutions()
 
 llvm_config.config.environment["CLANG"] = config.bolt_clang

@@ -1,4 +1,4 @@
-// Test that infinite loop in rdar://10418538 was fixed.
+// Test that infinite loop was fixed.
 
 // Without PCH
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class -include %s -include %s %s

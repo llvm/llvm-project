@@ -28,4 +28,3 @@ RUN: llvm-dwarfdump -a %t.dSYM/Contents/Resources/DWARF/basic-lto-dw4.macho.x86_
 RUN: not dsymutil -f -oso-prepend-path=%p/.. %t/basic.macho.x86_64 %t/basic-archive.macho.x86_64 %t/basic-lto.macho.x86_64 %t/basic-lto-dw4.macho.x86_64 -o %t.dSYM 2>&1 | FileCheck %s
 
 CHECK: error: cannot use -o with multiple inputs in flat mode
-

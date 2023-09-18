@@ -44,8 +44,8 @@ define void @add_i64_ext_load_store(<1 x i64> %A, ptr %B) nounwind {
 define i64 @add_v2i64_ext_load(<2 x i64> %A, ptr %B) nounwind {
 ; CHECK-LABEL: add_v2i64_ext_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    add x0, x9, x8
 ; CHECK-NEXT:    ret
   %a = extractelement <2 x i64> %A, i32 0
@@ -70,8 +70,8 @@ define i32 @add_i32_ext_load(<1 x i32> %A, ptr %B) nounwind {
 ; CHECK-LABEL: add_i32_ext_load:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    add w0, w9, w8
 ; CHECK-NEXT:    ret
   %a = extractelement <1 x i32> %A, i32 0

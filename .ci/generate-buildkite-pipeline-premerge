@@ -13,11 +13,25 @@
 #
 # See https://buildkite.com/docs/agent/v3/cli-pipeline#pipeline-format.
 #
+# As this outputs a yaml file, it's possible to log messages to stderr or
+# prefix with "#".
 
-if ! git diff --name-only HEAD~1 | grep -q -E "^libcxx/|^libcxxabi/|^libunwind/|^runtimes/|^cmake/|^clang/"; then
-  # libcxx/, libcxxabi/, libunwind/, runtimes/, cmake/ or clang/ are not affected
-  exit 0
-fi
+
+set -eu
+set -o pipefail
+
+# Environment variables script works with:
+# List of files affected by this commit
+: ${MODIFIED_FILES:=$(git diff --name-only HEAD~1)}
+# Filter rules for generic windows tests
+: ${WINDOWS_AGENTS:='{"queue": "windows"}'}
+# Filter rules for generic linux tests
+: ${LINUX_AGENTS:='{"queue": "linux"}'}
+# Service agents, for interacting with Phabricator.
+: ${SERVICE_AGENTS:='{"queue": "service"}'}
+# Set by buildkite
+: ${BUILDKITE_COMMIT:=}
+: ${BUILDKITE_BRANCH:=}
 
 reviewID="$(git log --format=%B -n 1 | sed -nE 's/^Review-ID:[[:space:]]*(.+)$/\1/p')"
 if [[ "${reviewID}" != "" ]]; then
@@ -30,24 +44,265 @@ cat <<EOF
 steps:
 EOF
 
-# If libc++ or one of the runtimes directories changed
-if git diff --name-only HEAD~1 | grep -q -E "^libcxx/|^libcxxabi/|^libunwind/|^runtimes/|^cmake/"; then
+echo "Files modified:" >&2
+echo "$MODIFIED_FILES" >&2
+modified_dirs=$(echo "$MODIFIED_FILES" | cut -d'/' -f1 | sort -u)
+echo "Directories modified:" >&2
+echo "$modified_dirs" >&2
+
+function compute-projects-to-test() {
+  projects=${@}
+  for project in ${projects}; do
+    echo "${project}"
+    case ${project} in
+    lld)
+      for p in bolt cross-project-tests; do
+        echo $p
+      done
+    ;;
+    llvm)
+      for p in bolt clang clang-tools-extra flang lld lldb mlir polly; do
+        echo $p
+      done
+    ;;
+    clang)
+      for p in clang-tools-extra compiler-rt flang libc lldb openmp cross-project-tests; do
+        echo $p
+      done
+    ;;
+    clang-tools-extra)
+      echo libc
+    ;;
+    mlir)
+      echo flang
+    ;;
+    *)
+      # Nothing to do
+    ;;
+    esac
+  done
+}
+
+function add-dependencies() {
+  projects=${@}
+  for project in ${projects}; do
+    echo "${project}"
+    case ${project} in
+    bolt)
+      for p in lld llvm; do
+        echo $p
+      done
+    ;;
+    cross-project-tests)
+      for p in lld clang; do
+        echo $p
+      done
+    ;;
+    clang-tools-extra)
+      for p in llvm clang; do
+        echo $p
+      done
+    ;;
+    compiler-rt|libc|openmp)
+      echo clang
+    ;;
+    flang|lldb)
+      for p in llvm clang; do
+        echo $p
+      done
+    ;;
+    lld|mlir|polly)
+      echo llvm
+    ;;
+    *)
+      # Nothing to do
+    ;;
+    esac
+  done
+}
+
+function exclude-linux() {
+  projects=${@}
+  for project in ${projects}; do
+    case ${project} in
+    cross-project-tests) ;; # tests failing
+    lldb)                ;; # tests failing
+    openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
+    *)
+      echo "${project}"
+    ;;
+    esac
+  done
+}
+
+function exclude-windows() {
+  projects=${@}
+  for project in ${projects}; do
+    case ${project} in
+    cross-project-tests) ;; # tests failing
+    compiler-rt)         ;; # tests taking too long
+    openmp)              ;; # TODO: having trouble with the Perl installation
+    libc)                ;; # no Windows support
+    lldb)                ;; # tests failing
+    bolt)                ;; # tests are not supported yet
+    *)
+      echo "${project}"
+    ;;
+    esac
+  done
+}
+
+# Prints only projects that are both present in $modified_dirs and the passed
+# list.
+function keep-modified-projects() {
+  projects=${@}
+  for project in ${projects}; do
+    if echo "$modified_dirs" | grep -q -E "^${project}$"; then
+      echo "${project}"
+    fi
+  done
+}
+
+function check-targets() {
+  projects=${@}
+  for project in ${projects}; do
+    case ${project} in
+    clang-tools-extra)
+      echo "check-clang-tools"
+    ;;
+    compiler-rt)
+      echo "check-all"
+    ;;
+    cross-project-tests)
+      echo "check-cross-project"
+    ;;
+    lldb)
+      echo "check-all" # TODO: check-lldb may not include all the LLDB tests?
+    ;;
+    pstl)
+      echo "check-all"
+    ;;
+    libclc)
+      echo "check-all"
+    ;;
+    *)
+      echo "check-${project}"
+    ;;
+    esac
+  done
+}
+
+# Project specific pipelines.
+
+# If libc++ or one of the runtimes directories changed.
+if echo "$modified_dirs" | grep -q -E "^(libcxx|libcxxabi|libunwind|runtimes|cmake)$"; then
   cat <<EOF
-  - trigger: "libcxx-ci"
-    build:
-      message: "${buildMessage}"
-      commit: "${BUILDKITE_COMMIT}"
-      branch: "${BUILDKITE_BRANCH}"
+- trigger: "libcxx-ci"
+  build:
+    message: "${buildMessage}"
+    commit: "${BUILDKITE_COMMIT}"
+    branch: "${BUILDKITE_BRANCH}"
 EOF
 fi
 
-# If clang changed
-if git diff --name-only HEAD~1 | grep -q -E "^clang/"; then
+# If clang changed.
+if echo "$modified_dirs" | grep -q -E "^(clang)$"; then
   cat <<EOF
-  - trigger: "clang-ci"
-    build:
-      message: "${buildMessage}"
-      commit: "${BUILDKITE_COMMIT}"
-      branch: "${BUILDKITE_BRANCH}"
+- trigger: "clang-ci"
+  build:
+    message: "${buildMessage}"
+    commit: "${BUILDKITE_COMMIT}"
+    branch: "${BUILDKITE_BRANCH}"
+EOF
+fi
+
+# Generic pipeline for projects that have not defined custom steps.
+#
+# Individual projects should instead define the pre-commit CI tests that suits their
+# needs while letting them run on the infrastructure provided by LLVM.
+
+# Figure out which projects need to be built on each platform
+all_projects="bolt clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
+modified_projects="$(keep-modified-projects ${all_projects})"
+
+linux_projects_to_test=$(exclude-linux $(compute-projects-to-test ${modified_projects}))
+linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
+linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
+
+windows_projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
+windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
+windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
+
+# Generate the appropriate pipeline
+if [[ "${linux_projects}" != "" ]]; then
+  cat <<EOF
+- label: ':linux: Linux x64'
+  artifact_paths:
+  - 'artifacts/**/*'
+  - '*_result.json'
+  - 'build/test-results.xml'
+  agents: ${LINUX_AGENTS}
+  retry:
+    automatic:
+      - exit_status: -1  # Agent was lost
+        limit: 2
+      - exit_status: 255 # Forced agent shutdown
+        limit: 2
+  timeout_in_minutes: 120
+  env:
+    CC: 'clang'
+    CXX: 'clang++'
+  commands:
+  - './.ci/monolithic-linux.sh "$(echo ${linux_projects} | tr ' ' ';')" "$(echo ${linux_check_targets})"'
+EOF
+fi
+
+if [[ "${windows_projects}" != "" ]]; then
+  cat <<EOF
+- label: ':windows: Windows x64'
+  artifact_paths:
+  - 'artifacts/**/*'
+  - '*_result.json'
+  - 'build/test-results.xml'
+  agents: ${WINDOWS_AGENTS}
+  retry:
+    automatic:
+      - exit_status: -1  # Agent was lost
+        limit: 2
+      - exit_status: 255 # Forced agent shutdown
+        limit: 2
+  timeout_in_minutes: 150
+  env:
+    CC: 'cl'
+    CXX: 'cl'
+    LD: 'link'
+  commands:
+  - 'C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64'
+  - 'bash .ci/monolithic-windows.sh "$(echo ${windows_projects} | tr ' ' ';')" "$(echo ${windows_check_targets})"'
+EOF
+fi
+
+# If build was triggered from a Phabricator review - send an update back.
+if [[ -n "${ph_target_phid:-}" ]]; then
+  cat << EOF
+- continue_on_failure: true
+  wait: '~'
+- label: ':phabricator: update build status on Phabricator'
+  agents: ${SERVICE_AGENTS}
+  artifact_paths:
+  - 'artifacts/**/*'
+  commands:
+  - export SRC=\$\${BUILDKITE_BUILD_PATH}/llvm-premerge-checks
+  - rm -rf \$\${SRC}
+  - git clone --depth 1 https://github.com/google/llvm-premerge-checks.git "\$\${SRC}"
+  - cd \$\${SRC}
+  - git fetch origin "main":x
+  - git checkout x
+  - echo "llvm-premerge-checks commit"
+  - git rev-parse HEAD
+  - pip install -q -r \$\${SRC}/scripts/requirements.txt
+  - cd "\$\$BUILDKITE_BUILD_CHECKOUT_PATH"
+  - \$\${SRC}/scripts/summary.py
+  timeout_in_minutes: 10
 EOF
 fi

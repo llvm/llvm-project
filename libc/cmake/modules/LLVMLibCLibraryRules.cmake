@@ -19,7 +19,8 @@ function(collect_object_file_deps target result)
     return()
   endif()
 
-  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+     ${target_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
     set(entrypoint_target ${target})
     get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
     if(is_alias)
@@ -75,7 +76,9 @@ function(add_entrypoint_library target_name)
   set(all_deps "")
   foreach(dep IN LISTS fq_deps_list)
     get_target_property(dep_type ${dep} "TARGET_TYPE")
-    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})))
+    if(NOT ((${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE}) OR
+            (${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})))
       message(FATAL_ERROR "Dependency '${dep}' of 'add_entrypoint_collection' is "
                           "not an 'add_entrypoint_object' or 'add_entrypoint_external' target.")
     endif()
@@ -83,7 +86,8 @@ function(add_entrypoint_library target_name)
     list(APPEND all_deps ${recursive_deps})
     # Add the entrypoint object target explicitly as collect_object_file_deps
     # only collects object files from non-entrypoint targets.
-    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+    if(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE} OR
+       ${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
       set(entrypoint_target ${dep})
       get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
       if(is_alias)
@@ -148,20 +152,13 @@ function(create_header_library fq_target_name)
     "ADD_HEADER"
     "" # Optional arguments
     "" # Single value arguments
-    "HDRS;DEPENDS;FLAGS" # Multi-value arguments
+    "HDRS;DEPENDS;FLAGS;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
 
   if(NOT ADD_HEADER_HDRS)
     message(FATAL_ERROR "'add_header_library' target requires a HDRS list of .h files.")
   endif()
-
-  set(FULL_HDR_PATHS "")
-  # TODO: Remove this foreach block when we can switch to the new
-  # version of the CMake policy CMP0076.
-  foreach(hdr IN LISTS ADD_HEADER_HDRS)
-    list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
-  endforeach()
 
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding header library ${fq_target_name}")
@@ -171,24 +168,19 @@ function(create_header_library fq_target_name)
       endforeach()
     endif()
   endif()
-  set(interface_target_name "${fq_target_name}.__header_library__")
 
-  add_library(${interface_target_name} INTERFACE)
-  target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
+  add_library(${fq_target_name} INTERFACE)
+  target_sources(${fq_target_name} INTERFACE ${ADD_HEADER_HDRS})
   if(ADD_HEADER_DEPENDS)
-    add_dependencies(${interface_target_name} ${ADD_HEADER_DEPENDS})
+    add_dependencies(${fq_target_name} ${ADD_HEADER_DEPENDS})
   endif()
-  set_target_properties(
-    ${interface_target_name}
-    PROPERTIES
-      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
-  )
-
-  add_custom_target(${fq_target_name})
-  add_dependencies(${fq_target_name} ${interface_target_name})
+  if(ADD_HEADER_COMPILE_OPTIONS)
+    target_compile_options(${fq_target_name} INTERFACE ${ADD_HEADER_COMPILE_OPTIONS})
+  endif()
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
+      INTERFACE_FLAGS "${ADD_HEADER_FLAGS}"
       TARGET_TYPE "${HDR_LIBRARY_TARGET_TYPE}"
       DEPS "${ADD_HEADER_DEPENDS}"
       FLAGS "${ADD_HEADER_FLAGS}"

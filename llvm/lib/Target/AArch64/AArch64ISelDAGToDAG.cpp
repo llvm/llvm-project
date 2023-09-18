@@ -49,7 +49,7 @@ public:
   AArch64DAGToDAGISel() = delete;
 
   explicit AArch64DAGToDAGISel(AArch64TargetMachine &tm,
-                               CodeGenOpt::Level OptLevel)
+                               CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -62,7 +62,7 @@ public:
   /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
   /// inline asm expressions.
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                    unsigned ConstraintID,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   template <signed Low, signed High, signed Scale>
@@ -451,7 +451,8 @@ private:
   bool SelectAddrModeXRO(SDValue N, unsigned Size, SDValue &Base,
                          SDValue &Offset, SDValue &SignExtend,
                          SDValue &DoShift);
-  bool isWorthFolding(SDValue V) const;
+  bool isWorthFoldingALU(SDValue V, bool LSL = false) const;
+  bool isWorthFoldingAddr(SDValue V) const;
   bool SelectExtendedSHL(SDValue N, unsigned Size, bool WantExtend,
                          SDValue &Offset, SDValue &SignExtend);
 
@@ -461,6 +462,14 @@ private:
   }
 
   bool SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos, unsigned Width);
+
+  template<unsigned RegWidth>
+  bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos) {
+    return SelectCVTFixedPosRecipOperand(N, FixedPos, RegWidth);
+  }
+
+  bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos,
+                                     unsigned Width);
 
   bool SelectCMP_SWAP(SDNode *N);
 
@@ -524,13 +533,14 @@ static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
 #endif
 
 bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, const InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_o:
-  case InlineAsm::Constraint_Q:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
+  case InlineAsm::ConstraintCode::Q:
     // We need to make sure that this one operand does not end up in XZR, thus
     // require the address to be in a PointerRegClass register.
     const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -652,18 +662,19 @@ static bool isWorthFoldingSHL(SDValue V) {
   return true;
 }
 
-/// Determine whether it is worth to fold V into an extended register.
-bool AArch64DAGToDAGISel::isWorthFolding(SDValue V) const {
+/// Determine whether it is worth to fold V into an extended register addressing
+/// mode.
+bool AArch64DAGToDAGISel::isWorthFoldingAddr(SDValue V) const {
   // Trivial if we are optimizing for code size or if there is only
   // one use of the value.
   if (CurDAG->shouldOptForSize() || V.hasOneUse())
     return true;
   // If a subtarget has a fastpath LSL we can fold a logical shift into
   // the addressing mode and save a cycle.
-  if (Subtarget->hasLSLFast() && V.getOpcode() == ISD::SHL &&
+  if (Subtarget->hasAddrLSLFast() && V.getOpcode() == ISD::SHL &&
       isWorthFoldingSHL(V))
     return true;
-  if (Subtarget->hasLSLFast() && V.getOpcode() == ISD::ADD) {
+  if (Subtarget->hasAddrLSLFast() && V.getOpcode() == ISD::ADD) {
     const SDValue LHS = V.getOperand(0);
     const SDValue RHS = V.getOperand(1);
     if (LHS.getOpcode() == ISD::SHL && isWorthFoldingSHL(LHS))
@@ -754,35 +765,6 @@ bool AArch64DAGToDAGISel::SelectShiftedRegisterFromAnd(SDValue N, SDValue &Reg,
   return true;
 }
 
-/// SelectShiftedRegister - Select a "shifted register" operand.  If the value
-/// is not shifted, set the Shift operand to default of "LSL 0".  The logical
-/// instructions allow the shifted register to be rotated, but the arithmetic
-/// instructions do not.  The AllowROR parameter specifies whether ROR is
-/// supported.
-bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
-                                                SDValue &Reg, SDValue &Shift) {
-  if (SelectShiftedRegisterFromAnd(N, Reg, Shift))
-    return true;
-
-  AArch64_AM::ShiftExtendType ShType = getShiftTypeForNode(N);
-  if (ShType == AArch64_AM::InvalidShiftExtend)
-    return false;
-  if (!AllowROR && ShType == AArch64_AM::ROR)
-    return false;
-
-  if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-    unsigned BitSize = N.getValueSizeInBits();
-    unsigned Val = RHS->getZExtValue() & (BitSize - 1);
-    unsigned ShVal = AArch64_AM::getShifterImm(ShType, Val);
-
-    Reg = N.getOperand(0);
-    Shift = CurDAG->getTargetConstant(ShVal, SDLoc(N), MVT::i32);
-    return isWorthFolding(N);
-  }
-
-  return false;
-}
-
 /// getExtendTypeForNode - Translate an extend node to the corresponding
 /// ExtendType value.
 static AArch64_AM::ShiftExtendType
@@ -835,6 +817,56 @@ getExtendTypeForNode(SDValue N, bool IsLoadStore = false) {
   }
 
   return AArch64_AM::InvalidShiftExtend;
+}
+
+/// Determine whether it is worth to fold V into an extended register of an
+/// Add/Sub. LSL means we are folding into an `add w0, w1, w2, lsl #N`
+/// instruction, and the shift should be treated as worth folding even if has
+/// multiple uses.
+bool AArch64DAGToDAGISel::isWorthFoldingALU(SDValue V, bool LSL) const {
+  // Trivial if we are optimizing for code size or if there is only
+  // one use of the value.
+  if (CurDAG->shouldOptForSize() || V.hasOneUse())
+    return true;
+
+  // If a subtarget has a fastpath LSL we can fold a logical shift into
+  // the add/sub and save a cycle.
+  if (LSL && Subtarget->hasALULSLFast() && V.getOpcode() == ISD::SHL &&
+      V.getConstantOperandVal(1) <= 4 &&
+      getExtendTypeForNode(V.getOperand(0)) == AArch64_AM::InvalidShiftExtend)
+    return true;
+
+  // It hurts otherwise, since the value will be reused.
+  return false;
+}
+
+/// SelectShiftedRegister - Select a "shifted register" operand.  If the value
+/// is not shifted, set the Shift operand to default of "LSL 0".  The logical
+/// instructions allow the shifted register to be rotated, but the arithmetic
+/// instructions do not.  The AllowROR parameter specifies whether ROR is
+/// supported.
+bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
+                                                SDValue &Reg, SDValue &Shift) {
+  if (SelectShiftedRegisterFromAnd(N, Reg, Shift))
+    return true;
+
+  AArch64_AM::ShiftExtendType ShType = getShiftTypeForNode(N);
+  if (ShType == AArch64_AM::InvalidShiftExtend)
+    return false;
+  if (!AllowROR && ShType == AArch64_AM::ROR)
+    return false;
+
+  if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+    unsigned BitSize = N.getValueSizeInBits();
+    unsigned Val = RHS->getZExtValue() & (BitSize - 1);
+    unsigned ShVal = AArch64_AM::getShifterImm(ShType, Val);
+
+    Reg = N.getOperand(0);
+    Shift = CurDAG->getTargetConstant(ShVal, SDLoc(N), MVT::i32);
+    return isWorthFoldingALU(N, true);
+  }
+
+  return false;
 }
 
 /// Instructions that accept extend modifiers like UXTW expect the register
@@ -917,7 +949,7 @@ bool AArch64DAGToDAGISel::SelectArithExtendedRegister(SDValue N, SDValue &Reg,
   Reg = narrowIfNeeded(CurDAG, Reg);
   Shift = CurDAG->getTargetConstant(getArithExtendImm(Ext, ShiftVal), SDLoc(N),
                                     MVT::i32);
-  return isWorthFolding(N);
+  return isWorthFoldingALU(N);
 }
 
 /// SelectArithUXTXRegister - Select a "UXTX register" operand. This
@@ -941,7 +973,7 @@ bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
   Reg = N.getOperand(0);
   Shift = CurDAG->getTargetConstant(getArithExtendImm(Ext, ShiftVal), SDLoc(N),
                                     MVT::i32);
-  return isWorthFolding(N);
+  return isWorthFoldingALU(N);
 }
 
 /// If there's a use of this ADDlow that's not itself a load/store then we'll
@@ -1156,7 +1188,7 @@ bool AArch64DAGToDAGISel::SelectExtendedSHL(SDValue N, unsigned Size,
   if (ShiftVal != 0 && ShiftVal != LegalShiftVal)
     return false;
 
-  return isWorthFolding(N);
+  return isWorthFoldingAddr(N);
 }
 
 bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
@@ -1184,7 +1216,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
   }
 
   // Remember if it is worth folding N when it produces extended register.
-  bool IsExtendedRegisterWorthFolding = isWorthFolding(N);
+  bool IsExtendedRegisterWorthFolding = isWorthFoldingAddr(N);
 
   // Try to match a shifted extend on the RHS.
   if (IsExtendedRegisterWorthFolding && RHS.getOpcode() == ISD::SHL &&
@@ -1214,7 +1246,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
     Offset = narrowIfNeeded(CurDAG, LHS.getOperand(0));
     SignExtend = CurDAG->getTargetConstant(Ext == AArch64_AM::SXTW, dl,
                                            MVT::i32);
-    if (isWorthFolding(LHS))
+    if (isWorthFoldingAddr(LHS))
       return true;
   }
 
@@ -1226,7 +1258,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeWRO(SDValue N, unsigned Size,
     Offset = narrowIfNeeded(CurDAG, RHS.getOperand(0));
     SignExtend = CurDAG->getTargetConstant(Ext == AArch64_AM::SXTW, dl,
                                            MVT::i32);
-    if (isWorthFolding(RHS))
+    if (isWorthFoldingAddr(RHS))
       return true;
   }
 
@@ -1297,7 +1329,7 @@ bool AArch64DAGToDAGISel::SelectAddrModeXRO(SDValue N, unsigned Size,
   }
 
   // Remember if it is worth folding N when it produces extended register.
-  bool IsExtendedRegisterWorthFolding = isWorthFolding(N);
+  bool IsExtendedRegisterWorthFolding = isWorthFoldingAddr(N);
 
   // Try to match a shifted extend on the RHS.
   if (IsExtendedRegisterWorthFolding && RHS.getOpcode() == ISD::SHL &&
@@ -3625,9 +3657,10 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
   return true;
 }
 
-bool
-AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
-                                              unsigned RegWidth) {
+static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
+                                               SDValue &FixedPos,
+                                               unsigned RegWidth,
+                                               bool isReciprocal) {
   APFloat FVal(0.0);
   if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N))
     FVal = CN->getValueAPF();
@@ -3652,13 +3685,18 @@ AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
   // integers.
   bool IsExact;
 
+  if (isReciprocal)
+    if (!FVal.getExactInverse(&FVal))
+      return false;
+
   // fbits is between 1 and 64 in the worst-case, which means the fmul
   // could have 2^64 as an actual operand. Need 65 bits of precision.
   APSInt IntVal(65, true);
   FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
 
   // N.b. isPowerOf2 also checks for > 0.
-  if (!IsExact || !IntVal.isPowerOf2()) return false;
+  if (!IsExact || !IntVal.isPowerOf2())
+    return false;
   unsigned FBits = IntVal.logBase2();
 
   // Checks above should have guaranteed that we haven't lost information in
@@ -3667,6 +3705,19 @@ AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
 
   FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
   return true;
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
+                                                   unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
+                                            false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperand(SDValue N,
+                                                        SDValue &FixedPos,
+                                                        unsigned RegWidth) {
+  return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
+                                            true);
 }
 
 // Inspects a register string of the form o0:op1:CRn:CRm:op2 gets the fields
@@ -6553,7 +6604,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 /// createAArch64ISelDag - This pass converts a legalized DAG into a
 /// AArch64-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
-                                         CodeGenOpt::Level OptLevel) {
+                                         CodeGenOptLevel OptLevel) {
   return new AArch64DAGToDAGISel(TM, OptLevel);
 }
 

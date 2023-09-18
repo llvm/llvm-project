@@ -153,14 +153,14 @@ private:
     if (!HTMLReportPath.empty())
       writeHTML();
 
-    auto &HS = getCompilerInstance().getPreprocessor().getHeaderSearchInfo();
     llvm::StringRef Path =
         SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
     assert(!Path.empty() && "Main file path not known?");
     llvm::StringRef Code = SM.getBufferData(SM.getMainFileID());
 
-    auto Results = analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI, SM,
-                           HS, HeaderFilter);
+    auto Results =
+        analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
+                getCompilerInstance().getPreprocessor(), HeaderFilter);
     if (!Insert)
       Results.Missing.clear();
     if (!Remove)

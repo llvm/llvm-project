@@ -79,7 +79,7 @@ func.func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4:
       // CHECK: "test.payload"(%[[CAST_ARG6]], %[[CAST_ARG7]]) : (index, index) -> ()
       "test.payload"(%arg6, %arg7) : (index, index) -> ()
       omp.yield
-    }) {operand_segment_sizes = array<i32: 2, 2, 2, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+    }) {operandSegmentSizes = array<i32: 2, 2, 2, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
     omp.terminator
   }
   return
@@ -328,7 +328,7 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr<array<100 x i32>> {fir.bindc_nam
   %5 = llvm.zext %2 : i1 to i32
   llvm.store %5, %4 : !llvm.ptr<i32>
   omp.parallel   {
-    %6 = llvm.alloca %3 x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
+    %6 = llvm.alloca %3 x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
     omp.wsloop   reduction(@eqv_reduction -> %4 : !llvm.ptr<i32>) for  (%arg1) : i32 = (%1) to (%0) inclusive step (%1) {
       llvm.store %arg1, %6 : !llvm.ptr<i32>
       %7 = llvm.load %6 : !llvm.ptr<i32>

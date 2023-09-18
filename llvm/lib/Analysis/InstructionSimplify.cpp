@@ -4060,19 +4060,6 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   if (Pred == FCmpInst::FCMP_TRUE)
     return getTrue(RetTy);
 
-  // Fold (un)ordered comparison if we can determine there are no NaNs.
-  if (Pred == FCmpInst::FCMP_UNO || Pred == FCmpInst::FCMP_ORD)
-    if (FMF.noNaNs() ||
-        (isKnownNeverNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
-         isKnownNeverNaN(RHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT)))
-      return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
-
-  // NaN is unordered; NaN is not ordered.
-  assert((FCmpInst::isOrdered(Pred) || FCmpInst::isUnordered(Pred)) &&
-         "Comparison must be either ordered or unordered");
-  if (match(RHS, m_NaN()))
-    return ConstantInt::get(RetTy, CmpInst::isUnordered(Pred));
-
   // fcmp pred x, poison and  fcmp pred poison, x
   // fold to poison
   if (isa<PoisonValue>(LHS) || isa<PoisonValue>(RHS))
@@ -4094,80 +4081,88 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       return getFalse(RetTy);
   }
 
-  // Handle fcmp with constant RHS.
-  // TODO: Use match with a specific FP value, so these work with vectors with
-  // undef lanes.
-  const APFloat *C;
-  if (match(RHS, m_APFloat(C))) {
-    // Check whether the constant is an infinity.
-    if (C->isInfinity()) {
-      if (C->isNegative()) {
-        switch (Pred) {
-        case FCmpInst::FCMP_OLT:
-          // No value is ordered and less than negative infinity.
-          return getFalse(RetTy);
-        case FCmpInst::FCMP_UGE:
-          // All values are unordered with or at least negative infinity.
-          return getTrue(RetTy);
-        default:
-          break;
-        }
-      } else {
-        switch (Pred) {
-        case FCmpInst::FCMP_OGT:
-          // No value is ordered and greater than infinity.
-          return getFalse(RetTy);
-        case FCmpInst::FCMP_ULE:
-          // All values are unordered with and at most infinity.
-          return getTrue(RetTy);
-        default:
-          break;
-        }
-      }
+  // Fold (un)ordered comparison if we can determine there are no NaNs.
+  //
+  // This catches the 2 variable input case, constants are handled below as a
+  // class-like compare.
+  if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
+    if (FMF.noNaNs() ||
+        (isKnownNeverNaN(RHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT) &&
+         isKnownNeverNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT)))
+      return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
+  }
 
-      // LHS == Inf
-      if (Pred == FCmpInst::FCMP_OEQ &&
-          isKnownNeverInfinity(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+  const APFloat *C = nullptr;
+  match(RHS, m_APFloatAllowUndef(C));
+  std::optional<KnownFPClass> FullKnownClassLHS;
+
+  // Lazily compute the possible classes for LHS. Avoid computing it twice if
+  // RHS is a 0.
+  auto computeLHSClass = [=, &FullKnownClassLHS](FPClassTest InterestedFlags =
+                                                     fcAllFlags) {
+    if (FullKnownClassLHS)
+      return *FullKnownClassLHS;
+    return computeKnownFPClass(LHS, FMF, Q.DL, InterestedFlags, 0, Q.TLI, Q.AC,
+                               Q.CxtI, Q.DT, Q.IIQ.UseInstrInfo);
+  };
+
+  if (C && Q.CxtI) {
+    // Fold out compares that express a class test.
+    //
+    // FIXME: Should be able to perform folds without context
+    // instruction. Always pass in the context function?
+
+    const Function *ParentF = Q.CxtI->getFunction();
+    auto [ClassVal, ClassTest] = fcmpToClassTest(Pred, *ParentF, LHS, C);
+    if (ClassVal) {
+      FullKnownClassLHS = computeLHSClass();
+      if ((FullKnownClassLHS->KnownFPClasses & ClassTest) == fcNone)
         return getFalse(RetTy);
-      // LHS != Inf
-      if (Pred == FCmpInst::FCMP_UNE &&
-          isKnownNeverInfinity(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
-        return getTrue(RetTy);
-      // LHS == Inf || LHS == NaN
-      if (Pred == FCmpInst::FCMP_UEQ &&
-          isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
-        return getFalse(RetTy);
-      // LHS != Inf && LHS != NaN
-      if (Pred == FCmpInst::FCMP_ONE &&
-          isKnownNeverInfOrNaN(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+      if ((FullKnownClassLHS->KnownFPClasses & ~ClassTest) == fcNone)
         return getTrue(RetTy);
     }
+  }
+
+  // Handle fcmp with constant RHS.
+  if (C) {
+    // TODO: If we always required a context function, we wouldn't need to
+    // special case nans.
+    if (C->isNaN())
+      return ConstantInt::get(RetTy, CmpInst::isUnordered(Pred));
+
+    // TODO: Need version fcmpToClassTest which returns implied class when the
+    // compare isn't a complete class test. e.g. > 1.0 implies fcPositive, but
+    // isn't implementable as a class call.
     if (C->isNegative() && !C->isNegZero()) {
-      assert(!C->isNaN() && "Unexpected NaN constant!");
+      FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
+
       // TODO: We can catch more cases by using a range check rather than
       //       relying on CannotBeOrderedLessThanZero.
       switch (Pred) {
       case FCmpInst::FCMP_UGE:
       case FCmpInst::FCMP_UGT:
-      case FCmpInst::FCMP_UNE:
+      case FCmpInst::FCMP_UNE: {
+        KnownFPClass KnownClass = computeLHSClass(Interested);
+
         // (X >= 0) implies (X > C) when (C < 0)
-        if (cannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI, 0,
-                                        Q.AC, Q.CxtI, Q.DT))
+        if (KnownClass.cannotBeOrderedLessThanZero())
           return getTrue(RetTy);
         break;
+      }
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_OLE:
-      case FCmpInst::FCMP_OLT:
+      case FCmpInst::FCMP_OLT: {
+        KnownFPClass KnownClass = computeLHSClass(Interested);
+
         // (X >= 0) implies !(X < C) when (C < 0)
-        if (cannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI,
-                                        Q.DT))
+        if (KnownClass.cannotBeOrderedLessThanZero())
           return getFalse(RetTy);
         break;
+      }
       default:
         break;
       }
     }
-
     // Check comparison of [minnum/maxnum with constant] with other constant.
     const APFloat *C2;
     if ((match(LHS, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_APFloat(C2))) &&
@@ -4214,13 +4209,17 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     }
   }
 
+  // TODO: Could fold this with above if there were a matcher which returned all
+  // classes in a non-splat vector.
   if (match(RHS, m_AnyZeroFP())) {
     switch (Pred) {
     case FCmpInst::FCMP_OGE:
     case FCmpInst::FCMP_ULT: {
-      FPClassTest Interested = FMF.noNaNs() ? fcNegative : fcNegative | fcNan;
-      KnownFPClass Known = computeKnownFPClass(LHS, Q.DL, Interested, 0,
-                                               Q.TLI, Q.AC, Q.CxtI, Q.DT);
+      FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
+      if (!FMF.noNaNs())
+        Interested |= fcNan;
+
+      KnownFPClass Known = computeLHSClass(Interested);
 
       // Positive or zero X >= 0.0 --> true
       // Positive or zero X <  0.0 --> false
@@ -4230,12 +4229,16 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
       break;
     }
     case FCmpInst::FCMP_UGE:
-    case FCmpInst::FCMP_OLT:
+    case FCmpInst::FCMP_OLT: {
+      FPClassTest Interested = KnownFPClass::OrderedLessThanZeroMask;
+      KnownFPClass Known = computeLHSClass(Interested);
+
       // Positive or zero or nan X >= 0.0 --> true
       // Positive or zero or nan X <  0.0 --> false
-      if (cannotBeOrderedLessThanZero(LHS, Q.DL, Q.TLI, 0, Q.AC, Q.CxtI, Q.DT))
+      if (Known.cannotBeOrderedLessThanZero())
         return Pred == FCmpInst::FCMP_UGE ? getTrue(RetTy) : getFalse(RetTy);
       break;
+    }
     default:
       break;
     }
@@ -4931,7 +4934,7 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     return UndefValue::get(GEPTy);
 
   bool IsScalableVec =
-      isa<ScalableVectorType>(SrcTy) || any_of(Indices, [](const Value *V) {
+      SrcTy->isScalableTy() || any_of(Indices, [](const Value *V) {
         return isa<ScalableVectorType>(V->getType());
       });
 
@@ -6047,21 +6050,18 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
   if (!IsConstantOffsetFromGlobal(Ptr, PtrSym, PtrOffset, DL))
     return nullptr;
 
-  Type *UnqualPtrTy = PointerType::getUnqual(Ptr->getContext());
   Type *Int32Ty = Type::getInt32Ty(Ptr->getContext());
-  Type *Int64Ty = Type::getInt64Ty(Ptr->getContext());
 
   auto *OffsetConstInt = dyn_cast<ConstantInt>(Offset);
   if (!OffsetConstInt || OffsetConstInt->getType()->getBitWidth() > 64)
     return nullptr;
 
-  uint64_t OffsetInt = OffsetConstInt->getSExtValue();
-  if (OffsetInt % 4 != 0)
+  APInt OffsetInt = OffsetConstInt->getValue().sextOrTrunc(
+      DL.getIndexTypeSizeInBits(Ptr->getType()));
+  if (OffsetInt.srem(4) != 0)
     return nullptr;
 
-  Constant *C = ConstantExpr::getGetElementPtr(
-      Int32Ty, Ptr, ConstantInt::get(Int64Ty, OffsetInt / 4));
-  Constant *Loaded = ConstantFoldLoadFromConstPtr(C, Int32Ty, DL);
+  Constant *Loaded = ConstantFoldLoadFromConstPtr(Ptr, Int32Ty, OffsetInt, DL);
   if (!Loaded)
     return nullptr;
 
@@ -6091,7 +6091,57 @@ static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
       PtrSym != LoadedRHSSym || PtrOffset != LoadedRHSOffset)
     return nullptr;
 
-  return ConstantExpr::getBitCast(LoadedLHSPtr, UnqualPtrTy);
+  return LoadedLHSPtr;
+}
+
+// TODO: Need to pass in FastMathFlags
+static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
+                            bool IsStrict) {
+  // ldexp(poison, x) -> poison
+  // ldexp(x, poison) -> poison
+  if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
+    return Op0;
+
+  // ldexp(undef, x) -> nan
+  if (Q.isUndefValue(Op0))
+    return ConstantFP::getNaN(Op0->getType());
+
+  if (!IsStrict) {
+    // TODO: Could insert a canonicalize for strict
+
+    // ldexp(x, undef) -> x
+    if (Q.isUndefValue(Op1))
+      return Op0;
+  }
+
+  const APFloat *C = nullptr;
+  match(Op0, PatternMatch::m_APFloat(C));
+
+  // These cases should be safe, even with strictfp.
+  // ldexp(0.0, x) -> 0.0
+  // ldexp(-0.0, x) -> -0.0
+  // ldexp(inf, x) -> inf
+  // ldexp(-inf, x) -> -inf
+  if (C && (C->isZero() || C->isInfinity()))
+    return Op0;
+
+  // These are canonicalization dropping, could do it if we knew how we could
+  // ignore denormal flushes and target handling of nan payload bits.
+  if (IsStrict)
+    return nullptr;
+
+  // TODO: Could quiet this with strictfp if the exception mode isn't strict.
+  if (C && C->isNaN())
+    return ConstantFP::get(Op0->getType(), C->makeQuiet());
+
+  // ldexp(x, 0) -> x
+
+  // TODO: Could fold this if we know the exception mode isn't
+  // strict, we know the denormal mode and other target modes.
+  if (match(Op1, PatternMatch::m_ZeroInt()))
+    return Op0;
+
+  return nullptr;
 }
 
 static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
@@ -6156,6 +6206,12 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
+  case Intrinsic::exp10:
+    // exp10(log10(x)) -> x
+    if (Q.CxtI->hasAllowReassoc() &&
+        match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
+      return X;
+    break;
   case Intrinsic::log:
     // log(exp(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&
@@ -6172,8 +6228,11 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     break;
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
+    // log10(exp10(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&
-        match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X))))
+        (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
+         match(Op0,
+               m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
       return X;
     break;
   case Intrinsic::experimental_vector_reverse:
@@ -6437,6 +6496,8 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
         return Op0;
     }
     break;
+  case Intrinsic::ldexp:
+    return simplifyLdexp(Op0, Op1, Q, false);
   case Intrinsic::copysign:
     // copysign X, X --> X
     if (Op0 == Op1)
@@ -6700,6 +6761,8 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
                             *FPI->getExceptionBehavior(),
                             *FPI->getRoundingMode());
   }
+  case Intrinsic::experimental_constrained_ldexp:
+    return simplifyLdexp(Args[0], Args[1], Q, true);
   default:
     return nullptr;
   }
@@ -6819,6 +6882,9 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse) {
   assert(I->getFunction() && "instruction should be inserted in a function");
+  assert((!SQ.CxtI || SQ.CxtI->getFunction() == I->getFunction()) &&
+         "context instruction should be in the same function");
+
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
 
   switch (I->getOpcode()) {

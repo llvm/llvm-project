@@ -71,6 +71,22 @@ public:
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
+  /// Get a 16-bit IEEE half value.
+  /// TODO: Add IEEE semantics to type - This currently returns a simple `scalar(16)`.
+  static constexpr LLT float16() {
+    return scalar(16);
+  }
+
+  /// Get a 32-bit IEEE float value.
+  static constexpr LLT float32() {
+    return scalar(32);
+  }
+
+  /// Get a 64-bit IEEE double value.
+  static constexpr LLT float64() {
+    return scalar(64);
+  }
+
   /// Get a low-level fixed-width vector of some number of elements and element
   /// width.
   static constexpr LLT fixed_vector(unsigned NumElements,
@@ -238,10 +254,9 @@ public:
         return getFieldValue(VectorSizeFieldInfo);
       else
         return getFieldValue(PointerVectorSizeFieldInfo);
-    } else if (IsPointer)
-      return getFieldValue(PointerSizeFieldInfo);
-    else
-      llvm_unreachable("unexpected LLT");
+    }
+    assert(IsPointer && "unexpected LLT");
+    return getFieldValue(PointerSizeFieldInfo);
   }
 
   constexpr unsigned getAddressSpace() const {

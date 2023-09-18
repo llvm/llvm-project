@@ -11,13 +11,10 @@
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AMDGPUOpenMP.h"
 #include "ToolChains/AVR.h"
-#include "ToolChains/Ananas.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/BareMetal.h"
 #include "ToolChains/CSKYToolChain.h"
 #include "ToolChains/Clang.h"
-#include "ToolChains/CloudABI.h"
-#include "ToolChains/Contiki.h"
 #include "ToolChains/CrossWindows.h"
 #include "ToolChains/Cuda.h"
 #include "ToolChains/Darwin.h"
@@ -36,9 +33,7 @@
 #include "ToolChains/MSP430.h"
 #include "ToolChains/MSVC.h"
 #include "ToolChains/MinGW.h"
-#include "ToolChains/Minix.h"
 #include "ToolChains/MipsLinux.h"
-#include "ToolChains/Myriad.h"
 #include "ToolChains/NaCl.h"
 #include "ToolChains/NetBSD.h"
 #include "ToolChains/OHOS.h"
@@ -238,7 +233,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 }
 
 void Driver::setDriverMode(StringRef Value) {
-  static const std::string OptName =
+  static StringRef OptName =
       getOpts().getOption(options::OPT_driver_mode).getPrefixedName();
   if (auto M = llvm::StringSwitch<std::optional<DriverMode>>(Value)
                    .Case("gcc", GCCMode)
@@ -254,25 +249,14 @@ void Driver::setDriverMode(StringRef Value) {
 }
 
 InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
-                                     bool IsClCompatMode,
-                                     bool &ContainsError) {
+                                     bool UseDriverMode, bool &ContainsError) {
   llvm::PrettyStackTraceString CrashInfo("Command line argument parsing");
   ContainsError = false;
 
-  unsigned IncludedFlagsBitmask;
-  unsigned ExcludedFlagsBitmask;
-  std::tie(IncludedFlagsBitmask, ExcludedFlagsBitmask) =
-      getIncludeExcludeOptionFlagMasks(IsClCompatMode);
-
-  // Make sure that Flang-only options don't pollute the Clang output
-  // TODO: Make sure that Clang-only options don't pollute Flang output
-  if (!IsFlangMode())
-    ExcludedFlagsBitmask |= options::FlangOnlyOption;
-
+  llvm::opt::Visibility VisibilityMask = getOptionVisibilityMask(UseDriverMode);
   unsigned MissingArgIndex, MissingArgCount;
-  InputArgList Args =
-      getOpts().ParseArgs(ArgStrings, MissingArgIndex, MissingArgCount,
-                          IncludedFlagsBitmask, ExcludedFlagsBitmask);
+  InputArgList Args = getOpts().ParseArgs(ArgStrings, MissingArgIndex,
+                                          MissingArgCount, VisibilityMask);
 
   // Check for missing argument error.
   if (MissingArgCount) {
@@ -306,10 +290,10 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     unsigned DiagID;
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
-    if (getOpts().findNearest(ArgString, Nearest, IncludedFlagsBitmask,
-                              ExcludedFlagsBitmask) > 1) {
+    if (getOpts().findNearest(ArgString, Nearest, VisibilityMask) > 1) {
       if (!IsCLMode() &&
-          getOpts().findExact(ArgString, Nearest, options::CC1Option)) {
+          getOpts().findExact(ArgString, Nearest,
+                              llvm::opt::Visibility(options::CC1Option))) {
         DiagID = diag::err_drv_unknown_argument_with_suggestion;
         Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
       } else {
@@ -334,8 +318,7 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     // Warn on joined arguments that are similar to a long argument.
     std::string ArgString = ArgStrings[A->getIndex()];
     std::string Nearest;
-    if (getOpts().findExact("-" + ArgString, Nearest, IncludedFlagsBitmask,
-                            ExcludedFlagsBitmask))
+    if (getOpts().findExact("-" + ArgString, Nearest, VisibilityMask))
       Diags.Report(diag::warn_drv_potentially_misspelled_joined_argument)
           << A->getAsString(Args) << Nearest;
   }
@@ -496,6 +479,10 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     DAL->append(A);
   }
 
+  // DXC mode quits before assembly if an output object file isn't specified.
+  if (IsDXCMode() && !Args.hasArg(options::OPT_dxc_Fo))
+    DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
+
   // Enforce -static if -miamcu is present.
   if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false))
     DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_static));
@@ -564,8 +551,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   }
 
   // Skip further flag support on OSes which don't support '-m32' or '-m64'.
-  if (Target.getArch() == llvm::Triple::tce ||
-      Target.getOS() == llvm::Triple::Minix)
+  if (Target.getArch() == llvm::Triple::tce)
     return Target;
 
   // On AIX, the env OBJECT_MODE may affect the resulting arch variant.
@@ -1021,7 +1007,7 @@ bool Driver::readConfigFile(StringRef FileName,
   llvm::sys::path::native(CfgFileName);
   bool ContainErrors;
   std::unique_ptr<InputArgList> NewOptions = std::make_unique<InputArgList>(
-      ParseArgStrings(NewCfgArgs, IsCLMode(), ContainErrors));
+      ParseArgStrings(NewCfgArgs, /*UseDriverMode=*/true, ContainErrors));
   if (ContainErrors)
     return true;
 
@@ -1212,7 +1198,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // Arguments specified in command line.
   bool ContainsError;
   CLOptions = std::make_unique<InputArgList>(
-      ParseArgStrings(ArgList.slice(1), IsCLMode(), ContainsError));
+      ParseArgStrings(ArgList.slice(1), /*UseDriverMode=*/true, ContainsError));
 
   // Try parsing configuration file.
   if (!ContainsError)
@@ -1245,7 +1231,8 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       // Parse any pass through args using default clang processing rather
       // than clang-cl processing.
       auto CLModePassThroughOptions = std::make_unique<InputArgList>(
-          ParseArgStrings(CLModePassThroughArgList, false, ContainsError));
+          ParseArgStrings(CLModePassThroughArgList, /*UseDriverMode=*/false,
+                          ContainsError));
 
       if (!ContainsError)
         for (auto *Opt : *CLModePassThroughOptions) {
@@ -1943,24 +1930,18 @@ int Driver::ExecuteCompilation(
 }
 
 void Driver::PrintHelp(bool ShowHidden) const {
-  unsigned IncludedFlagsBitmask;
-  unsigned ExcludedFlagsBitmask;
-  std::tie(IncludedFlagsBitmask, ExcludedFlagsBitmask) =
-      getIncludeExcludeOptionFlagMasks(IsCLMode());
+  llvm::opt::Visibility VisibilityMask = getOptionVisibilityMask();
 
-  ExcludedFlagsBitmask |= options::NoDriverOption;
-  if (!ShowHidden)
-    ExcludedFlagsBitmask |= HelpHidden;
-
+  // TODO: We're overriding the mask for flang here to keep this NFC for the
+  // option refactoring, but what we really need to do is annotate the flags
+  // that Flang uses.
   if (IsFlangMode())
-    IncludedFlagsBitmask |= options::FlangOption;
-  else
-    ExcludedFlagsBitmask |= options::FlangOnlyOption;
+    VisibilityMask = llvm::opt::Visibility(options::FlangOption);
 
   std::string Usage = llvm::formatv("{0} [options] file...", Name).str();
   getOpts().printHelp(llvm::outs(), Usage.c_str(), DriverTitle.c_str(),
-                      IncludedFlagsBitmask, ExcludedFlagsBitmask,
-                      /*ShowAllAliases=*/false);
+                      ShowHidden, /*ShowAllAliases=*/false,
+                      VisibilityMask);
 }
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
@@ -2008,13 +1989,12 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   std::vector<std::string> SuggestedCompletions;
   std::vector<std::string> Flags;
 
-  unsigned int DisableFlags =
-      options::NoDriverOption | options::Unsupported | options::Ignored;
+  llvm::opt::Visibility VisibilityMask(options::ClangOption);
 
   // Make sure that Flang-only options don't pollute the Clang output
   // TODO: Make sure that Clang-only options don't pollute Flang output
-  if (!IsFlangMode())
-    DisableFlags |= options::FlangOnlyOption;
+  if (IsFlangMode())
+    VisibilityMask = llvm::opt::Visibility(options::FlangOption);
 
   // Distinguish "--autocomplete=-someflag" and "--autocomplete=-someflag,"
   // because the latter indicates that the user put space before pushing tab
@@ -2033,7 +2013,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
   // We want to show cc1-only options only when clang is invoked with -cc1 or
   // -Xclang.
   if (llvm::is_contained(Flags, "-Xclang") || llvm::is_contained(Flags, "-cc1"))
-    DisableFlags &= ~options::NoDriverOption;
+    VisibilityMask = llvm::opt::Visibility(options::CC1Option);
 
   const llvm::opt::OptTable &Opts = getOpts();
   StringRef Cur;
@@ -2063,7 +2043,9 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
     // If the flag is in the form of "--autocomplete=-foo",
     // we were requested to print out all option names that start with "-foo".
     // For example, "--autocomplete=-fsyn" is expanded to "-fsyntax-only".
-    SuggestedCompletions = Opts.findByPrefix(Cur, DisableFlags);
+    SuggestedCompletions = Opts.findByPrefix(
+        Cur, VisibilityMask,
+        /*DisableFlags=*/options::Unsupported | options::Ignored);
 
     // We have to query the -W flags manually as they're not in the OptTable.
     // TODO: Find a good way to add them to OptTable instead and them remove
@@ -2121,7 +2103,8 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
 
   if (C.getArgs().hasArg(options::OPT_v) ||
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH) ||
-      C.getArgs().hasArg(options::OPT_print_supported_cpus)) {
+      C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
+      C.getArgs().hasArg(options::OPT_print_supported_extensions)) {
     PrintVersion(C, llvm::errs());
     SuppressMissingInputWarning = true;
   }
@@ -2180,16 +2163,8 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
   }
 
   if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
-    std::string RuntimePath;
-    // Get the first existing path, if any.
-    for (auto Path : TC.getRuntimePaths()) {
-      if (getVFS().exists(Path)) {
-        RuntimePath = Path;
-        break;
-      }
-    }
-    if (!RuntimePath.empty())
-      llvm::outs() << RuntimePath << '\n';
+    if (std::optional<std::string> RuntimePath = TC.getRuntimePath())
+      llvm::outs() << *RuntimePath << '\n';
     else
       llvm::outs() << TC.getCompilerRTPath() << '\n';
     return false;
@@ -2516,13 +2491,8 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
     // filenames, but e.g. `/diagnostic:caret` is more likely a typo for
     // the option `/diagnostics:caret` than a reference to a file in the root
     // directory.
-    unsigned IncludedFlagsBitmask;
-    unsigned ExcludedFlagsBitmask;
-    std::tie(IncludedFlagsBitmask, ExcludedFlagsBitmask) =
-        getIncludeExcludeOptionFlagMasks(IsCLMode());
     std::string Nearest;
-    if (getOpts().findNearest(Value, Nearest, IncludedFlagsBitmask,
-                              ExcludedFlagsBitmask) <= 1) {
+    if (getOpts().findNearest(Value, Nearest, getOptionVisibilityMask()) <= 1) {
       Diag(clang::diag::err_drv_no_such_file_with_suggestion)
           << Value << Nearest;
       return false;
@@ -2608,8 +2578,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
     for (Arg *A :
          Args.filtered(options::OPT__SLASH_TC, options::OPT__SLASH_TP)) {
       if (Previous) {
-        Diag(clang::diag::warn_drv_overriding_flag_option)
-          << Previous->getSpelling() << A->getSpelling();
+        Diag(clang::diag::warn_drv_overriding_option)
+            << Previous->getSpelling() << A->getSpelling();
         ShowNote = true;
       }
       Previous = A;
@@ -2648,6 +2618,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
         if (memcmp(Value, "-", 2) == 0) {
           if (IsFlangMode()) {
             Ty = types::TY_Fortran;
+          } else if (IsDXCMode()) {
+            Ty = types::TY_HLSL;
           } else {
             // If running with -E, treat as a C input (this changes the
             // builtin macros, for example). This may be overridden by -ObjC
@@ -4302,16 +4274,32 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
           C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
   }
 
-  // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a custom
-  // Compile phase that prints out supported cpu models and quits.
-  if (Arg *A = Args.getLastArg(options::OPT_print_supported_cpus)) {
-    // Use the -mcpu=? flag as the dummy input to cc1.
-    Actions.clear();
-    Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
-    Actions.push_back(
-        C.MakeAction<PrecompileJobAction>(InputAc, types::TY_Nothing));
-    for (auto &I : Inputs)
-      I.second->claim();
+  for (auto Opt : {options::OPT_print_supported_cpus,
+                   options::OPT_print_supported_extensions}) {
+    // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
+    // custom Compile phase that prints out supported cpu models and quits.
+    //
+    // If --print-supported-extensions is specified, call the helper function
+    // RISCVMarchHelp in RISCVISAInfo.cpp that prints out supported extensions
+    // and quits.
+    if (Arg *A = Args.getLastArg(Opt)) {
+      if (Opt == options::OPT_print_supported_extensions &&
+          !C.getDefaultToolChain().getTriple().isRISCV() &&
+          !C.getDefaultToolChain().getTriple().isAArch64() &&
+          !C.getDefaultToolChain().getTriple().isARM()) {
+        C.getDriver().Diag(diag::err_opt_not_valid_on_target)
+            << "--print-supported-extensions";
+        return;
+      }
+
+      // Use the -mcpu=? flag as the dummy input to cc1.
+      Actions.clear();
+      Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
+      Actions.push_back(
+          C.MakeAction<PrecompileJobAction>(InputAc, types::TY_Nothing));
+      for (auto &I : Inputs)
+        I.second->claim();
+    }
   }
 
   // Call validator for dxil when -Vd not in Args.
@@ -4931,6 +4919,12 @@ void Driver::BuildJobs(Compilation &C) const {
   (void)C.getArgs().hasArg(options::OPT_driver_mode);
   (void)C.getArgs().hasArg(options::OPT_rsp_quoting);
 
+  bool HasAssembleJob = llvm::any_of(C.getJobs(), [](auto &J) {
+    // Match ClangAs and other derived assemblers of Tool. ClangAs uses a
+    // longer ShortName "clang integrated assembler" while other assemblers just
+    // use "assembler".
+    return strstr(J.getCreator().getShortName(), "assembler");
+  });
   for (Arg *A : C.getArgs()) {
     // FIXME: It would be nice to be able to send the argument to the
     // DiagnosticsEngine, so that extra values, position, and so on could be
@@ -4960,7 +4954,12 @@ void Driver::BuildJobs(Compilation &C) const {
       // already been warned about.
       if (!IsCLMode() || !A->getOption().matches(options::OPT_UNKNOWN)) {
         if (A->getOption().hasFlag(options::TargetSpecific) &&
-            !A->isIgnoredTargetSpecific()) {
+            !A->isIgnoredTargetSpecific() && !HasAssembleJob &&
+            // When for example -### or -v is used
+            // without a file, target specific options are not
+            // consumed/validated.
+            // Instead emitting an error emit a warning instead.
+            !C.getActions().empty()) {
           Diag(diag::err_drv_unsupported_opt_for_target)
               << A->getSpelling() << getTargetTriple();
         } else {
@@ -5042,7 +5041,8 @@ class ToolSelector final {
     return TC.useIntegratedAs() && !SaveTemps &&
            !C.getArgs().hasArg(options::OPT_via_file_asm) &&
            !C.getArgs().hasArg(options::OPT__SLASH_FA) &&
-           !C.getArgs().hasArg(options::OPT__SLASH_Fa);
+           !C.getArgs().hasArg(options::OPT__SLASH_Fa) &&
+           !C.getArgs().hasArg(options::OPT_dxc_Fc);
   }
 
   /// Return true if a preprocessor action can be collapsed.
@@ -5795,8 +5795,21 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     return "-";
   }
 
-  if (IsDXCMode() && !C.getArgs().hasArg(options::OPT_o))
-    return "-";
+  if (JA.getType() == types::TY_PP_Asm &&
+      C.getArgs().hasArg(options::OPT_dxc_Fc)) {
+    StringRef FcValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fc);
+    // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
+    // handle this as part of the SLASH_Fa handling below.
+    return C.addResultFile(C.getArgs().MakeArgString(FcValue.str()), &JA);
+  }
+
+  if (JA.getType() == types::TY_Object &&
+      C.getArgs().hasArg(options::OPT_dxc_Fo)) {
+    StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
+    // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
+    // handle this as part of the SLASH_Fo handling below.
+    return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+  }
 
   // Is this the assembly listing for /FA?
   if (JA.getType() == types::TY_PP_Asm &&
@@ -5809,6 +5822,11 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         MakeCLOutputFilename(C.getArgs(), FaValue, BaseName, JA.getType()),
         &JA);
   }
+
+  // DXC defaults to standard out when generating assembly. We check this after
+  // any DXC flags that might specify a file.
+  if (AtTopLevel && JA.getType() == types::TY_PP_Asm && IsDXCMode())
+    return "-";
 
   bool SpecifiedModuleOutput =
       C.getArgs().hasArg(options::OPT_fmodule_output) ||
@@ -5828,7 +5846,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
-    const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
     // The non-offloading toolchain on Darwin requires deterministic input
     // file name for binaries to be deterministic, therefore it needs unique
     // directory.
@@ -5919,7 +5938,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput =
         MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
   } else {
-    const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
     assert(Suffix && "All types used for output should have a suffix.");
 
     std::string::size_type End = std::string::npos;
@@ -5980,7 +6000,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       StringRef Name = llvm::sys::path::filename(BaseInput);
       std::pair<StringRef, StringRef> Split = Name.split('.');
       std::string TmpName = GetTemporaryPath(
-          Split.first, types::getTypeTempSuffix(JA.getType(), IsCLMode()));
+          Split.first,
+          types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode()));
       return C.addTempFile(C.getArgs().MakeArgString(TmpName));
     }
   }
@@ -6156,12 +6177,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Haiku:
       TC = std::make_unique<toolchains::Haiku>(*this, Target, Args);
       break;
-    case llvm::Triple::Ananas:
-      TC = std::make_unique<toolchains::Ananas>(*this, Target, Args);
-      break;
-    case llvm::Triple::CloudABI:
-      TC = std::make_unique<toolchains::CloudABI>(*this, Target, Args);
-      break;
     case llvm::Triple::Darwin:
     case llvm::Triple::MacOSX:
     case llvm::Triple::IOS:
@@ -6185,9 +6200,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
                                                                Args);
       else
         TC = std::make_unique<toolchains::FreeBSD>(*this, Target, Args);
-      break;
-    case llvm::Triple::Minix:
-      TC = std::make_unique<toolchains::Minix>(*this, Target, Args);
       break;
     case llvm::Triple::Linux:
     case llvm::Triple::ELFIAMCU:
@@ -6262,9 +6274,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::PS5:
       TC = std::make_unique<toolchains::PS5CPU>(*this, Target, Args);
       break;
-    case llvm::Triple::Contiki:
-      TC = std::make_unique<toolchains::Contiki>(*this, Target, Args);
-      break;
     case llvm::Triple::Hurd:
       TC = std::make_unique<toolchains::Hurd>(*this, Target, Args);
       break;
@@ -6327,10 +6336,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
         break;
       default:
-        if (Target.getVendor() == llvm::Triple::Myriad)
-          TC = std::make_unique<toolchains::MyriadToolChain>(*this, Target,
-                                                              Args);
-        else if (toolchains::BareMetal::handlesTarget(Target))
+        if (toolchains::BareMetal::handlesTarget(Target))
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         else if (Target.isOSBinFormatELF())
           TC = std::make_unique<toolchains::Generic_ELF>(*this, Target, Args);
@@ -6479,31 +6485,18 @@ bool Driver::GetReleaseVersion(StringRef Str,
   return false;
 }
 
-std::pair<unsigned, unsigned>
-Driver::getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const {
-  unsigned IncludedFlagsBitmask = 0;
-  unsigned ExcludedFlagsBitmask = options::NoDriverOption;
-
-  if (IsClCompatMode) {
-    // Include CL and Core options.
-    IncludedFlagsBitmask |= options::CLOption;
-    IncludedFlagsBitmask |= options::CLDXCOption;
-    IncludedFlagsBitmask |= options::CoreOption;
-  } else {
-    ExcludedFlagsBitmask |= options::CLOption;
+llvm::opt::Visibility
+Driver::getOptionVisibilityMask(bool UseDriverMode) const {
+  if (!UseDriverMode)
+    return llvm::opt::Visibility(options::ClangOption);
+  if (IsCLMode())
+    return llvm::opt::Visibility(options::CLOption);
+  if (IsDXCMode())
+    return llvm::opt::Visibility(options::DXCOption);
+  if (IsFlangMode())  {
+    return llvm::opt::Visibility(options::FlangOption);
   }
-  if (IsDXCMode()) {
-    // Include DXC and Core options.
-    IncludedFlagsBitmask |= options::DXCOption;
-    IncludedFlagsBitmask |= options::CLDXCOption;
-    IncludedFlagsBitmask |= options::CoreOption;
-  } else {
-    ExcludedFlagsBitmask |= options::DXCOption;
-  }
-  if (!IsClCompatMode && !IsDXCMode())
-    ExcludedFlagsBitmask |= options::CLDXCOption;
-
-  return std::make_pair(IncludedFlagsBitmask, ExcludedFlagsBitmask);
+  return llvm::opt::Visibility(options::ClangOption);
 }
 
 const char *Driver::getExecutableForDriverMode(DriverMode Mode) {
@@ -6554,7 +6547,7 @@ bool clang::driver::willEmitRemarks(const ArgList &Args) {
 
 llvm::StringRef clang::driver::getDriverMode(StringRef ProgName,
                                              ArrayRef<const char *> Args) {
-  static const std::string OptName =
+  static StringRef OptName =
       getDriverOptTable().getOption(options::OPT_driver_mode).getPrefixedName();
   llvm::StringRef Opt;
   for (StringRef Arg : Args) {

@@ -254,17 +254,10 @@ public:
   /// Requirements:
   ///
   ///  `D` must not already have a storage location in the environment.
-  ///
-  ///  If `D` has reference type, `Loc` must refer directly to the referenced
-  ///  object (if any), not to a `ReferenceValue`, and it is not permitted to
-  ///  later change `Loc` to refer to a `ReferenceValue.`
   void setStorageLocation(const ValueDecl &D, StorageLocation &Loc);
 
   /// Returns the storage location assigned to `D` in the environment, or null
   /// if `D` isn't assigned a storage location in the environment.
-  ///
-  /// Note that if `D` has reference type, the storage location that is returned
-  /// refers directly to the referenced object, not a `ReferenceValue`.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
@@ -279,9 +272,6 @@ public:
   /// Returns the storage location assigned to the glvalue `E` in the
   /// environment, or null if `E` isn't assigned a storage location in the
   /// environment.
-  ///
-  /// If the storage location for `E` is associated with a
-  /// `ReferenceValue RefVal`, returns `RefVal.getReferentLoc()` instead.
   ///
   /// Requirements:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
@@ -437,7 +427,6 @@ public:
   /// Requirements:
   ///
   ///  `E` must be a prvalue
-  ///  `Val` must not be a `ReferenceValue`
   ///  If `Val` is a `RecordValue`, its `RecordStorageLocation` must be the
   ///  same as that of any `RecordValue` that has already been associated with
   ///  `E`. This is to guarantee that the result object initialized by a prvalue
@@ -651,14 +640,17 @@ private:
   // function being analyzed is only a function and not a method.
   RecordStorageLocation *ThisPointeeLoc = nullptr;
 
-  // Maps from program declarations and statements to storage locations that are
+  // Maps from declarations and glvalue expression to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
   // include only storage locations that are in scope for a particular basic
   // block.
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
+  // Maps from prvalue expressions and storage locations to the values that
+  // are assigned to them.
   // We preserve insertion order so that join/widen process values in
   // deterministic sequence. This in turn produces deterministic SAT formulas.
+  llvm::MapVector<const Expr *, Value *> ExprToVal;
   llvm::MapVector<const StorageLocation *, Value *> LocToVal;
 
   Atom FlowConditionToken;
@@ -697,15 +689,6 @@ RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
 /// Associates a new `RecordValue` with `Expr` and returns the new value.
 /// See also documentation for the overload above.
 RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
-
-/// Deprecated synonym for `refreshRecordValue()`.
-inline RecordValue &refreshStructValue(RecordStorageLocation &Loc,
-                                       Environment &Env) {
-  return refreshRecordValue(Loc, Env);
-}
-inline RecordValue &refreshStructValue(const Expr &Expr, Environment &Env) {
-  return refreshRecordValue(Expr, Env);
-}
 
 } // namespace dataflow
 } // namespace clang

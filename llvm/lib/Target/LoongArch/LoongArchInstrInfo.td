@@ -143,6 +143,32 @@ def loongarch_iocsrwr_d : SDNode<"LoongArchISD::IOCSRWR_D",
 def loongarch_cpucfg : SDNode<"LoongArchISD::CPUCFG", SDTUnaryOp,
                                [SDNPHasChain]>;
 
+def to_fclass_mask: SDNodeXForm<timm, [{
+  uint64_t Check = N->getZExtValue();
+  unsigned Mask = 0;
+  if (Check & fcSNan)
+    Mask |= LoongArch::FClassMaskSignalingNaN;
+  if (Check & fcQNan)
+    Mask |= LoongArch::FClassMaskQuietNaN;
+  if (Check & fcPosInf)
+    Mask |= LoongArch::FClassMaskPositiveInfinity;
+  if (Check & fcNegInf)
+    Mask |= LoongArch::FClassMaskNegativeInfinity;
+  if (Check & fcPosNormal)
+    Mask |= LoongArch::FClassMaskPositiveNormal;
+  if (Check & fcNegNormal)
+    Mask |= LoongArch::FClassMaskNegativeNormal;
+  if (Check & fcPosSubnormal)
+    Mask |= LoongArch::FClassMaskPositiveSubnormal;
+  if (Check & fcNegSubnormal)
+    Mask |= LoongArch::FClassMaskNegativeSubnormal;
+  if (Check & fcPosZero)
+    Mask |= LoongArch::FClassMaskPositiveZero;
+  if (Check & fcNegZero)
+    Mask |= LoongArch::FClassMaskNegativeZero;
+  return CurDAG->getTargetConstant(Mask, SDLoc(N), Subtarget->getGRLenVT());
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
@@ -182,7 +208,7 @@ def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
 }
 
-def uimm1 : Operand<GRLenVT> {
+def uimm1 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<1>(Imm);}]>{
   let ParserMatchClass = UImmAsmOperand<1>;
 }
 
@@ -197,11 +223,11 @@ def uimm2_plus1 : Operand<GRLenVT>,
   let DecoderMethod = "decodeUImmOperand<2, 1>";
 }
 
-def uimm3 : Operand<GRLenVT> {
+def uimm3 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<3>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<3>;
 }
 
-def uimm4 : Operand<GRLenVT> {
+def uimm4 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<4>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<4>;
 }
 
@@ -517,6 +543,40 @@ def AlslSlliImmI0 : SDNodeXForm<imm, [{
   }
   return CurDAG->getTargetConstant(I0, SDLoc(N),
                                    N->getValueType(0));
+}]>;
+
+// Check if (and r, imm) can be optimized to (BSTRINS r, R0, msb, lsb),
+// in which imm = ~((2^^(msb-lsb+1) - 1) << lsb).
+def BstrinsImm : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  uint64_t Imm = N->getZExtValue();
+  // andi can be used instead if Imm <= 0xfff.
+  if (Imm <= 0xfff)
+    return false;
+  unsigned MaskIdx, MaskLen;
+  return N->getValueType(0).getSizeInBits() == 32
+             ? llvm::isShiftedMask_32(~Imm, MaskIdx, MaskLen)
+             : llvm::isShiftedMask_64(~Imm, MaskIdx, MaskLen);
+}]>;
+
+def BstrinsMsb: SDNodeXForm<imm, [{
+  uint64_t Imm = N->getZExtValue();
+  unsigned MaskIdx, MaskLen;
+  N->getValueType(0).getSizeInBits() == 32
+      ? llvm::isShiftedMask_32(~Imm, MaskIdx, MaskLen)
+      : llvm::isShiftedMask_64(~Imm, MaskIdx, MaskLen);
+  return CurDAG->getTargetConstant(MaskIdx + MaskLen - 1, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+def BstrinsLsb: SDNodeXForm<imm, [{
+  uint64_t Imm = N->getZExtValue();
+  unsigned MaskIdx, MaskLen;
+  N->getValueType(0).getSizeInBits() == 32
+      ? llvm::isShiftedMask_32(~Imm, MaskIdx, MaskLen)
+      : llvm::isShiftedMask_64(~Imm, MaskIdx, MaskLen);
+  return CurDAG->getTargetConstant(MaskIdx, SDLoc(N), N->getValueType(0));
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -1142,6 +1202,18 @@ def : Pat<(not (or GPR:$rj, GPR:$rk)), (NOR GPR:$rj, GPR:$rk)>;
 def : Pat<(or GPR:$rj, (not GPR:$rk)), (ORN GPR:$rj, GPR:$rk)>;
 def : Pat<(and GPR:$rj, (not GPR:$rk)), (ANDN GPR:$rj, GPR:$rk)>;
 
+let Predicates = [IsLA32] in {
+def : Pat<(and GPR:$rj, BstrinsImm:$imm),
+          (BSTRINS_W GPR:$rj, R0, (BstrinsMsb BstrinsImm:$imm),
+                     (BstrinsLsb BstrinsImm:$imm))>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : Pat<(and GPR:$rj, BstrinsImm:$imm),
+          (BSTRINS_D GPR:$rj, R0, (BstrinsMsb BstrinsImm:$imm),
+                     (BstrinsLsb BstrinsImm:$imm))>;
+} // Predicates = [IsLA64]
+
 /// Traps
 
 // We lower `trap` to `amswap.w rd:$r0, rk:$r1, rj:$r0`, as this is guaranteed
@@ -1596,13 +1668,13 @@ defm : LdPat<atomic_load_16, LD_H>;
 defm : LdPat<atomic_load_32, LD_W>;
 
 class release_seqcst_store<PatFrag base>
-    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+    : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return isReleaseOrStronger(Ordering);
 }]>;
 
 class unordered_monotonic_store<PatFrag base>
-    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+    : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
   return !isReleaseOrStronger(Ordering);
 }]>;
@@ -1614,23 +1686,13 @@ def atomic_store_unordered_monotonic_32
 def atomic_store_unordered_monotonic_64
     : unordered_monotonic_store<atomic_store_64>;
 
-/// AtomicStores
-
-multiclass AtomicStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
-                       ValueType vt> {
-  def : Pat<(StoreOp BaseAddr:$ptr, (vt StTy:$val)),
-            (Inst StTy:$val, BaseAddr:$ptr, 0)>;
-  def : Pat<(StoreOp (AddLike BaseAddr:$ptr, simm12:$imm12), (vt StTy:$val)),
-            (Inst StTy:$val, BaseAddr:$ptr, simm12:$imm12)>;
-}
-
-defm : AtomicStPat<atomic_store_8, ST_B, GPR, GRLenVT>;
-defm : AtomicStPat<atomic_store_16, ST_H, GPR, GRLenVT>;
-defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
+defm : StPat<atomic_store_8, ST_B, GPR, GRLenVT>;
+defm : StPat<atomic_store_16, ST_H, GPR, GRLenVT>;
+defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
                    Requires<[IsLA32]>;
 
 def PseudoAtomicStoreW
-  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rk, GPR:$rj)>,
            PseudoInstExpansion<(AMSWAP__DB_W R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
@@ -1638,15 +1700,15 @@ def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
 
 let Predicates = [IsLA64] in {
 def PseudoAtomicStoreD
-  : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
+  : Pseudo<(outs GPR:$dst), (ins GPR:$rk, GPR:$rj)>,
            PseudoInstExpansion<(AMSWAP__DB_D R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
 
 defm : LdPat<atomic_load_64, LD_D>;
-defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
-defm : AtomicStPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
+defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
+defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 /// Atomic Ops

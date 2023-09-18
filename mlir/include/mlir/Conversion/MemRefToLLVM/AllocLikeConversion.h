@@ -20,7 +20,7 @@ struct AllocationOpLLVMLowering : public ConvertToLLVMPattern {
   using ConvertToLLVMPattern::getVoidPtrType;
 
   explicit AllocationOpLLVMLowering(StringRef opName,
-                                    LLVMTypeConverter &converter,
+                                    const LLVMTypeConverter &converter,
                                     PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(opName, &converter.getContext(), converter,
                              benefit) {}
@@ -107,7 +107,7 @@ private:
 /// Lowering for AllocOp and AllocaOp.
 struct AllocLikeOpLLVMLowering : public AllocationOpLLVMLowering {
   explicit AllocLikeOpLLVMLowering(StringRef opName,
-                                   LLVMTypeConverter &converter,
+                                   const LLVMTypeConverter &converter,
                                    PatternBenefit benefit = 1)
       : AllocationOpLLVMLowering(opName, converter, benefit) {}
 

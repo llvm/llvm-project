@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
@@ -84,8 +85,6 @@ protected:
   translateToLLVMIR(llvm::LLVMContext &llvmContext) override;
 
 private:
-  void getDependentDialects(DialectRegistry &registry) const override;
-
   // Loads LLVM bitcode libraries
   std::optional<SmallVector<std::unique_ptr<llvm::Module>, 3>>
   loadLibraries(SmallVectorImpl<char> &path,
@@ -143,12 +142,6 @@ SerializeToHsacoPass::SerializeToHsacoPass(StringRef triple, StringRef arch,
   maybeSetOption(this->features, [&features] { return features.str(); });
   if (this->optLevel.getNumOccurrences() == 0)
     this->optLevel.setValue(optLevel);
-}
-
-void SerializeToHsacoPass::getDependentDialects(
-    DialectRegistry &registry) const {
-  registerROCDLDialectTranslation(registry);
-  gpu::SerializeToBlobPass::getDependentDialects(registry);
 }
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>, 3>>

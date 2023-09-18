@@ -20,7 +20,19 @@
 
 namespace clang {
 
-using DefMapTy = llvm::DenseMap<const VarDecl *, std::vector<const VarDecl *>>;
+using VarGrpTy = std::vector<const VarDecl *>;
+using VarGrpRef = ArrayRef<const VarDecl *>;
+
+class VariableGroupsManager {
+public:
+  VariableGroupsManager() = default;
+  virtual ~VariableGroupsManager() = default;
+  /// Returns the set of variables (including `Var`) that need to be fixed
+  /// together in one step.
+  ///
+  /// `Var` must be a variable that needs fix (so it must be in a group).
+  virtual VarGrpRef getGroupOfVar(const VarDecl *Var) const =0;
+};
 
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
@@ -53,7 +65,7 @@ public:
   /// all variables that must be fixed together (i.e their types must be changed to the
   /// same target type to prevent type mismatches) into a single fixit.
   virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                         const DefMapTy &VarGrpMap,
+                                         const VariableGroupsManager &VarGrpMgr,
                                          FixItList &&Fixes) = 0;
 
 #ifndef NDEBUG

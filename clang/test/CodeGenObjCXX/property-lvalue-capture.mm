@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
-// rdar://15118128
 
 template <typename T> struct Quad2 {
   Quad2() {}

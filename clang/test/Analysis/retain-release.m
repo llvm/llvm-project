@@ -713,7 +713,6 @@ void f18(__attribute__((annotate("rc_ownership_consumed"))) isl_basic_map *bmap)
 }
 @end
 
-// <rdar://problem/6659160>
 int isFoo(char c);
 
 static void rdar_6659160(char *inkind, char *inname)
@@ -787,10 +786,10 @@ void pr3820_DeallocAfterRelease(void)
   // message sent to released object
 }
 
-// From <rdar://problem/6704930>.  The problem here is that 'length' binds to
-// '($0 - 1)' after '--length', but SimpleConstraintManager doesn't know how to
-// reason about '($0 - 1) > constant'.  As a temporary hack, we drop the value
-// of '($0 - 1)' and conjure a new symbol.
+// The problem here is that 'length' binds to'($0 - 1)' after '--length', but
+// SimpleConstraintManager doesn't know how to reason about
+// '($0 - 1) > constant'.  As a temporary hack, we drop the value of '($0 - 1)'
+// and conjure a new symbol.
 void rdar6704930(unsigned char *s, unsigned int length) {
   NSString* name = 0;
   if (s != 0) {
@@ -821,7 +820,6 @@ void rdar6704930(unsigned char *s, unsigned int length) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6833332>
 // One build of the analyzer accidentally stopped tracking the allocated
 // object after the 'retain'.
 //===----------------------------------------------------------------------===//
@@ -854,9 +852,8 @@ void rdar6704930(unsigned char *s, unsigned int length) {
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6257780> clang checker fails to catch use-after-release
+// clang checker fails to catch use-after-release
 //===----------------------------------------------------------------------===//
-
 int rdar_6257780_Case1(void) {
   NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
   NSArray *array = [NSArray array];
@@ -866,18 +863,16 @@ int rdar_6257780_Case1(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/10640253> Analyzer is confused about NSAutoreleasePool -allocWithZone:.
+// Analyzer is confused about NSAutoreleasePool -allocWithZone:.
 //===----------------------------------------------------------------------===//
-
 void rdar_10640253_autorelease_allocWithZone(void) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool allocWithZone:(NSZone*)0] init];
     (void) pool;
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6866843> Checker should understand new/setObject:/release constructs
+// Checker should understand new/setObject:/release constructs
 //===----------------------------------------------------------------------===//
-
 void rdar_6866843(void) {
  NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
  NSMutableDictionary* dictionary = [[NSMutableDictionary alloc] init];
@@ -893,7 +888,7 @@ void rdar_6866843(void) {
 
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6877235> Classes typedef-ed to CF objects should get the same treatment as CF objects
+// Classes typedef-ed to CF objects should get the same treatment as CF objects
 //===----------------------------------------------------------------------===//
 
 typedef CFTypeRef OtherRef;
@@ -913,10 +908,8 @@ typedef CFTypeRef OtherRef;
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6320065> false positive - init method returns an object
-// owned by caller
+// False positive - init method returns an object owned by caller.
 //===----------------------------------------------------------------------===//
-
 @interface RDar6320065 : NSObject {
   NSString *_foo;
 }
@@ -957,10 +950,8 @@ int RDar6320065_test(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7129086> -awakeAfterUsingCoder: returns an owned object 
-//  and claims the receiver
+// -awakeAfterUsingCoder: returns an owned object and claims the receiver
 //===----------------------------------------------------------------------===//
-
 @interface RDar7129086 : NSObject {} @end
 @implementation RDar7129086
 - (id)awakeAfterUsingCoder:(NSCoder *)aDecoder {
@@ -970,10 +961,8 @@ int RDar6320065_test(void) {
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6859457> [NSData dataWithBytesNoCopy] does not return a
-//  retained object
+// [NSData dataWithBytesNoCopy] does not return a retained object
 //===----------------------------------------------------------------------===//
-
 @interface RDar6859457 : NSObject {}
 - (NSString*) NoCopyString;
 - (NSString*) noCopyString;
@@ -1025,8 +1014,7 @@ static void PR4230_new(void)
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6893565> don't flag leaks for return types that cannot be 
-//                          determined to be CF types
+// Don't flag leaks for return types that cannot be determined to be CF types.
 //===----------------------------------------------------------------------===//
 
 // We don't know if 'struct s6893565' represents a Core Foundation type, so
@@ -1044,9 +1032,8 @@ typedef struct s6893565* TD6893565;
 @end
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6902710> clang: false positives w/QC and CoreImage methods
+// clang: false positives w/QC and CoreImage methods
 //===----------------------------------------------------------------------===//
-
 void rdar6902710(QCView *view, QCRenderer *renderer, CIContext *context,
                  NSString *str, CIImage *img, CGRect rect,
                  CIFormat form, CGColorSpaceRef cs) {
@@ -1057,19 +1044,15 @@ void rdar6902710(QCView *view, QCRenderer *renderer, CIContext *context,
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6945561> -[CIContext createCGLayerWithSize:info:]
-//                           misinterpreted by clang scan-build
+// -[CIContext createCGLayerWithSize:info:] misinterpreted by clang scan-build
 //===----------------------------------------------------------------------===//
-
 void rdar6945561(CIContext *context, CGSize size, CFDictionaryRef d) {
   [context createCGLayerWithSize:size info:d]; // expected-warning{{leak}}
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/6961230> add knowledge of IOKit functions to retain/release 
-//                          checker
+// Add knowledge of IOKit functions to retain/release checker.
 //===----------------------------------------------------------------------===//
-
 void IOBSDNameMatching_wrapper(mach_port_t mainPort, uint32_t options,  const char * bsdName) {  
   IOBSDNameMatching(mainPort, options, bsdName); // expected-warning{{leak}}
 }
@@ -1128,7 +1111,6 @@ void IOServiceAddMatchingNotification_wrapper(IONotificationPortRef notifyPort, 
 
 void CFDictionaryAddValue(CFMutableDictionaryRef, void *, void *);
 
-// <rdar://problem/6539791>
 void rdar_6539791(CFMutableDictionaryRef y, void* key, void* val_key) {
   CFMutableDictionaryRef x = CFDictionaryCreateMutable(kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
   CFDictionaryAddValue(y, key, x);
@@ -1142,7 +1124,6 @@ void rdar_6539791(CFMutableDictionaryRef y, void* key, void* val_key) {
   }
 }
 
-// <rdar://problem/6560661>
 // Same issue, except with "AppendValue" functions.
 void rdar_6560661(CFMutableArrayRef x) {
   signed z = 1;
@@ -1154,7 +1135,6 @@ void rdar_6560661(CFMutableArrayRef x) {
   CFRelease(value); // no-warning
 }
 
-// <rdar://problem/7152619>
 // Same issue, excwept with "CFAttributeStringSetAttribute".
 void rdar_7152619(CFStringRef str) {
   CFAttributedStringRef string = CFAttributedStringCreate(kCFAllocatorDefault, str, 0);
@@ -1214,14 +1194,12 @@ void rdar_7184450_pos(CGContextRef myContext, CGFloat x, CGPoint myStartPoint,
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7299394> clang false positive: retained instance passed to
-//                          thread in pthread_create marked as leak
+// clang false positive: retained instance passed to thread in pthread_create
+// marked as leak.
 //
 // Until we have full IPA, the analyzer should stop tracking the reference
 // count of objects passed to pthread_create.
-//
 //===----------------------------------------------------------------------===//
-
 struct _opaque_pthread_t {};
 struct _opaque_pthread_attr_t {};
 typedef struct _opaque_pthread_t *__darwin_pthread_t;
@@ -1249,18 +1227,15 @@ void rdar_7299394_positive(pthread_attr_t *attr, pthread_t *thread) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/11282706> false positive with not understanding thread
-// local storage
+// False positive with not understanding thread local storage.
 //===----------------------------------------------------------------------===//
-
 void rdar11282706(pthread_key_t key) {
   NSNumber *number = [[NSNumber alloc] initWithInt:5]; // no-warning
   pthread_setspecific(key, (void*) number);
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7283567> False leak associated with call to 
-//                          CVPixelBufferCreateWithBytes ()
+// False leak associated with call to CVPixelBufferCreateWithBytes()
 //
 // According to the Core Video Reference (ADC), CVPixelBufferCreateWithBytes and
 // CVPixelBufferCreateWithPlanarBytes can release (via a callback) the
@@ -1268,7 +1243,6 @@ void rdar11282706(pthread_key_t key) {
 // the reference count for the objects passed for this argument.  This
 // could be made smarter.
 //===----------------------------------------------------------------------===//
-
 typedef int int32_t;
 typedef UInt32 FourCharCode;
 typedef FourCharCode OSType;
@@ -1277,6 +1251,7 @@ typedef int32_t CVReturn;
 typedef struct __CVBuffer *CVBufferRef;
 typedef CVBufferRef CVImageBufferRef;
 typedef CVImageBufferRef CVPixelBufferRef;
+typedef CVBufferRef CMTaggedBufferGroupRef;
 typedef void (*CVPixelBufferReleaseBytesCallback)( void *releaseRefCon, const void *baseAddress );
 
 extern CVReturn CVPixelBufferCreateWithBytes(CFAllocatorRef allocator,
@@ -1424,6 +1399,16 @@ VTCompressionSessionEncodeFrame(
     void * _Nullable sourceFrameRefCon,
     VTEncodeInfoFlags * _Nullable infoFlagsOut);
 
+extern OSStatus
+VTCompressionSessionEncodeMultiImageFrame(
+    _Nonnull VTCompressionSessionRef session,
+    _Nonnull CVImageBufferRef imageBuffer,
+    CMTime presentationTimeStamp,
+    CMTime duration,
+    _Nullable CFDictionaryRef frameProperties,
+    void * _Nullable sourceFrameRefCon,
+    VTEncodeInfoFlags * _Nullable infoFlagsOut);
+
 OSStatus test_VTCompressionSessionCreateAndEncode_CallbackReleases(
     _Nullable CFAllocatorRef allocator,
     int32_t width,
@@ -1443,6 +1428,8 @@ OSStatus test_VTCompressionSessionCreateAndEncode_CallbackReleases(
   // The outputCallback is passed both contexts and so can release either.
   NSNumber *contextForCreate = [[NSNumber alloc] initWithInt:5]; // no-warning
   NSNumber *contextForEncode = [[NSNumber alloc] initWithInt:6]; // no-warning
+  NSNumber *contextForEncodeMultiFrame = [[NSNumber alloc] initWithInt:7]; // no-warning
+
 
   VTCompressionSessionRef session = 0;
   OSStatus status = VTCompressionSessionCreate(allocator,
@@ -1457,12 +1444,15 @@ OSStatus test_VTCompressionSessionCreateAndEncode_CallbackReleases(
       presentationTimeStamp, duration, frameProperties, contextForEncode,
       &encodeInfoFlags);
 
+  status = VTCompressionSessionEncodeMultiImageFrame(session, imageBuffer,
+      presentationTimeStamp, duration, frameProperties, contextForEncodeMultiFrame,
+      &encodeInfoFlags);
+
   return status;
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7358899> False leak associated with 
-//  CGBitmapContextCreateWithData
+// False leak associated with CGBitmapContextCreateWithData.
 //===----------------------------------------------------------------------===//
 typedef uint32_t CGBitmapInfo;
 typedef void (*CGBitmapContextReleaseDataCallback)(void *releaseInfo, void *data);
@@ -1487,14 +1477,13 @@ void rdar_7358899(void *data,
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7265711> allow 'new', 'copy', 'alloc', 'init' prefix to
-//  start before '_' when determining Cocoa fundamental rule
+// Allow 'new', 'copy', 'alloc', 'init' prefix to start before '_' when
+// determining Cocoa fundamental rule.
 //
 // Previously the retain/release checker just skipped prefixes before the
 // first '_' entirely.  Now the checker honors the prefix if it results in a
 // recognizable naming convention (e.g., 'new', 'init').
 //===----------------------------------------------------------------------===//
-
 @interface RDar7265711 {}
 - (id) new_stuff;
 @end
@@ -1509,10 +1498,8 @@ void rdar7265711_b(RDar7265711 *x) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7306898> clang thinks [NSCursor dragCopyCursor] returns a
-//                          retained reference
+// clang thinks [NSCursor dragCopyCursor] returns a retained reference.
 //===----------------------------------------------------------------------===//
-
 @interface NSCursor : NSObject
 + (NSCursor *)dragCopyCursor;
 @end
@@ -1525,10 +1512,9 @@ void rdar7306898(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7252064> sending 'release', 'retain', etc. to a Class
-// directly is not likely what the user intended
+// Sending 'release', 'retain', etc. to a Class directly is not likely what the
+// user intended.
 //===----------------------------------------------------------------------===//
-
 @interface RDar7252064 : NSObject @end
 void rdar7252064(void) {
   [RDar7252064 release]; // expected-warning{{The 'release' message should be sent to instances of class 'RDar7252064' and not the class directly}}
@@ -1669,10 +1655,9 @@ CFDateRef returnsRetainedCFDate(void)  {
 //===----------------------------------------------------------------------===//
 // Test that leaks post-dominated by "panic" functions are not reported.
 //
-// <rdar://problem/5905851> do not report a leak when post-dominated by a call
-// to a noreturn or panic function
+// Do not report a leak when post-dominated by a call to a noreturn or panic
+// function.
 //===----------------------------------------------------------------------===//
-
 void panic(void) __attribute__((noreturn));
 void panic_not_in_hardcoded_list(void) __attribute__((noreturn));
 
@@ -1700,9 +1685,9 @@ void test_panic_pos_2(int x) {
   if (x)
     panic();
   if (!x) {
-    // This showed up in <rdar://problem/7796563>, where we silently missed checking
-    // the function type for noreturn.  "panic()" is a hard-coded known panic function
-    // that isn't always noreturn.
+    // This showed up previously where we silently missed checking the function
+    // type for noreturn.  "panic()" is a hard-coded known panic function that
+    // isn't always noreturn.
     panic_not_in_hardcoded_list();
   }
 }
@@ -1749,17 +1734,14 @@ void test_blocks_1_indirect_retain_via_call(void) {
 }
 @end
 
-// <rdar://problem/8272168> - Correcly handle Class<...> in Cocoa Conventions
-// detector.
-
+// Correcly handle Class<...> in Cocoa Conventions detector.
 @protocol Prot_R8272168 @end
 Class <Prot_R8272168> GetAClassThatImplementsProt_R8272168(void);
 void r8272168(void) {
   GetAClassThatImplementsProt_R8272168();
 }
 
-// Test case for <rdar://problem/8356342>, which in the past triggered
-// a false positive.
+// This used to trigger a false positive.
 @interface RDar8356342
 - (NSDate*) rdar8356342:(NSDate *)inValue;
 @end
@@ -1777,8 +1759,7 @@ void r8272168(void) {
 }
 @end
 
-// <rdar://problem/8724287> - This test case previously crashed because
-// of a bug in BugReporter.
+// This test case previously crashed because of a bug in BugReporter.
 extern const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
 typedef struct __CFError * CFErrorRef;
 extern const CFStringRef kCFErrorUnderlyingErrorKey;
@@ -1800,16 +1781,15 @@ static void rdar_8724287(CFErrorRef error)
     }
 }
 
-// <rdar://problem/9234108> - Make sure the model applies cf_consumed
-// correctly in argument positions besides the first.
+// Make sure the model applies cf_consumed correctly in argument positions
+// besides the first.
 extern void *CFStringCreate(void);
 extern void rdar_9234108_helper(void *key, void * CF_CONSUMED value);
 void rdar_9234108(void) {
   rdar_9234108_helper(0, CFStringCreate());
 }
 
-// <rdar://problem/9726279> - Make sure that objc_method_family works
-// to override naming conventions.
+// Make sure that objc_method_family works to override naming conventions.
 struct TwoDoubles {
   double one;
   double two;
@@ -1833,7 +1813,6 @@ void rdar9726279(void) {
   [value release];
 }
 
-// <rdar://problem/9732321>
 // Test camelcase support for CF conventions.  While Core Foundation APIs
 // don't use camel casing, other code is allowed to use it.
 CFArrayRef camelcase_create_1(void) {
@@ -1885,7 +1864,6 @@ CFArrayRef camel_copymachine(void) {
   return CFArrayCreateMutable(0, 10, &kCFTypeArrayCallBacks); // expected-warning {{leak}}
 }
 
-// rdar://problem/8024350
 @protocol F18P
 - (id) clone; // expected-note 2 {{method declared here}}
 @end
@@ -1900,7 +1878,6 @@ CFArrayRef camel_copymachine(void) {
 }
 @end
 
-// Radar 6582778.
 void rdar6582778(void) {
   CFAbsoluteTime t = CFAbsoluteTimeGetCurrent();
   CFTypeRef vals[] = { CFDateCreate(0, t) }; // expected-warning {{leak}}
@@ -1913,9 +1890,7 @@ void rdar6582778_2(void) {
   global = CFDateCreate(0, t); // no-warning
 }
 
-// <rdar://problem/10232019> - Test that objects passed to containers
-// are marked "escaped".
-
+// Test that objects passed to containers are marked "escaped".
 void rdar10232019(void) {
   NSMutableArray *array = [NSMutableArray array];
 
@@ -1938,7 +1913,6 @@ void rdar10232019_positive(void) {
 }
 
 // RetainCountChecker support for XPC.
-// <rdar://problem/9658496>
 typedef void * xpc_object_t;
 xpc_object_t _CFXPCCreateXPCObjectFromCFObject(CFTypeRef cf);
 void xpc_release(xpc_object_t object);
@@ -1973,7 +1947,6 @@ void rdar_10824732(void) {
 }
 
 // Stop tracking objects passed to functions, which take callbacks as parameters.
-// radar://10973977
 typedef int (*CloseCallback) (void *);
 void ReaderForIO(CloseCallback ioclose, void *ioctx);
 int IOClose(void *context);
@@ -1998,7 +1971,7 @@ int IOClose(void *context);
 }
 @end
 
-// Object escapes through a selector callback: radar://11398514
+// Object escapes through a selector callback
 extern id NSApp;
 @interface MySheetController
 - (id<SInS>)inputS;
@@ -2324,9 +2297,8 @@ void autoreleaseObjC(void) {
 } // expected-warning{{Object autoreleased too many times}}
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/13783514> xpc_connection_set_finalizer_f
+// xpc_connection_set_finalizer_f
 //===----------------------------------------------------------------------===//
-
 typedef xpc_object_t xpc_connection_t;
 typedef void (*xpc_finalizer_t)(void *value);
 void xpc_connection_set_context(xpc_connection_t connection, void *ctx);

@@ -34,13 +34,23 @@ static bool IsDescriptor(const DeclTypeSpec *type) {
 }
 
 static bool IsDescriptor(const ObjectEntityDetails &details) {
-  if (IsDescriptor(details.type())) {
+  if (IsDescriptor(details.type()) || details.IsAssumedRank()) {
     return true;
   }
+  std::size_t j{0};
   for (const ShapeSpec &shapeSpec : details.shape()) {
-    const auto &lb{shapeSpec.lbound().GetExplicit()};
-    const auto &ub{shapeSpec.ubound().GetExplicit()};
-    if (!lb || !ub || !IsConstantExpr(*lb) || !IsConstantExpr(*ub)) {
+    ++j;
+    if (const auto &lb{shapeSpec.lbound().GetExplicit()};
+        !lb || !IsConstantExpr(*lb)) {
+      return true;
+    }
+    if (const auto &ub{shapeSpec.ubound().GetExplicit()}) {
+      if (!IsConstantExpr(*ub)) {
+        return true;
+      }
+    } else if (j == details.shape().size() && details.isDummy()) {
+      // assumed size array
+    } else {
       return true;
     }
   }
@@ -169,7 +179,7 @@ std::size_t DynamicType::GetAlignment(
       }
     }
   } else {
-    return targetCharacteristics.GetAlignment(category_, kind_);
+    return targetCharacteristics.GetAlignment(category_, kind());
   }
   return 1; // needs to be after switch to dodge a bogus gcc warning
 }
@@ -183,14 +193,14 @@ std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
   case TypeCategory::Complex:
   case TypeCategory::Logical:
     return Expr<SubscriptInteger>{
-        context.targetCharacteristics().GetByteSize(category_, kind_)};
+        context.targetCharacteristics().GetByteSize(category_, kind())};
   case TypeCategory::Character:
     if (auto len{charLength ? Expr<SubscriptInteger>{Constant<SubscriptInteger>{
                                   *charLength}}
                             : GetCharLength()}) {
       return Fold(context,
           Expr<SubscriptInteger>{
-              context.targetCharacteristics().GetByteSize(category_, kind_)} *
+              context.targetCharacteristics().GetByteSize(category_, kind())} *
               std::move(*len));
     }
     break;
@@ -530,7 +540,11 @@ static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
     return x.kind() == y.kind() &&
         (ignoreLengths || !xLen || !yLen || *xLen == *yLen);
   } else if (x.category() != TypeCategory::Derived) {
-    return x.kind() == y.kind();
+    if (x.IsTypelessIntrinsicArgument()) {
+      return y.IsTypelessIntrinsicArgument();
+    } else {
+      return !y.IsTypelessIntrinsicArgument() && x.kind() == y.kind();
+    }
   } else {
     const auto *xdt{GetDerivedTypeSpec(x)};
     const auto *ydt{GetDerivedTypeSpec(y)};
@@ -641,7 +655,7 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
   case TypeCategory::Integer:
     switch (that.category_) {
     case TypeCategory::Integer:
-      return DynamicType{TypeCategory::Integer, std::max(kind_, that.kind_)};
+      return DynamicType{TypeCategory::Integer, std::max(kind(), that.kind())};
     case TypeCategory::Real:
     case TypeCategory::Complex:
       return that;
@@ -654,9 +668,9 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
     case TypeCategory::Integer:
       return *this;
     case TypeCategory::Real:
-      return DynamicType{TypeCategory::Real, std::max(kind_, that.kind_)};
+      return DynamicType{TypeCategory::Real, std::max(kind(), that.kind())};
     case TypeCategory::Complex:
-      return DynamicType{TypeCategory::Complex, std::max(kind_, that.kind_)};
+      return DynamicType{TypeCategory::Complex, std::max(kind(), that.kind())};
     default:
       CRASH_NO_CASE;
     }
@@ -667,7 +681,7 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
       return *this;
     case TypeCategory::Real:
     case TypeCategory::Complex:
-      return DynamicType{TypeCategory::Complex, std::max(kind_, that.kind_)};
+      return DynamicType{TypeCategory::Complex, std::max(kind(), that.kind())};
     default:
       CRASH_NO_CASE;
     }
@@ -675,7 +689,7 @@ DynamicType DynamicType::ResultTypeForMultiply(const DynamicType &that) const {
   case TypeCategory::Logical:
     switch (that.category_) {
     case TypeCategory::Logical:
-      return DynamicType{TypeCategory::Logical, std::max(kind_, that.kind_)};
+      return DynamicType{TypeCategory::Logical, std::max(kind(), that.kind())};
     default:
       CRASH_NO_CASE;
     }

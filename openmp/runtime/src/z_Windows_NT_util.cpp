@@ -1006,7 +1006,7 @@ extern "C" void *__stdcall __kmp_launch_worker(void *arg) {
   __kmp_itt_thread_name(gtid);
 #endif /* USE_ITT_BUILD */
 
-  __kmp_affinity_set_init_mask(gtid, FALSE);
+  __kmp_affinity_bind_init_mask(gtid);
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   // Set FP control regs to be a copy of the parallel initialization thread's.

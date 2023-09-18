@@ -158,6 +158,19 @@ enum ProcessorFeatures {
   FEATURE_AVX512BITALG,
   FEATURE_AVX512BF16,
   FEATURE_AVX512VP2INTERSECT,
+
+  FEATURE_CMPXCHG16B = 46,
+  FEATURE_F16C = 49,
+  FEATURE_LAHF_LM = 54,
+  FEATURE_LM,
+  FEATURE_WP,
+  FEATURE_LZCNT,
+  FEATURE_MOVBE,
+
+  FEATURE_X86_64_BASELINE = 95,
+  FEATURE_X86_64_V2,
+  FEATURE_X86_64_V3,
+  FEATURE_X86_64_V4,
   CPU_FEATURE_MAX
 };
 
@@ -456,6 +469,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Meteorlake:
     case 0xaa:
     case 0xac:
+    // Gracemont:
+    case 0xbe:
       CPU = "alderlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
@@ -675,6 +690,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
   unsigned EAX = 0, EBX = 0;
 
+#define hasFeature(F) ((Features[F / 32] >> (F % 32)) & 1)
 #define setFeature(F)                                                          \
   Features[F / 32] |= 1U << (F % 32)
 
@@ -695,14 +711,20 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_SSSE3);
   if ((ECX >> 12) & 1)
     setFeature(FEATURE_FMA);
+  if ((ECX >> 13) & 1)
+    setFeature(FEATURE_CMPXCHG16B);
   if ((ECX >> 19) & 1)
     setFeature(FEATURE_SSE4_1);
   if ((ECX >> 20) & 1)
     setFeature(FEATURE_SSE4_2);
+  if ((ECX >> 22) & 1)
+    setFeature(FEATURE_MOVBE);
   if ((ECX >> 23) & 1)
     setFeature(FEATURE_POPCNT);
   if ((ECX >> 25) & 1)
     setFeature(FEATURE_AES);
+  if ((ECX >> 29) & 1)
+    setFeature(FEATURE_F16C);
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
@@ -784,12 +806,39 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  if (HasExtLeaf1 && ((ECX >> 6) & 1))
-    setFeature(FEATURE_SSE4_A);
-  if (HasExtLeaf1 && ((ECX >> 11) & 1))
-    setFeature(FEATURE_XOP);
-  if (HasExtLeaf1 && ((ECX >> 16) & 1))
-    setFeature(FEATURE_FMA4);
+  if (HasExtLeaf1) {
+    if (ECX & 1)
+      setFeature(FEATURE_LAHF_LM);
+    if ((ECX >> 5) & 1)
+      setFeature(FEATURE_LZCNT);
+    if (((ECX >> 6) & 1))
+      setFeature(FEATURE_SSE4_A);
+    if (((ECX >> 11) & 1))
+      setFeature(FEATURE_XOP);
+    if (((ECX >> 16) & 1))
+      setFeature(FEATURE_FMA4);
+    if (((EDX >> 29) & 1))
+      setFeature(FEATURE_LM);
+  }
+
+  if (hasFeature(FEATURE_LM) && hasFeature(FEATURE_SSE2)) {
+    setFeature(FEATURE_X86_64_BASELINE);
+    if (hasFeature(FEATURE_CMPXCHG16B) && hasFeature(FEATURE_POPCNT) &&
+        hasFeature(FEATURE_LAHF_LM) && hasFeature(FEATURE_SSE4_2)) {
+      setFeature(FEATURE_X86_64_V2);
+      if (hasFeature(FEATURE_AVX2) && hasFeature(FEATURE_BMI) &&
+          hasFeature(FEATURE_BMI2) && hasFeature(FEATURE_F16C) &&
+          hasFeature(FEATURE_FMA) && hasFeature(FEATURE_LZCNT) &&
+          hasFeature(FEATURE_MOVBE)) {
+        setFeature(FEATURE_X86_64_V3);
+        if (hasFeature(FEATURE_AVX512BW) && hasFeature(FEATURE_AVX512CD) &&
+            hasFeature(FEATURE_AVX512DQ) && hasFeature(FEATURE_AVX512VL))
+          setFeature(FEATURE_X86_64_V4);
+      }
+    }
+  }
+
+#undef hasFeature
 #undef setFeature
 }
 
@@ -811,7 +860,7 @@ struct __processor_model {
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
 #endif
-unsigned int __cpu_features2 = 0;
+unsigned __cpu_features2[(CPU_FEATURE_MAX - 1) / 32];
 
 // A constructor function that is sets __cpu_model and __cpu_features2 with
 // the right values.  This needs to run only once.  This constructor is
@@ -825,6 +874,8 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   unsigned Vendor;
   unsigned Model, Family;
   unsigned Features[(CPU_FEATURE_MAX + 31) / 32] = {0};
+  static_assert(sizeof(Features) / sizeof(Features[0]) == 4, "");
+  static_assert(sizeof(__cpu_features2) / sizeof(__cpu_features2[0]) == 3, "");
 
   // This function needs to run just once.
   if (__cpu_model.__cpu_vendor)
@@ -842,9 +893,10 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   // Find available features.
   getAvailableFeatures(ECX, EDX, MaxLeaf, &Features[0]);
 
-  assert((sizeof(Features)/sizeof(Features[0])) == 2);
   __cpu_model.__cpu_features[0] = Features[0];
-  __cpu_features2 = Features[1];
+  __cpu_features2[0] = Features[1];
+  __cpu_features2[1] = Features[2];
+  __cpu_features2[2] = Features[3];
 
   if (Vendor == SIG_INTEL) {
     // Get CPU type.

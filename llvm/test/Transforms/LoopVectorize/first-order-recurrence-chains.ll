@@ -18,7 +18,6 @@ define i16 @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
@@ -62,7 +61,6 @@ define i16 @test_chained_first_order_recurrences_2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body, !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:      middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
@@ -109,7 +107,6 @@ define i16 @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
@@ -222,7 +219,6 @@ define i16 @test_chained_first_order_recurrences_3_reordered_1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
@@ -274,7 +270,6 @@ define i16 @test_chained_first_order_recurrences_3_reordered_2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
@@ -326,7 +321,6 @@ define i16 @test_chained_first_order_recurrences_3_for2_no_other_uses(ptr %ptr) 
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
@@ -377,7 +371,6 @@ define i16 @test_chained_first_order_recurrences_3_for1_for2_no_other_uses(ptr %
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:      middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
@@ -427,7 +420,6 @@ define double @test_chained_first_order_recurrence_sink_users_1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body, !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 999, 996
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
@@ -496,10 +488,9 @@ define i64 @test_first_order_recurrences_and_induction(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 2
-; CHECK-NEXT:    br i1 [[CMP_N]]
+; CHECK-NEXT:    br i1 true
 
 entry:
   br label %loop
@@ -537,10 +528,9 @@ define i64 @test_first_order_recurrences_and_induction2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 2
-; CHECK-NEXT:    br i1 [[CMP_N]]
+; CHECK-NEXT:    br i1 true
 ;
 entry:
   br label %loop
@@ -579,10 +569,9 @@ define ptr @test_first_order_recurrences_and_pointer_induction1(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
-; CHECK-NEXT:    br i1 [[CMP_N]],
+; CHECK-NEXT:    br i1 true
 ;
 entry:
   br label %loop
@@ -624,10 +613,9 @@ define ptr @test_first_order_recurrences_and_pointer_induction2(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
-; CHECK-NEXT:    br i1 [[CMP_N]],
+; CHECK-NEXT:    br i1 true
 ;
 entry:
   br label %loop
@@ -672,14 +660,13 @@ define double @test_resinking_required(ptr %p, ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 0, 0
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT5:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI6:%.*]] = extractelement <4 x double> [[BROADCAST_SPLAT4]], i32 2
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT9:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI10:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
-; CHECK-NEXT:    br i1 [[CMP_N]], label %End, label %scalar.ph
+; CHECK-NEXT:    br i1 true, label %End, label %scalar.ph
 ;
 Entry:
   br label %Loop

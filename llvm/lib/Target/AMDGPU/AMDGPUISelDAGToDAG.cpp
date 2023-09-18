@@ -81,10 +81,9 @@ static bool isExtractHiElt(SDValue In, SDValue &Out) {
 // same register.
 static SDValue stripExtractLoElt(SDValue In) {
   if (In.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    if (ConstantSDNode *Idx = dyn_cast<ConstantSDNode>(In.getOperand(1))) {
-      if (Idx->isZero() && In.getValueSizeInBits() <= 32)
-        return In.getOperand(0);
-    }
+    SDValue Idx = In.getOperand(1);
+    if (isNullConstant(Idx) && In.getValueSizeInBits() <= 32)
+      return In.getOperand(0);
   }
 
   if (In.getOpcode() == ISD::TRUNCATE) {
@@ -113,12 +112,12 @@ INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "amdgpu-isel",
 /// This pass converts a legalized DAG into a AMDGPU-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
-                                        CodeGenOpt::Level OptLevel) {
+                                        CodeGenOptLevel OptLevel) {
   return new AMDGPUDAGToDAGISel(TM, OptLevel);
 }
 
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
-                                       CodeGenOpt::Level OptLevel)
+                                       CodeGenOptLevel OptLevel)
     : SelectionDAGISel(ID, TM, OptLevel) {
   EnableLateStructurizeCFG = AMDGPUTargetMachine::EnableLateStructurizeCFG;
 }
@@ -690,6 +689,14 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   }
   case ISD::INTRINSIC_VOID: {
     SelectINTRINSIC_VOID(N);
+    return;
+  }
+  case AMDGPUISD::WAVE_ADDRESS: {
+    SelectWAVE_ADDRESS(N);
+    return;
+  }
+  case ISD::STACKRESTORE: {
+    SelectSTACKRESTORE(N);
     return;
   }
   }
@@ -2567,6 +2574,45 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   }
 
   SelectCode(N);
+}
+
+void AMDGPUDAGToDAGISel::SelectWAVE_ADDRESS(SDNode *N) {
+  SDValue Log2WaveSize =
+    CurDAG->getTargetConstant(Subtarget->getWavefrontSizeLog2(), SDLoc(N), MVT::i32);
+  CurDAG->SelectNodeTo(N, AMDGPU::S_LSHR_B32, N->getVTList(),
+                       {N->getOperand(0), Log2WaveSize});
+}
+
+void AMDGPUDAGToDAGISel::SelectSTACKRESTORE(SDNode *N) {
+  SDValue SrcVal = N->getOperand(1);
+  if (SrcVal.getValueType() != MVT::i32) {
+    SelectCode(N); // Emit default error
+    return;
+  }
+
+  SDValue CopyVal;
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
+  SDLoc SL(N);
+
+  if (SrcVal.getOpcode() == AMDGPUISD::WAVE_ADDRESS) {
+    CopyVal = SrcVal.getOperand(0);
+  } else {
+    SDValue Log2WaveSize = CurDAG->getTargetConstant(
+        Subtarget->getWavefrontSizeLog2(), SL, MVT::i32);
+
+    if (N->isDivergent()) {
+      SrcVal = SDValue(CurDAG->getMachineNode(AMDGPU::V_READFIRSTLANE_B32, SL,
+                                              MVT::i32, SrcVal),
+                       0);
+    }
+
+    CopyVal = SDValue(CurDAG->getMachineNode(AMDGPU::S_LSHL_B32, SL, MVT::i32,
+                                             {SrcVal, Log2WaveSize}),
+                      0);
+  }
+
+  SDValue CopyToSP = CurDAG->getCopyToReg(N->getOperand(0), SL, SP, CopyVal);
+  CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), CopyToSP);
 }
 
 bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,

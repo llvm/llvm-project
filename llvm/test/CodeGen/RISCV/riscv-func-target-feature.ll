@@ -10,8 +10,8 @@ entry:
 }
 
 ; CHECK: .option push
-; CHECK-NEXT: .option arch, +experimental-zihintntl
-define void @test2() "target-features"="+a,+d,+f,+m,+experimental-zihintntl,+zifencei" {
+; CHECK-NEXT: .option arch, +zihintntl
+define void @test2() "target-features"="+a,+d,+f,+m,+zihintntl,+zifencei" {
 ; CHECK-LABEL: test2
 ; CHECK: .option pop
 entry:
@@ -30,6 +30,14 @@ entry:
 ; CHECK-NOT: .option push
 define void @test4() {
 ; CHECK-LABEL: test4
+; CHECK-NOT: .option pop
+entry:
+  ret void
+}
+
+; CHECK-NOT: .option push
+define void @test5() "target-features"="+unaligned-scalar-mem" {
+; CHECK-LABEL: test5
 ; CHECK-NOT: .option pop
 entry:
   ret void

@@ -749,7 +749,6 @@ void TargetInstrInfo::lowerCopy(MachineInstr *MI,
   if (MI->getNumOperands() > 2)
     transferImplicitOperands(MI, TRI);
   MI->eraseFromParent();
-  return;
 }
 
 bool TargetInstrInfo::hasReassociableOperands(
@@ -1374,6 +1373,26 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   return (DefCycle != -1 && DefCycle <= 1);
 }
 
+bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
+  // TODO: We don't split functions where a section attribute has been set
+  // since the split part may not be placed in a contiguous region. It may also
+  // be more beneficial to augment the linker to ensure contiguous layout of
+  // split functions within the same section as specified by the attribute.
+  if (MF.getFunction().hasSection() ||
+      MF.getFunction().hasFnAttribute("implicit-section-name"))
+    return false;
+
+  // We don't want to proceed further for cold functions
+  // or functions of unknown hotness. Lukewarm functions have no prefix.
+  std::optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
+  if (SectionPrefix &&
+      (*SectionPrefix == "unlikely" || *SectionPrefix == "unknown")) {
+    return false;
+  }
+
+  return true;
+}
+
 std::optional<ParamLoadedValue>
 TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
                                      Register Reg) const {
@@ -1591,25 +1610,24 @@ std::string TargetInstrInfo::createMIROperandComment(
   assert(Op.isImm() && "Expected flag operand to be an immediate");
   // Pretty print the inline asm operand descriptor.
   unsigned Flag = Op.getImm();
-  unsigned Kind = InlineAsm::getKind(Flag);
-  OS << InlineAsm::getKindName(Kind);
+  const InlineAsm::Flag F(Flag);
+  OS << F.getKindName();
 
-  unsigned RCID = 0;
-  if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
-      InlineAsm::hasRegClassConstraint(Flag, RCID)) {
+  unsigned RCID;
+  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
     if (TRI) {
       OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
     } else
       OS << ":RC" << RCID;
   }
 
-  if (InlineAsm::isMemKind(Flag)) {
-    unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
+  if (F.isMemKind()) {
+    InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
     OS << ":" << InlineAsm::getMemConstraintName(MCID);
   }
 
-  unsigned TiedTo = 0;
-  if (InlineAsm::isUseOperandTiedToDef(Flag, TiedTo))
+  unsigned TiedTo;
+  if (F.isUseOperandTiedToDef(TiedTo))
     OS << " tiedto:$" << TiedTo;
 
   return OS.str();

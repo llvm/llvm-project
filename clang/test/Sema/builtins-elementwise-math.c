@@ -601,6 +601,27 @@ void test_builtin_elementwise_sin(int i, float f, double d, float4 v, int3 iv, u
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
+void test_builtin_elementwise_sqrt(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+
+  struct Foo s = __builtin_elementwise_sqrt(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_sqrt();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_sqrt(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_sqrt(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_sqrt(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_sqrt(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+}
+
 void test_builtin_elementwise_trunc(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_trunc(f);

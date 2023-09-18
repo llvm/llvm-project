@@ -86,33 +86,30 @@ main(int argc, char *argv[]) {
 
   return 0;
 }
-// CHECK-LABEL: define dso_local void {{.+}}parallel_taskgroup_loop{{.+}} {
-// CHECK:        call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.+}}parallel_taskgroup_loop{{.+}}.omp_outlined{{.*}}
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}parallel_taskgroup_loop{{.+}} {
+// CHECK:        call {{.+}}__kmpc_fork_call({{.+}}parallel_taskgroup_loop{{.+}}.omp_outlined{{.*}}
 //
 //
-// CHECK-LABEL: define internal void {{.+}}parallel_taskgroup_loop{{.+}}.omp_outlined{{.+}} {
-// CHECK:        call void @__kmpc_taskgroup
+// CHECK-LABEL: define {{.+}}parallel_taskgroup_loop{{.+}}.omp_outlined{{.+}} {
+// CHECK:        call {{.+}}__kmpc_taskgroup
 // CHECK:       for.body:
 // CHECK:       omp.inner.for.cond:
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.inner.for.inc:
 // CHECK:       omp.inner.for.end:
 // CHECK:       for.end:
-// CHECK:         call void @__kmpc_end_taskgroup
-// CHECK-NEXT:    ret void
+// CHECK:         call {{.+}}__kmpc_end_taskgroup
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}parallel_taskwait_loop{{.+}} {
-// CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.+}}parallel_taskwait_loop{{.+}}.omp_outlined{{.*}})
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}parallel_taskwait_loop{{.+}} {
+// CHECK:         call {{.+}}__kmpc_fork_call({{.+}}parallel_taskwait_loop{{.+}}.omp_outlined{{.*}})
 //
 //
-// CHECK-LABEL: define internal void {{.+}}parallel_taskwait_loop{{.+}}.omp_outlined{{.+}} {
-// CHECK:         [[TMP2:%.*]] = call i32 @__kmpc_omp_taskwait
+// CHECK-LABEL: define {{.+}}parallel_taskwait_loop{{.+}}.omp_outlined{{.+}} {
+// CHECK:         [[TMP2:%.*]] = {{.+}}__kmpc_omp_taskwait
 // CHECK:       for.cond:
 // CHECK:       for.body:
-// CHECK:         call void @__kmpc_for_static_init_4
+// CHECK:         {{.+}}__kmpc_for_static_init_4
 // CHECK:       omp.inner.for.cond:
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.body.continue:
@@ -122,69 +119,61 @@ main(int argc, char *argv[]) {
 // CHECK:         call void @__kmpc_for_static_fini
 // CHECK:         call void @__kmpc_barrier
 // CHECK:       for.end:
-// CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}parallel_single_loop{{.+}} {
-// CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.+}}parallel_single_loop{{.+}}.omp_outlined{{.*}})
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}parallel_single_loop{{.+}} {
+// CHECK:         call {{.+}}__kmpc_fork_call({{.+}}parallel_single_loop{{.+}}.omp_outlined{{.*}})
 //
 //
-// CHECK-LABEL: define internal void {{.+}}parallel_single_loop{{.+}}.omp_outlined{{.+}} {
+// CHECK-LABEL: define {{.+}}parallel_single_loop{{.+}}.omp_outlined{{.+}} {
 // CHECK:       for.body:
-// CHECK:         [[TMP3:%.*]] = call i32 @__kmpc_single
+// CHECK:         [[TMP3:%.*]] = call {{.+}}__kmpc_single
 // CHECK:       omp.inner.for.end:
-// CHECK:         call void @__kmpc_end_single
+// CHECK:         call {{.+}}__kmpc_end_single
 // CHECK:       omp_if.end:
-// CHECK:        call void @__kmpc_barrier
+// CHECK:        call {{.+}}__kmpc_barrier
 // CHECK:       for.end:
-// CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}parallel_order_loop{{.+}} {
-// CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.+}}parallel_order_loop{{.+}}.omp_outlined{{.*}})
-// CHECK-NEXT:    ret void
+// CHECK-LABEL: define {{.+}}parallel_order_loop{{.+}} {
+// CHECK:         call {{.+}}__kmpc_fork_call({{.+}}parallel_order_loop{{.+}}.omp_outlined{{.*}})
 //
 //
-// CHECK-LABEL: define internal void {{.+}}parallel_order_loop{{.+}}.omp_outlined{{.+}} {
-// CHECK:        call void @__kmpc_for_static_init_4
+// CHECK-LABEL: define {{.+}}parallel_order_loop{{.+}}.omp_outlined{{.+}} {
+// CHECK:        call {{.+}}__kmpc_for_static_init_4
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.loop.exit:
-// CHECK:        call void @__kmpc_for_static_fini
-// CHECK:        call void @__kmpc_barrier
-// CHECK-NEXT:    ret void
+// CHECK:        call {{.+}}__kmpc_for_static_fini
+// CHECK:        call {{.+}}__kmpc_barrier
 //
 //
-// CHECK-LABEL: define dso_local void {{.+}}parallel_cancel_loop{{.+}} {
-// CHECK:         [[FLAG_ADDR:%.*]] = alloca i8,
-// CHECK:         call void @__kmpc_ordered
+// CHECK-LABEL: define {{.+}}parallel_cancel_loop{{.+}} {
+// CHECK:         call {{.+}}__kmpc_ordered
 // CHECK:       for.body:
-// CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call({{.+}}parallel_cancel_loop{{.+}}.omp_outlined{{.+}})
+// CHECK:         call {{.+}}__kmpc_fork_call({{.+}}parallel_cancel_loop{{.+}}.omp_outlined{{.+}})
 // CHECK:       for.end:
-// CHECK:         call void @__kmpc_end_ordered
-// CHECK-NEXT:    ret void
+// CHECK:         call {{.+}}__kmpc_end_ordered
 //
 //
-// CHECK-LABEL: define internal void {{.+}}parallel_cancel_loop{{.+}}.omp_outlined{{.+}} {
+// CHECK-LABEL: define {{.+}}parallel_cancel_loop{{.+}}.omp_outlined{{.+}} {
 // CHECK:       omp_if.then:
-// CHECK:         [[TMP4:%.*]] = call i32 @__kmpc_cancel
+// CHECK:         [[TMP4:%.*]] = call {{.+}}__kmpc_cancel
 // CHECK:       .cancel.exit:
-// CHECK:         [[TMP8:%.*]] = call i32 @__kmpc_cancel_barrier
+// CHECK:         [[TMP8:%.*]] = call {{.+}}__kmpc_cancel_barrier
 // CHECK:       omp_if.end:
-// CHECK:         call void @__kmpc_for_static_init_4
+// CHECK:         call {{.+}}__kmpc_for_static_init_4
 // CHECK:       omp.inner.for.body:
 // CHECK:       omp.loop.exit:
-// CHECK:         call void @__kmpc_for_static_fini
-// CHECK:         [[TMP24:%.*]] = call i32 @__kmpc_cancel_barrier
+// CHECK:         call {{.+}}__kmpc_for_static_fini
+// CHECK:         [[TMP24:%.*]] = call {{.+}}__kmpc_cancel_barrier
 // CHECK:       .cancel.continue5:
-// CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define dso_local noundef {{.+}}@main{{.+}} {
-// CHECK:         call void {{.+}}parallel_taskgroup_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}parallel_taskwait_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}parallel_single_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}parallel_order_loop{{.+}}()
-// CHECK-NEXT:    call void {{.+}}parallel_cancel_loop{{.+}}({{.+}}true)
-// CHECK-NEXT:    call void {{.+}}parallel_cancel_loop{{.+}}({{.+}}false)
+// CHECK-LABEL: define {{.+}}@main{{.+}} {
+// CHECK:         call {{.+}}parallel_taskgroup_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}parallel_taskwait_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}parallel_single_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}parallel_order_loop{{.+}}()
+// CHECK-NEXT:    call {{.+}}parallel_cancel_loop{{.+}}({{.+}}true)
+// CHECK-NEXT:    call {{.+}}parallel_cancel_loop{{.+}}({{.+}}false)
 //

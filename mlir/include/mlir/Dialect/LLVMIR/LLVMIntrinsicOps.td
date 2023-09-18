@@ -120,21 +120,17 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
   }];
 }
 
-def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
-                                          /*requiresFastmath=*/1> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in,
-                       I32Attr:$kinds,
-                       DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location,
-      $_resultType, $in, $_int_attr($kinds), nullptr);
-    moduleImport.setFastmathFlagsAttr(inst, op);
-    $res = op;
+      $_resultType, $in, $_int_attr($bit));
+      $res = op;
   }];
   string llvmBuilder = [{
     auto *inst = createIntrinsicCall(
       builder, llvm::Intrinsic::}] # llvmEnumName # [{,
-      {$in, builder.getInt32(op.getKinds())},
+      {$in, builder.getInt32(op.getBit())},
       }] # declTypes # [{);
     $res = inst;
   }];
@@ -333,7 +329,7 @@ def LLVM_NoAliasScopeDeclOp
   string llvmBuilder = [{
     // Wrap the scope argument into a list since the LLVM IR intrinsic takes
     // a list containing exactly one scope rather than a scope itself.
-    llvm::MDNode* node = moduleTranslation.getAliasScopes({$scope});
+    llvm::MDNode* node = moduleTranslation.getOrCreateAliasScopes({$scope});
     builder.CreateNoAliasScopeDeclaration(node);
   }];
   string mlirBuilder = [{
@@ -507,8 +503,9 @@ def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
 
 def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
   let arguments = (ins LLVM_i8Ptr:$handle,
-                       I1:$unwind);
-  let assemblyFormat = "$handle `,` $unwind attr-dict `:` functional-type(operands, results)";
+                       I1:$unwind,
+                       LLVM_TokenType:$retvals);
+  let assemblyFormat = "$handle `,` $unwind `,` $retvals attr-dict `:` functional-type(operands, results)";
 }
 
 def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
@@ -542,33 +539,10 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
       });
   }];
   let mlirBuilder = [{
-    // Drop debug intrinsics with a non-empty debug expression.
-    // TODO: Support debug intrinsics that evaluate a debug expression.
-    auto *dbgIntr = cast<llvm::DbgVariableIntrinsic>(inst);
-    if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
-      return success();
-    // Convert the value/address operand late since it cannot be a debug
-    // metadata argument list at this stage. Generating the conversion using an
-    // argument variable would not work here, since the builder variables are
-    // converted before entering the builder, which would result in an error
-    // when attempting to convert an argument list.
-
-    FailureOr<Value> argOperand = moduleImport.convertMetadataValue(llvmOperands[0]);
-    // Drop the intrinsic when its operand could not be converted. This can
-    // happen for use before definition cases that are allowed for debug
-    // intrinsics.
-    // TODO: Implement a two pass solution that translates the debug intrinsics
-    // after the entire function as been translated.
-    if (failed(argOperand))
-      return success();
-
-    // Ensure that the debug instrinsic is inserted right after its operand is
-    // defined. Otherwise, the operand might not necessarily dominate the
-    // intrinsic.
-    OpBuilder::InsertionGuard guard($_builder);
-    $_builder.setInsertionPointAfterValue(*argOperand);
-    $_op = $_builder.create<$_qualCppClassName>($_location,
-        *argOperand, $_var_attr($varInfo));
+    // Add debug intrindic to the list of intrinsics that need to be converted once the
+    // full function was converted.
+    moduleImport.addDebugIntrinsic(inst);
+    return success();
   }];
   let assemblyFormat = [{
     qualified($varInfo) `=` $}] # argName #
@@ -641,12 +615,12 @@ def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for"> {
 // Stack save/restore intrinsics.
 //
 
-def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave"> {
-  let assemblyFormat = "attr-dict `:` type($res)";
+def LLVM_StackSaveOp : LLVM_OneResultIntrOp<"stacksave", [0]> {
+  let assemblyFormat = "attr-dict `:` qualified(type($res))";
 }
 
-def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore"> {
-  let arguments = (ins LLVM_i8Ptr:$ptr);
+def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore", [0]> {
+  let arguments = (ins LLVM_AnyPointer:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 

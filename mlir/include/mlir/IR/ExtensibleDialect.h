@@ -486,14 +486,16 @@ public:
   void populateDefaultProperties(OperationName opName,
                                  OpaqueProperties properties) final {}
 
-  LogicalResult setPropertiesFromAttr(OperationName opName,
-                                      OpaqueProperties properties,
-                                      Attribute attr,
-                                      InFlightDiagnostic *diag) final {
+  LogicalResult
+  setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
+                        Attribute attr,
+                        function_ref<InFlightDiagnostic &()> getDiag) final {
+    getDiag() << "extensible Dialects don't support properties";
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
+  bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
 
 private:
@@ -545,10 +547,7 @@ public:
 
   /// Returns nullptr if the definition was not found.
   DynamicTypeDefinition *lookupTypeDefinition(StringRef name) const {
-    auto it = nameToDynTypes.find(name);
-    if (it == nameToDynTypes.end())
-      return nullptr;
-    return it->second;
+    return nameToDynTypes.lookup(name);
   }
 
   /// Returns nullptr if the definition was not found.
@@ -561,10 +560,7 @@ public:
 
   /// Returns nullptr if the definition was not found.
   DynamicAttrDefinition *lookupAttrDefinition(StringRef name) const {
-    auto it = nameToDynAttrs.find(name);
-    if (it == nameToDynAttrs.end())
-      return nullptr;
-    return it->second;
+    return nameToDynAttrs.lookup(name);
   }
 
   /// Returns nullptr if the definition was not found.

@@ -291,15 +291,16 @@ template <> std::string getName(const StringRef &name) {
 }
 
 template <> std::string getName(const Any &WrappedIR) {
-  if (const auto *const *M = any_cast<const Module *>(&WrappedIR))
+  if (const auto *const *M = llvm::any_cast<const Module *>(&WrappedIR))
     return (*M)->getName().str();
-  if (const auto *const *F = any_cast<const Function *>(&WrappedIR))
+  if (const auto *const *F = llvm::any_cast<const Function *>(&WrappedIR))
     return (*F)->getName().str();
-  if (const auto *const *L = any_cast<const Loop *>(&WrappedIR))
+  if (const auto *const *L = llvm::any_cast<const Loop *>(&WrappedIR))
     return (*L)->getName().str();
-  if (const auto *const *L = any_cast<const LoopNest *>(&WrappedIR))
+  if (const auto *const *L = llvm::any_cast<const LoopNest *>(&WrappedIR))
     return (*L)->getName().str();
-  if (const auto *const *C = any_cast<const LazyCallGraph::SCC *>(&WrappedIR))
+  if (const auto *const *C =
+          llvm::any_cast<const LazyCallGraph::SCC *>(&WrappedIR))
     return (*C)->getName();
   return "<UNKNOWN>";
 }

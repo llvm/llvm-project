@@ -351,6 +351,10 @@ public:
     Builder.SetInsertPoint(IP);
   }
 
+  void setInsertPoint(BasicBlock::iterator IP) {
+    Builder.SetInsertPoint(IP->getParent(), IP);
+  }
+
   /// Clear the current insertion point. This is useful if the instruction
   /// that had been serving as the insertion point may have been deleted.
   void clearInsertPoint() { Builder.ClearInsertionPoint(); }
@@ -374,20 +378,15 @@ public:
 
   void setChainedPhi(PHINode *PN) { ChainedPhis.insert(PN); }
 
-  /// Try to find the ValueOffsetPair for S. The function is mainly used to
-  /// check whether S can be expanded cheaply.  If this returns a non-None
-  /// value, we know we can codegen the `ValueOffsetPair` into a suitable
-  /// expansion identical with S so that S can be expanded cheaply.
+  /// Determine whether there is an existing expansion of S that can be reused.
+  /// This is used to check whether S can be expanded cheaply.
   ///
   /// L is a hint which tells in which loop to look for the suitable value.
-  /// On success return value which is equivalent to the expanded S at point
-  /// At. Return nullptr if value was not found.
   ///
   /// Note that this function does not perform an exhaustive search. I.e if it
   /// didn't find any value it does not mean that there is no such value.
-  ///
-  Value *getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
-                                     Loop *L);
+  bool hasRelatedExistingExpansion(const SCEV *S, const Instruction *At,
+                                   Loop *L);
 
   /// Returns a suitable insert point after \p I, that dominates \p
   /// MustDominate. Skips instructions inserted by the expander.
@@ -409,7 +408,10 @@ private:
   /// program. The code is inserted into the specified block. If \p
   /// Root is true, this indicates that \p SH is the top-level expression to
   /// expand passed from an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I);
+  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, BasicBlock::iterator I);
+  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I) {
+    return expandCodeForImpl(SH, Ty, I->getIterator());
+  }
 
   /// Recursive helper function for isHighCostExpansion.
   bool isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
@@ -443,7 +445,11 @@ private:
   Value *expandAddToGEP(const SCEV *Op, Type *Ty, Value *V);
 
   /// Find a previous Value in ExprValueMap for expand.
-  Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
+  /// DropPoisonGeneratingInsts is populated with instructions for which
+  /// poison-generating flags must be dropped if the value is reused.
+  Value *FindValueInExprValueMap(
+      const SCEV *S, const Instruction *InsertPt,
+      SmallVectorImpl<Instruction *> &DropPoisonGeneratingInsts);
 
   Value *expand(const SCEV *S);
 

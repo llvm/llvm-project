@@ -10,7 +10,6 @@
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
 // RUN: %clang_cc1 -w -triple   i386-apple-darwin10 -target-feature +avx512f \
 // RUN:  -emit-llvm -o - %s | FileCheck %s --check-prefix=ALL --check-prefix=AVX512
-// rdar://11759609
 
 // At or below target max alignment with no aligned attribute should align based
 // on the size of vector.

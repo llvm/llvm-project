@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fdebugger-support -funknown-anytype -fsyntax-only -verify %s
 
-// rdar://problem/9416370
 namespace test0 {
   void test(id x) {
     if ([x foo]) {} // expected-error {{no known method '-foo'; cast the message send to the method's return type}}
@@ -8,7 +7,6 @@ namespace test0 {
   }
 }
 
-// rdar://problem/12565338
 @interface Test1
 - (void) test_a: (__unknown_anytype)foo;
 - (void) test_b: (__unknown_anytype)foo;

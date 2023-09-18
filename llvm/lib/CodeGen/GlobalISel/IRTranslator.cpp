@@ -127,7 +127,7 @@ static void reportTranslationError(MachineFunction &MF,
     ORE.emit(R);
 }
 
-IRTranslator::IRTranslator(CodeGenOpt::Level optlevel)
+IRTranslator::IRTranslator(CodeGenOptLevel optlevel)
     : MachineFunctionPass(ID), OptLevel(optlevel) {}
 
 #ifndef NDEBUG
@@ -173,7 +173,7 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
-  if (OptLevel != CodeGenOpt::None) {
+  if (OptLevel != CodeGenOptLevel::None) {
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
   }
@@ -578,7 +578,8 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
 
   if (BrInst.isUnconditional()) {
     // If the unconditional target is the layout successor, fallthrough.
-    if (OptLevel == CodeGenOpt::None || !CurMBB.isLayoutSuccessor(Succ0MBB))
+    if (OptLevel == CodeGenOptLevel::None ||
+        !CurMBB.isLayoutSuccessor(Succ0MBB))
       MIRBuilder.buildBr(*Succ0MBB);
 
     // Link successors.
@@ -1742,6 +1743,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FEXP;
     case Intrinsic::exp2:
       return TargetOpcode::G_FEXP2;
+    case Intrinsic::exp10:
+      return TargetOpcode::G_FEXP10;
     case Intrinsic::fabs:
       return TargetOpcode::G_FABS;
     case Intrinsic::copysign:
@@ -1797,6 +1800,10 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_VECREDUCE_FMIN;
     case Intrinsic::vector_reduce_fmax:
       return TargetOpcode::G_VECREDUCE_FMAX;
+    case Intrinsic::vector_reduce_fminimum:
+      return TargetOpcode::G_VECREDUCE_FMINIMUM;
+    case Intrinsic::vector_reduce_fmaximum:
+      return TargetOpcode::G_VECREDUCE_FMAXIMUM;
     case Intrinsic::vector_reduce_add:
       return TargetOpcode::G_VECREDUCE_ADD;
     case Intrinsic::vector_reduce_mul:
@@ -1939,6 +1946,8 @@ bool IRTranslator::translateIfEntryValueArgument(
   if (!PhysReg)
     return false;
 
+  // Append an op deref to account for the fact that this is a dbg_declare.
+  Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
   MF->setVariableDbgInfo(DebugInst.getVariable(), Expr, *PhysReg,
                          DebugInst.getDebugLoc());
   return true;
@@ -1966,7 +1975,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     // No stack colouring in O0, discard region information.
-    if (MF->getTarget().getOptLevel() == CodeGenOpt::None)
+    if (MF->getTarget().getOptLevel() == CodeGenOptLevel::None)
       return true;
 
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
@@ -2229,31 +2238,12 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::stacksave: {
-    // Save the stack pointer to the location provided by the intrinsic.
-    Register Reg = getOrCreateVReg(CI);
-    Register StackPtr = MF->getSubtarget()
-                            .getTargetLowering()
-                            ->getStackPointerRegisterToSaveRestore();
-
-    // If the target doesn't specify a stack pointer, then fall back.
-    if (!StackPtr)
-      return false;
-
-    MIRBuilder.buildCopy(Reg, StackPtr);
+    MIRBuilder.buildInstr(TargetOpcode::G_STACKSAVE, {getOrCreateVReg(CI)}, {});
     return true;
   }
   case Intrinsic::stackrestore: {
-    // Restore the stack pointer from the location provided by the intrinsic.
-    Register Reg = getOrCreateVReg(*CI.getArgOperand(0));
-    Register StackPtr = MF->getSubtarget()
-                            .getTargetLowering()
-                            ->getStackPointerRegisterToSaveRestore();
-
-    // If the target doesn't specify a stack pointer, then fall back.
-    if (!StackPtr)
-      return false;
-
-    MIRBuilder.buildCopy(StackPtr, Reg);
+    MIRBuilder.buildInstr(TargetOpcode::G_STACKRESTORE, {},
+                          {getOrCreateVReg(*CI.getArgOperand(0))});
     return true;
   }
   case Intrinsic::cttz:
@@ -2493,7 +2483,8 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   auto TII = MF->getTarget().getIntrinsicInfo();
   const Function *F = CI.getCalledFunction();
 
-  // FIXME: support Windows dllimport function calls.
+  // FIXME: support Windows dllimport function calls and calls through
+  // weak symbols.
   if (F && (F->hasDLLImportStorageClass() ||
             (MF->getTarget().getTargetTriple().isOSWindows() &&
              F->hasExternalWeakLinkage())))
@@ -2673,6 +2664,13 @@ bool IRTranslator::translateInvoke(const User &U,
 
   // FIXME: support Windows exception handling.
   if (!isa<LandingPadInst>(EHPadBB->getFirstNonPHI()))
+    return false;
+
+  // FIXME: support Windows dllimport function calls and calls through
+  // weak symbols.
+  if (Fn && (Fn->hasDLLImportStorageClass() ||
+            (MF->getTarget().getTargetTriple().isOSWindows() &&
+             Fn->hasExternalWeakLinkage())))
     return false;
 
   bool LowerInlineAsm = I.isInlineAsm();
@@ -3499,7 +3497,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   const TargetMachine &TM = MF->getTarget();
   TM.resetTargetOptions(F);
-  EnableOpts = OptLevel != CodeGenOpt::None && !skipFunction(F);
+  EnableOpts = OptLevel != CodeGenOptLevel::None && !skipFunction(F);
   FuncInfo.MF = MF;
   if (EnableOpts) {
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();

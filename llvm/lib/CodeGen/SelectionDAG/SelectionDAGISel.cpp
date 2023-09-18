@@ -211,12 +211,12 @@ namespace llvm {
   /// the optimization level on a per-function basis.
   class OptLevelChanger {
     SelectionDAGISel &IS;
-    CodeGenOpt::Level SavedOptLevel;
+    CodeGenOptLevel SavedOptLevel;
     bool SavedFastISel;
 
   public:
-    OptLevelChanger(SelectionDAGISel &ISel,
-                    CodeGenOpt::Level NewOptLevel) : IS(ISel) {
+    OptLevelChanger(SelectionDAGISel &ISel, CodeGenOptLevel NewOptLevel)
+        : IS(ISel) {
       SavedOptLevel = IS.OptLevel;
       SavedFastISel = IS.TM.Options.EnableFastISel;
       if (NewOptLevel == SavedOptLevel)
@@ -225,9 +225,9 @@ namespace llvm {
       IS.TM.setOptLevel(NewOptLevel);
       LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
                         << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel << " ; After: -O"
-                        << NewOptLevel << "\n");
-      if (NewOptLevel == CodeGenOpt::None) {
+      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel) << " ; After: -O"
+                        << static_cast<int>(NewOptLevel) << "\n");
+      if (NewOptLevel == CodeGenOptLevel::None) {
         IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
         LLVM_DEBUG(
             dbgs() << "\tFastISel is "
@@ -241,8 +241,8 @@ namespace llvm {
         return;
       LLVM_DEBUG(dbgs() << "\nRestoring optimization level for Function "
                         << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << IS.OptLevel << " ; After: -O"
-                        << SavedOptLevel << "\n");
+      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(IS.OptLevel)
+                        << " ; After: -O" << static_cast<int>(SavedOptLevel) << "\n");
       IS.OptLevel = SavedOptLevel;
       IS.TM.setOptLevel(SavedOptLevel);
       IS.TM.setFastISel(SavedFastISel);
@@ -252,8 +252,8 @@ namespace llvm {
   //===--------------------------------------------------------------------===//
   /// createDefaultScheduler - This creates an instruction scheduler appropriate
   /// for the target.
-  ScheduleDAGSDNodes* createDefaultScheduler(SelectionDAGISel *IS,
-                                             CodeGenOpt::Level OptLevel) {
+  ScheduleDAGSDNodes *createDefaultScheduler(SelectionDAGISel *IS,
+                                             CodeGenOptLevel OptLevel) {
     const TargetLowering *TLI = IS->TLI;
     const TargetSubtargetInfo &ST = IS->MF->getSubtarget();
 
@@ -262,7 +262,7 @@ namespace llvm {
       return SchedulerCtor(IS, OptLevel);
     }
 
-    if (OptLevel == CodeGenOpt::None ||
+    if (OptLevel == CodeGenOptLevel::None ||
         (ST.enableMachineScheduler() && ST.enableMachineSchedDefaultSched()) ||
         TLI->getSchedulingPreference() == Sched::Source)
       return createSourceListDAGScheduler(IS, OptLevel);
@@ -315,7 +315,7 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 //===----------------------------------------------------------------------===//
 
 SelectionDAGISel::SelectionDAGISel(char &ID, TargetMachine &tm,
-                                   CodeGenOpt::Level OL)
+                                   CodeGenOptLevel OL)
     : MachineFunctionPass(ID), TM(tm), FuncInfo(new FunctionLoweringInfo()),
       SwiftError(new SwiftErrorValueTracking()),
       CurDAG(new SelectionDAG(tm, OL)),
@@ -335,23 +335,23 @@ SelectionDAGISel::~SelectionDAGISel() {
 }
 
 void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
-  if (OptLevel != CodeGenOpt::None)
-    AU.addRequired<AAResultsWrapperPass>();
+  if (OptLevel != CodeGenOptLevel::None)
+      AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<GCModuleInfo>();
   AU.addRequired<StackProtector>();
   AU.addPreserved<GCModuleInfo>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
   AU.addRequired<AssumptionCacheTracker>();
-  if (UseMBPI && OptLevel != CodeGenOpt::None)
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
+  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
+      AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
   // AssignmentTrackingAnalysis only runs if assignment tracking is enabled for
   // the module.
   AU.addRequired<AssignmentTrackingAnalysis>();
   AU.addPreserved<AssignmentTrackingAnalysis>();
-  if (OptLevel != CodeGenOpt::None)
-    LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
+  if (OptLevel != CodeGenOptLevel::None)
+      LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -403,9 +403,9 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // it wants to look at it.
   TM.resetTargetOptions(Fn);
   // Reset OptLevel to None for optnone functions.
-  CodeGenOpt::Level NewOptLevel = OptLevel;
-  if (OptLevel != CodeGenOpt::None && skipFunction(Fn))
-    NewOptLevel = CodeGenOpt::None;
+  CodeGenOptLevel NewOptLevel = OptLevel;
+  if (OptLevel != CodeGenOptLevel::None && skipFunction(Fn))
+    NewOptLevel = CodeGenOptLevel::None;
   OptLevelChanger OLC(*this, NewOptLevel);
 
   TII = MF->getSubtarget().getInstrInfo();
@@ -417,7 +417,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(mf.getFunction());
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI = nullptr;
-  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
+  if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOptLevel::None)
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
 
   FunctionVarLocs const *FnVarLocs = nullptr;
@@ -438,12 +438,12 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // into account).  That's unfortunate but OK because it just means we won't
   // ask for passes that have been required anyway.
 
-  if (UseMBPI && OptLevel != CodeGenOpt::None)
+  if (UseMBPI && OptLevel != CodeGenOptLevel::None)
     FuncInfo->BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
   else
     FuncInfo->BPI = nullptr;
 
-  if (OptLevel != CodeGenOpt::None)
+  if (OptLevel != CodeGenOptLevel::None)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   else
     AA = nullptr;
@@ -456,7 +456,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
 
   // We split CSR if the target supports it for the given function
   // and the function has only return exits.
-  if (OptLevel != CodeGenOpt::None && TLI->supportSplitCSR(MF)) {
+  if (OptLevel != CodeGenOptLevel::None && TLI->supportSplitCSR(MF)) {
     FuncInfo->SplitCSR = true;
 
     // Collect all the return blocks.
@@ -935,7 +935,7 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->VerifyDAGDivergence();
 #endif
 
-  if (OptLevel != CodeGenOpt::None)
+  if (OptLevel != CodeGenOptLevel::None)
     ComputeLiveOutVRegInfo();
 
   if (ViewISelDAGs && MatchFilterBB)
@@ -1357,6 +1357,8 @@ static bool processIfEntryValueDbgDeclare(FunctionLoweringInfo &FuncInfo,
   // Find the corresponding livein physical register to this argument.
   for (auto [PhysReg, VirtReg] : FuncInfo.RegInfo->liveins())
     if (VirtReg == ArgVReg) {
+      // Append an op deref to account for the fact that this is a dbg_declare.
+      Expr = DIExpression::append(Expr, dwarf::DW_OP_deref);
       FuncInfo.MF->setVariableDbgInfo(Var, Expr, PhysReg, DbgLoc);
       LLVM_DEBUG(dbgs() << "processDbgDeclare: setVariableDbgInfo Var=" << *Var
                         << ", Expr=" << *Expr << ",  MCRegister=" << PhysReg
@@ -1510,7 +1512,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   // Iterate over all basic blocks in the function.
   StackProtector &SP = getAnalysis<StackProtector>();
   for (const BasicBlock *LLVMBB : RPOT) {
-    if (OptLevel != CodeGenOpt::None) {
+    if (OptLevel != CodeGenOptLevel::None) {
       bool AllPredsVisited = true;
       for (const BasicBlock *Pred : predecessors(LLVMBB)) {
         if (!FuncInfo->VisitedBBs.count(Pred)) {
@@ -2074,41 +2076,43 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
     --e;  // Don't process a glue operand if it is here.
 
   while (i != e) {
-    unsigned Flags = cast<ConstantSDNode>(InOps[i])->getZExtValue();
-    if (!InlineAsm::isMemKind(Flags) && !InlineAsm::isFuncKind(Flags)) {
+    InlineAsm::Flag Flags(cast<ConstantSDNode>(InOps[i])->getZExtValue());
+    if (!Flags.isMemKind() && !Flags.isFuncKind()) {
       // Just skip over this operand, copying the operands verbatim.
-      Ops.insert(Ops.end(), InOps.begin()+i,
-                 InOps.begin()+i+InlineAsm::getNumOperandRegisters(Flags) + 1);
-      i += InlineAsm::getNumOperandRegisters(Flags) + 1;
+      Ops.insert(Ops.end(), InOps.begin() + i,
+                 InOps.begin() + i + Flags.getNumOperandRegisters() + 1);
+      i += Flags.getNumOperandRegisters() + 1;
     } else {
-      assert(InlineAsm::getNumOperandRegisters(Flags) == 1 &&
+      assert(Flags.getNumOperandRegisters() == 1 &&
              "Memory operand with multiple values?");
 
       unsigned TiedToOperand;
-      if (InlineAsm::isUseOperandTiedToDef(Flags, TiedToOperand)) {
+      if (Flags.isUseOperandTiedToDef(TiedToOperand)) {
         // We need the constraint ID from the operand this is tied to.
         unsigned CurOp = InlineAsm::Op_FirstOperand;
-        Flags = cast<ConstantSDNode>(InOps[CurOp])->getZExtValue();
+        Flags =
+            InlineAsm::Flag(cast<ConstantSDNode>(InOps[CurOp])->getZExtValue());
         for (; TiedToOperand; --TiedToOperand) {
-          CurOp += InlineAsm::getNumOperandRegisters(Flags)+1;
-          Flags = cast<ConstantSDNode>(InOps[CurOp])->getZExtValue();
+          CurOp += Flags.getNumOperandRegisters() + 1;
+          Flags = InlineAsm::Flag(
+              cast<ConstantSDNode>(InOps[CurOp])->getZExtValue());
         }
       }
 
       // Otherwise, this is a memory operand.  Ask the target to select it.
       std::vector<SDValue> SelOps;
-      unsigned ConstraintID = InlineAsm::getMemoryConstraintID(Flags);
+      const InlineAsm::ConstraintCode ConstraintID =
+          Flags.getMemoryConstraintID();
       if (SelectInlineAsmMemoryOperand(InOps[i+1], ConstraintID, SelOps))
         report_fatal_error("Could not match memory address.  Inline asm"
                            " failure!");
 
       // Add this to the output node.
-      unsigned NewFlags =
-          InlineAsm::isMemKind(Flags)
-              ? InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size())
-              : InlineAsm::getFlagWord(InlineAsm::Kind_Func, SelOps.size());
-      NewFlags = InlineAsm::getFlagWordForMem(NewFlags, ConstraintID);
-      Ops.push_back(CurDAG->getTargetConstant(NewFlags, DL, MVT::i32));
+      Flags = InlineAsm::Flag(Flags.isMemKind() ? InlineAsm::Kind::Mem
+                                                : InlineAsm::Kind::Func,
+                              SelOps.size());
+      Flags.setMemConstraint(ConstraintID);
+      Ops.push_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
       llvm::append_range(Ops, SelOps);
       i += 2;
     }
@@ -2176,18 +2180,20 @@ static bool findNonImmUse(SDNode *Root, SDNode *Def, SDNode *ImmedUse,
 /// operand node N of U during instruction selection that starts at Root.
 bool SelectionDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {
-  if (OptLevel == CodeGenOpt::None) return false;
+  if (OptLevel == CodeGenOptLevel::None)
+    return false;
   return N.hasOneUse();
 }
 
 /// IsLegalToFold - Returns true if the specific operand node N of
 /// U can be folded during instruction selection that starts at Root.
 bool SelectionDAGISel::IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
-                                     CodeGenOpt::Level OptLevel,
+                                     CodeGenOptLevel OptLevel,
                                      bool IgnoreChains) {
-  if (OptLevel == CodeGenOpt::None) return false;
+  if (OptLevel == CodeGenOptLevel::None)
+    return false;
 
-  // If Root use can somehow reach N through a path that that doesn't contain
+  // If Root use can somehow reach N through a path that doesn't contain
   // U then folding N would create a cycle. e.g. In the following
   // diagram, Root can reach N through X. If N is folded into Root, then
   // X is both a predecessor and a successor of U.
@@ -2433,6 +2439,13 @@ GetVBR(uint64_t Val, const unsigned char *MatcherTable, unsigned &Idx) {
   } while (NextBits & 128);
 
   return Val;
+}
+
+void SelectionDAGISel::Select_JUMP_TABLE_DEBUG_INFO(SDNode *N) {
+  SDLoc dl(N);
+  CurDAG->SelectNodeTo(N, TargetOpcode::JUMP_TABLE_DEBUG_INFO, MVT::Glue,
+                       CurDAG->getTargetConstant(N->getConstantOperandVal(1),
+                                                 dl, MVT::i64, true));
 }
 
 /// When a match is complete, this method updates uses of interior chain results
@@ -2986,6 +2999,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::PATCHPOINT:
     Select_PATCHPOINT(NodeToMatch);
+    return;
+  case ISD::JUMP_TABLE_DEBUG_INFO:
+    Select_JUMP_TABLE_DEBUG_INFO(NodeToMatch);
     return;
   }
 

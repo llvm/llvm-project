@@ -104,8 +104,8 @@ define i1 @foo(ptr %p) {
 ; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check nounwind }
 ; X86-WIN32: attributes #[[ATTR]] = { nocf_check nounwind }
 ; ARM: attributes #[[ATTR]] = { naked nounwind
-; THUMB: attributes #[[ATTR]] = { naked nounwind "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
-; THUMBV6M: attributes #[[ATTR]] = { naked nounwind "target-features"="+thumb-mode" }
+; THUMB: attributes #[[ATTR]] = { naked nounwind "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; THUMBV6M: attributes #[[ATTR]] = { naked nounwind "branch-target-enforcement"="false" "sign-return-address"="none" "target-features"="+thumb-mode" }
 ; RISCV: attributes #[[ATTR]] = { naked nounwind "target-features"="-c,-relax" }
 
 ; WASM32: ![[I0]] = !{i64 1}

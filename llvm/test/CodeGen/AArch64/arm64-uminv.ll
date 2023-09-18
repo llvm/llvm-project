@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -global-isel=1 -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 
 define i32 @vmin_u8x8(<8 x i8> %a) nounwind ssp {
 ; CHECK-LABEL: vmin_u8x8:

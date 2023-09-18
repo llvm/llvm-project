@@ -83,7 +83,7 @@ public:
   const SPIRVConversionOptions &getOptions() const { return options; }
 
   /// Checks if the SPIR-V capability inquired is supported.
-  bool allows(spirv::Capability capability);
+  bool allows(spirv::Capability capability) const;
 
 private:
   spirv::TargetEnv targetEnv;
@@ -169,17 +169,17 @@ Value linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 
 // TODO: This method assumes that the `baseType` is a MemRefType with AffineMap
 // that has static strides. Extend to handle dynamic strides.
-Value getElementPtr(SPIRVTypeConverter &typeConverter, MemRefType baseType,
-                    Value basePtr, ValueRange indices, Location loc,
-                    OpBuilder &builder);
+Value getElementPtr(const SPIRVTypeConverter &typeConverter,
+                    MemRefType baseType, Value basePtr, ValueRange indices,
+                    Location loc, OpBuilder &builder);
 
 // GetElementPtr implementation for Kernel/OpenCL flavored SPIR-V.
-Value getOpenCLElementPtr(SPIRVTypeConverter &typeConverter,
+Value getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
                           ValueRange indices, Location loc, OpBuilder &builder);
 
 // GetElementPtr implementation for Vulkan/Shader flavored SPIR-V.
-Value getVulkanElementPtr(SPIRVTypeConverter &typeConverter,
+Value getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
                           ValueRange indices, Location loc, OpBuilder &builder);
 

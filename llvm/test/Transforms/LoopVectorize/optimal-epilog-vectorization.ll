@@ -495,8 +495,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 84
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 84, 84
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUTER_LATCH]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END5:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-NEXT:    br i1 true, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
@@ -527,8 +526,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT19]], 84
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 84, 84
-; CHECK-NEXT:    br i1 [[CMP_N7]], label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 85, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 85, [[VEC_EPILOG_ITER_CHECK]] ], [ 1, [[ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i8 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
@@ -587,8 +585,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 84
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       middle.block:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 84, 84
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N]], label [[OUTER_LATCH]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.iter.check:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[IND_END5:%.*]] = mul i8 84, [[INDUCTION_IV]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
@@ -619,8 +616,7 @@ define void @induction_resume_value_requires_non_trivial_scev_expansion(ptr %dst
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT19]], 84
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.middle.block:
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 84, 84
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[CMP_N7]], label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 true, label [[OUTER_LATCH]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.scalar.ph:
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i64 [ 85, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 85, [[VEC_EPILOG_ITER_CHECK]] ], [ 1, [[ITER_CHECK]] ]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i8 [ [[IND_END4]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END5]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]

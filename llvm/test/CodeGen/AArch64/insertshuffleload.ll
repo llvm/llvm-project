@@ -121,11 +121,11 @@ define <8 x i32> @inserti32_last(ptr %p) {
 define <8 x i32> @inserti32_first_multiuse(ptr %p) {
 ; CHECK-LABEL: inserti32_first_multiuse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q2, q3, [x0]
+; CHECK-NEXT:    ldp q3, q2, [x0]
 ; CHECK-NEXT:    ldur q1, [x0, #20]
 ; CHECK-NEXT:    ldur q0, [x0, #4]
-; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 4
   %l1 = load <8 x i32>, ptr %q
@@ -140,10 +140,10 @@ define <8 x i32> @inserti32_last_multiuse(ptr %p) {
 ; CHECK-LABEL: inserti32_last_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldur q2, [x0, #4]
-; CHECK-NEXT:    ldur q3, [x0, #20]
-; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    ldur q2, [x0, #20]
+; CHECK-NEXT:    ldur q3, [x0, #4]
+; CHECK-NEXT:    add v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    ret
   %q = getelementptr inbounds i8, ptr %p, i32 32
   %l1 = load <8 x i32>, ptr %p
@@ -291,8 +291,8 @@ define <8 x i8> @wrong_shuffle(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldur d0, [x0, #1]
 ; CHECK-NEXT:    adrp x8, .LCPI19_0
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
 ; CHECK-NEXT:    tbl v0.8b, { v0.16b }, v1.8b
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0

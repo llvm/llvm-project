@@ -14,8 +14,8 @@ define i32 @and_commute0(i32 %x, i32 %y) {
 define i128 @and_commute1(i128 %x, i128 %y) {
 ; CHECK-LABEL: and_commute1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x0, x2, x0
 ; CHECK-NEXT:    and x1, x3, x1
+; CHECK-NEXT:    and x0, x2, x0
 ; CHECK-NEXT:    ret
   %b = and i128 %y, %x
   %b2 = and i128 %x, %b

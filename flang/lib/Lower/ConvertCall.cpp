@@ -680,19 +680,19 @@ struct CallCleanUp {
 /// It holds the value to be passed in the call and any related
 /// clean-ups to be done after the call.
 struct PreparedDummyArgument {
-  void setCopyInCleanUp(mlir::Value copiedIn, mlir::Value wasCopied,
-                        mlir::Value copyBackVar) {
-    assert(!maybeCleanUp.has_value() && "clean-up already set");
-    maybeCleanUp =
-        CallCleanUp{CallCleanUp::CopyIn{copiedIn, wasCopied, copyBackVar}};
+  void pushCopyInCleanUp(mlir::Value copiedIn, mlir::Value wasCopied,
+                         mlir::Value copyBackVar) {
+    cleanups.emplace_back(
+        CallCleanUp{CallCleanUp::CopyIn{copiedIn, wasCopied, copyBackVar}});
   }
-  void setExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
-    assert(!maybeCleanUp.has_value() && "clean-up already set");
-    maybeCleanUp = CallCleanUp{CallCleanUp::ExprAssociate{tempVar, wasCopied}};
+  void pushExprAssociateCleanUp(mlir::Value tempVar, mlir::Value wasCopied) {
+    cleanups.emplace_back(
+        CallCleanUp{CallCleanUp::ExprAssociate{tempVar, wasCopied}});
   }
 
   mlir::Value dummy;
-  std::optional<CallCleanUp> maybeCleanUp;
+  // NOTE: the clean-ups are executed in reverse order.
+  llvm::SmallVector<CallCleanUp, 2> cleanups;
 };
 
 /// Structure to help conditionally preparing a dummy argument based
@@ -711,16 +711,16 @@ struct ConditionallyPreparedDummy {
   /// be wrapped in a fir.if.
   ConditionallyPreparedDummy(PreparedDummyArgument &preparedDummy) {
     thenResultValues.push_back(preparedDummy.dummy);
-    if (preparedDummy.maybeCleanUp) {
-      if (const auto *copyInCleanUp = std::get_if<CallCleanUp::CopyIn>(
-              &preparedDummy.maybeCleanUp->cleanUp)) {
+    for (const CallCleanUp &c : preparedDummy.cleanups) {
+      if (const auto *copyInCleanUp =
+              std::get_if<CallCleanUp::CopyIn>(&c.cleanUp)) {
         thenResultValues.push_back(copyInCleanUp->copiedIn);
         thenResultValues.push_back(copyInCleanUp->wasCopied);
         if (copyInCleanUp->copyBackVar)
           thenResultValues.push_back(copyInCleanUp->copyBackVar);
       } else {
-        const auto &exprAssociate = std::get<CallCleanUp::ExprAssociate>(
-            preparedDummy.maybeCleanUp->cleanUp);
+        const auto &exprAssociate =
+            std::get<CallCleanUp::ExprAssociate>(c.cleanUp);
         thenResultValues.push_back(exprAssociate.tempVar);
         thenResultValues.push_back(exprAssociate.mustFree);
       }
@@ -763,17 +763,17 @@ struct ConditionallyPreparedDummy {
                    const PreparedDummyArgument &unconditionalDummy) {
     PreparedDummyArgument preparedDummy;
     preparedDummy.dummy = ifOp.getResults()[0];
-    if (unconditionalDummy.maybeCleanUp) {
-      if (const auto *copyInCleanUp = std::get_if<CallCleanUp::CopyIn>(
-              &unconditionalDummy.maybeCleanUp->cleanUp)) {
+    for (const CallCleanUp &c : unconditionalDummy.cleanups) {
+      if (const auto *copyInCleanUp =
+              std::get_if<CallCleanUp::CopyIn>(&c.cleanUp)) {
         mlir::Value copyBackVar;
         if (copyInCleanUp->copyBackVar)
           copyBackVar = ifOp.getResults().back();
-        preparedDummy.setCopyInCleanUp(ifOp.getResults()[1],
-                                       ifOp.getResults()[2], copyBackVar);
+        preparedDummy.pushCopyInCleanUp(ifOp.getResults()[1],
+                                        ifOp.getResults()[2], copyBackVar);
       } else {
-        preparedDummy.setExprAssociateCleanUp(ifOp.getResults()[1],
-                                              ifOp.getResults()[2]);
+        preparedDummy.pushExprAssociateCleanUp(ifOp.getResults()[1],
+                                               ifOp.getResults()[2]);
       }
     }
     return preparedDummy;
@@ -840,7 +840,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   if (actual.isProcedure()) {
     if (actual.getType() != dummyType)
       actual = fixProcedureDummyMismatch(loc, builder, actual, dummyType);
-    return PreparedDummyArgument{actual, std::nullopt};
+    return PreparedDummyArgument{actual, /*cleanups=*/{}};
   }
 
   const bool passingPolymorphicToNonPolymorphic =
@@ -893,7 +893,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
           loc, builder, hlfir::Entity{copy}, storageType, "adapt.valuebyref");
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
-      preparedDummy.setExprAssociateCleanUp(
+      preparedDummy.pushExprAssociateCleanUp(
           associate.getFirBase(), associate.getMustFreeStrorageFlag());
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
@@ -910,22 +910,41 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
           loc, entity, /*var_is_present=*/mlir::Value{});
       entity = hlfir::Entity{copyIn.getCopiedIn()};
       // Register the copy-out after the call.
-      preparedDummy.setCopyInCleanUp(
+      preparedDummy.pushCopyInCleanUp(
           copyIn.getCopiedIn(), copyIn.getWasCopied(),
           arg.mayBeModifiedByCall() ? copyIn.getVar() : mlir::Value{});
     }
   } else {
     // The actual is an expression value, place it into a temporary
     // and register the temporary destruction after the call.
-    if (mustSetDynamicTypeToDummyType)
-      TODO(loc, "passing polymorphic array expression to non polymorphic "
-                "contiguous dummy");
     mlir::Type storageType = converter.genType(expr);
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, storageType, "adapt.valuebyref");
     entity = hlfir::Entity{associate.getBase()};
-    preparedDummy.setExprAssociateCleanUp(associate.getFirBase(),
-                                          associate.getMustFreeStrorageFlag());
+    preparedDummy.pushExprAssociateCleanUp(associate.getFirBase(),
+                                           associate.getMustFreeStrorageFlag());
+    if (mustSetDynamicTypeToDummyType) {
+      // Rebox the actual argument to the dummy argument's type, and make
+      // sure that we pass a contiguous entity (i.e. make copy-in,
+      // if needed).
+      //
+      // TODO: this can probably be optimized by associating the expression
+      // with properly typed temporary, but this needs either a new operation
+      // or making the hlfir.associate more complex.
+      mlir::Type boxType =
+          fir::BoxType::get(hlfir::getFortranElementOrSequenceType(dummyType));
+      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
+          loc, boxType, entity, /*shape=*/mlir::Value{},
+          /*slice=*/mlir::Value{})};
+      auto copyIn = builder.create<hlfir::CopyInOp>(
+          loc, entity, /*var_is_present=*/mlir::Value{});
+      entity = hlfir::Entity{copyIn.getCopiedIn()};
+      // Note that the copy-out is not required, but the copy-in
+      // temporary must be deallocated if created.
+      preparedDummy.pushCopyInCleanUp(copyIn.getCopiedIn(),
+                                      copyIn.getWasCopied(),
+                                      /*copyBackVar=*/mlir::Value{});
+    }
   }
 
   // Step 3: now that the dummy argument storage has been prepared, package
@@ -1110,8 +1129,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       PreparedDummyArgument preparedDummy =
           prepareUserCallActualArgument(loc, builder, *preparedActual, argTy,
                                         arg, *expr, callContext.converter);
-      if (preparedDummy.maybeCleanUp.has_value())
-        callCleanUps.emplace_back(std::move(*preparedDummy.maybeCleanUp));
+      callCleanUps.append(preparedDummy.cleanups.rbegin(),
+                          preparedDummy.cleanups.rend());
       caller.placeInput(arg, preparedDummy.dummy);
     } break;
     case PassBy::AddressAndLength:
@@ -1659,9 +1678,13 @@ public:
       // use.
       return res;
     };
+    mlir::Value polymorphicMold;
+    if (fir::isPolymorphicType(*callContext.resultType))
+      polymorphicMold =
+          impl().getPolymorphicResultMold(loweredActuals, callContext);
     mlir::Value elemental =
         hlfir::genElementalOp(loc, builder, elementType, shape, typeParams,
-                              genKernel, !mustBeOrdered);
+                              genKernel, !mustBeOrdered, polymorphicMold);
     fir::FirOpBuilder *bldr = &builder;
     callContext.stmtCtx.attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
@@ -1710,6 +1733,14 @@ public:
          "compute elemental function result length parameters in HLFIR");
   }
 
+  mlir::Value getPolymorphicResultMold(
+      Fortran::lower::PreparedActualArguments &loweredActuals,
+      CallContext &callContext) {
+    fir::emitFatalError(callContext.loc,
+                        "elemental function call with polymorphic result");
+    return {};
+  }
+
 private:
   Fortran::lower::CallerInterface &caller;
   mlir::FunctionType callSiteType;
@@ -1750,6 +1781,25 @@ public:
     // present.
     TODO(callContext.loc,
          "compute elemental character min/max function result length in HLFIR");
+  }
+
+  mlir::Value getPolymorphicResultMold(
+      Fortran::lower::PreparedActualArguments &loweredActuals,
+      CallContext &callContext) {
+    if (!intrinsic)
+      return {};
+
+    if (intrinsic->name == "merge") {
+      // MERGE seems to be the only elemental function that can produce
+      // polymorphic result. The MERGE's result is polymorphic iff
+      // both TSOURCE and FSOURCE are polymorphic, and they also must have
+      // the same declared and dynamic types. So any of them can be used
+      // for the mold.
+      assert(!loweredActuals.empty());
+      return loweredActuals.front()->getOriginalActual();
+    }
+
+    return {};
   }
 
 private:

@@ -166,14 +166,14 @@ exit:
 
 ; Make sure we do the right thing for cases where the indirectbr branches to
 ; the block it terminates.
-define void @loop(ptr nocapture readonly %p) {
+define i64 @loop(ptr nocapture readonly %p) {
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    br label [[DOTSPLIT]]
 ; CHECK:       .split:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[BB0:%.*]] ], [ 0, [[BB0_CLONE:%.*]] ]
+; CHECK-NEXT:    [[MERGE:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[BB0:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[MERGE]]
 ; CHECK-NEXT:    store i64 [[MERGE]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[MERGE]], 1
@@ -182,7 +182,7 @@ define void @loop(ptr nocapture readonly %p) {
 ; CHECK-NEXT:    [[TARGET:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    indirectbr ptr [[TARGET]], [label [[BB0]], label %bb1]
 ; CHECK:       bb1:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret i64 [[I_NEXT]]
 ;
 entry:
   br label %bb0
@@ -198,7 +198,7 @@ bb0:
   indirectbr ptr %target, [label %bb0, label %bb1]
 
 bb1:
-  ret void
+  ret i64 %i.next
 }
 
 ; Don't do anything for cases that contain no phis.
@@ -267,7 +267,7 @@ define i32 @noncritical(i32 %k, ptr %p)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[R0]], [[BB0]] ], [ [[R1]], [[BB1:%.*]] ]
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 [[V]]
 ;
 {
 entry:
@@ -288,5 +288,5 @@ bb1:
 
 exit:
   %v = phi i32 [%r0, %bb0], [%r1, %bb1]
-  ret i32 0
+  ret i32 %v
 }

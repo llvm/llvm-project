@@ -88,7 +88,7 @@ LIBC_INLINE size_t string_length_byte_read(const char *src) {
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
 LIBC_INLINE size_t string_length(const char *src) {
-#ifdef LIBC_COPT_UNSAFE_STRING_WIDE_READ
+#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   // Unsigned int is the default size for most processors, and on x86-64 it
   // performs better than larger sizes when the src pointer can't be assumed to
   // be aligned to a word boundary, so it's the size we use for reading the
@@ -143,7 +143,7 @@ LIBC_INLINE void *find_first_character_byte_read(const unsigned char *src,
 // 'src'. If 'ch' is not found, returns nullptr.
 LIBC_INLINE void *find_first_character(const unsigned char *src,
                                        unsigned char ch, size_t max_strlen) {
-#ifdef LIBC_COPT_UNSAFE_STRING_WIDE_READ
+#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
   // If the maximum size of the string is small, the overhead of aligning to a
   // word boundary and generating a bitmask of the appropriate size may be
   // greater than the gains from reading larger chunks. Based on some testing,

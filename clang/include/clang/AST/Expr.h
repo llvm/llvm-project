@@ -566,7 +566,7 @@ public:
                                       SmallVectorImpl<
                                         PartialDiagnosticAt> &Diags);
 
-  /// isPotentialConstantExprUnevaluted - Return true if this expression might
+  /// isPotentialConstantExprUnevaluated - Return true if this expression might
   /// be usable in a constant expression in C++11 in an unevaluated context, if
   /// it were in function FD marked constexpr. Return false if the function can
   /// never produce a constant expression, along with diagnostics describing
@@ -6480,6 +6480,16 @@ public:
   QualType getValueType() const;
 
   AtomicOp getOp() const { return Op; }
+  StringRef getOpAsString() const {
+    switch (Op) {
+#define BUILTIN(ID, TYPE, ATTRS)
+#define ATOMIC_BUILTIN(ID, TYPE, ATTRS)                                        \
+  case AO##ID:                                                                 \
+    return #ID;
+#include "clang/Basic/Builtins.def"
+    }
+    llvm_unreachable("not an atomic operator?");
+  }
   unsigned getNumSubExprs() const { return NumSubExprs; }
 
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }

@@ -30,6 +30,18 @@ MlirType mlirTransformAnyOpTypeGet(MlirContext ctx) {
 }
 
 //===---------------------------------------------------------------------===//
+// AnyValueType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsATransformAnyValueType(MlirType type) {
+  return isa<transform::AnyValueType>(unwrap(type));
+}
+
+MlirType mlirTransformAnyValueTypeGet(MlirContext ctx) {
+  return wrap(transform::AnyValueType::get(unwrap(ctx)));
+}
+
+//===---------------------------------------------------------------------===//
 // OperationType
 //===---------------------------------------------------------------------===//
 

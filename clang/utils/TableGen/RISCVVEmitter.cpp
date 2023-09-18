@@ -264,13 +264,14 @@ void SemaSignatureTable::init(ArrayRef<SemaRecord> SemaRecords) {
 
   assert(!SemaRecords.empty());
 
-  llvm::for_each(SemaRecords, [&](const SemaRecord &SR) {
+  for (const SemaRecord &SR : SemaRecords) {
     InsertToSignatureSet(SR.Prototype);
     InsertToSignatureSet(SR.Suffix);
     InsertToSignatureSet(SR.OverloadedSuffix);
-  });
+  }
 
-  llvm::for_each(Signatures, [this](auto &Sig) { insert(Sig); });
+  for (auto &Sig : Signatures)
+    insert(Sig);
 }
 
 void SemaSignatureTable::insert(ArrayRef<PrototypeDescriptor> Signature) {
@@ -482,8 +483,6 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
       PrintFatalError("Builtin with same name has different IRName");
     else if (P.first->second->getManualCodegen() != Def->getManualCodegen())
       PrintFatalError("Builtin with same name has different ManualCodegen");
-    else if (P.first->second->getNF() != Def->getNF())
-      PrintFatalError("Builtin with same name has different NF");
     else if (P.first->second->isMasked() != Def->isMasked())
       PrintFatalError("Builtin with same name has different isMasked");
     else if (P.first->second->hasVL() != Def->hasVL())
@@ -655,7 +654,16 @@ void RVVEmitter::createRVVIntrinsics(
     for (auto RequiredFeature : RequiredFeatures) {
       RVVRequire RequireExt = StringSwitch<RVVRequire>(RequiredFeature)
                                   .Case("RV64", RVV_REQ_RV64)
+                                  .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
                                   .Case("Xsfvcp", RVV_REQ_Xsfvcp)
+                                  .Case("Zvbb", RVV_REQ_Zvbb)
+                                  .Case("Zvbc", RVV_REQ_Zvbc)
+                                  .Case("Zvkb", RVV_REQ_Zvkb)
+                                  .Case("Zvkg", RVV_REQ_Zvkg)
+                                  .Case("Zvkned", RVV_REQ_Zvkned)
+                                  .Case("Zvknha", RVV_REQ_Zvknha)
+                                  .Case("Zvksed", RVV_REQ_Zvksed)
+                                  .Case("Zvksh", RVV_REQ_Zvksh)
                                   .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
       SR.RequiredExtensions |= RequireExt;

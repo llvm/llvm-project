@@ -572,7 +572,7 @@ llvm::ConstantInt *
 CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
   // Remove any (C++17) exception specifications, to allow calling e.g. a
   // noexcept function through a non-noexcept pointer.
-  if (!isa<FunctionNoProtoType>(Ty))
+  if (!Ty->isFunctionNoProtoType())
     Ty = getContext().getFunctionTypeWithExceptionSpec(Ty, EST_None);
   std::string Mangled;
   llvm::raw_string_ostream Out(Mangled);
@@ -2504,7 +2504,7 @@ void CodeGenFunction::EmitVarAnnotations(const VarDecl *D, llvm::Value *V) {
   // FIXME We create a new bitcast for every annotation because that's what
   // llvm-gcc was doing.
   unsigned AS = V->getType()->getPointerAddressSpace();
-  llvm::Type *I8PtrTy = Builder.getInt8PtrTy(AS);
+  llvm::Type *I8PtrTy = Builder.getPtrTy(AS);
   for (const auto *I : D->specific_attrs<AnnotateAttr>())
     EmitAnnotationCall(CGM.getIntrinsic(llvm::Intrinsic::var_annotation,
                                         {I8PtrTy, CGM.ConstGlobalsPtrTy}),
@@ -2681,8 +2681,15 @@ llvm::Value *CodeGenFunction::FormX86ResolverCondition(
     const MultiVersionResolverOption &RO) {
   llvm::Value *Condition = nullptr;
 
-  if (!RO.Conditions.Architecture.empty())
-    Condition = EmitX86CpuIs(RO.Conditions.Architecture);
+  if (!RO.Conditions.Architecture.empty()) {
+    StringRef Arch = RO.Conditions.Architecture;
+    // If arch= specifies an x86-64 micro-architecture level, test the feature
+    // with __builtin_cpu_supports, otherwise use __builtin_cpu_is.
+    if (Arch.starts_with("x86-64"))
+      Condition = EmitX86CpuSupports({Arch});
+    else
+      Condition = EmitX86CpuIs(Arch);
+  }
 
   if (!RO.Conditions.Features.empty()) {
     llvm::Value *FeatureCond = EmitX86CpuSupports(RO.Conditions.Features);

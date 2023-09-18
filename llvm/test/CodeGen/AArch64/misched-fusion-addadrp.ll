@@ -12,6 +12,7 @@
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n1     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v1     | FileCheck %s
 ; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-n2     | FileCheck %s
+; RUN: llc %s -o - -mtriple=aarch64-unknown -mcpu=neoverse-v2     | FileCheck %s
 
 @g = common local_unnamed_addr global ptr null, align 8
 

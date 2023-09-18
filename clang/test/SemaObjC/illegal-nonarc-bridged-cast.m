@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fblocks -Wcast-qual -verify %s
-// rdar://10597832
 
 typedef const void *CFTypeRef;
 typedef const struct __CFString *CFStringRef;

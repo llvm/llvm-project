@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 -flax-vector-conversions=integer -ffreestanding -fsyntax-only -verify=lax-vector-integer %s
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 -flax-vector-conversions=all -ffreestanding -fsyntax-only -verify=lax-vector-all %s
 
-// lax-vector-all-no-diagnostics
-
 // REQUIRES: riscv-registered-target
 
 #define RVV_FIXED_ATTR __attribute__((riscv_rvv_vector_bits(__riscv_v_fixed_vlen)))
@@ -19,6 +17,8 @@ typedef __rvv_int64m1_t vint64m1_t;
 typedef __rvv_uint64m1_t vuint64m1_t;
 typedef __rvv_float32m1_t vfloat32m1_t;
 typedef __rvv_float64m1_t vfloat64m1_t;
+
+typedef __rvv_int64m2_t vint64m2_t;
 
 typedef vfloat32m1_t rvv_fixed_float32m1_t RVV_FIXED_ATTR;
 typedef vint32m1_t rvv_fixed_int32m1_t RVV_FIXED_ATTR;
@@ -75,4 +75,18 @@ void gnu_allowed_with_all_lax_conversions() {
   sf64 = ff32;
   // lax-vector-none-error@-1 {{assigning to 'vfloat64m1_t' (aka '__rvv_float64m1_t') from incompatible type}}
   // lax-vector-integer-error@-2 {{assigning to 'vfloat64m1_t' (aka '__rvv_float64m1_t') from incompatible type}}
+}
+
+void not_allowed() {
+  rvv_fixed_int32m1_t fi32m1;
+  vint64m2_t si64m2;
+
+  fi32m1 = si64m2;
+  // lax-vector-none-error@-1 {{assigning to 'rvv_fixed_int32m1_t' (vector of 16 'int' values) from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'rvv_fixed_int32m1_t' (vector of 16 'int' values) from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'rvv_fixed_int32m1_t' (vector of 16 'int' values) from incompatible type}}
+  si64m2 = fi32m1;
+  // lax-vector-none-error@-1 {{assigning to 'vint64m2_t' (aka '__rvv_int64m2_t') from incompatible type}}
+  // lax-vector-integer-error@-2 {{assigning to 'vint64m2_t' (aka '__rvv_int64m2_t') from incompatible type}}
+  // lax-vector-all-error@-3 {{assigning to 'vint64m2_t' (aka '__rvv_int64m2_t') from incompatible type}}
 }

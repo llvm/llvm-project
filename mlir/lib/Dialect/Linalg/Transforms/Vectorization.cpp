@@ -169,21 +169,6 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
   return res;
 }
 
-/// Return true if the scalable vector dimensions are supported. For now, we
-/// only support scalable vectors in the trailing dimension.
-static bool areValidScalableVecDims(ArrayRef<bool> scalableVecDims) {
-  if (scalableVecDims.empty())
-    return true;
-
-  auto isScalable = [](bool isScalableVecSize) { return isScalableVecSize; };
-  if (std::any_of(scalableVecDims.begin(), scalableVecDims.end() - 1,
-                  isScalable)) {
-    return false;
-  }
-
-  return true;
-}
-
 /// Contains the vectorization state and related methods used across the
 /// vectorization process of a given operation.
 struct VectorizationState {
@@ -216,12 +201,6 @@ struct VectorizationState {
       vectorShape.append(canonicalVecShape.begin(), canonicalVecShape.end());
       scalableDims.append(scalableVecDims.begin(), scalableVecDims.end());
     }
-
-    // Make sure we don't end up with unsupported scalable vector dimensions
-    // after the permutation. If so, we should bail out on that operation in the
-    // scalable preconditions.
-    assert(areValidScalableVecDims(scalableDims) &&
-           "Permuted scalable vector dimensions are not supported");
 
     return VectorType::get(vectorShape, elementType, scalableDims);
   }
@@ -526,10 +505,10 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
       .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
       .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
-      .Case<arith::MaxFOp>([&](auto op) { return CombiningKind::MAXF; })
+      .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXIMUMF; })
       .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
       .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
-      .Case<arith::MinFOp>([&](auto op) { return CombiningKind::MINF; })
+      .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINIMUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
@@ -1630,11 +1609,6 @@ vectorizeScalableVectorPrecondition(Operation *op,
   if (inputVectorSizes.empty())
     return success();
 
-  if (!areValidScalableVecDims(inputScalableVecDims)) {
-    LDBG("Non-trailing scalable vector dimensions are not supported\n");
-    return failure();
-  }
-
   bool isScalable = inputScalableVecDims.back();
   if (!isScalable)
     return success();
@@ -2061,7 +2035,7 @@ struct PadOpVectorizationWithTransferWritePattern
   /// sizes may turn out to be equal at runtime.
   bool hasSameTensorSize(Value beforePadding,
                          tensor::ExtractSliceOp afterTrimming) const {
-    // If the input to tensor::PadOp is a CastOp, try with with both CastOp
+    // If the input to tensor::PadOp is a CastOp, try with both CastOp
     // result and CastOp operand.
     if (auto castOp = beforePadding.getDefiningOp<tensor::CastOp>())
       if (hasSameTensorSize(castOp.getSource(), afterTrimming))
@@ -2442,9 +2416,11 @@ bool isSupportedPoolKind(vector::CombiningKind kind) {
   switch (kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXF:
+  case vector::CombiningKind::MAXIMUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINF:
+  case vector::CombiningKind::MINIMUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;

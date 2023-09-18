@@ -70,3 +70,4 @@ CHECK-NODEF-DLL: default.dll
 CHECK-NODEF-DLL: default.dll
 CHECK-NODEF-DLL: default.dll
 
+# RUN: lld-link /nologo /machine:x64 /out:%T/exe %T/object.obj /entry:f /subsystem:CONSOLE

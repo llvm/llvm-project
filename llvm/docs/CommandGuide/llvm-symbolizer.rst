@@ -18,8 +18,8 @@ symbolize logs containing :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` via
 
 If no address is specified on the command-line, it reads the addresses from
 standard input. If no input name is specified on the command-line, but addresses
-are, or if at any time an input value is not recognized, the input is simply
-echoed to the output.
+are, the first address value is treated as an input name. If an input value is not
+recognized, it reports that source information is not found.
 
 Input names can be specified together with the addresses either on standard
 input or as positional arguments on the command-line. By default, input names
@@ -268,7 +268,7 @@ OPTIONS
   ``#<number>[.<inline>] <address> <function> <file>:<line>:<col> (<module>+<relative address>)``
 
   ``<inline>`` provides frame numbers for calls inlined into the caller
-  coresponding to ``<number>``. The inlined call numbers start at 1 and increase
+  corresponding to ``<number>``. The inlined call numbers start at 1 and increase
   from callee to caller.
 
   ``<address>`` is an address inside the call instruction to the function.  The

@@ -1035,6 +1035,9 @@ SIFoldOperands::getImmOrMaterializedImm(MachineOperand &Op) const {
 // selection.
 // TODO: See if a frame index with a fixed offset can fold.
 bool SIFoldOperands::tryConstantFoldOp(MachineInstr *MI) const {
+  if (!MI->allImplicitDefsAreDead())
+    return false;
+
   unsigned Opc = MI->getOpcode();
 
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);

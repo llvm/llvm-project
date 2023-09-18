@@ -1,5 +1,5 @@
-; RUN: not llc -march=amdgcn -mtriple=amdgcn-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
-; RUN: not llc -march=amdgcn -mtriple=amdgcn--amdpal -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn-mesa-mesa3d -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn--amdpal -tailcallopt < %s 2>&1 | FileCheck --check-prefix=GCN %s
 ; RUN: not llc -march=r600 -mtriple=r600-- -mcpu=cypress -tailcallopt < %s 2>&1 | FileCheck -check-prefix=R600 %s
 
 declare i32 @external_function(i32) nounwind

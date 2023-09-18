@@ -149,11 +149,11 @@ define void @test_pass_5args(target("aarch64.svcount") %arg) nounwind {
 ; CHECK-O3:       // %bb.0:
 ; CHECK-O3-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-O3-NEXT:    addvl sp, sp, #-1
-; CHECK-O3-NEXT:    addpl x0, sp, #7
 ; CHECK-O3-NEXT:    mov p1.b, p0.b
+; CHECK-O3-NEXT:    addpl x0, sp, #7
+; CHECK-O3-NEXT:    str p0, [sp, #7, mul vl]
 ; CHECK-O3-NEXT:    mov p2.b, p0.b
 ; CHECK-O3-NEXT:    mov p3.b, p0.b
-; CHECK-O3-NEXT:    str p0, [sp, #7, mul vl]
 ; CHECK-O3-NEXT:    bl take_svcount_5
 ; CHECK-O3-NEXT:    addvl sp, sp, #1
 ; CHECK-O3-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload

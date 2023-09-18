@@ -188,7 +188,7 @@ public:
     BB = I->getParent();
     InsertPt = I->getIterator();
     assert(InsertPt != BB->end() && "Can't read debug loc from end()");
-    SetCurrentDebugLocation(I->getDebugLoc());
+    SetCurrentDebugLocation(I->getStableDebugLoc());
   }
 
   /// This specifies that created instructions should be inserted at the
@@ -197,7 +197,7 @@ public:
     BB = TheBB;
     InsertPt = IP;
     if (IP != TheBB->end())
-      SetCurrentDebugLocation(IP->getDebugLoc());
+      SetCurrentDebugLocation(IP->getStableDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning
@@ -1021,6 +1021,19 @@ public:
                                Value *Idx, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
+                           nullptr, Name);
+  }
+
+  /// Create a call to llvm.stacksave
+  CallInst *CreateStackSave(const Twine &Name = "") {
+    const DataLayout &DL = BB->getModule()->getDataLayout();
+    return CreateIntrinsic(Intrinsic::stacksave, {DL.getAllocaPtrType(Context)},
+                           {}, nullptr, Name);
+  }
+
+  /// Create a call to llvm.stackrestore
+  CallInst *CreateStackRestore(Value *Ptr, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::stackrestore, {Ptr->getType()}, {Ptr},
                            nullptr, Name);
   }
 

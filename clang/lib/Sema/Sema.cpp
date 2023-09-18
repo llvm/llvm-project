@@ -152,9 +152,9 @@ public:
       SourceLocation IncludeLoc = SM.getIncludeLoc(SM.getFileID(Loc));
       if (IncludeLoc.isValid()) {
         if (llvm::timeTraceProfilerEnabled()) {
-          const FileEntry *FE = SM.getFileEntryForID(SM.getFileID(Loc));
-          llvm::timeTraceProfilerBegin(
-              "Source", FE != nullptr ? FE->getName() : StringRef("<unknown>"));
+          OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getFileID(Loc));
+          llvm::timeTraceProfilerBegin("Source", FE ? FE->getName()
+                                                    : StringRef("<unknown>"));
         }
 
         IncludeStack.push_back(IncludeLoc);
@@ -483,7 +483,7 @@ Sema::~Sema() {
 
   // Delete cached satisfactions.
   std::vector<ConstraintSatisfaction *> Satisfactions;
-  Satisfactions.reserve(Satisfactions.size());
+  Satisfactions.reserve(SatisfactionCache.size());
   for (auto &Node : SatisfactionCache)
     Satisfactions.push_back(&Node);
   for (auto *Node : Satisfactions)
@@ -825,7 +825,7 @@ void Sema::getUndefinedButUsed(
       continue;
     }
 
-    if (FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
       if (FD->isDefined())
         continue;
       if (FD->isExternallyVisible() &&
@@ -836,7 +836,7 @@ void Sema::getUndefinedButUsed(
       if (FD->getBuiltinID())
         continue;
     } else {
-      auto *VD = cast<VarDecl>(ND);
+      const auto *VD = cast<VarDecl>(ND);
       if (VD->hasDefinition() != VarDecl::DeclarationOnly)
         continue;
       if (VD->isExternallyVisible() &&

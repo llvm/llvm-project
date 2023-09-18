@@ -612,7 +612,7 @@ to perform additional operations on certain scalar and vector types.
 
 Let ``T`` be one of the following types:
 
-* an integer type (as in C2x 6.2.5p19), but excluding enumerated types and _Bool
+* an integer type (as in C23 6.2.5p22), but excluding enumerated types and ``bool``
 * the standard floating types float or double
 * a half-precision floating point type, if one is supported on the target
 * a vector type.
@@ -643,6 +643,8 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_bitreverse(T x)     return the integer represented after reversing the bits of x     integer types
  T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
  T __builtin_elementwise_exp2(T x)           returns the base-2 exponential, 2^x, of the specified value      floating point types
+
+ T __builtin_elementwise_sqrt(T x)           return the square root of a floating-point number                floating point types
  T __builtin_elementwise_roundeven(T x)      round x to the nearest integer value in floating point format,   floating point types
                                              rounding halfway cases to even (that is, to the nearest value
                                              that is an even integer), regardless of the current rounding
@@ -812,6 +814,7 @@ to ``float``; see below for more information on this emulation.
   * AMDGPU (natively)
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
+  * RISC-V (natively if Zfh or Zhinx is available)
 
 * ``__bf16`` is supported on the following targets (currently never natively):
   * 32-bit ARM
@@ -1462,8 +1465,8 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
 -------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
-Array & element qualification (N2607)                                   C2x           C89
-Attributes (N2335)                                                      C2x           C89
+Array & element qualification (N2607)                                   C23           C89
+Attributes (N2335)                                                      C23           C89
 ====================================== ================================ ============= =============
 
 Type Trait Primitives
@@ -1618,6 +1621,10 @@ The following type trait primitives are supported by Clang. Those traits marked
   materialized temporary object. If ``T`` is not a reference type the result
   is false. Note this trait will also return false when the initialization of
   ``T`` from ``U`` is ill-formed.
+  Deprecated, use ``__reference_constructs_from_temporary``.
+* ``__reference_constructs_from_temporary(T, U)`` (C++)
+  Returns true if a reference ``T`` can be constructed from a temporary of type
+  a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
 
 In addition, the following expression traits are supported:
@@ -2407,7 +2414,7 @@ this always needs to be called to grow the table.
 It takes three arguments. The first argument is the WebAssembly table
 to grow. The second argument is the reference typed value to store in
 the new table entries (the initialization value), and the third argument
-is the amound to grow the table by. It returns the previous table size
+is the amount to grow the table by. It returns the previous table size
 or -1. It will return -1 if not enough space could be allocated.
 
 .. code-block:: c++
@@ -3160,7 +3167,7 @@ avoid cache misses when the developer has a good understanding of which data
 are going to be used next. ``addr`` is the address that needs to be brought into
 the cache. ``rw`` indicates the expected access mode: ``0`` for *read* and ``1``
 for *write*. In case of *read write* access, ``1`` is to be used. ``locality``
-indicates the expected persistance of data in cache, from ``0`` which means that
+indicates the expected persistence of data in cache, from ``0`` which means that
 data can be discarded from cache after its next use to ``3`` which means that
 data is going to be reused a lot once in cache. ``1`` and ``2`` provide
 intermediate behavior between these two extremes.
@@ -3513,18 +3520,15 @@ Floating point builtins
 ``__builtin_isfpclass``
 -----------------------
 
-``__builtin_isfpclass`` is used to test if the specified floating-point value
-falls into one of the specified floating-point classes.
+``__builtin_isfpclass`` is used to test if the specified floating-point values
+fall into one of the specified floating-point classes.
 
 **Syntax**:
 
 .. code-block:: c++
 
     int __builtin_isfpclass(fp_type expr, int mask)
-
-``fp_type`` is a floating-point type supported by the target. ``mask`` is an
-integer constant expression, where each bit represents floating-point class to
-test. The function returns boolean value.
+    int_vector __builtin_isfpclass(fp_vector expr, int mask)
 
 **Example of use**:
 
@@ -3540,8 +3544,9 @@ test. The function returns boolean value.
 The ``__builtin_isfpclass()`` builtin is a generalization of functions ``isnan``,
 ``isinf``, ``isfinite`` and some others defined by the C standard. It tests if
 the floating-point value, specified by the first argument, falls into any of data
-classes, specified by the second argument. The later is a bitmask, in which each
-data class is represented by a bit using the encoding:
+classes, specified by the second argument. The latter is an integer constant
+bitmask expression, in which each data class is represented by a bit
+using the encoding:
 
 ========== =================== ======================
 Mask value Data class          Macro
@@ -3568,6 +3573,14 @@ these data classes. Using suitable mask value, the function can implement any of
 the standard classification functions, for example, ``__builtin_isfpclass(x, 3)``
 is identical to ``isnan``,``__builtin_isfpclass(x, 504)`` - to ``isfinite``
 and so on.
+
+If the first argument is a vector, the function is equivalent to the set of
+scalar calls of ``__builtin_isfpclass`` applied to the input elementwise.
+
+The result of ``__builtin_isfpclass`` is a boolean value, if the first argument
+is a scalar, or an integer vector with the same element count as the first
+argument. The element type in this vector has the same bit length as the
+element of the the first argument type.
 
 This function never raises floating-point exceptions and does not canonicalize
 its input. The floating-point argument is not promoted, its data class is
@@ -3669,7 +3682,7 @@ A predefined typedef for the target-specific ``va_list`` type.
 
 A builtin function for the target-specific ``va_start`` function-like macro.
 The ``parameter-name`` argument is the name of the parameter preceding the
-ellipsis (``...``) in the function signature. Alternatively, in C2x mode or
+ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
@@ -4699,7 +4712,12 @@ settings can be pushed or popped.
 When ``pragma float_control(precise, on)`` is enabled, the section of code
 governed by the pragma uses precise floating point semantics, effectively
 ``-ffast-math`` is disabled and ``-ffp-contract=on``
-(fused multiply add) is enabled.
+(fused multiply add) is enabled. This pragma enables ``-fmath-errno``.
+
+When ``pragma float_control(precise, off)`` is enabled, unsafe-floating point
+optimizations are enabled in the section of code governed by the pragma.
+Effectively ``-ffast-math`` is enabled and ``-ffp-contract=fast``. This pragma
+disables ``-fmath-errno``.
 
 When ``pragma float_control(except, on)`` is enabled, the section of code
 governed by the pragma behaves as though the command-line option
@@ -5222,12 +5240,18 @@ The following x86-specific intrinsics can be used in constant expressions:
 * ``_castf64_u64``
 * ``_castu32_f32``
 * ``_castu64_f64``
+* ``__lzcnt16``
+* ``__lzcnt``
+* ``__lzcnt64``
 * ``_mm_popcnt_u32``
 * ``_mm_popcnt_u64``
 * ``_popcnt32``
 * ``_popcnt64``
 * ``__popcntd``
 * ``__popcntq``
+* ``__popcnt16``
+* ``__popcnt``
+* ``__popcnt64``
 * ``__rolb``
 * ``__rolw``
 * ``__rold``

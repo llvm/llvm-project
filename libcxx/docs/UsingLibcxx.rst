@@ -43,6 +43,15 @@ the Standard but whose implementation is not complete or stable yet in libc++. T
 are disabled by default because they are neither API nor ABI stable. However, the
 ``-fexperimental-library`` compiler flag can be defined to turn those features on.
 
+The following features are currently considered experimental and are only provided
+when ``-fexperimental-library`` is passed:
+
+* The parallel algorithms library (``<execution>`` and the associated algorithms)
+* ``std::stop_token``, ``std::stop_source`` and ``std::stop_callback``
+* ``std::jthread``
+* ``std::chrono::tzdb`` and related time zone functionality
+* ``std::ranges::join_view``
+
 .. warning::
   Experimental libraries are experimental.
     * The contents of the ``<experimental/...>`` headers and the associated static
@@ -127,15 +136,15 @@ provide pretty-printers itself. Those can be used as:
 include-what-you-use (IWYU)
 ===========================
 
-libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`,
+libc++ provides an IWYU `mapping file <https://github.com/include-what-you-use/include-what-you-use/blob/master/docs/IWYUMappings.md>`_,
 which drastically improves the accuracy of the tool when using libc++. To use the mapping file with
 IWYU, you should run the tool like so:
 
 .. code-block:: bash
 
-  $ include-what-you-use -Xiwyu /path/to/libcxx/include/libcxx.imp file.cpp
+  $ include-what-you-use -Xiwyu --mapping_file=/path/to/libcxx/include/libcxx.imp file.cpp
 
-If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp```
+If you would prefer to not use that flag, then you can replace ``/path/to/include-what-you-use/share/libcxx.imp``
 file with the libc++-provided ``libcxx.imp`` file.
 
 .. _termination-handler:
@@ -215,10 +224,13 @@ safety annotations.
   disabled and must be manually enabled by the user.
 
 **_LIBCPP_ENABLE_HARDENED_MODE**:
-  This macro is used to enable the :ref:`hardened mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`hardened mode <using-hardening-modes>`.
+
+**_LIBCPP_ENABLE_SAFE_MODE**:
+  This macro is used to enable the :ref:`safe mode <using-hardening-modes>`.
 
 **_LIBCPP_ENABLE_DEBUG_MODE**:
-  This macro is used to enable the :ref:`debug mode <using-hardened-mode>`.
+  This macro is used to enable the :ref:`debug mode <using-hardening-modes>`.
 
 **_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS**:
   This macro is used to disable all visibility annotations inside libc++.
@@ -291,11 +303,6 @@ C++17 Specific Configuration Macros
 
 C++20 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17**:
-  This macro can be used to disable diagnostics emitted from functions marked
-  ``[[nodiscard]]`` in dialects after C++17.  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
-
 **_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
   This macro is used to re-enable all the features removed in C++20. The effect
   is equivalent to manually defining each macro listed below.
@@ -374,6 +381,13 @@ which no dialect declares as such (See the second form described above).
 * ``byteswap``
 * ``cbrt``
 * ``ceil``
+* ``chrono::tzdb_list::begin``
+* ``chrono::tzdb_list::cbegin``
+* ``chrono::tzdb_list::cend``
+* ``chrono::tzdb_list::end``
+* ``chrono::get_tzdb_list``
+* ``chrono::get_tzdb``
+* ``chrono::remote_version``
 * ``clamp``
 * ``copysign``
 * ``count_if``
@@ -524,6 +538,12 @@ in their code base.
 
 In C++26 formatting pointers gained a type ``P`` and allows to use
 zero-padding. These options have been retroactively applied to C++20.
+
+Extensions to the C++23 modules ``std`` and ``std.compat``
+----------------------------------------------------------
+
+Like other major implementations, libc++ provides C++23 modules ``std`` and
+``std.compat`` in C++20 as an extension"
 
 .. _turning-off-asan:
 

@@ -98,15 +98,18 @@ public:
     return std::nullopt;
   }
 
-  std::optional<int64_t> getExprOpAddressRelocAdjustment(
-      DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
-      uint64_t EndOffset) override {
+  std::optional<int64_t>
+  getExprOpAddressRelocAdjustment(DWARFUnit &U,
+                                  const DWARFExpression::Operation &Op,
+                                  uint64_t, uint64_t) override {
     switch (Op.getCode()) {
     default: {
       assert(false && "Specified operation does not have address operand");
     } break;
+    case dwarf::DW_OP_const2u:
     case dwarf::DW_OP_const4u:
     case dwarf::DW_OP_const8u:
+    case dwarf::DW_OP_const2s:
     case dwarf::DW_OP_const4s:
     case dwarf::DW_OP_const8s:
     case dwarf::DW_OP_addr: {
@@ -287,23 +290,33 @@ static std::string getMessageForDeletedAcceleratorTables(
 template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
 Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
                         raw_pwrite_stream &OutStream) {
+  std::mutex ErrorHandlerMutex;
+
   auto ReportWarn = [&](const Twine &Message, StringRef Context,
                         const DWARFDie *Die) {
-    warning(Message, Context);
-
-    if (!Options.Verbose || !Die)
+    // FIXME: implement warning logging which does not block other threads.
+    if (!ErrorHandlerMutex.try_lock())
       return;
 
-    DIDumpOptions DumpOpts;
-    DumpOpts.ChildRecurseDepth = 0;
-    DumpOpts.Verbose = Options.Verbose;
+    warning(Message, Context);
+    if (Options.Verbose && Die) {
+      DIDumpOptions DumpOpts;
+      DumpOpts.ChildRecurseDepth = 0;
+      DumpOpts.Verbose = Options.Verbose;
 
-    WithColor::note() << "    in DIE:\n";
-    Die->dump(errs(), /*Indent=*/6, DumpOpts);
+      WithColor::note() << "    in DIE:\n";
+      Die->dump(errs(), /*Indent=*/6, DumpOpts);
+    }
+    ErrorHandlerMutex.unlock();
   };
   auto ReportErr = [&](const Twine &Message, StringRef Context,
                        const DWARFDie *) {
+    // FIXME: implement error logging which does not block other threads.
+    if (!ErrorHandlerMutex.try_lock())
+      return;
+
     WithColor::error(errs(), Context) << Message << '\n';
+    ErrorHandlerMutex.unlock();
   };
 
   // Create DWARF linker.
@@ -325,7 +338,18 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   std::vector<std::string> EmptyWarnings;
 
   // Add object files to the DWARFLinker.
-  std::unique_ptr<DWARFContext> Context = DWARFContext::create(File);
+  std::unique_ptr<DWARFContext> Context = DWARFContext::create(
+      File, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
+      [&](Error Err) {
+        handleAllErrors(std::move(Err), [&](ErrorInfoBase &Info) {
+          ReportErr(Info.message(), "", nullptr);
+        });
+      },
+      [&](Error Warning) {
+        handleAllErrors(std::move(Warning), [&](ErrorInfoBase &Info) {
+          ReportWarn(Info.message(), "", nullptr);
+        });
+      });
   std::unique_ptr<ObjFileAddressMap<AddressMapBase>> AddressesMap(
       std::make_unique<ObjFileAddressMap<AddressMapBase>>(*Context, Options,
                                                           File));

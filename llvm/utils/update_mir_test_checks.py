@@ -204,8 +204,11 @@ def build_function_info_dictionary(
             m = VREG_DEF_RE.match(func_line)
             if m:
                 for vreg in VREG_RE.finditer(m.group("vregs")):
-                    name = mangle_vreg(m.group("opcode"), vreg_map.values())
-                    vreg_map[vreg.group(1)] = name
+                    if vreg.group(1) in vreg_map:
+                        name = vreg_map[vreg.group(1)]
+                    else:
+                        name = mangle_vreg(m.group("opcode"), vreg_map.values())
+                        vreg_map[vreg.group(1)] = name
                     func_line = func_line.replace(
                         vreg.group(1), "[[{}:%[0-9]+]]".format(name), 1
                     )

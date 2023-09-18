@@ -59,20 +59,20 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    je .LBB0_10
 ; CHECK-NEXT:  .LBB0_3: # %a29b173
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB0_37 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_36 Depth 2
 ; CHECK-NEXT:    # Child Loop BB0_19 Depth 2
 ; CHECK-NEXT:    # Child Loop BB0_20 Depth 2
-; CHECK-NEXT:    # Child Loop BB0_21 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_23 Depth 2
-; CHECK-NEXT:    # Child Loop BB0_24 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_26 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_37 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_22 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_23 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_25 Depth 2
 ; CHECK-NEXT:    # Child Loop BB0_38 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_29 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_30 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_28 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_29 Depth 2
 ; CHECK-NEXT:    # Child Loop BB0_39 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_33 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_34 Depth 2
-; CHECK-NEXT:    # Child Loop BB0_36 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_32 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_33 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_35 Depth 2
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    js .LBB0_4
 ; CHECK-NEXT:  # %bb.17: # %b179
@@ -80,11 +80,11 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    js .LBB0_18
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_37: # %a30b
+; CHECK-NEXT:  .LBB0_36: # %a30b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    je .LBB0_37
+; CHECK-NEXT:    je .LBB0_36
 ; CHECK-NEXT:  .LBB0_18: # %b188
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    testb %r8b, %r8b
@@ -104,33 +104,33 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    movl %eax, %r10d
 ; CHECK-NEXT:    orl %esi, %r10d
-; CHECK-NEXT:    jns .LBB0_26
+; CHECK-NEXT:    jns .LBB0_25
 ; CHECK-NEXT:  .LBB0_6: # %a57b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    shrl $31, %r9d
 ; CHECK-NEXT:    testb %r9b, %r9b
-; CHECK-NEXT:    je .LBB0_30
+; CHECK-NEXT:    je .LBB0_29
 ; CHECK-NEXT:  .LBB0_7: # %a66b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    shrl $31, %r10d
 ; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_34: # %a74b
+; CHECK-NEXT:  .LBB0_33: # %a74b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    jne .LBB0_34
-; CHECK-NEXT:  # %bb.35: # %b1582
-; CHECK-NEXT:    # in Loop: Header=BB0_34 Depth=2
+; CHECK-NEXT:    jne .LBB0_33
+; CHECK-NEXT:  # %bb.34: # %b1582
+; CHECK-NEXT:    # in Loop: Header=BB0_33 Depth=2
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    jne .LBB0_34
+; CHECK-NEXT:    jne .LBB0_33
 ; CHECK-NEXT:  .LBB0_8: # %a93b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    js .LBB0_9
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_36: # %a97b
+; CHECK-NEXT:  .LBB0_35: # %a97b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -141,108 +141,108 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    addss %xmm1, %xmm2
 ; CHECK-NEXT:    movss %xmm2, i6000(%rip)
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    jne .LBB0_36
+; CHECK-NEXT:    jne .LBB0_35
 ; CHECK-NEXT:    jmp .LBB0_9
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_22: # %b463
+; CHECK-NEXT:  .LBB0_21: # %b377
 ; CHECK-NEXT:    # in Loop: Header=BB0_20 Depth=2
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    je .LBB0_23
+; CHECK-NEXT:    je .LBB0_22
 ; CHECK-NEXT:  .LBB0_20: # %b341
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
-; CHECK-NEXT:    # Child Loop BB0_21 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_37 Depth 3
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    js .LBB0_22
+; CHECK-NEXT:    js .LBB0_21
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_21: # %a35b
+; CHECK-NEXT:  .LBB0_37: # %a35b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # Parent Loop BB0_20 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    je .LBB0_21
-; CHECK-NEXT:    jmp .LBB0_22
+; CHECK-NEXT:    je .LBB0_37
+; CHECK-NEXT:    jmp .LBB0_21
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_28: # %b1016
-; CHECK-NEXT:    # in Loop: Header=BB0_26 Depth=2
+; CHECK-NEXT:  .LBB0_27: # %b1016
+; CHECK-NEXT:    # in Loop: Header=BB0_25 Depth=2
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    jle .LBB0_6
-; CHECK-NEXT:  .LBB0_26: # %b858
+; CHECK-NEXT:  .LBB0_25: # %b858
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
 ; CHECK-NEXT:    # Child Loop BB0_38 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_29 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_28 Depth 3
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    js .LBB0_27
+; CHECK-NEXT:    js .LBB0_26
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_38: # %a53b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_26 Depth=2
+; CHECK-NEXT:    # Parent Loop BB0_25 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    je .LBB0_38
-; CHECK-NEXT:  .LBB0_27: # %b879
-; CHECK-NEXT:    # in Loop: Header=BB0_26 Depth=2
+; CHECK-NEXT:  .LBB0_26: # %b879
+; CHECK-NEXT:    # in Loop: Header=BB0_25 Depth=2
 ; CHECK-NEXT:    testb %r8b, %r8b
-; CHECK-NEXT:    jne .LBB0_28
+; CHECK-NEXT:    jne .LBB0_27
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_29: # %a53b1019
+; CHECK-NEXT:  .LBB0_28: # %a53b1019
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_26 Depth=2
+; CHECK-NEXT:    # Parent Loop BB0_25 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    jle .LBB0_29
-; CHECK-NEXT:    jmp .LBB0_28
+; CHECK-NEXT:    jle .LBB0_28
+; CHECK-NEXT:    jmp .LBB0_27
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_32: # %b1263
-; CHECK-NEXT:    # in Loop: Header=BB0_30 Depth=2
+; CHECK-NEXT:  .LBB0_31: # %b1263
+; CHECK-NEXT:    # in Loop: Header=BB0_29 Depth=2
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    jle .LBB0_7
-; CHECK-NEXT:  .LBB0_30: # %b1117
+; CHECK-NEXT:  .LBB0_29: # %b1117
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
 ; CHECK-NEXT:    # Child Loop BB0_39 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_33 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_32 Depth 3
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    js .LBB0_31
+; CHECK-NEXT:    js .LBB0_30
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_39: # %a63b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_30 Depth=2
+; CHECK-NEXT:    # Parent Loop BB0_29 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    jle .LBB0_39
-; CHECK-NEXT:  .LBB0_31: # %b1139
-; CHECK-NEXT:    # in Loop: Header=BB0_30 Depth=2
+; CHECK-NEXT:  .LBB0_30: # %b1139
+; CHECK-NEXT:    # in Loop: Header=BB0_29 Depth=2
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    jle .LBB0_31
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB0_32: # %a63b1266
+; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
+; CHECK-NEXT:    # Parent Loop BB0_29 Depth=2
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    jle .LBB0_32
+; CHECK-NEXT:    jmp .LBB0_31
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_33: # %a63b1266
-; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_30 Depth=2
-; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    jle .LBB0_33
-; CHECK-NEXT:    jmp .LBB0_32
-; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_25: # %b712
-; CHECK-NEXT:    # in Loop: Header=BB0_23 Depth=2
+; CHECK-NEXT:  .LBB0_24: # %b712
+; CHECK-NEXT:    # in Loop: Header=BB0_22 Depth=2
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    je .LBB0_5
-; CHECK-NEXT:  .LBB0_23: # %b535
+; CHECK-NEXT:  .LBB0_22: # %b535
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
-; CHECK-NEXT:    # Child Loop BB0_24 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_23 Depth 3
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    js .LBB0_25
+; CHECK-NEXT:    js .LBB0_24
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_24: # %a45b
+; CHECK-NEXT:  .LBB0_23: # %a45b
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_23 Depth=2
+; CHECK-NEXT:    # Parent Loop BB0_22 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    testb %dil, %dil
-; CHECK-NEXT:    je .LBB0_24
-; CHECK-NEXT:    jmp .LBB0_25
+; CHECK-NEXT:    je .LBB0_23
+; CHECK-NEXT:    jmp .LBB0_24
 ; CHECK-NEXT:  .LBB0_10: # %a109b
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp

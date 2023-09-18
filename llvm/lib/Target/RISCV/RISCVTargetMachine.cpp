@@ -109,7 +109,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT)
+                                       CodeGenOptLevel OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -273,6 +273,7 @@ public:
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addOptimizedRegAlloc() override;
+  void addFastRegAlloc() override;
 };
 } // namespace
 
@@ -283,7 +284,7 @@ TargetPassConfig *RISCVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void RISCVPassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
 
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVGatherScatterLoweringPass());
     addPass(createInterleavedAccessPass());
     addPass(createRISCVCodeGenPreparePass());
@@ -293,7 +294,7 @@ void RISCVPassConfig::addIRPasses() {
 }
 
 bool RISCVPassConfig::addPreISel() {
-  if (TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     // Add a barrier before instruction selection so that we will not get
     // deleted block address after enabling default outlining. See D99707 for
     // more details.
@@ -349,12 +350,13 @@ void RISCVPassConfig::addPreEmitPass() {
   // propagation after the machine outliner (which runs after addPreEmitPass)
   // currently leads to incorrect code-gen, where copies to registers within
   // outlined functions are removed erroneously.
-  if (TM->getOptLevel() >= CodeGenOpt::Default && EnableRISCVCopyPropagation)
+  if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
+      EnableRISCVCopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
 }
 
 void RISCVPassConfig::addPreEmitPass2() {
-  if (TM->getOptLevel() != CodeGenOpt::None) {
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMoveMergePass());
     // Schedule PushPop Optimization before expansion of Pseudo instruction,
     // ensuring return instruction is detected correctly.
@@ -385,21 +387,27 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 
 void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
   addPass(createRISCVInsertVSETVLIPass());
   addPass(createRISCVInsertReadWriteCSRPass());
 }
 
 void RISCVPassConfig::addOptimizedRegAlloc() {
-  if (getOptimizeRegAlloc())
-    insertPass(&DetectDeadLanesID, &RISCVInitUndefID);
+  insertPass(&DetectDeadLanesID, &RISCVInitUndefID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
 
+void RISCVPassConfig::addFastRegAlloc() {
+  addPass(createRISCVInitUndefPass());
+  TargetPassConfig::addFastRegAlloc();
+}
+
+
 void RISCVPassConfig::addPostRegAlloc() {
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableRedundantCopyElimination)
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
 }
 

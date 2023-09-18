@@ -30,6 +30,7 @@
 #include "support/Trace.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -108,6 +109,7 @@ BackgroundIndex::BackgroundIndex(
   for (unsigned I = 0; I < Opts.ThreadPoolSize; ++I) {
     ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
                         [this, Ctx(Context::current().clone())]() mutable {
+                          clang::noteBottomOfStack();
                           WithContext BGContext(std::move(Ctx));
                           Queue.work([&] { Rebuilder.idle(); });
                         });

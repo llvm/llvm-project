@@ -39,9 +39,9 @@ define dso_local zeroext i8 @test_char_three(i8 zeroext %a) {
 ; CHECK-NEXT:    addis 4, 2, var_char@got@tprel@ha
 ; CHECK-NEXT:    ld 4, var_char@got@tprel@l(4)
 ; CHECK-NEXT:    lbzx 5, 4, var_char@tls
-; CHECK-NEXT:    add 5, 5, 3
-; CHECK-NEXT:    clrldi 3, 5, 56
-; CHECK-NEXT:    stbx 5, 4, var_char@tls
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    stbx 3, 4, var_char@tls
+; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr @var_char, align 1, !tbaa !4
@@ -93,9 +93,9 @@ define dso_local signext i16 @test_short_three(i16 signext %a) {
 ; CHECK-NEXT:    addis 4, 2, var_short@got@tprel@ha
 ; CHECK-NEXT:    ld 4, var_short@got@tprel@l(4)
 ; CHECK-NEXT:    lhzx 5, 4, var_short@tls
-; CHECK-NEXT:    add 5, 5, 3
-; CHECK-NEXT:    extsh 3, 5
-; CHECK-NEXT:    sthx 5, 4, var_short@tls
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    sthx 3, 4, var_short@tls
+; CHECK-NEXT:    extsh 3, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr @var_short, align 2, !tbaa !7
@@ -146,9 +146,9 @@ define dso_local signext i32 @test_int_three(i32 signext %a) {
 ; CHECK-NEXT:    addis 4, 2, var_int@got@tprel@ha
 ; CHECK-NEXT:    ld 4, var_int@got@tprel@l(4)
 ; CHECK-NEXT:    lwzx 5, 4, var_int@tls
-; CHECK-NEXT:    add 5, 5, 3
-; CHECK-NEXT:    extsw 3, 5
-; CHECK-NEXT:    stwx 5, 4, var_int@tls
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    stwx 3, 4, var_int@tls
+; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr @var_int, align 4, !tbaa !9

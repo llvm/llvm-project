@@ -215,8 +215,9 @@ def G_PREFETCH : AArch64GenericInstruction {
   let hasSideEffects = 1;
 }
 
-// Generic bitwise insert if true.
-def G_BIT : AArch64GenericInstruction {
+// Generic instruction for the BSP pseudo. It is expanded into BSP, which
+// expands into BSL/BIT/BIF after register allocation.
+def G_BSP : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
   let hasSideEffects = 0;
@@ -252,7 +253,7 @@ def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
 def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
 def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
 
-def : GINodeEquiv<G_BIT, AArch64bit>;
+def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
@@ -303,30 +304,43 @@ def : Pat<(int_aarch64_stlxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
 def : Pat<(int_aarch64_stxp GPR64:$lo, GPR64:$hi, GPR64:$addr),
           (STXPX GPR64:$lo, GPR64:$hi, GPR64:$addr)>;
 
+let GIIgnoreCopies = 1 in
+class PatIgnoreCopies<dag pattern, dag result> : Pat<pattern, result>, GISelFlags;
+
 multiclass SIMDAcrossLanesSignedIntrinsicBHS<string baseOpc, Intrinsic intOp> {
-  def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
+  def : PatIgnoreCopies<(i32 (sext (i8 (intOp (v8i8 V64:$Rn))))),
         (i32 (SMOVvi8to32
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+           (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
           (i64 0)))>;
-  def : Pat<(i32 (intOp (v16i8 V128:$Rn))),
+  def : Pat<(i8 (intOp (v8i8 V64:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn)>;
+
+  def : PatIgnoreCopies<(i32 (sext (i8 (intOp (v16i8 V128:$Rn))))),
         (i32 (SMOVvi8to32
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
           (i64 0)))>;
+  def : Pat<(i8 (intOp (v16i8 V128:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn)>;
 
-  def : Pat<(i32 (intOp (v4i16 V64:$Rn))),
+  def : PatIgnoreCopies<(i32 (sext (i16 (intOp (v4i16 V64:$Rn))))),
         (i32 (SMOVvi16to32
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
            (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
           (i64 0)))>;
-  def : Pat<(i32 (intOp (v8i16 V128:$Rn))),
+  def : Pat<(i16 (intOp (v4i16 V64:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn)>;
+
+  def : PatIgnoreCopies<(i32 (sext (i16 (intOp (v8i16 V128:$Rn))))),
         (i32 (SMOVvi16to32
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
           (i64 0)))>;
+  def : Pat<(i16 (intOp (v8i16 V128:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn)>;
 
-  def : Pat<(i32 (intOp (v4i32 V128:$Rn))),
+  def : PatIgnoreCopies<(i32 (intOp (v4i32 V128:$Rn))),
         (i32 (EXTRACT_SUBREG
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
            (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub),
@@ -335,29 +349,48 @@ multiclass SIMDAcrossLanesSignedIntrinsicBHS<string baseOpc, Intrinsic intOp> {
 
 multiclass SIMDAcrossLanesUnsignedIntrinsicBHS<string baseOpc,
                                                 Intrinsic intOp> {
-  def : Pat<(i32 (intOp (v8i8 V64:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
-          ssub))>;
-  def : Pat<(i32 (intOp (v16i8 V128:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
-          ssub))>;
+  def : PatIgnoreCopies<(i32 (zext (i8 (intOp (v8i8 V64:$Rn))))),
+        (COPY_TO_REGCLASS
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+            ssub)),
+          GPR32)>;
+  def : Pat<(i8 (intOp (v8i8 V64:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn)>;
 
-  def : Pat<(i32 (intOp (v4i16 V64:$Rn))),
+  def : PatIgnoreCopies<(i32 (zext (i8 (intOp (v16i8 V128:$Rn))))),
+        (COPY_TO_REGCLASS
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+            ssub)),
+        GPR32)>;
+  def : Pat<(i8 (intOp (v16i8 V128:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn)>;
+
+
+  def : PatIgnoreCopies<(i32 (zext (i16 (intOp (v4i16 V64:$Rn))))),
+        (COPY_TO_REGCLASS
           (i32 (EXTRACT_SUBREG
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
               (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
-            ssub))>;
-  def : Pat<(i32 (intOp (v8i16 V128:$Rn))),
-        (i32 (EXTRACT_SUBREG
-          (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
-          ssub))>;
+            ssub)),
+          GPR32)>;
+  def : Pat<(i16 (intOp (v4i16 V64:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn)>;
 
-  def : Pat<(i32 (intOp (v4i32 V128:$Rn))),
+  def : PatIgnoreCopies<(i32 (zext (i16 (intOp (v8i16 V128:$Rn))))),
+        (COPY_TO_REGCLASS
+          (i32 (EXTRACT_SUBREG
+            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
+              (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+            ssub)),
+        GPR32)>;
+  def : Pat<(i16 (intOp (v8i16 V128:$Rn))),
+        (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn)>;
+
+  def : PatIgnoreCopies<(i32 (intOp (v4i32 V128:$Rn))),
         (i32 (EXTRACT_SUBREG
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
             (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub),
@@ -373,12 +406,23 @@ def : Pat<(i32 (int_aarch64_neon_saddv (v2i32 V64:$Rn))),
               (ADDPv2i32 V64:$Rn, V64:$Rn), dsub),
             ssub))>;
 
+def : Pat<(i64 (int_aarch64_neon_saddv (v2i64 V128:$Rn))),
+          (i64 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
+              (ADDPv2i64p V128:$Rn), dsub),
+            dsub))>;
+
 defm : SIMDAcrossLanesUnsignedIntrinsicBHS<"ADDV", int_aarch64_neon_uaddv>;
 def : Pat<(i32 (int_aarch64_neon_uaddv (v2i32 V64:$Rn))),
           (i32 (EXTRACT_SUBREG
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
               (ADDPv2i32 V64:$Rn, V64:$Rn), dsub),
             ssub))>;
+def : Pat<(i64 (int_aarch64_neon_uaddv (v2i64 V128:$Rn))),
+          (i64 (EXTRACT_SUBREG
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
+              (ADDPv2i64p V128:$Rn), dsub),
+            dsub))>;
 
 defm : SIMDAcrossLanesSignedIntrinsicBHS<"SMAXV", int_aarch64_neon_smaxv>;
 def : Pat<(i32 (int_aarch64_neon_smaxv (v2i32 V64:$Rn))),
@@ -407,3 +451,48 @@ def : Pat<(i32 (int_aarch64_neon_uminv (v2i32 V64:$Rn))),
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
               (UMINPv2i32 V64:$Rn, V64:$Rn), dsub),
             ssub))>;
+
+// Match stores from lane 0 to the appropriate subreg's store.
+multiclass VecStoreLane64_0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop,
+                            ValueType VTy, ValueType STy,
+                            SubRegIndex SubRegIdx, Operand IndexType,
+                            Instruction STR> {
+  def : Pat<(storeop (STy (vector_extract (VTy VecListOne64:$Vt), (i64 0))),
+                     (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
+            (STR (EXTRACT_SUBREG VecListOne64:$Vt, SubRegIdx),
+                 GPR64sp:$Rn, IndexType:$offset)>;
+}
+multiclass VecStoreULane64_0Pat<SDPatternOperator StoreOp,
+                             ValueType VTy, ValueType STy,
+                             SubRegIndex SubRegIdx, Instruction STR> {
+  defm : VecStoreLane64_0Pat<am_unscaled64, StoreOp, VTy, STy, SubRegIdx, simm9, STR>;
+}
+
+multiclass VecROStoreLane64_0Pat<ROAddrMode ro, SDPatternOperator storeop,
+                              ValueType VecTy, ValueType STy,
+                              SubRegIndex SubRegIdx,
+                              Instruction STRW, Instruction STRX> {
+
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne64:$Vt), (i64 0))),
+                     (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
+            (STRW (EXTRACT_SUBREG VecListOne64:$Vt, SubRegIdx),
+                  GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
+
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne64:$Vt), (i64 0))),
+                     (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
+            (STRX (EXTRACT_SUBREG VecListOne64:$Vt, SubRegIdx),
+                  GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+}
+
+let AddedComplexity = 19 in {
+  def : St1Lane128Pat<store, VectorIndexB, v16i8, i8,  ST1i8>;
+  def : St1Lane64Pat<store, VectorIndexB, v8i8,  i8,  ST1i8>;
+
+  defm : VecStoreLane64_0Pat<am_indexed16, store, v4i16, i16, hsub, uimm12s2, STRHui>;
+  defm : VecStoreLane64_0Pat<am_indexed32, store, v2i32, i32, ssub, uimm12s4, STRSui>;
+
+  defm : VecStoreULane64_0Pat<store, v4i16, i16, hsub, STURHi>;
+  defm : VecStoreULane64_0Pat<store, v2i32, i32, ssub, STURSi>;
+  defm : VecROStoreLane64_0Pat<ro16, store, v4i16, i16, hsub, STRHroW, STRHroX>;
+  defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
+}

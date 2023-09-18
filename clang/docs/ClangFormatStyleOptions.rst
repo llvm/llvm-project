@@ -1108,6 +1108,54 @@ the configuration (without a prefix: ``Auto``).
                     int d,
                     int e);
 
+.. _AllowBreakBeforeNoexceptSpecifier:
+
+**AllowBreakBeforeNoexceptSpecifier** (``BreakBeforeNoexceptSpecifierStyle``) :versionbadge:`clang-format 18` :ref:`¶ <AllowBreakBeforeNoexceptSpecifier>`
+  Controls if there could be a line break before a ``noexcept`` specifier.
+
+  Possible values:
+
+  * ``BBNSS_Never`` (in configuration: ``Never``)
+    No line break allowed.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2) noexcept(
+          noexcept(baz(arg1)) &&
+          noexcept(baz(arg2)));
+
+  * ``BBNSS_OnlyWithParen`` (in configuration: ``OnlyWithParen``)
+    For a simple ``noexcept`` there is no line break allowed, but when we
+    have a condition it is.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2)
+          noexcept(noexcept(baz(arg1)) &&
+                   noexcept(baz(arg2)));
+
+  * ``BBNSS_Always`` (in configuration: ``Always``)
+    Line breaks are allowed. But note that because of the associated
+    penalties ``clang-format`` often prefers not to break before the
+    ``noexcept``.
+
+    .. code-block:: c++
+
+      void foo(int arg1,
+               double arg2) noexcept;
+
+      void bar(int arg1, double arg2)
+          noexcept(noexcept(baz(arg1)) &&
+                   noexcept(baz(arg2)));
+
+
+
 .. _AllowShortBlocksOnASingleLine:
 
 **AllowShortBlocksOnASingleLine** (``ShortBlockStyle``) :versionbadge:`clang-format 3.5` :ref:`¶ <AllowShortBlocksOnASingleLine>`
@@ -1549,14 +1597,14 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     x = (char *__capability)&y;
-    int function(void) __ununsed;
+    int function(void) __unused;
     void only_writes_to_buffer(char *__output buffer);
 
   In the .clang-format configuration file, this can be configured like:
 
   .. code-block:: yaml
 
-    AttributeMacros: ['__capability', '__output', '__ununsed']
+    AttributeMacros: ['__capability', '__output', '__unused']
 
 .. _BinPackArguments:
 
@@ -2722,6 +2770,8 @@ the configuration (without a prefix: ``Auto``).
 **BreakStringLiterals** (``Boolean``) :versionbadge:`clang-format 3.9` :ref:`¶ <BreakStringLiterals>`
   Allow breaking string literals when formatting.
 
+  In C, C++, and Objective-C:
+
   .. code-block:: c++
 
      true:
@@ -2731,7 +2781,35 @@ the configuration (without a prefix: ``Auto``).
 
      false:
      const char* x =
-       "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  In C# and Java:
+
+  .. code-block:: c++
+
+     true:
+     string x = "veryVeryVeryVeryVeryVe" +
+                "ryVeryVeryVeryVeryVery" +
+                "VeryLongString";
+
+     false:
+     string x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  C# interpolated strings are not broken.
+
+  In Verilog:
+
+  .. code-block:: c++
+
+     true:
+     string x = {"veryVeryVeryVeryVeryVe",
+                 "ryVeryVeryVeryVeryVery",
+                 "VeryLongString"};
+
+     false:
+     string x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
 .. _ColumnLimit:
 
@@ -3832,7 +3910,7 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Macros:
 
-**Macros** (``List of Strings``) :versionbadge:`clang-format 17.0` :ref:`¶ <Macros>`
+**Macros** (``List of Strings``) :versionbadge:`clang-format 17` :ref:`¶ <Macros>`
   A list of macros of the form ``<definition>=<expansion>`` .
 
   Code will be parsed with macros expanded, in order to determine how to
@@ -5097,7 +5175,7 @@ the configuration (without a prefix: ``Auto``).
       AfterControlStatements: true
       AfterFunctionDefinitionName: true
 
-  * ``bool AfterControlStatements`` If ``true``, put space betwee control statement keywords
+  * ``bool AfterControlStatements`` If ``true``, put space between control statement keywords
     (for/if/while...) and opening parentheses.
 
     .. code-block:: c++
@@ -5436,7 +5514,7 @@ the configuration (without a prefix: ``Auto``).
 .. _SpacesInParentheses:
 
 **SpacesInParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInParentheses>`
-  If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  If ``true``, spaces will be inserted after ``(`` and before ``)``.
   This option is **deprecated**. The previous behavior is preserved by using
   ``SpacesInParens`` with ``Custom`` and by setting all
   ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and

@@ -12,12 +12,14 @@
 
 #include "PPCMCCodeEmitter.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
-#include "PPCInstrInfo.h"
+#include "PPCMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -47,14 +49,106 @@ getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  const PPCInstrInfo *InstrInfo = static_cast<const PPCInstrInfo *>(&MCII);
-  unsigned Opcode = MI.getOpcode();
   // Add a fixup for the branch target.
   Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (InstrInfo->isNoTOCCallInstr(Opcode)
+                                   (isNoTOCCallInstr(MI)
                                         ? (MCFixupKind)PPC::fixup_ppc_br24_notoc
                                         : (MCFixupKind)PPC::fixup_ppc_br24)));
   return 0;
+}
+
+/// Check if Opcode corresponds to a call instruction that should be marked
+/// with the NOTOC relocation.
+bool PPCMCCodeEmitter::isNoTOCCallInstr(const MCInst &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  if (!MCII.get(Opcode).isCall())
+    return false;
+
+  switch (Opcode) {
+  default:
+#ifndef NDEBUG
+    llvm_unreachable("Unknown call opcode");
+#endif
+    return false;
+  case PPC::BL8_NOTOC:
+  case PPC::BL8_NOTOC_TLS:
+  case PPC::BL8_NOTOC_RM:
+    return true;
+#ifndef NDEBUG
+  case PPC::BL8:
+  case PPC::BL:
+  case PPC::BL8_TLS:
+  case PPC::BL_TLS:
+  case PPC::BLA8:
+  case PPC::BLA:
+  case PPC::BCCL:
+  case PPC::BCCLA:
+  case PPC::BCL:
+  case PPC::BCLn:
+  case PPC::BL8_NOP:
+  case PPC::BL_NOP:
+  case PPC::BL8_NOP_TLS:
+  case PPC::BLA8_NOP:
+  case PPC::BCTRL8:
+  case PPC::BCTRL:
+  case PPC::BCCCTRL8:
+  case PPC::BCCCTRL:
+  case PPC::BCCTRL8:
+  case PPC::BCCTRL:
+  case PPC::BCCTRL8n:
+  case PPC::BCCTRLn:
+  case PPC::BL8_RM:
+  case PPC::BLA8_RM:
+  case PPC::BL8_NOP_RM:
+  case PPC::BLA8_NOP_RM:
+  case PPC::BCTRL8_RM:
+  case PPC::BCTRL8_LDinto_toc:
+  case PPC::BCTRL8_LDinto_toc_RM:
+  case PPC::BL8_TLS_:
+  case PPC::TCRETURNdi8:
+  case PPC::TCRETURNai8:
+  case PPC::TCRETURNri8:
+  case PPC::TAILBCTR8:
+  case PPC::TAILB8:
+  case PPC::TAILBA8:
+  case PPC::BCLalways:
+  case PPC::BLRL:
+  case PPC::BCCLRL:
+  case PPC::BCLRL:
+  case PPC::BCLRLn:
+  case PPC::BDZL:
+  case PPC::BDNZL:
+  case PPC::BDZLA:
+  case PPC::BDNZLA:
+  case PPC::BDZLp:
+  case PPC::BDNZLp:
+  case PPC::BDZLAp:
+  case PPC::BDNZLAp:
+  case PPC::BDZLm:
+  case PPC::BDNZLm:
+  case PPC::BDZLAm:
+  case PPC::BDNZLAm:
+  case PPC::BDZLRL:
+  case PPC::BDNZLRL:
+  case PPC::BDZLRLp:
+  case PPC::BDNZLRLp:
+  case PPC::BDZLRLm:
+  case PPC::BDNZLRLm:
+  case PPC::BL_RM:
+  case PPC::BLA_RM:
+  case PPC::BL_NOP_RM:
+  case PPC::BCTRL_RM:
+  case PPC::TCRETURNdi:
+  case PPC::TCRETURNai:
+  case PPC::TCRETURNri:
+  case PPC::BCTRL_LWZinto_toc:
+  case PPC::BCTRL_LWZinto_toc_RM:
+  case PPC::TAILBCTR:
+  case PPC::TAILB:
+  case PPC::TAILBA:
+    return false;
+#endif
+  }
 }
 
 unsigned PPCMCCodeEmitter::getCondBrEncoding(const MCInst &MI, unsigned OpNo,
@@ -372,7 +466,7 @@ get_crbitm_encoding(const MCInst &MI, unsigned OpNo,
 }
 
 // Get the index for this operand in this instruction. This is needed for
-// computing the register number in PPCInstrInfo::getRegNumForOperand() for
+// computing the register number in PPC::getRegNumForOperand() for
 // any instructions that use a different numbering scheme for registers in
 // different operands.
 static unsigned getOpIdxForMO(const MCInst &MI, const MCOperand &MO) {
@@ -397,8 +491,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
            MO.getReg() < PPC::CR0 || MO.getReg() > PPC::CR7);
     unsigned OpNo = getOpIdxForMO(MI, MO);
     unsigned Reg =
-      PPCInstrInfo::getRegNumForOperand(MCII.get(MI.getOpcode()),
-                                        MO.getReg(), OpNo);
+        PPC::getRegNumForOperand(MCII.get(MI.getOpcode()), MO.getReg(), OpNo);
     return CTX.getRegisterInfo()->getEncodingValue(Reg);
   }
 
@@ -443,9 +536,7 @@ unsigned PPCMCCodeEmitter::getInstSizeInBytes(const MCInst &MI) const {
 }
 
 bool PPCMCCodeEmitter::isPrefixedInstruction(const MCInst &MI) const {
-  unsigned Opcode = MI.getOpcode();
-  const PPCInstrInfo *InstrInfo = static_cast<const PPCInstrInfo*>(&MCII);
-  return InstrInfo->isPrefixed(Opcode);
+  return MCII.get(MI.getOpcode()).TSFlags & PPCII::Prefixed;
 }
 
 #include "PPCGenMCCodeEmitter.inc"

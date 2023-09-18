@@ -397,12 +397,9 @@ clang/lib/Driver/ToolChains/AIX.cpp
 clang/lib/Driver/ToolChains/AIX.h
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.cpp
 clang/lib/Driver/ToolChains/AMDGPUOpenMP.h
-clang/lib/Driver/ToolChains/Ananas.h
 clang/lib/Driver/ToolChains/AVR.cpp
 clang/lib/Driver/ToolChains/AVR.h
-clang/lib/Driver/ToolChains/CloudABI.cpp
 clang/lib/Driver/ToolChains/CommonArgs.h
-clang/lib/Driver/ToolChains/Contiki.cpp
 clang/lib/Driver/ToolChains/CrossWindows.h
 clang/lib/Driver/ToolChains/DragonFly.h
 clang/lib/Driver/ToolChains/FreeBSD.cpp
@@ -416,7 +413,6 @@ clang/lib/Driver/ToolChains/Hurd.cpp
 clang/lib/Driver/ToolChains/Hurd.h
 clang/lib/Driver/ToolChains/InterfaceStubs.cpp
 clang/lib/Driver/ToolChains/InterfaceStubs.h
-clang/lib/Driver/ToolChains/Minix.h
 clang/lib/Driver/ToolChains/MipsLinux.cpp
 clang/lib/Driver/ToolChains/MSP430.h
 clang/lib/Driver/ToolChains/PPCFreeBSD.cpp
@@ -2185,6 +2181,8 @@ flang/include/flang/Runtime/time-intrinsic.h
 flang/include/flang/Runtime/transformational.h
 flang/include/flang/Runtime/type-code.h
 flang/include/flang/Semantics/attr.h
+flang/include/flang/Semantics/expression.h
+flang/include/flang/Semantics/openmp-directive-sets.h
 flang/include/flang/Semantics/runtime-type-info.h
 flang/include/flang/Semantics/scope.h
 flang/include/flang/Semantics/semantics.h
@@ -5802,7 +5800,7 @@ llvm/lib/CodeGen/MIRPrintingPass.cpp
 llvm/lib/CodeGen/MIRSampleProfile.cpp
 llvm/lib/CodeGen/MIRVRegNamerUtils.cpp
 llvm/lib/CodeGen/MIRYamlMapping.cpp
-llvm/lib/CodeGen/MLRegallocEvictAdvisor.cpp
+llvm/lib/CodeGen/MLRegAllocEvictAdvisor.cpp
 llvm/lib/CodeGen/MultiHazardRecognizer.cpp
 llvm/lib/CodeGen/NonRelocatableStringpool.cpp
 llvm/lib/CodeGen/ParallelCG.cpp

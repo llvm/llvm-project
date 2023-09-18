@@ -10,6 +10,14 @@
 
 // DWARF_VER: "-dwarf-version=5"
 
+// RUN: %clang -### --target=amdgcn--amdhsa -x assembler \
+// RUN:  -Wl,--unresolved-symbols=ignore-all %s 2>&1 | FileCheck -check-prefix=AS_LINK_UR %s
+// RUN: %clang -### --target=amdgcn--amdhsa -x assembler \
+// RUN:  -Xlinker --unresolved-symbols=ignore-all %s 2>&1 | FileCheck -check-prefix=AS_LINK_UR %s
+
+// AS_LINK_UR: "-cc1as"
+// AS_LINK_UR: ld.lld{{.*}} "--no-undefined"{{.*}} "--unresolved-symbols=ignore-all"
+
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
 // RUN:   -L. -flto -fconvergent-functions %s 2>&1 | FileCheck -check-prefixes=LTO,MCPU %s
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \

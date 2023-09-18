@@ -12,6 +12,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -547,6 +548,37 @@ OpFoldResult CmpOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+/// Canonicalize
+/// `x - y cmp 0` to `x cmp y`. or `x - y cmp 0` to `x cmp y`.
+/// `0 cmp x - y` to `y cmp x`. or `0 cmp x - y` to `y cmp x`.
+LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
+  IntegerAttr cmpRhs;
+  IntegerAttr cmpLhs;
+
+  bool rhsIsZero = matchPattern(op.getRhs(), m_Constant(&cmpRhs)) &&
+                   cmpRhs.getValue().isZero();
+  bool lhsIsZero = matchPattern(op.getLhs(), m_Constant(&cmpLhs)) &&
+                   cmpLhs.getValue().isZero();
+  if (!rhsIsZero && !lhsIsZero)
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "cmp is not comparing something with 0");
+  SubOp subOp = rhsIsZero ? op.getLhs().getDefiningOp<index::SubOp>()
+                          : op.getRhs().getDefiningOp<index::SubOp>();
+  if (!subOp)
+    return rewriter.notifyMatchFailure(
+        op.getLoc(), "non-zero operand is not a result of subtraction");
+
+  index::CmpOp newCmp;
+  if (rhsIsZero)
+    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
+                                           subOp.getLhs(), subOp.getRhs());
+  else
+    newCmp = rewriter.create<index::CmpOp>(op.getLoc(), op.getPred(),
+                                           subOp.getRhs(), subOp.getLhs());
+  rewriter.replaceOp(op, newCmp);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

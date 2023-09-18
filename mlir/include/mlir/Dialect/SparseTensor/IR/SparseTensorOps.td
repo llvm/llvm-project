@@ -108,8 +108,8 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
                    Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$out_levels)>,
     Results<(outs TensorOf<[AnyType]>:$ret_values,
                   Variadic<TensorOf<[AnySignlessIntegerOrIndex]>>:$ret_levels,
-                  Index:$val_len,
-                  Variadic<Index>:$lvl_lens)> {
+                  ScalarLikeOf<[AnySignlessIntegerOrIndex]>:$val_len,
+                  Variadic<ScalarLikeOf<[AnySignlessIntegerOrIndex]>>:$lvl_lens)> {
   let summary = "Returns the (values, coordinates) pair unpacked from the input tensor";
 
   let description = [{
@@ -131,9 +131,10 @@ def SparseTensor_UnpackOp : SparseTensor_Op<"unpack", [Pure, SameVariadicResultS
     // input COO format |1.1, 0.0, 0.0, 0.0|
     //    of 3x4 matrix |0.0, 0.0, 2.2, 3.3|
     //                  |0.0, 0.0, 0.0, 0.0|
-    %v, %p, %c, %v_len, %p_len, %c_len = sparse_tensor.unpack %sp : tensor<3x4xf64, #SparseVector>
-                                         outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
-                                      -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
+    %v, %p, %c, %v_len, %p_len, %c_len =
+        sparse_tensor.unpack %sp : tensor<3x4xf64, #COO>
+          outs(%od, %op, %oi : tensor<3xf64>, tensor<2xindex>, tensor<3x2xindex>)
+                            -> tensor<3xf64>, (tensor<2xindex>, tensor<3x2xindex>), index, (index, index)
     // %v = arith.constant dense<[ 1.1,   2.2,   3.3 ]> : tensor<3xf64>
     // %p = arith.constant dense<[ 0,              3 ]> : tensor<2xindex>
     // %c = arith.constant dense<[[0,0], [1,2], [1,3]]> : tensor<3x2xindex>

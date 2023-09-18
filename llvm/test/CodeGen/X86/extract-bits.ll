@@ -8598,3 +8598,43 @@ define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
   store i64 %tmp2, ptr %ptr
   ret void
 }
+
+define i64 @c8_i64(i64 %arg, ptr %ptr) nounwind {
+; X86-LABEL: c8_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %eax
+; X86-NEXT:    shrl $19, %eax
+; X86-NEXT:    andl $4092, %eax # imm = 0xFFC
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    retl
+;
+; X64-NOBMI-LABEL: c8_i64:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    movl (%rsi), %eax
+; X64-NOBMI-NEXT:    shrl $19, %eax
+; X64-NOBMI-NEXT:    andl $4092, %eax # imm = 0xFFC
+; X64-NOBMI-NEXT:    addq %rdi, %rax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMINOTBM-LABEL: c8_i64:
+; X64-BMINOTBM:       # %bb.0:
+; X64-BMINOTBM-NEXT:    movl $2581, %eax # imm = 0xA15
+; X64-BMINOTBM-NEXT:    bextrl %eax, (%rsi), %eax
+; X64-BMINOTBM-NEXT:    leaq (%rdi,%rax,4), %rax
+; X64-BMINOTBM-NEXT:    retq
+;
+; X64-BMITBM-LABEL: c8_i64:
+; X64-BMITBM:       # %bb.0:
+; X64-BMITBM-NEXT:    bextrl $2581, (%rsi), %eax # imm = 0xA15
+; X64-BMITBM-NEXT:    leaq (%rdi,%rax,4), %rax
+; X64-BMITBM-NEXT:    retq
+  %tmp = load i32, ptr %ptr, align 8
+  %tmp1 = lshr i32 %tmp, 19
+  %tmp2 = and i32 %tmp1, 4092
+  %tmp3 = zext i32 %tmp2 to i64
+  %tmp4 = add i64 %arg, %tmp3
+  ret i64 %tmp4
+}

@@ -236,3 +236,101 @@ llvm.func @arm_sme_toggle_za() {
   "arm_sme.intr.za.disable"() : () -> ()
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @arm_sme_vector_to_tile_horiz
+llvm.func @arm_sme_vector_to_tile_horiz(%tileslice : i32,
+                                        %nxv16i1 : vector<[16]xi1>,
+                                        %nxv8i1 : vector<[8]xi1>,
+                                        %nxv4i1 : vector<[4]xi1>,
+                                        %nxv2i1 : vector<[2]xi1>,
+                                        %nxv1i1 : vector<[1]xi1>,
+                                        %nxv16i8 : vector<[16]xi8>,
+                                        %nxv8i16 : vector<[8]xi16>,
+                                        %nxv4i32 : vector<[4]xi32>,
+                                        %nxv2i64 : vector<[2]xi64>,
+                                        %nxv1i128 : vector<[1]xi128>,
+                                        %nxv8f16 : vector<[8]xf16>,
+                                        %nxv8bf16 : vector<[8]xbf16>,
+                                        %nxv4f32 : vector<[4]xf32>,
+                                        %nxv2f64 : vector<[2]xf64>) {
+  %tile = llvm.mlir.constant(0 : index) : i32
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv16i8
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv16i1, %nxv16i8) :
+      (i32, i32, vector<[16]xi1>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv8i16
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv8i1, %nxv8i16) :
+      (i32, i32, vector<[8]xi1>, vector<[8]xi16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv4i32
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv4i1, %nxv4i32) :
+      (i32, i32, vector<[4]xi1>, vector<[4]xi32>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv2i64
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv2i1, %nxv2i64) :
+      (i32, i32, vector<[2]xi1>, vector<[2]xi64>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv1i128
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv1i1, %nxv1i128) :
+      (i32, i32, vector<[1]xi1>, vector<[1]xi128>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv8f16
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv8i1, %nxv8f16) :
+      (i32, i32, vector<[8]xi1>, vector<[8]xf16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv8bf16
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv8i1, %nxv8bf16) :
+      (i32, i32, vector<[8]xi1>, vector<[8]xbf16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv4f32
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv4i1, %nxv4f32) :
+      (i32, i32, vector<[4]xi1>, vector<[4]xf32>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.horiz.nxv2f64
+  "arm_sme.intr.write.horiz"(%tile, %tileslice, %nxv2i1, %nxv2f64) :
+      (i32, i32, vector<[2]xi1>, vector<[2]xf64>) -> ()
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @arm_sme_vector_to_tile_vert
+llvm.func @arm_sme_vector_to_tile_vert(%tileslice : i32,
+                                       %nxv16i1 : vector<[16]xi1>,
+                                       %nxv8i1 : vector<[8]xi1>,
+                                       %nxv4i1 : vector<[4]xi1>,
+                                       %nxv2i1 : vector<[2]xi1>,
+                                       %nxv1i1 : vector<[1]xi1>,
+                                       %nxv16i8 : vector<[16]xi8>,
+                                       %nxv8i16 : vector<[8]xi16>,
+                                       %nxv4i32 : vector<[4]xi32>,
+                                       %nxv2i64 : vector<[2]xi64>,
+                                       %nxv1i128 : vector<[1]xi128>,
+                                       %nxv8f16 : vector<[8]xf16>,
+                                       %nxv8bf16 : vector<[8]xbf16>,
+                                       %nxv4f32 : vector<[4]xf32>,
+                                       %nxv2f64 : vector<[2]xf64>) {
+  %tile = llvm.mlir.constant(0 : index) : i32
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv16i8
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv16i1, %nxv16i8) :
+      (i32, i32, vector<[16]xi1>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv8i16
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv8i1, %nxv8i16) :
+      (i32, i32, vector<[8]xi1>, vector<[8]xi16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv4i32
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv4i1, %nxv4i32) :
+      (i32, i32, vector<[4]xi1>, vector<[4]xi32>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv2i64
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv2i1, %nxv2i64) :
+      (i32, i32, vector<[2]xi1>, vector<[2]xi64>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv1i128
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv1i1, %nxv1i128) :
+      (i32, i32, vector<[1]xi1>, vector<[1]xi128>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv8f16
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv8i1, %nxv8f16) :
+      (i32, i32, vector<[8]xi1>, vector<[8]xf16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv8bf16
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv8i1, %nxv8bf16) :
+      (i32, i32, vector<[8]xi1>, vector<[8]xbf16>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv4f32
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv4i1, %nxv4f32) :
+      (i32, i32, vector<[4]xi1>, vector<[4]xf32>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.write.vert.nxv2f64
+  "arm_sme.intr.write.vert"(%tile, %tileslice, %nxv2i1, %nxv2f64) :
+      (i32, i32, vector<[2]xi1>, vector<[2]xf64>) -> ()
+  llvm.return
+}

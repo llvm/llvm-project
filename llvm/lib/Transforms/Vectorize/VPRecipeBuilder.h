@@ -133,9 +133,12 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
+  /// Create the mask for the vector loop header block.
+  void createHeaderMask(VPlan &Plan);
+
   /// A helper function that computes the predicate of the block BB, assuming
-  /// that the header block of the loop is set to True. It returns the *entry*
-  /// mask for the block BB.
+  /// that the header block of the loop is set to True or the loop mask when
+  /// tail folding. It returns the *entry* mask for the block BB.
   VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
 
   /// A helper function that computes the predicate of the edge between SRC

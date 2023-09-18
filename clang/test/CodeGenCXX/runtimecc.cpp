@@ -7,8 +7,6 @@
 // translation units to define these runtime functions (or, equivalently,
 // for us to get LTO'ed with such a translation unit), and then the
 // mismatch will kill us.
-//
-// rdar://12818655
 
 // CHECK: [[A:%.*]] = type { double }
 

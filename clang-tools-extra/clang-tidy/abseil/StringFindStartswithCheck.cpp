@@ -86,8 +86,7 @@ void StringFindStartswithCheck::check(const MatchFinder::MatchResult &Result) {
   const Expr *Haystack = Result.Nodes.getNodeAs<CXXMemberCallExpr>("findexpr")
                              ->getImplicitObjectArgument();
   assert(Haystack != nullptr);
-  const CXXMethodDecl *FindFun =
-      Result.Nodes.getNodeAs<CXXMethodDecl>("findfun");
+  const auto *FindFun = Result.Nodes.getNodeAs<CXXMethodDecl>("findfun");
   assert(FindFun != nullptr);
 
   bool Rev = FindFun->getName().contains("rfind");

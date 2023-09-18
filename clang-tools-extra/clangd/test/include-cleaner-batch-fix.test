@@ -5,10 +5,11 @@
 # RUN: rm -rf %t
 # RUN: mkdir -p %t/clangd
 # RUN: cp -r %S/Inputs/include-cleaner %t/include
+# RUN: echo '-I%t/include' > %t/compile_flags.txt
 # Create a config file enabling include-cleaner features.
 # RUN: echo $'Diagnostics:\n  UnusedIncludes: Strict\n  MissingIncludes: Strict' >> %t/clangd/config.yaml
 
-# RUN: env XDG_CONFIG_HOME=%t clangd -lit-test -enable-config --resource-dir=%t < %s | FileCheck -strict-whitespace %s
+# RUN: env XDG_CONFIG_HOME=%t clangd -lit-test -enable-config --compile-commands-dir=%t < %s | FileCheck -strict-whitespace %s
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"workspace":{"workspaceEdit":{"documentChanges":true, "changeAnnotationSupport":{"groupsOnLabel":true}}}},"trace":"off"}}
 ---
 {

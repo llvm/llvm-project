@@ -18,31 +18,30 @@
 #include "test_macros.h"
 #include "constexpr_char_traits.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::string_view SV;
-    SV  sv1 {};
-    SV  sv2 { "abcde", 5 };
+    SV sv1{};
+    SV sv2{"abcde", 5};
 
     ASSERT_NOEXCEPT(sv1.starts_with('e'));
 
-    assert (!sv1.starts_with('a'));
-    assert (!sv1.starts_with('x'));
-    assert ( sv2.starts_with('a'));
-    assert (!sv2.starts_with('x'));
-    }
+    assert(!sv1.starts_with('a'));
+    assert(!sv1.starts_with('x'));
+    assert(sv2.starts_with('a'));
+    assert(!sv2.starts_with('x'));
+  }
 
 #if TEST_STD_VER > 11
-    {
+  {
     typedef std::basic_string_view<char, constexpr_char_traits<char>> SV;
-    constexpr SV  sv1 {};
-    constexpr SV  sv2 { "abcde", 5 };
-    static_assert (!sv1.starts_with('a'), "" );
-    static_assert (!sv1.starts_with('x'), "" );
-    static_assert ( sv2.starts_with('a'), "" );
-    static_assert (!sv2.starts_with('x'), "" );
-    }
+    constexpr SV sv1{};
+    constexpr SV sv2{"abcde", 5};
+    static_assert(!sv1.starts_with('a'), "");
+    static_assert(!sv1.starts_with('x'), "");
+    static_assert(sv2.starts_with('a'), "");
+    static_assert(!sv2.starts_with('x'), "");
+  }
 #endif
 
   return 0;

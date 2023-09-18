@@ -2,7 +2,6 @@
 // RUN: cp %s %t
 // RUN: not %clang_cc1 -pedantic -fobjc-arc -fixit -x objective-c %t
 // RUN: %clang_cc1 -pedantic -fobjc-arc -Werror -x objective-c %t
-// rdar://14106083
 
 @class A;
 @class NSString;

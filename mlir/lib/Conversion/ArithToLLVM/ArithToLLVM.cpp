@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -53,27 +54,21 @@ using FPToSIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToSIOp, LLVM::FPToSIOp>;
 using FPToUIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToUIOp, LLVM::FPToUIOp>;
-template <typename SourceOp, typename TargetOp>
-// FPClass bitmask for -inf (bit 2) and +inf (bit 9).
-using InfKinds =
-    arith::AttrConvertAddFpclassKinds<(1 << 2) | (1 << 9), SourceOp, TargetOp>;
-using IsInfLowering =
-    VectorConvertToLLVMPattern<arith::IsInfOp, LLVM::IsFPClass, InfKinds>;
-// FPClass bitmask for signalling NaN (bit 0) or quiet NaN (bit 1).
-template <typename SourceOp, typename TargetOp>
-using NanKinds =
-    arith::AttrConvertAddFpclassKinds<(1 << 0) | (1 << 1), SourceOp, TargetOp>;
-using IsNanLowering =
-    VectorConvertToLLVMPattern<arith::IsNanOp, LLVM::IsFPClass, NanKinds>;
-using MaxFOpLowering =
-    VectorConvertToLLVMPattern<arith::MaxFOp, LLVM::MaxNumOp,
+using MaximumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaximumFOp, LLVM::MaximumOp,
+                               arith::AttrConvertFastMathToLLVM>;
+using MaxNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaxNumFOp, LLVM::MaxNumOp,
                                arith::AttrConvertFastMathToLLVM>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxUIOp, LLVM::UMaxOp>;
-using MinFOpLowering =
-    VectorConvertToLLVMPattern<arith::MinFOp, LLVM::MinNumOp,
+using MinimumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinimumFOp, LLVM::MinimumOp,
+                               arith::AttrConvertFastMathToLLVM>;
+using MinNumFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinNumFOp, LLVM::MinNumOp,
                                arith::AttrConvertFastMathToLLVM>;
 using MinSIOpLowering =
     VectorConvertToLLVMPattern<arith::MinSIOp, LLVM::SMinOp>;
@@ -452,6 +447,35 @@ struct ArithToLLVMConversionPass
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// ConvertToLLVMPatternInterface implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Implement the interface to convert MemRef to LLVM.
+struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::arith::registerConvertArithToLLVMInterface(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
+    dialect->addInterfaces<ArithToLLVMDialectInterface>();
+  });
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
@@ -477,12 +501,12 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     FPToUIOpLowering,
     IndexCastOpSILowering,
     IndexCastOpUILowering,
-    IsInfLowering,
-    IsNanLowering,
-    MaxFOpLowering,
+    MaximumFOpLowering,
+    MaxNumFOpLowering,
     MaxSIOpLowering,
     MaxUIOpLowering,
-    MinFOpLowering,
+    MinimumFOpLowering,
+    MinNumFOpLowering,
     MinSIOpLowering,
     MinUIOpLowering,
     MulFOpLowering,

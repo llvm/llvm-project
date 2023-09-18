@@ -23,7 +23,6 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -34,6 +33,7 @@
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
@@ -1813,7 +1813,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
     } else {
       // We have at least one section loaded. This can be because we have
       // manually loaded some sections with "target modules load ..." or
-      // because we have have a live process that has sections loaded through
+      // because we have a live process that has sections loaded through
       // the dynamic loader
       load_addr =
           fixed_addr.GetOffset(); // "fixed_addr" doesn't have a section, so
@@ -2096,7 +2096,7 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
       } else {
         // We have at least one section loaded. This can be because we have
         // manually loaded some sections with "target modules load ..." or
-        // because we have have a live process that has sections loaded through
+        // because we have a live process that has sections loaded through
         // the dynamic loader
         section_load_list.ResolveLoadAddress(pointer_vm_addr, pointer_addr);
       }
@@ -3859,11 +3859,10 @@ void Target::StopHookScripted::GetSubclassDescription(
   s.Indent("Args:\n");
   s.SetIndentLevel(s.GetIndentLevel() + 4);
 
-  auto print_one_element = [&s](ConstString key,
+  auto print_one_element = [&s](llvm::StringRef key,
                                 StructuredData::Object *object) {
     s.Indent();
-    s.Printf("%s : %s\n", key.GetCString(),
-              object->GetStringValue().str().c_str());
+    s.Format("{0} : {1}\n", key, object->GetStringValue());
     return true;
   };
 
@@ -4062,7 +4061,7 @@ enum {
 class TargetOptionValueProperties
     : public Cloneable<TargetOptionValueProperties, OptionValueProperties> {
 public:
-  TargetOptionValueProperties(ConstString name) : Cloneable(name) {}
+  TargetOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -4098,7 +4097,7 @@ class TargetExperimentalOptionValueProperties
                        OptionValueProperties> {
 public:
   TargetExperimentalOptionValueProperties()
-      : Cloneable(ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(Properties::GetExperimentalSettingsName()) {}
 };
 
 TargetExperimentalProperties::TargetExperimentalProperties()
@@ -4152,8 +4151,7 @@ TargetProperties::TargetProperties(Target *target)
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
   } else {
-    m_collection_sp =
-        std::make_shared<TargetOptionValueProperties>(ConstString("target"));
+    m_collection_sp = std::make_shared<TargetOptionValueProperties>("target");
     m_collection_sp->Initialize(g_target_properties);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();

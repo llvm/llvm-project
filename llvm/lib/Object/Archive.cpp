@@ -1392,6 +1392,8 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
                                   GlobSymtab32Loc, GlobSymtab32Size, "32-bit");
     if (Err)
       return;
+
+    Has32BitGlobalSymtab = true;
   }
 
   if (GlobSymtab64Offset) {
@@ -1400,6 +1402,8 @@ BigArchive::BigArchive(MemoryBufferRef Source, Error &Err)
                                   GlobSymtab64Loc, GlobSymtab64Size, "64-bit");
     if (Err)
       return;
+
+    Has64BitGlobalSymtab = true;
   }
 
   SmallVector<GlobalSymtabInfo> SymtabInfos;

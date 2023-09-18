@@ -1713,8 +1713,8 @@ public:
 /// A helper class for performing the null-initialization of a return
 /// value.
 struct NullReturnState {
-  llvm::BasicBlock *NullBB;
-  NullReturnState() : NullBB(nullptr) {}
+  llvm::BasicBlock *NullBB = nullptr;
+  NullReturnState() = default;
 
   /// Perform a null-check of the given receiver.
   void init(CodeGenFunction &CGF, llvm::Value *receiver) {

@@ -2,7 +2,6 @@
 
 // Properly instantiate a non-dependent message expression which
 // requires a contextual conversion to ObjC pointer type.
-// <rdar://13305374>
 @interface Test0
 - (void) foo;
 @end

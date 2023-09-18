@@ -1,12 +1,14 @@
-// RUN: mlir-opt %s -enable-arm-streaming="mode=locally enable-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-llvm="enable-arm-sme" \
-// RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \
-// RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli_aarch64_cmd --march=aarch64 --mattr="+sve,+sme" \
-// RUN:   --entry-function=entry \
-// RUN:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{entry_point} = entry
+// DEFINE: %{compile} = mlir-opt %s -enable-arm-streaming="mode=locally enable-za" \
+// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
+// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" \
+// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
+// DEFINE: %{run} = %mcr_aarch64_cmd \
+// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  -e %{entry_point} -entry-point-result=i32 \
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+
+// RUN: %{compile} | %{run} | FileCheck %s
 
 func.func @entry() -> i32 {
   %c0 = arith.constant 0 : index

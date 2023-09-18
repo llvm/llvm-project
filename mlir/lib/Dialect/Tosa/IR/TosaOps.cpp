@@ -1493,6 +1493,134 @@ std::optional<SmallVector<int64_t, 4>> ApplyScaleOp::getShapeForUnroll() {
   return std::nullopt;
 }
 
+// parse and print of IfOp refer to the implementation of SCF dialect.
+ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Create the regions for 'then'.
+  result.regions.reserve(2);
+  Region *thenRegion = result.addRegion();
+  Region *elseRegion = result.addRegion();
+
+  auto &builder = parser.getBuilder();
+  OpAsmParser::UnresolvedOperand cond;
+  // Create a i1 tensor type for the boolean condition.
+  Type i1Type = RankedTensorType::get({}, builder.getIntegerType(1));
+  if (parser.parseOperand(cond) ||
+      parser.resolveOperand(cond, i1Type, result.operands))
+    return failure();
+  // Parse optional results type list.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+  // Parse the 'then' region.
+  if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+
+  // If we find an 'else' keyword then parse the 'else' region.
+  if (!parser.parseOptionalKeyword("else")) {
+    if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
+      return failure();
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+void IfOp::print(OpAsmPrinter &p) {
+  bool printBlockTerminators = false;
+
+  p << " " << getCond();
+  if (!getResults().empty()) {
+    p << " -> (" << getResultTypes() << ")";
+    // Print yield explicitly if the op defines values.
+    printBlockTerminators = true;
+  }
+  p << ' ';
+  p.printRegion(getThenBranch(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/printBlockTerminators);
+
+  // Print the 'else' regions if it exists and has a block.
+  auto &elseRegion = getElseBranch();
+  if (!elseRegion.empty()) {
+    p << " else ";
+    p.printRegion(elseRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/printBlockTerminators);
+  }
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+// parse and print of WhileOp refer to the implementation of SCF dialect.
+ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+  Region *cond = result.addRegion();
+  Region *body = result.addRegion();
+
+  OptionalParseResult listResult =
+      parser.parseOptionalAssignmentList(regionArgs, operands);
+  if (listResult.has_value() && failed(listResult.value()))
+    return failure();
+
+  FunctionType functionType;
+  SMLoc typeLoc = parser.getCurrentLocation();
+  if (failed(parser.parseColonType(functionType)))
+    return failure();
+
+  result.addTypes(functionType.getResults());
+
+  if (functionType.getNumInputs() != operands.size()) {
+    return parser.emitError(typeLoc)
+           << "expected as many input types as operands "
+           << "(expected " << operands.size() << " got "
+           << functionType.getNumInputs() << ")";
+  }
+
+  // Resolve input operands.
+  if (failed(parser.resolveOperands(operands, functionType.getInputs(),
+                                    parser.getCurrentLocation(),
+                                    result.operands)))
+    return failure();
+
+  // Propagate the types into the region arguments.
+  for (size_t i = 0, e = regionArgs.size(); i != e; ++i)
+    regionArgs[i].type = functionType.getInput(i);
+
+  return failure(parser.parseRegion(*cond, regionArgs) ||
+                 parser.parseKeyword("do") || parser.parseRegion(*body) ||
+                 parser.parseOptionalAttrDictWithKeyword(result.attributes));
+}
+
+static void printInitializationList(OpAsmPrinter &parser,
+                                    Block::BlockArgListType blocksArgs,
+                                    ValueRange initializers,
+                                    StringRef prefix = "") {
+  assert(blocksArgs.size() == initializers.size() &&
+         "expected same length of arguments and initializers");
+  if (initializers.empty())
+    return;
+
+  parser << prefix << '(';
+  llvm::interleaveComma(
+      llvm::zip(blocksArgs, initializers), parser,
+      [&](auto it) { parser << std::get<0>(it) << " = " << std::get<1>(it); });
+  parser << ")";
+}
+
+void WhileOp::print(OpAsmPrinter &parser) {
+  printInitializationList(parser, getCond().front().getArguments(), getInputs(),
+                          " ");
+  parser << " : ";
+  parser.printFunctionalType(getInputs().getTypes(), getResults().getTypes());
+  parser << ' ';
+  parser.printRegion(getCond(), /*printEntryBlockArgs=*/false);
+  parser << " do ";
+  parser.printRegion(getBody());
+  parser.printOptionalAttrDictWithKeyword((*this)->getAttrs());
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Attribute Definitions.
 //===----------------------------------------------------------------------===//

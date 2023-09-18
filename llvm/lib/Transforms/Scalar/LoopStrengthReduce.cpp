@@ -943,12 +943,6 @@ static MemAccessTy getAccessType(const TargetTransformInfo &TTI,
     }
   }
 
-  // All pointers have the same requirements, so canonicalize them to an
-  // arbitrary pointer type to minimize variation.
-  if (PointerType *PTy = dyn_cast<PointerType>(AccessTy.MemTy))
-    AccessTy.MemTy = PointerType::get(IntegerType::get(PTy->getContext(), 1),
-                                      PTy->getAddressSpace());
-
   return AccessTy;
 }
 

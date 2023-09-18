@@ -54,7 +54,7 @@ define <2 x i32> @cttz_v2i32(<2 x i32> %a) nounwind {
 define <1 x i64> @cttz_v1i64(<1 x i64> %a) nounwind {
 ; CHECK-LABEL: cttz_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    sub d1, d0, d1
 ; CHECK-NEXT:    bic v0.8b, v1.8b, v0.8b
@@ -85,8 +85,8 @@ define <8 x i16> @cttz_v8i16(<8 x i16> %a) nounwind {
 ; CHECK-NEXT:    movi v1.8h, #1
 ; CHECK-NEXT:    sub v1.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    clz v0.8h, v0.8h
 ; CHECK-NEXT:    movi v1.8h, #16
+; CHECK-NEXT:    clz v0.8h, v0.8h
 ; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
     %b = call <8 x i16> @llvm.cttz.v8i16(<8 x i16> %a, i1 true)
@@ -99,8 +99,8 @@ define <4 x i32> @cttz_v4i32(<4 x i32> %a) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    sub v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    clz v0.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #32
+; CHECK-NEXT:    clz v0.4s, v0.4s
 ; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
     %b = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 true)
@@ -110,7 +110,7 @@ define <4 x i32> @cttz_v4i32(<4 x i32> %a) nounwind {
 define <2 x i64> @cttz_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: cttz_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    sub v1.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b

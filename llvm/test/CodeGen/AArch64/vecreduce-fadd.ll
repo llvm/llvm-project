@@ -172,8 +172,8 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    mov h5, v0.h[6]
 ; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    fadd s2, s2, s3
-; CHECKNOFP16-NEXT:    mov h3, v1.h[6]
-; CHECKNOFP16-NEXT:    fcvt h4, s4
+; CHECKNOFP16-NEXT:    fcvt h3, s4
+; CHECKNOFP16-NEXT:    mov h4, v1.h[6]
 ; CHECKNOFP16-NEXT:    fcvt s5, h5
 ; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
 ; CHECKNOFP16-NEXT:    fcvt s0, h0
@@ -182,15 +182,15 @@ define half @add_2H(<16 x half> %bin.rdx)  {
 ; CHECKNOFP16-NEXT:    fcvt s4, h4
 ; CHECKNOFP16-NEXT:    fcvt s1, h1
 ; CHECKNOFP16-NEXT:    fcvt s2, h2
-; CHECKNOFP16-NEXT:    fadd s3, s5, s3
 ; CHECKNOFP16-NEXT:    fadd s0, s0, s1
-; CHECKNOFP16-NEXT:    fadd s2, s2, s4
-; CHECKNOFP16-NEXT:    fcvt h3, s3
+; CHECKNOFP16-NEXT:    fadd s2, s2, s3
+; CHECKNOFP16-NEXT:    fadd s3, s5, s4
 ; CHECKNOFP16-NEXT:    fcvt h0, s0
 ; CHECKNOFP16-NEXT:    fcvt h2, s2
-; CHECKNOFP16-NEXT:    fcvt s3, h3
+; CHECKNOFP16-NEXT:    fcvt h3, s3
 ; CHECKNOFP16-NEXT:    fcvt s0, h0
 ; CHECKNOFP16-NEXT:    fcvt s2, h2
+; CHECKNOFP16-NEXT:    fcvt s3, h3
 ; CHECKNOFP16-NEXT:    fadd s2, s2, s3
 ; CHECKNOFP16-NEXT:    fcvt h1, s2
 ; CHECKNOFP16-NEXT:    fcvt s1, h1
@@ -494,8 +494,8 @@ define half @fadd_reduct_reassoc_v8f16(<8 x half> %a, <8 x half> %b) {
 ; CHECKNOFP16-NEXT:    fadd s3, s3, s5
 ; CHECKNOFP16-NEXT:    mov h4, v0.h[6]
 ; CHECKNOFP16-NEXT:    mov h5, v1.h[6]
-; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    mov h1, v1.h[7]
+; CHECKNOFP16-NEXT:    mov h0, v0.h[7]
 ; CHECKNOFP16-NEXT:    fcvt h2, s2
 ; CHECKNOFP16-NEXT:    fcvt h3, s3
 ; CHECKNOFP16-NEXT:    fcvt s4, h4

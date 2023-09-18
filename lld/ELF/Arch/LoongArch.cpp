@@ -457,6 +457,7 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
     return R_RISCV_ADD;
   case R_LARCH_32_PCREL:
   case R_LARCH_64_PCREL:
+  case R_LARCH_PCREL20_S2:
     return R_PC;
   case R_LARCH_B16:
   case R_LARCH_B21:
@@ -562,6 +563,12 @@ void LoongArch::relocate(uint8_t *loc, const Relocation &rel,
   case R_LARCH_TLS_DTPREL64:
   case R_LARCH_64_PCREL:
     write64le(loc, val);
+    return;
+
+  case R_LARCH_PCREL20_S2:
+    checkInt(loc, val, 22, rel);
+    checkAlignment(loc, val, 4, rel);
+    write32le(loc, setJ20(read32le(loc), val >> 2));
     return;
 
   case R_LARCH_B16:

@@ -57,6 +57,7 @@ MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
+MODULE_PASS("dxil-upgrade", DXILUpgradePass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("extract-blocks", BlockExtractorPass({}, false))
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
@@ -191,6 +192,15 @@ MODULE_PASS_WITH_PARAMS("memprof-use",
                         },
                         parseMemProfUsePassOptions,
                         "profile-filename=S")
+MODULE_PASS_WITH_PARAMS("print<structural-hash>",
+                        "StructuralHashPrinterPass",
+                        [](bool EnableDetailedStructuralHash) {
+                          return StructuralHashPrinterPass(
+                              dbgs(),
+                              EnableDetailedStructuralHash);
+                        },
+                        parseStructuralHashPrinterPassOptions,
+                        "detailed")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
@@ -235,7 +245,7 @@ CGSCC_PASS_WITH_PARAMS("function-attrs",
                          return PostOrderFunctionAttrsPass(SkipNonRecursive);
                        },
                        parsePostOrderFunctionAttrsPassOptions,
-                       "skip-non-recursive")
+                       "skip-non-recursive-function-attrs")
 #undef CGSCC_PASS_WITH_PARAMS
 
 #ifndef FUNCTION_ANALYSIS

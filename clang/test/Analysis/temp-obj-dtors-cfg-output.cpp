@@ -1393,13 +1393,13 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (2): B2 B1
 // CHECK:   [B4 (NORETURN)]
 // CHECK:     1: ~NoReturn() (Temporary object destructor)
-// CHECK:     Preds (1): B5
+// CHECK:     Preds (1): B5(Unreachable)
 // CHECK:     Succs (1): B0
 // CHECK:   [B5]
 // CHECK:     1: [B8.3] || [B7.2] || [B6.7]
 // CHECK:     T: (Temp Dtor) [B6.4]
 // CHECK:     Preds (3): B6 B7 B8
-// CHECK:     Succs (2): B4 B3
+// CHECK:     Succs (2): B4(Unreachable) B3
 // CHECK:   [B6]
 // CHECK:     1: check
 // CHECK:     2: [B6.1] (ImplicitCastExpr, FunctionToPointerDecay, _Bool (*)(const NoReturn &))

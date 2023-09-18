@@ -28,7 +28,7 @@ func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!
 // CHECK:    %[[ONE_2:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: omp.parallel   {
 // CHECK:      %[[ONE_3:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
+// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
 // CHECK:      %[[N:.*]] = llvm.load %[[N_REF]] : !llvm.ptr<i32>
 // CHECK: omp.wsloop nowait
 // CHECK-SAME: for (%[[I:.*]]) : i32 = (%[[ONE_2]]) to (%[[N]]) inclusive step (%[[ONE_2]]) {
@@ -200,7 +200,7 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK:    %[[ONE_2:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: omp.parallel   {
 // CHECK:      %[[ONE_3:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
+// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
 // CHECK:      %[[N:.*]] = llvm.load %[[N_REF]] : !llvm.ptr<i32>
 // CHECK: omp.simdloop
 // CHECK-SAME: (%[[I:.*]]) : i32 = (%[[ONE_2]]) to (%[[N]]) step (%[[ONE_2]]) {
@@ -231,13 +231,13 @@ func.func @_QPomp_target_data() {
 
 // CHECK-LABEL:   llvm.func @_QPomp_target_data() {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x !llvm.array<1024 x i32> {bindc_name = "b", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEb"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x !llvm.array<1024 x i32> {bindc_name = "b", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEb"} : (i64) -> !llvm.ptr<array<1024 x i32>>
 // CHECK:           %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_5:.*]] = llvm.alloca %[[VAL_4]] x !llvm.array<1024 x i32> {bindc_name = "c", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEc"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_5:.*]] = llvm.alloca %[[VAL_4]] x !llvm.array<1024 x i32> {bindc_name = "c", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEc"} : (i64) -> !llvm.ptr<array<1024 x i32>>
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_7:.*]] = llvm.alloca %[[VAL_6]] x !llvm.array<1024 x i32> {bindc_name = "d", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEd"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_7:.*]] = llvm.alloca %[[VAL_6]] x !llvm.array<1024 x i32> {bindc_name = "d", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEd"} : (i64) -> !llvm.ptr<array<1024 x i32>>
 // CHECK:           omp.target_enter_data   map((to -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (to -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (always, alloc -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>))
 // CHECK:           omp.target_exit_data   map((from -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (from -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (release -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>), (always, delete -> %[[VAL_7]] : !llvm.ptr<array<1024 x i32>>))
 // CHECK:           llvm.return
@@ -278,9 +278,9 @@ func.func @_QPopenmp_target_data_region() {
 
 // CHECK-LABEL:   llvm.func @_QPopenmp_target_data_region() {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEi"} : (i64) -> !llvm.ptr<i32>
+// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEi"} : (i64) -> !llvm.ptr<i32>
 // CHECK:           omp.target_data   map((tofrom -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>)) {
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:             %[[VAL_5:.*]] = llvm.sext %[[VAL_4]] : i32 to i64
@@ -351,7 +351,7 @@ func.func @_QPomp_target() {
 
 // CHECK-LABEL:   llvm.func @_QPomp_target() {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<512 x i32> {bindc_name = "a", in_type = !fir.array<512xi32>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFomp_targetEa"} : (i64) -> !llvm.ptr<array<512 x i32>>
+// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<512 x i32> {bindc_name = "a", in_type = !fir.array<512xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_targetEa"} : (i64) -> !llvm.ptr<array<512 x i32>>
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(64 : i32) : i32
 // CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map((tofrom -> %[[VAL_1]] : !llvm.ptr<array<512 x i32>>)) {
 // CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
@@ -557,7 +557,7 @@ func.func @_QPsb() {
 // CHECK:  llvm.func @_QPsb() {
 // CHECK:    %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    %[[SIZE:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:    %[[LI_REF:.*]] = llvm.alloca %6 x i32 {bindc_name = "li", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFsbEli"} : (i64) -> !llvm.ptr<i32>
+// CHECK:    %[[LI_REF:.*]] = llvm.alloca %6 x i32 {bindc_name = "li", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFsbEli"} : (i64) -> !llvm.ptr<i32>
 // CHECK:    omp.sections   {
 // CHECK:      omp.section {
 // CHECK:        llvm.br ^[[BB_ENTRY:.*]]({{.*}})
@@ -595,7 +595,7 @@ func.func @_QPsb() {
 // CHECK:  }
 // CHECK-LABEL:  @_QPsimple_reduction
 // CHECK-SAME: %[[ARRAY_REF:.*]]: !llvm.ptr<array<100 x i32>>
-// CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %2 x i32 {bindc_name = "x", in_type = !fir.logical<4>, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr<i32>
+// CHECK:    %[[RED_ACCUMULATOR:.*]] = llvm.alloca %2 x i32 {bindc_name = "x", in_type = !fir.logical<4>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFsimple_reductionEx"} : (i64) -> !llvm.ptr<i32>
 // CHECK:    omp.parallel   {
 // CHECK:      omp.wsloop   reduction(@[[EQV_REDUCTION]] -> %[[RED_ACCUMULATOR]] : !llvm.ptr<i32>) for
 // CHECK:        %[[ARRAY_ELEM_REF:.*]] = llvm.getelementptr %[[ARRAY_REF]][0, %{{.*}}] : (!llvm.ptr<array<100 x i32>>, i64) -> !llvm.ptr<i32>
@@ -654,4 +654,42 @@ func.func @_QPs(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "x"}) {
   %0 = fir.alloca !fir.complex<4> {bindc_name = "v", uniq_name = "_QFsEv"}
   omp.atomic.read %0 = %arg0   : !fir.ref<!fir.complex<4>>, !fir.complex<4>
   return
-} 
+}
+
+// -----
+// Test if llvm.alloca is properly inserted in the omp section
+
+//CHECK:  %[[CONST:.*]] = llvm.mlir.constant(1 : i64) : i64
+//CHECK:  %[[ALLOCA:.*]] = llvm.alloca %[[CONST]] x !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)> {bindc_name = "iattr", in_type = !fir.box<!fir.ptr<i32>>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFEiattr"} : (i64) -> !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:  omp.parallel   {
+//CHECK:    %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
+//CHECK:    %[[ALLOCA_1:.*]] = llvm.alloca %[[CONST_1:.*]] x !llvm.struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:    %[[LOAD:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:    llvm.store %[[LOAD]], %[[ALLOCA_1]] : !llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>
+//CHECK:    %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA_1]][0, 0] : (!llvm.ptr<struct<(ptr<i32>, i64, i32, i8, i8, i8, i8)>>) -> !llvm.ptr<ptr<i32>>
+//CHECK:    %[[LOAD_2:.*]] = llvm.load %[[GEP]] : !llvm.ptr<ptr<i32>>
+//CHECK:    omp.terminator
+//CHECK:  }
+
+func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
+  %0 = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "iattr", uniq_name = "_QFEiattr"}
+  %1 = fir.zero_bits !fir.ptr<i32>
+  %2 = fir.embox %1 : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
+  fir.store %2 to %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %3 = fir.address_of(@_QFEx) : !fir.ref<i32>
+  %4 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"}
+  %5 = fir.embox %3 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+  fir.store %5 to %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  omp.parallel   {
+    %6 = fir.load %4 : !fir.ref<i32>
+    %7 = fir.load %0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+    %8 = fir.box_addr %7 : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+    fir.store %6 to %8 : !fir.ptr<i32>
+    omp.terminator
+  }
+  return
+}
+fir.global internal @_QFEx target : i32 {
+  %0 = fir.zero_bits i32
+  fir.has_value %0 : i32
+}

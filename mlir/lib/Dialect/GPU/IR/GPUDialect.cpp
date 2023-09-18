@@ -20,11 +20,11 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -326,12 +326,22 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
             LaunchFuncOp::getKernelAttrName(launchOp->getName())))
       return success();
 
-    // Check that `launch_func` refers to a well-formed GPU kernel module.
-    StringAttr kernelModuleName = launchOp.getKernelModuleName();
-    auto kernelModule = module.lookupSymbol<GPUModuleOp>(kernelModuleName);
+    // Check that `launch_func` refers to a well-formed GPU kernel container.
+    StringAttr kernelContainerName = launchOp.getKernelModuleName();
+    Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
+    if (!kernelContainer)
+      return launchOp.emitOpError()
+             << "kernel container '" << kernelContainerName.getValue()
+             << "' is undefined";
+
+    // If the container is a GPU binary op return success.
+    if (isa<BinaryOp>(kernelContainer))
+      return success();
+
+    auto kernelModule = dyn_cast<GPUModuleOp>(kernelContainer);
     if (!kernelModule)
       return launchOp.emitOpError()
-             << "kernel module '" << kernelModuleName.getValue()
+             << "kernel module '" << kernelContainerName.getValue()
              << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
@@ -988,13 +998,45 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   auto kernelSymbol =
       SymbolRefAttr::get(kernelModule.getNameAttr(),
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
-  result.addAttribute(getKernelAttrName(result.name), kernelSymbol);
-  SmallVector<int32_t, 9> segmentSizes(9, 1);
-  segmentSizes.front() = asyncDependencies.size();
-  segmentSizes[segmentSizes.size() - 2] = dynamicSharedMemorySize ? 1 : 0;
-  segmentSizes.back() = static_cast<int32_t>(kernelOperands.size());
-  result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(segmentSizes));
+
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernelSymbol;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = asyncDependencies.size();
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+}
+
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
+                         SymbolRefAttr kernel, KernelDim3 gridSize,
+                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
+                         ValueRange kernelOperands, Value asyncObject) {
+  // Add grid and block sizes as op operands, followed by the data operands.
+  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
+                      getBlockSize.y, getBlockSize.z});
+  if (dynamicSharedMemorySize)
+    result.addOperands(dynamicSharedMemorySize);
+  result.addOperands(kernelOperands);
+  if (asyncObject)
+    result.addOperands(asyncObject);
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernel;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = 0;
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
@@ -1035,6 +1077,22 @@ LogicalResult LaunchFuncOp::verify() {
                        "' attribute");
 
   return success();
+}
+
+static ParseResult parseLaunchDimType(OpAsmParser &parser, Type &dimTy) {
+  if (succeeded(parser.parseOptionalColon())) {
+    if (parser.parseType(dimTy))
+      return failure();
+  } else {
+    dimTy = IndexType::get(parser.getContext());
+  }
+  return success();
+}
+
+static void printLaunchDimType(OpAsmPrinter &printer, Operation *op,
+                               Type dimTy) {
+  if (!dimTy.isIndex())
+    printer << ": " << dimTy;
 }
 
 static ParseResult parseLaunchFuncOperands(
@@ -1520,7 +1578,7 @@ void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, ArrayRef<Attribute> targets) {
   build(builder, result, name,
-        targets.size() > 0 ? builder.getArrayAttr(targets) : ArrayAttr());
+        targets.empty() ? ArrayAttr() : builder.getArrayAttr(targets));
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1583,6 +1641,46 @@ void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
   ArrayAttr &targetsAttr = getProperties().targets;
   SmallVector<Attribute> targetsVector(targets);
   targetsAttr = ArrayAttr::get(getContext(), targetsVector);
+}
+
+//===----------------------------------------------------------------------===//
+// GPUBinaryOp
+//===----------------------------------------------------------------------===//
+void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                     Attribute offloadingHandler, ArrayAttr objects) {
+  auto &properties = result.getOrAddProperties<Properties>();
+  result.attributes.push_back(builder.getNamedAttr(
+      SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+  properties.objects = objects;
+  if (offloadingHandler)
+    properties.offloadingHandler = offloadingHandler;
+  else
+    properties.offloadingHandler = builder.getAttr<SelectObjectAttr>(nullptr);
+}
+
+void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                     Attribute offloadingHandler, ArrayRef<Attribute> objects) {
+  build(builder, result, name, offloadingHandler,
+        objects.empty() ? ArrayAttr() : builder.getArrayAttr(objects));
+}
+
+static ParseResult parseOffloadingHandler(OpAsmParser &parser,
+                                          Attribute &offloadingHandler) {
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseAttribute(offloadingHandler))
+      return failure();
+    if (parser.parseGreater())
+      return failure();
+  }
+  if (!offloadingHandler)
+    offloadingHandler = parser.getBuilder().getAttr<SelectObjectAttr>(nullptr);
+  return success();
+}
+
+static void printOffloadingHandler(OpAsmPrinter &printer, Operation *op,
+                                   Attribute offloadingHandler) {
+  if (offloadingHandler != SelectObjectAttr::get(op->getContext(), nullptr))
+    printer << '<' << offloadingHandler << '>';
 }
 
 //===----------------------------------------------------------------------===//
@@ -1857,23 +1955,93 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// GPU object attribute
+//===----------------------------------------------------------------------===//
+
+LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 Attribute target, CompilationTarget format,
+                                 StringAttr object, DictionaryAttr properties) {
+  if (!target)
+    return emitError() << "the target attribute cannot be null";
+  if (target.hasPromiseOrImplementsInterface<TargetAttrInterface>())
+    return success();
+  return emitError() << "the target attribute must implement or promise the "
+                        "`gpu::TargetAttrInterface`";
+}
+
+namespace {
+LogicalResult parseObject(AsmParser &odsParser, CompilationTarget &format,
+                          StringAttr &object) {
+  std::optional<CompilationTarget> formatResult;
+  StringRef enumKeyword;
+  auto loc = odsParser.getCurrentLocation();
+  if (failed(odsParser.parseOptionalKeyword(&enumKeyword)))
+    formatResult = CompilationTarget::Fatbin;
+  if (!formatResult &&
+      (formatResult =
+           gpu::symbolizeEnum<gpu::CompilationTarget>(enumKeyword)) &&
+      odsParser.parseEqual())
+    return odsParser.emitError(loc, "expected an equal sign");
+  if (!formatResult)
+    return odsParser.emitError(loc, "expected keyword for GPU object format");
+  FailureOr<StringAttr> objectResult =
+      FieldParser<StringAttr>::parse(odsParser);
+  if (failed(objectResult))
+    return odsParser.emitError(odsParser.getCurrentLocation(),
+                               "failed to parse GPU_ObjectAttr parameter "
+                               "'object' which is to be a `StringAttr`");
+  format = *formatResult;
+  object = *objectResult;
+  return success();
+}
+
+void printObject(AsmPrinter &odsParser, CompilationTarget format,
+                 StringAttr object) {
+  if (format != CompilationTarget::Fatbin)
+    odsParser << stringifyEnum(format) << " = ";
+  odsParser << object;
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// GPU select object attribute
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                              Attribute target) {
+  // Check `target`, it can be null, an integer attr or a GPU Target attribute.
+  if (target) {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(target)) {
+      if (intAttr.getInt() < 0) {
+        return emitError() << "the object index must be positive";
+      }
+    } else if (!target.hasPromiseOrImplementsInterface<TargetAttrInterface>()) {
+      return emitError()
+             << "the target attribute must be a GPU Target attribute";
+    }
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPU target options
 //===----------------------------------------------------------------------===//
 
-TargetOptions::TargetOptions(StringRef toolkitPath,
-                             ArrayRef<std::string> linkFiles,
-                             StringRef cmdOptions,
-                             CompilationTarget compilationTarget)
+TargetOptions::TargetOptions(
+    StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef cmdOptions, CompilationTarget compilationTarget,
+    function_ref<SymbolTable *()> getSymbolTableCallback)
     : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
-                    cmdOptions, compilationTarget) {}
+                    cmdOptions, compilationTarget, getSymbolTableCallback) {}
 
-TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
-                             ArrayRef<std::string> linkFiles,
-                             StringRef cmdOptions,
-                             CompilationTarget compilationTarget)
+TargetOptions::TargetOptions(
+    TypeID typeID, StringRef toolkitPath, ArrayRef<std::string> linkFiles,
+    StringRef cmdOptions, CompilationTarget compilationTarget,
+    function_ref<SymbolTable *()> getSymbolTableCallback)
     : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
       cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
-      typeID(typeID) {}
+      getSymbolTableCallback(getSymbolTableCallback), typeID(typeID) {}
 
 TypeID TargetOptions::getTypeID() const { return typeID; }
 
@@ -1883,22 +2051,39 @@ ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
 
 StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
 
+SymbolTable *TargetOptions::getSymbolTable() const {
+  return getSymbolTableCallback ? getSymbolTableCallback() : nullptr;
+}
+
+CompilationTarget TargetOptions::getCompilationTarget() const {
+  return compilationTarget;
+}
+
+CompilationTarget TargetOptions::getDefaultCompilationTarget() {
+  return CompilationTarget::Fatbin;
+}
+
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
 TargetOptions::tokenizeCmdOptions() const {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
+  StringRef opts = cmdOptions;
+  // For a correct tokenization of the command line options `opts` must be
+  // unquoted, otherwise the tokenization function returns a single string: the
+  // unquoted `cmdOptions` -which is not the desired behavior.
+  // Remove any quotes if they are at the beginning and end of the string:
+  if (!opts.empty() && opts.front() == '"' && opts.back() == '"')
+    opts.consume_front("\""), opts.consume_back("\"");
+  if (!opts.empty() && opts.front() == '\'' && opts.back() == '\'')
+    opts.consume_front("'"), opts.consume_back("'");
 #ifdef _WIN32
-  llvm::cl::TokenizeWindowsCommandLine(cmdOptions, stringSaver, options.second,
+  llvm::cl::TokenizeWindowsCommandLine(opts, stringSaver, options.second,
                                        /*MarkEOLs=*/false);
 #else
-  llvm::cl::TokenizeGNUCommandLine(cmdOptions, stringSaver, options.second,
+  llvm::cl::TokenizeGNUCommandLine(opts, stringSaver, options.second,
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
-}
-
-TargetOptions::CompilationTarget TargetOptions::getCompilationTarget() const {
-  return compilationTarget;
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

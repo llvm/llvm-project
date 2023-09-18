@@ -110,7 +110,7 @@ public:
 
 private:
   StringRef getSymbolName(uint32_t Index);
-  void printSymbols() override;
+  void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override;
   void printSymbol(const SymbolRef &Sym);
   void printRelocation(const SectionRef &Section, const RelocationRef &Reloc,
@@ -854,17 +854,17 @@ void COFFDumper::printCOFFLoadConfig() {
         reportError(std::move(E), Obj->getFileName());
       auto CodeMap = reinterpret_cast<const chpe_range_entry *>(CodeMapInt);
       for (uint32_t i = 0; i < CHPE->CodeMapCount; i++) {
-        uint32_t Start = CodeMap[i].StartOffset & ~3;
+        uint32_t Start = CodeMap[i].getStart();
         W.startLine() << W.hex(Start) << " - "
                       << W.hex(Start + CodeMap[i].Length) << "  ";
-        switch (CodeMap[i].StartOffset & 3) {
-        case CHPE_RANGE_ARM64:
+        switch (CodeMap[i].getType()) {
+        case chpe_range_type::Arm64:
           W.getOStream() << "ARM64\n";
           break;
-        case CHPE_RANGE_ARM64EC:
+        case chpe_range_type::Arm64EC:
           W.getOStream() << "ARM64EC\n";
           break;
-        case CHPE_RANGE_AMD64:
+        case chpe_range_type::Amd64:
           W.getOStream() << "X64\n";
           break;
         default:
@@ -940,36 +940,34 @@ void COFFDumper::printCOFFLoadConfig() {
       OS << " flags " << utohexstr(Flags);
   };
 
+  // The stride gives the number of extra bytes in addition to the 4-byte
+  // RVA of each entry in the table. As of writing only a 1-byte extra flag
+  // has been defined.
+  uint32_t Stride = Tables.GuardFlags >> 28;
+  PrintExtraCB PrintExtra = Stride == 1 ? +PrintGuardFlags : nullptr;
+
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
-    if (uint32_t Size =
-            Tables.GuardFlags &
-            uint32_t(COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK)) {
-      // The size mask gives the number of extra bytes in addition to the 4-byte
-      // RVA of each entry in the table. As of writing only a 1-byte extra flag
-      // has been defined.
-      Size = (Size >> 28) + 4;
-      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, Size,
-                    PrintGuardFlags);
-    } else {
-      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 4);
-    }
+    printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount,
+                  4 + Stride, PrintExtra);
   }
 
   if (Tables.GuardIatTableVA) {
     ListScope LS(W, "GuardIatTable");
-    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount, 4);
+    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount,
+                  4 + Stride, PrintExtra);
   }
 
   if (Tables.GuardLJmpTableVA) {
     ListScope LS(W, "GuardLJmpTable");
-    printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount, 4);
+    printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount,
+                  4 + Stride, PrintExtra);
   }
 
   if (Tables.GuardEHContTableVA) {
     ListScope LS(W, "GuardEHContTable");
-    printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount, 5,
-                  PrintGuardFlags);
+    printRVATable(Tables.GuardEHContTableVA, Tables.GuardEHContTableCount,
+                  4 + Stride, PrintExtra);
   }
 }
 
@@ -1611,7 +1609,7 @@ void COFFDumper::printRelocation(const SectionRef &Section,
   }
 }
 
-void COFFDumper::printSymbols() {
+void COFFDumper::printSymbols(bool /*ExtraSymInfo*/) {
   ListScope Group(W, "Symbols");
 
   for (const SymbolRef &Symbol : Obj->symbols())

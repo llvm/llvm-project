@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdio>
@@ -52,8 +51,7 @@ namespace {
 
 /// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
-class EmptyLookupIterator : public IdentifierIterator
-{
+class EmptyLookupIterator : public IdentifierIterator {
 public:
   StringRef Next() override { return StringRef(); }
 };
@@ -94,7 +92,7 @@ namespace {
     KEYNOCXX      = 0x80,
     KEYBORLAND    = 0x100,
     KEYOPENCLC    = 0x200,
-    KEYC2X        = 0x400,
+    KEYC23        = 0x400,
     KEYNOMS18     = 0x800,
     KEYNOOPENCL   = 0x1000,
     WCHARSUPPORT  = 0x2000,
@@ -145,8 +143,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     if (LangOpts.C99)
       return KS_Enabled;
     return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
-  case KEYC2X:
-    if (LangOpts.C2x)
+  case KEYC23:
+    if (LangOpts.C23)
       return KS_Enabled;
     return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
   case KEYCXX:
@@ -914,8 +912,8 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
   } else {
     if ((Flags & KEYC99) == KEYC99)
       return diag::warn_c99_keyword;
-    if ((Flags & KEYC2X) == KEYC2X)
-      return diag::warn_c2x_keyword;
+    if ((Flags & KEYC23) == KEYC23)
+      return diag::warn_c23_keyword;
   }
 
   llvm_unreachable(

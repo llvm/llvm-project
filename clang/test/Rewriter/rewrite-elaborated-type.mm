@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Wno-address-of-temporary -D_Bool=bool -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-rw.cpp
 // RUN: %clang_cc1 -x objective-c++ -Wno-return-type -fms-extensions -rewrite-objc %s -o %t-modern-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Wno-address-of-temporary -D_Bool=bool -D"id=void*" -D"SEL=void*" -D"__declspec(X)=" %t-modern-rw.cpp
-// radar 8143056
 
 typedef struct objc_class *Class;
 typedef unsigned NSPointerFunctionsOptions;

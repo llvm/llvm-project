@@ -350,6 +350,8 @@ defm : int_cond_alias<"vs",   0b0111>;
 let EmitPriority = 0 in
 {
   defm : int_cond_alias<"",     0b1000>; // same as a; gnu asm, not in manual
+  defm : int_cond_alias<"gt",   0b1010>; // same as g; gnu asm, not in manual
+  defm : int_cond_alias<"lt",   0b0011>; // same as l; gnu asm, not in manual
   defm : int_cond_alias<"nz",   0b1001>; // same as ne
   defm : int_cond_alias<"eq",   0b0001>; // same as e
   defm : int_cond_alias<"z",    0b0001>; // same as e
@@ -443,6 +445,13 @@ def : InstAlias<"save", (SAVErr G0, G0, G0)>;
 // def : InstAlias<"set $val, $rd", (ORri IntRegs:$rd, (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
 
+// setx value, tmp, rd
+// (turns into a sequence of sethi+or+shift, depending on the value)
+def SETX : AsmPseudoInst<(outs I64Regs:$rd),
+                         (ins i64imm:$val, I64Regs:$tmp),
+                         "setx $val, $tmp, $rd">,
+                         Requires<[Is64Bit, HasV9]>;
+
 // not rd -> xnor rd, %g0, rd
 def : InstAlias<"not $rd", (XNORrr IntRegs:$rd, IntRegs:$rd, G0), 0>;
 
@@ -454,6 +463,24 @@ def : InstAlias<"neg $rd", (SUBrr IntRegs:$rd, G0, IntRegs:$rd), 0>;
 
 // neg reg, rd -> sub %g0, reg, rd
 def : InstAlias<"neg $rs2, $rd", (SUBrr IntRegs:$rd, G0, IntRegs:$rs2), 0>;
+
+let Predicates = [HasV9] in {
+  // cas [rs1], rs2, rd -> casa [rs1] #ASI_P, rs2, rd
+  def : InstAlias<"cas [$rs1], $rs2, $rd",
+                  (CASArr IntRegs:$rd, IntRegs:$rs1, IntRegs:$rs2, 0x80)>;
+
+  // casl [rs1], rs2, rd -> casa [rs1] #ASI_P_L, rs2, rd
+  def : InstAlias<"casl [$rs1], $rs2, $rd",
+                  (CASArr IntRegs:$rd, IntRegs:$rs1, IntRegs:$rs2, 0x88)>;
+
+  // casx [rs1], rs2, rd -> casxa [rs1] #ASI_P, rs2, rd
+  def : InstAlias<"casx [$rs1], $rs2, $rd",
+                  (CASXArr I64Regs:$rd, I64Regs:$rs1, I64Regs:$rs2, 0x80)>;
+
+  // casxl [rs1], rs2, rd -> casxa [rs1] #ASI_P_L, rs2, rd
+  def : InstAlias<"casxl [$rs1], $rs2, $rd",
+                  (CASXArr I64Regs:$rd, I64Regs:$rs1, I64Regs:$rs2, 0x88)>;
+}
 
 // inc rd -> add rd, 1, rd
 def : InstAlias<"inc $rd", (ADDri IntRegs:$rd, IntRegs:$rd, 1), 0>;
@@ -517,7 +544,6 @@ def : InstAlias<"mov $asr, $rd", (RDASR IntRegs:$rd, ASRRegs:$asr), 0>;
 def : InstAlias<"mov %psr, $rd", (RDPSR IntRegs:$rd), 0>;
 def : InstAlias<"mov %wim, $rd", (RDWIM IntRegs:$rd), 0>;
 def : InstAlias<"mov %tbr, $rd", (RDTBR IntRegs:$rd), 0>;
-def : InstAlias<"mov %pc, $rd", (RDPC IntRegs:$rd), 0>;
 
 // mov reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 def : InstAlias<"mov $rs2, $asr", (WRASRrr ASRRegs:$asr, G0, IntRegs:$rs2), 0>;
@@ -530,6 +556,11 @@ def : InstAlias<"mov $rs2, %tbr", (WRTBRrr G0, IntRegs:$rs2), 0>;
 def : InstAlias<"mov $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
 
 // End of Section A.3
+
+// or imm, reg, rd -> or reg, imm, rd
+// Nonstandard GNU extension.
+let EmitPriority = 0 in
+  def : InstAlias<"or $simm13, $rs1, $rd", (ORri IntRegs:$rd, IntRegs:$rs1, simm13Op:$simm13)>;
 
 // wr reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 // (aka: omit the first arg when it's g0. This is not in the manual, but is
@@ -573,7 +604,14 @@ def : MnemonicAlias<"stsh", "sth">;
 
 def : MnemonicAlias<"stuha", "stha">;
 def : MnemonicAlias<"stsha", "stha">;
+
 def : MnemonicAlias<"stw", "st">, Requires<[HasV9]>;
+def : MnemonicAlias<"stuw", "st">, Requires<[HasV9]>;
+def : MnemonicAlias<"stsw", "st">, Requires<[HasV9]>;
+
+def : MnemonicAlias<"stwa", "sta">, Requires<[HasV9]>;
+def : MnemonicAlias<"stuwa", "sta">, Requires<[HasV9]>;
+def : MnemonicAlias<"stswa", "sta">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"lduw", "ld">, Requires<[HasV9]>;
 def : MnemonicAlias<"lduwa", "lda">, Requires<[HasV9]>;

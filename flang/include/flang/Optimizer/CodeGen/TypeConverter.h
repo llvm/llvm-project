@@ -49,20 +49,19 @@ public:
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
   // types. Indexing into other aggregate types is more flexible.
-  mlir::Type offsetType();
+  mlir::Type offsetType() const;
 
   // i64 can be used to index into aggregates like arrays
-  mlir::Type indexType();
+  mlir::Type indexType() const;
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
   std::optional<mlir::LogicalResult>
   convertRecordType(fir::RecordType derived,
-                    llvm::SmallVectorImpl<mlir::Type> &results,
-                    llvm::ArrayRef<mlir::Type> callStack);
+                    llvm::SmallVectorImpl<mlir::Type> &results);
 
   // Is an extended descriptor needed given the element type of a fir.box type ?
   // Extended descriptors are required for derived types.
-  bool requiresExtendedDesc(mlir::Type boxElementType);
+  bool requiresExtendedDesc(mlir::Type boxElementType) const;
 
   // Magic value to indicate we do not know the rank of an entity, either
   // because it is assumed rank or because we have not determined it yet.
@@ -70,35 +69,33 @@ public:
 
   // This corresponds to the descriptor as defined in ISO_Fortran_binding.h and
   // the addendum defined in descriptor.h.
-  mlir::Type convertBoxType(BaseBoxType box, int rank = unknownRank());
+  mlir::Type convertBoxType(BaseBoxType box, int rank = unknownRank()) const;
 
   /// Convert fir.box type to the corresponding llvm struct type instead of a
   /// pointer to this struct type.
-  mlir::Type convertBoxTypeAsStruct(BaseBoxType box);
+  mlir::Type convertBoxTypeAsStruct(BaseBoxType box) const;
 
   // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
-  mlir::Type convertBoxProcType(BoxProcType boxproc);
+  mlir::Type convertBoxProcType(BoxProcType boxproc) const;
 
-  unsigned characterBitsize(fir::CharacterType charTy);
+  unsigned characterBitsize(fir::CharacterType charTy) const;
 
   // fir.char<k,?>  -->  llvm<"ix">          where ix is scaled by kind mapping
   // fir.char<k,n>  -->  llvm.array<n x "ix">
-  mlir::Type convertCharType(fir::CharacterType charTy);
+  mlir::Type convertCharType(fir::CharacterType charTy) const;
 
   // Use the target specifics to figure out how to map complex to LLVM IR. The
   // use of complex values in function signatures is handled before conversion
   // to LLVM IR dialect here.
   //
   // fir.complex<T> | std.complex<T>    --> llvm<"{t,t}">
-  template <typename C>
-  mlir::Type convertComplexType(C cmplx) {
+  template <typename C> mlir::Type convertComplexType(C cmplx) const {
     LLVM_DEBUG(llvm::dbgs() << "type convert: " << cmplx << '\n');
     auto eleTy = cmplx.getElementType();
     return convertType(specifics->complexMemoryType(eleTy));
   }
 
-  template <typename A>
-  mlir::Type convertPointerLike(A &ty) {
+  template <typename A> mlir::Type convertPointerLike(A &ty) const {
     mlir::Type eleTy = ty.getEleTy();
     // A sequence type is a special case. A sequence of runtime size on its
     // interior dimensions lowers to a memory reference. In that case, we
@@ -126,27 +123,27 @@ public:
 
   // convert a front-end kind value to either a std or LLVM IR dialect type
   // fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-  mlir::Type convertRealType(fir::KindTy kind);
+  mlir::Type convertRealType(fir::KindTy kind) const;
 
   // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
-  mlir::Type convertSequenceType(SequenceType seq);
+  mlir::Type convertSequenceType(SequenceType seq) const;
 
   // fir.tdesc<any>  -->  llvm<"i8*">
   // TODO: For now use a void*, however pointer identity is not sufficient for
   // the f18 object v. class distinction (F2003).
-  mlir::Type convertTypeDescType(mlir::MLIRContext *ctx);
+  mlir::Type convertTypeDescType(mlir::MLIRContext *ctx) const;
 
-  KindMapping &getKindMap() { return kindMapping; }
+  const KindMapping &getKindMap() const { return kindMapping; }
 
   // Relay TBAA tag attachment to TBAABuilder.
   void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
-                     mlir::LLVM::GEPOp gep);
+                     mlir::LLVM::GEPOp gep) const;
 
 private:
   KindMapping kindMapping;
   std::unique_ptr<CodeGenSpecifics> specifics;
-  TBAABuilder tbaaBuilder;
+  std::unique_ptr<TBAABuilder> tbaaBuilder;
 };
 
 } // namespace fir

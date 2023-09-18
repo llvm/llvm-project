@@ -23,7 +23,7 @@ tablegen("RISCVGenDAGISel") {
 tablegen("RISCVGenGlobalISel") {
   visibility = [ ":LLVMRISCVCodeGen" ]
   args = [ "-gen-global-isel" ]
-  td_file = "RISCV.td"
+  td_file = "RISCVGISel.td"
 }
 
 tablegen("RISCVGenMCPseudoLowering") {

@@ -51,7 +51,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-NullStmt {{.*}} <line:6:5>
@@ -79,7 +79,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-ForStmt {{.*}} <line:12:5, line:13:7>
@@ -91,7 +91,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT: |       | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   `-NullStmt {{.*}} <line:13:7>
@@ -126,7 +126,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-ForStmt {{.*}} <line:19:5, line:20:7>
@@ -138,7 +138,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT: |       | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   `-NullStmt {{.*}} <line:20:7>
@@ -173,7 +173,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT: |       | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT: |       | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | `-ForStmt {{.*}} <line:26:5, line:27:7>
@@ -185,7 +185,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
 // CHECK-NEXT: |       | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT: |       | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT: |       | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT: |       | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | |   `-NullStmt {{.*}} <line:27:7>
@@ -221,7 +221,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |-ImplicitCastExpr {{.*}} <col:19> 'int' <LValueToRValue>
 // CHECK-NEXT:         | | | | `-DeclRefExpr {{.*}} <col:19> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
-// CHECK-NEXT:         | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
+// CHECK-NEXT:         | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | | |-UnaryOperator {{.*}} <col:26, col:27> 'int' postfix '++'
 // CHECK-NEXT:         | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | `-ForStmt {{.*}} <line:33:5, line:35:9>
@@ -233,7 +233,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | |   | |-ImplicitCastExpr {{.*}} <col:21> 'int' <LValueToRValue>
 // CHECK-NEXT:         | |   | | `-DeclRefExpr {{.*}} <col:21> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | |   | `-ImplicitCastExpr {{.*}} <col:25> 'int' <LValueToRValue>
-// CHECK-NEXT:         | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
+// CHECK-NEXT:         | |   |   `-DeclRefExpr {{.*}} <col:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | |   |-UnaryOperator {{.*}} <col:28, col:29> 'int' postfix '++'
 // CHECK-NEXT:         | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | |   `-ForStmt {{.*}} <line:34:7, line:35:9>
@@ -245,7 +245,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | |     | |-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
 // CHECK-NEXT:         | |     | | `-DeclRefExpr {{.*}} <col:23> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | |     | `-ImplicitCastExpr {{.*}} <col:27> 'int' <LValueToRValue>
-// CHECK-NEXT:         | |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int'
+// CHECK-NEXT:         | |     |   `-DeclRefExpr {{.*}} <col:27> 'int' lvalue ParmVar {{.*}} 'z' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | |     |-UnaryOperator {{.*}} <col:30, col:31> 'int' postfix '++'
 // CHECK-NEXT:         | |     | `-DeclRefExpr {{.*}} <col:30> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | |     `-NullStmt {{.*}} <line:35:9>

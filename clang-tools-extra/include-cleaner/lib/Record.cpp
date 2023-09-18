@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -24,16 +25,21 @@
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <assert.h>
 #include <memory>
 #include <optional>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -218,7 +224,7 @@ public:
         IncludedHeader = *StandardHeader;
       }
     if (!IncludedHeader && File)
-      IncludedHeader = &File->getFileEntry();
+      IncludedHeader = *File;
     checkForExport(HashFID, HashLine, std::move(IncludedHeader), File);
     checkForKeep(HashLine, File);
   }
@@ -237,7 +243,7 @@ public:
       if (IncludedHeader) {
         switch (IncludedHeader->kind()) {
         case Header::Physical:
-          Out->IWYUExportBy[IncludedHeader->physical()->getUniqueID()]
+          Out->IWYUExportBy[IncludedHeader->physical().getUniqueID()]
               .push_back(Top.Path);
           break;
         case Header::Standard:
@@ -387,18 +393,18 @@ llvm::StringRef PragmaIncludes::getPublic(const FileEntry *F) const {
   return It->getSecond();
 }
 
-static llvm::SmallVector<const FileEntry *>
+static llvm::SmallVector<FileEntryRef>
 toFileEntries(llvm::ArrayRef<StringRef> FileNames, FileManager &FM) {
-  llvm::SmallVector<const FileEntry *> Results;
+  llvm::SmallVector<FileEntryRef> Results;
 
   for (auto FName : FileNames) {
     // FIMXE: log the failing cases?
-    if (auto FE = expectedToOptional(FM.getFileRef(FName)))
+    if (auto FE = FM.getOptionalFileRef(FName))
       Results.push_back(*FE);
   }
   return Results;
 }
-llvm::SmallVector<const FileEntry *>
+llvm::SmallVector<FileEntryRef>
 PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
   auto It = IWYUExportBy.find(File->getUniqueID());
   if (It == IWYUExportBy.end())
@@ -406,7 +412,7 @@ PragmaIncludes::getExporters(const FileEntry *File, FileManager &FM) const {
 
   return toFileEntries(It->getSecond(), FM);
 }
-llvm::SmallVector<const FileEntry *>
+llvm::SmallVector<FileEntryRef>
 PragmaIncludes::getExporters(tooling::stdlib::Header StdHeader,
                              FileManager &FM) const {
   auto It = StdIWYUExportBy.find(StdHeader);
@@ -424,7 +430,8 @@ bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
 }
 
 bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
-  return ShouldKeep.contains(FE->getUniqueID());
+  return ShouldKeep.contains(FE->getUniqueID()) ||
+         NonSelfContainedFiles.contains(FE->getUniqueID());
 }
 
 namespace {

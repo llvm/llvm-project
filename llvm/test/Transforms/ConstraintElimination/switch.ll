@@ -13,12 +13,10 @@ define i1 @test_switch_in_block_with_assume(i32 %x) {
 ; CHECK-NEXT:    i32 1, label [[EXIT_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[X]], 10
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[X]], 9
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 10
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[X]], 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, [[C_3]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]

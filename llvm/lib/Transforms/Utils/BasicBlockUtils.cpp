@@ -194,7 +194,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   // Don't break unwinding instructions or terminators with other side-effects.
   Instruction *PTI = PredBB->getTerminator();
-  if (PTI->isExceptionalTerminator() || PTI->mayHaveSideEffects())
+  if (PTI->isSpecialTerminator() || PTI->mayHaveSideEffects())
     return false;
 
   // Can't merge if there are multiple distinct successors.
@@ -300,7 +300,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     PredBB->back().eraseFromParent();
 
     // Move terminator instruction.
-    PredBB->splice(PredBB->end(), BB);
+    BB->back().moveBeforePreserving(*PredBB, PredBB->end());
 
     // Terminator may be a memory accessing instruction too.
     if (MSSAU)
@@ -852,9 +852,11 @@ void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
         continue;
 
     // Otherwise a new PHI is needed. Create one and populate it.
-    PHINode *NewPN = PHINode::Create(
-        PN.getType(), Preds.size(), "split",
-        SplitBB->isLandingPad() ? &SplitBB->front() : SplitBB->getTerminator());
+    PHINode *NewPN = PHINode::Create(PN.getType(), Preds.size(), "split");
+    BasicBlock::iterator InsertPos =
+        SplitBB->isLandingPad() ? SplitBB->begin()
+                                : SplitBB->getTerminator()->getIterator();
+    NewPN->insertBefore(InsertPos);
     for (BasicBlock *BB : Preds)
       NewPN->addIncoming(V, BB);
 
@@ -877,7 +879,7 @@ llvm::SplitAllCriticalEdges(Function &F,
   return NumBroken;
 }
 
-static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
+static BasicBlock *SplitBlockImpl(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                   DomTreeUpdater *DTU, DominatorTree *DT,
                                   LoopInfo *LI, MemorySSAUpdater *MSSAU,
                                   const Twine &BBName, bool Before) {
@@ -887,7 +889,7 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
                             DTU ? DTU : (DT ? &LocalDTU : nullptr), LI, MSSAU,
                             BBName);
   }
-  BasicBlock::iterator SplitIt = SplitPt->getIterator();
+  BasicBlock::iterator SplitIt = SplitPt;
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad()) {
     ++SplitIt;
     assert(SplitIt != SplitPt->getParent()->end());
@@ -933,14 +935,14 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
   return New;
 }
 
-BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName,
                              bool Before) {
   return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName,
                         Before);
 }
-BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DomTreeUpdater *DTU, LoopInfo *LI,
                              MemorySSAUpdater *MSSAU, const Twine &BBName,
                              bool Before) {
@@ -948,12 +950,12 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
                         Before);
 }
 
-BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
+BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                    DomTreeUpdater *DTU, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
                                    const Twine &BBName) {
 
-  BasicBlock::iterator SplitIt = SplitPt->getIterator();
+  BasicBlock::iterator SplitIt = SplitPt;
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
     ++SplitIt;
   std::string Name = BBName.str();
@@ -1137,14 +1139,11 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
       // If all incoming values for the new PHI would be the same, just don't
       // make a new PHI.  Instead, just remove the incoming values from the old
       // PHI.
-
-      // NOTE! This loop walks backwards for a reason! First off, this minimizes
-      // the cost of removal if we end up removing a large number of values, and
-      // second off, this ensures that the indices for the incoming values
-      // aren't invalidated when we remove one.
-      for (int64_t i = PN->getNumIncomingValues() - 1; i >= 0; --i)
-        if (PredSet.count(PN->getIncomingBlock(i)))
-          PN->removeIncomingValue(i, false);
+      PN->removeIncomingValueIf(
+          [&](unsigned Idx) {
+            return PredSet.contains(PN->getIncomingBlock(Idx));
+          },
+          /* DeletePHIIfEmpty */ false);
 
       // Add an incoming value to the PHI node in the loop for the preheader
       // edge.
@@ -1472,7 +1471,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 }
 
 Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
-                                             Instruction *SplitBefore,
+                                             BasicBlock::iterator SplitBefore,
                                              bool Unreachable,
                                              MDNode *BranchWeights,
                                              DomTreeUpdater *DTU, LoopInfo *LI,
@@ -1485,7 +1484,7 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
 }
 
 Instruction *llvm::SplitBlockAndInsertIfElse(Value *Cond,
-                                             Instruction *SplitBefore,
+                                             BasicBlock::iterator SplitBefore,
                                              bool Unreachable,
                                              MDNode *BranchWeights,
                                              DomTreeUpdater *DTU, LoopInfo *LI,
@@ -1497,7 +1496,7 @@ Instruction *llvm::SplitBlockAndInsertIfElse(Value *Cond,
   return ElseBlock->getTerminator();
 }
 
-void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
+void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, BasicBlock::iterator SplitBefore,
                                          Instruction **ThenTerm,
                                          Instruction **ElseTerm,
                                          MDNode *BranchWeights,
@@ -1513,7 +1512,7 @@ void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
 }
 
 void llvm::SplitBlockAndInsertIfThenElse(
-    Value *Cond, Instruction *SplitBefore, BasicBlock **ThenBlock,
+    Value *Cond, BasicBlock::iterator SplitBefore, BasicBlock **ThenBlock,
     BasicBlock **ElseBlock, bool UnreachableThen, bool UnreachableElse,
     MDNode *BranchWeights, DomTreeUpdater *DTU, LoopInfo *LI) {
   assert((ThenBlock || ElseBlock) &&
@@ -1530,7 +1529,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
   }
 
   LLVMContext &C = Head->getContext();
-  BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
+  BasicBlock *Tail = Head->splitBasicBlock(SplitBefore);
   BasicBlock *TrueBlock = Tail;
   BasicBlock *FalseBlock = Tail;
   bool ThenToTailEdge = false;

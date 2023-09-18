@@ -58,6 +58,5 @@ unsigned long long uint_max = 4294967295u;
 // NOTE: tentative definitions are processed at the end of the translation unit.
 
 // This shouldn't be emitted as common because it has an explicit section.
-// rdar://7119244
 // CHECK: @b ={{.*}} global i32 0, section "foo"
 int b __attribute__((section("foo")));

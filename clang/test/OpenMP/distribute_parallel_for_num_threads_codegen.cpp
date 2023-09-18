@@ -145,7 +145,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK1-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR6:[0-9]+]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR5:[0-9]+]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       lpad:
 // CHECK1-NEXT:    [[TMP15:%.*]] = landingpad { ptr, i32 }
@@ -154,7 +154,7 @@ int main() {
 // CHECK1-NEXT:    store ptr [[TMP16]], ptr [[EXN_SLOT]], align 8
 // CHECK1-NEXT:    [[TMP17:%.*]] = extractvalue { ptr, i32 } [[TMP15]], 1
 // CHECK1-NEXT:    store i32 [[TMP17]], ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK1-NEXT:    br label [[EH_RESUME:%.*]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    [[TMP18:%.*]] = load i8, ptr [[A]], align 1
@@ -198,7 +198,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK1-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK1:       omp_offload.failed3:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR5]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK1:       omp_offload.cont4:
 // CHECK1-NEXT:    [[TMP40:%.*]] = load i8, ptr [[A]], align 1
@@ -212,7 +212,7 @@ int main() {
 // CHECK1:       invoke.cont7:
 // CHECK1-NEXT:    [[ADD9:%.*]] = add nsw i32 [[ADD]], [[CALL8]]
 // CHECK1-NEXT:    store i32 [[ADD9]], ptr [[RETVAL]], align 4
-// CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK1-NEXT:    [[TMP41:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    ret i32 [[TMP41]]
 // CHECK1:       eh.resume:
@@ -257,7 +257,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -318,7 +318,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -392,14 +392,14 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10:[0-9]+]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11:[0-9]+]]
 // CHECK1-NEXT:    unreachable
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
-// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
-// CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK1-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] comdat {
+// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR5]]
+// CHECK1-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -413,7 +413,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -479,7 +479,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -553,12 +553,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainIcLi5EEiv
-// CHECK1-SAME: () #[[ATTR7:[0-9]+]] comdat {
+// CHECK1-SAME: () #[[ATTR8:[0-9]+]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -594,7 +594,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK1-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR6]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR5]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -627,14 +627,14 @@ int main() {
 // CHECK1-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK1-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK1:       omp_offload.failed3:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR6]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR5]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK1:       omp_offload.cont4:
 // CHECK1-NEXT:    ret i32 0
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z5tmainI1SLi1EEiv
-// CHECK1-SAME: () #[[ATTR7]] comdat {
+// CHECK1-SAME: () #[[ATTR8]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -670,7 +670,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK1-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK1:       omp_offload.failed:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR6]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR5]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK1:       omp_offload.cont:
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -703,24 +703,24 @@ int main() {
 // CHECK1-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK1-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK1:       omp_offload.failed3:
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR6]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR5]]
 // CHECK1-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK1:       omp_offload.cont4:
 // CHECK1-NEXT:    ret i32 0
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SD1Ev
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK1-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK1-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR5]]
 // CHECK1-NEXT:    ret void
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -734,7 +734,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN1SD2Ev
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -750,7 +750,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -811,7 +811,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -885,7 +885,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -897,7 +897,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -958,7 +958,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1032,7 +1032,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -1044,7 +1044,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1105,7 +1105,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1179,7 +1179,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
@@ -1191,7 +1191,7 @@ int main() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1240,7 +1240,7 @@ int main() {
 // CHECK1:       invoke.cont2:
 // CHECK1-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK1-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
-// CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
+// CHECK1-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR5]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
@@ -1262,12 +1262,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP14:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, i32 } [[TMP14]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined.omp_outlined
-// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1341,12 +1341,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK1-NEXT:    catch ptr null
 // CHECK1-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK1-NEXT:    unreachable
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK1-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK1-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK1-NEXT:    ret void
@@ -1404,7 +1404,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK5-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK5:       omp_offload.failed:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR6:[0-9]+]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR5:[0-9]+]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK5:       lpad:
 // CHECK5-NEXT:    [[TMP15:%.*]] = landingpad { ptr, i32 }
@@ -1413,7 +1413,7 @@ int main() {
 // CHECK5-NEXT:    store ptr [[TMP16]], ptr [[EXN_SLOT]], align 8
 // CHECK5-NEXT:    [[TMP17:%.*]] = extractvalue { ptr, i32 } [[TMP15]], 1
 // CHECK5-NEXT:    store i32 [[TMP17]], ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK5-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK5-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK5-NEXT:    br label [[EH_RESUME:%.*]]
 // CHECK5:       omp_offload.cont:
 // CHECK5-NEXT:    [[TMP18:%.*]] = load i8, ptr [[A]], align 1
@@ -1457,7 +1457,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK5-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK5:       omp_offload.failed3:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR6]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR5]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK5:       omp_offload.cont4:
 // CHECK5-NEXT:    [[TMP40:%.*]] = load i8, ptr [[A]], align 1
@@ -1471,7 +1471,7 @@ int main() {
 // CHECK5:       invoke.cont7:
 // CHECK5-NEXT:    [[ADD9:%.*]] = add nsw i32 [[ADD]], [[CALL8]]
 // CHECK5-NEXT:    store i32 [[ADD9]], ptr [[RETVAL]], align 4
-// CHECK5-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK5-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK5-NEXT:    [[TMP41:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK5-NEXT:    ret i32 [[TMP41]]
 // CHECK5:       eh.resume:
@@ -1516,7 +1516,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1577,7 +1577,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1651,14 +1651,14 @@ int main() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10:[0-9]+]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11:[0-9]+]]
 // CHECK5-NEXT:    unreachable
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK5-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
-// CHECK5-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
-// CHECK5-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK5-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] comdat {
+// CHECK5-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR5]]
+// CHECK5-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
@@ -1672,7 +1672,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR3]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR4]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1738,7 +1738,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1812,12 +1812,12 @@ int main() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z5tmainIcLi5EEiv
-// CHECK5-SAME: () #[[ATTR7:[0-9]+]] comdat {
+// CHECK5-SAME: () #[[ATTR8:[0-9]+]] comdat {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -1853,7 +1853,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK5-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK5:       omp_offload.failed:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR6]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR5]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK5:       omp_offload.cont:
 // CHECK5-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -1886,14 +1886,14 @@ int main() {
 // CHECK5-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK5-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK5:       omp_offload.failed3:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR6]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR5]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK5:       omp_offload.cont4:
 // CHECK5-NEXT:    ret i32 0
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z5tmainI1SLi1EEiv
-// CHECK5-SAME: () #[[ATTR7]] comdat {
+// CHECK5-SAME: () #[[ATTR8]] comdat {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK5-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -1929,7 +1929,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK5-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK5:       omp_offload.failed:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR6]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR5]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK5:       omp_offload.cont:
 // CHECK5-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -1962,24 +1962,24 @@ int main() {
 // CHECK5-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK5-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK5:       omp_offload.failed3:
-// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR6]]
+// CHECK5-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR5]]
 // CHECK5-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK5:       omp_offload.cont4:
 // CHECK5-NEXT:    ret i32 0
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SD1Ev
-// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] comdat align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] comdat align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK5-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK5-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR6]]
+// CHECK5-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR5]]
 // CHECK5-NEXT:    ret void
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -2000,7 +2000,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2061,7 +2061,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2135,7 +2135,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
@@ -2147,7 +2147,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2208,7 +2208,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2282,7 +2282,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
@@ -2294,7 +2294,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2355,7 +2355,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2429,7 +2429,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
@@ -2441,7 +2441,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2490,7 +2490,7 @@ int main() {
 // CHECK5:       invoke.cont2:
 // CHECK5-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK5-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
-// CHECK5-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
+// CHECK5-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR5]]
 // CHECK5-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK5-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK5-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
@@ -2512,12 +2512,12 @@ int main() {
 // CHECK5-NEXT:    [[TMP14:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, i32 } [[TMP14]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR10]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2591,12 +2591,12 @@ int main() {
 // CHECK5-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK5-NEXT:    catch ptr null
 // CHECK5-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK5-NEXT:    unreachable
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN1SD2Ev
-// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -2605,7 +2605,7 @@ int main() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK5-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK5-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK5-NEXT:    ret void
@@ -2663,7 +2663,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK9-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR6:[0-9]+]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR5:[0-9]+]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK9:       lpad:
 // CHECK9-NEXT:    [[TMP15:%.*]] = landingpad { ptr, i32 }
@@ -2672,7 +2672,7 @@ int main() {
 // CHECK9-NEXT:    store ptr [[TMP16]], ptr [[EXN_SLOT]], align 8
 // CHECK9-NEXT:    [[TMP17:%.*]] = extractvalue { ptr, i32 } [[TMP15]], 1
 // CHECK9-NEXT:    store i32 [[TMP17]], ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK9-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK9-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK9-NEXT:    br label [[EH_RESUME:%.*]]
 // CHECK9:       omp_offload.cont:
 // CHECK9-NEXT:    [[TMP18:%.*]] = load i8, ptr [[A]], align 1
@@ -2716,7 +2716,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK9-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK9:       omp_offload.failed3:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR6]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR5]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK9:       omp_offload.cont4:
 // CHECK9-NEXT:    [[TMP40:%.*]] = load i8, ptr [[A]], align 1
@@ -2730,7 +2730,7 @@ int main() {
 // CHECK9:       invoke.cont7:
 // CHECK9-NEXT:    [[ADD9:%.*]] = add nsw i32 [[ADD]], [[CALL8]]
 // CHECK9-NEXT:    store i32 [[ADD9]], ptr [[RETVAL]], align 4
-// CHECK9-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK9-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK9-NEXT:    [[TMP41:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK9-NEXT:    ret i32 [[TMP41]]
 // CHECK9:       eh.resume:
@@ -2775,7 +2775,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2836,7 +2836,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2910,14 +2910,14 @@ int main() {
 // CHECK9-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10:[0-9]+]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11:[0-9]+]]
 // CHECK9-NEXT:    unreachable
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK9-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
-// CHECK9-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
-// CHECK9-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK9-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] comdat {
+// CHECK9-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR5]]
+// CHECK9-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
@@ -2931,7 +2931,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR4]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2997,7 +2997,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3071,12 +3071,12 @@ int main() {
 // CHECK9-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z5tmainIcLi5EEiv
-// CHECK9-SAME: () #[[ATTR7:[0-9]+]] comdat {
+// CHECK9-SAME: () #[[ATTR8:[0-9]+]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -3112,7 +3112,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK9-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR6]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR5]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK9:       omp_offload.cont:
 // CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -3145,14 +3145,14 @@ int main() {
 // CHECK9-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK9-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK9:       omp_offload.failed3:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR6]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR5]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK9:       omp_offload.cont4:
 // CHECK9-NEXT:    ret i32 0
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_Z5tmainI1SLi1EEiv
-// CHECK9-SAME: () #[[ATTR7]] comdat {
+// CHECK9-SAME: () #[[ATTR8]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -3188,7 +3188,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK9-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK9:       omp_offload.failed:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR6]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR5]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK9:       omp_offload.cont:
 // CHECK9-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -3221,24 +3221,24 @@ int main() {
 // CHECK9-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK9-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK9:       omp_offload.failed3:
-// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR6]]
+// CHECK9-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR5]]
 // CHECK9-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK9:       omp_offload.cont4:
 // CHECK9-NEXT:    ret i32 0
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SD1Ev
-// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] comdat align 2 {
+// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] comdat align 2 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK9-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR6]]
+// CHECK9-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR5]]
 // CHECK9-NEXT:    ret void
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -3252,7 +3252,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SD2Ev
-// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK9-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -3268,7 +3268,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3329,7 +3329,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3403,7 +3403,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
@@ -3415,7 +3415,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3476,7 +3476,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3550,7 +3550,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
@@ -3562,7 +3562,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3623,7 +3623,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3697,7 +3697,7 @@ int main() {
 // CHECK9-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
@@ -3709,7 +3709,7 @@ int main() {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3758,7 +3758,7 @@ int main() {
 // CHECK9:       invoke.cont2:
 // CHECK9-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK9-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
-// CHECK9-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
+// CHECK9-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR5]]
 // CHECK9-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK9-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK9-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
@@ -3780,12 +3780,12 @@ int main() {
 // CHECK9-NEXT:    [[TMP14:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, i32 } [[TMP14]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR10]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined.omp_outlined
-// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK9-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3859,12 +3859,12 @@ int main() {
 // CHECK9-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK9-NEXT:    catch ptr null
 // CHECK9-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK9-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK9-NEXT:    unreachable
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK9-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK9-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK9-NEXT:    ret void
@@ -3922,7 +3922,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK13-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK13:       omp_offload.failed:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR6:[0-9]+]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68() #[[ATTR5:[0-9]+]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK13:       lpad:
 // CHECK13-NEXT:    [[TMP15:%.*]] = landingpad { ptr, i32 }
@@ -3931,7 +3931,7 @@ int main() {
 // CHECK13-NEXT:    store ptr [[TMP16]], ptr [[EXN_SLOT]], align 8
 // CHECK13-NEXT:    [[TMP17:%.*]] = extractvalue { ptr, i32 } [[TMP15]], 1
 // CHECK13-NEXT:    store i32 [[TMP17]], ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK13-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK13-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK13-NEXT:    br label [[EH_RESUME:%.*]]
 // CHECK13:       omp_offload.cont:
 // CHECK13-NEXT:    [[TMP18:%.*]] = load i8, ptr [[A]], align 1
@@ -3975,7 +3975,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], 0
 // CHECK13-NEXT:    br i1 [[TMP39]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK13:       omp_offload.failed3:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR6]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74(i64 [[TMP19]]) #[[ATTR5]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK13:       omp_offload.cont4:
 // CHECK13-NEXT:    [[TMP40:%.*]] = load i8, ptr [[A]], align 1
@@ -3989,7 +3989,7 @@ int main() {
 // CHECK13:       invoke.cont7:
 // CHECK13-NEXT:    [[ADD9:%.*]] = add nsw i32 [[ADD]], [[CALL8]]
 // CHECK13-NEXT:    store i32 [[ADD9]], ptr [[RETVAL]], align 4
-// CHECK13-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR6]]
+// CHECK13-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[S]]) #[[ATTR5]]
 // CHECK13-NEXT:    [[TMP41:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK13-NEXT:    ret i32 [[TMP41]]
 // CHECK13:       eh.resume:
@@ -4034,7 +4034,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4095,7 +4095,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l68.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4169,14 +4169,14 @@ int main() {
 // CHECK13-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10:[0-9]+]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11:[0-9]+]]
 // CHECK13-NEXT:    unreachable
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@__clang_call_terminate
-// CHECK13-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] comdat {
-// CHECK13-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR6]]
-// CHECK13-NEXT:    call void @_ZSt9terminatev() #[[ATTR10]]
+// CHECK13-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] comdat {
+// CHECK13-NEXT:    [[TMP2:%.*]] = call ptr @__cxa_begin_catch(ptr [[TMP0]]) #[[ATTR5]]
+// CHECK13-NEXT:    call void @_ZSt9terminatev() #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
@@ -4190,7 +4190,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[A:%.*]]) #[[ATTR4]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4256,7 +4256,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l74.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4330,12 +4330,12 @@ int main() {
 // CHECK13-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z5tmainIcLi5EEiv
-// CHECK13-SAME: () #[[ATTR7:[0-9]+]] comdat {
+// CHECK13-SAME: () #[[ATTR8:[0-9]+]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -4371,7 +4371,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK13-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK13:       omp_offload.failed:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR6]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52() #[[ATTR5]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK13:       omp_offload.cont:
 // CHECK13-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -4404,14 +4404,14 @@ int main() {
 // CHECK13-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK13-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK13:       omp_offload.failed3:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR6]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57() #[[ATTR5]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK13:       omp_offload.cont4:
 // CHECK13-NEXT:    ret i32 0
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_Z5tmainI1SLi1EEiv
-// CHECK13-SAME: () #[[ATTR7]] comdat {
+// CHECK13-SAME: () #[[ATTR8]] comdat {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[TMP:%.*]] = alloca i32, align 4
 // CHECK13-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
@@ -4447,7 +4447,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
 // CHECK13-NEXT:    br i1 [[TMP14]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // CHECK13:       omp_offload.failed:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR6]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52() #[[ATTR5]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 // CHECK13:       omp_offload.cont:
 // CHECK13-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS2]], i32 0, i32 0
@@ -4480,24 +4480,24 @@ int main() {
 // CHECK13-NEXT:    [[TMP29:%.*]] = icmp ne i32 [[TMP28]], 0
 // CHECK13-NEXT:    br i1 [[TMP29]], label [[OMP_OFFLOAD_FAILED3:%.*]], label [[OMP_OFFLOAD_CONT4:%.*]]
 // CHECK13:       omp_offload.failed3:
-// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR6]]
+// CHECK13-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57() #[[ATTR5]]
 // CHECK13-NEXT:    br label [[OMP_OFFLOAD_CONT4]]
 // CHECK13:       omp_offload.cont4:
 // CHECK13-NEXT:    ret i32 0
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SD1Ev
-// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8:[0-9]+]] comdat align 2 {
+// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9:[0-9]+]] comdat align 2 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK13-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK13-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR6]]
+// CHECK13-NEXT:    call void @_ZN1SD2Ev(ptr noundef nonnull align 8 dereferenceable(24) [[THIS1]]) #[[ATTR5]]
 // CHECK13-NEXT:    ret void
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SC2El
-// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]], i64 noundef [[A:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
@@ -4518,7 +4518,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4579,7 +4579,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l52.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4653,7 +4653,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
@@ -4665,7 +4665,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4726,7 +4726,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainIcLi5EEiv_l57.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4800,7 +4800,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
@@ -4812,7 +4812,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4873,7 +4873,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l52.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4947,7 +4947,7 @@ int main() {
 // CHECK13-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
@@ -4959,7 +4959,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5008,7 +5008,7 @@ int main() {
 // CHECK13:       invoke.cont2:
 // CHECK13-NEXT:    [[TMP7:%.*]] = sext i8 [[CALL]] to i32
 // CHECK13-NEXT:    call void @__kmpc_push_num_threads(ptr @[[GLOB3]], i32 [[TMP1]], i32 [[TMP7]])
-// CHECK13-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR6]]
+// CHECK13-NEXT:    call void @_ZN1SD1Ev(ptr noundef nonnull align 8 dereferenceable(24) [[REF_TMP]]) #[[ATTR5]]
 // CHECK13-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_COMB_LB]], align 4
 // CHECK13-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 // CHECK13-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTOMP_COMB_UB]], align 4
@@ -5030,12 +5030,12 @@ int main() {
 // CHECK13-NEXT:    [[TMP14:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, i32 } [[TMP14]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR10]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP15]]) #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z5tmainI1SLi1EEiv_l57.omp_outlined.omp_outlined
-// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] personality ptr @__gxx_personality_v0 {
+// CHECK13-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR4]] personality ptr @__gxx_personality_v0 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5109,12 +5109,12 @@ int main() {
 // CHECK13-NEXT:    [[TMP11:%.*]] = landingpad { ptr, i32 }
 // CHECK13-NEXT:    catch ptr null
 // CHECK13-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, i32 } [[TMP11]], 0
-// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR10]]
+// CHECK13-NEXT:    call void @__clang_call_terminate(ptr [[TMP12]]) #[[ATTR11]]
 // CHECK13-NEXT:    unreachable
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@_ZN1SD2Ev
-// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR8]] comdat align 2 {
+// CHECK13-SAME: (ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR9]] comdat align 2 {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK13-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -5123,7 +5123,7 @@ int main() {
 //
 //
 // CHECK13-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// CHECK13-SAME: () #[[ATTR9:[0-9]+]] {
+// CHECK13-SAME: () #[[ATTR10:[0-9]+]] {
 // CHECK13-NEXT:  entry:
 // CHECK13-NEXT:    call void @__tgt_register_requires(i64 1)
 // CHECK13-NEXT:    ret void

@@ -10,10 +10,24 @@ set(core_files
   module.modulemap
   stdalign.h
   stdarg.h
+  __stdarg___gnuc_va_list.h
+  __stdarg___va_copy.h
+  __stdarg_va_arg.h
+  __stdarg_va_copy.h
+  __stdarg_va_list.h
   stdatomic.h
   stdbool.h
   stddef.h
   __stddef_max_align_t.h
+  __stddef_null.h
+  __stddef_nullptr_t.h
+  __stddef_offsetof.h
+  __stddef_ptrdiff_t.h
+  __stddef_rsize_t.h
+  __stddef_size_t.h
+  __stddef_unreachable.h
+  __stddef_wchar_t.h
+  __stddef_wint_t.h
   stdint.h
   stdnoreturn.h
   tgmath.h
@@ -275,6 +289,8 @@ set(cuda_wrapper_files
 
 set(cuda_wrapper_bits_files
   cuda_wrappers/bits/shared_ptr_base.h
+  cuda_wrappers/bits/basic_string.h
+  cuda_wrappers/bits/basic_string.tcc
 )
 
 set(ppc_wrapper_files
@@ -285,6 +301,7 @@ set(ppc_wrapper_files
   ppc_wrappers/pmmintrin.h
   ppc_wrappers/tmmintrin.h
   ppc_wrappers/smmintrin.h
+  ppc_wrappers/nmmintrin.h
   ppc_wrappers/bmiintrin.h
   ppc_wrappers/bmi2intrin.h
   ppc_wrappers/immintrin.h
@@ -303,11 +320,13 @@ set(openmp_wrapper_files
 )
 
 set(llvm_libc_wrapper_files
+  llvm_libc_wrappers/assert.h
   llvm_libc_wrappers/stdio.h
   llvm_libc_wrappers/stdlib.h
   llvm_libc_wrappers/string.h
   llvm_libc_wrappers/ctype.h
   llvm_libc_wrappers/inttypes.h
+  llvm_libc_wrappers/time.h
 )
 
 include(GetClangResourceDir)

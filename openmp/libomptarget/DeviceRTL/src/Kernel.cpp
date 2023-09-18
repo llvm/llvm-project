@@ -135,7 +135,6 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
 ///
 void __kmpc_target_deinit() {
   bool IsSPMD = mapping::isSPMDMode();
-  state::assumeInitialState(IsSPMD);
   if (IsSPMD)
     return;
 

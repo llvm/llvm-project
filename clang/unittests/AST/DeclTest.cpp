@@ -353,6 +353,32 @@ TEST(Decl, FriendFunctionWithinClassInHeaderUnit) {
   EXPECT_TRUE(getFooValue->isInlined());
 }
 
+TEST(Decl, FunctionDeclBitsShouldNotOverlapWithCXXConstructorDeclBits) {
+  llvm::Annotations Code(R"(
+    struct A {
+      A() : m() {}
+      int m;
+    };
+
+    A f() { return A(); }
+    )");
+
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), {"-std=c++14"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto HasCtorInit =
+      hasAnyConstructorInitializer(cxxCtorInitializer(isMemberInitializer()));
+  auto ImpMoveCtor =
+      cxxConstructorDecl(isMoveConstructor(), isImplicit(), HasCtorInit)
+          .bind("MoveCtor");
+
+  auto *ToImpMoveCtor =
+      selectFirst<CXXConstructorDecl>("MoveCtor", match(ImpMoveCtor, Ctx));
+
+  EXPECT_TRUE(ToImpMoveCtor->getNumCtorInitializers() == 1);
+  EXPECT_FALSE(ToImpMoveCtor->FriendConstraintRefersToEnclosingTemplate());
+}
+
 TEST(Decl, NoProtoFunctionDeclAttributes) {
   llvm::Annotations Code(R"(
     void f();

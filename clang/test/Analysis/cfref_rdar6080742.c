@@ -1,7 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify %s
 // expected-no-diagnostics
 
-// This test case was reported in <rdar:problem/6080742>.
 // It tests path-sensitivity with respect to '!(cfstring != 0)' (negation of inequality).
 
 int printf(const char *restrict,...);

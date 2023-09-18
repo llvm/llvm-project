@@ -31,13 +31,13 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
   static inline NamingCheckId getEmptyKey() {
-    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
-                         "EMPTY");
+    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                         "EMPTY"};
   }
 
   static inline NamingCheckId getTombstoneKey() {
-    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-                         "TOMBSTONE");
+    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                         "TOMBSTONE"};
   }
 
   static unsigned getHashValue(NamingCheckId Val) {

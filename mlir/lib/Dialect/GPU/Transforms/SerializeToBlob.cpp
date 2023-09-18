@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
@@ -23,8 +25,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 
-#include <string>
 #include <optional>
+#include <string>
 
 #define DEBUG_TYPE "serialize-to-blob"
 
@@ -54,7 +56,7 @@ gpu::SerializeToBlobPass::translateToISA(llvm::Module &llvmModule,
     llvm::legacy::PassManager codegenPasses;
 
     if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                          llvm::CGFT_AssemblyFile))
+                                          llvm::CodeGenFileType::AssemblyFile))
       return std::nullopt;
 
     codegenPasses.run(llvmModule);
@@ -108,7 +110,7 @@ gpu::SerializeToBlobPass::optimizeLlvm(llvm::Module &llvmModule,
     return getOperation().emitError()
            << "invalid optimization level " << optLevel;
 
-  targetMachine.setOptLevel(static_cast<llvm::CodeGenOpt::Level>(optLevel));
+  targetMachine.setOptLevel(static_cast<llvm::CodeGenOptLevel>(optLevel));
 
   auto transformer =
       makeOptimizingTransformer(optLevel, /*sizeLevel=*/0, &targetMachine);
@@ -122,13 +124,6 @@ gpu::SerializeToBlobPass::optimizeLlvm(llvm::Module &llvmModule,
     return mlirError;
   }
   return success();
-}
-
-void gpu::SerializeToBlobPass::getDependentDialects(
-    DialectRegistry &registry) const {
-  registerGPUDialectTranslation(registry);
-  registerLLVMDialectTranslation(registry);
-  OperationPass<gpu::GPUModuleOp>::getDependentDialects(registry);
 }
 
 std::unique_ptr<llvm::TargetMachine>

@@ -220,11 +220,11 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
     if (NeedsSanitizerDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
-      linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
     }
     if (NeedsXRayDeps) {
       CmdArgs.push_back(ToolChain.getCompilerRTArgString(Args, "builtins"));
-      linkXRayRuntimeDeps(ToolChain, CmdArgs);
+      linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     }
     // FIXME: For some reason GCC passes -lgcc before adding
     // the default system libraries. Just mimic this for now.

@@ -141,7 +141,7 @@ private:
   /// positional value.
   DenseMap<Value, Position *> valueToPosition;
 
-  /// The set of operation values whose whose location will be used for newly
+  /// The set of operation values whose location will be used for newly
   /// generated operations.
   SetVector<Value> locOps;
 
@@ -447,8 +447,9 @@ void PatternLowering::generate(BoolNode *boolNode, Block *&currentBlock,
   }
   case Predicates::ConstraintQuestion: {
     auto *cstQuestion = cast<ConstraintQuestion>(question);
-    builder.create<pdl_interp::ApplyConstraintOp>(loc, cstQuestion->getName(),
-                                                  args, success, failure);
+    builder.create<pdl_interp::ApplyConstraintOp>(
+        loc, cstQuestion->getName(), args, cstQuestion->getIsNegated(), success,
+        failure);
     break;
   }
   default:

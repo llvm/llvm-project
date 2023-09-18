@@ -10,6 +10,7 @@
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
 # RUN: dsymutil -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker llvm -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
 
 # CHECK: file format Mach-O 64-bit x86-64
 # CHECK: .debug_info contents:

@@ -73,8 +73,9 @@ exposition-only to document what members a char_traits specialization should pro
 
 //
 // Temporary extension to provide a base template for std::char_traits.
-// TODO(LLVM-18): Remove this class.
+// TODO(LLVM-19): Remove this class.
 //
+#if !defined(_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION)
 template <class _CharT>
 struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, char8_t, char16_t or char32_t is non-standard and is provided for a temporary period. It will be removed in LLVM 18, so please migrate off of it.")
     char_traits
@@ -170,6 +171,7 @@ struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, cha
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int_type  eof() _NOEXCEPT
         {return int_type(EOF);}
 };
+#endif // !defined(_LIBCPP_CHAR_TRAITS_REMOVE_BASE_SPECIALIZATION)
 
 // char_traits<char>
 

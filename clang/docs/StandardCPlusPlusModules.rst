@@ -313,18 +313,8 @@ So all of the following name is not valid by default:
     __test
     // and so on ...
 
-If you still want to use the reserved module names for any reason, currently you can add a special line marker
-in the front of the module declaration like:
-
-.. code-block:: c++
-
-  # __LINE_NUMBER__ __FILE__ 1 3
-  export module std;
-
-Here the `__LINE_NUMBER__` is the actual line number of the corresponding line. The `__FILE__` means the filename
-of the translation unit. The `1` means the following is a new file. And `3` means this is a system header/file so
-the certain warnings should be suppressed. You could find more details at:
-https://gcc.gnu.org/onlinedocs/gcc-3.0.2/cpp_9.html.
+If you still want to use the reserved module names for any reason, use
+``-Wno-reserved-module-identifier`` to suppress the warning.
 
 How to specify the dependent BMIs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1072,12 +1062,6 @@ the user can choose to get the dependency information per file. For example:
 
   $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o
 
-.. warning::
-
-   The ``<path-to-compiler-executable>/clang++`` should point to the real
-   binary and not to a symlink. If it points to a symlink the include paths
-   will not be correctly resolved.
-
 And we'll get:
 
 .. code-block:: text
@@ -1133,6 +1117,32 @@ We will get:
 
 When clang-scan-deps detects ``-MF`` option, clang-scan-deps will try to write the
 dependency information for headers to the file specified by ``-MF``.
+
+Possible Issues: Failed to find system headers
+----------------------------------------------
+
+In case the users encounter errors like ``fatal error: 'stddef.h' file not found``,
+probably the specified ``<path-to-compiler-executable>/clang++`` refers to a symlink
+instead a real binary. There are 4 potential solutions to the problem:
+
+* (1) End users can resolve the issue by pointing the specified compiler executable to
+  the real binary instead of the symlink.
+* (2) End users can invoke ``<path-to-compiler-executable>/clang++ -print-resource-dir``
+  to get the corresponding resource directory for your compiler and add that directory
+  to the include search paths manually in the build scripts.
+* (3) Build systems that use a compilation database as the input for clang-scan-deps
+  scanner, the build system can add the flag ``--resource-dir-recipe invoke-compiler`` to
+  the clang-scan-deps scanner to calculate the resources directory dynamically.
+  The calculation happens only once for a unique ``<path-to-compiler-executable>/clang++``.
+* (4) For build systems that invokes the clang-scan-deps scanner per file, repeatedly
+  calculating the resource directory may be inefficient. In such cases, the build
+  system can cache the resource directory by itself and pass ``-resource-dir <resource-dir>``
+  explicitly in the command line options:
+
+.. code-block:: console
+
+  $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 -resource-dir <resource-dir> mod.cppm -c -o mod.o
+
 
 Possible Questions
 ==================

@@ -1085,7 +1085,7 @@ num_get<_CharT, _InputIterator>::do_get(iter_type __b, iter_type __e,
     int __base = 16;
     // Stage 2
     char_type __atoms[26];
-    char_type __thousands_sep = 0;
+    char_type __thousands_sep = char_type();
     string __grouping;
     std::use_facet<ctype<_CharT> >(__iob.getloc()).widen(__num_get_base::__src,
                                                          __num_get_base::__src + 26, __atoms);
@@ -3455,7 +3455,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<wchar_t>;
 class _LIBCPP_EXPORTED_FROM_ABI messages_base
 {
 public:
-    typedef ptrdiff_t catalog;
+    typedef intptr_t catalog;
 
     _LIBCPP_INLINE_VISIBILITY messages_base() {}
 };
@@ -3512,10 +3512,7 @@ typename messages<_CharT>::catalog
 messages<_CharT>::do_open(const basic_string<char>& __nm, const locale&) const
 {
 #ifdef _LIBCPP_HAS_CATOPEN
-    catalog __cat = (catalog)catopen(__nm.c_str(), NL_CAT_LOCALE);
-    if (__cat != -1)
-        __cat = static_cast<catalog>((static_cast<size_t>(__cat) >> 1));
-    return __cat;
+    return (catalog)catopen(__nm.c_str(), NL_CAT_LOCALE);
 #else // !_LIBCPP_HAS_CATOPEN
     (void)__nm;
     return -1;
@@ -3532,9 +3529,8 @@ messages<_CharT>::do_get(catalog __c, int __set, int __msgid,
     __narrow_to_utf8<sizeof(char_type)*__CHAR_BIT__>()(std::back_inserter(__ndflt),
                                                        __dflt.c_str(),
                                                        __dflt.c_str() + __dflt.size());
-    if (__c != -1)
-        __c <<= 1;
     nl_catd __cat = (nl_catd)__c;
+    static_assert(sizeof(catalog) >= sizeof(nl_catd), "Unexpected nl_catd type");
     char* __n = catgets(__cat, __set, __msgid, __ndflt.c_str());
     string_type __w;
     __widen_from_utf8<sizeof(char_type)*__CHAR_BIT__>()(std::back_inserter(__w),
@@ -3553,10 +3549,7 @@ void
 messages<_CharT>::do_close(catalog __c) const
 {
 #ifdef _LIBCPP_HAS_CATOPEN
-    if (__c != -1)
-        __c <<= 1;
-    nl_catd __cat = (nl_catd)__c;
-    catclose(__cat);
+    catclose((nl_catd)__c);
 #else // !_LIBCPP_HAS_CATOPEN
     (void)__c;
 #endif // _LIBCPP_HAS_CATOPEN
@@ -4355,6 +4348,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <cstdarg>
 #  include <iterator>
+#  include <mutex>
 #  include <stdexcept>
 #  include <type_traits>
 #  include <typeinfo>

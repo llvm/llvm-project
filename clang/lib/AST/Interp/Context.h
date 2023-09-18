@@ -31,6 +31,11 @@ class Program;
 class State;
 enum PrimType : unsigned;
 
+struct ParamOffset {
+  unsigned Offset;
+  bool IsPtr;
+};
+
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
 public:
@@ -67,6 +72,9 @@ public:
   getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
+
+  const Function *getOrCreateFunction(const FunctionDecl *FD);
+
   /// Returns whether we should create a global variable for the
   /// given ValueDecl.
   static bool shouldBeGloballyIndexed(const ValueDecl *VD) {

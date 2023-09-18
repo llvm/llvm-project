@@ -1679,6 +1679,7 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
       .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
       .Case(".gosymtab", eSectionTypeGoSymtab)
       .Case(".text", eSectionTypeCode)
+      .Case(".swift_ast", eSectionTypeSwiftModules)
       .Default(eSectionTypeOther);
 }
 

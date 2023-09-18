@@ -315,9 +315,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"aint", {{"a", SameReal}, MatchingDefaultKIND}, KINDReal},
     {"all", {{"mask", SameLogical, Rank::array}, OptionalDIM}, SameLogical,
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
-    {"allocated", {{"array", AnyData, Rank::array}}, DefaultLogical,
-        Rank::elemental, IntrinsicClass::inquiryFunction},
     {"allocated", {{"scalar", AnyData, Rank::scalar}}, DefaultLogical,
+        Rank::elemental, IntrinsicClass::inquiryFunction},
+    {"allocated", {{"array", AnyData, Rank::anyOrAssumedRank}}, DefaultLogical,
         Rank::elemental, IntrinsicClass::inquiryFunction},
     {"anint", {{"a", SameReal}, MatchingDefaultKIND}, KINDReal},
     {"any", {{"mask", SameLogical, Rank::array}, OptionalDIM}, SameLogical,
@@ -777,6 +777,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"selected_char_kind", {{"name", DefaultChar, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"selected_int_kind", {{"r", AnyInt, Rank::scalar}}, DefaultInt,
+        Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"selected_logical_kind", {{"bits", AnyInt, Rank::scalar}}, DefaultInt,
         Rank::scalar, IntrinsicClass::transformationalFunction},
     {"selected_real_kind",
         {{"p", AnyInt, Rank::scalar},
@@ -2091,7 +2093,15 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(sameArg);
       if (std::optional<DynamicType> aType{sameArg->GetType()}) {
         if (result.categorySet.test(aType->category())) {
-          resultType = *aType;
+          if (const auto *sameChar{UnwrapExpr<Expr<SomeCharacter>>(*sameArg)}) {
+            if (auto len{ToInt64(Fold(context, sameChar->LEN()))}) {
+              resultType = DynamicType{aType->kind(), *len};
+            } else {
+              resultType = *aType;
+            }
+          } else {
+            resultType = *aType;
+          }
         } else {
           resultType = DynamicType{*category, aType->kind()};
         }
@@ -2219,7 +2229,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (dummy[*dimArg].optionality == Optionality::required) {
         if (const Symbol *whole{
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
-          if (IsOptional(*whole) || IsAllocatableOrPointer(*whole)) {
+          if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
             if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
               messages.Say(
                   "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_port_en_US);
@@ -2320,17 +2330,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             }
           }
         }
-        auto dc{characteristics::DummyArgument::FromActual(
-            std::move(kw), *expr, context)};
-        if (!dc) {
-          common::die("INTERNAL: could not characterize intrinsic function "
-                      "actual argument '%s'",
+        if (auto dc{characteristics::DummyArgument::FromActual(
+                std::move(kw), *expr, context)}) {
+          dummyArgs.emplace_back(std::move(*dc));
+          if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
+            sameDummyArg = j;
+          }
+        } else { // error recovery
+          messages.Say(
+              "Could not characterize intrinsic function actual argument '%s'"_err_en_US,
               expr->AsFortran().c_str());
           return std::nullopt;
-        }
-        dummyArgs.emplace_back(std::move(*dc));
-        if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
-          sameDummyArg = j;
         }
       } else {
         CHECK(arg->GetAssumedTypeDummy());
@@ -3023,7 +3033,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           }
           if (!ok) {
             context.messages().Say(at,
-                "Arguments of OPERATION= procedure of REDUCE() must be both scalar of the same type as ARRAY=, and neither allocatable, pointer, polymorphic, or optional"_err_en_US);
+                "Arguments of OPERATION= procedure of REDUCE() must be both scalar of the same type as ARRAY=, and neither allocatable, pointer, polymorphic, nor optional"_err_en_US);
           } else if (data[0]->attrs.test(characteristics::DummyDataObject::
                              Attr::Asynchronous) !=
                   data[1]->attrs.test(

@@ -366,6 +366,10 @@ class StmtComparer {
     return true;
   }
 
+  bool IsStmtEquivalent(const CXXBoolLiteralExpr *E1, const CXXBoolLiteralExpr *E2) {
+    return E1->getValue() == E2->getValue();
+  }
+
   /// End point of the traversal chain.
   bool TraverseStmt(const Stmt *S1, const Stmt *S2) { return true; }
 
@@ -1092,7 +1096,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::TemplateTypeParm: {
     const auto *Parm1 = cast<TemplateTypeParmType>(T1);
     const auto *Parm2 = cast<TemplateTypeParmType>(T2);
-    if (Parm1->getDepth() != Parm2->getDepth())
+    if (!Context.IgnoreTemplateParmDepth &&
+        Parm1->getDepth() != Parm2->getDepth())
       return false;
     if (Parm1->getIndex() != Parm2->getIndex())
       return false;

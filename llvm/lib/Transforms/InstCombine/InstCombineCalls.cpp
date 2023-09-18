@@ -291,7 +291,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     for (auto *DAI : at::getAssignmentMarkers(S)) {
-      if (any_of(DAI->location_ops(), [&](Value *V) { return V == FillC; }))
+      if (llvm::is_contained(DAI->location_ops(), FillC))
         DAI->replaceVariableLocationOp(FillC, FillVal);
     }
 
@@ -899,11 +899,27 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 
   Value *FAbsSrc;
   if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fabs(Mask)));
+    II.setArgOperand(1, ConstantInt::get(Src1->getType(), inverse_fabs(Mask)));
     return replaceOperand(II, 0, FAbsSrc);
   }
 
-  // TODO: is.fpclass(x, fcInf) -> fabs(x) == inf
+  if ((OrderedMask == fcInf || OrderedInvertedMask == fcInf) &&
+      (IsOrdered || IsUnordered) && !IsStrict) {
+    // is.fpclass(x, fcInf) -> fcmp oeq fabs(x), +inf
+    // is.fpclass(x, ~fcInf) -> fcmp one fabs(x), +inf
+    // is.fpclass(x, fcInf|fcNan) -> fcmp ueq fabs(x), +inf
+    // is.fpclass(x, ~(fcInf|fcNan)) -> fcmp une fabs(x), +inf
+    Constant *Inf = ConstantFP::getInfinity(Src0->getType());
+    FCmpInst::Predicate Pred =
+        IsUnordered ? FCmpInst::FCMP_UEQ : FCmpInst::FCMP_OEQ;
+    if (OrderedInvertedMask == fcInf)
+      Pred = IsUnordered ? FCmpInst::FCMP_UNE : FCmpInst::FCMP_ONE;
+
+    Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Src0);
+    Value *CmpInf = Builder.CreateFCmp(Pred, Fabs, Inf);
+    CmpInf->takeName(&II);
+    return replaceInstUsesWith(II, CmpInf);
+  }
 
   if ((OrderedMask == fcPosInf || OrderedMask == fcNegInf) &&
       (IsOrdered || IsUnordered) && !IsStrict) {
@@ -980,8 +996,7 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     return replaceInstUsesWith(II, FCmp);
   }
 
-  KnownFPClass Known = computeKnownFPClass(
-      Src0, DL, Mask, 0, &getTargetLibraryInfo(), &AC, &II, &DT);
+  KnownFPClass Known = computeKnownFPClass(Src0, Mask, &II);
 
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
@@ -1613,6 +1628,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Value *NarrowMaxMin = Builder.CreateBinaryIntrinsic(IID, X, NarrowC);
         return CastInst::Create(Instruction::SExt, NarrowMaxMin, II->getType());
       }
+    }
+
+    // umin(i1 X, i1 Y) -> and i1 X, Y
+    // smax(i1 X, i1 Y) -> and i1 X, Y
+    if ((IID == Intrinsic::umin || IID == Intrinsic::smax) &&
+        II->getType()->isIntOrIntVectorTy(1)) {
+      return BinaryOperator::CreateAnd(I0, I1);
+    }
+
+    // umax(i1 X, i1 Y) -> or i1 X, Y
+    // smin(i1 X, i1 Y) -> or i1 X, Y
+    if ((IID == Intrinsic::umax || IID == Intrinsic::smin) &&
+        II->getType()->isIntOrIntVectorTy(1)) {
+      return BinaryOperator::CreateOr(I0, I1);
     }
 
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
@@ -2973,7 +3002,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     auto *DstTy = dyn_cast<FixedVectorType>(ReturnType);
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
 
-    // Only canonicalize if the the destination vector and Vec are fixed
+    // Only canonicalize if the destination vector and Vec are fixed
     // vectors.
     if (DstTy && VecTy) {
       unsigned DstNumElts = DstTy->getNumElements();
@@ -3965,7 +3994,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 
       Instruction *InsertPt = NewCall->getInsertionPointAfterDef();
       assert(InsertPt && "No place to insert cast");
-      InsertNewInstBefore(NC, *InsertPt);
+      InsertNewInstBefore(NC, InsertPt->getIterator());
       Worklist.pushUsersToWorkList(*Caller);
     } else {
       NV = PoisonValue::get(Caller->getType());

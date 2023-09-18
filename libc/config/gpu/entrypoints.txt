@@ -1,4 +1,7 @@
 set(TARGET_LIBC_ENTRYPOINTS
+    # assert.h entrypoints
+    libc.src.assert.__assert_fail
+
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
@@ -55,9 +58,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.atoll
     libc.src.stdlib.div
     libc.src.stdlib.labs
+    libc.src.stdlib.bsearch
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
@@ -65,11 +71,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
-
-    # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
+    libc.src.stdlib.abort
 
     # Only implemented in the test suite
     libc.src.stdlib.malloc
@@ -81,11 +86,22 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.errno
 
     # stdio.h entrypoints
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.clearerr
     libc.src.stdio.puts
-    libc.src.stdio.fputs
-    libc.src.stdio.fread
-    libc.src.stdio.fclose
     libc.src.stdio.fopen
+    libc.src.stdio.fclose
+    libc.src.stdio.fread
+    libc.src.stdio.fputs
+    libc.src.stdio.fwrite
+    libc.src.stdio.fputc
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
+    libc.src.stdio.fgets
+    libc.src.stdio.fgetc
+    libc.src.stdio.getc
+    libc.src.stdio.getchar
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr
@@ -95,6 +111,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
+
+    # time.h entrypoints
+    libc.src.time.clock
+    libc.src.time.nanosleep
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_reset

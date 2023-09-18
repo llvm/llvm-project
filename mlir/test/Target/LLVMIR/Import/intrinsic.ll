@@ -17,9 +17,9 @@ define void @fmuladd_test(float %0, float %1, <8 x float> %2, ptr %3) {
 
 ; CHECK-LABEL:  llvm.func @fpclass_test
 define void @fpclass_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 0 : i32}> : (f32) -> i1
+  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 0 : i32}> : (f32) -> i1
   %3 = call i1 @llvm.is.fpclass.f32(float %0, i32 0)
-  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 1 : i32}> : (vector<8xf32>) -> vector<8xi1>
+  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 1 : i32}> : (vector<8xf32>) -> vector<8xi1>
   %4 = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> %1, i32 1)
   ret void
 }
@@ -701,7 +701,7 @@ define void @coro_suspend(i32 %0, i1 %1, ptr %2) {
 ; CHECK-LABEL:  llvm.func @coro_end
 define void @coro_end(ptr %0, i1 %1) {
   ; CHECK:  llvm.intr.coro.end
-  call i1 @llvm.coro.end(ptr %0, i1 %1)
+  call i1 @llvm.coro.end(ptr %0, i1 %1, token none)
   ret void
 }
 
@@ -731,14 +731,18 @@ define void @eh_typeid_for(ptr %0) {
 ; CHECK-LABEL:  llvm.func @stack_save() {
 define void @stack_save() {
   ; CHECK: llvm.intr.stacksave : !llvm.ptr
-  %1 = call ptr @llvm.stacksave()
+  %1 = call ptr @llvm.stacksave.p0()
+  ; CHECK: llvm.intr.stacksave : !llvm.ptr<1>
+  %2 = call ptr addrspace(1) @llvm.stacksave.p1()
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @stack_restore
-define void @stack_restore(ptr %0) {
-  ; CHECK: llvm.intr.stackrestore %{{.*}}
-  call void @llvm.stackrestore(ptr %0)
+define void @stack_restore(ptr %0, ptr addrspace(1) %1) {
+  ; CHECK: llvm.intr.stackrestore %{{.*}} : !llvm.ptr
+  call void @llvm.stackrestore.p0(ptr %0)
+  ; CHECK: llvm.intr.stackrestore %{{.*}} : !llvm.ptr<1>
+  call void @llvm.stackrestore.p1(ptr addrspace(1) %1)
   ret void
 }
 
@@ -1017,12 +1021,14 @@ declare i64 @llvm.coro.align.i64()
 declare i32 @llvm.coro.align.i32()
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
 declare i32 @llvm.eh.typeid.for(ptr)
-declare ptr @llvm.stacksave()
-declare void @llvm.stackrestore(ptr)
+declare ptr @llvm.stacksave.p0()
+declare ptr addrspace(1) @llvm.stacksave.p1()
+declare void @llvm.stackrestore.p0(ptr)
+declare void @llvm.stackrestore.p1(ptr addrspace(1))
 declare void @llvm.va_start(ptr)
 declare void @llvm.va_copy(ptr, ptr)
 declare void @llvm.va_end(ptr)

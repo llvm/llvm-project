@@ -64,7 +64,16 @@ private:
   std::string StandardFormatString;
 
   /// Casts to be used to wrap arguments to retain printf compatibility.
-  std::vector<std::tuple<const Expr *, std::string>> ArgFixes;
+  struct ArgumentFix {
+    unsigned ArgIndex;
+    std::string Fix;
+
+    // We currently need this for emplace_back. Roll on C++20.
+    explicit ArgumentFix(unsigned ArgIndex, std::string Fix)
+        : ArgIndex(ArgIndex), Fix(std::move(Fix)) {}
+  };
+
+  std::vector<ArgumentFix> ArgFixes;
   std::vector<clang::ast_matchers::BoundNodes> ArgCStrRemovals;
 
   // Argument rotations to cope with the fact that std::print puts the value to
@@ -77,7 +86,7 @@ private:
   void emitAlternativeForm(const PrintfSpecifier &FS, std::string &FormatSpec);
   void emitFieldWidth(const PrintfSpecifier &FS, std::string &FormatSpec);
   void emitPrecision(const PrintfSpecifier &FS, std::string &FormatSpec);
-  void emitStringArgument(const Expr *Arg);
+  void emitStringArgument(unsigned ArgIndex, const Expr *Arg);
   bool emitIntegerArgument(ConversionSpecifier::Kind ArgKind, const Expr *Arg,
                            unsigned ArgIndex, std::string &FormatSpec);
 

@@ -196,7 +196,6 @@ void f(const C& c) {
 
 }
 
-// rdar://problem/9355931
 namespace test6 {
   struct A { A(); A(int); };
 

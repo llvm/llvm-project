@@ -144,11 +144,11 @@ define <5 x float> @sin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    str d12, [sp, #-48]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov s10, s2
+; CHECK-NEXT:    fmov s11, s1
 ; CHECK-NEXT:    stp d9, d8, [sp, #24] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov s8, s4
-; CHECK-NEXT:    str x30, [sp, #40] // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov s9, s3
-; CHECK-NEXT:    fmov s11, s1
+; CHECK-NEXT:    str x30, [sp, #40] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s12, s0
 ; CHECK-NEXT:    fmov s0, s11
@@ -164,12 +164,12 @@ define <5 x float> @sin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s1, s11
 ; CHECK-NEXT:    fmov s2, s10
-; CHECK-NEXT:    fmov s3, s9
 ; CHECK-NEXT:    ldr x30, [sp, #40] // 8-byte Folded Reload
+; CHECK-NEXT:    fmov s3, s9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #24] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov s4, s0
 ; CHECK-NEXT:    fmov s0, s12
-; CHECK-NEXT:    ldp d11, d10, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr d12, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %r = call <5 x float> @llvm.sin.v5f32(<5 x float> %x)
@@ -182,11 +182,11 @@ define <6 x float> @sin_v6f32(<6 x float> %x) nounwind {
 ; CHECK-NEXT:    stp d13, d12, [sp, #-64]! // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov s10, s3
+; CHECK-NEXT:    fmov s11, s2
 ; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov s8, s5
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov s9, s4
-; CHECK-NEXT:    fmov s11, s2
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov s12, s1
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s13, s0
@@ -206,12 +206,12 @@ define <6 x float> @sin_v6f32(<6 x float> %x) nounwind {
 ; CHECK-NEXT:    bl sinf
 ; CHECK-NEXT:    fmov s2, s11
 ; CHECK-NEXT:    fmov s3, s10
-; CHECK-NEXT:    fmov s4, s9
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    fmov s4, s9
 ; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov s5, s0
 ; CHECK-NEXT:    fmov s0, s13
-; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov s1, s12
 ; CHECK-NEXT:    ldp d13, d12, [sp], #64 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -225,8 +225,8 @@ define <3 x double> @sin_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    fmov d8, d2
-; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov d9, d1
+; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    fmov d10, d0
 ; CHECK-NEXT:    fmov d0, d9
@@ -235,8 +235,8 @@ define <3 x double> @sin_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    bl sin
 ; CHECK-NEXT:    fmov d1, d9
-; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #8] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #24] // 8-byte Folded Reload
 ; CHECK-NEXT:    fmov d2, d0
 ; CHECK-NEXT:    fmov d0, d10
 ; CHECK-NEXT:    ldr d10, [sp], #32 // 8-byte Folded Reload

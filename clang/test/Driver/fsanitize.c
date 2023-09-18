@@ -548,8 +548,8 @@
 // RUN: %clang --target=armv7-apple-ios7 -miphoneos-version-min=7.0 -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-IOS
 // CHECK-ASAN-IOS: -fsanitize=address
 
-// RUN %clang --target=i386-pc-openbsd -fsanitize=undefined %s -### 2>&1 | FileCheck --check-prefix=CHECK-UBSAN-OPENBSD
-// CHECK-UBSAN-OPENBSD: -fsanitize=undefined
+// RUN: %clang --target=i386-pc-openbsd -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-OPENBSD
+// CHECK-UBSAN-OPENBSD: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|function|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|vptr|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){19}"}}
 
 // RUN: not %clang --target=i386-pc-openbsd -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-OPENBSD
 // CHECK-ASAN-OPENBSD: unsupported option '-fsanitize=address' for target 'i386-pc-openbsd'
@@ -705,7 +705,6 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=safe-stack -fstack-protector-all -### %s 2>&1 | FileCheck %s -check-prefix=SP
 // RUN: %clang --target=arm-linux-androideabi -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
 // RUN: %clang --target=aarch64-linux-android -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
-// RUN: %clang --target=i386-contiki-unknown -fsanitize=safe-stack -### %s 2>&1 | FileCheck %s -check-prefix=NO-SP
 // NO-SP-NOT: stack-protector
 // NO-SP: "-fsanitize=safe-stack"
 // SP-ASAN: error: invalid argument '-fsanitize=safe-stack' not allowed with '-fsanitize=address'
@@ -716,10 +715,6 @@
 // RUN: %clang --target=powerpc64-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
 // RUN: %clang --target=powerpc64le-unknown-linux-gnu -fsanitize=memory %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-SANM
 // CHECK-SANM: "-fsanitize=memory"
-
-// RUN: %clang --target=aarch64-unknown-cloudabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-CLOUDABI
-// RUN: %clang --target=x86_64-unknown-cloudabi -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-CLOUDABI
-// SAFESTACK-CLOUDABI: "-fsanitize=safe-stack"
 
 // RUN: %clang --target=x86_64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
 // RUN: %clang --target=aarch64--freebsd -fsanitize=kernel-address %s -### 2>&1 | FileCheck %s -check-prefix=KERNEL-ADDRESS-FREEBSD
@@ -971,3 +966,17 @@
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=undefined,function -mcmodel=large %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-CODE-MODEL
 // CHECK-UBSAN-FUNCTION-CODE-MODEL: error: invalid argument '-fsanitize=function' only allowed with '-mcmodel=small'
+
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=undefined -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI
+// RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function -fsanitize=kcfi %s -### 2>&1 | FileCheck %s  --check-prefix=CHECK-UBSAN-KCFI --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: %clang --target=x86_64-sie-ps5 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
+
+// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION
+// RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI
+// RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
+
+// CHECK-UBSAN-KCFI-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
+// CHECK-UBSAN-FUNCTION-DAG: error: invalid argument '-fsanitize=function' not allowed with {{('x86_64-sie-ps5'|'armv6t2-unknown-unknown-eabi')}}
+// CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}

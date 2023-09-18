@@ -455,27 +455,28 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
                                  const SIRegisterInfo &TRI,
                                  SIMachineFunctionInfo &Info) {
   // FIXME: How should these inputs interact with inreg / custom SGPR inputs?
-  if (Info.hasPrivateSegmentBuffer()) {
+  const GCNUserSGPRUsageInfo &UserSGPRInfo = Info.getUserSGPRInfo();
+  if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     Register PrivateSegmentBufferReg = Info.addPrivateSegmentBuffer(TRI);
     MF.addLiveIn(PrivateSegmentBufferReg, &AMDGPU::SGPR_128RegClass);
     CCInfo.AllocateReg(PrivateSegmentBufferReg);
   }
 
-  if (Info.hasDispatchPtr()) {
+  if (UserSGPRInfo.hasDispatchPtr()) {
     Register DispatchPtrReg = Info.addDispatchPtr(TRI);
     MF.addLiveIn(DispatchPtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
   const Module *M = MF.getFunction().getParent();
-  if (Info.hasQueuePtr() &&
+  if (UserSGPRInfo.hasQueuePtr() &&
       AMDGPU::getCodeObjectVersion(*M) < AMDGPU::AMDHSA_COV5) {
     Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
   }
 
-  if (Info.hasKernargSegmentPtr()) {
+  if (UserSGPRInfo.hasKernargSegmentPtr()) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
     Register InputPtrReg = Info.addKernargSegmentPtr(TRI);
     const LLT P4 = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
@@ -486,13 +487,13 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(InputPtrReg);
   }
 
-  if (Info.hasDispatchID()) {
+  if (UserSGPRInfo.hasDispatchID()) {
     Register DispatchIDReg = Info.addDispatchID(TRI);
     MF.addLiveIn(DispatchIDReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(DispatchIDReg);
   }
 
-  if (Info.hasFlatScratchInit()) {
+  if (UserSGPRInfo.hasFlatScratchInit()) {
     Register FlatScratchInitReg = Info.addFlatScratchInit(TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(FlatScratchInitReg);
@@ -597,15 +598,16 @@ bool AMDGPUCallLowering::lowerFormalArguments(
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, F.isVarArg(), MF, ArgLocs, F.getContext());
+  const GCNUserSGPRUsageInfo &UserSGPRInfo = Info->getUserSGPRInfo();
 
-  if (Info->hasImplicitBufferPtr()) {
+  if (UserSGPRInfo.hasImplicitBufferPtr()) {
     Register ImplicitBufferPtrReg = Info->addImplicitBufferPtr(*TRI);
     MF.addLiveIn(ImplicitBufferPtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(ImplicitBufferPtrReg);
   }
 
   // FIXME: This probably isn't defined for mesa
-  if (Info->hasFlatScratchInit() && !Subtarget.isAmdPalOS()) {
+  if (UserSGPRInfo.hasFlatScratchInit() && !Subtarget.isAmdPalOS()) {
     Register FlatScratchInitReg = Info->addFlatScratchInit(*TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(FlatScratchInitReg);
@@ -1355,6 +1357,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.addDef(TRI->getReturnAddressReg(MF));
+
+  if (!Info.IsConvergent)
+    MIB.setMIFlag(MachineInstr::NoConvergent);
 
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;

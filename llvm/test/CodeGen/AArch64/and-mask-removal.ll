@@ -22,8 +22,8 @@ define void @new_position(i32 %pos) {
 ; CHECK-SD-NEXT:    adrp x9, _next_string@GOTPAGE
 ; CHECK-SD-NEXT:    adrp x10, _string_number@GOTPAGE
 ; CHECK-SD-NEXT:    ldr x9, [x9, _next_string@GOTPAGEOFF]
-; CHECK-SD-NEXT:    ldr w9, [x9]
 ; CHECK-SD-NEXT:    ldr x10, [x10, _string_number@GOTPAGEOFF]
+; CHECK-SD-NEXT:    ldr w9, [x9]
 ; CHECK-SD-NEXT:    str w9, [x10, x8, lsl #2]
 ; CHECK-SD-NEXT:  LBB0_2: ; %if.end
 ; CHECK-SD-NEXT:    ret
@@ -40,8 +40,8 @@ define void @new_position(i32 %pos) {
 ; CHECK-GI-NEXT:    adrp x8, _next_string@GOTPAGE
 ; CHECK-GI-NEXT:    adrp x9, _string_number@GOTPAGE
 ; CHECK-GI-NEXT:    ldr x8, [x8, _next_string@GOTPAGEOFF]
-; CHECK-GI-NEXT:    ldr w8, [x8]
 ; CHECK-GI-NEXT:    ldr x9, [x9, _string_number@GOTPAGEOFF]
+; CHECK-GI-NEXT:    ldr w8, [x8]
 ; CHECK-GI-NEXT:    str w8, [x9, w0, sxtw #2]
 ; CHECK-GI-NEXT:  LBB0_2: ; %if.end
 ; CHECK-GI-NEXT:    ret
@@ -270,15 +270,15 @@ ret_true:
 define zeroext i1 @test16_0(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_0:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #5086
+; CHECK-SD-NEXT:    mov w8, #5086 ; =0x13de
 ; CHECK-SD-NEXT:    cmp w0, w8
 ; CHECK-SD-NEXT:    cset w0, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test16_0:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #18547
-; CHECK-GI-NEXT:    mov w9, #23633
+; CHECK-GI-NEXT:    mov w8, #18547 ; =0x4873
+; CHECK-GI-NEXT:    mov w9, #23633 ; =0x5c51
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w9, w8, uxth
 ; CHECK-GI-NEXT:    cset w0, ne
@@ -296,8 +296,8 @@ ret_true:
 define zeroext i1 @test16_2(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_2:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #16882
-; CHECK-SD-NEXT:    mov w9, #40700
+; CHECK-SD-NEXT:    mov w8, #16882 ; =0x41f2
+; CHECK-SD-NEXT:    mov w9, #40700 ; =0x9efc
 ; CHECK-SD-NEXT:    add w8, w0, w8
 ; CHECK-SD-NEXT:    cmp w9, w8, uxth
 ; CHECK-SD-NEXT:    cset w0, hi
@@ -305,8 +305,8 @@ define zeroext i1 @test16_2(i16 zeroext %x)  align 2 {
 ;
 ; CHECK-GI-LABEL: test16_2:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #16882
-; CHECK-GI-NEXT:    mov w9, #40699
+; CHECK-GI-NEXT:    mov w8, #16882 ; =0x41f2
+; CHECK-GI-NEXT:    mov w9, #40699 ; =0x9efb
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w9, w8, uxth
 ; CHECK-GI-NEXT:    cset w0, hs
@@ -324,15 +324,15 @@ ret_true:
 define zeroext i1 @test16_3(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_3:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #53200
+; CHECK-SD-NEXT:    mov w8, #53200 ; =0xcfd0
 ; CHECK-SD-NEXT:    cmp w0, w8
 ; CHECK-SD-NEXT:    cset w0, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test16_3:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #29283
-; CHECK-GI-NEXT:    mov w9, #16947
+; CHECK-GI-NEXT:    mov w8, #29283 ; =0x7263
+; CHECK-GI-NEXT:    mov w9, #16947 ; =0x4233
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w9, w8, uxth
 ; CHECK-GI-NEXT:    cset w0, ne
@@ -350,8 +350,8 @@ ret_true:
 define zeroext i1 @test16_4(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_4:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #29985
-; CHECK-SD-NEXT:    mov w9, #15676
+; CHECK-SD-NEXT:    mov w8, #29985 ; =0x7521
+; CHECK-SD-NEXT:    mov w9, #15676 ; =0x3d3c
 ; CHECK-SD-NEXT:    add w8, w0, w8
 ; CHECK-SD-NEXT:    cmp w9, w8, uxth
 ; CHECK-SD-NEXT:    cset w0, lo
@@ -359,8 +359,8 @@ define zeroext i1 @test16_4(i16 zeroext %x)  align 2 {
 ;
 ; CHECK-GI-LABEL: test16_4:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #29985
-; CHECK-GI-NEXT:    mov w9, #15677
+; CHECK-GI-NEXT:    mov w8, #29985 ; =0x7521
+; CHECK-GI-NEXT:    mov w9, #15677 ; =0x3d3d
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w9, w8, uxth
 ; CHECK-GI-NEXT:    cset w0, ls
@@ -378,15 +378,15 @@ ret_true:
 define zeroext i1 @test16_5(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_5:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #23282
+; CHECK-SD-NEXT:    mov w8, #23282 ; =0x5af2
 ; CHECK-SD-NEXT:    cmp w0, w8
 ; CHECK-SD-NEXT:    cset w0, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test16_5:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #-25214
-; CHECK-GI-NEXT:    mov w9, #63604
+; CHECK-GI-NEXT:    mov w8, #-25214 ; =0xffff9d82
+; CHECK-GI-NEXT:    mov w9, #63604 ; =0xf874
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w9, w8, uxth
 ; CHECK-GI-NEXT:    cset w0, ne
@@ -404,8 +404,8 @@ ret_true:
 define zeroext i1 @test16_6(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_6:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #-32194
-; CHECK-SD-NEXT:    mov w9, #24320
+; CHECK-SD-NEXT:    mov w8, #-32194 ; =0xffff823e
+; CHECK-SD-NEXT:    mov w9, #24320 ; =0x5f00
 ; CHECK-SD-NEXT:    add w8, w0, w8
 ; CHECK-SD-NEXT:    cmp w8, w9
 ; CHECK-SD-NEXT:    cset w0, hi
@@ -413,8 +413,8 @@ define zeroext i1 @test16_6(i16 zeroext %x)  align 2 {
 ;
 ; CHECK-GI-LABEL: test16_6:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #-32194
-; CHECK-GI-NEXT:    mov w9, #24321
+; CHECK-GI-NEXT:    mov w8, #-32194 ; =0xffff823e
+; CHECK-GI-NEXT:    mov w9, #24321 ; =0x5f01
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w8, w9
 ; CHECK-GI-NEXT:    cset w0, hs
@@ -432,8 +432,8 @@ ret_true:
 define zeroext i1 @test16_7(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_7:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #9272
-; CHECK-SD-NEXT:    mov w9, #22619
+; CHECK-SD-NEXT:    mov w8, #9272 ; =0x2438
+; CHECK-SD-NEXT:    mov w9, #22619 ; =0x585b
 ; CHECK-SD-NEXT:    add w8, w0, w8
 ; CHECK-SD-NEXT:    cmp w9, w8, uxth
 ; CHECK-SD-NEXT:    cset w0, lo
@@ -441,8 +441,8 @@ define zeroext i1 @test16_7(i16 zeroext %x)  align 2 {
 ;
 ; CHECK-GI-LABEL: test16_7:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    mov w8, #9272
-; CHECK-GI-NEXT:    mov w9, #22620
+; CHECK-GI-NEXT:    mov w8, #9272 ; =0x2438
+; CHECK-GI-NEXT:    mov w9, #22620 ; =0x585c
 ; CHECK-GI-NEXT:    add w8, w0, w8
 ; CHECK-GI-NEXT:    cmp w9, w8, uxth
 ; CHECK-GI-NEXT:    cset w0, ls
@@ -460,16 +460,16 @@ ret_true:
 define zeroext i1 @test16_8(i16 zeroext %x)  align 2 {
 ; CHECK-SD-LABEL: test16_8:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    mov w8, #4919
+; CHECK-SD-NEXT:    mov w8, #4919 ; =0x1337
 ; CHECK-SD-NEXT:    cmp w0, w8
 ; CHECK-SD-NEXT:    cset w0, ne
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test16_8:
 ; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    add w8, w0, #1787
-; CHECK-GI-NEXT:    mov w9, #6706
-; CHECK-GI-NEXT:    cmp w9, w8, uxth
+; CHECK-GI-NEXT:    mov w8, #6706 ; =0x1a32
+; CHECK-GI-NEXT:    add w9, w0, #1787
+; CHECK-GI-NEXT:    cmp w8, w9, uxth
 ; CHECK-GI-NEXT:    cset w0, ne
 ; CHECK-GI-NEXT:    ret
 entry:

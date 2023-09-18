@@ -275,8 +275,9 @@ entry:
 define i64 @extendedLeftShiftintToint64By4(i32 %a) nounwind readnone ssp {
 ; CHECK-LABEL: extendedLeftShiftintToint64By4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    add w8, w0, #1
-; CHECK-NEXT:    sbfiz x0, x8, #4, #32
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    sbfiz x8, x0, #4, #32
+; CHECK-NEXT:    add x0, x8, #16
 ; CHECK-NEXT:    ret
 entry:
   %inc = add nsw i32 %a, 1

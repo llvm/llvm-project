@@ -42,6 +42,7 @@ static OpFoldResult getCollapsedOutputDimFromInputShape(
     OpBuilder &builder, Location loc, int64_t dimIndex, Value src,
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociationMap) {
   if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
+    // Static dimension: return Attribute.
     return builder.getIndexAttr(dstStaticShape[dimIndex]);
   }
   AffineMap map = reassociationMap[dimIndex];
@@ -55,9 +56,12 @@ static OpFoldResult getCollapsedOutputDimFromInputShape(
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
   }
-  return affine::makeComposedFoldedAffineApply(
-      builder, loc, AffineMap::get(0, endPos - startPos + 1, expr),
-      dynamicDims);
+
+  // Dynamic dimension: return Value.
+  return affine::makeComposedAffineApply(
+             builder, loc, AffineMap::get(0, endPos - startPos + 1, expr),
+             dynamicDims)
+      ->getResult(0);
 }
 
 /// Given the `src` of a collapsing reshape op and its reassociation maps,
@@ -79,6 +83,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation,
     llvm::DenseMap<int64_t, int64_t> &expandedDimToCollapsedDim) {
   if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
+    // Static dimension: return Attribute.
     return builder.getIndexAttr(dstStaticShape[dimIndex]);
   }
   unsigned sourceDimPos = expandedDimToCollapsedDim[dimIndex];
@@ -104,11 +109,15 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
   }
   OpFoldResult sourceDim =
       builder.create<tensor::DimOp>(loc, src, sourceDimPos).getResult();
-  return affine::makeComposedFoldedAffineApply(
-      builder, loc,
-      AffineMap::get(
-          0, 1, builder.getAffineSymbolExpr(0).floorDiv(linearizedStaticDim)),
-      sourceDim);
+
+  // Dynamic dimension: return Value.
+  return affine::makeComposedAffineApply(
+             builder, loc,
+             AffineMap::get(
+                 0, 1,
+                 builder.getAffineSymbolExpr(0).floorDiv(linearizedStaticDim)),
+             sourceDim)
+      ->getResult(0);
 }
 
 /// Given the `src` of an expanding reshape op, the reassociation maps and the

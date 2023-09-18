@@ -54,9 +54,9 @@ struct SubtargetFeatureInfo {
   ///
   /// This version emits the bit index for the feature and can therefore support
   /// more than 64 feature bits.
-  static void
-  emitSubtargetFeatureBitEnumeration(SubtargetFeatureInfoMap &SubtargetFeatures,
-                                     raw_ostream &OS);
+  static void emitSubtargetFeatureBitEnumeration(
+      const SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS,
+      const std::map<std::string, unsigned> *HwModes = nullptr);
 
   static void emitNameTable(SubtargetFeatureInfoMap &SubtargetFeatures,
                             raw_ostream &OS);
@@ -75,11 +75,12 @@ struct SubtargetFeatureInfo {
   /// \param SubtargetFeatures A map of TableGen records to the
   ///                          SubtargetFeatureInfo equivalent.
   /// \param ExtraParams Additional arguments to the generated function.
-  static void
-  emitComputeAvailableFeatures(StringRef TargetName, StringRef ClassName,
-                               StringRef FuncName,
-                               SubtargetFeatureInfoMap &SubtargetFeatures,
-                               raw_ostream &OS, StringRef ExtraParams = "");
+  /// \param HwModes Map of HwMode conditions to check.
+  static void emitComputeAvailableFeatures(
+      StringRef TargetName, StringRef ClassName, StringRef FuncName,
+      const SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS,
+      StringRef ExtraParams = "",
+      const std::map<std::string, unsigned> *HwModes = nullptr);
 
   /// Emit the function to compute the list of available features given a
   /// subtarget.

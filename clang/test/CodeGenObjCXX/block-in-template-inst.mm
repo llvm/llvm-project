@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm-only -std=c++11 -fblocks -o - -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 %s
-// rdar://9362021
 
 @class DYFuture;
 @interface NSCache

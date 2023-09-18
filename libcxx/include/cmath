@@ -569,9 +569,9 @@ hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT
 }
 #endif
 
-template <class _A1>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 {
 #if __has_builtin(__builtin_isnan)
@@ -581,17 +581,17 @@ __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 #endif
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 {
     return std::isnan(__lcpp_x);
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 {
 #if __has_builtin(__builtin_isinf)
@@ -601,17 +601,17 @@ __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 #endif
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 {
     return std::isinf(__lcpp_x);
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 {
 #if __has_builtin(__builtin_isfinite)
@@ -621,9 +621,9 @@ __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 #endif
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 {
     return __builtin_isfinite(__lcpp_x);
@@ -642,10 +642,9 @@ __constexpr_copysign(long double __x, long double __y) _NOEXCEPT {
     return __builtin_copysignl(__x, __y);
 }
 
-template <class _A1, class _A2>
+template <class _A1, class _A2, __enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI
-    typename std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value,
-                                std::__promote<_A1, _A2> >::type
+    typename __promote<_A1, _A2>::type
     __constexpr_copysign(_A1 __x, _A2 __y) _NOEXCEPT {
     typedef typename std::__promote<_A1, _A2>::type __result_type;
     static_assert((!(std::_IsSame<_A1, __result_type>::value && std::_IsSame<_A2, __result_type>::value)), "");

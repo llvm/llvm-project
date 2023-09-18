@@ -19,54 +19,40 @@
 #include "min_allocator.h"
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected)
-{
-    if (pos <= sv.size())
-    {
-        s.assign(sv, pos, n);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+TEST_CONSTEXPR_CXX20 void test(S s, SV sv, typename S::size_type pos, typename S::size_type n, S expected) {
+  if (pos <= sv.size()) {
+    s.assign(sv, pos, n);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.assign(sv, pos, n);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > sv.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.assign(sv, pos, n);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > sv.size());
     }
+  }
 #endif
 }
 
 template <class S, class SV>
-TEST_CONSTEXPR_CXX20 void
-test_npos(S s, SV sv, typename S::size_type pos, S expected)
-{
-    if (pos <= sv.size())
-    {
-        s.assign(sv, pos);
-        LIBCPP_ASSERT(s.__invariants());
-        assert(s == expected);
-    }
+TEST_CONSTEXPR_CXX20 void test_npos(S s, SV sv, typename S::size_type pos, S expected) {
+  if (pos <= sv.size()) {
+    s.assign(sv, pos);
+    LIBCPP_ASSERT(s.__invariants());
+    assert(s == expected);
+  }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else if (!TEST_IS_CONSTANT_EVALUATED)
-    {
-        try
-        {
-            s.assign(sv, pos);
-            assert(false);
-        }
-        catch (std::out_of_range&)
-        {
-            assert(pos > sv.size());
-        }
+  else if (!TEST_IS_CONSTANT_EVALUATED) {
+    try {
+      s.assign(sv, pos);
+      assert(false);
+    } catch (std::out_of_range&) {
+      assert(pos > sv.size());
     }
+  }
 #endif
 }
 
@@ -92,8 +78,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 
   test(S("12345678901234567890"), SV(), 0, 0, S());
   test(S("12345678901234567890"), SV("12345"), 1, 3, S("234"));
-  test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
-        S("6789012345"));
+  test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10, S("6789012345"));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -115,11 +100,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   {
-    std::string s = "ABCD";
+    std::string s       = "ABCD";
     std::string_view sv = "EFGH";
-    char arr[] = "IJKL";
+    char arr[]          = "IJKL";
 
-    s.assign("CDEF", 0);    // calls assign(const char *, len)
+    s.assign("CDEF", 0); // calls assign(const char *, len)
     assert(s == "");
     s.clear();
 
@@ -127,29 +112,29 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s == "QRST");
     s.clear();
 
-    s.assign(sv, 0);  // calls assign(T, pos, npos)
+    s.assign(sv, 0); // calls assign(T, pos, npos)
     assert(s == sv);
     s.clear();
 
-    s.assign(sv, 0, std::string::npos);   // calls assign(T, pos, npos)
+    s.assign(sv, 0, std::string::npos); // calls assign(T, pos, npos)
     assert(s == sv);
     s.clear();
 
-    s.assign(arr, 0);     // calls assign(const char *, len)
+    s.assign(arr, 0); // calls assign(const char *, len)
     assert(s == "");
     s.clear();
 
-    s.assign(arr, 0, std::string::npos);    // calls assign(string("IJKL"), pos, npos)
+    s.assign(arr, 0, std::string::npos); // calls assign(string("IJKL"), pos, npos)
     assert(s == "IJKL");
     s.clear();
 
-    s.assign(arr, 0);     // calls assign(const char *, len)
+    s.assign(arr, 0); // calls assign(const char *, len)
     assert(s == "");
     s.clear();
   }
 
   {
-    std::string s = "ABCD";
+    std::string s       = "ABCD";
     std::string_view sv = s;
     s.assign(sv);
     assert(s == "ABCD");
@@ -160,7 +145,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   {
-    std::string s = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::string s       = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     std::string_view sv = s;
     s.assign(sv);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -172,8 +157,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

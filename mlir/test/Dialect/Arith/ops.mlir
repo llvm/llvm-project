@@ -577,30 +577,6 @@ func.func @test_remf_scalable_vector(%arg0 : vector<[8]xf64>, %arg1 : vector<[8]
   return %0 : vector<[8]xf64>
 }
 
-// CHECK-LABEL: test_is_nan
-func.func @test_is_nan(%arg0 : f32) -> i1 {
-  %0 = arith.is_nan %arg0 : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: test_is_nan_vector
-func.func @test_is_nan_vector(%arg0 : vector<2x2xf32>) -> vector<2x2xi1> {
-  %0 = arith.is_nan %arg0 : vector<2x2xf32>
-  func.return %0 : vector<2x2xi1>
-}
-
-// CHECK-LABEL: test_is_inf
-func.func @test_is_inf(%arg0 : f32) -> i1 {
-  %0 = arith.is_inf %arg0 : f32
-  func.return %0 : i1
-}
-
-// CHECK-LABEL: test_is_inf_vector
-func.func @test_is_inf_vector(%arg0 : vector<2x2xf32>) -> vector<2x2xi1> {
-  %0 = arith.is_inf %arg0 : vector<2x2xf32>
-  func.return %0 : vector<2x2xi1>
-}
-
 // CHECK-LABEL: test_extui
 func.func @test_extui(%arg0 : i32) -> i64 {
   %0 = arith.extui %arg0 : i32 to i64
@@ -1095,9 +1071,12 @@ func.func @maximum(%v1: vector<4xf32>, %v2: vector<4xf32>,
                %sv1: vector<[4]xf32>, %sv2: vector<[4]xf32>,
                %f1: f32, %f2: f32,
                %i1: i32, %i2: i32) {
-  %max_vector = arith.maxf %v1, %v2 : vector<4xf32>
-  %max_scalable_vector = arith.maxf %sv1, %sv2 : vector<[4]xf32>
-  %max_float = arith.maxf %f1, %f2 : f32
+  %maximum_vector = arith.maximumf %v1, %v2 : vector<4xf32>
+  %maximum_scalable_vector = arith.maximumf %sv1, %sv2 : vector<[4]xf32>
+  %maximum_float = arith.maximumf %f1, %f2 : f32
+  %maxnum_vector = arith.maxnumf %v1, %v2 : vector<4xf32>
+  %maxnum_scalable_vector = arith.maxnumf %sv1, %sv2 : vector<[4]xf32>
+  %maxnum_float = arith.maxnumf %f1, %f2 : f32
   %max_signed = arith.maxsi %i1, %i2 : i32
   %max_unsigned = arith.maxui %i1, %i2 : i32
   return
@@ -1108,9 +1087,12 @@ func.func @minimum(%v1: vector<4xf32>, %v2: vector<4xf32>,
                %sv1: vector<[4]xf32>, %sv2: vector<[4]xf32>,
                %f1: f32, %f2: f32,
                %i1: i32, %i2: i32) {
-  %min_vector = arith.minf %v1, %v2 : vector<4xf32>
-  %min_scalable_vector = arith.minf %sv1, %sv2 : vector<[4]xf32>
-  %min_float = arith.minf %f1, %f2 : f32
+  %minimum_vector = arith.minimumf %v1, %v2 : vector<4xf32>
+  %minimum_scalable_vector = arith.minimumf %sv1, %sv2 : vector<[4]xf32>
+  %minimum_float = arith.minimumf %f1, %f2 : f32
+  %minnum_vector = arith.minnumf %v1, %v2 : vector<4xf32>
+  %minnum_scalable_vector = arith.minnumf %sv1, %sv2 : vector<[4]xf32>
+  %minnum_float = arith.minnumf %f1, %f2 : f32
   %min_signed = arith.minsi %i1, %i2 : i32
   %min_unsigned = arith.minui %i1, %i2 : i32
   return

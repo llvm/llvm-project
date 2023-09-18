@@ -23,7 +23,11 @@
 
 namespace llvm {
 class hash_code;
+class Triple;
+namespace opt {
+class ArgList;
 }
+} // namespace llvm
 
 namespace clang {
 

@@ -23,16 +23,33 @@ namespace llvm::jitlink::ppc64 {
 enum EdgeKind_ppc64 : Edge::Kind {
   Pointer64 = Edge::FirstRelocation,
   Pointer32,
+  Pointer16,
+  Pointer16DS,
+  Pointer16HA,
+  Pointer16HI,
+  Pointer16HIGH,
+  Pointer16HIGHA,
+  Pointer16HIGHER,
+  Pointer16HIGHERA,
+  Pointer16HIGHEST,
+  Pointer16HIGHESTA,
+  Pointer16LO,
+  Pointer16LODS,
+  Pointer14,
   Delta64,
   Delta34,
   Delta32,
   NegDelta32,
   Delta16,
   Delta16HA,
+  Delta16HI,
   Delta16LO,
-  TOCDelta16HA,
-  TOCDelta16LO,
+  TOC,
+  TOCDelta16,
   TOCDelta16DS,
+  TOCDelta16HA,
+  TOCDelta16HI,
+  TOCDelta16LO,
   TOCDelta16LODS,
   CallBranchDelta,
   // Need to restore r2 after the bl, suggesting the bl is followed by a nop.
@@ -80,25 +97,29 @@ inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
         isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
     // Skip save r2.
     Content = Content.slice(4);
+    size_t Offset = isLE ? 0 : 2;
     return PLTCallStubInfo{
         Content,
-        {{TOCDelta16HA, 0, 0}, {TOCDelta16LO, 4, 0}},
+        {{TOCDelta16HA, Offset, 0}, {TOCDelta16LO, Offset + 4, 0}},
     };
   }
   case LongBranchSaveR2: {
     ArrayRef<char> Content =
         isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
+    size_t Offset = isLE ? 4 : 6;
     return PLTCallStubInfo{
         Content,
-        {{TOCDelta16HA, 4, 0}, {TOCDelta16LO, 8, 0}},
+        {{TOCDelta16HA, Offset, 0}, {TOCDelta16LO, Offset + 4, 0}},
     };
   }
   case LongBranchNoTOC: {
     ArrayRef<char> Content = isLE ? PointerJumpStubNoTOCContent_little
                                   : PointerJumpStubNoTOCContent_big;
+    size_t Offset = isLE ? 16 : 18;
+    Edge::AddendT Addend = isLE ? 8 : 10;
     return PLTCallStubInfo{
         Content,
-        {{Delta16HA, 16, 8}, {Delta16LO, 20, 12}},
+        {{Delta16HA, Offset, Addend}, {Delta16LO, Offset + 4, Addend + 4}},
     };
   }
   }
@@ -183,9 +204,11 @@ public:
       if (isExternal) {
         E.setKind(ppc64::CallBranchDeltaRestoreTOC);
         this->StubKind = LongBranchSaveR2;
+        // FIXME: We assume the addend to the external target is zero. It's
+        // quite unusual that the addend of an external target to be non-zero as
+        // if we have known the layout of the external object.
         E.setTarget(this->getEntryForTarget(G, E.getTarget()));
-        // We previously set branching to local entry. Now reverse that
-        // operation.
+        // Addend to the stub is zero.
         E.setAddend(0);
       } else
         // TODO: There are cases a local function call need a call stub.
@@ -228,9 +251,19 @@ private:
 /// only.
 const char *getEdgeKindName(Edge::Kind K);
 
-inline static uint16_t ha16(uint64_t x) { return (x + 0x8000) >> 16; }
-
-inline static uint16_t lo16(uint64_t x) { return x & 0xffff; }
+inline static uint16_t ha(uint64_t x) { return (x + 0x8000) >> 16; }
+inline static uint64_t lo(uint64_t x) { return x & 0xffff; }
+inline static uint16_t hi(uint64_t x) { return x >> 16; }
+inline static uint64_t high(uint64_t x) { return (x >> 16) & 0xffff; }
+inline static uint64_t higha(uint64_t x) {
+  return ((x + 0x8000) >> 16) & 0xffff;
+}
+inline static uint64_t higher(uint64_t x) { return (x >> 32) & 0xffff; }
+inline static uint64_t highera(uint64_t x) {
+  return ((x + 0x8000) >> 32) & 0xffff;
+}
+inline static uint16_t highest(uint64_t x) { return x >> 48; }
+inline static uint16_t highesta(uint64_t x) { return (x + 0x8000) >> 48; }
 
 // Prefixed instruction introduced in ISAv3.1 consists of two 32-bit words,
 // prefix word and suffix word, i.e., prefixed_instruction = concat(prefix_word,
@@ -250,6 +283,63 @@ inline static void writePrefixedInstruction(char *Loc, uint64_t Inst) {
   constexpr bool isLE = Endianness == support::endianness::little;
   Inst = isLE ? (Inst << 32) | (Inst >> 32) : Inst;
   support::endian::write64<Endianness>(Loc, Inst);
+}
+
+template <support::endianness Endianness>
+inline Error relocateHalf16(char *FixupPtr, int64_t Value, Edge::Kind K) {
+  switch (K) {
+  case Delta16:
+  case Pointer16:
+  case TOCDelta16:
+    support::endian::write16<Endianness>(FixupPtr, Value);
+    break;
+  case Pointer16DS:
+  case TOCDelta16DS:
+    support::endian::write16<Endianness>(FixupPtr, Value & ~3);
+    break;
+  case Delta16HA:
+  case Pointer16HA:
+  case TOCDelta16HA:
+    support::endian::write16<Endianness>(FixupPtr, ha(Value));
+    break;
+  case Delta16HI:
+  case Pointer16HI:
+  case TOCDelta16HI:
+    support::endian::write16<Endianness>(FixupPtr, hi(Value));
+    break;
+  case Pointer16HIGH:
+    support::endian::write16<Endianness>(FixupPtr, high(Value));
+    break;
+  case Pointer16HIGHA:
+    support::endian::write16<Endianness>(FixupPtr, higha(Value));
+    break;
+  case Pointer16HIGHER:
+    support::endian::write16<Endianness>(FixupPtr, higher(Value));
+    break;
+  case Pointer16HIGHERA:
+    support::endian::write16<Endianness>(FixupPtr, highera(Value));
+    break;
+  case Pointer16HIGHEST:
+    support::endian::write16<Endianness>(FixupPtr, highest(Value));
+    break;
+  case Pointer16HIGHESTA:
+    support::endian::write16<Endianness>(FixupPtr, highesta(Value));
+    break;
+  case Delta16LO:
+  case Pointer16LO:
+  case TOCDelta16LO:
+    support::endian::write16<Endianness>(FixupPtr, lo(Value));
+    break;
+  case Pointer16LODS:
+  case TOCDelta16LODS:
+    support::endian::write16<Endianness>(FixupPtr, lo(Value) & ~3);
+    break;
+  default:
+    return make_error<JITLinkError>(
+        StringRef(getEdgeKindName(K)) +
+        " relocation does not write at half16 field");
+  }
+  return Error::success();
 }
 
 /// Apply fixup expression for edge to block content.
@@ -278,41 +368,60 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     support::endian::write64<Endianness>(FixupPtr, Value);
     break;
   }
+  case Delta16:
   case Delta16HA:
+  case Delta16HI:
   case Delta16LO: {
     int64_t Value = S + A - P;
     if (LLVM_UNLIKELY(!isInt<32>(Value))) {
       return makeTargetOutOfRangeError(G, B, E);
     }
-    if (K == Delta16LO)
-      support::endian::write16<Endianness>(FixupPtr, lo16(Value));
-    else
-      support::endian::write16<Endianness>(FixupPtr, ha16(Value));
-    break;
+    return relocateHalf16<Endianness>(FixupPtr, Value, K);
   }
-  case TOCDelta16HA:
-  case TOCDelta16LO: {
-    int64_t Value = S + A - TOCBase;
+  case TOC:
+    support::endian::write64<Endianness>(FixupPtr, TOCBase);
+    break;
+  case Pointer16:
+  case Pointer16DS:
+  case Pointer16HA:
+  case Pointer16HI:
+  case Pointer16HIGH:
+  case Pointer16HIGHA:
+  case Pointer16HIGHER:
+  case Pointer16HIGHERA:
+  case Pointer16HIGHEST:
+  case Pointer16HIGHESTA:
+  case Pointer16LO:
+  case Pointer16LODS: {
+    uint64_t Value = S + A;
     if (LLVM_UNLIKELY(!isInt<32>(Value))) {
       return makeTargetOutOfRangeError(G, B, E);
     }
-    if (K == TOCDelta16LO)
-      support::endian::write16<Endianness>(FixupPtr, lo16(Value));
-    else
-      support::endian::write16<Endianness>(FixupPtr, ha16(Value));
+    return relocateHalf16<Endianness>(FixupPtr, Value, K);
+  }
+  case Pointer14: {
+    static const uint32_t Low14Mask = 0xfffc;
+    uint64_t Value = S + A;
+    assert((Value & 3) == 0 && "Pointer14 requires 4-byte alignment");
+    if (LLVM_UNLIKELY(!isInt<16>(Value))) {
+      return makeTargetOutOfRangeError(G, B, E);
+    }
+    uint32_t Inst = support::endian::read32<Endianness>(FixupPtr);
+    support::endian::write32<Endianness>(FixupPtr, (Inst & ~Low14Mask) |
+                                                       (Value & Low14Mask));
     break;
   }
+  case TOCDelta16:
   case TOCDelta16DS:
+  case TOCDelta16HA:
+  case TOCDelta16HI:
+  case TOCDelta16LO:
   case TOCDelta16LODS: {
     int64_t Value = S + A - TOCBase;
     if (LLVM_UNLIKELY(!isInt<32>(Value))) {
       return makeTargetOutOfRangeError(G, B, E);
     }
-    if (K == TOCDelta16LODS)
-      support::endian::write16<Endianness>(FixupPtr, lo16(Value) & ~3);
-    else
-      support::endian::write16<Endianness>(FixupPtr, Value & ~3);
-    break;
+    return relocateHalf16<Endianness>(FixupPtr, Value, K);
   }
   case CallBranchDeltaRestoreTOC:
   case CallBranchDelta: {

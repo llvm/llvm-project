@@ -30,8 +30,8 @@ body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test
     ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
-    ; ALL: $al = COPY [[DEF]]
-    ; ALL: RET 0, implicit $al
+    ; ALL-NEXT: $al = COPY [[DEF]]
+    ; ALL-NEXT: RET 0, implicit $al
     %0(s8) = G_IMPLICIT_DEF
     $al = COPY %0(s8)
     RET 0, implicit $al
@@ -55,11 +55,13 @@ body:             |
     liveins: $edi
 
     ; ALL-LABEL: name: test2
-    ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY $dil
-    ; ALL: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
-    ; ALL: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY]], [[DEF]], implicit-def $eflags
-    ; ALL: $al = COPY [[ADD8rr]]
-    ; ALL: RET 0, implicit $al
+    ; ALL: liveins: $edi
+    ; ALL-NEXT: {{  $}}
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:gr8 = COPY $dil
+    ; ALL-NEXT: [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
+    ; ALL-NEXT: [[ADD8rr:%[0-9]+]]:gr8 = ADD8rr [[COPY]], [[DEF]], implicit-def dead $eflags
+    ; ALL-NEXT: $al = COPY [[ADD8rr]]
+    ; ALL-NEXT: RET 0, implicit $al
     %0(s8) = COPY $dil
     %1(s8) = G_IMPLICIT_DEF
     %2(s8) = G_ADD %0, %1
@@ -79,8 +81,8 @@ body:             |
   bb.1 (%ir-block.0):
     ; ALL-LABEL: name: test3
     ; ALL: [[DEF:%[0-9]+]]:vr128 = IMPLICIT_DEF
-    ; ALL: $xmm0 = COPY [[DEF]]
-    ; ALL: RET 0, implicit $xmm0
+    ; ALL-NEXT: $xmm0 = COPY [[DEF]]
+    ; ALL-NEXT: RET 0, implicit $xmm0
     %1:vecr(s128) = G_IMPLICIT_DEF
     $xmm0 = COPY %1:vecr(s128)
     RET 0, implicit $xmm0

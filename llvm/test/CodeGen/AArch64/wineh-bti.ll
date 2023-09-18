@@ -43,7 +43,7 @@ lbl4:
 
 ; CHECK:      .LBB0_2:
 ; CHECK-NEXT: hint #36
-; CHECK-NEXT: mov w0, #1
+; CHECK: mov w0, #1
 
 ; CHECK:      .LBB0_3:
 ; CHECK-NEXT: hint #36

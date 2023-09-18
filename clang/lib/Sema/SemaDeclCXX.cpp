@@ -20,6 +20,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -37,11 +38,13 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
@@ -329,23 +332,16 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
   ParmVarDecl *Param = cast<ParmVarDecl>(param);
   UnparsedDefaultArgLocs.erase(Param);
 
-  auto Fail = [&] {
-    Param->setInvalidDecl();
-    Param->setDefaultArg(new (Context) OpaqueValueExpr(
-        EqualLoc, Param->getType().getNonReferenceType(), VK_PRValue));
-  };
-
   // Default arguments are only permitted in C++
   if (!getLangOpts().CPlusPlus) {
     Diag(EqualLoc, diag::err_param_default_argument)
       << DefaultArg->getSourceRange();
-    return Fail();
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
   }
 
   // Check for unexpanded parameter packs.
-  if (DiagnoseUnexpandedParameterPack(DefaultArg, UPPC_DefaultArgument)) {
-    return Fail();
-  }
+  if (DiagnoseUnexpandedParameterPack(DefaultArg, UPPC_DefaultArgument))
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   // C++11 [dcl.fct.default]p3
   //   A default argument expression [...] shall not be specified for a
@@ -360,14 +356,14 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
 
   ExprResult Result = ConvertParamDefaultArgument(Param, DefaultArg, EqualLoc);
   if (Result.isInvalid())
-    return Fail();
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   DefaultArg = Result.getAs<Expr>();
 
   // Check that the default argument is well-formed
   CheckDefaultArgumentVisitor DefaultArgChecker(*this, DefaultArg);
   if (DefaultArgChecker.Visit(DefaultArg))
-    return Fail();
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   SetParamDefaultArgument(Param, DefaultArg, EqualLoc);
 }
@@ -389,16 +385,23 @@ void Sema::ActOnParamUnparsedDefaultArgument(Decl *param,
 
 /// ActOnParamDefaultArgumentError - Parsing or semantic analysis of
 /// the default argument for the parameter param failed.
-void Sema::ActOnParamDefaultArgumentError(Decl *param,
-                                          SourceLocation EqualLoc) {
+void Sema::ActOnParamDefaultArgumentError(Decl *param, SourceLocation EqualLoc,
+                                          Expr *DefaultArg) {
   if (!param)
     return;
 
   ParmVarDecl *Param = cast<ParmVarDecl>(param);
   Param->setInvalidDecl();
   UnparsedDefaultArgLocs.erase(Param);
-  Param->setDefaultArg(new (Context) OpaqueValueExpr(
-      EqualLoc, Param->getType().getNonReferenceType(), VK_PRValue));
+  ExprResult RE;
+  if (DefaultArg) {
+    RE = CreateRecoveryExpr(EqualLoc, DefaultArg->getEndLoc(), {DefaultArg},
+                            Param->getType().getNonReferenceType());
+  } else {
+    RE = CreateRecoveryExpr(EqualLoc, EqualLoc, {},
+                            Param->getType().getNonReferenceType());
+  }
+  Param->setDefaultArg(RE.get());
 }
 
 /// CheckExtraCXXDefaultArguments - Check for any extra default
@@ -3726,10 +3729,20 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
     if (!Diags.isIgnored(diag::warn_unused_private_field, FD->getLocation())) {
       // Remember all explicit private FieldDecls that have a name, no side
       // effects and are not part of a dependent type declaration.
+
+      auto DeclHasUnusedAttr = [](const QualType &T) {
+        if (const TagDecl *TD = T->getAsTagDecl())
+          return TD->hasAttr<UnusedAttr>();
+        if (const TypedefType *TDT = T->getAs<TypedefType>())
+          return TDT->getDecl()->hasAttr<UnusedAttr>();
+        return false;
+      };
+
       if (!FD->isImplicit() && FD->getDeclName() &&
           FD->getAccess() == AS_private &&
           !FD->hasAttr<UnusedAttr>() &&
           !FD->getParent()->isDependentContext() &&
+          !DeclHasUnusedAttr(FD->getType()) &&
           !InitializationHasSideEffects(*FD))
         UnusedPrivateFields.insert(FD);
     }
@@ -6588,6 +6601,13 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
     // Only methods and static fields inherit the attributes.
     if (!VD && !MD)
       continue;
+
+    if ((TSK == TSK_ExplicitInstantiationDeclaration ||
+         TSK == TSK_ExplicitInstantiationDefinition) &&
+        Member->hasAttr<ExcludeFromExplicitInstantiationAttr>()) {
+      // Skip members excluded from instantiation.
+      continue;
+    }
 
     if (MD) {
       // Don't process deleted methods.

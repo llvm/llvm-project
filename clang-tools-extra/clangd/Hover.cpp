@@ -1245,12 +1245,11 @@ std::string getSymbolName(include_cleaner::Symbol Sym) {
 }
 
 void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
-  const SourceManager &SM = AST.getSourceManager();
   auto Converted = convertIncludes(AST);
   llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), SM,
+      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||

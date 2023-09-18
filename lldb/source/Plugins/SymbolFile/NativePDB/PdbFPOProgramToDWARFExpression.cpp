@@ -9,7 +9,6 @@
 #include "PdbFPOProgramToDWARFExpression.h"
 #include "CodeViewRegisterMapping.h"
 
-#include "lldb/Core/StreamBuffer.h"
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"

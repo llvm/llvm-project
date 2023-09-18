@@ -852,7 +852,7 @@ void OperationName::UnregisteredOpModel::populateDefaultProperties(
     OperationName opName, OpaqueProperties properties) {}
 LogicalResult OperationName::UnregisteredOpModel::setPropertiesFromAttr(
     OperationName opName, OpaqueProperties properties, Attribute attr,
-    InFlightDiagnostic *diag) {
+    function_ref<InFlightDiagnostic &()> getDiag) {
   *properties.as<Attribute *>() = attr;
   return success();
 }
@@ -863,6 +863,10 @@ OperationName::UnregisteredOpModel::getPropertiesAsAttr(Operation *op) {
 void OperationName::UnregisteredOpModel::copyProperties(OpaqueProperties lhs,
                                                         OpaqueProperties rhs) {
   *lhs.as<Attribute *>() = *rhs.as<Attribute *>();
+}
+bool OperationName::UnregisteredOpModel::compareProperties(OpaqueProperties lhs,
+                                                        OpaqueProperties rhs) {
+  return *lhs.as<Attribute *>() == *rhs.as<Attribute *>();
 }
 llvm::hash_code
 OperationName::UnregisteredOpModel::hashProperties(OpaqueProperties prop) {

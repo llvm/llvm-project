@@ -251,7 +251,7 @@ public:
   }
 
   /// Get the data layout for the module's target platform.
-  const DataLayout &getDataLayout() const;
+  const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
   /// @returns a string containing the target triple.

@@ -76,8 +76,12 @@ std::unique_ptr<CoveragePrinter>
 CoveragePrinter::create(const CoverageViewOptions &Opts) {
   switch (Opts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
+    if (Opts.ShowDirectoryCoverage)
+      return std::make_unique<CoveragePrinterTextDirectory>(Opts);
     return std::make_unique<CoveragePrinterText>(Opts);
   case CoverageViewOptions::OutputFormat::HTML:
+    if (Opts.ShowDirectoryCoverage)
+      return std::make_unique<CoveragePrinterHTMLDirectory>(Opts);
     return std::make_unique<CoveragePrinterHTML>(Opts);
   case CoverageViewOptions::OutputFormat::Lcov:
     // Unreachable because CodeCoverage.cpp should terminate with an error

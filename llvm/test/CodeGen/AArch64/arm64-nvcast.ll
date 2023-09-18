@@ -51,8 +51,8 @@ entry:
 define internal void @nvcast_f32_v8i8() {
 ; CHECK-LABEL: nvcast_f32_v8i8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    adrp x8, __gv@GOTPAGE
 ; CHECK-NEXT:    movi.8b v0, #254
+; CHECK-NEXT:    adrp x8, __gv@GOTPAGE
 ; CHECK-NEXT:    ldr x8, [x8, __gv@GOTPAGEOFF]
 ; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:    ret

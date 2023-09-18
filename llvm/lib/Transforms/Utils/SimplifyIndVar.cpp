@@ -1673,7 +1673,8 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     assert(LoopExitingBlock && L->contains(LoopExitingBlock) &&
            "Not a LCSSA Phi?");
     WidePN->addIncoming(WideBO, LoopExitingBlock);
-    Builder.SetInsertPoint(&*User->getParent()->getFirstInsertionPt());
+    Builder.SetInsertPoint(User->getParent(),
+                           User->getParent()->getFirstInsertionPt());
     auto *TruncPN = Builder.CreateTrunc(WidePN, User->getType());
     User->replaceAllUsesWith(TruncPN);
     DeadInsts.emplace_back(User);
@@ -1726,7 +1727,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
           PHINode::Create(DU.WideDef->getType(), 1, UsePhi->getName() + ".wide",
                           UsePhi);
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
-        IRBuilder<> Builder(&*WidePhi->getParent()->getFirstInsertionPt());
+        BasicBlock *WidePhiBB = WidePhi->getParent();
+        IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
         Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType());
         UsePhi->replaceAllUsesWith(Trunc);
         DeadInsts.emplace_back(UsePhi);
@@ -1944,13 +1946,15 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   // SCEVExpander. Henceforth, we produce 1-to-1 narrow to wide uses.
   if (BasicBlock *LatchBlock = L->getLoopLatch()) {
     WideInc =
-      cast<Instruction>(WidePhi->getIncomingValueForBlock(LatchBlock));
-    WideIncExpr = SE->getSCEV(WideInc);
-    // Propagate the debug location associated with the original loop increment
-    // to the new (widened) increment.
-    auto *OrigInc =
-      cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
-    WideInc->setDebugLoc(OrigInc->getDebugLoc());
+        dyn_cast<Instruction>(WidePhi->getIncomingValueForBlock(LatchBlock));
+    if (WideInc) {
+      WideIncExpr = SE->getSCEV(WideInc);
+      // Propagate the debug location associated with the original loop
+      // increment to the new (widened) increment.
+      auto *OrigInc =
+          cast<Instruction>(OrigPhi->getIncomingValueForBlock(LatchBlock));
+      WideInc->setDebugLoc(OrigInc->getDebugLoc());
+    }
   }
 
   LLVM_DEBUG(dbgs() << "Wide IV: " << *WidePhi << "\n");

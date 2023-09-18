@@ -1257,19 +1257,6 @@ Constant *llvm::ConstantFoldCompareInstOperands(
       }
     }
 
-    // icmp eq (or x, y), 0 -> (icmp eq x, 0) & (icmp eq y, 0)
-    // icmp ne (or x, y), 0 -> (icmp ne x, 0) | (icmp ne y, 0)
-    if ((Predicate == ICmpInst::ICMP_EQ || Predicate == ICmpInst::ICMP_NE) &&
-        CE0->getOpcode() == Instruction::Or && Ops1->isNullValue()) {
-      Constant *LHS = ConstantFoldCompareInstOperands(
-          Predicate, CE0->getOperand(0), Ops1, DL, TLI);
-      Constant *RHS = ConstantFoldCompareInstOperands(
-          Predicate, CE0->getOperand(1), Ops1, DL, TLI);
-      unsigned OpC =
-        Predicate == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
-      return ConstantFoldBinaryOpOperands(OpC, LHS, RHS, DL);
-    }
-
     // Convert pointer comparison (base+offset1) pred (base+offset2) into
     // offset1 pred offset2, for the case where the offset is inbounds. This
     // only works for equality and unsigned comparison, as inbounds permits
@@ -1555,11 +1542,13 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::log10:
   case Intrinsic::exp:
   case Intrinsic::exp2:
+  case Intrinsic::exp10:
   case Intrinsic::sqrt:
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::pow:
   case Intrinsic::powi:
+  case Intrinsic::ldexp:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::frexp:
@@ -1575,7 +1564,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::amdgcn_fmul_legacy:
   case Intrinsic::amdgcn_fma_legacy:
   case Intrinsic::amdgcn_fract:
-  case Intrinsic::amdgcn_ldexp:
   case Intrinsic::amdgcn_sin:
   // The intrinsics below depend on rounding mode in MXCSR.
   case Intrinsic::x86_sse_cvtss2si:
@@ -2213,6 +2201,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::exp2:
         // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
         return ConstantFoldBinaryFP(pow, APFloat(2.0), APF, Ty);
+      case Intrinsic::exp10:
+        // Fold exp10(x) as pow(10, x), in case the host lacks a C99 library.
+        return ConstantFoldBinaryFP(pow, APFloat(10.0), APF, Ty);
       case Intrinsic::sin:
         return ConstantFoldFP(sin, APF, Ty);
       case Intrinsic::cos:
@@ -2636,6 +2627,11 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       }
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
+      case Intrinsic::ldexp: {
+        return ConstantFP::get(
+            Ty->getContext(),
+            scalbn(Op1V, Op2C->getSExtValue(), APFloat::rmNearestTiesToEven));
+      }
       case Intrinsic::is_fpclass: {
         FPClassTest Mask = static_cast<FPClassTest>(Op2C->getZExtValue());
         bool Result =
@@ -2672,16 +2668,6 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
             Ty->getContext(),
             APFloat((double)std::pow(Op1V.convertToDouble(),
                                      (int)Op2C->getZExtValue())));
-
-      if (IntrinsicID == Intrinsic::amdgcn_ldexp) {
-        // FIXME: Should flush denorms depending on FP mode, but that's ignored
-        // everywhere else.
-
-        // scalbn is equivalent to ldexp with float radix 2
-        APFloat Result = scalbn(Op1->getValueAPF(), Op2C->getSExtValue(),
-                                APFloat::rmNearestTiesToEven);
-        return ConstantFP::get(Ty->getContext(), Result);
-      }
     }
     return nullptr;
   }

@@ -567,7 +567,7 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     Config.PrePrunePasses.push_back(
         CompactUnwindSplitter("__LD,__compact_unwind"));
 
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     // FIXME: Prune eh-frames for which compact-unwind is available once
     // we support compact-unwind registration with libunwind.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());

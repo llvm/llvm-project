@@ -527,6 +527,11 @@ public:
     return NumRequired;
   }
 
+  /// Return true if the argument at a given index is required.
+  bool isRequiredArg(unsigned argIdx) const {
+    return argIdx == ~0U || argIdx < NumRequired;
+  }
+
   unsigned getOpaqueData() const { return NumRequired; }
   static RequiredArgs getFromOpaqueData(unsigned value) {
     if (value == ~0U) return All;

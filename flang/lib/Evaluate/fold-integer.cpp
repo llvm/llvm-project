@@ -352,12 +352,12 @@ public:
     if (mask) {
       if (auto scalarMask{mask->GetScalarValue()}) {
         // Convert into array in case of scalar MASK= (for
-        // MAXLOC/MINLOC/FINDLOC mask should be be conformable)
+        // MAXLOC/MINLOC/FINDLOC mask should be conformable)
         ConstantSubscript n{GetSize(array->shape())};
         std::vector<Scalar<LogicalResult>> mask_elements(
             n, Scalar<LogicalResult>{scalarMask.value()});
         *mask = Constant<LogicalResult>{
-            std::move(mask_elements), ConstantSubscripts{n}};
+            std::move(mask_elements), ConstantSubscripts{array->shape()}};
       }
       mask->SetLowerBoundsToOne();
       maskAt = mask->lbounds();
@@ -844,10 +844,22 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "int_ptr_kind") {
     return Expr<T>{8};
   } else if (name == "kind") {
-    if constexpr (common::HasMember<T, IntegerTypes>) {
-      return Expr<T>{args[0].value().GetType()->kind()};
-    } else {
-      DIE("kind() result not integral");
+    // FoldOperation(FunctionRef &&) in fold-implementation.h will not
+    // have folded the argument; in the case of TypeParamInquiry,
+    // try to get the type of the parameter itself.
+    if (const auto *expr{args[0] ? args[0]->UnwrapExpr() : nullptr}) {
+      if (const auto *inquiry{UnwrapExpr<TypeParamInquiry>(*expr)}) {
+        if (const auto *typeSpec{inquiry->parameter().GetType()}) {
+          if (const auto *intrinType{typeSpec->AsIntrinsic()}) {
+            if (auto k{ToInt64(Fold(
+                    context, Expr<SubscriptInteger>{intrinType->kind()}))}) {
+              return Expr<T>{*k};
+            }
+          }
+        }
+      } else if (auto dyType{expr->GetType()}) {
+        return Expr<T>{dyType->kind()};
+      }
     }
   } else if (name == "iparity") {
     return FoldBitReduction(
@@ -1038,8 +1050,6 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, T::Scalar::Least());
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "merge_bits") {
     return FoldElementalIntrinsic<T, T, T, T>(
         context, std::move(funcRef), &Scalar<T>::MERGE_BITS);
@@ -1152,6 +1162,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "selected_int_kind") {
     if (auto p{ToInt64(args[0])}) {
       return Expr<T>{context.targetCharacteristics().SelectedIntKind(*p)};
+    }
+  } else if (name == "selected_logical_kind") {
+    if (auto p{ToInt64(args[0])}) {
+      return Expr<T>{context.targetCharacteristics().SelectedLogicalKind(*p)};
     }
   } else if (name == "selected_real_kind" ||
       name == "__builtin_ieee_selected_real_kind") {
