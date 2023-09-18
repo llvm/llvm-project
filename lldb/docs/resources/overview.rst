@@ -92,7 +92,9 @@ layers to the implementation: DataVisualization at the highest end of the
 spectrum, backed by classes implementing individual formatters, matching rules,
 etc.
 
-For an introduction to data formatters, see :doc:`/use/variable`.
+For a general user-level introduction to data formatters, see :doc:`/use/variable`.
+
+More details on their architecture can be found in :doc:`/resources/dataformatters`.
 
 Expression
 ----------

@@ -4,8 +4,7 @@ Data Formatters
 This page is an introduction to the design of the LLDB data formatters
 subsystem. The intended target audience are people interested in understanding
 or modifying the formatters themselves rather than writing a specific data
-formatter. For this latter purpose, the user documentation about formatters is
-the main relevant document which one should refer to.
+formatter. For the latter, refer to :doc:`/use/variable/`.
 
 This page also highlights some open areas for improvement to the general
 subsystem, and more evolutions not anticipated here are certainly possible.
