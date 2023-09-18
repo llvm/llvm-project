@@ -10,10 +10,10 @@
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
 !u8i = !cir.int<u, 8>
-!ty_22A22 = !cir.struct<struct "A" {!s32i, !cir.array<!cir.array<!s32i x 2> x 2>} #cir.recdecl.ast>
-!ty_22Bar22 = !cir.struct<struct "Bar" {!s32i, !s8i} #cir.recdecl.ast>
-!ty_22StringStruct22 = !cir.struct<struct "StringStruct" {!cir.array<!s8i x 3>, !cir.array<!s8i x 3>, !cir.array<!s8i x 3>} #cir.recdecl.ast>
-!ty_22StringStructPtr22 = !cir.struct<struct "StringStructPtr" {!cir.ptr<!s8i>} #cir.recdecl.ast>
+!ty_22A22 = !cir.struct<struct "A" {!s32i, !cir.array<!cir.array<!s32i x 2> x 2>} #cir.record.decl.ast>
+!ty_22Bar22 = !cir.struct<struct "Bar" {!s32i, !s8i} #cir.record.decl.ast>
+!ty_22StringStruct22 = !cir.struct<struct "StringStruct" {!cir.array<!s8i x 3>, !cir.array<!s8i x 3>, !cir.array<!s8i x 3>} #cir.record.decl.ast>
+!ty_22StringStructPtr22 = !cir.struct<struct "StringStructPtr" {!cir.ptr<!s8i>} #cir.record.decl.ast>
 
 module {
   cir.global external @a = #cir.int<3> : !s32i

@@ -30,17 +30,51 @@
 
 // ClangIR holds back AST references when available.
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 
-static void printStructMembers(mlir::AsmPrinter &p,
-                                    mlir::ArrayAttr members);
+static void printStructMembers(mlir::AsmPrinter &p, mlir::ArrayAttr members);
 static mlir::ParseResult parseStructMembers(::mlir::AsmParser &parser,
-                                                 mlir::ArrayAttr &members);
+                                            mlir::ArrayAttr &members);
 
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::cir;
+
+//===----------------------------------------------------------------------===//
+// CIR AST Attr helpers
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+namespace cir {
+
+mlir::Attribute makeFuncDeclAttr(const clang::Decl *decl,
+                                 mlir::MLIRContext *ctx) {
+  return llvm::TypeSwitch<const clang::Decl *, mlir::Attribute>(decl)
+      .Case([ctx](const clang::CXXConstructorDecl *ast) {
+        return ASTCXXConstructorDeclAttr::get(ctx, ast);
+      })
+      .Case([ctx](const clang::CXXConversionDecl *ast) {
+        return ASTCXXConversionDeclAttr::get(ctx, ast);
+      })
+      .Case([ctx](const clang::CXXDestructorDecl *ast) {
+        return ASTCXXDestructorDeclAttr::get(ctx, ast);
+      })
+      .Case([ctx](const clang::CXXMethodDecl *ast) {
+        return ASTCXXMethodDeclAttr::get(ctx, ast);
+      })
+      .Case([ctx](const clang::FunctionDecl *ast) {
+        return ASTFunctionDeclAttr::get(ctx, ast);
+      })
+      .Default([](auto) {
+        llvm_unreachable("unexpected Decl kind");
+        return mlir::Attribute();
+      });
+}
+
+} // namespace cir
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // General CIR parsing / printing
@@ -65,14 +99,14 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 }
 
 static void printStructMembers(mlir::AsmPrinter &printer,
-                                    mlir::ArrayAttr members) {
+                               mlir::ArrayAttr members) {
   printer << '{';
   llvm::interleaveComma(members, printer);
   printer << '}';
 }
 
 static ParseResult parseStructMembers(mlir::AsmParser &parser,
-                                           mlir::ArrayAttr &members) {
+                                      mlir::ArrayAttr &members) {
   SmallVector<mlir::Attribute, 4> elts;
 
   auto delimiter = AsmParser::Delimiter::Braces;

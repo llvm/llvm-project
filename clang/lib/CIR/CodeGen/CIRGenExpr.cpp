@@ -134,8 +134,8 @@ static Address buildPointerWithAlignment(const Expr *E,
         if (BaseInfo)
           *BaseInfo = InnerBaseInfo;
 
-        if (isa<ExplicitCastExpr>(CE)) {          
-          assert(!UnimplementedFeature::tbaa());          
+        if (isa<ExplicitCastExpr>(CE)) {
+          assert(!UnimplementedFeature::tbaa());
           LValueBaseInfo TargetTypeBaseInfo;
 
           CharUnits Align = CGF.CGM.getNaturalPointeeTypeAlignment(

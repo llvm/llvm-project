@@ -5,10 +5,10 @@
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
 !ty_22S22 = !cir.struct<struct "S" {!u8i, !s32i}>
-!ty_22S2A22 = !cir.struct<struct "S2A" {!s32i} #cir.recdecl.ast>
-!ty_22S122 = !cir.struct<struct "S1" {!s32i, f32, !cir.ptr<!s32i>} #cir.recdecl.ast>
-!ty_22S222 = !cir.struct<struct "S2" {!ty_22S2A22} #cir.recdecl.ast>
-!ty_22S322 = !cir.struct<struct "S3" {!s32i} #cir.recdecl.ast>
+!ty_22S2A22 = !cir.struct<struct "S2A" {!s32i} #cir.record.decl.ast>
+!ty_22S122 = !cir.struct<struct "S1" {!s32i, f32, !cir.ptr<!s32i>} #cir.record.decl.ast>
+!ty_22S222 = !cir.struct<struct "S2" {!ty_22S2A22} #cir.record.decl.ast>
+!ty_22S322 = !cir.struct<struct "S3" {!s32i} #cir.record.decl.ast>
 
 module {
   cir.func @test() {

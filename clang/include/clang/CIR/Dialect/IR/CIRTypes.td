@@ -14,6 +14,7 @@
 #define MLIR_CIR_DIALECT_CIR_TYPES
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
@@ -111,7 +112,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     "bool":$body,
     "bool":$packed,
     "mlir::cir::StructType::RecordKind":$kind,
-    "std::optional<::mlir::cir::ASTRecordDeclAttr>":$ast
+    "std::optional<ASTRecordDeclInterface>":$ast
   );
 
   let hasCustomAssemblyFormat = 1;

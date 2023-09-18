@@ -2,7 +2,7 @@
 // RUN: cir-translate %s -cir-to-llvmir -o -  | FileCheck %s -check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
-!ty_22S22 = !cir.struct<struct "S" {!s32i} #cir.recdecl.ast>
+!ty_22S22 = !cir.struct<struct "S" {!s32i} #cir.record.decl.ast>
 
 module {
   cir.func @foo() {
@@ -26,10 +26,10 @@ module {
   // CHECK:   %0 = llvm.mlir.undef : !llvm.array<2 x struct<"struct.S", (i32)>>
   // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"struct.S", (i32)>
   // CHECK:   %2 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S", (i32)> 
-  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.array<2 x struct<"struct.S", (i32)>> 
+  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S", (i32)>
+  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.array<2 x struct<"struct.S", (i32)>>
   // CHECK:   %5 = cir.llvmir.zeroinit : !llvm.struct<"struct.S", (i32)>
-  // CHECK:   %6 = llvm.insertvalue %5, %4[1] : !llvm.array<2 x struct<"struct.S", (i32)>> 
+  // CHECK:   %6 = llvm.insertvalue %5, %4[1] : !llvm.array<2 x struct<"struct.S", (i32)>>
   // CHECK:   llvm.return %6 : !llvm.array<2 x struct<"struct.S", (i32)>>
   // CHECK: }
 }

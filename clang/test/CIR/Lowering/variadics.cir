@@ -5,7 +5,7 @@
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 
-!ty_22__va_list_tag22 = !cir.struct<struct "__va_list_tag" {!u32i, !u32i, !cir.ptr<!u8i>, !cir.ptr<!u8i>} #cir.recdecl.ast>
+!ty_22__va_list_tag22 = !cir.struct<struct "__va_list_tag" {!u32i, !u32i, !cir.ptr<!u8i>, !cir.ptr<!u8i>} #cir.record.decl.ast>
 
 module {
   cir.func @average(%arg0: !s32i, ...) -> !s32i {

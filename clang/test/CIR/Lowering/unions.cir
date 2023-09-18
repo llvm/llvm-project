@@ -4,9 +4,9 @@
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 #true = #cir.bool<true> : !cir.bool
-!ty_22U122 = !cir.struct<union "U1" {!cir.bool, !s16i, !s32i} #cir.recdecl.ast>
-!ty_22U222 = !cir.struct<union "U2" {f64, !ty_22U122} #cir.recdecl.ast>
-!ty_22U322 = !cir.struct<union "U3" {!s16i, !ty_22U122} #cir.recdecl.ast>
+!ty_22U122 = !cir.struct<union "U1" {!cir.bool, !s16i, !s32i} #cir.record.decl.ast>
+!ty_22U222 = !cir.struct<union "U2" {f64, !ty_22U122} #cir.record.decl.ast>
+!ty_22U322 = !cir.struct<union "U3" {!s16i, !ty_22U122} #cir.record.decl.ast>
 module {
   // Should lower union to struct with only the largest member.
   cir.global external @u1 = #cir.zero : !ty_22U122

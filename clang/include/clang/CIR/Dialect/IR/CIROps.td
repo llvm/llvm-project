@@ -18,6 +18,8 @@ include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
+include "clang/CIR/Interfaces/ASTAttrInterfaces.td"
+
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
@@ -300,7 +302,7 @@ def AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     UnitAttr:$init,
     ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
-    OptionalAttr<ASTVarDeclAttr>:$ast
+    OptionalAttr<ASTVarDeclInterface>:$ast
   );
 
   let results = (outs Res<CIR_PointerType, "",
@@ -1283,7 +1285,7 @@ def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchO
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<ASTVarDeclAttr>:$ast
+                       OptionalAttr<ASTVarDeclInterface>:$ast
                        );
   let regions = (region AnyRegion:$ctorRegion, AnyRegion:$dtorRegion);
   let assemblyFormat = [{
@@ -1596,7 +1598,7 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       OptionalAttr<ASTFunctionDeclAttr>:$ast);
+                       OptionalAttr<AnyASTFunctionDeclAttr>:$ast);
   let regions = (region AnyRegion:$body);
   let skipDefaultBuilders = 1;
 

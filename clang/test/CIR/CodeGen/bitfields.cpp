@@ -14,5 +14,5 @@ void m() {
   __long l;
 }
 
-// CHECK: !ty_22anon22 = !cir.struct<struct "anon" {!u32i} #cir.recdecl.ast>
+// CHECK: !ty_22anon22 = !cir.struct<struct "anon" {!u32i} #cir.record.decl.ast>
 // CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!ty_22anon22, !u32i, !cir.ptr<!u32i>}>
