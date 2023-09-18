@@ -623,13 +623,7 @@ InvalidFreeReport::~InvalidFreeReport() {
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
-}  // namespace
 
-void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
-  InvalidFreeReport R(stack, tagged_addr);
-}
-
-namespace {
 class TailOverwrittenReport {
  public:
   explicit TailOverwrittenReport(StackTrace *stack, uptr tagged_addr,
@@ -717,14 +711,7 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
-}  // namespace
 
-void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
-                           const u8 *expected) {
-  TailOverwrittenReport R(stack, tagged_addr, orig_size, expected);
-}
-
-namespace {
 class TagMismatchReport {
  public:
   explicit TagMismatchReport(StackTrace *stack, uptr tagged_addr,
@@ -817,6 +804,15 @@ TagMismatchReport::~TagMismatchReport() {
   ReportErrorSummary(bug_type, stack);
 }
 }  // namespace
+
+void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
+  InvalidFreeReport R(stack, tagged_addr);
+}
+
+void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
+                           const u8 *expected) {
+  TailOverwrittenReport R(stack, tagged_addr, orig_size, expected);
+}
 
 void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
                        bool is_store, bool fatal, uptr *registers_frame) {
