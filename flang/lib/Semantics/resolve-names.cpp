@@ -5226,9 +5226,10 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   Walk(componentDefs);
   if (derivedTypeInfo_.sequence) {
     details.set_sequence(true);
-    if (componentDefs.empty()) { // C740
+    if (componentDefs.empty()) {
+      // F'2023 C745 - not enforced by any compiler
       Say(stmt.source,
-          "A sequence type must have at least one component"_err_en_US);
+          "A sequence type should have at least one component"_warn_en_US);
     }
     if (!details.paramNames().empty()) { // C740
       Say(stmt.source,
