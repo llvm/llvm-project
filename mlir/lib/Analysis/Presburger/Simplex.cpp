@@ -436,7 +436,7 @@ LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
 }
 
 void SymbolicLexSimplex::recordOutput(SymbolicLexOpt &result) const {
-  Matrix<MPInt> output(0, domainPoly.getNumVars() + 1);
+  Matrix output(0, domainPoly.getNumVars() + 1);
   output.reserveRows(result.lexopt.getNumOutputs());
   for (const Unknown &u : var) {
     if (u.isSymbol)
@@ -1801,7 +1801,7 @@ private:
 ///
 /// When incrementing i, no cached f values get invalidated. However, the cached
 /// duals do get invalidated as the duals for the higher levels are different.
-void Simplex::reduceBasis(Matrix<MPInt> &basis, unsigned level) {
+void Simplex::reduceBasis(Matrix &basis, unsigned level) {
   const Fraction epsilon(3, 4);
 
   if (level == basis.getNumRows() - 1)
@@ -1975,7 +1975,7 @@ std::optional<SmallVector<MPInt, 8>> Simplex::findIntegerSample() {
     return {};
 
   unsigned nDims = var.size();
-  Matrix<MPInt> basis = Matrix<MPInt>::identity(nDims);
+  Matrix basis = Matrix::identity(nDims);
 
   unsigned level = 0;
   // The snapshot just before constraining a direction to a value at each level.
