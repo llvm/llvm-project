@@ -608,9 +608,9 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   Value i = lo;
   Value j = builder.create<arith::SubIOp>(loc, hi, c1);
   createChoosePivot(builder, module, func, nx, ny, isCoo, i, j, p, args);
-  Value cont = constantI1(builder, loc, true);
-  SmallVector<Value, 3> operands{i, j, p, cont}; // Exactly three values.
-  SmallVector<Type, 3> types{i.getType(), j.getType(), p.getType(),
+  Value cont = constantI1(builder, loc, true);   // The value for while (true)
+  SmallVector<Value, 4> operands{i, j, p, cont}; // Exactly four values.
+  SmallVector<Type, 4> types{i.getType(), j.getType(), p.getType(),
                              cont.getType()};
   scf::WhileOp whileOp = builder.create<scf::WhileOp>(loc, types, operands);
 
