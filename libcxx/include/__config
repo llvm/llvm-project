@@ -1422,7 +1422,7 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #include <__iterator/wrap_iter.h>
 #      define _PSTL_PRAGMA_DATA_MAP_TO(NAME,LEN) _PSTL_PRAGMA(omp target enter data map(to:NAME[:LEN]))
 #      define _PSTL_PRAGMA_DATA_MAP_ALLOC(NAME,LEN) _PSTL_PRAGMA(omp target enter data map(alloc:NAME[:LEN]))
-#      define _PSTL_PRAGMA_DATA_MAP_FROM(NAME,LEN) _PSTL_PRAGMA(omp target update from(NAME[:LEN]))
+#      define _PSTL_PRAGMA_DATA_MAP_FROM(NAME,LEN) _PSTL_PRAGMA(omp target exit data map(from:NAME[:LEN]))
 
 template <typename N>
 bool constexpr OMPIsOffloadable(N size)
@@ -1440,9 +1440,11 @@ void inline OMPMapToIf(T data,N length,int device = omp_get_default_device())
 {
       // If the data is already present on the device, there is no need
       // transfer the data again.
+#ifdef _LIBCPP_OPENMP_OFFLOAD_MAPPED
       if (omp_target_is_present(data,device)){
             return;
       }
+#endif
       // If it is a small amount of data it does not make sense to offload to a
       // device
       if (!OMPIsOffloadable(length)){
@@ -1456,15 +1458,35 @@ void inline OMPMapAllocIf(T data,N length,int device = omp_get_default_device())
 {
       // If the data is already present on the device, there is no need
       // transfer the data again.
+#ifdef _LIBCPP_OPENMP_OFFLOAD_MAPPED
       if (omp_target_is_present(data,device)){
             return;
       }
+#endif
       // If it is a small amount of data it does not make sense to offload to a
       // device
       if (!OMPIsOffloadable(length)){
             return;
       }
       _PSTL_PRAGMA_DATA_MAP_ALLOC(data,length);
+}
+
+template <typename T, typename N>
+void inline OMPMapFromIf(T data,N length,int device = omp_get_default_device())
+{
+      // If the data is already present on the device, there is no need
+      // transfer the data again.
+#ifdef _LIBCPP_OPENMP_OFFLOAD_MAPPED
+      if (omp_target_is_present(data,device)){
+            return;
+      }
+#endif
+      // If it is a small amount of data it does not make sense to offload to a
+      // device
+      if (!OMPIsOffloadable(length)){
+            return;
+      }
+      _PSTL_PRAGMA_DATA_MAP_FROM(data,length);
 }
 
 template <typename T, typename N>
@@ -1501,7 +1523,7 @@ void inline OMPMapAlloc(std::__wrap_iter<T*> w,N length) {
 
 template <typename T,typename N>
 void inline OMPMapFrom(T data,N length) {
-  _PSTL_PRAGMA_DATA_MAP_FROM(data,length);
+  OMPMapFromIf(data,length);
 }
 
 /**
@@ -1512,7 +1534,7 @@ template <typename T,typename N>
 void inline OMPMapFrom(std::__wrap_iter<T*> w,N length) {
   std::pointer_traits<std::__wrap_iter<T*>> PT;
   T* data = PT.to_address(w);
-  _PSTL_PRAGMA_DATA_MAP_FROM(data,length);
+  OMPMapFromIf(data,length);
 }
 #      define _PSTL_OMP_MAP_TO(DATA,LEN) OMPMapTo(DATA,LEN)
 #      define _PSTL_OMP_MAP_ALLOC(DATA,LEN) OMPMapAlloc(DATA,LEN)
