@@ -210,18 +210,10 @@ public:
     Entry.MemMap = H->MemMap;
     Entry.Time = Time;
     if (useMemoryTagging<Config>(Options)) {
-      if (Interval == 0 && !SCUDO_FUCHSIA) {
-        // Release the memory and make it inaccessible at the same time by
-        // creating a new MAP_NOACCESS mapping on top of the existing mapping.
-        // Fuchsia does not support replacing mappings by creating a new mapping
-        // on top so we just do the two syscalls there.
+      if (Interval == 0)
         Entry.Time = 0;
-        mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
-                             Entry.CommitBase, MAP_NOACCESS, Entry.MemMap);
-      } else {
-        Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
-                                         MAP_NOACCESS);
-      }
+      Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
+                                       MAP_NOACCESS);
     } else if (Interval == 0) {
       Entry.MemMap.releasePagesToOS(Entry.CommitBase, Entry.CommitSize);
       Entry.Time = 0;
