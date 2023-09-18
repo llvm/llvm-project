@@ -9,12 +9,19 @@ config.substitutions.append(('%{flags}',
 config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include} -I %{target-include} -I %{libcxx}/test/support'
 ))
-config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -Wl,-rpath,%{lib} -lc++'
-))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %T -- '
 ))
+
+if config.root.target_triple.startswith('ve-'):
+  # VE requires libdl library.
+  config.substitutions.append(('%{link_flags}',
+      '-nostdlib++ -L %{lib} -Wl,-rpath,%{lib} -lc++ -ldl'
+  ))
+else:
+  config.substitutions.append(('%{link_flags}',
+      '-nostdlib++ -L %{lib} -Wl,-rpath,%{lib} -lc++'
+  ))
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
