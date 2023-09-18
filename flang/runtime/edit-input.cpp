@@ -24,16 +24,6 @@ static inline bool IsCharValueSeparator(const DataEdit &edit, char32_t ch) {
   return ch == ' ' || ch == '\t' || ch == '/' || ch == comma;
 }
 
-static inline bool IsListDirectedFieldComplete(
-    IoStatementState &io, const DataEdit &edit) {
-  std::size_t byteCount;
-  if (auto ch{io.GetCurrentChar(byteCount)}) {
-    return IsCharValueSeparator(edit, *ch);
-  } else {
-    return true; // end of record: ok
-  }
-}
-
 static bool CheckCompleteListDirectedField(
     IoStatementState &io, const DataEdit &edit) {
   if (edit.IsListDirected()) {
