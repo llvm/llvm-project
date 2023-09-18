@@ -5009,8 +5009,7 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
-  auto CNode = cast<ConstantSDNode>(Op.getOperand(1));
-  unsigned Check = CNode->getZExtValue();
+  unsigned Check = Op.getConstantOperandVal(1);
   unsigned TDCMask = 0;
   if (Check & fcSNan)
     TDCMask |= RISCV::FPMASK_Signaling_NaN;
@@ -5088,7 +5087,7 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
     SDValue AND = DAG.getNode(RISCVISD::AND_VL, DL, ContainerDstVT, FPCLASS,
                               TDCMaskV, DAG.getUNDEF(ContainerDstVT), Mask, VL);
 
-    SDValue SplatZero = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+    SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
     SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ContainerDstVT,
                             DAG.getUNDEF(ContainerDstVT), SplatZero, VL);
 
