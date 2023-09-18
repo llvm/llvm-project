@@ -455,6 +455,95 @@ entry:
   ret i64 %0
 }
 
+; Check for folds in accesses to block address.
+define dso_local ptr @load_ba_1() nounwind {
+; RV32I-LABEL: load_ba_1:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:  .Ltmp0: # Block address taken
+; RV32I-NEXT:  # %bb.1: # %label
+; RV32I-NEXT:    lui a0, %hi(.Ltmp0)
+; RV32I-NEXT:    lw a0, %lo(.Ltmp0)(a0)
+; RV32I-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: load_ba_1:
+; RV32I-MEDIUM:       # %bb.0: # %entry
+; RV32I-MEDIUM-NEXT:  .Ltmp0: # Block address taken
+; RV32I-MEDIUM-NEXT:  # %bb.1: # %label
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi12:
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.Ltmp0)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi12)
+; RV32I-MEDIUM-NEXT:    lw a0, 0(a0)
+; RV32I-MEDIUM-NEXT:    ret
+;
+; RV64I-LABEL: load_ba_1:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:  .Ltmp0: # Block address taken
+; RV64I-NEXT:  # %bb.1: # %label
+; RV64I-NEXT:    lui a0, %hi(.Ltmp0)
+; RV64I-NEXT:    ld a0, %lo(.Ltmp0)(a0)
+; RV64I-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: load_ba_1:
+; RV64I-MEDIUM:       # %bb.0: # %entry
+; RV64I-MEDIUM-NEXT:  .Ltmp0: # Block address taken
+; RV64I-MEDIUM-NEXT:  # %bb.1: # %label
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi12:
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.Ltmp0)
+; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi12)
+; RV64I-MEDIUM-NEXT:    ld a0, 0(a0)
+; RV64I-MEDIUM-NEXT:    ret
+entry:
+  br label %label
+label:
+  %0 = load ptr, ptr blockaddress(@load_ba_1, %label)
+  ret ptr %0
+}
+
+define dso_local ptr @load_ba_2() nounwind {
+; RV32I-LABEL: load_ba_2:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:  .Ltmp1: # Block address taken
+; RV32I-NEXT:  # %bb.1: # %label
+; RV32I-NEXT:    lui a0, %hi(.Ltmp1)
+; RV32I-NEXT:    addi a0, a0, %lo(.Ltmp1)
+; RV32I-NEXT:    lw a0, 8(a0)
+; RV32I-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: load_ba_2:
+; RV32I-MEDIUM:       # %bb.0: # %entry
+; RV32I-MEDIUM-NEXT:  .Ltmp1: # Block address taken
+; RV32I-MEDIUM-NEXT:  # %bb.1: # %label
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi13:
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.Ltmp1)
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi13)
+; RV32I-MEDIUM-NEXT:    lw a0, 8(a0)
+; RV32I-MEDIUM-NEXT:    ret
+;
+; RV64I-LABEL: load_ba_2:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:  .Ltmp1: # Block address taken
+; RV64I-NEXT:  # %bb.1: # %label
+; RV64I-NEXT:    lui a0, %hi(.Ltmp1)
+; RV64I-NEXT:    addi a0, a0, %lo(.Ltmp1)
+; RV64I-NEXT:    ld a0, 8(a0)
+; RV64I-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: load_ba_2:
+; RV64I-MEDIUM:       # %bb.0: # %entry
+; RV64I-MEDIUM-NEXT:  .Ltmp1: # Block address taken
+; RV64I-MEDIUM-NEXT:  # %bb.1: # %label
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi13:
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(.Ltmp1)
+; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi13)
+; RV64I-MEDIUM-NEXT:    ld a0, 8(a0)
+; RV64I-MEDIUM-NEXT:    ret
+entry:
+  br label %label
+label:
+  %0 = load ptr, ptr getelementptr inbounds (i8, ptr blockaddress(@load_ba_2, %label), i32 8)
+  ret ptr %0
+}
+
 ; Check for folds in accesses to thread-local variables.
 
 @tl_4 = dso_local thread_local global i64 0, align 4
