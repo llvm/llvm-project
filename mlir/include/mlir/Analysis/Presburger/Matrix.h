@@ -7,15 +7,17 @@
 //===----------------------------------------------------------------------===//
 //
 // This is a simple 2D matrix class that supports reading, writing, resizing,
-// swapping rows, and swapping columns.
+// swapping rows, and swapping columns. It can hold integers (MPInt) or rational
+// numbers (Fraction).
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
-#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -32,7 +34,12 @@ namespace presburger {
 /// (i, j) is stored at data[i*nReservedColumns + j]. The reserved but unused
 /// columns always have all zero values. The reserved rows are just reserved
 /// space in the underlying SmallVector's capacity.
+/// This class only works for the types MPInt and Fraction, since the method
+/// implementations are in the Matrix.cpp file. Only these two types have
+/// been explicitly instantiated there.
+template<typename T>
 class Matrix {
+static_assert(std::is_same_v<T,MPInt> || std::is_same_v<T,Fraction>, "T must be MPInt or Fraction.");
 public:
   Matrix() = delete;
 
@@ -49,21 +56,21 @@ public:
   static Matrix identity(unsigned dimension);
 
   /// Access the element at the specified row and column.
-  MPInt &at(unsigned row, unsigned column) {
+  T &at(unsigned row, unsigned column) {
     assert(row < nRows && "Row outside of range");
     assert(column < nColumns && "Column outside of range");
     return data[row * nReservedColumns + column];
   }
 
-  MPInt at(unsigned row, unsigned column) const {
+  T at(unsigned row, unsigned column) const {
     assert(row < nRows && "Row outside of range");
     assert(column < nColumns && "Column outside of range");
     return data[row * nReservedColumns + column];
   }
 
-  MPInt &operator()(unsigned row, unsigned column) { return at(row, column); }
+  T &operator()(unsigned row, unsigned column) { return at(row, column); }
 
-  MPInt operator()(unsigned row, unsigned column) const {
+  T operator()(unsigned row, unsigned column) const {
     return at(row, column);
   }
 
@@ -87,11 +94,11 @@ public:
   void reserveRows(unsigned rows);
 
   /// Get a [Mutable]ArrayRef corresponding to the specified row.
-  MutableArrayRef<MPInt> getRow(unsigned row);
-  ArrayRef<MPInt> getRow(unsigned row) const;
+  MutableArrayRef<T> getRow(unsigned row);
+  ArrayRef<T> getRow(unsigned row) const;
 
   /// Set the specified row to `elems`.
-  void setRow(unsigned row, ArrayRef<MPInt> elems);
+  void setRow(unsigned row, ArrayRef<T> elems);
 
   /// Insert columns having positions pos, pos + 1, ... pos + count - 1.
   /// Columns that were at positions 0 to pos - 1 will stay where they are;
@@ -125,23 +132,23 @@ public:
 
   void copyRow(unsigned sourceRow, unsigned targetRow);
 
-  void fillRow(unsigned row, const MPInt &value);
-  void fillRow(unsigned row, int64_t value) { fillRow(row, MPInt(value)); }
+  void fillRow(unsigned row, const T &value);
+  void fillRow(unsigned row, int64_t value) { fillRow(row, T(value)); }
 
   /// Add `scale` multiples of the source row to the target row.
-  void addToRow(unsigned sourceRow, unsigned targetRow, const MPInt &scale);
+  void addToRow(unsigned sourceRow, unsigned targetRow, const T &scale);
   void addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale) {
-    addToRow(sourceRow, targetRow, MPInt(scale));
+    addToRow(sourceRow, targetRow, T(scale));
   }
   /// Add `scale` multiples of the rowVec row to the specified row.
-  void addToRow(unsigned row, ArrayRef<MPInt> rowVec, const MPInt &scale);
+  void addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale);
 
   /// Add `scale` multiples of the source column to the target column.
   void addToColumn(unsigned sourceColumn, unsigned targetColumn,
-                   const MPInt &scale);
+                   const T &scale);
   void addToColumn(unsigned sourceColumn, unsigned targetColumn,
                    int64_t scale) {
-    addToColumn(sourceColumn, targetColumn, MPInt(scale));
+    addToColumn(sourceColumn, targetColumn, T(scale));
   }
 
   /// Negate the specified column.
@@ -152,18 +159,18 @@ public:
 
   /// Divide the first `nCols` of the specified row by their GCD.
   /// Returns the GCD of the first `nCols` of the specified row.
-  MPInt normalizeRow(unsigned row, unsigned nCols);
+  T normalizeRow(unsigned row, unsigned nCols);
   /// Divide the columns of the specified row by their GCD.
   /// Returns the GCD of the columns of the specified row.
-  MPInt normalizeRow(unsigned row);
+  T normalizeRow(unsigned row);
 
   /// The given vector is interpreted as a row vector v. Post-multiply v with
   /// this matrix, say M, and return vM.
-  SmallVector<MPInt, 8> preMultiplyWithRow(ArrayRef<MPInt> rowVec) const;
+  SmallVector<T, 8> preMultiplyWithRow(ArrayRef<T> rowVec) const;
 
   /// The given vector is interpreted as a column vector v. Pre-multiply v with
   /// this matrix, say M, and return Mv.
-  SmallVector<MPInt, 8> postMultiplyWithColumn(ArrayRef<MPInt> colVec) const;
+  SmallVector<T, 8> postMultiplyWithColumn(ArrayRef<T> colVec) const;
 
   /// Given the current matrix M, returns the matrices H, U such that H is the
   /// column hermite normal form of M, i.e. H = M * U, where U is unimodular and
@@ -192,7 +199,7 @@ public:
   unsigned appendExtraRow();
   /// Same as above, but copy the given elements into the row. The length of
   /// `elems` must be equal to the number of columns.
-  unsigned appendExtraRow(ArrayRef<MPInt> elems);
+  unsigned appendExtraRow(ArrayRef<T> elems);
 
   /// Print the matrix.
   void print(raw_ostream &os) const;
@@ -211,7 +218,7 @@ private:
 
   /// Stores the data. data.size() is equal to nRows * nReservedColumns.
   /// data.capacity() / nReservedColumns is the number of reserved rows.
-  SmallVector<MPInt, 16> data;
+  SmallVector<T, 16> data;
 };
 
 } // namespace presburger

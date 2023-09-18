@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include "./Utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -15,7 +16,7 @@ using namespace mlir;
 using namespace presburger;
 
 TEST(MatrixTest, ReadWrite) {
-  Matrix mat(5, 5);
+  Matrix<MPInt> mat(5, 5);
   for (unsigned row = 0; row < 5; ++row)
     for (unsigned col = 0; col < 5; ++col)
       mat(row, col) = 10 * row + col;
@@ -25,7 +26,7 @@ TEST(MatrixTest, ReadWrite) {
 }
 
 TEST(MatrixTest, SwapColumns) {
-  Matrix mat(5, 5);
+  Matrix<MPInt> mat(5, 5);
   for (unsigned row = 0; row < 5; ++row)
     for (unsigned col = 0; col < 5; ++col)
       mat(row, col) = col == 3 ? 1 : 0;
@@ -47,7 +48,7 @@ TEST(MatrixTest, SwapColumns) {
 }
 
 TEST(MatrixTest, SwapRows) {
-  Matrix mat(5, 5);
+  Matrix<MPInt> mat(5, 5);
   for (unsigned row = 0; row < 5; ++row)
     for (unsigned col = 0; col < 5; ++col)
       mat(row, col) = row == 2 ? 1 : 0;
@@ -69,7 +70,7 @@ TEST(MatrixTest, SwapRows) {
 }
 
 TEST(MatrixTest, resizeVertically) {
-  Matrix mat(5, 5);
+  Matrix<MPInt> mat(5, 5);
   EXPECT_EQ(mat.getNumRows(), 5u);
   EXPECT_EQ(mat.getNumColumns(), 5u);
   for (unsigned row = 0; row < 5; ++row)
@@ -94,7 +95,7 @@ TEST(MatrixTest, resizeVertically) {
 }
 
 TEST(MatrixTest, insertColumns) {
-  Matrix mat(5, 5, 5, 10);
+  Matrix<MPInt> mat(5, 5, 5, 10);
   EXPECT_EQ(mat.getNumRows(), 5u);
   EXPECT_EQ(mat.getNumColumns(), 5u);
   for (unsigned row = 0; row < 5; ++row)
@@ -131,7 +132,7 @@ TEST(MatrixTest, insertColumns) {
 }
 
 TEST(MatrixTest, insertRows) {
-  Matrix mat(5, 5, 5, 10);
+  Matrix<MPInt> mat(5, 5, 5, 10);
   ASSERT_TRUE(mat.hasConsistentState());
   EXPECT_EQ(mat.getNumRows(), 5u);
   EXPECT_EQ(mat.getNumColumns(), 5u);
@@ -169,7 +170,7 @@ TEST(MatrixTest, insertRows) {
 }
 
 TEST(MatrixTest, resize) {
-  Matrix mat(5, 5);
+  Matrix<MPInt> mat(5, 5);
   EXPECT_EQ(mat.getNumRows(), 5u);
   EXPECT_EQ(mat.getNumColumns(), 5u);
   for (unsigned row = 0; row < 5; ++row)
@@ -193,8 +194,8 @@ TEST(MatrixTest, resize) {
       EXPECT_EQ(mat(row, col), row >= 3 || col >= 3 ? 0 : int(10 * row + col));
 }
 
-static void checkHermiteNormalForm(const Matrix &mat,
-                                   const Matrix &hermiteForm) {
+static void checkHermiteNormalForm(const Matrix<MPInt> &mat,
+                                   const Matrix<MPInt> &hermiteForm) {
   auto [h, u] = mat.computeHermiteNormalForm();
 
   for (unsigned row = 0; row < mat.getNumRows(); row++)
@@ -208,42 +209,42 @@ TEST(MatrixTest, computeHermiteNormalForm) {
 
   {
     // Hermite form of a unimodular matrix is the identity matrix.
-    Matrix mat = makeMatrix(3, 3, {{2, 3, 6}, {3, 2, 3}, {17, 11, 16}});
-    Matrix hermiteForm = makeMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
+    Matrix<MPInt> mat = makeIntMatrix(3, 3, {{2, 3, 6}, {3, 2, 3}, {17, 11, 16}});
+    Matrix<MPInt> hermiteForm = makeIntMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
   {
     // Hermite form of a unimodular is the identity matrix.
-    Matrix mat = makeMatrix(
+    Matrix<MPInt> mat = makeIntMatrix(
         4, 4,
         {{-6, -1, -19, -20}, {0, 1, 0, 0}, {-5, 0, -15, -16}, {6, 0, 18, 19}});
-    Matrix hermiteForm = makeMatrix(
+    Matrix<MPInt> hermiteForm = makeIntMatrix(
         4, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
   {
-    Matrix mat = makeMatrix(
+    Matrix<MPInt> mat = makeIntMatrix(
         4, 4, {{3, 3, 1, 4}, {0, 1, 0, 0}, {0, 0, 19, 16}, {0, 0, 0, 3}});
-    Matrix hermiteForm = makeMatrix(
+    Matrix<MPInt> hermiteForm = makeIntMatrix(
         4, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {1, 0, 3, 0}, {18, 0, 54, 57}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
   {
-    Matrix mat = makeMatrix(
+    Matrix<MPInt> mat = makeIntMatrix(
         4, 4, {{3, 3, 1, 4}, {0, 1, 0, 0}, {0, 0, 19, 16}, {0, 0, 0, 3}});
-    Matrix hermiteForm = makeMatrix(
+    Matrix<MPInt> hermiteForm = makeIntMatrix(
         4, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {1, 0, 3, 0}, {18, 0, 54, 57}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 
   {
-    Matrix mat =
-        makeMatrix(3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
-    Matrix hermiteForm =
-        makeMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
+    Matrix<MPInt> mat =
+        makeIntMatrix(3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
+    Matrix<MPInt> hermiteForm =
+        makeIntMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
 }
