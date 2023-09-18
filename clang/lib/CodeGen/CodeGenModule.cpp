@@ -794,7 +794,7 @@ void CodeGenModule::Release() {
       AddGlobalCtor(ObjCInitFunction);
   if (Context.getLangOpts().CUDA && CUDARuntime) {
     if (llvm::Function *CudaCtorFunction = CUDARuntime->finalizeModule())
-      AddGlobalCtor(CudaCtorFunction);
+      AddGlobalCtor(CudaCtorFunction, /*Priority=*/0);
   }
   if (OpenMPRuntime) {
     if (llvm::Function *OpenMPRequiresDirectiveRegFun =
