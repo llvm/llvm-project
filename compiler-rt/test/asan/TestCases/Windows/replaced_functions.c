@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan /Od %s /Fe%t
+// RUN: %clang_cl_asan %Od %s %Fe%t
 
 #define _CRT_SECURE_NO_WARNINGS
 #define NOMINMAX
