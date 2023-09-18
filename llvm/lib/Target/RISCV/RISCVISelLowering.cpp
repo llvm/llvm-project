@@ -14079,11 +14079,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
       unsigned ElementSize = VT.getScalarStoreSize();
       EVT WideScalarVT = MVT::getIntegerVT(ElementSize * 8 * 2);
-      EVT WideVT = VT.changeVectorElementType(WideScalarVT)
-        .getHalfNumVectorElementsVT(*DAG.getContext());
+      auto EltCnt = VT.getVectorElementCount();
+      assert(EltCnt.isKnownEven() && "Splitting vector, but not in half!");
+      EVT WideVT = EVT::getVectorVT(*DAG.getContext(), WideScalarVT,
+                                    EltCnt.divideCoefficientBy(2));
       SDValue Passthru = DAG.getBitcast(WideVT, MGN->getPassThru());
-      SDValue Mask = DAG.getSplat(WideVT.changeVectorElementType(MVT::i1), DL,
-                                  DAG.getConstant(1, DL, MVT::i1));
+      EVT MaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                    EltCnt.divideCoefficientBy(2));
+      SDValue Mask = DAG.getSplat(MaskVT, DL, DAG.getConstant(1, DL, MVT::i1));
 
       SDValue Gather =
         DAG.getMaskedGather(DAG.getVTList(WideVT, MVT::Other), WideVT, DL,
