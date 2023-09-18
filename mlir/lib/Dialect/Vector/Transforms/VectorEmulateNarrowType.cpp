@@ -226,7 +226,7 @@ struct BitCastBitsEnumerator {
 
 } // namespace
 
-static raw_ostream &operator<<(raw_ostream &os,
+[[maybe_unused]] static raw_ostream &operator<<(raw_ostream &os,
                                const SmallVector<SourceElementRangeList> &vec) {
   for (const auto &l : vec) {
     for (auto it : llvm::enumerate(l)) {
