@@ -59,7 +59,7 @@ class TestNoWatchpointSupportInfo(GDBRemoteTestBase):
 
         err = lldb.SBError()
         wp_opts = lldb.SBWatchpointOptions()
-        wp_opts.SetWatchpointTypeModify(True)
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
         wp = target.WatchpointCreateByAddress(0x100, 8, wp_opts, err)
         if self.TraceOn() and (err.Fail() or wp.IsValid == False):
             strm = lldb.SBStream()

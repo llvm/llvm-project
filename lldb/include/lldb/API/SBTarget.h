@@ -831,7 +831,7 @@ public:
 
   LLDB_DEPRECATED("WatchAddress deprecated, use WatchpointCreateByAddress")
   lldb::SBWatchpoint WatchAddress(lldb::addr_t addr, size_t size, bool read,
-                                  bool write, SBError &error);
+                                  bool modify, SBError &error);
 
   lldb::SBWatchpoint
   WatchpointCreateByAddress(lldb::addr_t addr, size_t size,

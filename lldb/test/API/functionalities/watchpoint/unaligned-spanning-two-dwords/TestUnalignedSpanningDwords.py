@@ -47,7 +47,7 @@ class UnalignedWatchpointTestCase(TestBase):
         a_bytebuf_6_addr = a_bytebuf_6.GetAddress().GetLoadAddress(target)
         err = lldb.SBError()
         wp_opts = lldb.SBWatchpointOptions()
-        wp_opts.SetWatchpointTypeModify(True)
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
         wp = target.WatchpointCreateByAddress(a_bytebuf_6_addr, 4, wp_opts, err)
         self.assertTrue(err.Success())
         self.assertTrue(wp.IsEnabled())

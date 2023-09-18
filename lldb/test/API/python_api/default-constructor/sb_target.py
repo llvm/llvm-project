@@ -55,7 +55,7 @@ def fuzz_obj(obj):
     error = lldb.SBError()
     wp_opts = lldb.SBWatchpointOptions()
     wp_opts.SetWatchpointTypeRead(True)
-    wp_opts.SetWatchpointTypeModify(True)
+    wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
     obj.WatchpointCreateByAddress(123, 8, wp_opts, error)
     obj.GetBroadcaster()
     obj.GetDescription(lldb.SBStream(), lldb.eDescriptionLevelBrief)

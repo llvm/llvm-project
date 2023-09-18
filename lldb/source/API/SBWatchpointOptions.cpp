@@ -52,16 +52,22 @@ bool SBWatchpointOptions::GetWatchpointTypeRead() const {
   return m_opaque_up->m_read;
 }
 
-void SBWatchpointOptions::SetWatchpointTypeWrite(bool write) {
-  m_opaque_up->m_write = write;
-}
-bool SBWatchpointOptions::GetWatchpointTypeWrite() const {
-  return m_opaque_up->m_write;
+void SBWatchpointOptions::SetWatchpointTypeWrite(
+    WatchpointWriteType write_type) {
+  if (write_type == eWatchpointWriteTypeOnModify) {
+    m_opaque_up->m_write = false;
+    m_opaque_up->m_modify = true;
+  } else if (write_type == eWatchpointWriteTypeAlways) {
+    m_opaque_up->m_write = true;
+    m_opaque_up->m_modify = false;
+  } else
+    m_opaque_up->m_write = m_opaque_up->m_modify = false;
 }
 
-void SBWatchpointOptions::SetWatchpointTypeModify(bool modify) {
-  m_opaque_up->m_modify = modify;
-}
-bool SBWatchpointOptions::GetWatchpointTypeModify() const {
-  return m_opaque_up->m_modify;
+WatchpointWriteType SBWatchpointOptions::GetWatchpointTypeWrite() const {
+  if (m_opaque_up->m_modify)
+    return eWatchpointWriteTypeOnModify;
+  if (m_opaque_up->m_write)
+    return eWatchpointWriteTypeAlways;
+  return eWatchpointWriteTypeDisabled;
 }

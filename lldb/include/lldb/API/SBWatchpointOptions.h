@@ -25,14 +25,13 @@ public:
 
   const SBWatchpointOptions &operator=(const lldb::SBWatchpointOptions &rhs);
 
+  /// Stop when the watched memory region is read.
   void SetWatchpointTypeRead(bool read);
   bool GetWatchpointTypeRead() const;
 
-  void SetWatchpointTypeWrite(bool write);
-  bool GetWatchpointTypeWrite() const;
-
-  void SetWatchpointTypeModify(bool modify);
-  bool GetWatchpointTypeModify() const;
+  /// Stop when the watched memory region is written to/modified
+  void SetWatchpointTypeWrite(lldb::WatchpointWriteType write_type);
+  lldb::WatchpointWriteType GetWatchpointTypeWrite() const;
 
 private:
   // This auto_pointer is made in the constructor and is always valid.

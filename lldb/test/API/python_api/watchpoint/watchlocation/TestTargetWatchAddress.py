@@ -52,7 +52,7 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
         # Watch for write to *g_char_ptr.
         error = lldb.SBError()
         wp_opts = lldb.SBWatchpointOptions()
-        wp_opts.SetWatchpointTypeModify(True)
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
         watchpoint = target.WatchpointCreateByAddress(
             value.GetValueAsUnsigned(), 1, wp_opts, error
         )
@@ -127,7 +127,7 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
             # Watch for write to *g_char_ptr.
             error = lldb.SBError()
             wp_opts = lldb.SBWatchpointOptions()
-            wp_opts.SetWatchpointTypeModify(True)
+            wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
             watchpoint = target.WatchpointCreateByAddress(
                 value.GetValueAsUnsigned(), 365, wp_opts, error
             )
