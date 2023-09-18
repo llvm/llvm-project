@@ -241,7 +241,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
 
-  TIMESCOPE_WITH_IDENT(Loc);
+  //TIMESCOPE_WITH_IDENT(Loc);
+  TIMESCOPE();
+  //TIMESCOPE_WITH_NAME_AND_IDENT("Hello", Loc);
+  //TIMESCOPE_WITH_RTM_AND_IDENT("Hello", Loc);
 
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",
