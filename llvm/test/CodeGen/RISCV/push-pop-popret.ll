@@ -3137,7 +3137,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-NEXT:    addi s0, sp, 32
 ; RV32IZCMP-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IZCMP-NEXT:    mv s1, a0
-; RV32IZCMP-NEXT:    addi a1, s0, -4
+; RV32IZCMP-NEXT:    addi a1, s0, -20
 ; RV32IZCMP-NEXT:    mv a0, s0
 ; RV32IZCMP-NEXT:    call bar@plt
 ; RV32IZCMP-NEXT:    mv a0, s1
@@ -3153,7 +3153,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64IZCMP-NEXT:    addi s0, sp, 48
 ; RV64IZCMP-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IZCMP-NEXT:    mv s1, a0
-; RV64IZCMP-NEXT:    addi a1, s0, -4
+; RV64IZCMP-NEXT:    addi a1, s0, -36
 ; RV64IZCMP-NEXT:    mv a0, s0
 ; RV64IZCMP-NEXT:    call bar@plt
 ; RV64IZCMP-NEXT:    mv a0, s1
@@ -3169,7 +3169,7 @@ define i32 @use_fp(i32 %x) {
 ; RV32IZCMP-SR-NEXT:    addi s0, sp, 32
 ; RV32IZCMP-SR-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IZCMP-SR-NEXT:    mv s1, a0
-; RV32IZCMP-SR-NEXT:    addi a1, s0, -4
+; RV32IZCMP-SR-NEXT:    addi a1, s0, -20
 ; RV32IZCMP-SR-NEXT:    mv a0, s0
 ; RV32IZCMP-SR-NEXT:    call bar@plt
 ; RV32IZCMP-SR-NEXT:    mv a0, s1
@@ -3185,7 +3185,7 @@ define i32 @use_fp(i32 %x) {
 ; RV64IZCMP-SR-NEXT:    addi s0, sp, 48
 ; RV64IZCMP-SR-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IZCMP-SR-NEXT:    mv s1, a0
-; RV64IZCMP-SR-NEXT:    addi a1, s0, -4
+; RV64IZCMP-SR-NEXT:    addi a1, s0, -36
 ; RV64IZCMP-SR-NEXT:    mv a0, s0
 ; RV64IZCMP-SR-NEXT:    call bar@plt
 ; RV64IZCMP-SR-NEXT:    mv a0, s1

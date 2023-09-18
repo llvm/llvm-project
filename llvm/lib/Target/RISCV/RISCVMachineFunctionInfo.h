@@ -104,6 +104,10 @@ public:
     BranchRelaxationScratchFrameIndex = Index;
   }
 
+  unsigned getReservedSpillsSize() const {
+    return LibCallStackSize + RVPushStackSize;
+  }
+
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
   void setLibCallStackSize(unsigned Size) { LibCallStackSize = Size; }
 
