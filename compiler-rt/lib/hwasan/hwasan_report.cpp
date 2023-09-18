@@ -451,19 +451,21 @@ static uptr GetTopPc(StackTrace *stack) {
 namespace {
 class BaseReport {
  public:
-  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr)
+  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr, uptr access_size = 0)
       : scoped_report(fatal),
         stack(stack),
         tagged_addr(tagged_addr),
+        access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
         ptr_tag(GetTagFromPointer(tagged_addr)) {}
 
  protected:
   ScopedReport scoped_report;
-  StackTrace *stack;
-  uptr tagged_addr;
-  uptr untagged_addr;
-  tag_t ptr_tag;
+  StackTrace *stack = nullptr;
+  uptr tagged_addr = 0;
+  uptr access_size = 0;
+  uptr untagged_addr = 0;
+  tag_t ptr_tag = 0;
 };
 
 static void PrintAddressDescription(
@@ -739,7 +741,7 @@ class TagMismatchReport : public BaseReport {
   explicit TagMismatchReport(StackTrace *stack, uptr tagged_addr,
                              uptr access_size, bool is_store, bool fatal,
                              uptr *registers_frame)
-      : BaseReport(stack, fatal, tagged_addr),
+      : BaseReport(stack, fatal, tagged_addr, access_size),
         access_size(access_size),
         is_store(is_store),
         registers_frame(registers_frame) {}
