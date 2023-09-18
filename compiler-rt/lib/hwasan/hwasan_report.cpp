@@ -451,7 +451,7 @@ static uptr GetTopPc(StackTrace *stack) {
 namespace {
 class BaseReport {
  public:
-  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr, uptr access_size = 0)
+  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr, uptr access_size)
       : scoped_report(fatal),
         stack(stack),
         tagged_addr(tagged_addr),
@@ -610,7 +610,7 @@ static void PrintAddressDescription(
 class InvalidFreeReport : public BaseReport {
  public:
   InvalidFreeReport(StackTrace *stack, uptr tagged_addr)
-      : BaseReport(stack, flags()->halt_on_error, tagged_addr) {}
+      : BaseReport(stack, flags()->halt_on_error, tagged_addr, 0) {}
   ~InvalidFreeReport();
 
  private:
@@ -658,7 +658,7 @@ class TailOverwrittenReport : public BaseReport {
  public:
   explicit TailOverwrittenReport(StackTrace *stack, uptr tagged_addr,
                                  uptr orig_size, const u8 *expected)
-      : BaseReport(stack, flags()->halt_on_error, tagged_addr),
+      : BaseReport(stack, flags()->halt_on_error, tagged_addr, 0),
         orig_size(orig_size),
         expected(expected) {}
   ~TailOverwrittenReport();
