@@ -495,6 +495,7 @@ public:
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
+  bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
 
 private:
