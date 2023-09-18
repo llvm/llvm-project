@@ -1713,11 +1713,11 @@ def : Pat<(int_ppc_dcbf xoaddr:$dst),
 def : Pat<(int_ppc_icbt xoaddr:$dst),
           (ICBT 0, xoaddr:$dst)>;
 
-def : Pat<(prefetch xoaddr:$dst, (i32 0), imm, (i32 1)),
+def : Pat<(prefetch xoaddr:$dst, (i32 0), timm, (i32 1)),
           (DCBT 0, xoaddr:$dst)>;   // data prefetch for loads
-def : Pat<(prefetch xoaddr:$dst, (i32 1), imm, (i32 1)),
+def : Pat<(prefetch xoaddr:$dst, (i32 1), timm, (i32 1)),
           (DCBTST 0, xoaddr:$dst)>; // data prefetch for stores
-def : Pat<(prefetch xoaddr:$dst, (i32 0), imm, (i32 0)),
+def : Pat<(prefetch xoaddr:$dst, (i32 0), timm, (i32 0)),
           (ICBT 0, xoaddr:$dst)>, Requires<[HasICBT]>; // inst prefetch (for read)
 
 def : Pat<(int_ppc_dcbt_with_hint xoaddr:$dst, i32:$TH),
