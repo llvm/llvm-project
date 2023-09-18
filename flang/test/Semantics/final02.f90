@@ -25,6 +25,11 @@ module m
     !CHECK: 'matrix' of derived type 't1' does not have a FINAL subroutine for its rank (2)
     type(t1) :: matrix(2, 2)
   end type
+  type :: t6
+    integer :: n
+   contains
+    final :: t6f3
+  end type
  contains
   subroutine t1f0(x)
     type(t1) :: x
@@ -38,9 +43,12 @@ module m
   subroutine t3far(x)
     type(t3) :: x(..)
   end subroutine
+  subroutine t6f3(x)
+    type(t6) :: x(:,:,:)
+  end subroutine
 end module
 
-subroutine test ! *not* a main program, since they don't finalize locals
+subroutine test(assumedRank) ! *not* a main program, since they don't finalize locals
   use m
   !CHECK-NOT: 'scalar1' of derived type 't1'
   type(t1) :: scalar1
@@ -66,4 +74,6 @@ subroutine test ! *not* a main program, since they don't finalize locals
   type(t4) :: vector4(2)
   !CHECK: 'matrix4' of derived type 't4' extended from 't1' does not have a FINAL subroutine for its rank (2)
   type(t4) :: matrix4(2,2)
+  !CHECK-NOT: 'assumedRank' of derived type 't6'
+  type(t6) :: assumedRank(..)
 end
