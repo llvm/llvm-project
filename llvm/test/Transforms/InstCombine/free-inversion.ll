@@ -10,11 +10,9 @@ declare void @use.i8(i8)
 
 define i8 @xor_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[BA:%.*]] = xor i8 [[B]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[BA]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[B_NOT:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -27,11 +25,9 @@ define i8 @xor_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @xor_2(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_2(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[AB:%.*]] = xor i8 [[B]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[B_NOT:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[B_NOT]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
@@ -59,11 +55,9 @@ define i8 @xor_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @add_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[BA:%.*]] = add i8 [[B]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[BA]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = sub i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -76,11 +70,9 @@ define i8 @add_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @add_2(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @add_2(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[AB:%.*]] = add i8 [[B]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = sub i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
@@ -110,11 +102,9 @@ define i8 @add_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @sub_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[B]], -1
-; CHECK-NEXT:    [[NOT_BA:%.*]] = add i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = add i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -145,11 +135,10 @@ define i8 @sub_2(i8 %a, i1 %c, i8 %x, i8 %y) {
 define i8 @sub_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_fail(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
 ; CHECK-NEXT:    call void @use.i8(i8 [[NX]])
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[B]], -1
-; CHECK-NEXT:    [[NOT_BA:%.*]] = add i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = add i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -163,11 +152,9 @@ define i8 @sub_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @ashr_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[BA:%.*]] = ashr i8 [[B]], [[A:%.*]]
-; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[BA]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = ashr i8 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -197,13 +184,11 @@ define i8 @ashr_2_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
 
 define i8 @select_1(i1 %cc, i8 %na, i8 %aa, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[NA:%.*]], [[AA:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[TMP1]], 45
-; CHECK-NEXT:    [[AB:%.*]] = select i1 [[CC:%.*]], i8 [[A]], i8 [[B]]
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -46
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP3]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = select i1 [[CC:%.*]], i8 [[TMP2]], i8 [[TMP4]]
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
@@ -218,12 +203,10 @@ define i8 @select_1(i1 %cc, i8 %na, i8 %aa, i1 %c, i8 %x, i8 %y) {
 
 define i8 @select_2(i1 %cc, i8 %na, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_2(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[A:%.*]] = xor i8 [[NA:%.*]], 45
-; CHECK-NEXT:    [[BA:%.*]] = select i1 [[CC:%.*]], i8 [[B]], i8 [[A]]
-; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[BA]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[NA:%.*]], -46
+; CHECK-NEXT:    [[NOT_BA:%.*]] = select i1 [[CC:%.*]], i8 [[TMP2]], i8 [[TMP3]]
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1
@@ -271,13 +254,10 @@ define i1 @select_logic_and_fail(i1 %cc, i1 %c, i1 %x, i8 %y) {
 
 define i8 @smin_1(i8 %aa, i8 %na, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @smin_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[NNA:%.*]] = xor i8 [[NA:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NNA]], [[AA:%.*]]
-; CHECK-NEXT:    [[AB:%.*]] = call i8 @llvm.smin.i8(i8 [[A]], i8 [[B]])
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[NA:%.*]], [[AA:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP2]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP1]], i8 [[TMP3]])
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
@@ -324,13 +304,10 @@ define i8 @umin_1_fail(i1 %c, i8 %x, i8 %y) {
 
 define i8 @smax_1(i8 %aa, i8 %na, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @smax_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[NNA:%.*]] = xor i8 [[NA:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = sub i8 [[NNA]], [[AA:%.*]]
-; CHECK-NEXT:    [[AB:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 [[B]])
-; CHECK-NEXT:    [[NOT_AB:%.*]] = xor i8 [[AB]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[NA:%.*]], [[AA:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP2]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = call i8 @llvm.smin.i8(i8 [[TMP1]], i8 [[TMP3]])
 ; CHECK-NEXT:    ret i8 [[NOT_AB]]
 ;
   %nx = xor i8 %x, -1
@@ -368,11 +345,9 @@ define i8 @smax_1_fail(i8 %aa, i8 %na, i1 %c, i8 %x, i8 %y) {
 
 define i8 @umax_1(i8 %na, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_1(
-; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], 123
-; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8 [[NX]], i8 [[YY]]
-; CHECK-NEXT:    [[BA:%.*]] = call i8 @llvm.umax.i8(i8 [[B]], i8 85)
-; CHECK-NEXT:    [[NOT_BA:%.*]] = xor i8 [[BA]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    [[NOT_BA:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP2]], i8 -86)
 ; CHECK-NEXT:    ret i8 [[NOT_BA]]
 ;
   %nx = xor i8 %x, -1

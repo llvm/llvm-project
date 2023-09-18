@@ -121,9 +121,9 @@ define i1 @or_ne_notY_eq_1s(i8 %x, i8 %y) {
 
 define i1 @or_ne_notY_eq_1s_fail_bad_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ne_notY_eq_1s_fail_bad_not(
-; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NY]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ny = xor i8 %y, -2
