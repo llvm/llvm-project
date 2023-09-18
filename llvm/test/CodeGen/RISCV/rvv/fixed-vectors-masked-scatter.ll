@@ -11296,9 +11296,8 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, ptr %base, <32 x i8> %idxs, 
 define void @mscatter_unit_stride(<8 x i16> %val, ptr %base) {
 ; CHECK-LABEL: mscatter_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vsse16.v v8, (a0), a1
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i16 0
   %allones = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
@@ -11311,9 +11310,8 @@ define void @mscatter_unit_stride_with_offset(<8 x i16> %val, ptr %base) {
 ; CHECK-LABEL: mscatter_unit_stride_with_offset:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, a0, 10
-; CHECK-NEXT:    li a1, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vsse16.v v8, (a0), a1
+; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i16 0
   %allones = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
