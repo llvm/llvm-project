@@ -5695,8 +5695,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
         if (OpOp.getOpcode() == ISD::AssertZext && N1->hasOneUse()) {
-          EVT ExtVT = cast<VTSDNode>(OpOp.getOperand(1))->getVT();
-          if (N1.getScalarValueSizeInBits() >= ExtVT.getSizeInBits()) {
+          APInt HiBits = APInt::getBitsSetFrom(VT.getScalarSizeInBits(),
+                                               N1.getScalarValueSizeInBits());
+          if (MaskedValueIsZero(OpOp, HiBits)) {
             transferDbgValues(N1, OpOp);
             return OpOp;
           }
