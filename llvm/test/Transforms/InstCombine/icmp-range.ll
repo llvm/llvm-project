@@ -1164,7 +1164,7 @@ define i1 @icmp_eq_zext_ne_non_boolean(i32 %a) {
 }
 
 define <2 x i1> @icmp_ne_zext_eq_zero_vec(<2 x i32> %a) {
-; CHECK-LABEL: @icmp_ne_zext_eq_zero_vec
+; CHECK-LABEL: @icmp_ne_zext_eq_zero_vec(
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>
@@ -1218,10 +1218,7 @@ define <2 x i1> @icmp_ne_zext_eq_non_boolean_vec(<2 x i32> %a) {
 
 define i1 @icmp_ne_sext_eq_zero(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_zero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp eq i32 %a, 0
   %conv = sext i1 %cmp to i32
@@ -1231,9 +1228,8 @@ define i1 @icmp_ne_sext_eq_zero(i32 %a) {
 
 define i1 @icmp_ne_sext_ne_zero(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_zero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, 0
@@ -1244,10 +1240,7 @@ define i1 @icmp_ne_sext_ne_zero(i32 %a) {
 
 define i1 @icmp_eq_sext_eq_zero(i32 %a) {
 ; CHECK-LABEL: @icmp_eq_sext_eq_zero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp eq i32 %a, 0
   %conv = sext i1 %cmp to i32
@@ -1257,9 +1250,8 @@ define i1 @icmp_eq_sext_eq_zero(i32 %a) {
 
 define i1 @icmp_eq_sext_ne_zero(i32 %a) {
 ; CHECK-LABEL: @icmp_eq_sext_ne_zero(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, 0
@@ -1270,9 +1262,8 @@ define i1 @icmp_eq_sext_ne_zero(i32 %a) {
 
 define i1 @icmp_ne_sext_eq_allones(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_allones(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TMP1]], -2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp eq i32 %a, -1
@@ -1283,10 +1274,7 @@ define i1 @icmp_ne_sext_eq_allones(i32 %a) {
 
 define i1 @icmp_ne_sext_ne_allones(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_allones(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp ne i32 %a, -1
   %conv = sext i1 %cmp to i32
@@ -1296,9 +1284,8 @@ define i1 @icmp_ne_sext_ne_allones(i32 %a) {
 
 define i1 @icmp_eq_sext_eq_allones(i32 %a) {
 ; CHECK-LABEL: @icmp_eq_sext_eq_allones(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp eq i32 %a, -1
@@ -1309,10 +1296,7 @@ define i1 @icmp_eq_sext_eq_allones(i32 %a) {
 
 define i1 @icmp_eq_sext_ne_allones(i32 %a) {
 ; CHECK-LABEL: @icmp_eq_sext_ne_allones(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp ne i32 %a, -1
   %conv = sext i1 %cmp to i32
@@ -1322,9 +1306,7 @@ define i1 @icmp_eq_sext_ne_allones(i32 %a) {
 
 define i1 @icmp_ne_sext_eq_otherwise(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_otherwise(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp eq i32 %a, 2
@@ -1335,9 +1317,7 @@ define i1 @icmp_ne_sext_eq_otherwise(i32 %a) {
 
 define i1 @icmp_ne_sext_ne_otherwise(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_otherwise(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, 2
@@ -1348,9 +1328,7 @@ define i1 @icmp_ne_sext_ne_otherwise(i32 %a) {
 
 define i1 @icmp_eq_sext_eq_otherwise(i32 %a) {
 ; CHECK-LABEL: @icmp_eq_sext_eq_otherwise(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp eq i32 %a, 2
@@ -1361,9 +1339,7 @@ define i1 @icmp_eq_sext_eq_otherwise(i32 %a) {
 
 define i1 @icmp_eq_sext_ne_otherwise(i32 %a) {
 ; CHECK-LABEL: @icmp_eq_sext_ne_otherwise(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 2
-; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, 2
@@ -1374,10 +1350,7 @@ define i1 @icmp_eq_sext_ne_otherwise(i32 %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_zero_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>
   %conv = sext <2 x i1> %cmp to <2 x i32>
@@ -1387,9 +1360,8 @@ define <2 x i1> @icmp_ne_sext_eq_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_zero_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -2, i32 -2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 0, i32 0>
@@ -1400,9 +1372,8 @@ define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_allones_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -2, i32 -2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 -1, i32 -1>
@@ -1413,10 +1384,7 @@ define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_ne_allones_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_allones_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 -1, i32 -1>
   %conv = sext <2 x i1> %cmp to <2 x i32>
@@ -1426,9 +1394,7 @@ define <2 x i1> @icmp_ne_sext_ne_allones_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_otherwise_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_otherwise_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne <2 x i32> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 2, i32 2>

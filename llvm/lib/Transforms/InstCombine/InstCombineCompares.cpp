@@ -6385,9 +6385,9 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
   const APInt *C;
   Instruction *ExtI;
   if (match(&I, m_c_ICmp(Pred1, m_Value(X),
-                         m_Instruction(ExtI,
-                                       m_ZExtOrSExt(m_ICmp(Pred2, m_Deferred(X),
-                                                           m_APInt(C))))))) {
+                         m_CombineAnd(m_Instruction(ExtI),
+                                      m_ZExtOrSExt(m_ICmp(Pred2, m_Deferred(X),
+                                                          m_APInt(C))))))) {
     bool IsSExt = ExtI->getOpcode() == Instruction::SExt;
     bool HasOneUse = ExtI->hasOneUse() && ExtI->getOperand(0)->hasOneUse();
     if (C->isZero()) {
