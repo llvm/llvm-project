@@ -758,6 +758,17 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   // sections and expected to be contiguous (e.g. ObjC metadata).
   const Align Alignment = getGVAlignment(GV, DL);
 
+  if (GV->hasSanitizerMetadata() &&
+    !GV->getSanitizerMetadata().NoAddress) {
+    StructType* ST = dyn_cast<StructType>(GV->getValueType());
+    if (ST && ST->getNumElements() == 2) {
+      auto *ET0 = ST->getElementType(0);
+      if (ET0 && isa<ArrayType>(ST->getElementType(1))) {
+        Size = DL.getTypeAllocSize(ET0);
+      }
+    }
+  }
+
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
                        HI.TimerGroupName, HI.TimerGroupDescription,
