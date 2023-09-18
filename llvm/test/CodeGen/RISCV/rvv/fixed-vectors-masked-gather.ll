@@ -13024,19 +13024,19 @@ define <4 x i32> @mgather_narrow_edge_case(ptr %base) {
 define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV32-LABEL: mgather_strided_2xSEW:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI107_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI107_0)
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle8.v v9, (a1)
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vsll.vi v9, v8, 3
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_strided_2xSEW:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    lui a1, %hi(.LCPI107_0)
-; RV64V-NEXT:    addi a1, a1, %lo(.LCPI107_0)
-; RV64V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64V-NEXT:    vle8.v v9, (a1)
+; RV64V-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV64V-NEXT:    vid.v v8
+; RV64V-NEXT:    vsll.vi v9, v8, 3
+; RV64V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
@@ -13141,19 +13141,19 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV32-LABEL: mgather_gather_2xSEW:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(.LCPI108_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI108_0)
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vle8.v v9, (a1)
+; RV32-NEXT:    lui a1, 82176
+; RV32-NEXT:    addi a1, a1, 1024
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v9, a1
 ; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_gather_2xSEW:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    lui a1, %hi(.LCPI108_0)
-; RV64V-NEXT:    addi a1, a1, %lo(.LCPI108_0)
-; RV64V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64V-NEXT:    vle8.v v9, (a1)
+; RV64V-NEXT:    lui a1, 82176
+; RV64V-NEXT:    addiw a1, a1, 1024
+; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64V-NEXT:    vmv.s.x v9, a1
 ; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
