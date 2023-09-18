@@ -89,9 +89,9 @@ class TestDumpDWO(lldbtest.TestBase):
             patterns=[
                 "Symbol file: .*?a\.out",
                 'Type: "dwo"',
-                "Dwo ID\s+Dwo Path",
-                "0x[a-zA-Z0-9]{16}.*main\.dwo",
-                "0x[a-zA-Z0-9]{16}.*foo\.dwo",
+                "Dwo ID\s+Err\s+Dwo Path",
+                "0x[a-zA-Z0-9]{16}\s+.*main\.dwo",
+                "0x[a-zA-Z0-9]{16}\s+.*foo\.dwo",
             ],
         )
 
@@ -115,8 +115,8 @@ class TestDumpDWO(lldbtest.TestBase):
             patterns=[
                 "Symbol file: .*?a\.out",
                 'Type: "dwo"',
-                "Dwo ID\s+Dwo Path",
-                "0x[a-zA-Z0-9]{16}.*error:.*main\.dwo",
-                "0x[a-zA-Z0-9]{16}.*error:.*foo\.dwo",
+                "Dwo ID\s+Err\s+Dwo Path",
+                "0x[a-zA-Z0-9]{16}\s+E\s+.*main\.dwo",
+                "0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.dwo",
             ],
         )

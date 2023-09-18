@@ -1481,10 +1481,10 @@ static bool GetSeparateDebugInfoList(StructuredData::Array &list,
 
 static void DumpDwoFilesTable(Stream &strm,
                               StructuredData::Array &dwo_listings) {
-  strm.PutCString("Dwo ID             Dwo Path");
+  strm.PutCString("Dwo ID             Err Dwo Path");
   strm.EOL();
   strm.PutCString(
-      "------------------ -----------------------------------------");
+      "------------------ --- -----------------------------------------");
   strm.EOL();
   dwo_listings.ForEach([&strm](StructuredData::Object *dwo) {
     StructuredData::Dictionary *dict = dwo->GetAsDictionary();
@@ -1499,12 +1499,12 @@ static void DumpDwoFilesTable(Stream &strm,
 
     llvm::StringRef error;
     if (dict->GetValueForKeyAsString("error", error))
-      strm << "error: " << error;
+      strm << "E   " << error;
     else {
       llvm::StringRef resolved_dwo_path;
       if (dict->GetValueForKeyAsString("resolved_dwo_path",
                                        resolved_dwo_path)) {
-        strm << resolved_dwo_path;
+        strm << "    " << resolved_dwo_path;
         if (resolved_dwo_path.ends_with(".dwp")) {
           llvm::StringRef dwo_name;
           if (dict->GetValueForKeyAsString("dwo_name", dwo_name))
@@ -1519,9 +1519,9 @@ static void DumpDwoFilesTable(Stream &strm,
 
 static void DumpOsoFilesTable(Stream &strm,
                               StructuredData::Array &oso_listings) {
-  strm.PutCString("Mod Time           Oso Path");
+  strm.PutCString("Mod Time           Err Oso Path");
   strm.EOL();
-  strm.PutCString("------------------ ---------------------");
+  strm.PutCString("------------------ --- ---------------------");
   strm.EOL();
   oso_listings.ForEach([&strm](StructuredData::Object *oso) {
     StructuredData::Dictionary *dict = oso->GetAsDictionary();
@@ -1534,11 +1534,11 @@ static void DumpOsoFilesTable(Stream &strm,
 
     llvm::StringRef error;
     if (dict->GetValueForKeyAsString("error", error))
-      strm << "error: " << error;
+      strm << "E   " << error;
     else {
       llvm::StringRef oso_path;
       if (dict->GetValueForKeyAsString("oso_path", oso_path))
-        strm << oso_path;
+        strm << "    " << oso_path;
     }
     strm.EOL();
     return true;
