@@ -1,11 +1,11 @@
-; Confirm that we do generate one too many indirections accessing the stack guard
-; variable, when the relocation model is static.
-; This is preparation for the fix. 
-;
 ; RUN: llvm-as < %s > %t.bc
 ; RUN: llvm-lto -O0 -relocation-model=static -o %t.o %t.bc
 ; RUN: llvm-objdump -d -r %t.o | FileCheck %s
 
+; Confirm that we do generate one too many indirections accessing the stack guard
+; variable, when the relocation model is static and the PIC level is not 0..
+; This is preparation for the fix.
+;
 target triple = "armv4t-unknown-unknown"
 
 define arm_aapcscc i8 @foo() #0 {
@@ -34,7 +34,7 @@ entry:
   ret i32 %conv
 }
 
-attributes #0 = { noinline nounwind optnone sspstrong }
+attributes #0 = { sspstrong }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"PIC Level", i32 2}
