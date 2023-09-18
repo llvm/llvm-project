@@ -657,8 +657,11 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // 15.5.2.6 -- dummy is ALLOCATABLE
   bool actualIsAllocatable{evaluate::IsAllocatableDesignator(actual)};
+  bool dummyIsOptional{
+      dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
+  bool actualIsNull{evaluate::IsNullPointer(actual)};
   if (dummyIsAllocatable) {
-    if (!actualIsAllocatable) {
+    if (!actualIsAllocatable && !(actualIsNull && dummyIsOptional)) {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
           dummyName);
@@ -788,9 +791,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // NULL(MOLD=) checking for non-intrinsic procedures
-  bool dummyIsOptional{
-      dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
-  bool actualIsNull{evaluate::IsNullPointer(actual)};
   if (!intrinsic && !dummyIsPointer && !dummyIsOptional && actualIsNull) {
     messages.Say(
         "Actual argument associated with %s may not be null pointer %s"_err_en_US,
