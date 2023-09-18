@@ -23,7 +23,7 @@ using namespace llvm::object;
 namespace lld::wasm {
 SymbolTable *symtab;
 
-void SymbolTable::addFile(InputFile *file) {
+void SymbolTable::addFile(InputFile *file, StringRef symName) {
   log("Processing: " + toString(file));
 
   // .a file
@@ -50,7 +50,7 @@ void SymbolTable::addFile(InputFile *file) {
 
   // LLVM bitcode file
   if (auto *f = dyn_cast<BitcodeFile>(file)) {
-    f->parse();
+    f->parse(symName);
     bitcodeFiles.push_back(f);
     return;
   }
