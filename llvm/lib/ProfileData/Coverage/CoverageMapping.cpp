@@ -358,11 +358,12 @@ Error CoverageMapping::loadFromFile(
   MemoryBufferRef CovMappingBufRef =
       CovMappingBufOrErr.get()->getMemBufferRef();
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
+  InstrProfSymtab& ProfSymTab = ProfileReader.getSymtab();
 
   SmallVector<object::BuildIDRef> BinaryIDs;
   auto CoverageReadersOrErr = BinaryCoverageReader::create(
-      CovMappingBufRef, ProfileReader, Arch, Buffers, CompilationDir,
-      FoundBinaryIDs ? &BinaryIDs : nullptr);
+      CovMappingBufRef, Arch, Buffers, ProfSymTab,
+      CompilationDir, FoundBinaryIDs ? &BinaryIDs : nullptr);
   if (Error E = CoverageReadersOrErr.takeError()) {
     E = handleMaybeNoDataFoundError(std::move(E));
     if (E)
