@@ -11,8 +11,8 @@ module name_clash
 end module
 
 !CHECK-LABEL: func.func @_QPuser_clash(
-!CHECK-SAME: !fir.ref<!fir.type<_QFuser_clashTt2{i._QMname_clashTt:i32,i:i32}>>
-!CHECK-SAME: !fir.ref<!fir.type<_QMname_clashTt{i._QMname_clashTt:i32}>>
+!CHECK-SAME: !fir.ref<!fir.type<_QFuser_clashTt2{_QMname_clashTt.i:i32,i:i32}>>
+!CHECK-SAME: !fir.ref<!fir.type<_QMname_clashTt{_QMname_clashTt.i:i32}>>
 subroutine user_clash(a, at)
   use name_clash
   type,extends(t) :: t2
@@ -26,7 +26,7 @@ subroutine user_clash(a, at)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPclash_with_intrinsic_module(
-! CHECK-SAME: !fir.ref<!fir.type<_QFclash_with_intrinsic_moduleTmy_class{which._QMieee_arithmeticTieee_class_type:i8,which:i8}>>
+! CHECK-SAME: !fir.ref<!fir.type<_QFclash_with_intrinsic_moduleTmy_class{_QMieee_arithmeticTieee_class_type.which:i8,which:i8}>>
 subroutine clash_with_intrinsic_module(a)
  use ieee_arithmetic
  type, extends(ieee_class_type) :: my_class

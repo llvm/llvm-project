@@ -245,8 +245,8 @@ std::string Fortran::lower::mangle::getRecordTypeFieldName(
   // without access to semantics::Symbol.
   if (Fortran::semantics::IsIsoCType(componentParentType))
     return component.name().ToString();
-  return component.name().ToString() + "." +
-         mangleName(*componentParentType, scopeBlockIdMap);
+  return mangleName(*componentParentType, scopeBlockIdMap) + "." +
+         component.name().ToString();
 }
 
 std::string Fortran::lower::mangle::demangleName(llvm::StringRef name) {
