@@ -50,9 +50,9 @@ CharSourceRange clang::tooling::maybeExtendRange(CharSourceRange Range,
   return CharSourceRange::getTokenRange(Range.getBegin(), Tok.getLocation());
 }
 
-static llvm::Error validateRange(const CharSourceRange &Range,
-                                 const SourceManager &SM,
-                                 bool AllowSystemHeaders) {
+llvm::Error clang::tooling::validateRange(const CharSourceRange &Range,
+                                          const SourceManager &SM,
+                                          bool AllowSystemHeaders) {
   if (Range.isInvalid())
     return llvm::make_error<StringError>(errc::invalid_argument,
                                          "Invalid range");
