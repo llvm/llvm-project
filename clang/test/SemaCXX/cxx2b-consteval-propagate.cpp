@@ -331,6 +331,21 @@ S s(0); // expected-note {{in the default initializer of 'j'}}
 
 }
 
+namespace GH65985 {
+consteval int invalid(); // expected-note 2{{declared here}}
+constexpr int escalating(auto) {
+    return invalid();
+    // expected-note@-1 {{'escalating<int>' is an immediate function because its body contains a call to a consteval function 'invalid' and that call is not a constant expression}}
+    // expected-note@-2 2{{undefined function 'invalid' cannot be used in a constant expression}}
+}
+struct S {
+    static constexpr int a = escalating(0); // expected-note 2{{in call to}}
+    // expected-error@-1 {{call to immediate function 'GH65985::escalating<int>' is not a constant expression}}
+    // expected-error@-2 {{constexpr variable 'a' must be initialized by a constant expression}}
+};
+
+}
+
 namespace GH66324 {
 
 consteval int allocate();  // expected-note  2{{declared here}}
