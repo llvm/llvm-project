@@ -548,7 +548,7 @@ bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
   // currently executing, so conservatively return false if they are in
   // different basic blocks.
   if (LHSI->isConvergent() && LHSI->getParent() != RHSI->getParent())
-      return false;
+    return false;
 
   return LHSI->isIdenticalTo(RHSI);
 }
@@ -565,21 +565,21 @@ struct GEPValue {
   bool HasConstantOffset;
 
   GEPValue(Instruction *I) : Inst(I), HasConstantOffset(false) {
-      assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
+    assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
   }
   GEPValue(Instruction *I, APInt ConstantOffset, bool HasConstantOffset)
       : Inst(I), ConstantOffset(ConstantOffset),
         HasConstantOffset(HasConstantOffset) {
-      assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
+    assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
   }
 
   bool isSentinel() const {
-      return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-             Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
+           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
   static bool canHandle(Instruction *Inst) {
-      return isa<GetElementPtrInst>(Inst);
+    return isa<GetElementPtrInst>(Inst);
   }
 };
 
@@ -589,11 +589,11 @@ namespace llvm {
 
 template <> struct DenseMapInfo<GEPValue> {
   static inline GEPValue getEmptyKey() {
-      return DenseMapInfo<Instruction *>::getEmptyKey();
+    return DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
   static inline GEPValue getTombstoneKey() {
-      return DenseMapInfo<Instruction *>::getTombstoneKey();
+    return DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
   static unsigned getHashValue(const GEPValue &Val);
@@ -603,10 +603,10 @@ template <> struct DenseMapInfo<GEPValue> {
 } // end namespace llvm
 
 unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
-  GetElementPtrInst *GEP = cast<GetElementPtrInst>(Val.Inst);
+  auto *GEP = cast<GetElementPtrInst>(Val.Inst);
   if (Val.HasConstantOffset)
-      return hash_combine(GEP->getOpcode(), GEP->getPointerOperand(),
-                          Val.ConstantOffset);
+    return hash_combine(GEP->getOpcode(), GEP->getPointerOperand(),
+                        Val.ConstantOffset);
   return hash_combine(
       GEP->getOpcode(),
       hash_combine_range(GEP->value_op_begin(), GEP->value_op_end()));
@@ -614,13 +614,13 @@ unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
 
 bool DenseMapInfo<GEPValue>::isEqual(const GEPValue &LHS, const GEPValue &RHS) {
   if (LHS.isSentinel() || RHS.isSentinel())
-      return LHS.Inst == RHS.Inst;
-  GetElementPtrInst *LGEP = cast<GetElementPtrInst>(LHS.Inst);
-  GetElementPtrInst *RGEP = cast<GetElementPtrInst>(RHS.Inst);
+    return LHS.Inst == RHS.Inst;
+  auto *LGEP = cast<GetElementPtrInst>(LHS.Inst);
+  auto *RGEP = cast<GetElementPtrInst>(RHS.Inst);
   if (LGEP->getPointerOperand() != RGEP->getPointerOperand())
-      return false;
+    return false;
   if (LHS.HasConstantOffset && RHS.HasConstantOffset)
-      return LHS.ConstantOffset == RHS.ConstantOffset;
+    return LHS.ConstantOffset == RHS.ConstantOffset;
   return LGEP->isIdenticalToWhenDefined(RGEP);
 }
 
@@ -1649,7 +1649,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // Compare GEP instructions based on offset.
     if (GEPValue::canHandle(&Inst)) {
-      GetElementPtrInst *GEP = cast<GetElementPtrInst>(&Inst);
+      auto *GEP = cast<GetElementPtrInst>(&Inst);
       APInt Offset(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
       bool HasConstantOffset = GEP->accumulateConstantOffset(SQ.DL, Offset);
       GEPValue GEPVal(GEP, Offset, HasConstantOffset);
