@@ -57,6 +57,7 @@ enum NodeType : unsigned {
 
   // Load address.
   LA_TLS_GD,
+  LA_TLSDESC,
 
   // Multiply high for signedxunsigned.
   MULHSU,
@@ -845,6 +846,8 @@ private:
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                            bool UseGOT) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
+  SDValue getGeneralDynamicTLSDescAddr(GlobalAddressSDNode *N,
+                                       SelectionDAG &DAG) const;
 
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;

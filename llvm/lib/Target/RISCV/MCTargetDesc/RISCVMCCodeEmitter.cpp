@@ -57,6 +57,10 @@ public:
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
 
+  void expandTLSDESCCall(const MCInst &MI, SmallVectorImpl<char> &CB,
+                         SmallVectorImpl<MCFixup> &Fixups,
+                         const MCSubtargetInfo &STI) const;
+
   void expandAddTPRel(const MCInst &MI, SmallVectorImpl<char> &CB,
                       SmallVectorImpl<MCFixup> &Fixups,
                       const MCSubtargetInfo &STI) const;
@@ -147,6 +151,31 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
     // Emit JALR Ra, Ra, 0
     TmpInst = MCInstBuilder(RISCV::JALR).addReg(Ra).addReg(Ra).addImm(0);
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, support::little);
+}
+
+void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI, SmallVectorImpl<char> &CB,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  MCOperand SrcSymbol = MI.getOperand(3);
+  assert(SrcSymbol.isExpr() &&
+         "Expected expression as first input to TLSDESCCALL");
+  const RISCVMCExpr *Expr = dyn_cast<RISCVMCExpr>(SrcSymbol.getExpr());
+  MCRegister Link = MI.getOperand(0).getReg();
+  MCRegister Dest = MI.getOperand(1).getReg();
+  MCRegister Imm = MI.getOperand(2).getImm();
+  Fixups.push_back(MCFixup::create(
+      0, Expr, MCFixupKind(RISCV::fixup_riscv_tlsdesc_call), MI.getLoc()));
+  // Emit fixup_riscv_relax for jalr where the relax feature is enabled.
+  if (STI.hasFeature(RISCV::FeatureRelax)) {
+    const MCConstantExpr *Dummy = MCConstantExpr::create(0, Ctx);
+    Fixups.push_back(MCFixup::create(
+        0, Dummy, MCFixupKind(RISCV::fixup_riscv_relax), MI.getLoc()));
+  }
+  MCInst Call =
+      MCInstBuilder(RISCV::JALR).addReg(Link).addReg(Dest).addImm(Imm);
+
+  uint32_t Binary = getBinaryCodeForInstr(Call, Fixups, STI);
   support::endian::write(CB, Binary, support::little);
 }
 
@@ -299,6 +328,10 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
     expandLongCondBr(MI, CB, Fixups, STI);
     MCNumEmitted += 2;
     return;
+  case RISCV::PseudoTLSDESCCall:
+    expandTLSDESCCall(MI, CB, Fixups, STI);
+    MCNumEmitted += 1;
+    return;
   }
 
   switch (Size) {
@@ -439,6 +472,19 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       break;
     case RISCVMCExpr::VK_RISCV_CALL_PLT:
       FixupKind = RISCV::fixup_riscv_call_plt;
+      RelaxCandidate = true;
+      break;
+    case RISCVMCExpr::VK_RISCV_TLSDESC_HI:
+      FixupKind = RISCV::fixup_riscv_tlsdesc_hi20;
+      break;
+    case RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO:
+      FixupKind = RISCV::fixup_riscv_tlsdesc_load_lo12;
+      break;
+    case RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO:
+      FixupKind = RISCV::fixup_riscv_tlsdesc_add_lo12;
+      break;
+    case RISCVMCExpr::VK_RISCV_TLSDESC_CALL:
+      FixupKind = RISCV::fixup_riscv_tlsdesc_call;
       RelaxCandidate = true;
       break;
     }

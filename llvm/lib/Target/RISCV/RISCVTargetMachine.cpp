@@ -78,6 +78,10 @@ static cl::opt<bool> EnableRISCVDeadRegisterElimination(
              " them with stores to x0"),
     cl::init(true));
 
+cl::opt<bool> EnableRISCVTLSDESC("riscv-enable-tlsdesc",
+                                 cl::desc("Enable the tlsdesc for RISC-V"),
+                                 cl::Hidden);
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());

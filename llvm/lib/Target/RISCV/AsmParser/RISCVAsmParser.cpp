@@ -152,6 +152,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // Helper to emit pseudo instruction "la.tls.gd" used in global-dynamic TLS
   // addressing.
   void emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+  void emitLoadTLSDescAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
   // Helper to emit pseudo load/store instruction with a symbol.
   void emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
@@ -169,6 +170,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // operand of PseudoAddTPRel results in a poor diagnostic due to the fact
   // 'add' is an overloaded mnemonic.
   bool checkPseudoAddTPRel(MCInst &Inst, OperandVector &Operands);
+
+  // Checks that a PseudoTLSDESCCall is using x5/t0 in its output operand.
+  // Enforcing this using a restricted register class for the output
+  // operand of PseudoTLSDESCCall results in a poor diagnostic due to the fact
+  // 'jalr' is an overloaded mnemonic.
+  bool checkPseudoTLSDESCCall(MCInst &Inst, OperandVector &Operands);
 
   // Check instruction constraints.
   bool validateInstruction(MCInst &Inst, OperandVector &Operands);
@@ -533,6 +540,16 @@ public:
            VK == RISCVMCExpr::VK_RISCV_TPREL_ADD;
   }
 
+  bool isTLSDESCCallSymbol() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    // Must be of 'immediate' type but not a constant.
+    if (!isImm() || evaluateConstantImm(getImm(), Imm, VK))
+      return false;
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == RISCVMCExpr::VK_RISCV_TLSDESC_CALL;
+  }
+
   bool isCSRSystemRegister() const { return isSystemRegister(); }
 
   bool isVTypeImm(unsigned N) const {
@@ -584,7 +601,10 @@ public:
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    if (VK == RISCVMCExpr::VK_RISCV_LO || VK == RISCVMCExpr::VK_RISCV_PCREL_LO)
+    if (VK == RISCVMCExpr::VK_RISCV_LO ||
+        VK == RISCVMCExpr::VK_RISCV_PCREL_LO ||
+        VK == RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO ||
+        VK == RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO)
       return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
@@ -837,7 +857,9 @@ public:
     return IsValid && ((IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None) ||
                        VK == RISCVMCExpr::VK_RISCV_LO ||
                        VK == RISCVMCExpr::VK_RISCV_PCREL_LO ||
-                       VK == RISCVMCExpr::VK_RISCV_TPREL_LO);
+                       VK == RISCVMCExpr::VK_RISCV_TPREL_LO ||
+                       VK == RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO ||
+                       VK == RISCVMCExpr::VK_RISCV_TLSDESC_ADD_LO);
   }
 
   bool isSImm12Lsb0() const { return isBareSimmNLsb0<12>(); }
@@ -894,14 +916,16 @@ public:
       return IsValid && (VK == RISCVMCExpr::VK_RISCV_PCREL_HI ||
                          VK == RISCVMCExpr::VK_RISCV_GOT_HI ||
                          VK == RISCVMCExpr::VK_RISCV_TLS_GOT_HI ||
-                         VK == RISCVMCExpr::VK_RISCV_TLS_GD_HI);
-    } else {
-      return isUInt<20>(Imm) && (VK == RISCVMCExpr::VK_RISCV_None ||
-                                 VK == RISCVMCExpr::VK_RISCV_PCREL_HI ||
-                                 VK == RISCVMCExpr::VK_RISCV_GOT_HI ||
-                                 VK == RISCVMCExpr::VK_RISCV_TLS_GOT_HI ||
-                                 VK == RISCVMCExpr::VK_RISCV_TLS_GD_HI);
+                         VK == RISCVMCExpr::VK_RISCV_TLS_GD_HI ||
+                         VK == RISCVMCExpr::VK_RISCV_TLSDESC_HI);
     }
+
+    return isUInt<20>(Imm) && (VK == RISCVMCExpr::VK_RISCV_None ||
+                               VK == RISCVMCExpr::VK_RISCV_PCREL_HI ||
+                               VK == RISCVMCExpr::VK_RISCV_GOT_HI ||
+                               VK == RISCVMCExpr::VK_RISCV_TLS_GOT_HI ||
+                               VK == RISCVMCExpr::VK_RISCV_TLS_GD_HI ||
+                               VK == RISCVMCExpr::VK_RISCV_TLSDESC_HI);
   }
 
   bool isSImm21Lsb0JAL() const { return isBareSimmNLsb0<21>(); }
@@ -1514,6 +1538,11 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidTPRelAddSymbol: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a symbol with %tprel_add modifier");
+  }
+  case Match_InvalidTLSDESCCallSymbol: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc,
+                 "operand must be a symbol with %tlsdesc_call modifier");
   }
   case Match_InvalidRTZArg: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -3107,6 +3136,41 @@ void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
                     RISCV::ADDI, IDLoc, Out);
 }
 
+void RISCVAsmParser::emitLoadTLSDescAddress(MCInst &Inst, SMLoc IDLoc,
+                                            MCStreamer &Out) {
+  // The load TLS GD address pseudo-instruction "la.tlsdesc" is used in
+  // global-dynamic TLS model addressing of global symbols:
+  //   la.tlsdesc rdest, symbol
+  // expands to
+  //   TmpLabel: AUIPC rdest, %tlsdesc_hi(symbol)
+  //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
+  MCOperand DestReg = Inst.getOperand(0);
+  const MCExpr *Symbol = Inst.getOperand(1).getExpr();
+
+  MCContext &Ctx = getContext();
+
+  MCSymbol *TmpLabel = Ctx.createNamedTempSymbol("pcrel_hi");
+  Out.emitLabel(TmpLabel);
+
+  const RISCVMCExpr *SymbolHi =
+      RISCVMCExpr::create(Symbol, RISCVMCExpr::VK_RISCV_TLSDESC_HI, Ctx);
+  emitToStreamer(
+      Out, MCInstBuilder(RISCV::AUIPC).addOperand(DestReg).addExpr(SymbolHi));
+
+  const MCExpr *RefToLinkTmpLabel =
+      RISCVMCExpr::create(MCSymbolRefExpr::create(TmpLabel, Ctx),
+                          RISCVMCExpr::VK_RISCV_TLSDESC_LOAD_LO, Ctx);
+
+  emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
+                          .addOperand(DestReg)
+                          .addOperand(DestReg)
+                          .addExpr(RefToLinkTmpLabel));
+
+  emitToStreamer(
+      Out,
+      MCInstBuilder(RISCV::JALR).addReg(RISCV::X5).addReg(RISCV::X5).addImm(0));
+}
+
 void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
                                          SMLoc IDLoc, MCStreamer &Out,
                                          bool HasTmpReg) {
@@ -3242,6 +3306,18 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[3]).getStartLoc();
     return Error(ErrorLoc, "the second input operand must be tp/x4 when using "
                            "%tprel_add modifier");
+  }
+
+  return false;
+}
+bool RISCVAsmParser::checkPseudoTLSDESCCall(MCInst &Inst,
+                                            OperandVector &Operands) {
+  assert(Inst.getOpcode() == RISCV::PseudoTLSDESCCall && "Invalid instruction");
+  assert(Inst.getOperand(0).isReg() && "Unexpected operand kind");
+  if (Inst.getOperand(0).getReg() != RISCV::X5) {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[3]).getStartLoc();
+    return Error(ErrorLoc, "the output operand must be t0/x5 when using "
+                           "%tlsdesc_call modifier");
   }
 
   return false;
@@ -3442,6 +3518,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoLA_TLS_GD:
     emitLoadTLSGDAddress(Inst, IDLoc, Out);
+    return false;
+  case RISCV::PseudoLA_TLSDESC:
+    emitLoadTLSDescAddress(Inst, IDLoc, Out);
     return false;
   case RISCV::PseudoLB:
     emitLoadStoreSymbol(Inst, RISCV::LB, IDLoc, Out, /*HasTmpReg=*/false);
