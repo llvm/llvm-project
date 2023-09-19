@@ -349,8 +349,9 @@ static Error handleMaybeNoDataFoundError(Error E) {
 
 Error CoverageMapping::loadFromFile(
     StringRef Filename, StringRef Arch, StringRef CompilationDir,
-    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
-    bool &DataFound, SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
+    StringRef DebugInfoFilename, IndexedInstrProfReader &ProfileReader,
+    CoverageMapping &Coverage, bool &DataFound,
+    SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
   auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
       Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = CovMappingBufOrErr.getError())
@@ -362,7 +363,7 @@ Error CoverageMapping::loadFromFile(
 
   SmallVector<object::BuildIDRef> BinaryIDs;
   auto CoverageReadersOrErr = BinaryCoverageReader::create(
-      CovMappingBufRef, Arch, Buffers, ProfSymTab,
+      CovMappingBufRef, Arch, Buffers, DebugInfoFilename, ProfSymTab,
       CompilationDir, FoundBinaryIDs ? &BinaryIDs : nullptr);
   if (Error E = CoverageReadersOrErr.takeError()) {
     E = handleMaybeNoDataFoundError(std::move(E));
@@ -388,7 +389,8 @@ Error CoverageMapping::loadFromFile(
 
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-    vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
+    vfs::FileSystem &FS, StringRef DebugInfoFilename,
+    ArrayRef<StringRef> Arches, StringRef CompilationDir,
     const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())
@@ -409,7 +411,8 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
     if (Error E =
             loadFromFile(File.value(), GetArch(File.index()), CompilationDir,
-                         *ProfileReader, *Coverage, DataFound, &FoundBinaryIDs))
+                         DebugInfoFilename, *ProfileReader, *Coverage,
+                         DataFound, &FoundBinaryIDs))
       return std::move(E);
   }
 
@@ -436,8 +439,9 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
       if (PathOpt) {
         std::string Path = std::move(*PathOpt);
         StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
-        if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
-                                  *Coverage, DataFound))
+        if (Error E =
+                loadFromFile(Path, Arch, DebugInfoFilename, CompilationDir,
+                             *ProfileReader, *Coverage, DataFound))
           return std::move(E);
       } else if (CheckBinaryIDs) {
         return createFileError(

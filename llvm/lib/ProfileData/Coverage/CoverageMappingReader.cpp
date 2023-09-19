@@ -1014,7 +1014,7 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr)
       return NameOrErr.takeError();
-    if (stripSuffix(*NameOrErr) == Name)
+    if (stripSuffix(*NameOrErr) == Name && Section.getSize() != 0)
       Sections.push_back(Section);
   }
   if (Sections.empty())
@@ -1022,10 +1022,10 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
   return Sections;
 }
 
-static Error getProfileNamesFromDebugInfo(StringRef FileName,
+static Error getProfileNamesFromDebugInfo(StringRef DebugInfoFilename,
                                           InstrProfSymtab &ProfileNames) {
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto E = InstrProfCorrelator::get(FileName).moveInto(Correlator))
+  if (auto E = InstrProfCorrelator::get(DebugInfoFilename).moveInto(Correlator))
     return E;
   if (auto E = Correlator->correlateCovUnusedFuncNames(0))
     return E;
@@ -1038,7 +1038,8 @@ static Error getProfileNamesFromDebugInfo(StringRef FileName,
 
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
-                 InstrProfSymtab &ProfSymTab, StringRef CompilationDir = "",
+                 StringRef DebugInfoFilename, InstrProfSymtab &ProfSymTab,
+                 StringRef CompilationDir = "",
                  object::BuildIDRef *BinaryID = nullptr) {
   std::unique_ptr<ObjectFile> OF;
   if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
@@ -1077,9 +1078,9 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       lookupSections(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
                                                   /*AddSegmentInfo=*/false));
   if (auto E = NamesSection.takeError()) {
-    if (OF->hasDebugInfo()) {
+    if (!DebugInfoFilename.empty()) {
       if (auto E =
-              getProfileNamesFromDebugInfo(OF->getFileName(), ProfileNames))
+              getProfileNamesFromDebugInfo(DebugInfoFilename, ProfileNames))
         return make_error<CoverageMapError>(coveragemap_error::malformed);
     }
     consumeError(std::move(E));
@@ -1176,8 +1177,8 @@ Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
     MemoryBufferRef ObjectBuffer, StringRef Arch,
     SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-    InstrProfSymtab &ProfSymTab, StringRef CompilationDir,
-    SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
+    StringRef DebugInfoFilename, InstrProfSymtab &ProfSymTab,
+    StringRef CompilationDir, SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
 
   if (ObjectBuffer.getBuffer().size() > sizeof(TestingFormatMagic)) {
@@ -1221,8 +1222,8 @@ BinaryCoverageReader::create(
       }
 
       return BinaryCoverageReader::create(
-          ArchiveOrErr.get()->getMemoryBufferRef(), Arch,
-          ObjectFileBuffers, ProfSymTab, CompilationDir, BinaryIDs);
+          ArchiveOrErr.get()->getMemoryBufferRef(), Arch, ObjectFileBuffers,
+          DebugInfoFilename, ProfSymTab, CompilationDir, BinaryIDs);
     }
   }
 
@@ -1235,8 +1236,8 @@ BinaryCoverageReader::create(
         return ChildBufOrErr.takeError();
 
       auto ChildReadersOrErr = BinaryCoverageReader::create(
-          ChildBufOrErr.get(), Arch, ObjectFileBuffers, ProfSymTab,
-          CompilationDir, BinaryIDs);
+          ChildBufOrErr.get(), Arch, ObjectFileBuffers, DebugInfoFilename,
+          ProfSymTab, CompilationDir, BinaryIDs);
       if (!ChildReadersOrErr)
         return ChildReadersOrErr.takeError();
       for (auto &Reader : ChildReadersOrErr.get())
@@ -1257,8 +1258,8 @@ BinaryCoverageReader::create(
 
   object::BuildIDRef BinaryID;
   auto ReaderOrErr =
-      loadBinaryFormat(std::move(Bin), Arch, ProfSymTab, CompilationDir,
-                       BinaryIDs ? &BinaryID : nullptr);
+      loadBinaryFormat(std::move(Bin), Arch, DebugInfoFilename, ProfSymTab,
+                       CompilationDir, BinaryIDs ? &BinaryID : nullptr);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   Readers.push_back(std::move(ReaderOrErr.get()));

@@ -7,7 +7,7 @@
 
 // RUN: %clang_profgen -o %t -g -mllvm --debug-info-correlate -fcoverage-mapping %S/../Inputs/instrprof-debug-info-correlate-main.cpp %S/../Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.proflite %run %t
-// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t %t.proflite
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t.dSYM %t.proflite
 
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
@@ -22,7 +22,7 @@
 // RUN: rm -rf %t.profdir && mkdir %t.profdir
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.proflite %run %t
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.proflite %run %t
-// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t %t.profdir
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t.dSYM %t.profdir
 
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
@@ -44,11 +44,11 @@
 
 // RUN: %clang_profgen -o %t -g -mllvm --debug-info-correlate -fcoverage-mapping -mllvm -enable-name-compression=false %s
 // RUN: env LLVM_PROFILE_FILE=%t.proflite %run %t
-// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t %t.proflite
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t.dSYM %t.proflite
 
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
-// RUN: llvm-cov export --format=lcov --instr-profile=%t.profdata %t --debug-info=%t | FileCheck %s -check-prefix=NAME
+// RUN: llvm-cov export --format=lcov --instr-profile=%t.profdata %t --debug-info=%t.dSYM | FileCheck %s -check-prefix=NAME
 
 // Test debug info correlate with clang coverage (online merging).
 
@@ -59,11 +59,11 @@
 // RUN: rm -rf %t.profdir && mkdir %t.profdir
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.proflite %run %t
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.proflite %run %t
-// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t %t.profdir
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t.dSYM %t.profdir
 
 // RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
-// RUN: llvm-cov export --format=lcov --instr-profile=%t.profdata %t --debug-info=%t | FileCheck %s -check-prefix=NAME
+// RUN: llvm-cov export --format=lcov --instr-profile=%t.profdata %t --debug-info=%t.dSYM | FileCheck %s -check-prefix=NAME
 // NAME: _Z9used_funcv
 // NAME: main
 // NAME: _ZN1A11unused_funcEv

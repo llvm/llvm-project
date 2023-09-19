@@ -444,8 +444,9 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
               ObjectFilename);
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
-      ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+      ObjectFilenames, PGOFilename, *FS, ViewOpts.DebugInfoFilename,
+      CoverageArches, ViewOpts.CompilationDirectory, BIDFetcher.get(),
+      CheckBinaryIDs);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -774,6 +775,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
+  cl::opt<std::string> DebugInfoFilename(
+      "debug-info", cl::init(""),
+      cl::desc("Read and extract profile metadata from debug info and show "
+               "the functions it found."));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -929,6 +935,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
+    ViewOpts.DebugInfoFilename = DebugInfoFilename;
 
     return 0;
   };

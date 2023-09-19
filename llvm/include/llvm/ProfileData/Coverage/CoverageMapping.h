@@ -594,6 +594,7 @@ class CoverageMapping {
   // Load coverage records from file.
   static Error
   loadFromFile(StringRef Filename, StringRef Arch, StringRef CompilationDir,
+               StringRef DebugInfoFilename,
                IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
                bool &DataFound,
                SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
@@ -623,8 +624,8 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       vfs::FileSystem &FS, ArrayRef<StringRef> Arches = std::nullopt,
-       StringRef CompilationDir = "",
+       vfs::FileSystem &FS, StringRef DebugInfoFilename = "",
+       ArrayRef<StringRef> Arches = std::nullopt, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
        bool CheckBinaryIDs = false);
 
