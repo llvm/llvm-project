@@ -729,3 +729,21 @@ struct forward_declared_as_struct;
 class forward_declared_as_struct {
 };
 
+namespace pr55156 {
+
+typedef enum {
+  VALUE0,
+  VALUE1,
+} ValueType;
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: invalid case style for typedef 'ValueType' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}} value_type_t;
+
+#define STATIC_MACRO static
+STATIC_MACRO void someFunc(ValueType a_v1, const ValueType& a_v2) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(value_type_t a_v1, const value_type_t& a_v2) {}
+STATIC_MACRO void someFunc(const ValueType** p_a_v1, ValueType (*p_a_v2)()) {}
+// CHECK-FIXES: {{^}}STATIC_MACRO void someFunc(const value_type_t** p_a_v1, value_type_t (*p_a_v2)()) {}
+STATIC_MACRO ValueType someFunc() {}
+// CHECK-FIXES: {{^}}STATIC_MACRO value_type_t someFunc() {}
+#undef STATIC_MACRO
+}
