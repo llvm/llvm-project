@@ -707,42 +707,42 @@ define amdgpu_kernel void @s_exp2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ;
 ; SI-GISEL-LABEL: s_exp2_v4f32:
 ; SI-GISEL:       ; %bb.0:
-; SI-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
-; SI-GISEL-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0xd
+; SI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
 ; SI-GISEL-NEXT:    s_mov_b32 s0, 0xc2fc0000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v3, 0x42800000
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v4, 0x1f800000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s4
+; SI-GISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-GISEL-NEXT:    v_cmp_gt_f32_e32 vcc, s0, v0
-; SI-GISEL-NEXT:    v_mov_b32_e32 v1, s5
+; SI-GISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc
 ; SI-GISEL-NEXT:    v_cmp_gt_f32_e64 s[0:1], s0, v1
-; SI-GISEL-NEXT:    v_add_f32_e32 v0, s4, v0
+; SI-GISEL-NEXT:    v_add_f32_e32 v0, s8, v0
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, v3, s[0:1]
 ; SI-GISEL-NEXT:    v_exp_f32_e32 v0, v0
-; SI-GISEL-NEXT:    v_add_f32_e32 v1, s5, v1
+; SI-GISEL-NEXT:    v_add_f32_e32 v1, s9, v1
 ; SI-GISEL-NEXT:    v_exp_f32_e32 v1, v1
 ; SI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xc2fc0000
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v5, 1.0, v4, vcc
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v5
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v5, 1.0, v4, s[0:1]
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v2
-; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v2
+; SI-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s10, v2
+; SI-GISEL-NEXT:    v_cmp_lt_f32_e64 s[0:1], s11, v2
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v1, v1, v5
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v5, 0, v3, vcc
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, v3, s[0:1]
-; SI-GISEL-NEXT:    v_add_f32_e32 v5, s6, v5
-; SI-GISEL-NEXT:    v_add_f32_e32 v2, s7, v2
+; SI-GISEL-NEXT:    v_add_f32_e32 v5, s10, v5
+; SI-GISEL-NEXT:    v_add_f32_e32 v2, s11, v2
 ; SI-GISEL-NEXT:    v_exp_f32_e32 v5, v5
 ; SI-GISEL-NEXT:    v_exp_f32_e32 v3, v2
 ; SI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 1.0, v4, vcc
 ; SI-GISEL-NEXT:    v_cndmask_b32_e64 v4, 1.0, v4, s[0:1]
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v2, v5, v2
 ; SI-GISEL-NEXT:    v_mul_f32_e32 v3, v3, v4
-; SI-GISEL-NEXT:    s_mov_b32 s10, -1
-; SI-GISEL-NEXT:    s_mov_b32 s11, 0xf000
-; SI-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; SI-GISEL-NEXT:    s_mov_b32 s6, -1
+; SI-GISEL-NEXT:    s_mov_b32 s7, 0xf000
+; SI-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-GISEL-NEXT:    s_endpgm
 ;
 ; VI-SDAG-LABEL: s_exp2_v4f32:
