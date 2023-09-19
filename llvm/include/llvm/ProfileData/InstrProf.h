@@ -97,6 +97,9 @@ inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 /// Return the name prefix of profile counter variables.
 inline StringRef getInstrProfCountersVarPrefix() { return "__profc_"; }
 
+/// Return the name prefix of profile bitmap variables.
+inline StringRef getInstrProfBitmapVarPrefix() { return "__profbm_"; }
+
 /// Return the name prefix of value profile variables.
 inline StringRef getInstrProfValuesVarPrefix() { return "__profvp_"; }
 
@@ -336,6 +339,7 @@ enum class instrprof_error {
   invalid_prof,
   hash_mismatch,
   count_mismatch,
+  bitmap_mismatch,
   counter_overflow,
   value_site_count_mismatch,
   compress_failed,
@@ -691,18 +695,23 @@ struct InstrProfValueSiteRecord {
 /// Profiling information for a single function.
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
+  std::vector<uint8_t> BitmapBytes;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
+  InstrProfRecord(std::vector<uint64_t> Counts,
+                  std::vector<uint8_t> BitmapBytes)
+      : Counts(std::move(Counts)), BitmapBytes(std::move(BitmapBytes)) {}
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
-      : Counts(RHS.Counts),
+      : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
   InstrProfRecord &operator=(InstrProfRecord &&) = default;
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
+    BitmapBytes = RHS.BitmapBytes;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -881,6 +890,11 @@ struct NamedInstrProfRecord : InstrProfRecord {
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
                        std::vector<uint64_t> Counts)
       : InstrProfRecord(std::move(Counts)), Name(Name), Hash(Hash) {}
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts,
+                       std::vector<uint8_t> BitmapBytes)
+      : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
+        Hash(Hash) {}
 
   static bool hasCSFlagInHash(uint64_t FuncHash) {
     return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
@@ -1016,7 +1030,9 @@ enum ProfVersion {
   Version9 = 9,
   // An additional (optional) temporal profile traces section is added.
   Version10 = 10,
-  // The current version is 10.
+  // An additional field is used for bitmap bytes.
+  Version11 = 11,
+  // The current version is 11.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1154,6 +1170,7 @@ namespace RawInstrProf {
 // Version 6: Added binary id.
 // Version 7: Reorder binary id and include version in signature.
 // Version 8: Use relative counter pointer.
+// Version 9: Added relative bitmap bytes pointer and count used by MC/DC.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();
