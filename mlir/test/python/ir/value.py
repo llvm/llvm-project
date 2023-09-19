@@ -1,4 +1,4 @@
-# RUN: %PYTHON %s | FileCheck %s
+# RUN: %PYTHON %s | FileCheck %s --enable-var-scope=false
 
 import gc
 from mlir.ir import *
@@ -199,6 +199,16 @@ def testValuePrintAsOperand():
         # CHECK: %[[VAL4]]
         print(value4.get_name())
 
+        print("With AsmState")
+        # CHECK-LABEL: With AsmState
+        state = AsmState(value3, use_local_scope=True)
+        # CHECK: %0
+        print(value3.get_name(state=state))
+        # CHECK: %1
+        print(value4.get_name(state=state))
+
+        print("With use_local_scope")
+        # CHECK-LABEL: With use_local_scope
         # CHECK: %0
         print(value3.get_name(use_local_scope=True))
         # CHECK: %1
