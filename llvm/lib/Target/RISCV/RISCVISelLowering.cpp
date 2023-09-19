@@ -13623,10 +13623,11 @@ static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
     // TODO: This offset check is too strict if we support fully
     // misaligned memory operations.
     uint64_t C = Index->getConstantOperandVal(i);
-    if (C % ElementSize != 0)
-      return false;
-    if (i % 2 == 0)
+    if (i % 2 == 0) {
+      if (C % WiderElementSize != 0)
+        return false;
       continue;
+    }
     uint64_t Last = Index->getConstantOperandVal(i-1);
     if (C != Last + ElementSize)
       return false;
