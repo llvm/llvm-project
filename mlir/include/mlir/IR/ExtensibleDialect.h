@@ -486,14 +486,16 @@ public:
   void populateDefaultProperties(OperationName opName,
                                  OpaqueProperties properties) final {}
 
-  LogicalResult setPropertiesFromAttr(OperationName opName,
-                                      OpaqueProperties properties,
-                                      Attribute attr,
-                                      InFlightDiagnostic *diag) final {
+  LogicalResult
+  setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
+                        Attribute attr,
+                        function_ref<InFlightDiagnostic &()> getDiag) final {
+    getDiag() << "extensible Dialects don't support properties";
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
   void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
+  bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
   llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
 
 private:

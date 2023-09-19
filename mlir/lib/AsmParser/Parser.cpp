@@ -18,8 +18,10 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Support/InterfaceSupport.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
@@ -29,6 +31,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/SourceMgr.h"
 #include <algorithm>
+#include <memory>
 #include <optional>
 
 using namespace mlir;
@@ -1443,12 +1446,17 @@ Operation *OperationParser::parseGenericOperation() {
   // Try setting the properties for the operation, using a diagnostic to print
   // errors.
   if (properties) {
-    InFlightDiagnostic diagnostic =
-        mlir::emitError(srcLocation, "invalid properties ")
-        << properties << " for op " << name << ": ";
-    if (failed(op->setPropertiesFromAttribute(properties, &diagnostic)))
+    std::unique_ptr<InFlightDiagnostic> diagnostic;
+    auto getDiag = [&]() -> InFlightDiagnostic & {
+      if (!diagnostic) {
+        diagnostic = std::make_unique<InFlightDiagnostic>(
+            mlir::emitError(srcLocation, "invalid properties ")
+            << properties << " for op " << name << ": ");
+      }
+      return *diagnostic;
+    };
+    if (failed(op->setPropertiesFromAttribute(properties, getDiag)))
       return nullptr;
-    diagnostic.abandon();
   }
 
   return op;
@@ -2001,12 +2009,18 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Try setting the properties for the operation.
   if (properties) {
-    InFlightDiagnostic diagnostic =
-        mlir::emitError(srcLocation, "invalid properties ")
-        << properties << " for op " << op->getName().getStringRef() << ": ";
-    if (failed(op->setPropertiesFromAttribute(properties, &diagnostic)))
+    std::unique_ptr<InFlightDiagnostic> diagnostic;
+    auto getDiag = [&]() -> InFlightDiagnostic & {
+      if (!diagnostic) {
+        diagnostic = std::make_unique<InFlightDiagnostic>(
+            mlir::emitError(srcLocation, "invalid properties ")
+            << properties << " for op " << op->getName().getStringRef()
+            << ": ");
+      }
+      return *diagnostic;
+    };
+    if (failed(op->setPropertiesFromAttribute(properties, getDiag)))
       return nullptr;
-    diagnostic.abandon();
   }
   return op;
 }

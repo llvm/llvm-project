@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
 
 // GFX10: v_cmpx_le_f32_e64 v1, v0        ; encoding: [0x7e,0x00,0x13,0xd4,0x01,0x01,0x02,0x00]
 v_cmpx_le_f32_e64 v1, v0

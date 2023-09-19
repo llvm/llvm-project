@@ -275,7 +275,7 @@ public:
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getBufferForFile(const FileEntry *Entry, bool isVolatile = false,
+  getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
                    bool RequiresNullTerminator = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
@@ -327,7 +327,7 @@ public:
   /// This is a very expensive operation, despite its results being cached,
   /// and should only be used when the physical layout of the file system is
   /// required, which is (almost) never.
-  StringRef getCanonicalName(const FileEntry *File);
+  StringRef getCanonicalName(FileEntryRef File);
 
 private:
   /// Retrieve the canonical name for a given file or directory.

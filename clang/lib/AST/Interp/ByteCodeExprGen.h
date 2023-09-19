@@ -105,6 +105,7 @@ public:
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
+  bool VisitOffsetOfExpr(const OffsetOfExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

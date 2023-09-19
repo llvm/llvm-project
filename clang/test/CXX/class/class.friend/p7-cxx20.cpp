@@ -27,7 +27,7 @@ class Y {
   friend void y(){};
 };
 
-// CHECK-HU: `-CXXRecordDecl {{.*}} <./header-unit.h:2:1, line:4:1> line:2:7 class Y definition
+// CHECK-HU: `-CXXRecordDecl {{.*}} <.{{/|\\\\?}}header-unit.h:2:1, line:4:1> line:2:7 class Y definition
 // CHECK-HU: |-CXXRecordDecl {{.*}} <col:1, col:7> col:7 implicit class Y
 // CHECK-HU-NEXT: `-FriendDecl {{.*}} <line:3:3, col:19> col:15
 // CHECK-HU-NEXT: `-FunctionDecl {{.*}} parent {{.*}} <col:3, col:19> col:15 friend_undeclared y 'void ()' implicit-inline
@@ -48,7 +48,7 @@ export module M;
 class Z {
   friend void z(){};
 };
-// CHECK-MOD: |-CXXRecordDecl {{.*}} <./header.h:2:1, line:4:1> line:2:7 in M.<global> hidden class A definition
+// CHECK-MOD: |-CXXRecordDecl {{.*}} <.{{/|\\\\?}}header.h:2:1, line:4:1> line:2:7 in M.<global> hidden class A definition
 // CHECK-MOD: | |-CXXRecordDecl {{.*}} <col:1, col:7> col:7 in M.<global> hidden implicit class A
 // CHECK-MOD-NEXT: | `-FriendDecl {{.*}} <line:3:3, col:19> col:15 in M.<global>
 // CHECK-MOD-NEXT: |   `-FunctionDecl {{.*}} parent {{.*}} <col:3, col:19> col:15 in M.<global> hidden friend_undeclared a 'void ()' implicit-inline

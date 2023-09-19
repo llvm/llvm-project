@@ -17,6 +17,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -28,6 +29,8 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -1165,7 +1168,7 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 }
 
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
-llvm::AtomicOrdering
+static llvm::AtomicOrdering
 convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
   if (!ao)
     return llvm::AtomicOrdering::Monotonic; // Default Memory Ordering
@@ -1537,27 +1540,34 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
 
   unsigned index = 0;
   for (const auto &mapOp : mapOperands) {
+    // Unlike dev_ptr and dev_addr operands these map operands point
+    // to a map entry operation which contains further information
+    // on the variable being mapped and how it should be mapped.
+    auto MapInfoOp =
+        mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp());
+
     // TODO: Only LLVMPointerTypes are handled.
-    if (!mapOp.getType().isa<LLVM::LLVMPointerType>())
+    if (!MapInfoOp.getType().isa<LLVM::LLVMPointerType>())
       return fail();
 
-    llvm::Value *mapOpValue = moduleTranslation.lookupValue(mapOp);
+    llvm::Value *mapOpValue =
+        moduleTranslation.lookupValue(MapInfoOp.getVarPtr());
     combinedInfo.BasePointers.emplace_back(mapOpValue);
     combinedInfo.Pointers.emplace_back(mapOpValue);
     combinedInfo.DevicePointers.emplace_back(
         llvm::OpenMPIRBuilder::DeviceInfoTy::None);
-    combinedInfo.Names.emplace_back(
-        LLVM::createMappingInformation(mapOp.getLoc(), *ompBuilder));
+    combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
+        MapInfoOp.getVarPtr().getLoc(), *ompBuilder));
 
     combinedInfo.Types.emplace_back(
         llvm::omp::OpenMPOffloadMappingFlags(
-            mapTypes[index].dyn_cast<IntegerAttr>().getInt()) |
+            mapTypes[index].dyn_cast<IntegerAttr>().getUInt()) |
         (IsTargetParams
              ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
              : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE));
 
     combinedInfo.Sizes.emplace_back(
-        builder.getInt64(getSizeInBytes(DL, mapOp.getType())));
+        builder.getInt64(getSizeInBytes(DL, MapInfoOp.getVarPtr().getType())));
     index++;
   }
 
@@ -1606,6 +1616,19 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
+  auto getMapTypes = [](mlir::OperandRange mapOperands,
+                        mlir::MLIRContext *ctx) {
+    SmallVector<mlir::Attribute> mapTypes;
+    for (auto mapValue : mapOperands) {
+      if (mapValue.getDefiningOp()) {
+        auto mapOp =
+            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapValue.getDefiningOp());
+        mapTypes.push_back(mapOp.getMapTypeAttr());
+      }
+    }
+    return mlir::ArrayAttr::get(ctx, mapTypes);
+  };
+
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
           .Case([&](omp::DataOp dataOp) {
@@ -1619,8 +1642,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                   deviceID = intAttr.getInt();
 
             mapOperands = dataOp.getMapOperands();
-            if (dataOp.getMapTypes())
-              mapTypes = dataOp.getMapTypes().value();
+            mapTypes =
+                getMapTypes(dataOp.getMapOperands(), dataOp->getContext());
             useDevPtrOperands = dataOp.getUseDevicePtr();
             useDevAddrOperands = dataOp.getUseDeviceAddr();
             return success();
@@ -1639,7 +1662,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                   deviceID = intAttr.getInt();
             RTLFn = llvm::omp::OMPRTL___tgt_target_data_begin_mapper;
             mapOperands = enterDataOp.getMapOperands();
-            mapTypes = enterDataOp.getMapTypes();
+            mapTypes = getMapTypes(enterDataOp.getMapOperands(),
+                                   enterDataOp->getContext());
             return success();
           })
           .Case([&](omp::ExitDataOp exitDataOp) {
@@ -1657,7 +1681,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
             RTLFn = llvm::omp::OMPRTL___tgt_target_data_end_mapper;
             mapOperands = exitDataOp.getMapOperands();
-            mapTypes = exitDataOp.getMapTypes();
+            mapTypes = getMapTypes(exitDataOp.getMapOperands(),
+                                   exitDataOp->getContext());
             return success();
           })
           .Default([&](Operation *op) {
@@ -1884,7 +1909,22 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   DataLayout DL = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapOperands = targetOp.getMapOperands();
-  ArrayAttr mapTypes = targetOp.getMapTypes().value_or(nullptr);
+
+  auto getMapTypes = [](mlir::OperandRange mapOperands,
+                        mlir::MLIRContext *ctx) {
+    SmallVector<mlir::Attribute> mapTypes;
+    for (auto mapValue : mapOperands) {
+      if (mapValue.getDefiningOp()) {
+        auto mapOp =
+            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapValue.getDefiningOp());
+        mapTypes.push_back(mapOp.getMapTypeAttr());
+      }
+    }
+    return mlir::ArrayAttr::get(ctx, mapTypes);
+  };
+
+  ArrayAttr mapTypes =
+      getMapTypes(targetOp.getMapOperands(), targetOp->getContext());
 
   llvm::OpenMPIRBuilder::MapInfosTy combinedInfos;
   auto genMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP)
@@ -1932,6 +1972,27 @@ convertDeclareTargetAttr(Operation *op,
   return success();
 }
 
+/// Converts the module-level set of OpenMP requires clauses into LLVM IR using
+/// OpenMPIRBuilder.
+static LogicalResult
+convertRequiresAttr(Operation &op, omp::ClauseRequiresAttr requiresAttr,
+                    LLVM::ModuleTranslation &moduleTranslation) {
+  auto *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  // No need to read requiresAttr here, because it has already been done in
+  // translateModuleToLLVMIR(). There, flags are stored in the
+  // OpenMPIRBuilderConfig object, available to the OpenMPIRBuilder.
+  auto *regFn =
+      ompBuilder->createRegisterRequires(ompBuilder->createPlatformSpecificName(
+          {"omp_offloading", "requires_reg"}));
+
+  // Add registration function as global constructor
+  if (regFn)
+    llvm::appendToGlobalCtors(ompBuilder->M, regFn, /* Priority = */ 0);
+
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -1947,6 +2008,8 @@ public:
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final;
 
+  /// Given an OpenMP MLIR attribute, create the corresponding LLVM-IR, runtime
+  /// calls, or operation amendments
   LogicalResult
   amendOperation(Operation *op, NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final;
@@ -1954,31 +2017,90 @@ public:
 
 } // namespace
 
-/// Given an OpenMP MLIR attribute, create the corresponding LLVM-IR, runtime
-/// calls, or operation amendments
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
-  return llvm::TypeSwitch<Attribute, LogicalResult>(attribute.getValue())
-      .Case([&](mlir::omp::FlagsAttr rtlAttr) {
-        return convertFlagsAttr(op, rtlAttr, moduleTranslation);
-      })
-      .Case([&](mlir::omp::VersionAttr versionAttr) {
-        llvm::OpenMPIRBuilder *ompBuilder =
-            moduleTranslation.getOpenMPBuilder();
-        ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp",
-                                    versionAttr.getVersion());
+  return llvm::StringSwitch<llvm::function_ref<LogicalResult(Attribute)>>(
+             attribute.getName())
+      .Case("omp.is_target_device",
+            [&](Attribute attr) {
+              if (auto deviceAttr = attr.dyn_cast<BoolAttr>()) {
+                llvm::OpenMPIRBuilderConfig &config =
+                    moduleTranslation.getOpenMPBuilder()->Config;
+                config.setIsTargetDevice(deviceAttr.getValue());
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.is_gpu",
+            [&](Attribute attr) {
+              if (auto gpuAttr = attr.dyn_cast<BoolAttr>()) {
+                llvm::OpenMPIRBuilderConfig &config =
+                    moduleTranslation.getOpenMPBuilder()->Config;
+                config.setIsGPU(gpuAttr.getValue());
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.host_ir_filepath",
+            [&](Attribute attr) {
+              if (auto filepathAttr = attr.dyn_cast<StringAttr>()) {
+                llvm::OpenMPIRBuilder *ompBuilder =
+                    moduleTranslation.getOpenMPBuilder();
+                ompBuilder->loadOffloadInfoMetadata(filepathAttr.getValue());
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.flags",
+            [&](Attribute attr) {
+              if (auto rtlAttr = attr.dyn_cast<omp::FlagsAttr>())
+                return convertFlagsAttr(op, rtlAttr, moduleTranslation);
+              return failure();
+            })
+      .Case("omp.version",
+            [&](Attribute attr) {
+              if (auto versionAttr = attr.dyn_cast<omp::VersionAttr>()) {
+                llvm::OpenMPIRBuilder *ompBuilder =
+                    moduleTranslation.getOpenMPBuilder();
+                ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp",
+                                            versionAttr.getVersion());
+                return success();
+              }
+              return failure();
+            })
+      .Case("omp.declare_target",
+            [&](Attribute attr) {
+              if (auto declareTargetAttr =
+                      attr.dyn_cast<omp::DeclareTargetAttr>())
+                return convertDeclareTargetAttr(op, declareTargetAttr,
+                                                moduleTranslation);
+              return failure();
+            })
+      .Case(
+          "omp.requires",
+          [&](Attribute attr) {
+            if (auto requiresAttr = attr.dyn_cast<omp::ClauseRequiresAttr>()) {
+              using Requires = omp::ClauseRequires;
+              Requires flags = requiresAttr.getValue();
+              llvm::OpenMPIRBuilderConfig &config =
+                  moduleTranslation.getOpenMPBuilder()->Config;
+              config.setHasRequiresReverseOffload(
+                  bitEnumContainsAll(flags, Requires::reverse_offload));
+              config.setHasRequiresUnifiedAddress(
+                  bitEnumContainsAll(flags, Requires::unified_address));
+              config.setHasRequiresUnifiedSharedMemory(
+                  bitEnumContainsAll(flags, Requires::unified_shared_memory));
+              config.setHasRequiresDynamicAllocators(
+                  bitEnumContainsAll(flags, Requires::dynamic_allocators));
+              return convertRequiresAttr(*op, requiresAttr, moduleTranslation);
+            }
+            return failure();
+          })
+      .Default([](Attribute) {
+        // Fall through for omp attributes that do not require lowering.
         return success();
-      })
-      .Case([&](mlir::omp::DeclareTargetAttr declareTargetAttr) {
-        return convertDeclareTargetAttr(op, declareTargetAttr,
-                                        moduleTranslation);
-      })
-      .Default([&](Attribute attr) {
-        // fall through for omp attributes that do not require lowering and/or
-        // have no concrete definition and thus no type to define a case on
-        return success();
-      });
+      })(attribute.getValue());
 
   return failure();
 }
@@ -2084,6 +2206,12 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::TargetOp) {
         return convertOmpTarget(*op, builder, moduleTranslation);
+      })
+      .Case<omp::MapInfoOp, omp::DataBoundsOp>([&](auto op) {
+        // No-op, should be handled by relevant owning operations e.g.
+        // TargetOp, EnterDataOp, ExitDataOp, DataOp etc. and then
+        // discarded
+        return success();
       })
       .Default([&](Operation *inst) {
         return inst->emitError("unsupported OpenMP operation: ")

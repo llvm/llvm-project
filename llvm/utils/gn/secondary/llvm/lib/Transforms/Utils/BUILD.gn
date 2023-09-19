@@ -26,6 +26,7 @@ static_library("Utils") {
     "CodeMoverUtils.cpp",
     "CountVisits.cpp",
     "CtorUtils.cpp",
+    "DXILUpgrade.cpp",
     "Debugify.cpp",
     "DemoteRegToStack.cpp",
     "EntryExitInstrumenter.cpp",

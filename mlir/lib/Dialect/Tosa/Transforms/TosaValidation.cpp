@@ -86,7 +86,7 @@ struct tosa_level_t {
   }
 };
 
-static constexpr tosa_level_t TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 64};
+static constexpr tosa_level_t TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256};
 static constexpr tosa_level_t TOSA_LEVEL_NONE = {0, 0, 0, 0};
 
 //===----------------------------------------------------------------------===//

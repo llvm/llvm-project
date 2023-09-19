@@ -525,15 +525,15 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   StringRef OriginalModuleMapName = CI.getFrontendOpts().OriginalModuleMap;
   if (!OriginalModuleMapName.empty()) {
     auto OriginalModuleMap =
-        CI.getFileManager().getFile(OriginalModuleMapName,
-                                    /*openFile*/ true);
+        CI.getFileManager().getOptionalFileRef(OriginalModuleMapName,
+                                               /*openFile*/ true);
     if (!OriginalModuleMap) {
       CI.getDiagnostics().Report(diag::err_module_map_not_found)
         << OriginalModuleMapName;
       return nullptr;
     }
-    if (*OriginalModuleMap != CI.getSourceManager().getFileEntryForID(
-                                 CI.getSourceManager().getMainFileID())) {
+    if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
+                                  CI.getSourceManager().getMainFileID())) {
       M->IsInferred = true;
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
         .setInferredModuleAllowedBy(M, *OriginalModuleMap);
@@ -666,7 +666,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     } else {
       auto &OldSM = AST->getSourceManager();
       FileID ID = OldSM.getMainFileID();
-      if (auto *File = OldSM.getFileEntryForID(ID))
+      if (auto File = OldSM.getFileEntryRefForID(ID))
         Input = FrontendInputFile(File->getName(), Kind);
       else
         Input = FrontendInputFile(OldSM.getBufferOrFake(ID), Kind);
@@ -844,7 +844,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         return false;
       }
       // We now have the filename...
-      FileName = FE->getFileEntry().getName();
+      FileName = FE->getName();
       // ... still a header unit, but now use the path as written.
       Kind = Input.getKind().withHeaderUnit(InputKind::HeaderUnit_Abs);
       Input = FrontendInputFile(FileName, Kind, Input.isSystem());

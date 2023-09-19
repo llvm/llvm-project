@@ -98,12 +98,12 @@ static bool parseShowColorsArgs(const llvm::opt::ArgList &args,
 /// Extracts the optimisation level from \a args.
 static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
-  unsigned defaultOpt = llvm::CodeGenOpt::None;
+  unsigned defaultOpt = 0;
 
   if (llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_O_Group)) {
     if (a->getOption().matches(clang::driver::options::OPT_O0))
-      return llvm::CodeGenOpt::None;
+      return 0;
 
     assert(a->getOption().matches(clang::driver::options::OPT_O));
 

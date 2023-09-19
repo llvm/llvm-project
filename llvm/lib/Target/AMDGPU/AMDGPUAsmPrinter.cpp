@@ -393,28 +393,29 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   uint16_t KernelCodeProperties = 0;
+  const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
 
-  if (MFI.hasPrivateSegmentBuffer()) {
+  if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
   }
-  if (MFI.hasDispatchPtr()) {
+  if (UserSGPRInfo.hasDispatchPtr()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
   }
-  if (MFI.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5) {
+  if (UserSGPRInfo.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
   }
-  if (MFI.hasKernargSegmentPtr()) {
+  if (UserSGPRInfo.hasKernargSegmentPtr()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR;
   }
-  if (MFI.hasDispatchID()) {
+  if (UserSGPRInfo.hasDispatchID()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID;
   }
-  if (MFI.hasFlatScratchInit()) {
+  if (UserSGPRInfo.hasFlatScratchInit()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
   }
@@ -1165,27 +1166,28 @@ void AMDGPUAsmPrinter::getAmdKernelCode(amd_kernel_code_t &Out,
                    AMD_CODE_PROPERTY_PRIVATE_ELEMENT_SIZE,
                    getElementByteSizeValue(STM.getMaxPrivateElementSize(true)));
 
-  if (MFI->hasPrivateSegmentBuffer()) {
+  const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI->getUserSGPRInfo();
+  if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     Out.code_properties |=
       AMD_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER;
   }
 
-  if (MFI->hasDispatchPtr())
+  if (UserSGPRInfo.hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
-  if (MFI->hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5)
+  if (UserSGPRInfo.hasQueuePtr() && CodeObjectVersion < AMDGPU::AMDHSA_COV5)
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_QUEUE_PTR;
 
-  if (MFI->hasKernargSegmentPtr())
+  if (UserSGPRInfo.hasKernargSegmentPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_KERNARG_SEGMENT_PTR;
 
-  if (MFI->hasDispatchID())
+  if (UserSGPRInfo.hasDispatchID())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_ID;
 
-  if (MFI->hasFlatScratchInit())
+  if (UserSGPRInfo.hasFlatScratchInit())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT;
 
-  if (MFI->hasDispatchPtr())
+  if (UserSGPRInfo.hasDispatchPtr())
     Out.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
   if (STM.isXNACKEnabled())

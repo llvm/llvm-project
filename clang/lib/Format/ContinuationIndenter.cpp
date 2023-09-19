@@ -876,15 +876,15 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                  FormatStyle::BCIS_AfterColon) {
     CurrentState.Indent = State.Column;
     CurrentState.LastSpace = State.Column;
-  } else if ((Previous.isOneOf(TT_BinaryOperator, TT_ConditionalExpr,
-                               TT_CtorInitializerColon)) &&
+  } else if (Previous.isOneOf(TT_ConditionalExpr, TT_CtorInitializerColon)) {
+    CurrentState.LastSpace = State.Column;
+  } else if (Previous.is(TT_BinaryOperator) &&
              ((Previous.getPrecedence() != prec::Assignment &&
                (Previous.isNot(tok::lessless) || Previous.OperatorIndex != 0 ||
                 Previous.NextOperator)) ||
               Current.StartsBinaryExpression)) {
     // Indent relative to the RHS of the expression unless this is a simple
-    // assignment without binary expression on the RHS. Also indent relative to
-    // unary operators and the colons of constructor initializers.
+    // assignment without binary expression on the RHS.
     if (Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None)
       CurrentState.LastSpace = State.Column;
   } else if (Previous.is(TT_InheritanceColon)) {
@@ -1204,12 +1204,13 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
                     CurrentState.Indent + Style.ContinuationIndentWidth);
   }
 
-  // After a goto label. Usually labels are on separate lines. However
-  // for Verilog the labels may be only recognized by the annotator and
-  // thus are on the same line as the current token.
-  if ((Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous)) ||
-      (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
-       State.Line->First->is(tok::kw_enum))) {
+  // Indentation of the statement following a Verilog case label is taken care
+  // of in moveStateToNextToken.
+  if (Style.isVerilog() && Keywords.isVerilogEndOfLabel(Previous))
+    return State.FirstIndent;
+
+  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+      State.Line->First->is(tok::kw_enum)) {
     return (Style.IndentWidth * State.Line->First->IndentLevel) +
            Style.IndentWidth;
   }
@@ -1599,6 +1600,15 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
 
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
+  // Verilog case labels are on the same unwrapped lines as the statements that
+  // follow. TokenAnnotator identifies them and sets MustBreakBefore.
+  // Indentation is taken care of here. A case label can only have 1 statement
+  // in Verilog, so we don't have to worry about lines that follow.
+  if (Style.isVerilog() && State.NextToken &&
+      State.NextToken->MustBreakBefore &&
+      Keywords.isVerilogEndOfLabel(Current)) {
+    State.FirstIndent += Style.IndentWidth;
+  }
 
   unsigned Penalty =
       handleEndOfLine(Current, State, DryRun, AllowBreak, Newline);
@@ -2237,9 +2247,12 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                            LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
-    // Strings in JSON can not be broken.
-    if (Style.isJson() || !Style.BreakStringLiterals || !AllowBreak)
+    // Strings in JSON cannot be broken. Breaking strings in JavaScript is
+    // disabled for now.
+    if (Style.isJson() || Style.isJavaScript() || !Style.BreakStringLiterals ||
+        !AllowBreak) {
       return nullptr;
+    }
 
     // Don't break string literals inside preprocessor directives (except for
     // #define directives, as their contents are stored in separate lines and

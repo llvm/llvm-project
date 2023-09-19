@@ -1,4 +1,4 @@
-; RUN: not llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn-unknown-amdhsa < %s 2>&1 | FileCheck %s
 
 ; CHECK: in function pixel_s{{.*}}: unsupported non-compute shaders with HSA
 define amdgpu_ps void @pixel_shader() #0 {

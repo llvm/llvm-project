@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
@@ -16,6 +17,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
@@ -201,8 +203,7 @@ struct CollapseShapeOpInterface
       // TODO: Create alloc_tensor ops during TensorCopyInsertion.
       AnalysisState analysisState(options);
       FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
-          rewriter, op->getLoc(), collapseShapeOp.getSrc(),
-          analysisState.isTensorYielded(collapseShapeOp.getResult()), options);
+          rewriter, op->getLoc(), collapseShapeOp.getSrc(), options);
       if (failed(tensorAlloc))
         return failure();
       auto memrefType =
@@ -463,9 +464,6 @@ struct FromElementsOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto fromElementsOp = cast<tensor::FromElementsOp>(op);
-    // Should the buffer be deallocated?
-    bool dealloc = shouldDeallocateOpResult(
-        cast<OpResult>(fromElementsOp.getResult()), options);
 
     // TODO: Implement memory space for this op.
     if (options.defaultMemorySpace != Attribute())
@@ -476,10 +474,9 @@ struct FromElementsOpInterface
     auto tensorType = cast<RankedTensorType>(fromElementsOp.getType());
     auto shape = tensorType.getShape();
     // TODO: Create alloc_tensor ops during TensorCopyInsertion.
-    FailureOr<Value> tensorAlloc =
-        allocateTensorForShapedValue(rewriter, loc, fromElementsOp.getResult(),
-                                     /*escape=*/!dealloc, options,
-                                     /*copy=*/false);
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
+        rewriter, loc, fromElementsOp.getResult(), options,
+        /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
     auto memrefType =
@@ -581,9 +578,6 @@ struct GenerateOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto generateOp = cast<tensor::GenerateOp>(op);
-    // Should the buffer be deallocated?
-    bool dealloc = shouldDeallocateOpResult(
-        cast<OpResult>(generateOp.getResult()), options);
 
     // TODO: Implement memory space for this op.
     if (options.defaultMemorySpace != Attribute())
@@ -591,10 +585,9 @@ struct GenerateOpInterface
 
     // Allocate memory.
     Location loc = op->getLoc();
-    FailureOr<Value> tensorAlloc =
-        allocateTensorForShapedValue(rewriter, loc, generateOp.getResult(),
-                                     /*escape=*/!dealloc, options,
-                                     /*copy=*/false);
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
+        rewriter, loc, generateOp.getResult(), options,
+        /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
 
@@ -628,117 +621,6 @@ struct InsertOpInterface
   }
 };
 
-/// Return true if the (ExtractSliceOp, InsertSliceOp) pair match (i.e.
-/// equivalent operand / result and same offset/sizes/strides specification).
-template <typename OpTy>
-static bool areEquivalentSlices(const AnalysisState &state,
-                                ExtractSliceOp extractSliceOp,
-                                OpTy insertSliceOp) {
-  if (!extractSliceOp || !insertSliceOp)
-    return false;
-  if (extractSliceOp != insertSliceOp &&
-      !state.areEquivalentBufferizedValues(extractSliceOp.getSource(),
-                                           insertSliceOp.getDest()))
-    return false;
-  if (!sameOffsetsSizesAndStrides(extractSliceOp, insertSliceOp,
-                                  isEqualConstantIntOrValue))
-    return false;
-  return true;
-}
-
-/// Return true if `value` is originating from an ExtractSliceOp that matches
-/// the given InsertSliceOp.
-template <typename OpTy>
-static bool matchesInsertDestination(const AnalysisState &state, Value value,
-                                     OpTy insertSliceOp) {
-  // Look for matching slices.
-  auto matchesSlice = [&](Value val) {
-    if (auto extractSliceOp = val.getDefiningOp<ExtractSliceOp>())
-      if (areEquivalentSlices(state, extractSliceOp, insertSliceOp))
-        return true;
-    return false;
-  };
-  return static_cast<bool>(llvm::all_of(
-      state.findValueInReverseUseDefChain(value, matchesSlice), matchesSlice));
-}
-
-template <typename OpTy>
-static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
-                                              OpOperand *uConflictingWrite,
-                                              const AnalysisState &state) {
-  Operation *readingOp = uRead->getOwner();
-  Operation *conflictingWritingOp = uConflictingWrite->getOwner();
-
-  // Special rules for matching ExtractSliceOp/InsertSliceOp pairs. If
-  // uRead is an InsertSliceOp...
-  if (auto insertSliceOp = dyn_cast<OpTy>(readingOp)) {
-    // As an example, consider the following IR.
-    //
-    // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
-    // %1 = linalg.fill %cst, %0 {inplace= [true] }
-    // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
-    //     {inplace= [true] }
-
-    // TODO: Use insertSliceOp.getDestOpOperand etc. when available.
-    if (uRead == &insertSliceOp->getOpOperand(1) /*dest*/ &&
-        matchesInsertDestination(state, uConflictingWrite->get(),
-                                 insertSliceOp))
-      // Case 1: The main insight is that InsertSliceOp reads only part of
-      // the destination tensor. The overwritten area is not read. If
-      // uConflictingWrite writes into exactly the memory location that is
-      // being read by uRead, this is not a conflict.
-      //
-      // In the above example:
-      // uRead             = OpOperand 1 (%t) of tensor.insert_slice
-      // uConflictingWrite = OpOperand 1 (%0) of linalg.fill
-      //
-      // The read of %t does not conflict with the write of the FillOp
-      // (same aliases!) because the area that the FillOp operates on is
-      // exactly the one that is *not* read via %t.
-      return true;
-
-    if (uRead == &insertSliceOp->getOpOperand(0) /*source*/ &&
-        uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
-        matchesInsertDestination(state, uRead->get(), insertSliceOp))
-      // Case 2: The read of the source tensor and the write to the dest
-      // tensor via an InsertSliceOp is not a conflict if the read is
-      // reading exactly that part of an equivalent tensor that the
-      // InsertSliceOp is writing.
-      //
-      // In the above example:
-      // uRead             = OpOperand 0 (%1) of tensor.insert_slice
-      // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
-      return true;
-  }
-
-  // If uConflictingWrite is an InsertSliceOp...
-  if (auto insertSliceOp = dyn_cast<OpTy>(conflictingWritingOp))
-    // As an example, consider the following IR.
-    //
-    // %0 = tensor.extract_slice %t[%a, %b][%c, %d][1, 1] {inplace = [true] }
-    // %1 = linalg.fill %cst, %0 {inplace= [true] }
-    // %2 = tensor.insert_slice %1 into %t[%a, %b][%c, %d][1, 1]
-    //     {inplace= [true] }
-    // %3 = vector.transfer_read %1, %cst
-    //
-    // In the above example:
-    // uRead             = OpOperand 0 (%1) of vector.transfer_read
-    // uConflictingWrite = OpOperand 1 (%t) of tensor.insert_slice
-    // definition        = %1
-    //
-    // This is not a conflict because the InsertSliceOp overwrites the
-    // memory segment of %1 with the exact same data. (Effectively, there
-    // is no memory write here.)
-    if (uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
-        state.areEquivalentBufferizedValues(uRead->get(),
-                                            insertSliceOp.getSource()) &&
-        matchesInsertDestination(state, insertSliceOp.getSource(),
-                                 insertSliceOp))
-      return true;
-
-  return false;
-}
-
 /// Bufferization of tensor.insert_slice. Replace with a memory copy. Under
 /// certain circumstances, this op can also be a no-op.
 ///
@@ -753,11 +635,11 @@ struct InsertSliceOpInterface
     RankedTensorType destType = insertSliceOp.getDestType();
 
     // The source is always read.
-    if (&opOperand == &op->getOpOperand(0) /*src*/)
+    if (&opOperand == &insertSliceOp.getSourceMutable()[0])
       return true;
 
     // For the destination, it depends...
-    assert(&opOperand == &insertSliceOp->getOpOperand(1) && "expected dest");
+    assert(&opOperand == &insertSliceOp.getDestMutable()[0] && "expected dest");
 
     // Dest is not read if it is entirely overwritten. E.g.:
     // tensor.insert_slice %a into %t[0][10][1] : ... into tensor<10xf32>
@@ -775,13 +657,6 @@ struct InsertSliceOpInterface
           return isConstantIntValue(ofr, 1);
         });
     return !(allOffsetsZero && sizesMatchDestSizes && allStridesOne);
-  }
-
-  bool isNotConflicting(Operation *op, OpOperand *uRead,
-                        OpOperand *uConflictingWrite,
-                        const AnalysisState &state) const {
-    return isNotConflictingInsertSliceLikeOp<tensor::InsertSliceOp>(
-        op, uRead, uConflictingWrite, state);
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -899,13 +774,9 @@ struct PadOpInterface
       dynamicSizes.push_back(sum);
     }
 
-    // Should the buffer be deallocated?
-    bool dealloc =
-        shouldDeallocateOpResult(cast<OpResult>(padOp.getResult()), options);
     // Allocate a buffer for the padded result.
     FailureOr<Value> tensorAlloc =
-        allocateTensorForShapedValue(rewriter, loc, padOp.getResult(),
-                                     /*escape=*/!dealloc, options,
+        allocateTensorForShapedValue(rewriter, loc, padOp.getResult(), options,
                                      /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
@@ -967,9 +838,8 @@ struct ReshapeOpInterface
                                                     tensor::ReshapeOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(1) /* shape */)
-      return true;
-    return false;
+    auto reshapeOp = cast<tensor::ReshapeOp>(op);
+    return &opOperand == &reshapeOp.getShapeMutable()[0];
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -995,6 +865,20 @@ struct ReshapeOpInterface
         bufferization::getBufferType(reshapeOp.getResult(), options);
     if (failed(maybeResultMemRefType))
       return failure();
+
+    // memref.reshape requires the source buffer to have an identity layout.
+    // If the source memref does not have an identity layout, clone the source
+    // into a new buffer with an identity layout.
+    auto srcType = llvm::dyn_cast<MemRefType>(srcBuffer->getType());
+    if (srcType && !srcType.getLayout().isIdentity()) {
+      auto identityType =
+          MemRefType::get(srcType.getShape(), srcType.getElementType());
+      srcBuffer = rewriter
+                      .create<bufferization::CloneOp>(op->getLoc(),
+                                                      identityType, *srcBuffer)
+                      .getResult();
+    }
+
     replaceOpWithNewBufferizedOp<memref::ReshapeOp>(
         rewriter, op, maybeResultMemRefType.value(), *srcBuffer, *shapeBuffer);
     return success();
@@ -1031,7 +915,8 @@ struct ParallelInsertSliceOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    return &opOperand == &op->getOpOperand(1) /*dest*/;
+    auto parallelInsertSliceOp = cast<ParallelInsertSliceOp>(op);
+    return &opOperand == &parallelInsertSliceOp.getDestMutable()[0];
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -1092,13 +977,6 @@ struct ParallelInsertSliceOpInterface
     rewriter.eraseOp(op);
     return success();
   }
-
-  bool isNotConflicting(Operation *op, OpOperand *uRead,
-                        OpOperand *uConflictingWrite,
-                        const AnalysisState &state) const {
-    return isNotConflictingInsertSliceLikeOp<tensor::ParallelInsertSliceOp>(
-        op, uRead, uConflictingWrite, state);
-  }
 };
 
 /// Bufferization of tensor.splat. Bufferizes to a new allocation that is filled
@@ -1114,20 +992,15 @@ struct SplatOpInterface
     OpBuilder::InsertionGuard g(rewriter);
     auto splatOp = cast<tensor::SplatOp>(op);
 
-    // Should the buffer be deallocated?
-    bool dealloc =
-        shouldDeallocateOpResult(cast<OpResult>(splatOp.getResult()), options);
-
     // TODO: Implement memory space for this op.
     if (options.defaultMemorySpace != Attribute())
       return op->emitError("memory space not implemented yet");
 
     // Allocate memory.
     Location loc = op->getLoc();
-    FailureOr<Value> tensorAlloc =
-        allocateTensorForShapedValue(rewriter, loc, splatOp.getResult(),
-                                     /*escape=*/!dealloc, options,
-                                     /*copy=*/false);
+    FailureOr<Value> tensorAlloc = allocateTensorForShapedValue(
+        rewriter, loc, splatOp.getResult(), options,
+        /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
 
@@ -1175,4 +1048,8 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     // Load additional dialects of which ops may get created.
     ctx->loadDialect<arith::ArithDialect, linalg::LinalgDialect>();
   });
+
+  // Bufferization requires SubsetInsertionOpInterface models. Make sure that
+  // they are registered.
+  tensor::registerSubsetInsertionOpInterfaceExternalModels(registry);
 }

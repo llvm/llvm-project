@@ -58,13 +58,15 @@ public:
       return rewriter.notifyMatchFailure(
           op, "0-D and 1-D vectors are handled separately");
 
+    if (dstType.getScalableDims().front())
+      return rewriter.notifyMatchFailure(
+          op, "Cannot unroll leading scalable dim in dstType");
+
     auto loc = op.getLoc();
-    auto eltType = dstType.getElementType();
     int64_t dim = dstType.getDimSize(0);
     Value idx = op.getOperand(0);
 
-    VectorType lowType =
-        VectorType::get(dstType.getShape().drop_front(), eltType);
+    VectorType lowType = VectorType::Builder(dstType).dropDim(0);
     Value trueVal = rewriter.create<vector::CreateMaskOp>(
         loc, lowType, op.getOperands().drop_front());
     Value falseVal = rewriter.create<arith::ConstantOp>(

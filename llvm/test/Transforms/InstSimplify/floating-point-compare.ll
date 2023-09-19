@@ -11,11 +11,29 @@ define i1 @inf0(double %arg) {
   ret i1 %tmp
 }
 
+define i1 @inf0_fabs(double %arg) {
+; CHECK-LABEL: @inf0_fabs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp ogt double %fabs.arg, 0x7FF0000000000000
+  ret i1 %tmp
+}
+
 define i1 @inf1(double %arg) {
 ; CHECK-LABEL: @inf1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %tmp = fcmp ule double %arg, 0x7FF0000000000000
+  ret i1 %tmp
+}
+
+define i1 @inf1_fabs(double %arg) {
+; CHECK-LABEL: @inf1_fabs(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp ule double %fabs.arg, 0x7FF0000000000000
   ret i1 %tmp
 }
 
@@ -29,11 +47,29 @@ define i1 @ninf0(double %arg) {
   ret i1 %tmp
 }
 
+define i1 @ninf0_fabs(double %arg) {
+; CHECK-LABEL: @ninf0_fabs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp olt double %fabs.arg, 0xFFF0000000000000
+  ret i1 %tmp
+}
+
 define i1 @ninf1(double %arg) {
 ; CHECK-LABEL: @ninf1(
 ; CHECK-NEXT:    ret i1 true
 ;
   %tmp = fcmp uge double %arg, 0xFFF0000000000000
+  ret i1 %tmp
+}
+
+define i1 @ninf1_fabs(double %arg) {
+; CHECK-LABEL: @ninf1_fabs(
+; CHECK-NEXT:    ret i1 true
+;
+  %fabs.arg = call double @llvm.fabs.f64(double %arg)
+  %tmp = fcmp uge double %fabs.arg, 0xFFF0000000000000
   ret i1 %tmp
 }
 
@@ -1651,6 +1687,87 @@ bb:
   %i5 = select i1 %i4, float 0.000000e+00, float %i3
   ret float %i5
 }
+
+define i1 @is_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+; CHECK-LABEL: @is_olt_smallest_normal_dynamic(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+; CHECK-LABEL: @is_olt_smallest_normal_ieee(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+; CHECK-LABEL: @is_olt_smallest_normal_preserve_sign(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+; CHECK-LABEL: @is_olt_smallest_normal_positive_zero(
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %is.denorm.or.zero = fcmp olt float %x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_dynamic(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_ieee(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_preserve_sign(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
+define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+; CHECK-LABEL: @is_fabs_olt_smallest_normal_positive_zero(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
+; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.denorm.or.zero = fcmp olt float %fabs.x, 0x3810000000000000
+  ret i1 %is.denorm.or.zero
+}
+
 
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)

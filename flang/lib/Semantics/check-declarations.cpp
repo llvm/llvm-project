@@ -419,11 +419,16 @@ void CheckHelper::Check(const Symbol &symbol) {
     }
     CheckBindCFunctionResult(symbol);
   }
-  if (symbol.owner().IsModule() && IsAutomatic(symbol)) {
-    messages_.Say(
-        "Automatic data object '%s' may not appear in the specification part"
-        " of a module"_err_en_US,
-        symbol.name());
+  if (IsAutomatic(symbol)) {
+    if (const Symbol * common{FindCommonBlockContaining(symbol)}) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in COMMON block /%s/"_err_en_US,
+          symbol.name(), common->name());
+    } else if (symbol.owner().IsModule()) {
+      messages_.Say(
+          "Automatic data object '%s' may not appear in a module"_err_en_US,
+          symbol.name());
+    }
   }
   if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
     if (IsAllocatable(symbol)) {
@@ -1062,7 +1067,8 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
           SomeExpr lhs{evaluate::ProcedureDesignator{symbol}};
           SomeExpr rhs{evaluate::ProcedureDesignator{**proc->init()}};
           CheckPointerAssignment(context_, lhs, rhs,
-              GetProgramUnitOrBlockConstructContaining(symbol));
+              GetProgramUnitOrBlockConstructContaining(symbol),
+              /*isBoundsRemapping=*/false, /*isAssumedRank=*/false);
         }
       }
     }
@@ -2052,7 +2058,7 @@ bool CheckHelper::CheckConflicting(const Symbol &symbol, Attr a1, Attr a2) {
 
 void CheckHelper::WarnMissingFinal(const Symbol &symbol) {
   const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!object ||
+  if (!object || object->IsAssumedRank() ||
       (!IsAutomaticallyDestroyed(symbol) &&
           symbol.owner().kind() != Scope::Kind::DerivedType)) {
     return;

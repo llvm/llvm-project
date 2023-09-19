@@ -187,20 +187,9 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
       return failure();
   }
 
-  // Should the buffer be deallocated?
-  bool dealloc =
-      shouldDeallocateOpResult(llvm::cast<OpResult>(getResult()), options);
-
   // Replace op.
   replaceOpWithBufferizedValues(rewriter, getOperation(), *alloc);
 
-  // Create buffer deallocation (if requested).
-  if (!dealloc)
-    return success();
-
-  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-  if (failed(options.createDealloc(rewriter, loc, *alloc)))
-    return failure();
   return success();
 }
 
@@ -442,48 +431,6 @@ Value AllocTensorOp::getDynamicSize(OpBuilder &b, unsigned idx) {
 }
 
 //===----------------------------------------------------------------------===//
-// CopyTensorOp
-//===----------------------------------------------------------------------===//
-
-bool CopyTensorOp::bufferizesToMemoryRead(OpOperand &opOperand,
-                                          const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(0) /*source*/)
-    return true;
-  return false;
-}
-
-bool CopyTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
-                                           const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
-    return true;
-  return false;
-}
-
-AliasingValueList CopyTensorOp::getAliasingValues(OpOperand &opOperand,
-                                                  const AnalysisState &state) {
-  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
-    return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
-  return {};
-}
-
-LogicalResult CopyTensorOp::bufferize(RewriterBase &rewriter,
-                                      const BufferizationOptions &options) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
-  if (failed(buffer))
-    return failure();
-  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
-  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
-  return success();
-}
-
-LogicalResult CopyTensorOp::reifyResultShapes(
-    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
-  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // CloneOp
 //===----------------------------------------------------------------------===//
 
@@ -583,6 +530,73 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
     return failure();
   rewriter.eraseOp(getOperation());
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MaterializeInDestinationOp
+//===----------------------------------------------------------------------===//
+
+bool MaterializeInDestinationOp::bufferizesToMemoryRead(
+    OpOperand &opOperand, const AnalysisState &state) {
+  return &opOperand == &getSourceMutable()[0];
+}
+
+bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
+    OpOperand &opOperand, const AnalysisState &state) {
+  return &opOperand == &getDestMutable()[0];
+}
+
+AliasingValueList
+MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
+                                              const AnalysisState &state) {
+  if (&opOperand == &getDestMutable()[0])
+    return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
+  return {};
+}
+
+LogicalResult
+MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
+                                      const BufferizationOptions &options) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
+  if (failed(buffer))
+    return failure();
+  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
+  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
+  return success();
+}
+
+bool MaterializeInDestinationOp::bufferizesToElementwiseAccess(
+    const AnalysisState &state, ArrayRef<OpOperand *> opOperands) {
+  // As elements are copied from the "source" buffer to the "dest" buffer,
+  // already copied elements are not read a second time.
+  return true;
+}
+
+LogicalResult MaterializeInDestinationOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
+  return success();
+}
+
+Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
+                                                        Location loc) {
+  // The subset is the entire destination tensor.
+  return getDest();
+}
+
+bool MaterializeInDestinationOp::isEquivalentSubset(
+    Value candidate, function_ref<bool(Value, Value)> equivalenceFn) {
+  return equivalenceFn(getDest(), candidate);
+}
+
+SmallVector<Value>
+MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
+  return {getDest()};
+}
+
+OpOperand &MaterializeInDestinationOp::getSourceOperand() {
+  return getOperation()->getOpOperand(0) /*source*/;
 }
 
 //===----------------------------------------------------------------------===//

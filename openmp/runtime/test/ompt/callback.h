@@ -221,6 +221,13 @@ ompt_label_##id:
   printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
          ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
          ((char *)addr) - 8, ((char *)addr) - 12)
+#elif KMP_ARCH_VE
+// On VE the NOP instruction is 8 byte long. In addition, the compiler inserts
+// a ??? instruction for non-void runtime functions which is ? bytes long.
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+         ompt_get_thread_data()->value, ((char *)addr) - 8,                    \
+         ((char *)addr) - 8)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif

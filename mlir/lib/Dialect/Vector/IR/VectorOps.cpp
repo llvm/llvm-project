@@ -125,6 +125,8 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
     return elementType.isIntOrIndex();
   case CombiningKind::MINF:
   case CombiningKind::MAXF:
+  case CombiningKind::MINIMUMF:
+  case CombiningKind::MAXIMUMF:
     return llvm::isa<FloatType>(elementType);
   }
   return false;
@@ -172,24 +174,21 @@ bool mlir::vector::isDisjointTransferIndices(
     return false;
   unsigned rankOffset = transferA.getLeadingShapedRank();
   for (unsigned i = 0, e = transferA.indices().size(); i < e; i++) {
-    auto indexA = transferA.indices()[i].getDefiningOp<arith::ConstantOp>();
-    auto indexB = transferB.indices()[i].getDefiningOp<arith::ConstantOp>();
+    auto indexA = getConstantIntValue(transferA.indices()[i]);
+    auto indexB = getConstantIntValue(transferB.indices()[i]);
     // If any of the indices are dynamic we cannot prove anything.
-    if (!indexA || !indexB)
+    if (!indexA.has_value() || !indexB.has_value())
       continue;
 
     if (i < rankOffset) {
       // For leading dimensions, if we can prove that index are different we
       // know we are accessing disjoint slices.
-      if (llvm::cast<IntegerAttr>(indexA.getValue()).getInt() !=
-          llvm::cast<IntegerAttr>(indexB.getValue()).getInt())
+      if (*indexA != *indexB)
         return true;
     } else {
       // For this dimension, we slice a part of the memref we need to make sure
       // the intervals accessed don't overlap.
-      int64_t distance =
-          std::abs(llvm::cast<IntegerAttr>(indexA.getValue()).getInt() -
-                   llvm::cast<IntegerAttr>(indexB.getValue()).getInt());
+      int64_t distance = std::abs(*indexA - *indexB);
       if (distance >= transferA.getVectorType().getDimSize(i - rankOffset))
         return true;
     }
@@ -496,18 +495,18 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::muli:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MUL, vector);
-  case arith::AtomicRMWKind::minf:
+  case arith::AtomicRMWKind::minimumf:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MINF, vector);
+                                               CombiningKind::MINIMUMF, vector);
   case arith::AtomicRMWKind::mins:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MINSI, vector);
   case arith::AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MINUI, vector);
-  case arith::AtomicRMWKind::maxf:
+  case arith::AtomicRMWKind::maximumf:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MAXF, vector);
+                                               CombiningKind::MAXIMUMF, vector);
   case arith::AtomicRMWKind::maxs:
     return builder.create<vector::ReductionOp>(vector.getLoc(),
                                                CombiningKind::MAXSI, vector);
@@ -820,7 +819,8 @@ static LogicalResult verifyOutputShape(
           return e.cast<AffineConstantExpr>().getValue();
         }));
     auto expected =
-        VectorType::get(expectedShape, resVectorType.getElementType());
+        VectorType::get(expectedShape, resVectorType.getElementType(),
+                        resVectorType.getScalableDims());
     if (resVectorType != expected || accVectorType != expected)
       return op.emitOpError(
                  "invalid accumulator/result vector shape, expected: ")
@@ -911,22 +911,27 @@ Type ContractionOp::getExpectedMaskType() {
 
   unsigned numVecDims = lhsIdxMap.getNumDims();
   SmallVector<int64_t> maskShape(numVecDims, ShapedType::kDynamic);
+  SmallVector<bool> maskShapeScalableDims(numVecDims, false);
 
   // Using the information in the indexing maps, extract the size of each
   // dimension in the vector.contract operation from the two input operands.
-  for (auto [dimIdx, dimSize] : llvm::enumerate(lhsType.getShape()))
+  for (auto [dimIdx, dimSize] : llvm::enumerate(lhsType.getShape())) {
     maskShape[lhsIdxMap.getDimPosition(dimIdx)] = dimSize;
-  for (auto [dimIdx, dimSize] : llvm::enumerate(rhsType.getShape()))
+    maskShapeScalableDims[lhsIdxMap.getDimPosition(dimIdx)] =
+        lhsType.getScalableDims()[dimIdx];
+  }
+  for (auto [dimIdx, dimSize] : llvm::enumerate(rhsType.getShape())) {
     maskShape[rhsIdxMap.getDimPosition(dimIdx)] = dimSize;
+    maskShapeScalableDims[rhsIdxMap.getDimPosition(dimIdx)] =
+        rhsType.getScalableDims()[dimIdx];
+  }
 
   assert(!ShapedType::isDynamicShape(maskShape) &&
          "Mask shape couldn't be computed");
-  // TODO: Extend the scalable vector type representation with a bit map.
-  assert(!lhsType.isScalable() && !rhsType.isScalable() &&
-         "Scalable vectors are not supported yet");
 
   return VectorType::get(maskShape,
-                         IntegerType::get(lhsType.getContext(), /*width=*/1));
+                         IntegerType::get(lhsType.getContext(), /*width=*/1),
+                         maskShapeScalableDims);
 }
 
 SmallVector<StringRef> ContractionOp::getTraitAttrNames() {
@@ -5944,14 +5949,16 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     result = b.createOrFold<arith::AndIOp>(loc, v1, acc);
     break;
   case CombiningKind::MAXF:
+  case CombiningKind::MAXIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
-    result = b.createOrFold<arith::MaxFOp>(loc, v1, acc);
+    result = b.createOrFold<arith::MaximumFOp>(loc, v1, acc);
     break;
   case CombiningKind::MINF:
+  case CombiningKind::MINIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
-    result = b.createOrFold<arith::MinFOp>(loc, v1, acc);
+    result = b.createOrFold<arith::MinimumFOp>(loc, v1, acc);
     break;
   case CombiningKind::MAXSI:
     assert(t1.isIntOrIndex() && tAcc.isIntOrIndex() && "expected int values");

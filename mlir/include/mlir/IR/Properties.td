@@ -55,7 +55,7 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // Format:
   // - `$_storage` is the storage type value.
   // - `$_attr` is the attribute.
-  // - `$_diag` is an optional Diagnostic pointer to emit error.
+  // - `$_diag` is a callback to get a Diagnostic to emit error.
   //
   // The expression must return a LogicalResult
   code convertFromAttribute = [{

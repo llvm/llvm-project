@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -triple=mipsel-unknown-linux -mcpu=mips32r2 -arch=mips 2>&1 -filetype=obj | FileCheck %s
+# RUN: not llvm-mc %s -triple=mipsel-unknown-linux -mcpu=mips32r2 -triple=mips 2>&1 -filetype=obj | FileCheck %s
 
 # Two instructions, to check that this is not a fatal error
 # CHECK: error: out of range PC16 fixup

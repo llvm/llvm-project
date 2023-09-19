@@ -549,7 +549,7 @@ def HasStdExtSvinval : Predicate<"Subtarget->hasStdExtSvinval()">,
 def FeatureStdExtZtso
     : SubtargetFeature<"experimental-ztso", "HasStdExtZtso", "true",
                        "'Ztso' (Memory Model - Total Store Order)">;
-def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZTso()">,
+def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                               AssemblerPredicate<(all_of FeatureStdExtZtso),
                               "'Ztso' (Memory Model - Total Store Order)">;
 def NotHasStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;

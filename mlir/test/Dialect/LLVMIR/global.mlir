@@ -246,10 +246,16 @@ llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}
 // CHECK: llvm.mlir.global external @target_ext() {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
 llvm.mlir.global @target_ext() : !llvm.target<"spirv.Image", i32, 0>
 
-// CHECK: llvm.mlir.global external @target_ext_init(0 : i64) {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
-llvm.mlir.global @target_ext_init(0 : i64) : !llvm.target<"spirv.Image", i32, 0>
+// CHECK:       llvm.mlir.global external @target_ext_init() {addr_space = 0 : i32} : !llvm.target<"spirv.Image", i32, 0>
+// CHECK-NEXT:    %0 = llvm.mlir.zero : !llvm.target<"spirv.Image", i32, 0>
+// CHECK-NEXT:    llvm.return %0 : !llvm.target<"spirv.Image", i32, 0>
+// CHECK-NEXT:  }
+llvm.mlir.global @target_ext_init() : !llvm.target<"spirv.Image", i32, 0> {
+  %0 = llvm.mlir.zero : !llvm.target<"spirv.Image", i32, 0>
+  llvm.return %0 : !llvm.target<"spirv.Image", i32, 0>
+}
 
 // -----
 
-// expected-error @+1 {{expected zero value for global with target extension type}}
-llvm.mlir.global @target_fail(1 : i64) : !llvm.target<"spirv.Image", i32, 0>
+// expected-error @+1 {{global with target extension type can only be initialized with zero-initializer}}
+llvm.mlir.global @target_fail(0 : i64) : !llvm.target<"spirv.Image", i32, 0>

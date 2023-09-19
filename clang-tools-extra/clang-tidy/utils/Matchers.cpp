@@ -17,4 +17,32 @@ bool NotIdenticalStatementsPredicate::operator()(
                                         Nodes.getNodeAs<Stmt>(ID), *Context);
 }
 
+MatchesAnyListedTypeNameMatcher::MatchesAnyListedTypeNameMatcher(
+    llvm::ArrayRef<StringRef> NameList)
+    : NameMatchers(NameList.begin(), NameList.end()) {}
+
+MatchesAnyListedTypeNameMatcher::~MatchesAnyListedTypeNameMatcher() = default;
+
+bool MatchesAnyListedTypeNameMatcher::matches(
+    const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
+    ast_matchers::internal::BoundNodesTreeBuilder *Builder) const {
+
+  if (NameMatchers.empty())
+    return false;
+
+  PrintingPolicy PrintingPolicyWithSuppressedTag(
+      Finder->getASTContext().getLangOpts());
+  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes = true;
+  PrintingPolicyWithSuppressedTag.SuppressElaboration = true;
+  PrintingPolicyWithSuppressedTag.SuppressScope = false;
+  PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
+  PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
+  std::string TypeName =
+      Node.getUnqualifiedType().getAsString(PrintingPolicyWithSuppressedTag);
+
+  return llvm::any_of(NameMatchers, [&TypeName](const llvm::Regex &NM) {
+    return NM.isValid() && NM.match(TypeName);
+  });
+}
+
 } // namespace clang::tidy::matchers

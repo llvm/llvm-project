@@ -78,7 +78,9 @@ void GCNRegPressure::inc(unsigned Reg,
 
     if (PrevMask.none()) {
       assert(NewMask.any());
-      Value[Kind] += Sign * MRI.getPressureSets(Reg).getWeight();
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      Value[Kind] +=
+          Sign * TRI->getRegClassWeight(MRI.getRegClass(Reg)).RegWeight;
     }
     break;
 

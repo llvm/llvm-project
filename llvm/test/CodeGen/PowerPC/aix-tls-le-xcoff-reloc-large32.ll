@@ -309,7 +309,6 @@ entry:
 ; DIS-NEXT:                                       stwu 1, -32(1)
 ; DIS-NEXT:                                       stw 0, 40(1)
 ; DIS-NEXT:                                       li 5, 1
-; DIS-NEXT:                                       li 6, 0
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: 21) IThreadLocalVarUninit[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 0(3)
@@ -318,7 +317,8 @@ entry:
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA  (idx: 1)      .__get_tpointer[PR]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                add 4, 3, 4
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 4(4)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 6, 0(4)
+; DIS-NEXT:                                       li 5, 0
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                stw 5, 0(4)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 4, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU       (idx: 27) IThreadLocalVarUninit2[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                lwz 4, 12(4)

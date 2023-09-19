@@ -165,13 +165,6 @@ public:
     return Integral(Value.V);
   }
 
-  template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if constexpr (SrcSign)
-      return Integral(Value.V.getSExtValue());
-    else
-      return Integral(Value.V.getZExtValue());
-  }
-
   static Integral zero() { return from(0); }
 
   template <typename T> static Integral from(T Value, unsigned NumBits) {

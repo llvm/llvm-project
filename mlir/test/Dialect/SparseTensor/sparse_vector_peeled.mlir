@@ -2,7 +2,7 @@
 // RUN:   FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed" ],
+  map = (d0) -> (d0 : compressed),
   posWidth = 32,
   crdWidth = 32
 }>

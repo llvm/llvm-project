@@ -1020,8 +1020,8 @@ public:
         BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
       } else {
         // If this operand is a scalable type, bail out early.
-        // TODO: handle scalable vectors
-        if (isa<ScalableVectorType>(TargetType))
+        // TODO: Make isLegalAddressingMode TypeSize aware.
+        if (TargetType->isScalableTy())
           return TTI::TCC_Basic;
         int64_t ElementSize =
             DL.getTypeAllocSize(GTI.getIndexedType()).getFixedValue();
