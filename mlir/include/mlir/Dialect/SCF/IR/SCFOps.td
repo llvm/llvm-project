@@ -948,6 +948,7 @@ def ReduceReturnOp :
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>,
      RecursiveMemoryEffects, SingleBlock]> {
   let summary = "a generic 'while' loop";
   let description = [{
