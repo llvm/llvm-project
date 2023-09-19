@@ -561,15 +561,14 @@ namespace {
 
 struct GEPValue {
   Instruction *Inst;
-  APInt ConstantOffset;
-  bool HasConstantOffset;
+  std::optional<APInt> ConstantOffset;
 
-  GEPValue(Instruction *I) : Inst(I), HasConstantOffset(false) {
+  GEPValue(Instruction *I) : Inst(I) {
     assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
   }
-  GEPValue(Instruction *I, APInt ConstantOffset, bool HasConstantOffset)
-      : Inst(I), ConstantOffset(ConstantOffset),
-        HasConstantOffset(HasConstantOffset) {
+
+  GEPValue(Instruction *I, std::optional<APInt> ConstantOffset)
+      : Inst(I), ConstantOffset(ConstantOffset) {
     assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
   }
 
@@ -604,9 +603,9 @@ template <> struct DenseMapInfo<GEPValue> {
 
 unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
   auto *GEP = cast<GetElementPtrInst>(Val.Inst);
-  if (Val.HasConstantOffset)
+  if (Val.ConstantOffset.has_value())
     return hash_combine(GEP->getOpcode(), GEP->getPointerOperand(),
-                        Val.ConstantOffset);
+                        Val.ConstantOffset.value());
   return hash_combine(
       GEP->getOpcode(),
       hash_combine_range(GEP->value_op_begin(), GEP->value_op_end()));
@@ -619,8 +618,8 @@ bool DenseMapInfo<GEPValue>::isEqual(const GEPValue &LHS, const GEPValue &RHS) {
   auto *RGEP = cast<GetElementPtrInst>(RHS.Inst);
   if (LGEP->getPointerOperand() != RGEP->getPointerOperand())
     return false;
-  if (LHS.HasConstantOffset && RHS.HasConstantOffset)
-    return LHS.ConstantOffset == RHS.ConstantOffset;
+  if (LHS.ConstantOffset.has_value() && RHS.ConstantOffset.has_value())
+    return LHS.ConstantOffset.value() == RHS.ConstantOffset.value();
   return LGEP->isIdenticalToWhenDefined(RGEP);
 }
 
@@ -1650,9 +1649,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // Compare GEP instructions based on offset.
     if (GEPValue::canHandle(&Inst)) {
       auto *GEP = cast<GetElementPtrInst>(&Inst);
-      APInt Offset(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-      bool HasConstantOffset = GEP->accumulateConstantOffset(SQ.DL, Offset);
-      GEPValue GEPVal(GEP, Offset, HasConstantOffset);
+      std::optional<APInt> Offset =
+          APInt(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+      GEPValue GEPVal(GEP, GEP->accumulateConstantOffset(SQ.DL, Offset.value())
+                               ? Offset
+                               : std::nullopt);
       if (Value *V = AvailableGEPs.lookup(GEPVal)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE GEP: " << Inst << "  to: " << *V
                           << '\n');
