@@ -764,24 +764,28 @@ class TailOverwrittenReport : public BaseReport {
                                  uptr orig_size, const u8 *expected)
       : BaseReport(stack, flags()->halt_on_error, tagged_addr, 0),
         orig_size(orig_size),
-        expected(expected) {}
+        tail_size(kShadowAlignment - (orig_size % kShadowAlignment)) {
+    CHECK_GT(tail_size, 0U);
+    CHECK_LT(tail_size, kShadowAlignment);
+    internal_memcpy(tail_copy,
+                    reinterpret_cast<u8 *>(untagged_addr + orig_size),
+                    tail_size);
+    internal_memcpy(actual_expected, expected, tail_size);
+    // Short granule is stashed in the last byte of the magic string. To avoid
+    // confusion, make the expected magic string contain the short granule tag.
+    if (orig_size % kShadowAlignment != 0)
+      actual_expected[tail_size - 1] = ptr_tag;
+  }
   ~TailOverwrittenReport();
 
  private:
-  const uptr orig_size;
-  const u8 *expected;
+  const uptr orig_size = 0;
+  const uptr tail_size = 0;
+  u8 actual_expected[kShadowAlignment] = {};
+  u8 tail_copy[kShadowAlignment] = {};
 };
 
 TailOverwrittenReport::~TailOverwrittenReport() {
-  uptr tail_size = kShadowAlignment - (orig_size % kShadowAlignment);
-  u8 actual_expected[kShadowAlignment];
-  internal_memcpy(actual_expected, expected, tail_size);
-  // Short granule is stashed in the last byte of the magic string. To avoid
-  // confusion, make the expected magic string contain the short granule tag.
-  if (orig_size % kShadowAlignment != 0) {
-    actual_expected[tail_size - 1] = ptr_tag;
-  }
-
   Decorator d;
   Printf("%s", d.Error());
   const char *bug_type = "allocation-tail-overwritten";
@@ -803,9 +807,7 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   }
 
   InternalScopedString s;
-  CHECK_GT(tail_size, 0U);
-  CHECK_LT(tail_size, kShadowAlignment);
-  u8 *tail = reinterpret_cast<u8*>(untagged_addr + orig_size);
+  u8 *tail = tail_copy;
   s.AppendF("Tail contains: ");
   for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
   for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", tail[i]);
