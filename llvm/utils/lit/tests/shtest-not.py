@@ -120,9 +120,6 @@
 
 # CHECK: FAIL: shtest-not :: not-calls-fail2.txt {{.*}}
 # CHECK-NEXT: {{.*}} TEST 'shtest-not :: not-calls-fail2.txt' FAILED {{.*}}
-# CHECK-NEXT: Script:
-# CHECK-NEXT: --
-# CHECK:      --
 # CHECK-NEXT: Exit Code: 1
 
 # CHECK: FAIL: shtest-not :: not-calls-mkdir.txt {{.*}}
