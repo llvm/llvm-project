@@ -66,7 +66,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
   //TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, Loc);
-  TIMESCOPE_WITH_RTM_AND_IDENT("targetData", Loc);
+  TIMESCOPE_WITH_RTM_AND_IDENT("Runtime Data Copy", Loc);
 
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
@@ -239,10 +239,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
 
-  //TIMESCOPE_WITH_IDENT(Loc);
-  //TIMESCOPE();
-  //TIMESCOPE_WITH_NAME_AND_IDENT("Hello", Loc);
-  //TIMESCOPE_WITH_RTM_AND_IDENT("Kernel", Loc);
+  TIMESCOPE_WITH_NAME_AND_IDENT("Runtime target exe",Loc);
 
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",

@@ -821,6 +821,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo, bool FromMapper) {
+  //TIMESCOPE_WITH_NAME_AND_IDENT("targetDataEnd", Loc);
   int Ret = OFFLOAD_SUCCESS;
   auto *PostProcessingPtrs = new SmallVector<PostProcessingInfo>();
   // process each input.
@@ -913,7 +914,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         !TPR.Flags.IsHostPointer && DataSize != 0) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
          DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-
+      TIMESCOPE_WITH_NAME_AND_IDENT("DevToHost", Loc);
       // Wait for any previous transfer if an event is present.
       if (void *Event = TPR.getEntry()->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
@@ -1403,7 +1404,6 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                              SmallVector<ptrdiff_t> &TgtOffsets,
                              PrivateArgumentManagerTy &PrivateArgumentManager,
                              AsyncInfoTy &AsyncInfo) {
-  TIMESCOPE_WITH_NAME_AND_IDENT("mappingBeforeTargetRegion", Loc);
 
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
@@ -1456,6 +1456,7 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
              DPxPTR(HstPtrVal));
           continue;
         }
+        TIMESCOPE_WITH_RTM_AND_IDENT("HostToDev", Loc);
         DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
            DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
         Ret =
@@ -1537,7 +1538,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                             map_var_info_t *ArgNames, void **ArgMappers,
                             PrivateArgumentManagerTy &PrivateArgumentManager,
                             AsyncInfoTy &AsyncInfo) {
-  TIMESCOPE_WITH_NAME_AND_IDENT("mappingAfterTargetRegion", Loc);
+
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
@@ -1564,6 +1565,7 @@ static int processDataAfter(ident_t *Loc, int64_t DeviceId, void *HostPtr,
         return Ret;
       });
 
+  
   return OFFLOAD_SUCCESS;
 }
 } // namespace
@@ -1639,7 +1641,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
-    TIMESCOPE_WITH_NAME_AND_IDENT("Initiate Kernel Launch", Loc);
+    TIMESCOPE_WITH_RTM_AND_IDENT("Kernel", Loc);
 
 #ifdef OMPT_SUPPORT
     assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&
