@@ -392,7 +392,7 @@ static int32_t getParentIndex(int64_t Type) {
 
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name) {
-  TIMESCOPE();
+  //TIMESCOPE();
   DP("Call to %s for device %d requesting %zu bytes\n", Name, DeviceNum, Size);
 
   if (Size <= 0) {
@@ -419,7 +419,7 @@ void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
 
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
                         const char *Name) {
-  TIMESCOPE();
+  //TIMESCOPE();
   DP("Call to %s for device %d and address " DPxMOD "\n", Name, DeviceNum,
      DPxPTR(DevicePtr));
 
@@ -444,7 +444,7 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
 
 void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
                          const char *Name) {
-  TIMESCOPE();
+  //TIMESCOPE();
   DP("Call to %s for device %d locking %zu bytes\n", Name, DeviceNum, Size);
 
   if (Size <= 0) {
@@ -471,7 +471,7 @@ void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
 }
 
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name) {
-  TIMESCOPE();
+  //TIMESCOPE();
   DP("Call to %s for device %d unlocking\n", Name, DeviceNum);
 
   auto DeviceOrErr = PM->getDevice(DeviceNum);
@@ -531,7 +531,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
                     bool FromMapper) {
-  TIMESCOPE_WITH_IDENT(Loc);
+  //TIMESCOPE_WITH_IDENT(Loc);
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     // Ignore private variables and arrays - there is no mapping for them.

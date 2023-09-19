@@ -227,7 +227,7 @@ struct llvm::TimeTraceProfiler {
         J.attribute("ph", "X");
         J.attribute("ts", 0);
         J.attribute("dur", DurUs);
-        J.attribute("name", "Total " + Total.first);
+        J.attribute("name", "Total: " + Total.first);
         J.attributeObject("args", [&] {
           J.attribute("count", int64_t(Count));
           J.attribute("avg ms", int64_t(DurUs / Count / 1000));

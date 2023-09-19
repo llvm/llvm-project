@@ -33,14 +33,12 @@ using namespace llvm::omp::target::ompt;
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
-  TIMESCOPE();
   PM->addRequirements(Flags);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
-  TIMESCOPE();
   if (PM->delayRegisterLib(Desc))
     return;
 
@@ -54,7 +52,6 @@ EXTERN void __tgt_init_all_rtls() { PM->initAllPlugins(); }
 ////////////////////////////////////////////////////////////////////////////////
 /// unloads a target shared library
 EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
-  TIMESCOPE();
   PM->unregisterLib(Desc);
 }
 
@@ -68,7 +65,8 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
-  TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, Loc);
+  //TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, Loc);
+  TIMESCOPE_WITH_RTM_AND_IDENT("targetData", Loc);
 
   DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
      RegionName, DeviceId, ArgNum);
@@ -242,9 +240,9 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
 
   //TIMESCOPE_WITH_IDENT(Loc);
-  TIMESCOPE();
+  //TIMESCOPE();
   //TIMESCOPE_WITH_NAME_AND_IDENT("Hello", Loc);
-  //TIMESCOPE_WITH_RTM_AND_IDENT("Hello", Loc);
+  //TIMESCOPE_WITH_RTM_AND_IDENT("Kernel", Loc);
 
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",
@@ -405,7 +403,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
 
 // Get the current number of components for a user-defined mapper.
 EXTERN int64_t __tgt_mapper_num_components(void *RtMapperHandle) {
-  TIMESCOPE();
+  //TIMESCOPE();
   auto *MapperComponentsPtr = (struct MapperComponentsTy *)RtMapperHandle;
   int64_t Size = MapperComponentsPtr->Components.size();
   DP("__tgt_mapper_num_components(Handle=" DPxMOD ") returns %" PRId64 "\n",
@@ -417,7 +415,7 @@ EXTERN int64_t __tgt_mapper_num_components(void *RtMapperHandle) {
 EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
                                         void *Begin, int64_t Size, int64_t Type,
                                         void *Name) {
-  TIMESCOPE();
+  //TIMESCOPE();
   DP("__tgt_push_mapper_component(Handle=" DPxMOD
      ") adds an entry (Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
      ", Type=0x%" PRIx64 ", Name=%s).\n",
