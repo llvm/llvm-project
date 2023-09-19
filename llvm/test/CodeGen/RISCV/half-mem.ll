@@ -128,10 +128,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    fadd.h a0, a0, a1
 ; CHECKIZHINX-NEXT:    lui a1, %hi(G)
 ; CHECKIZHINX-NEXT:    addi a1, a1, %lo(G)
-; CHECKIZHINX-NEXT:    lh a2, 0(a1)
+; CHECKIZHINX-NEXT:    lh zero, 0(a1)
 ; CHECKIZHINX-NEXT:    sh a0, 0(a1)
 ; CHECKIZHINX-NEXT:    addi a1, a1, 18
-; CHECKIZHINX-NEXT:    lh a2, 0(a1)
+; CHECKIZHINX-NEXT:    lh zero, 0(a1)
 ; CHECKIZHINX-NEXT:    sh a0, 0(a1)
 ; CHECKIZHINX-NEXT:    ret
 ;
@@ -157,10 +157,10 @@ define half @flh_fsh_global(half %a, half %b) nounwind {
 ; CHECKIZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; CHECKIZHINXMIN-NEXT:    lui a1, %hi(G)
 ; CHECKIZHINXMIN-NEXT:    addi a1, a1, %lo(G)
-; CHECKIZHINXMIN-NEXT:    lh a2, 0(a1)
+; CHECKIZHINXMIN-NEXT:    lh zero, 0(a1)
 ; CHECKIZHINXMIN-NEXT:    sh a0, 0(a1)
 ; CHECKIZHINXMIN-NEXT:    addi a1, a1, 18
-; CHECKIZHINXMIN-NEXT:    lh a2, 0(a1)
+; CHECKIZHINXMIN-NEXT:    lh zero, 0(a1)
 ; CHECKIZHINXMIN-NEXT:    sh a0, 0(a1)
 ; CHECKIZHINXMIN-NEXT:    ret
   %1 = fadd half %a, %b
