@@ -1,5 +1,5 @@
 """
-Use lldb Python SBtarget.WatchAddress() API to create a watchpoint for write of '*g_char_ptr'.
+Use lldb Python SBtarget.WatchpointCreateByAddress() API to create a watchpoint for write of '*g_char_ptr'.
 """
 
 import lldb
@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class TargetWatchAddressAPITestCase(TestBase):
+class TargetWatchpointCreateByAddressPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -22,7 +22,7 @@ class TargetWatchAddressAPITestCase(TestBase):
         self.violating_func = "do_bad_thing_with_location"
 
     def test_watch_address(self):
-        """Exercise SBTarget.WatchAddress() API to set a watchpoint."""
+        """Exercise SBTarget.WatchpointCreateByAddress() API to set a watchpoint."""
         self.build()
         exe = self.getBuildArtifact("a.out")
 
@@ -51,8 +51,10 @@ class TargetWatchAddressAPITestCase(TestBase):
         )
         # Watch for write to *g_char_ptr.
         error = lldb.SBError()
-        watchpoint = target.WatchAddress(
-            value.GetValueAsUnsigned(), 1, False, True, error
+        wp_opts = lldb.SBWatchpointOptions()
+        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
+        watchpoint = target.WatchpointCreateByAddress(
+            value.GetValueAsUnsigned(), 1, wp_opts, error
         )
         self.assertTrue(
             value and watchpoint, "Successfully found the pointer and set a watchpoint"
@@ -90,7 +92,7 @@ class TargetWatchAddressAPITestCase(TestBase):
     @skipIf(archs=["mips", "mipsel", "mips64", "mips64el"])
     @skipIf(archs=["s390x"])  # Likewise on SystemZ
     def test_watch_address_with_invalid_watch_size(self):
-        """Exercise SBTarget.WatchAddress() API but pass an invalid watch_size."""
+        """Exercise SBTarget.WatchpointCreateByAddress() API but pass an invalid watch_size."""
         self.build()
         exe = self.getBuildArtifact("a.out")
 
@@ -124,8 +126,10 @@ class TargetWatchAddressAPITestCase(TestBase):
         if self.getArchitecture() not in ["arm64", "arm64e", "arm64_32"]:
             # Watch for write to *g_char_ptr.
             error = lldb.SBError()
-            watchpoint = target.WatchAddress(
-                value.GetValueAsUnsigned(), 365, False, True, error
+            wp_opts = lldb.SBWatchpointOptions()
+            wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
+            watchpoint = target.WatchpointCreateByAddress(
+                value.GetValueAsUnsigned(), 365, wp_opts, error
             )
             self.assertFalse(watchpoint)
             self.expect(
