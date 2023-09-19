@@ -1463,6 +1463,7 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
       int getIntNotAccessed() const { return IntNotAccessed; }
       int getIntNoDefinition() const;
       int &getIntRef() { return IntRef; }
+      void returnVoid() const { return; }
     };
 
     void target() {
@@ -1473,6 +1474,14 @@ TEST(TransferTest, StructModeledFieldsWithAccessor) {
       int i2 = s.getWithInc(1);
       int i3 = s.getIntNoDefinition();
       int &iref = s.getIntRef();
+
+      // Regression test: Don't crash on an indirect call (which doesn't have
+      // an associated `CXXMethodDecl`).
+      auto ptr_to_member_fn = &S::getPtr;
+      p1 = (s.*ptr_to_member_fn)();
+
+      // Regression test: Don't crash on a return statement without a value.
+      s.returnVoid();
       // [[p]]
     }
   )";
