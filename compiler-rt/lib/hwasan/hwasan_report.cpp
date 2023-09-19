@@ -572,21 +572,33 @@ static uptr GetTopPc(StackTrace *stack) {
 }
 
 namespace {
-class InvalidFreeReport {
+class BaseReport {
+ public:
+  BaseReport(StackTrace *stack, bool fatal, uptr tagged_addr)
+      : scoped_report(fatal),
+        stack(stack),
+        tagged_addr(tagged_addr),
+        untagged_addr(UntagAddr(tagged_addr)),
+        ptr_tag(GetTagFromPointer(tagged_addr)) {}
+
+ protected:
+  ScopedReport scoped_report;
+  StackTrace *stack;
+  uptr tagged_addr;
+  uptr untagged_addr;
+  tag_t ptr_tag;
+};
+
+class InvalidFreeReport : public BaseReport {
  public:
   InvalidFreeReport(StackTrace *stack, uptr tagged_addr)
-      : stack(stack), tagged_addr(tagged_addr) {}
+      : BaseReport(stack, flags()->halt_on_error, tagged_addr) {}
   ~InvalidFreeReport();
 
  private:
-  StackTrace *stack;
-  uptr tagged_addr;
 };
 
 InvalidFreeReport::~InvalidFreeReport() {
-  ScopedReport R(flags()->halt_on_error);
-  uptr untagged_addr = UntagAddr(tagged_addr);
-  tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr = nullptr;
   tag_t mem_tag = 0;
   if (MemIsApp(untagged_addr)) {
@@ -624,19 +636,16 @@ InvalidFreeReport::~InvalidFreeReport() {
   ReportErrorSummary(bug_type, stack);
 }
 
-class TailOverwrittenReport {
+class TailOverwrittenReport : public BaseReport {
  public:
   explicit TailOverwrittenReport(StackTrace *stack, uptr tagged_addr,
                                  uptr orig_size, const u8 *expected)
-      : stack(stack),
-        tagged_addr(tagged_addr),
+      : BaseReport(stack, flags()->halt_on_error, tagged_addr),
         orig_size(orig_size),
         expected(expected) {}
   ~TailOverwrittenReport();
 
  private:
-  StackTrace *stack;
-  uptr tagged_addr;
   uptr orig_size;
   const u8 *expected;
 };
@@ -645,16 +654,13 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   uptr tail_size = kShadowAlignment - (orig_size % kShadowAlignment);
   u8 actual_expected[kShadowAlignment];
   internal_memcpy(actual_expected, expected, tail_size);
-  tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   // Short granule is stashed in the last byte of the magic string. To avoid
   // confusion, make the expected magic string contain the short granule tag.
   if (orig_size % kShadowAlignment != 0) {
     actual_expected[tail_size - 1] = ptr_tag;
   }
 
-  ScopedReport R(flags()->halt_on_error);
   Decorator d;
-  uptr untagged_addr = UntagAddr(tagged_addr);
   Printf("%s", d.Error());
   const char *bug_type = "allocation-tail-overwritten";
   Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
@@ -712,35 +718,28 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   ReportErrorSummary(bug_type, stack);
 }
 
-class TagMismatchReport {
+class TagMismatchReport : public BaseReport {
  public:
   explicit TagMismatchReport(StackTrace *stack, uptr tagged_addr,
                              uptr access_size, bool is_store, bool fatal,
                              uptr *registers_frame)
-      : stack(stack),
-        tagged_addr(tagged_addr),
+      : BaseReport(stack, fatal, tagged_addr),
         access_size(access_size),
         is_store(is_store),
-        fatal(fatal),
         registers_frame(registers_frame) {}
   ~TagMismatchReport();
 
  private:
-  StackTrace *stack;
-  uptr tagged_addr;
   uptr access_size;
   bool is_store;
-  bool fatal;
   uptr *registers_frame;
 };
 
 TagMismatchReport::~TagMismatchReport() {
-  ScopedReport R(fatal);
   SavedStackAllocations current_stack_allocations(
       GetCurrentThread()->stack_allocations());
 
   Decorator d;
-  uptr untagged_addr = UntagAddr(tagged_addr);
   // TODO: when possible, try to print heap-use-after-free, etc.
   const char *bug_type = "tag-mismatch";
   uptr pc = GetTopPc(stack);
@@ -754,7 +753,6 @@ TagMismatchReport::~TagMismatchReport() {
       __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
   CHECK_GE(offset, 0);
   CHECK_LT(offset, static_cast<sptr>(access_size));
-  tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr =
       reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
   tag_t mem_tag = *tag_ptr;
