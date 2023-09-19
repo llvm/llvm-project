@@ -759,7 +759,7 @@ static bool PrintResults(LeakReport &report) {
 
 static bool CheckForLeaks() {
   if (&__lsan_is_turned_off && __lsan_is_turned_off()) {
-    VReport(1, "LeakSanitizer is disabled");
+    VReport(1, "LeakSanitizer is disabled\n");
     return false;
   }
   VReport(1, "LeakSanitizer: checking for leaks");
