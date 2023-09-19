@@ -26,9 +26,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
-add_subdirectory(printf_core)
-add_subdirectory(scanf_core)
-
 add_entrypoint_object(
   fflush
   SRCS
@@ -285,6 +282,9 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${printf_copts}
 )
+
+add_subdirectory(printf_core)
+add_subdirectory(scanf_core)
 
 add_entrypoint_object(
   ftell

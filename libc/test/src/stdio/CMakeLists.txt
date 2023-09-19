@@ -112,6 +112,16 @@ add_libc_unittest(
     LibcMemoryHelpers
 )
 
+if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+
 add_fp_unittest(
   sprintf_test
   UNIT_TEST_ONLY
@@ -123,6 +133,8 @@ add_fp_unittest(
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.platform_defs
+  COMPILE_OPTIONS
+    ${sprintf_test_copts}
 )
 
 add_libc_unittest(
