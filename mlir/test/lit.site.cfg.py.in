@@ -47,6 +47,7 @@ config.mlir_run_arm_sme_tests = @MLIR_RUN_ARM_SME_TESTS@
 config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
 config.mlir_run_riscv_vector_tests = "@MLIR_RUN_RISCV_VECTOR_TESTS@"
 config.mlir_run_cuda_tensor_core_tests = @MLIR_RUN_CUDA_TENSOR_CORE_TESTS@
+config.mlir_run_rocm_wmma_tests = @MLIR_RUN_ROCM_WMMA_TESTS@
 config.mlir_run_cuda_sm80_tests = @MLIR_RUN_CUDA_SM80_TESTS@
 config.mlir_run_cuda_sm80_lt_tests = @MLIR_RUN_CUDA_SM80_LT_TESTS@
 config.mlir_run_cuda_sm90_tests = @MLIR_RUN_CUDA_SM90_TESTS@
