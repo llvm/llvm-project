@@ -547,6 +547,12 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
         }
         converter = defaultTypeConverter.get();
       }
+
+      // Add descriptor-specific updates to the conversion target, which may
+      // depend on the final type converter. In structural converters, the
+      // legality of types dictates the dynamic legality of an operation.
+      descriptor.populateConversionTargetRules(*converter, conversionTarget);
+
       descriptor.populatePatterns(*converter, patterns);
     }
   }
@@ -1227,7 +1233,7 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
   DenseSet<Operation *> resultSet;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Operation *parent = target->getParentOp();
-    do {
+    while (parent) {
       bool checkIsolatedFromAbove =
           !getIsolatedFromAbove() ||
           parent->hasTrait<OpTrait::IsIsolatedFromAbove>();
@@ -1235,7 +1241,8 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
                          parent->getName().getStringRef() == *getOpName();
       if (checkIsolatedFromAbove && checkOpName)
         break;
-    } while ((parent = parent->getParentOp()));
+      parent = parent->getParentOp();
+    }
     if (!parent) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
@@ -2180,6 +2187,9 @@ LogicalResult transform::SequenceOp::verify() {
         return failure();
     }
   }
+
+  if (!getBodyBlock()->hasTerminator())
+    return emitOpError() << "expects to have a terminator in the body";
 
   if (getBodyBlock()->getTerminator()->getOperandTypes() !=
       getOperation()->getResultTypes()) {

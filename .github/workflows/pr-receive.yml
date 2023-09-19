@@ -10,7 +10,12 @@ permissions:
 jobs:
   pr-target:
     runs-on: ubuntu-latest
-    if: github.repository == 'llvm/llvm-project'
+    # Ignore PRs with more than 10 commits.  Pull requests with a lot of
+    # commits tend to be accidents usually when someone made a mistake while trying
+    # to rebase.  We want to ignore these pull requests to avoid excessive
+    # notifications.
+    if: github.repository == 'llvm/llvm-project' &&
+        github.event.pull_request.commits < 10
     steps:
       - name: Store PR Information
         run: |

@@ -152,6 +152,9 @@ static lto::Config createConfig() {
   c.DwoDir = std::string(config->dwoDir);
 
   c.HasWholeProgramVisibility = config->ltoWholeProgramVisibility;
+  c.ValidateAllVtablesHaveTypeInfos =
+      config->ltoValidateAllVtablesHaveTypeInfos;
+  c.AllVtablesHaveTypeInfos = ctx.ltoAllVtablesHaveTypeInfos;
   c.AlwaysEmitRegularLTOObj = !config->ltoObjPath.empty();
 
   for (const llvm::StringRef &name : config->thinLTOModulesToCompile)
@@ -174,7 +177,7 @@ static lto::Config createConfig() {
   }
 
   if (config->ltoEmitAsm) {
-    c.CGFileType = CGFT_AssemblyFile;
+    c.CGFileType = CodeGenFileType::AssemblyFile;
     c.Options.MCOptions.AsmVerbose = true;
   }
 

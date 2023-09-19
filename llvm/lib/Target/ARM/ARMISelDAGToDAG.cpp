@@ -63,7 +63,7 @@ public:
 
   ARMDAGToDAGISel() = delete;
 
-  explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOpt::Level OptLevel)
+  explicit ARMDAGToDAGISel(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, tm, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -499,7 +499,7 @@ void ARMDAGToDAGISel::PreprocessISelDAG() {
 /// node. VFP / NEON fp VMLA / VMLS instructions have special RAW hazards (at
 /// least on current ARM implementations) which should be avoidded.
 bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return true;
 
   if (!Subtarget->hasVMLxHazards())
@@ -5894,6 +5894,6 @@ bool ARMDAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// ARM-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createARMISelDag(ARMBaseTargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel) {
+                                     CodeGenOptLevel OptLevel) {
   return new ARMDAGToDAGISel(TM, OptLevel);
 }

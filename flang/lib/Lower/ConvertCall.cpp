@@ -1165,8 +1165,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         continue;
       }
       if (fir::isPointerType(argTy) &&
-          !Fortran::evaluate::IsObjectPointer(
-              *expr, callContext.converter.getFoldingContext())) {
+          !Fortran::evaluate::IsObjectPointer(*expr)) {
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
@@ -1814,13 +1813,11 @@ genIsPresentIfArgMaybeAbsent(mlir::Location loc, hlfir::Entity actual,
                              const Fortran::lower::SomeExpr &expr,
                              CallContext &callContext,
                              bool passAsAllocatableOrPointer) {
-  if (!Fortran::evaluate::MayBePassedAsAbsentOptional(
-          expr, callContext.converter.getFoldingContext()))
+  if (!Fortran::evaluate::MayBePassedAsAbsentOptional(expr))
     return std::nullopt;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   if (!passAsAllocatableOrPointer &&
-      Fortran::evaluate::IsAllocatableOrPointerObject(
-          expr, callContext.converter.getFoldingContext())) {
+      Fortran::evaluate::IsAllocatableOrPointerObject(expr)) {
     // Passing Allocatable/Pointer to non-pointer/non-allocatable OPTIONAL.
     // Fortran 2018 15.5.2.12 point 1: If unallocated/disassociated, it is
     // as if the argument was absent. The main care here is to not do a

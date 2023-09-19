@@ -2850,6 +2850,13 @@ public:
   /// DW_OP_LLVM_arg op as its first operand, or if it contains none.
   bool isSingleLocationExpression() const;
 
+  /// Returns a reference to the elements contained in this expression, skipping
+  /// past the leading `DW_OP_LLVM_arg, 0` if one is present.
+  /// Similar to `convertToNonVariadicExpression`, but faster and cheaper - it
+  /// does not check whether the expression is a single-location expression, and
+  /// it returns elements rather than creating a new DIExpression.
+  std::optional<ArrayRef<uint64_t>> getSingleLocationExpressionElements() const;
+
   /// Removes all elements from \p Expr that do not apply to an undef debug
   /// value, which includes every operator that computes the value/location on
   /// the DWARF stack, including any DW_OP_LLVM_arg elements (making the result
@@ -2868,6 +2875,9 @@ public:
   /// single debug operand at the start of the expression, then return that
   /// expression in a non-variadic form by removing DW_OP_LLVM_arg from the
   /// expression if it is present; otherwise returns std::nullopt.
+  /// See also `getSingleLocationExpressionElements` above, which skips
+  /// checking `isSingleLocationExpression` and returns a list of elements
+  /// rather than a DIExpression.
   static std::optional<const DIExpression *>
   convertToNonVariadicExpression(const DIExpression *Expr);
 

@@ -47,7 +47,7 @@ public:
   WebAssemblyDAGToDAGISel() = delete;
 
   WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
-                          CodeGenOpt::Level OptLevel)
+                          CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -408,6 +408,6 @@ bool WebAssemblyDAGToDAGISel::SelectAddrOperands64(SDValue Op, SDValue &Offset,
 /// This pass converts a legalized DAG into a WebAssembly-specific DAG, ready
 /// for instruction scheduling.
 FunctionPass *llvm::createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                             CodeGenOpt::Level OptLevel) {
+                                             CodeGenOptLevel OptLevel) {
   return new WebAssemblyDAGToDAGISel(TM, OptLevel);
 }

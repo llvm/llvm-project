@@ -1206,7 +1206,7 @@ bool MachineFunction::shouldUseDebugInstrRef() const {
   // have optimized code inlined into this unoptimized code, however with
   // fewer and less aggressive optimizations happening, coverage and accuracy
   // should not suffer.
-  if (getTarget().getOptLevel() == CodeGenOpt::None)
+  if (getTarget().getOptLevel() == CodeGenOptLevel::None)
     return false;
 
   // Don't use instr-ref if this function is marked optnone.

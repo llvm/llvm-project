@@ -298,7 +298,7 @@ add_libc_test(
     libc.src.stdio.fopen
 )
 
-add_libc_unittest(
+add_libc_test(
   putc_test
   SUITE
     libc_stdio_unittests
@@ -330,7 +330,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   fgetc_test
   SUITE
     libc_stdio_unittests
@@ -370,7 +370,7 @@ add_libc_unittest(
     libc.src.stdio.getc_unlocked
 )
 
-add_libc_unittest(
+add_libc_test(
   fgets_test
   SUITE
     libc_stdio_unittests

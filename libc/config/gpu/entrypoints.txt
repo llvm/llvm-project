@@ -86,6 +86,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.errno
 
     # stdio.h entrypoints
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.clearerr
     libc.src.stdio.puts
     libc.src.stdio.fopen
     libc.src.stdio.fclose
@@ -95,6 +98,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.fputc
     libc.src.stdio.putc
     libc.src.stdio.putchar
+    libc.src.stdio.fgets
+    libc.src.stdio.fgetc
+    libc.src.stdio.getc
+    libc.src.stdio.getchar
     libc.src.stdio.stdin
     libc.src.stdio.stdout
     libc.src.stdio.stderr

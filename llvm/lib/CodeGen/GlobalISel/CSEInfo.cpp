@@ -76,9 +76,9 @@ bool CSEConfigConstantOnly::shouldCSEOpc(unsigned Opc) {
 }
 
 std::unique_ptr<CSEConfigBase>
-llvm::getStandardCSEConfigForOpt(CodeGenOpt::Level Level) {
+llvm::getStandardCSEConfigForOpt(CodeGenOptLevel Level) {
   std::unique_ptr<CSEConfigBase> Config;
-  if (Level == CodeGenOpt::None)
+  if (Level == CodeGenOptLevel::None)
     Config = std::make_unique<CSEConfigConstantOnly>();
   else
     Config = std::make_unique<CSEConfigFull>();

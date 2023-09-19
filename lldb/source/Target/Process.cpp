@@ -3153,6 +3153,14 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   // case it was already set and some thread plan logic calls halt on its own.
   m_clear_thread_plans_on_stop |= clear_thread_plans;
 
+  if (m_public_state.GetValue() == eStateAttaching) {
+    // Don't hijack and eat the eStateExited as the code that was doing the
+    // attach will be waiting for this event...
+    SetExitStatus(SIGKILL, "Cancelled async attach.");
+    Destroy(false);
+    return Status();
+  }
+
   ListenerSP halt_listener_sp(
       Listener::MakeListener("lldb.process.halt_listener"));
   HijackProcessEvents(halt_listener_sp);
@@ -3160,15 +3168,6 @@ Status Process::Halt(bool clear_thread_plans, bool use_run_lock) {
   EventSP event_sp;
 
   SendAsyncInterrupt();
-
-  if (m_public_state.GetValue() == eStateAttaching) {
-    // Don't hijack and eat the eStateExited as the code that was doing the
-    // attach will be waiting for this event...
-    RestoreProcessEvents();
-    SetExitStatus(SIGKILL, "Cancelled async attach.");
-    Destroy(false);
-    return Status();
-  }
 
   // Wait for the process halt timeout seconds for the process to stop.
   // If we are going to use the run lock, that means we're stopping out to the

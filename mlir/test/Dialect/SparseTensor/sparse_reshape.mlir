@@ -4,7 +4,7 @@
 // RUN: --cse --canonicalize  | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
-#SparseMatrix = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#SparseMatrix = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 //
 // roundtrip:

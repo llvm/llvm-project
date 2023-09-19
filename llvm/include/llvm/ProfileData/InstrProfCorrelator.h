@@ -39,6 +39,8 @@ public:
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   virtual Error correlateProfileData(int MaxWarnings) = 0;
 
+  virtual Error correlateCovUnusedFuncNames(int MaxWarnings) = 0;
+
   /// Process debug info and dump the correlation data.
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   virtual Error dumpYaml(int MaxWarnings, raw_ostream &OS) = 0;
@@ -52,6 +54,12 @@ public:
   /// Return the number of bytes in the names string.
   size_t getNamesSize() const { return Names.size(); }
 
+  const char *getCovUnusedFuncNamesPointer() const {
+    return CovUnusedFuncNames.c_str();
+  }
+
+  size_t getCovUnusedFuncNamesSize() const { return CovUnusedFuncNames.size(); }
+
   /// Return the size of the counters section in bytes.
   uint64_t getCountersSectionSize() const {
     return Ctx->CountersSectionEnd - Ctx->CountersSectionStart;
@@ -60,6 +68,7 @@ public:
   static const char *FunctionNameAttributeName;
   static const char *CFGHashAttributeName;
   static const char *NumCountersAttributeName;
+  static const char *CovFunctionNameAttributeName;
 
   enum InstrProfCorrelatorKind { CK_32Bit, CK_64Bit };
   InstrProfCorrelatorKind getKind() const { return Kind; }
@@ -83,6 +92,7 @@ protected:
 
   std::string Names;
   std::vector<std::string> NamesVec;
+  std::string CovUnusedFuncNames;
 
   struct Probe {
     std::string FunctionName;
@@ -205,6 +215,8 @@ private:
   void correlateProfileDataImpl(
       int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;
+
+  Error correlateCovUnusedFuncNames(int MaxWarnings) override;
 };
 
 } // end namespace llvm

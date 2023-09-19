@@ -144,10 +144,10 @@ define %"struct.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -159,24 +159,24 @@ define %"struct.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldp q7, q6, [x10]
 ; CHECK-NEXT:    ldp q17, q16, [x9, #32]
 ; CHECK-NEXT:    ldp q19, q18, [x10, #32]
-; CHECK-NEXT:    fcmla v1.2d, v7.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v2.2d, v7.2d, v5.2d, #0
 ; CHECK-NEXT:    fcmla v0.2d, v6.2d, v4.2d, #0
-; CHECK-NEXT:    fcmla v2.2d, v19.2d, v17.2d, #0
+; CHECK-NEXT:    fcmla v1.2d, v19.2d, v17.2d, #0
 ; CHECK-NEXT:    fcmla v3.2d, v18.2d, v16.2d, #0
-; CHECK-NEXT:    fcmla v1.2d, v7.2d, v5.2d, #90
+; CHECK-NEXT:    fcmla v2.2d, v7.2d, v5.2d, #90
 ; CHECK-NEXT:    fcmla v0.2d, v6.2d, v4.2d, #90
-; CHECK-NEXT:    fcmla v2.2d, v19.2d, v17.2d, #90
+; CHECK-NEXT:    fcmla v1.2d, v19.2d, v17.2d, #90
 ; CHECK-NEXT:    fcmla v3.2d, v18.2d, v16.2d, #90
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    zip2 v4.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v3.2d, v1.2d, v0.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    zip2 v4.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip1 v1.2d, v1.2d, v3.2d
+; CHECK-NEXT:    zip2 v3.2d, v2.2d, v0.2d
+; CHECK-NEXT:    zip1 v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    fadd v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    fadd v1.2d, v4.2d, v3.2d
-; CHECK-NEXT:    fadd v0.2d, v2.2d, v0.2d
-; CHECK-NEXT:    faddp d1, v1.2d
 ; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    faddp d1, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %scevgep = getelementptr i8, ptr %a, i64 32
