@@ -97,6 +97,11 @@ public:
   ParseResult Parse(DiagnosticManager &diagnostic_manager,
                     uint32_t first_line = 0, uint32_t last_line = UINT32_MAX);
 
+  /// Returns true if the call to parse of this type is cacheable.
+  bool IsParseCacheable() const {
+    return m_is_cacheable;
+  }
+
   //------------------------------------------------------------------
   /// Ready an already-parsed expression for execution, possibly
   /// evaluating it statically.
@@ -198,6 +203,9 @@ private:
 
   /// If true, we are running in REPL mode
   EvaluateExpressionOptions m_options;
+
+  /// Indicates whether the call to Parse of this type is cacheable.
+  bool m_is_cacheable;
 };
 } // namespace lldb_private
 

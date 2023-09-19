@@ -138,6 +138,10 @@ public:
   void WillStartExecuting() override;
   void DidFinishExecuting() override;
 
+  bool IsParseCacheable() override {
+    return m_parser->IsParseCacheable();
+  }
+
 private:
   //------------------------------------------------------------------
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
