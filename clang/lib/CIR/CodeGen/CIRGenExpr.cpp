@@ -271,7 +271,9 @@ LValue CIRGenFunction::buildLValueForField(LValue base,
     if (!IsInPreservedAIRegion &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       llvm::StringRef fieldName = field->getName();
-      unsigned fieldIndex = field->getFieldIndex();
+      auto& layout = CGM.getTypes().getCIRGenRecordLayout(field->getParent());
+      unsigned fieldIndex = layout.getCIRFieldNo(field);
+
       if (CGM.LambdaFieldToName.count(field))
         fieldName = CGM.LambdaFieldToName[field];
       addr = buildAddrOfFieldStorage(*this, addr, field, fieldName, fieldIndex);
