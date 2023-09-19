@@ -37,6 +37,18 @@
 // DEBIAN_X86_64_M32-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../lib32"
 
+/// Test GCC installation on bare-metal RISCV64.
+// RUN: %clang -### %s --target=riscv64-unknown-elf --sysroot=%S/Inputs/multilib_riscv_elf_sdk/riscv64-unknown-elf/ --stdlib=platform --rtlib=platform \
+// RUN:   --gcc-install-dir=%S/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/ 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ELF_RISCV64
+// ELF_RISCV64:      "-internal-isystem"
+// ELF_RISCV64-SAME: {{^}} "[[SYSROOT:[^"]+]]/include/c++/8.2.0"
+// ELF_RISCV64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/include/c++/8.2.0/riscv64-unknown-elf/rv64imac/lp64"
+// ELF_RISCV64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/include/c++/8.2.0/backward"
+// ELF_RISCV64:      "-L
+// ELF_RISCV64-SAME: {{^}}[[SYSROOT:[^"]+]]/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64"
+// ELF_RISCV64-SAME: {{^}} "-L[[SYSROOT]]/lib/gcc/riscv64-unknown-elf/8.2.0/../../../../riscv64-unknown-elf/lib/rv64imac/lp64"
+
 // RUN: not %clangxx %s -### --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform \
 // RUN:   --gcc-install-dir=%S/Inputs/debian_multiarch_tree/usr/lib/gcc/x86_64-linux-gnu 2>&1 | FileCheck %s --check-prefix=INVALID
