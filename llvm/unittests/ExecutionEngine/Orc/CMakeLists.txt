@@ -41,6 +41,7 @@ add_llvm_unittest(OrcJITTests
   ThreadSafeModuleTest.cpp
   WrapperFunctionUtilsTest.cpp
   JITLinkRedirectionManagerTest.cpp
+  ReOptimizeLayerTest.cpp
   )
 
 target_link_libraries(OrcJITTests PRIVATE
