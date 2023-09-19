@@ -366,7 +366,7 @@ class MaskedVectorizeOp:
     def __init__(
         self,
         target: Union[Operation, OpView, Value],
-        vector_sizes: Union[DynamicIndexList, ArrayAttr],
+        vector_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         *,
         vectorize_nd_extract: Optional[bool] = None,
         scalable_sizes: OptionalBoolList = None,
@@ -374,7 +374,13 @@ class MaskedVectorizeOp:
         loc=None,
         ip=None,
     ):
-        if scalable_sizes is None and static_vector_sizes is None:
+        if (
+            scalable_sizes is None
+            and static_vector_sizes is None
+            and vector_sizes is None
+        ):
+            dynamic_vector_sizes = []
+        elif scalable_sizes is None and static_vector_sizes is None:
             (
                 dynamic_vector_sizes,
                 static_vector_sizes,
