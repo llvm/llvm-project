@@ -37,7 +37,7 @@ namespace __hwasan {
 
 class ScopedReport {
  public:
-  ScopedReport(bool fatal = false) : fatal(fatal) {
+  explicit ScopedReport(bool fatal) : fatal(fatal) {
     Lock lock(&error_message_lock_);
     error_message_ptr_ = fatal ? &error_message_ : nullptr;
     ++hwasan_report_count;
