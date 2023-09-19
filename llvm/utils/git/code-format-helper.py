@@ -115,10 +115,9 @@ class ClangFormatHelper(FormatHelper):
             return [excl.strip() for excl in ifd.readlines()]
 
     def should_be_excluded(self, path: str) -> bool:
-        for excl in self.libcxx_excluded_files:
-            if path == excl:
-                print(f"Excluding file {path}")
-                return True
+        if path in self.libcxx_excluded_files:
+            print(f"Excluding file {path}")
+            return True
         return False
 
     def filter_changed_files(self, changed_files: [str]) -> [str]:
