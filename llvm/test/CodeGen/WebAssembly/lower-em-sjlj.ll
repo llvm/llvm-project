@@ -110,8 +110,8 @@ entry:
   call void @foo()
   ret void
 ; CHECK: call.em.longjmp:
-; CHECK-NEXT:  %threw.phi = phi [[PTR]] [ %__THREW__.val, %if.then1 ], [ %__THREW__.val3, %if.then14 ]
-; CHECK-NEXT:  %threwvalue.phi = phi i32 [ %__threwValue.val, %if.then1 ], [ %__threwValue.val7, %if.then14 ]
+; CHECK-NEXT:  %threw.phi = phi [[PTR]] [ %__THREW__.val, %if.then1 ], [ %__THREW__.val4, %if.then15 ]
+; CHECK-NEXT:  %threwvalue.phi = phi i32 [ %__threwValue.val, %if.then1 ], [ %__threwValue.val8, %if.then15 ]
 ; CHECK-NEXT: tail call void @free(ptr %[[SETJMP_TABLE1]])
 ; CHECK-NEXT: call void @emscripten_longjmp([[PTR]] %threw.phi, i32 %threwvalue.phi)
 ; CHECK-NEXT: unreachable
@@ -158,9 +158,9 @@ if.then:                                          ; preds = %entry
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE1:.*]] = call i32 @getTempRet0()
 
 ; CHECK: if.then.split:
-; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end2 ], [ %[[VAR0]], %if.then ]
-; CHECK: %[[SETJMP_TABLE_SIZE2:.*]] = phi i32 [ %[[SETJMP_TABLE_SIZE1]], %if.then ], [ %[[SETJMP_TABLE_SIZE3:.*]], %if.end2 ]
-; CHECK: %[[SETJMP_TABLE2:.*]] = phi ptr [ %[[SETJMP_TABLE1]], %if.then ], [ %[[SETJMP_TABLE3:.*]], %if.end2 ]
+; CHECK: %[[VAR1:.*]] = phi i32 [ %[[VAR2:.*]], %if.end3 ], [ %[[VAR0]], %if.then ]
+; CHECK: %[[SETJMP_TABLE_SIZE2:.*]] = phi i32 [ %[[SETJMP_TABLE_SIZE1]], %if.then ], [ %[[SETJMP_TABLE_SIZE3:.*]], %if.end3 ]
+; CHECK: %[[SETJMP_TABLE2:.*]] = phi ptr [ %[[SETJMP_TABLE1]], %if.then ], [ %[[SETJMP_TABLE3:.*]], %if.end3 ]
 ; CHECK: store i32 %[[VAR1]], ptr @global_var, align 4
 
 if.end:                                           ; preds = %if.then, %entry
@@ -169,7 +169,7 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK: if.end:
 ; CHECK: %[[VAR2]] = phi i32 [ %[[VAR1]], %if.then.split ], [ undef, %entry.split ]
 ; CHECK: %[[SETJMP_TABLE_SIZE3]] = phi i32 [ %[[SETJMP_TABLE_SIZE2]], %if.then.split ], [ %[[SETJMP_TABLE_SIZE0]], %entry.split ]
-; CHECK: %[[SETJMP_TABLE3]] = phi ptr [ %[[SETJMP_TABLE2]], %if.then.split ], [ %malloccall, %entry.split ]
+; CHECK: %[[SETJMP_TABLE3]] = phi ptr [ %[[SETJMP_TABLE2]], %if.then.split ], [ %setjmpTable, %entry.split ]
 }
 
 ; Test a case when a function only calls other functions that are neither setjmp nor longjmp

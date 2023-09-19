@@ -4095,8 +4095,9 @@ static CallingConv getCCForDeclaratorChunk(
           D.getTypeObject(I).Kind == DeclaratorChunk::MemberPointer;
     } else if (D.getContext() == DeclaratorContext::LambdaExpr) {
       // This can only be a call operator for a lambda, which is an instance
-      // method.
-      IsCXXInstanceMethod = true;
+      // method, unless explicitly specified as 'static'.
+      IsCXXInstanceMethod =
+          D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_static;
     } else {
       // We're the innermost decl chunk, so must be a function declarator.
       assert(D.isFunctionDeclarator());

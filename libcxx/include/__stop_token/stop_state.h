@@ -14,9 +14,9 @@
 #include <__config>
 #include <__stop_token/atomic_unique_lock.h>
 #include <__stop_token/intrusive_list_view.h>
+#include <__thread/id.h>
 #include <atomic>
 #include <cstdint>
-#include <thread>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -63,7 +63,7 @@ class __stop_state {
   using __callback_list      = __intrusive_list_view<__stop_callback_base>;
 
   __callback_list __callback_list_;
-  thread::id __requesting_thread_;
+  __thread_id __requesting_thread_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI __stop_state() noexcept = default;

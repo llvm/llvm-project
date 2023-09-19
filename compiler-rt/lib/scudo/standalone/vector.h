@@ -9,26 +9,20 @@
 #ifndef SCUDO_VECTOR_H_
 #define SCUDO_VECTOR_H_
 
-#include "common.h"
+#include "mem_map.h"
 
 #include <string.h>
 
 namespace scudo {
 
-// A low-level vector based on map. May incur a significant memory overhead for
-// small vectors. The current implementation supports only POD types.
+// A low-level vector based on map. It stores the contents inline up to a fixed
+// capacity, or in an external memory buffer if it grows bigger than that. May
+// incur a significant memory overhead for small vectors. The current
+// implementation supports only POD types.
+//
+// NOTE: This class is not meant to be used directly, use Vector<T> instead.
 template <typename T> class VectorNoCtor {
 public:
-  constexpr void init(uptr InitialCapacity = 0) {
-    Data = &LocalData[0];
-    CapacityBytes = sizeof(LocalData);
-    if (InitialCapacity > capacity())
-      reserve(InitialCapacity);
-  }
-  void destroy() {
-    if (Data != &LocalData[0])
-      unmap(Data, CapacityBytes, 0, &MapData);
-  }
   T &operator[](uptr I) {
     DCHECK_LT(I, Size);
     return Data[I];
@@ -78,24 +72,43 @@ public:
   const T *end() const { return data() + size(); }
   T *end() { return data() + size(); }
 
+protected:
+  constexpr void init(uptr InitialCapacity = 0) {
+    Data = &LocalData[0];
+    CapacityBytes = sizeof(LocalData);
+    if (InitialCapacity > capacity())
+      reserve(InitialCapacity);
+  }
+  void destroy() {
+    if (Data != &LocalData[0])
+      ExternalBuffer.unmap(ExternalBuffer.getBase(),
+                           ExternalBuffer.getCapacity());
+  }
+
 private:
   void reallocate(uptr NewCapacity) {
     DCHECK_GT(NewCapacity, 0);
     DCHECK_LE(Size, NewCapacity);
+
+    MemMapT NewExternalBuffer;
     NewCapacity = roundUp(NewCapacity * sizeof(T), getPageSizeCached());
-    T *NewData = reinterpret_cast<T *>(
-        map(nullptr, NewCapacity, "scudo:vector", 0, &MapData));
-    memcpy(NewData, Data, Size * sizeof(T));
+    NewExternalBuffer.map(/*Addr=*/0U, NewCapacity, "scudo:vector");
+    T *NewExternalData = reinterpret_cast<T *>(NewExternalBuffer.getBase());
+
+    memcpy(NewExternalData, Data, Size * sizeof(T));
     destroy();
-    Data = NewData;
+
+    Data = NewExternalData;
     CapacityBytes = NewCapacity;
+    ExternalBuffer = NewExternalBuffer;
   }
 
   T *Data = nullptr;
-  T LocalData[256 / sizeof(T)] = {};
   uptr CapacityBytes = 0;
   uptr Size = 0;
-  [[no_unique_address]] MapPlatformData MapData = {};
+
+  T LocalData[256 / sizeof(T)] = {};
+  MemMapT ExternalBuffer;
 };
 
 template <typename T> class Vector : public VectorNoCtor<T> {

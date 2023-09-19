@@ -62,7 +62,6 @@ func.func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[alloc]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
 }
@@ -115,7 +114,6 @@ func.func @read_after_write_conflict(%cst : f32, %idx : index, %idx2 : index)
   // CHECK: %[[read2:.*]] = memref.load %[[alloc]]
   %read2 = tensor.extract %write[%idx] : tensor<10xf32>
 
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[read]], %[[read2]]
   return %read, %read2 : f32, f32
 }
@@ -127,7 +125,6 @@ func.func @copy_deallocated() -> tensor<10xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc()
   %0 = bufferization.alloc_tensor() : tensor<10xf32>
   // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[alloc_tensor]]
   return %0 : tensor<10xf32>
 }
@@ -162,7 +159,6 @@ func.func @alloc_tensor_with_copy(%t: tensor<5xf32>) -> tensor<5xf32> {
   // CHECK: memref.copy %[[m]], %[[alloc]]
   %0 = bufferization.alloc_tensor() copy(%t) : tensor<5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
 }
@@ -174,7 +170,6 @@ func.func @alloc_tensor_with_memory_space() -> tensor<5xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32, 1>
   %0 = bufferization.alloc_tensor() {memory_space = 1 : i64} : tensor<5xf32>
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   return %0 : tensor<5xf32>
 }
@@ -221,7 +216,6 @@ func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
   // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
   // CHECK: memref.copy %[[m]], %[[alloc]]
   // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[r]]
   %dest = bufferization.alloc_tensor() : tensor<5xf32>
   %0 = bufferization.materialize_in_destination %arg0 in %dest : tensor<5xf32>

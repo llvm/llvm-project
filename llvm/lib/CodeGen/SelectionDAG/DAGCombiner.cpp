@@ -430,6 +430,8 @@ namespace {
     SDValue visitSADDO_CARRY(SDNode *N);
     SDValue visitUADDO_CARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                  SDNode *N);
+    SDValue visitSADDO_CARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
+                                 SDNode *N);
     SDValue visitSUBE(SDNode *N);
     SDValue visitUSUBO_CARRY(SDNode *N);
     SDValue visitSSUBO_CARRY(SDNode *N);
@@ -3305,7 +3307,12 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
     return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
                      DAG.getConstant(0, DL, CarryVT));
 
-  if (!IsSigned) {
+  if (IsSigned) {
+    // fold (saddo (xor a, -1), 1) -> (ssub 0, a).
+    if (isBitwiseNot(N0) && isOneOrOneSplat(N1))
+      return DAG.getNode(ISD::SSUBO, DL, N->getVTList(),
+                         DAG.getConstant(0, DL, VT), N0.getOperand(0));
+  } else {
     // fold (uaddo (xor a, -1), 1) -> (usub 0, a) and flip carry.
     if (isBitwiseNot(N0) && isOneOrOneSplat(N1)) {
       SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
@@ -3637,6 +3644,18 @@ SDValue DAGCombiner::visitUADDO_CARRYLike(SDValue N0, SDValue N1,
   return SDValue();
 }
 
+SDValue DAGCombiner::visitSADDO_CARRYLike(SDValue N0, SDValue N1,
+                                          SDValue CarryIn, SDNode *N) {
+  // fold (saddo_carry (xor a, -1), b, c) -> (ssubo_carry b, a, !c)
+  if (isBitwiseNot(N0)) {
+    if (SDValue NotC = extractBooleanFlip(CarryIn, DAG, TLI, true))
+      return DAG.getNode(ISD::SSUBO_CARRY, SDLoc(N), N->getVTList(), N1,
+                         N0.getOperand(0), NotC);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -3655,6 +3674,12 @@ SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
         TLI.isOperationLegalOrCustom(ISD::SADDO, N->getValueType(0)))
       return DAG.getNode(ISD::SADDO, DL, N->getVTList(), N0, N1);
   }
+
+  if (SDValue Combined = visitSADDO_CARRYLike(N0, N1, CarryIn, N))
+    return Combined;
+
+  if (SDValue Combined = visitSADDO_CARRYLike(N1, N0, CarryIn, N))
+    return Combined;
 
   return SDValue();
 }
@@ -11680,10 +11705,9 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
+    if (TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
       IndexType = ISD::UNSIGNED_SCALED;
-      Index = Op;
+      Index = Index.getOperand(0);
       return true;
     }
     if (ISD::isIndexTypeSigned(IndexType)) {
@@ -11694,12 +11718,10 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's only safe to look through sign extends when Index is signed.
   if (Index.getOpcode() == ISD::SIGN_EXTEND &&
-      ISD::isIndexTypeSigned(IndexType)) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
-      Index = Op;
-      return true;
-    }
+      ISD::isIndexTypeSigned(IndexType) &&
+      TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
+    Index = Index.getOperand(0);
+    return true;
   }
 
   return false;

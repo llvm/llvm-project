@@ -352,7 +352,7 @@ static uint64_t encodeValueAArch64(uint64_t Type, uint64_t Value, uint64_t PC) {
     assert(isInt<28>(Value) && "only PC +/- 128MB is allowed for direct call");
     // Immediate goes in bits 25:0 of BL.
     // OP 1001_01 goes in bits 31:26 of BL.
-    Value = (Value >> 2) | 0x94000000ULL;
+    Value = ((Value >> 2) & 0x3ffffff) | 0x94000000ULL;
     break;
   }
   return Value;

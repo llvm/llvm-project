@@ -2050,15 +2050,9 @@ LogicalResult GlobalOp::verify() {
       return emitOpError()
              << "this target extension type cannot be used in a global";
 
-    if (Attribute value = getValueOrNull()) {
-      // Only a single, zero integer attribute (=zeroinitializer) is allowed for
-      // a global value with TargetExtType.
-      // TODO: Replace with 'zeroinitializer' once there is a dedicated
-      // zeroinitializer operation in the LLVM dialect.
-      if (!isa<IntegerAttr>(value) || !isZeroAttribute(value))
-        return emitOpError()
-               << "expected zero value for global with target extension type";
-    }
+    if (Attribute value = getValueOrNull())
+      return emitOpError() << "global with target extension type can only be "
+                              "initialized with zero-initializer";
   }
 
   if (getLinkage() == Linkage::Common) {
@@ -2511,6 +2505,19 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// ZeroOp.
+//===----------------------------------------------------------------------===//
+
+LogicalResult LLVM::ZeroOp::verify() {
+  if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType()))
+    if (!targetExtType.hasProperty(LLVM::LLVMTargetExtType::HasZeroInit))
+      return emitOpError()
+             << "target extension type does not support zero-initializer";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp.
 //===----------------------------------------------------------------------===//
 
@@ -2554,16 +2561,7 @@ LogicalResult LLVM::ConstantOp::verify() {
     return success();
   }
   if (auto targetExtType = dyn_cast<LLVMTargetExtType>(getType())) {
-    if (!targetExtType.hasProperty(LLVM::LLVMTargetExtType::HasZeroInit))
-      return emitOpError()
-             << "target extension type does not support zero-initializer";
-    // Only a single, zero integer attribute (=zeroinitializer) is allowed for a
-    // global value with TargetExtType.
-    if (!isa<IntegerAttr>(getValue()) || !isZeroAttribute(getValue()))
-      return emitOpError()
-             << "only zero-initializer allowed for target extension types";
-
-    return success();
+    return emitOpError() << "does not support target extension type.";
   }
   if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
     return emitOpError()

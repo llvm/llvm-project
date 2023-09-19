@@ -1,23 +1,13 @@
 // RUN: mlir-opt %s \
-// RUN:     -one-shot-bufferize="allow-unknown-ops create-deallocs=0" \
+// RUN:     -one-shot-bufferize="allow-unknown-ops" \
 // RUN:     -split-input-file | \
-// RUN: FileCheck %s --check-prefix=CHECK-NODEALLOC
+// RUN: FileCheck %s
 
-// RUN: mlir-opt %s \
-// RUN:     -one-shot-bufferize="allow-unknown-ops create-deallocs=0" \
-// RUN:     -buffer-deallocation | \
-// RUN: FileCheck %s --check-prefix=CHECK-BUFFERDEALLOC
-
-// CHECK-NODEALLOC-LABEL: func @out_of_place_bufferization
-// CHECK-BUFFERDEALLOC-LABEL: func @out_of_place_bufferization
+// CHECK-LABEL: func @out_of_place_bufferization
 func.func @out_of_place_bufferization(%t1 : tensor<?xf32>) -> (f32, f32) {
-  //     CHECK-NODEALLOC: memref.alloc
-  //     CHECK-NODEALLOC: memref.copy
-  // CHECK-NODEALLOC-NOT: memref.dealloc
-
-  //     CHECK-BUFFERDEALLOC: %[[alloc:.*]] = memref.alloc
-  //     CHECK-BUFFERDEALLOC: memref.copy
-  //     CHECK-BUFFERDEALLOC: memref.dealloc %[[alloc]]
+  //     CHECK: memref.alloc
+  //     CHECK: memref.copy
+  // CHECK-NOT: memref.dealloc
 
   %cst = arith.constant 0.0 : f32
   %idx = arith.constant 5 : index

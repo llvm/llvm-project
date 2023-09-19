@@ -58,7 +58,7 @@ module {
     %c = arith.constant 0 : index
     %ci1 = arith.constant 1 : i32
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xi32, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xi32, #SparseVector>
     %0 = linalg.generic #trait_vec
        ins(%arga: tensor<?xf64, #SparseVector>)
         outs(%xv: tensor<?xi32, #SparseVector>) {
@@ -79,7 +79,7 @@ module {
   func.func @vector_complement_dense(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xi32> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xi32>
+    %xv = tensor.empty(%d) : tensor<?xi32>
     %0 = linalg.generic #trait_vec
        ins(%arga: tensor<?xf64, #SparseVector>)
         outs(%xv: tensor<?xi32>) {
@@ -100,7 +100,7 @@ module {
     %c = arith.constant 0 : index
     %cf1 = arith.constant 1.0 : f64
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_vec
        ins(%arga: tensor<?xf64, #SparseVector>)
         outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -123,7 +123,7 @@ module {
   func.func @vector_magnify(%arga: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xf64, #SparseVector>
-    %xv = bufferization.alloc_tensor(%d) : tensor<?xf64, #SparseVector>
+    %xv = tensor.empty(%d) : tensor<?xf64, #SparseVector>
     %0 = linalg.generic #trait_vec
        ins(%arga: tensor<?xf64, #SparseVector>)
         outs(%xv: tensor<?xf64, #SparseVector>) {
@@ -151,7 +151,7 @@ module {
     %cfmax = arith.constant 7.0 : f64
     %d0 = tensor.dim %argx, %c0 : tensor<?x?xf64, #DCSR>
     %d1 = tensor.dim %argx, %c1 : tensor<?x?xf64, #DCSR>
-    %xv = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #DCSR>
+    %xv = tensor.empty(%d0, %d1) : tensor<?x?xf64, #DCSR>
     %0 = linalg.generic #trait_mat
        ins(%argx: tensor<?x?xf64, #DCSR>)
         outs(%xv: tensor<?x?xf64, #DCSR>) {
@@ -178,7 +178,7 @@ module {
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %argx, %c0 : tensor<?x?xf64, #DCSR>
     %d1 = tensor.dim %argx, %c1 : tensor<?x?xf64, #DCSR>
-    %xv = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #DCSR>
+    %xv = tensor.empty(%d0, %d1) : tensor<?x?xf64, #DCSR>
     %0 = linalg.generic #trait_mat
        ins(%argx: tensor<?x?xf64, #DCSR>)
         outs(%xv: tensor<?x?xf64, #DCSR>) {

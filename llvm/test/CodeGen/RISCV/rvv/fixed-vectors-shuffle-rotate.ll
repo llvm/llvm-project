@@ -640,8 +640,8 @@ define <8 x i32> @shuffle_v8i32_as_i64(<8 x i32> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI22_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI22_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e32, m8, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle32.v v24, (a0)
-; ZVBB-ZVE32X-NEXT:    vrgather.vv v16, v8, v24
+; ZVBB-ZVE32X-NEXT:    vle16.v v24, (a0)
+; ZVBB-ZVE32X-NEXT:    vrgatherei16.vv v16, v8, v24
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v16
 ; ZVBB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %v, <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
@@ -836,8 +836,8 @@ define <8 x float> @shuffle_v8f32_as_i64(<8 x float> %v) {
 ; ZVBB-ZVE32X-NEXT:    lui a0, %hi(.LCPI27_0)
 ; ZVBB-ZVE32X-NEXT:    addi a0, a0, %lo(.LCPI27_0)
 ; ZVBB-ZVE32X-NEXT:    vsetivli zero, 8, e32, m8, ta, ma
-; ZVBB-ZVE32X-NEXT:    vle32.v v24, (a0)
-; ZVBB-ZVE32X-NEXT:    vrgather.vv v16, v8, v24
+; ZVBB-ZVE32X-NEXT:    vle16.v v24, (a0)
+; ZVBB-ZVE32X-NEXT:    vrgatherei16.vv v16, v8, v24
 ; ZVBB-ZVE32X-NEXT:    vmv.v.v v8, v16
 ; ZVBB-ZVE32X-NEXT:    ret
   %shuffle = shufflevector <8 x float> %v, <8 x float> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
