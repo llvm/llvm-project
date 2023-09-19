@@ -225,7 +225,7 @@ namespace ranges {
 
   template<class I1, class I2>
     using copy_backward_result = in_out_result<I1, I2>;                                     // since C++20
-  
+
   template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2, 
     sentinel_for<I2> S2, class Pred = ranges::equal_to, class Proj1 = identity, 
     class Proj2 = identity>

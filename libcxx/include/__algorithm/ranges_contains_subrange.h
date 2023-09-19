@@ -50,15 +50,20 @@ struct __fn {
       _Proj1& __proj1,
       _Proj2& __proj2,
       _Offset __offset) {
-    if (__offset < 0) return false;
+    if (__offset < 0)
+      return false;
     else {
-      for (;__offset >= 0; __offset --, __first1 ++) {
+      for (; __offset >= 0; __offset --, __first1 ++) {
         auto result = ranges::starts_with(
           std::move(__first1),
           std::move(__last1),
           std::move(__first2),
-          std::move(__last2), std::ref(__pred), std::ref(__proj1), std::ref(__proj2));
-        if (result) return true;
+          std::move(__last2),
+          std::ref(__pred),
+          std::ref(__proj1),
+          std::ref(__proj2));
+        if (result)
+          return true;
       }
       return false;
     }
@@ -80,11 +85,19 @@ struct __fn {
       _Pred __pred   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __n1 = ranges::distance(__first1, __last1);
-    auto __n2 = ranges::distance(__first2, __last2);
+    auto __n1     = ranges::distance(__first1, __last1);
+    auto __n2     = ranges::distance(__first2, __last2);
     auto __offset = __n1 - __n2;
 
-    return __contains_subrange_fn_impl(std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __pred, __proj1, __proj2, std::move(__offset));
+    return __contains_subrange_fn_impl(
+        std::move(__first1),
+        std::move(__last1),
+        std::move(__first2),
+        std::move(__last2),
+        __pred,
+        __proj1,
+        __proj2,
+        std::move(__offset));
   }
 
   template <input_range _Range1,
@@ -108,14 +121,14 @@ struct __fn {
 
     auto __offset = __n1 - __n2;
     return __contains_subrange_fn_impl(
-          ranges::begin(__range1),
-          ranges::end(__range1),
-          ranges::begin(__range2),
-          ranges::end(__range2),
-          __pred,
-          __proj1,
-          __proj2,
-          __offset);
+        ranges::begin(__range1),
+        ranges::end(__range1),
+        ranges::begin(__range2),
+        ranges::end(__range2),
+        __pred,
+        __proj1,
+        __proj2,
+        __offset);
     }
 };
 } // namespace __contains_subrange
