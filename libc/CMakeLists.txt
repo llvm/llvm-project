@@ -10,7 +10,7 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
 # `llvm-project/llvm/CMakeLists.txt` adds the following directive
 # `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
 # We undo it to be able to precisely control what is getting included.
-set_property(DIRECTORY . PROPERTY INCLUDE_DIRECTORIES "")
+set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
 
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
