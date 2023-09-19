@@ -1,20 +1,12 @@
-add_custom_target(libc-math-unittests)
-
-add_library(
-  libc_math_test_utils
-  RandUtils.cpp
-  RandUtils.h
-)
+add_custom_target(libc-math-smoke-tests)
+add_dependencies(libc-math-unittests libc-math-smoke-tests)
 
 add_fp_unittest(
   cosf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     cosf_test.cpp
-  HDRS
-    sdcomp26094.h
   DEPENDS
     libc.src.errno.errno
     libc.src.math.cosf
@@ -23,26 +15,11 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  cos_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    cos_test.cpp
-  DEPENDS
-    libc.src.math.cos
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   sinf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     sinf_test.cpp
-  HDRS
-    sdcomp26094.h
   DEPENDS
     libc.src.errno.errno
     libc.src.math.sinf
@@ -51,26 +28,11 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  sin_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    sin_test.cpp
-  DEPENDS
-    libc.src.math.sin
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   sincosf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     sincosf_test.cpp
-  HDRS
-    sdcomp26094.h
   DEPENDS
     libc.src.errno.errno
     libc.src.math.sincosf
@@ -80,13 +42,10 @@ add_fp_unittest(
 
 add_fp_unittest(
   tanf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     tanf_test.cpp
-  HDRS
-    sdcomp26094.h
   DEPENDS
     libc.src.errno.errno
     libc.src.math.tanf
@@ -96,9 +55,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   fabs_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fabs_test.cpp
   HDRS
@@ -111,9 +69,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   fabsf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fabsf_test.cpp
   HDRS
@@ -126,9 +83,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   fabsl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fabsl_test.cpp
   HDRS
@@ -141,9 +97,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   trunc_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     trunc_test.cpp
   HDRS
@@ -156,9 +111,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   truncf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     truncf_test.cpp
   HDRS
@@ -171,9 +125,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   truncl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     truncl_test.cpp
   HDRS
@@ -186,9 +139,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   ceil_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ceil_test.cpp
   HDRS
@@ -201,9 +153,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   ceilf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ceilf_test.cpp
   HDRS
@@ -216,9 +167,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   ceill_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ceill_test.cpp
   HDRS
@@ -231,9 +181,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   floor_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     floor_test.cpp
   HDRS
@@ -246,9 +195,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   floorf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     floorf_test.cpp
   HDRS
@@ -261,9 +209,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   floorl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     floorl_test.cpp
   HDRS
@@ -276,9 +223,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   round_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     round_test.cpp
   HDRS
@@ -291,9 +237,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   roundf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     roundf_test.cpp
   HDRS
@@ -306,9 +251,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   roundl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     roundl_test.cpp
   HDRS
@@ -321,9 +265,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   lround_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     lround_test.cpp
   HDRS
@@ -340,9 +283,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   lroundf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     lroundf_test.cpp
   HDRS
@@ -359,9 +301,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   lroundl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     lroundl_test.cpp
   HDRS
@@ -378,9 +319,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   llround_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     llround_test.cpp
   HDRS
@@ -397,9 +337,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   llroundf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     llroundf_test.cpp
   HDRS
@@ -416,9 +355,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   llroundl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     llroundl_test.cpp
   HDRS
@@ -435,9 +373,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   rint_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     rint_test.cpp
   HDRS
@@ -451,9 +388,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   rintf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     rintf_test.cpp
   HDRS
@@ -467,9 +403,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   rintl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     rintl_test.cpp
   HDRS
@@ -483,9 +418,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   lrint_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     lrint_test.cpp
   HDRS
@@ -499,9 +433,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   lrintf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     lrintf_test.cpp
   HDRS
@@ -515,9 +448,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   lrintl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     lrintl_test.cpp
   HDRS
@@ -531,9 +463,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   llrint_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     llrint_test.cpp
   HDRS
@@ -547,9 +478,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   llrintf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     llrintf_test.cpp
   HDRS
@@ -563,9 +493,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   llrintl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     llrintl_test.cpp
   HDRS
@@ -579,9 +508,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   expf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     expf_test.cpp
   DEPENDS
@@ -593,9 +521,8 @@ add_fp_unittest(
 
 add_fp_unittest(
  exp_test
- NEED_MPFR
  SUITE
-   libc-math-unittests
+   libc-math-smoke-tests
  SRCS
    exp_test.cpp
  DEPENDS
@@ -607,9 +534,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   exp2f_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     exp2f_test.cpp
   DEPENDS
@@ -621,9 +547,8 @@ add_fp_unittest(
 
 add_fp_unittest(
  exp2_test
- NEED_MPFR
  SUITE
-   libc-math-unittests
+   libc-math-smoke-tests
  SRCS
    exp2_test.cpp
  DEPENDS
@@ -635,9 +560,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   exp10f_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     exp10f_test.cpp
   DEPENDS
@@ -649,9 +573,8 @@ add_fp_unittest(
 
 add_fp_unittest(
  exp10_test
- NEED_MPFR
  SUITE
-   libc-math-unittests
+   libc-math-smoke-tests
  SRCS
    exp10_test.cpp
  DEPENDS
@@ -664,7 +587,7 @@ add_fp_unittest(
 add_fp_unittest(
   copysign_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     copysign_test.cpp
   HDRS
@@ -678,7 +601,7 @@ add_fp_unittest(
 add_fp_unittest(
   copysignf_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     copysignf_test.cpp
   HDRS
@@ -692,7 +615,7 @@ add_fp_unittest(
 add_fp_unittest(
   copysignl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     copysignl_test.cpp
   HDRS
@@ -705,9 +628,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexp_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     frexp_test.cpp
   HDRS
@@ -720,9 +642,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexpf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     frexpf_test.cpp
   HDRS
@@ -735,9 +656,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexpl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     frexpl_test.cpp
   HDRS
@@ -753,7 +673,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
     ilogb_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       ilogb_test.cpp
     HDRS
@@ -768,7 +688,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
     ilogbf_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       ilogbf_test.cpp
     HDRS
@@ -784,7 +704,7 @@ endif()
 add_fp_unittest(
   ilogbl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ilogbl_test.cpp
   HDRS
@@ -799,7 +719,7 @@ add_fp_unittest(
 add_fp_unittest(
   ldexp_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ldexp_test.cpp
   HDRS
@@ -814,7 +734,7 @@ add_fp_unittest(
 add_fp_unittest(
   ldexpf_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ldexpf_test.cpp
   HDRS
@@ -829,7 +749,7 @@ add_fp_unittest(
 add_fp_unittest(
   ldexpl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     ldexpl_test.cpp
   HDRS
@@ -844,7 +764,7 @@ add_fp_unittest(
 add_fp_unittest(
   logb_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     logb_test.cpp
   DEPENDS
@@ -856,7 +776,7 @@ add_fp_unittest(
 add_fp_unittest(
   logbf_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     logbf_test.cpp
   DEPENDS
@@ -868,7 +788,7 @@ add_fp_unittest(
 add_fp_unittest(
   logbl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     logbl_test.cpp
   HDRS
@@ -882,7 +802,7 @@ add_fp_unittest(
 add_fp_unittest(
   modf_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     modf_test.cpp
   HDRS
@@ -899,7 +819,7 @@ add_fp_unittest(
 add_fp_unittest(
   modff_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     modff_test.cpp
   HDRS
@@ -916,7 +836,7 @@ add_fp_unittest(
 add_fp_unittest(
   modfl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     modfl_test.cpp
   HDRS
@@ -931,7 +851,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdimf_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fdimf_test.cpp
   HDRS
@@ -946,7 +866,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdim_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fdim_test.cpp
   HDRS
@@ -961,7 +881,7 @@ add_fp_unittest(
 add_fp_unittest(
   fdiml_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fdiml_test.cpp
   HDRS
@@ -978,7 +898,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     fminf_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       fminf_test.cpp
     HDRS
@@ -992,7 +912,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     fmin_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       fmin_test.cpp
     HDRS
@@ -1006,7 +926,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     fminl_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       fminl_test.cpp
     HDRS
@@ -1020,7 +940,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     fmaxf_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       fmaxf_test.cpp
     HDRS
@@ -1034,7 +954,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     fmax_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       fmax_test.cpp
     HDRS
@@ -1048,7 +968,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_fp_unittest(
     fmaxl_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       fmaxl_test.cpp
     HDRS
@@ -1062,9 +982,8 @@ endif()
 
 add_fp_unittest(
   sqrtf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     sqrtf_test.cpp
   DEPENDS
@@ -1075,9 +994,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   sqrt_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     sqrt_test.cpp
   DEPENDS
@@ -1088,9 +1006,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   sqrtl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     sqrtl_test.cpp
   DEPENDS
@@ -1101,9 +1018,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   generic_sqrtf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     generic_sqrtf_test.cpp
   DEPENDS
@@ -1116,9 +1032,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   generic_sqrt_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     generic_sqrt_test.cpp
   DEPENDS
@@ -1131,9 +1046,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   generic_sqrtl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     generic_sqrtl_test.cpp
   DEPENDS
@@ -1146,9 +1060,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   remquof_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     remquof_test.cpp
   HDRS
@@ -1162,9 +1075,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   remquo_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     remquo_test.cpp
   HDRS
@@ -1178,9 +1090,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   remquol_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     remquol_test.cpp
   HDRS
@@ -1194,9 +1105,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   hypotf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     hypotf_test.cpp
   DEPENDS
@@ -1207,9 +1117,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   hypot_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     hypot_test.cpp
   DEPENDS
@@ -1223,7 +1132,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
     nextafter_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       nextafter_test.cpp
     HDRS
@@ -1238,7 +1147,7 @@ if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   add_fp_unittest(
     nextafterf_test
     SUITE
-      libc-math-unittests
+      libc-math-smoke-tests
     SRCS
       nextafterf_test.cpp
     HDRS
@@ -1254,7 +1163,7 @@ endif()
 add_fp_unittest(
   nextafterl_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     nextafterl_test.cpp
   HDRS
@@ -1270,9 +1179,8 @@ add_fp_unittest(
 # correctly rounded for the default rounding mode round-to-nearest tie-to-even.
 add_fp_unittest(
   fmaf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fmaf_test.cpp
   DEPENDS
@@ -1285,9 +1193,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   fma_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fma_test.cpp
   DEPENDS
@@ -1297,22 +1204,9 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  tan_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  SRCS
-    tan_test.cpp
-  DEPENDS
-    libc.src.math.tan
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   expm1f_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     expm1f_test.cpp
   DEPENDS
@@ -1323,24 +1217,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- log_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   log_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.include.math
-   libc.src.math.log
-   libc.src.__support.FPUtil.fp_bits
+  log_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.math
+    libc.src.math.log
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
   logf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     logf_test.cpp
   DEPENDS
@@ -1351,24 +1243,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-log2_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   log2_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.include.math
-   libc.src.math.log2
-   libc.src.__support.FPUtil.fp_bits
+  log2_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log2_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.math
+    libc.src.math.log2
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
   log2f_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     log2f_test.cpp
   DEPENDS
@@ -1379,24 +1269,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
- log10_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   log10_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.include.math
-   libc.src.math.log10
-   libc.src.__support.FPUtil.fp_bits
+  log10_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log10_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.math
+    libc.src.math.log10
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
   log10f_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     log10f_test.cpp
   DEPENDS
@@ -1407,24 +1295,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-log1p_test
- NEED_MPFR
- SUITE
-   libc-math-unittests
- SRCS
-   log1p_test.cpp
- DEPENDS
-   libc.src.errno.errno
-   libc.include.math
-   libc.src.math.log1p
-   libc.src.__support.FPUtil.fp_bits
+  log1p_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log1p_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.math
+    libc.src.math.log1p
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
   log1pf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     log1pf_test.cpp
   DEPENDS
@@ -1437,7 +1323,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmodf_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fmodf_test.cpp
   HDRS
@@ -1455,7 +1341,7 @@ add_fp_unittest(
 add_fp_unittest(
   fmod_test
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     fmod_test.cpp
   HDRS
@@ -1471,29 +1357,11 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  explogxf_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  HDRS
-    in_float_range_test_helper.h
-  SRCS
-    explogxf_test.cpp
-  DEPENDS
-    libc.include.math
-    libc.src.math.generic.explogxf
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   coshf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     coshf_test.cpp
-  HDRS
-    sdcomp26094.h
   DEPENDS
     libc.src.errno.errno
     libc.src.math.coshf
@@ -1503,13 +1371,10 @@ add_fp_unittest(
 
 add_fp_unittest(
   sinhf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     sinhf_test.cpp
-  HDRS
-    sdcomp26094.h
   DEPENDS
     libc.src.errno.errno
     libc.src.math.sinhf
@@ -1519,9 +1384,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   tanhf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     tanhf_test.cpp
   DEPENDS
@@ -1531,9 +1395,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanhf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     atanhf_test.cpp
   DEPENDS
@@ -1544,9 +1407,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinhf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     asinhf_test.cpp
   DEPENDS
@@ -1557,9 +1419,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   acoshf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     acoshf_test.cpp
   DEPENDS
@@ -1570,9 +1431,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     asinf_test.cpp
   DEPENDS
@@ -1583,9 +1443,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   acosf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     acosf_test.cpp
   DEPENDS
@@ -1596,9 +1455,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     atanf_test.cpp
   DEPENDS
@@ -1608,24 +1466,9 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  inv_trigf_utils_test
-  NEED_MPFR
-  SUITE
-    libc-math-unittests
-  HDRS
-    in_float_range_test_helper.h
-  SRCS
-    inv_trigf_utils_test.cpp
-  DEPENDS
-    libc.src.math.generic.inv_trigf_utils
-    libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
   scalbn_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     scalbn_test.cpp
   HDRS
@@ -1639,9 +1482,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   scalbnf_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     scalbnf_test.cpp
   HDRS
@@ -1655,9 +1497,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   scalbnl_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     scalbnl_test.cpp
   HDRS
@@ -1671,9 +1512,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   erff_test
-  NEED_MPFR
   SUITE
-    libc-math-unittests
+    libc-math-smoke-tests
   SRCS
     erff_test.cpp
   DEPENDS
@@ -1681,11 +1521,3 @@ add_fp_unittest(
     libc.src.math.erff
     libc.src.__support.FPUtil.fp_bits
 )
-
-add_subdirectory(generic)
-add_subdirectory(smoke)
-
-if(NOT LLVM_LIBC_FULL_BUILD)
-  add_subdirectory(exhaustive)
-  add_subdirectory(differential_testing)
-endif()
