@@ -1947,7 +1947,9 @@ void fir::IterWhileOp::print(mlir::OpAsmPrinter &p) {
                 /*printBlockTerminators=*/true);
 }
 
-mlir::Region &fir::IterWhileOp::getLoopBody() { return getRegion(); }
+llvm::SmallVector<mlir::Region *> fir::IterWhileOp::getLoopRegions() {
+  return {&getRegion()};
+}
 
 mlir::BlockArgument fir::IterWhileOp::iterArgToBlockArg(mlir::Value iterArg) {
   for (auto i : llvm::enumerate(getInitArgs()))
@@ -2234,7 +2236,9 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
                 printBlockTerminators);
 }
 
-mlir::Region &fir::DoLoopOp::getLoopBody() { return getRegion(); }
+llvm::SmallVector<mlir::Region *> fir::DoLoopOp::getLoopRegions() {
+  return {&getRegion()};
+}
 
 /// Translate a value passed as an iter_arg to the corresponding block
 /// argument in the body of the loop.
