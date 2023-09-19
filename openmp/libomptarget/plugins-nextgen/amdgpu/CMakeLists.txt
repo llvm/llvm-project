@@ -19,20 +19,6 @@ if (NOT LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
   return()
 endif()
 
-# libhsakmt.a
-find_library(HSAKMT_LIB libhsakmt.a REQURIED HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-get_filename_component(HSAKMT_LIB_PATH ${HSAKMT_LIB} DIRECTORY)
-link_directories (${HSAKMT_LIB_PATH})
-
-# lib_amdgpu
-pkg_check_modules(drm_amdgpu REQUIRED IMPORTED_TARGET libdrm_amdgpu)
-
-# lib_drm
-pkg_check_modules(drm REQUIRED IMPORTED_TARGET libdrm)
-
-# libnuma
-find_library(numa libnuma.so REQUIRED HINTS /usr/lib/x86_64-linux-gnu/)
-
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 
@@ -117,10 +103,6 @@ add_dependencies(omptarget.rtl.amdgpu amdgcn_hostexec_services)
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   target_link_libraries(
     omptarget.rtl.amdgpu
-    PRIVATE hsakmt
-    PRIVATE drm_amdgpu
-    PRIVATE drm
-    PRIVATE numa
     PRIVATE
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
 endif()
