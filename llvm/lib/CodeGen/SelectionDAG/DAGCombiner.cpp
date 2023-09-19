@@ -11963,7 +11963,7 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
 SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
   auto *SLD = cast<VPStridedLoadSDNode>(N);
   EVT EltVT = SLD->getValueType(0).getVectorElementType();
-  // Combine strided loads with unit-stride to a regular load.
+  // Combine strided loads with unit-stride to a regular VP load.
   if (auto *CStride = dyn_cast<ConstantSDNode>(SLD->getStride());
       CStride && CStride->getZExtValue() == EltVT.getStoreSize()) {
     SDValue NewLd = DAG.getLoadVP(
