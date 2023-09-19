@@ -18,7 +18,7 @@
 ## of main.o.
 # RUN: rm -rf %t
 # RUN: split-file %s %t
-# RUN: llvm-mc -g --filetype=obj %t/main.s -o %t/main.o
+# RUN: llvm-mc -g --filetype=obj -triple=x86_64-pc-linux %t/main.s -o %t/main.o
 # RUN: llvm-nm -l %t/main.o | FileCheck %s --match-full-lines --implicit-check-not={{.}}
 # RUN: llvm-nm --line-numbers %t/main.o | FileCheck %s --match-full-lines --implicit-check-not={{.}}
 
@@ -34,7 +34,7 @@
 
 ## Check that in the absence of DWARF in the whole object, no line number
 ## information is printed.
-# RUN: llvm-mc --filetype=obj %t/main.s -o %t/no-dwarf.o
+# RUN: llvm-mc --filetype=obj %t/main.s -triple=x86_64-pc-linux -o %t/no-dwarf.o
 # RUN: llvm-nm -l %t/no-dwarf.o | FileCheck %s --check-prefix=NO-DWARF --match-full-lines --implicit-check-not={{.}}
 
 # NO-DWARF:      0000000000001234 a absolute_symbol
@@ -49,7 +49,7 @@
 
 ## Check that printing line numbers for undefined values is not attempted in
 ## the absence of any relocation section.
-# RUN: llvm-mc --filetype=obj %t/undef-no-reloc-sections.s -o %t/undef-no-reloc-sections.o
+# RUN: llvm-mc --filetype=obj %t/undef-no-reloc-sections.s -triple=x86_64-pc-linux -o %t/undef-no-reloc-sections.o
 # RUN: llvm-nm --line-numbers %t/undef-no-reloc-sections.o | FileCheck %s --check-prefix=UNDEF-NO-RELOC-SECTIONS --match-full-lines --implicit-check-not={{.}}
 
 # UNDEF-NO-RELOC-SECTIONS: U undef
@@ -57,7 +57,7 @@
 ## Check that printing line numbers for undefined values does not include
 ## relocations for non-text sections. This is broken out of main.s to ensure
 ## that the data relocation for undef comes first.
-# RUN: llvm-mc -g --filetype=obj %t/undef-data-reloc.s -o %t/undef-data-reloc.o
+# RUN: llvm-mc -g --filetype=obj %t/undef-data-reloc.s -triple=x86_64-pc-linux -o %t/undef-data-reloc.o
 # RUN: llvm-nm --line-numbers %t/undef-data-reloc.o | FileCheck %s --check-prefix=UNDEF-DATA-RELOC --match-full-lines --implicit-check-not={{.}}
 
 # UNDEF-DATA-RELOC:      0000000000000000 r data_reloc
@@ -65,7 +65,7 @@
 
 ## Check that line numbers can be printed for data definitions. These are broken
 ## out of main.s since their DWARF cannot be generated with llvm-mc -g.
-# RUN: llvm-mc -g --filetype=obj %t/data-dwarf.s -o %t/data-dwarf.o
+# RUN: llvm-mc -g --filetype=obj %t/data-dwarf.s -triple=x86_64-pc-linux -o %t/data-dwarf.o
 # RUN: llvm-nm --line-numbers %t/data-dwarf.o | FileCheck %s --check-prefix=DATA-DWARF --match-full-lines --implicit-check-not={{.}}
 
 # DATA-DWARF: 0000000000000000 D defined_data /tmp/tmp.c:1
