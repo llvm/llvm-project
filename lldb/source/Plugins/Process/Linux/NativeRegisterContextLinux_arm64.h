@@ -85,6 +85,8 @@ private:
   bool m_mte_ctrl_is_valid;
 
   bool m_sve_header_is_valid;
+  bool m_za_buffer_is_valid;
+  bool m_za_header_is_valid;
   bool m_pac_mask_is_valid;
   bool m_tls_is_valid;
   size_t m_tls_size;
@@ -97,6 +99,9 @@ private:
   SVEState m_sve_state;
   struct sve::user_sve_header m_sve_header;
   std::vector<uint8_t> m_sve_ptrace_payload;
+
+  sve::user_za_header m_za_header;
+  std::vector<uint8_t> m_za_ptrace_payload;
 
   bool m_refresh_hwdebug_info;
 
@@ -139,7 +144,18 @@ private:
 
   Status WriteTLS();
 
+  Status ReadZAHeader();
+
+  Status ReadZA();
+
+  Status WriteZA();
+
+  // No WriteZAHeader because writing only the header will disable ZA.
+  // Instead use WriteZA and ensure you have the correct ZA buffer size set
+  // beforehand if you wish to disable it.
+
   bool IsSVE(unsigned reg) const;
+  bool IsSME(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
   bool IsTLS(unsigned reg) const;
@@ -149,6 +165,10 @@ private:
   void SetSVERegVG(uint64_t vg) { m_sve_header.vl = vg * 8; }
 
   void *GetSVEHeader() { return &m_sve_header; }
+
+  void *GetZAHeader() { return &m_za_header; }
+
+  size_t GetZAHeaderSize() { return sizeof(m_za_header); }
 
   void *GetPACMask() { return &m_pac_mask; }
 
@@ -165,6 +185,10 @@ private:
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
 
   unsigned GetSVERegSet();
+
+  void *GetZABuffer() { return m_za_ptrace_payload.data(); };
+
+  size_t GetZABufferSize() { return m_za_ptrace_payload.size(); }
 
   size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
 
