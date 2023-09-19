@@ -366,8 +366,17 @@ It may be beneficial for projects besides Flang to use the alternative trampolin
 implementation, so does it sound reasonable to actually put the support
 into LLVM/compiler-rt?
 
-### Implementation questions
+### Implementation options
 
-* The trampoline area initialization implies writing target specific binary code
-  for the trampolines. Are there utils that the runtime implementation
-  can reuse?
+We may try to reuse [libffi](https://github.com/libffi/libffi) implementation for __static trampolines__:
+* Initial implementation added support for x64, i386, aarch64 and arm on Linux: https://github.com/libffi/libffi/pull/624
+* Follow-up patches:
+  * Added support for Cygwin: https://github.com/libffi/libffi/commit/a1130f37712c03957c9b0adf316cd006fa92a60b
+  * Added support for LoongArch: https://github.com/libffi/libffi/pull/723
+  * Page protection for iOS devices: https://github.com/libffi/libffi/pull/718
+  * Fix for trampoline code for x32: https://github.com/libffi/libffi/pull/657
+* The author (@madvenka786) initially [proposed](https://sourceware.org/pipermail/libffi-discuss/2021/002587.html) to make the trampoline APIs public,
+  but this was not a requirement at the time and the APIs were made private.
+  If we want to rely on `libffi`, the APIs have to be made public.
+* We may also try to extract the static trampolines implementation from `libffi`
+  into separate library (e.g. `libstatictramp` as mentioned [here](https://sourceware.org/pipermail/libffi-discuss/2021/002592.html)).
