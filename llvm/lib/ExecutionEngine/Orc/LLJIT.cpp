@@ -1288,9 +1288,12 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
     return;
   }
 
+  // Create the IP Layer.
+  IPLayer = std::make_unique<IRPartitionLayer>(*ES, *InitHelperTransformLayer);
+
   // Create the COD layer.
-  CODLayer = std::make_unique<CompileOnDemandLayer>(
-      *ES, *InitHelperTransformLayer, *LCTMgr, std::move(ISMBuilder));
+  CODLayer = std::make_unique<CompileOnDemandLayer>(*ES, *IPLayer, *LCTMgr,
+                                                    std::move(ISMBuilder));
 
   if (S.NumCompileThreads > 0)
     CODLayer->setCloneToNewContextOnEmit(true);
