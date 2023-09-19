@@ -73,28 +73,14 @@ class TestExclusivitySuppression(TestBase):
 
         # Evaluate w.s.i at breakpoint 2 to check that exclusivity checking
         # is suppressed inside the nested expression
-        self.check_expression(thread.frames[0], "i", "8", use_summary=False)
+        lldbutil.check_expression(self, thread.frames[0], "i", "8", use_summary=False)
 
         # Return to breakpoint 1 and evaluate w.s.i again to check that
         # exclusivity checking is still suppressed
-        self.dbg.HandleCommand('thread ret -x')
-        self.check_expression(thread.frame[0], "w.s.i", "8", use_summary=False)
+        self.dbg.HandleCommand("thread ret -x")
+        lldbutil.check_expression(self, thread.frame[0], "w.s.i", "8", use_summary=False)
 
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def check_expression(self, frame, expression, expected_result, use_summary=True):
-        value = frame.EvaluateExpression(expression)
-        self.assertTrue(value.IsValid(), expression + " returned a valid value")
-        if self.TraceOn():
-            print(value.GetSummary())
-            print(value.GetValue())
-        if use_summary:
-            answer = value.GetSummary()
-        else:
-            answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
-        self.assertTrue(answer == expected_result, report_str)

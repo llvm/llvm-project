@@ -24,22 +24,6 @@ class TestSwiftExprInProtocolExtension(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame().EvaluateExpression(
-            expression, lldb.eDynamicCanRunTarget)
-        self.assertTrue(value.IsValid(), expression + "returned a valid value")
-        if use_summary:
-            answer = value.GetSummary()
-        else:
-            answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
-        if answer != expected_result:
-            print(report_str)
-            print(value.GetError())
-
-        self.assertTrue(answer == expected_result, report_str)
-
     def continue_to_bkpt(self, process, bkpt):
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)
@@ -83,9 +67,9 @@ class TestSwiftExprInProtocolExtension(TestBase):
 
         # Check that we can evaluate expressions correctly in the struct
         # method.
-        self.check_expression("self.x", "10", False)
-        self.check_expression("self.y", '"Hello world"', True)
-        self.check_expression("local_var", "111", False)
+        lldbutil.check_expression(self, self.frame(), "self.x", "10", False)
+        lldbutil.check_expression(self, self.frame(), "self.y", '"Hello world"', True)
+        lldbutil.check_expression(self, self.frame(), "local_var", "111", False)
 
         # And check that we got the type of self right:
         self_var = self.frame().EvaluateExpression(
@@ -98,16 +82,16 @@ class TestSwiftExprInProtocolExtension(TestBase):
         # Now continue to the static method and check things there:
         self.continue_to_bkpt(process, static_bkpt)
 
-        self.check_expression("self.cvar", "333", False)
-        self.check_expression("local_var", "222", False)
+        lldbutil.check_expression(self, self.frame(), "self.cvar", "333", False)
+        lldbutil.check_expression(self, self.frame(), "local_var", "222", False)
 
         # This continues to the class version:
         self.continue_to_bkpt(process, method_bkpt)
         # Check that we can evaluate expressions correctly in the struct
         # method.
-        self.check_expression("self.x", "10", False)
-        self.check_expression("self.y", '"Hello world"', True)
-        self.check_expression("local_var", "111", False)
+        lldbutil.check_expression(self, self.frame(), "self.x", "10", False)
+        lldbutil.check_expression(self, self.frame(), "self.y", '"Hello world"', True)
+        lldbutil.check_expression(self, self.frame(), "local_var", "111", False)
 
         # And check that we got the type of self right:
         self_var = self.frame().EvaluateExpression(
@@ -120,16 +104,16 @@ class TestSwiftExprInProtocolExtension(TestBase):
         # Now continue to the static method and check things there:
         self.continue_to_bkpt(process, static_bkpt)
 
-        self.check_expression("self.cvar", "333", False)
-        self.check_expression("local_var", "222", False)
+        lldbutil.check_expression(self, self.frame(), "self.cvar", "333", False)
+        lldbutil.check_expression(self, self.frame(), "local_var", "222", False)
 
         # This continues to the enum version:
         self.continue_to_bkpt(process, method_bkpt)
         # Check that we can evaluate expressions correctly in the struct
         # method.
-        self.check_expression("self.x", "10", False)
-        self.check_expression("self.y", '"Hello world"', True)
-        self.check_expression("local_var", "111", False)
+        lldbutil.check_expression(self, self.frame(), "self.x", "10", False)
+        lldbutil.check_expression(self, self.frame(), "self.y", '"Hello world"', True)
+        lldbutil.check_expression(self, self.frame(), "local_var", "111", False)
 
         # And check that we got the type of self right:
         self_var = self.frame().EvaluateExpression(
@@ -142,7 +126,5 @@ class TestSwiftExprInProtocolExtension(TestBase):
         # Now continue to the static method and check things there:
         self.continue_to_bkpt(process, static_bkpt)
 
-        self.check_expression("self.cvar", "333", False)
-        self.check_expression("local_var", "222", False)
-
-
+        lldbutil.check_expression(self, self.frame(), "self.cvar", "333", False)
+        lldbutil.check_expression(self, self.frame(), "local_var", "222", False)
