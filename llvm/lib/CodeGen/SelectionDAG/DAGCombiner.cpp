@@ -430,6 +430,8 @@ namespace {
     SDValue visitSADDO_CARRY(SDNode *N);
     SDValue visitUADDO_CARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                  SDNode *N);
+    SDValue visitSADDO_CARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
+                                 SDNode *N);
     SDValue visitSUBE(SDNode *N);
     SDValue visitUSUBO_CARRY(SDNode *N);
     SDValue visitSSUBO_CARRY(SDNode *N);
@@ -537,6 +539,8 @@ namespace {
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitVPGATHER(SDNode *N);
     SDValue visitVPSCATTER(SDNode *N);
+    SDValue visitVP_STRIDED_LOAD(SDNode *N);
+    SDValue visitVP_STRIDED_STORE(SDNode *N);
     SDValue visitFP_TO_FP16(SDNode *N);
     SDValue visitFP16_TO_FP(SDNode *N);
     SDValue visitFP_TO_BF16(SDNode *N);
@@ -3305,7 +3309,12 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
     return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
                      DAG.getConstant(0, DL, CarryVT));
 
-  if (!IsSigned) {
+  if (IsSigned) {
+    // fold (saddo (xor a, -1), 1) -> (ssub 0, a).
+    if (isBitwiseNot(N0) && isOneOrOneSplat(N1))
+      return DAG.getNode(ISD::SSUBO, DL, N->getVTList(),
+                         DAG.getConstant(0, DL, VT), N0.getOperand(0));
+  } else {
     // fold (uaddo (xor a, -1), 1) -> (usub 0, a) and flip carry.
     if (isBitwiseNot(N0) && isOneOrOneSplat(N1)) {
       SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
@@ -3637,6 +3646,18 @@ SDValue DAGCombiner::visitUADDO_CARRYLike(SDValue N0, SDValue N1,
   return SDValue();
 }
 
+SDValue DAGCombiner::visitSADDO_CARRYLike(SDValue N0, SDValue N1,
+                                          SDValue CarryIn, SDNode *N) {
+  // fold (saddo_carry (xor a, -1), b, c) -> (ssubo_carry b, a, !c)
+  if (isBitwiseNot(N0)) {
+    if (SDValue NotC = extractBooleanFlip(CarryIn, DAG, TLI, true))
+      return DAG.getNode(ISD::SSUBO_CARRY, SDLoc(N), N->getVTList(), N1,
+                         N0.getOperand(0), NotC);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -3655,6 +3676,12 @@ SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
         TLI.isOperationLegalOrCustom(ISD::SADDO, N->getValueType(0)))
       return DAG.getNode(ISD::SADDO, DL, N->getVTList(), N0, N1);
   }
+
+  if (SDValue Combined = visitSADDO_CARRYLike(N0, N1, CarryIn, N))
+    return Combined;
+
+  if (SDValue Combined = visitSADDO_CARRYLike(N1, N0, CarryIn, N))
+    return Combined;
 
   return SDValue();
 }
@@ -11680,10 +11707,9 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
+    if (TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
       IndexType = ISD::UNSIGNED_SCALED;
-      Index = Op;
+      Index = Index.getOperand(0);
       return true;
     }
     if (ISD::isIndexTypeSigned(IndexType)) {
@@ -11694,12 +11720,10 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's only safe to look through sign extends when Index is signed.
   if (Index.getOpcode() == ISD::SIGN_EXTEND &&
-      ISD::isIndexTypeSigned(IndexType)) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
-      Index = Op;
-      return true;
-    }
+      ISD::isIndexTypeSigned(IndexType) &&
+      TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
+    Index = Index.getOperand(0);
+    return true;
   }
 
   return false;
@@ -11850,6 +11874,21 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitVP_STRIDED_STORE(SDNode *N) {
+  auto *SST = cast<VPStridedStoreSDNode>(N);
+  EVT EltVT = SST->getValue().getValueType().getVectorElementType();
+  // Combine strided stores with unit-stride to a regular VP store.
+  if (auto *CStride = dyn_cast<ConstantSDNode>(SST->getStride());
+      CStride && CStride->getZExtValue() == EltVT.getStoreSize()) {
+    return DAG.getStoreVP(SST->getChain(), SDLoc(N), SST->getValue(),
+                          SST->getBasePtr(), SST->getOffset(), SST->getMask(),
+                          SST->getVectorLength(), SST->getMemoryVT(),
+                          SST->getMemOperand(), SST->getAddressingMode(),
+                          SST->isTruncatingStore(), SST->isCompressingStore());
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVPGATHER(SDNode *N) {
   VPGatherSDNode *MGT = cast<VPGatherSDNode>(N);
   SDValue Mask = MGT->getMask();
@@ -11934,6 +11973,22 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
     return SDValue(N, 0);
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
+  auto *SLD = cast<VPStridedLoadSDNode>(N);
+  EVT EltVT = SLD->getValueType(0).getVectorElementType();
+  // Combine strided loads with unit-stride to a regular VP load.
+  if (auto *CStride = dyn_cast<ConstantSDNode>(SLD->getStride());
+      CStride && CStride->getZExtValue() == EltVT.getStoreSize()) {
+    SDValue NewLd = DAG.getLoadVP(
+        SLD->getAddressingMode(), SLD->getExtensionType(), SLD->getValueType(0),
+        SDLoc(N), SLD->getChain(), SLD->getBasePtr(), SLD->getOffset(),
+        SLD->getMask(), SLD->getVectorLength(), SLD->getMemoryVT(),
+        SLD->getMemOperand(), SLD->isExpandingLoad());
+    return CombineTo(N, NewLd, NewLd.getValue(1));
+  }
   return SDValue();
 }
 
@@ -25952,6 +26007,14 @@ SDValue DAGCombiner::visitVPOp(SDNode *N) {
 
   if (N->getOpcode() == ISD::VP_SCATTER)
     if (SDValue SD = visitVPSCATTER(N))
+      return SD;
+
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_LOAD)
+    if (SDValue SD = visitVP_STRIDED_LOAD(N))
+      return SD;
+
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_STORE)
+    if (SDValue SD = visitVP_STRIDED_STORE(N))
       return SD;
 
   // VP operations in which all vector elements are disabled - either by

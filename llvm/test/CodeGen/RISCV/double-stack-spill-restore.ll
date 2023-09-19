@@ -100,24 +100,20 @@ define double @func(double %d, i32 %n) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: func:
 ; RV64IZFINXZDINX:       # %bb.0: # %entry
+; RV64IZFINXZDINX-NEXT:    sext.w a2, a1
+; RV64IZFINXZDINX-NEXT:    beqz a2, .LBB0_2
+; RV64IZFINXZDINX-NEXT:  # %bb.1: # %if.else
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, -16
 ; RV64IZFINXZDINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IZFINXZDINX-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64IZFINXZDINX-NEXT:    sext.w a2, a1
-; RV64IZFINXZDINX-NEXT:    mv s0, a0
-; RV64IZFINXZDINX-NEXT:    beqz a2, .LBB0_2
-; RV64IZFINXZDINX-NEXT:  # %bb.1: # %if.else
 ; RV64IZFINXZDINX-NEXT:    addiw a1, a1, -1
-; RV64IZFINXZDINX-NEXT:    mv a0, s0
+; RV64IZFINXZDINX-NEXT:    mv s0, a0
 ; RV64IZFINXZDINX-NEXT:    call func@plt
 ; RV64IZFINXZDINX-NEXT:    fadd.d a0, a0, s0
-; RV64IZFINXZDINX-NEXT:    j .LBB0_3
-; RV64IZFINXZDINX-NEXT:  .LBB0_2: # %return
-; RV64IZFINXZDINX-NEXT:    mv a0, s0
-; RV64IZFINXZDINX-NEXT:  .LBB0_3: # %return
 ; RV64IZFINXZDINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64IZFINXZDINX-NEXT:    addi sp, sp, 16
+; RV64IZFINXZDINX-NEXT:  .LBB0_2: # %return
 ; RV64IZFINXZDINX-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %n, 0

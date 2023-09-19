@@ -85,11 +85,11 @@ static bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
                                       opsToHoist))
       return false;
   } else if (auto forOp = dyn_cast<AffineForOp>(op)) {
-    if (!areAllOpsInTheBlockListInvariant(forOp.getLoopBody(), indVar, iterArgs,
+    if (!areAllOpsInTheBlockListInvariant(forOp.getRegion(), indVar, iterArgs,
                                           opsWithUsers, opsToHoist))
       return false;
   } else if (auto parOp = dyn_cast<AffineParallelOp>(op)) {
-    if (!areAllOpsInTheBlockListInvariant(parOp.getLoopBody(), indVar, iterArgs,
+    if (!areAllOpsInTheBlockListInvariant(parOp.getRegion(), indVar, iterArgs,
                                           opsWithUsers, opsToHoist))
       return false;
   } else if (!isMemoryEffectFree(&op) &&

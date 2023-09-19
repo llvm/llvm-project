@@ -14,6 +14,7 @@
 #include "combined.h"
 #include "mem_map.h"
 
+#include <algorithm>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -87,7 +88,6 @@ constexpr size_t kMaxAlign = std::max({
 #if SCUDO_CAN_USE_PRIMARY64
       alignof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-      alignof(scudo::Allocator<scudo::AndroidSvelteConfig>),
       alignof(scudo::Allocator<scudo::AndroidConfig>)
 });
 
@@ -101,7 +101,6 @@ struct TestAllocatorStorage {
 #if SCUDO_CAN_USE_PRIMARY64
         sizeof(scudo::Allocator<scudo::FuchsiaConfig>),
 #endif
-        sizeof(scudo::Allocator<scudo::AndroidSvelteConfig>),
         sizeof(scudo::Allocator<scudo::AndroidConfig>)
   });
 
@@ -167,11 +166,9 @@ template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
 
 #if SCUDO_FUCHSIA
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, FuchsiaConfig)
 #else
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidSvelteConfig)                    \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)
 #endif

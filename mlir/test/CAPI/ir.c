@@ -35,6 +35,17 @@ static void registerAllUpstreamDialects(MlirContext ctx) {
   mlirDialectRegistryDestroy(registry);
 }
 
+struct ResourceDeleteUserData {
+  const char *name;
+};
+static struct ResourceDeleteUserData resourceI64BlobUserData = {
+    "resource_i64_blob"};
+static void reportResourceDelete(void *userData, const void *data, size_t size,
+                                 size_t align) {
+  fprintf(stderr, "reportResourceDelete: %s\n",
+          ((struct ResourceDeleteUserData *)userData)->name);
+}
+
 void populateLoopBody(MlirContext ctx, MlirBlock loopBody,
                       MlirLocation location, MlirBlock funcBody) {
   MlirValue iv = mlirBlockGetArgument(loopBody, 0);
@@ -475,6 +486,13 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   // clang-format off
   // CHECK: Op print with all flags: %{{.*}} = "arith.constant"() <{value = 0 : index}> {elts = dense_resource<__elided__> : tensor<4xi32>} : () -> index loc(unknown)
   // clang-format on
+
+  MlirAsmState state = mlirAsmStateCreateForOperation(parentOperation, flags);
+  fprintf(stderr, "With state: |");
+  mlirValuePrintAsOperand(value, state, printToStderr, NULL);
+  // CHECK: With state: |%0|
+  fprintf(stderr, "|\n");
+  mlirAsmStateDestroy(state);
 
   mlirOpPrintingFlagsDestroy(flags);
 }
@@ -1270,10 +1288,14 @@ int printBuiltinAttributes(MlirContext ctx) {
   MlirAttribute doublesBlob = mlirUnmanagedDenseDoubleResourceElementsAttrGet(
       mlirRankedTensorTypeGet(2, shape, mlirF64TypeGet(ctx), encoding),
       mlirStringRefCreateFromCString("resource_f64"), 2, doubles);
-  MlirAttribute blobBlob = mlirUnmanagedDenseBlobResourceElementsAttrGet(
+  MlirAttribute blobBlob = mlirUnmanagedDenseResourceElementsAttrGet(
       mlirRankedTensorTypeGet(2, shape, mlirIntegerTypeGet(ctx, 64), encoding),
-      mlirStringRefCreateFromCString("resource_i64_blob"), uints64,
-      sizeof(uints64));
+      mlirStringRefCreateFromCString("resource_i64_blob"), /*data=*/uints64,
+      /*dataLength=*/sizeof(uints64),
+      /*dataAlignment=*/_Alignof(uint64_t),
+      /*dataIsMutable=*/false,
+      /*deleter=*/reportResourceDelete,
+      /*userData=*/(void *)&resourceI64BlobUserData);
 
   mlirAttributeDump(uint8Blob);
   mlirAttributeDump(uint16Blob);
@@ -2329,9 +2351,13 @@ int main(void) {
   if (testDialectRegistry())
     return 15;
 
-  mlirContextDestroy(ctx);
-
   testExplicitThreadPools();
   testDiagnostics();
+
+  // CHECK: DESTROY MAIN CONTEXT
+  // CHECK: reportResourceDelete: resource_i64_blob
+  fprintf(stderr, "DESTROY MAIN CONTEXT\n");
+  mlirContextDestroy(ctx);
+
   return 0;
 }

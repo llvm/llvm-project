@@ -1566,7 +1566,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     MachineOperand &MO = MI->getOperand(SrcIdx);
     assert(MO.isReg() && MO.getReg() == RegB && MO.isUse() &&
            "inconsistent operand info for 2-reg pass");
-    if (MO.isKill()) {
+    if (isPlainlyKilled(MO)) {
       MO.setIsKill(false);
       RemovedKillFlag = true;
     }
@@ -1587,7 +1587,7 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     for (MachineOperand &MO : MI->all_uses()) {
       if (MO.getReg() == RegB) {
         if (MO.getSubReg() == SubRegB && !IsEarlyClobber) {
-          if (MO.isKill()) {
+          if (isPlainlyKilled(MO)) {
             MO.setIsKill(false);
             RemovedKillFlag = true;
           }
@@ -1868,12 +1868,16 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
             // %reg.subidx.
             LaneBitmask LaneMask =
                 TRI->getSubRegIndexLaneMask(mi->getOperand(0).getSubReg());
-            SlotIndex Idx = LIS->getInstructionIndex(*mi);
+            SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
             for (auto &S : LI.subranges()) {
               if ((S.LaneMask & LaneMask).none()) {
-                LiveRange::iterator UseSeg = S.FindSegmentContaining(Idx);
-                LiveRange::iterator DefSeg = std::next(UseSeg);
-                S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+                LiveRange::iterator DefSeg = S.FindSegmentContaining(Idx);
+                if (mi->getOperand(0).isUndef()) {
+                  S.removeValNo(DefSeg->valno);
+                } else {
+                  LiveRange::iterator UseSeg = std::prev(DefSeg);
+                  S.MergeValueNumberInto(DefSeg->valno, UseSeg->valno);
+                }
               }
             }
 

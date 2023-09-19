@@ -2,6 +2,8 @@
 ! RUN: %flang_fc1 -fopenmp -emit-mlir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
 ! RUN: %flang_fc1 -fopenmp -fopenmp-is-target-device -emit-llvm %s -o - | FileCheck --check-prefixes=LLVM-DEVICE,LLVM-ALL %s
 ! RUN: %flang_fc1 -fopenmp -fopenmp-is-target-device -emit-mlir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s
+! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck --check-prefixes=MLIR-HOST,MLIR-ALL %s
+! RUN: bbc -fopenmp -fopenmp-is-target-device -emit-fir %s -o - | FileCheck --check-prefixes=MLIR-DEVICE,MLIR-ALL %s
 
 ! Check that the correct LLVM IR functions are kept for the host and device
 ! after running the whole set of translation and transformation passes from

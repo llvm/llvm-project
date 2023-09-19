@@ -345,9 +345,7 @@ define i1 @is_pow2_ctpop_wrong_pred1_logical(i32 %x) {
 ; CHECK-LABEL: @is_pow2_ctpop_wrong_pred1_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 2
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ugt i32 %t0, 2

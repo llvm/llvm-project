@@ -47,6 +47,10 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
 
 static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
 
+static bool isMemrefOperand(OpOperand &operand) {
+  return isMemref(operand.get());
+}
+
 //===----------------------------------------------------------------------===//
 // Backedges analysis
 //===----------------------------------------------------------------------===//
@@ -937,7 +941,7 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 
   // Add an additional operand for every MemRef for the ownership indicator.
   if (!funcWithoutDynamicOwnership) {
-    unsigned numMemRefs = llvm::count_if(operands, isMemref);
+    unsigned numMemRefs = llvm::count_if(operands, isMemrefOperand);
     SmallVector<Value> newOperands{OperandRange(operands)};
     auto ownershipValues =
         deallocOp.getUpdatedConditions().take_front(numMemRefs);
@@ -994,6 +998,11 @@ namespace {
 struct OwnershipBasedBufferDeallocationPass
     : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
           OwnershipBasedBufferDeallocationPass> {
+  OwnershipBasedBufferDeallocationPass() = default;
+  OwnershipBasedBufferDeallocationPass(bool privateFuncDynamicOwnership)
+      : OwnershipBasedBufferDeallocationPass() {
+    this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
+  }
   void runOnOperation() override {
     func::FuncOp func = getOperation();
     if (func.isExternal())
@@ -1025,6 +1034,8 @@ LogicalResult bufferization::deallocateBuffersOwnershipBased(
 //===----------------------------------------------------------------------===//
 
 std::unique_ptr<Pass>
-mlir::bufferization::createOwnershipBasedBufferDeallocationPass() {
-  return std::make_unique<OwnershipBasedBufferDeallocationPass>();
+mlir::bufferization::createOwnershipBasedBufferDeallocationPass(
+    bool privateFuncDynamicOwnership) {
+  return std::make_unique<OwnershipBasedBufferDeallocationPass>(
+      privateFuncDynamicOwnership);
 }

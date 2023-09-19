@@ -856,6 +856,11 @@ public:
     return Fortran::lower::mangle::mangleName(name, getCurrentScope(),
                                               scopeBlockIdMap);
   }
+  std::string getRecordTypeFieldName(
+      const Fortran::semantics::Symbol &component) override final {
+    return Fortran::lower::mangle::getRecordTypeFieldName(component,
+                                                          scopeBlockIdMap);
+  }
   const fir::KindMapping &getKindMap() override final {
     return bridge.getKindMap();
   }
@@ -1013,7 +1018,9 @@ private:
     if (!forced && lookupSymbol(sym))
       return false;
     if (lowerToHighLevelFIR()) {
-      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val, forced);
+      Fortran::lower::genDeclareSymbol(*this, localSymbols, sym, val,
+                                       fir::FortranVariableFlagsEnum::None,
+                                       forced);
     } else {
       localSymbols.addSymbol(sym, val, forced);
     }
@@ -2313,7 +2320,7 @@ private:
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
-    genOpenMPConstruct(*this, getEval(), omp);
+    genOpenMPConstruct(*this, bridge.getSemanticsContext(), getEval(), omp);
 
     const Fortran::parser::OpenMPLoopConstruct *ompLoop =
         std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);

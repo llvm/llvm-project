@@ -4236,8 +4236,8 @@ bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
 }
 
 bool TargetProperties::GetPreloadSymbols() const {
-  if (INTERRUPT_REQUESTED(m_target->GetDebugger(), 
-      "Interrupted checking preload symbols")) {
+  if (INTERRUPT_REQUESTED(m_target->GetDebugger(),
+                          "Interrupted checking preload symbols")) {
     return false;
   }
   const uint32_t idx = ePropertyPreloadSymbols;
@@ -4535,6 +4535,12 @@ void TargetProperties::CheckJITObjectsDir() {
 
 bool TargetProperties::GetEnableSyntheticValue() const {
   const uint32_t idx = ePropertyEnableSynthetic;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+bool TargetProperties::ShowHexVariableValuesWithLeadingZeroes() const {
+  const uint32_t idx = ePropertyShowHexVariableValuesWithLeadingZeroes;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
 }

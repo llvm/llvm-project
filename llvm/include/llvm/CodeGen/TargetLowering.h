@@ -651,6 +651,11 @@ public:
     return false;
   }
 
+  /// Return true if ctpop instruction is fast.
+  virtual bool isCtpopFast(EVT VT) const {
+    return isOperationLegal(ISD::CTPOP, VT);
+  }
+
   /// Return the maximum number of "x & (x - 1)" operations that can be done
   /// instead of deferring to a custom CTPOP.
   virtual unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const {
@@ -1460,9 +1465,9 @@ public:
   /// extending
   virtual bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const { return false; }
 
-  // Returns true if VT is a legal index type for masked gathers/scatters
-  // on this target
-  virtual bool shouldRemoveExtendFromGSIndex(EVT IndexVT, EVT DataVT) const {
+  // Returns true if Extend can be folded into the index of a masked gathers/scatters
+  // on this target.
+  virtual bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const {
     return false;
   }
 

@@ -6251,15 +6251,15 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ;
 ; GFX10-LABEL: s_ssubsat_v2i128:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_sub_u32 s16, s0, s8
-; GFX10-NEXT:    s_subb_u32 s17, s1, s9
-; GFX10-NEXT:    s_subb_u32 s18, s2, s10
-; GFX10-NEXT:    v_cmp_lt_u64_e64 s0, s[16:17], s[0:1]
-; GFX10-NEXT:    s_subb_u32 s19, s3, s11
-; GFX10-NEXT:    s_cmp_eq_u64 s[18:19], s[2:3]
+; GFX10-NEXT:    s_sub_u32 s18, s0, s8
+; GFX10-NEXT:    s_subb_u32 s19, s1, s9
+; GFX10-NEXT:    s_subb_u32 s16, s2, s10
+; GFX10-NEXT:    v_cmp_lt_u64_e64 s0, s[18:19], s[0:1]
+; GFX10-NEXT:    s_subb_u32 s17, s3, s11
+; GFX10-NEXT:    s_cmp_eq_u64 s[16:17], s[2:3]
 ; GFX10-NEXT:    s_cselect_b32 s20, 1, 0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX10-NEXT:    v_cmp_lt_i64_e64 s0, s[18:19], s[2:3]
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s0, s[16:17], s[2:3]
 ; GFX10-NEXT:    v_cmp_gt_u64_e64 s2, s[8:9], 0
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
 ; GFX10-NEXT:    s_and_b32 s0, 1, s20
@@ -6268,7 +6268,7 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX10-NEXT:    v_cmp_gt_i64_e64 s2, s[10:11], 0
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s0
 ; GFX10-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX10-NEXT:    s_ashr_i32 s8, s19, 31
+; GFX10-NEXT:    s_ashr_i32 s8, s17, 31
 ; GFX10-NEXT:    s_and_b32 s1, 1, s1
 ; GFX10-NEXT:    s_add_u32 s9, s8, 0x80000000
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s2
@@ -6304,12 +6304,12 @@ define amdgpu_ps <2 x i128> @s_ssubsat_v2i128(<2 x i128> inreg %lhs, <2 x i128> 
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
 ; GFX10-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s5
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, v4, v3, vcc_lo
-; GFX10-NEXT:    v_mov_b32_e32 v3, s16
-; GFX10-NEXT:    v_mov_b32_e32 v4, s17
+; GFX10-NEXT:    v_mov_b32_e32 v3, s18
+; GFX10-NEXT:    v_mov_b32_e32 v4, s19
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX10-NEXT:    v_mov_b32_e32 v0, s18
+; GFX10-NEXT:    v_mov_b32_e32 v0, s16
 ; GFX10-NEXT:    v_xor_b32_e32 v1, v2, v1
-; GFX10-NEXT:    v_mov_b32_e32 v2, s19
+; GFX10-NEXT:    v_mov_b32_e32 v2, s17
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, s8, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v4, v4, s8, vcc_lo
 ; GFX10-NEXT:    v_and_b32_e32 v1, 1, v1

@@ -113,7 +113,7 @@ void RegisterContextCorePOSIX_arm64::ConfigureRegisterContext() {
     m_sve_state = SVEState::Disabled;
 
   if (m_sve_state != SVEState::Disabled)
-    m_register_info_up->ConfigureVectorLength(
+    m_register_info_up->ConfigureVectorLengthSVE(
         sve::vq_from_vl(m_sve_vector_length));
 }
 

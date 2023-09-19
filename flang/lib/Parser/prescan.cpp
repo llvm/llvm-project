@@ -1041,8 +1041,11 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
       tabInCurrentLine_ = true;
       return nextLine_ + 2; // VAX extension
     }
-    if (col1 == ' ' && nextLine_[1] == ' ' && nextLine_[2] == ' ' &&
-        nextLine_[3] == ' ' && nextLine_[4] == ' ') {
+    if ((col1 == ' ' ||
+            ((col1 == 'D' || col1 == 'd') &&
+                features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
+        nextLine_[1] == ' ' && nextLine_[2] == ' ' && nextLine_[3] == ' ' &&
+        nextLine_[4] == ' ') {
       char col6{nextLine_[5]};
       if (col6 != '\n' && col6 != '\t' && col6 != ' ' && col6 != '0') {
         if ((col6 == 'i' || col6 == 'I') && IsIncludeLine(nextLine_)) {
