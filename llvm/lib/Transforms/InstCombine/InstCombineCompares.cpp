@@ -6437,10 +6437,10 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
       //   icmp ne X, (zext (icmp eq X, C)) --> icmp ne X, 0
       //   icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, 1
       // when C != 0 && C != -1:
-      //   icmp eq X, (zext (icmp eq X, C)) --> icmp eq X, 0
-      //   icmp eq X, (zext (icmp ne X, C)) --> icmp eq X, -1
-      //   icmp ne X, (zext (icmp eq X, C)) --> icmp ne X, 0
-      //   icmp ne X, (zext (icmp ne X, C)) --> icmp ne X, -1
+      //   icmp eq X, (sext (icmp eq X, C)) --> icmp eq X, 0
+      //   icmp eq X, (sext (icmp ne X, C)) --> icmp eq X, -1
+      //   icmp ne X, (sext (icmp eq X, C)) --> icmp ne X, 0
+      //   icmp ne X, (sext (icmp ne X, C)) --> icmp ne X, -1
       return ICmpInst::Create(
           Instruction::ICmp, Pred1, X,
           ConstantInt::get(X->getType(),
