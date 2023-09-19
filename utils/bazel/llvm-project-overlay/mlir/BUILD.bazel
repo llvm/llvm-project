@@ -8290,6 +8290,7 @@ cc_library(
         ":LinalgTransformOps",
         ":LinalgTransforms",
         ":MLProgramDialect",
+        ":MLProgramTransforms",
         ":MathDialect",
         ":MathToFuncs",
         ":MathToLLVM",
@@ -11872,6 +11873,22 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "MLProgramPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=MLProgram",
+            ],
+            "include/mlir/Dialect/MLProgram/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MLProgram/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "MLProgramTypesIncGen",
     tbl_outs = [
         (
@@ -11892,10 +11909,9 @@ cc_library(
     name = "MLProgramDialect",
     srcs = glob([
         "lib/Dialect/MLProgram/IR/*.cpp",
-        "lib/Dialect/MLProgram/IR/*.h",
     ]),
     hdrs = glob([
-        "include/mlir/Dialect/MLProgram/IR/*.h",
+        "include/mlir/Dialect/MLProgram/**/*.h",
     ]),
     includes = ["include"],
     deps = [
@@ -11908,6 +11924,25 @@ cc_library(
         ":Pass",
         ":Support",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MLProgramTransforms",
+    srcs = glob([
+        "lib/Dialect/MLProgram/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/MLProgram/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":MLProgramDialect",
+        ":FuncDialect",
+        ":TransformUtils",
+        ":IR",
+        ":MLProgramPassIncGen",
+        ":Pass",
     ],
 )
 
