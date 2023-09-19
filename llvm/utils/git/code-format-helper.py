@@ -130,7 +130,6 @@ class ClangFormatHelper(FormatHelper):
         return filtered_files
 
     def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
-        self.args = args
         cpp_files = self.filter_changed_files(changed_files)
         if not cpp_files:
             return
@@ -170,7 +169,6 @@ class DarkerFormatHelper(FormatHelper):
         return filtered_files
 
     def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
-        self.args = args
         py_files = self.filter_changed_files(changed_files)
         if not py_files:
             return
