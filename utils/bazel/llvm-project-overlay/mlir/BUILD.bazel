@@ -9098,6 +9098,20 @@ gentbl_cc_library(
     name = "OpenMPOpsIncGen",
     tbl_outs = [
         (
+            [
+                "-gen-typedef-decls",
+                "-typedefs-dialect=omp",
+            ],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsTypes.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "-typedefs-dialect=omp",
+            ],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc",
+        ),
+        (
             ["-gen-op-decls"],
             "include/mlir/Dialect/OpenMP/OpenMPOps.h.inc",
         ),
