@@ -504,10 +504,9 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Require C++20 for all targets. C++17 is needed to use aligned allocation
-  # in the dylib. C++20 is needed to use char8_t.
+  # Require C++23 for all targets.
   set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 20
+    CXX_STANDARD 23
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
 
