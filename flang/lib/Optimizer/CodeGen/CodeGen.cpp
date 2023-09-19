@@ -34,6 +34,7 @@
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -3860,6 +3861,14 @@ public:
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,
                                                std::move(pattern)))) {
       signalPassFailure();
+    }
+
+    // Run pass to add comdats to functions that have weak linkage on relevant platforms
+    if (fir::getTargetTriple(mod).supportsCOMDAT()) {
+      mlir::OpPassManager comdatPM("builtin.module");
+      comdatPM.addPass(mlir::LLVM::createLLVMAddComdats());
+      if (mlir::failed(runPipeline(comdatPM, mod)))
+        return signalPassFailure();
     }
   }
 

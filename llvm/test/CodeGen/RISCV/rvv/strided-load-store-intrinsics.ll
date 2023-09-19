@@ -89,9 +89,8 @@ define void @strided_store_i8_nostride(ptr %p, <32 x i8> %v, <32 x i1> %m) {
 ; CHECK-LABEL: strided_store_i8_nostride:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vsse8.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.riscv.masked.strided.store.v32i8.p0.i64(<32 x i8> %v, ptr %p, i64 1, <32 x i1> %m)
   ret void

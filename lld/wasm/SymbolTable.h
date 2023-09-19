@@ -40,7 +40,7 @@ public:
 
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 
-  void addFile(InputFile *file);
+  void addFile(InputFile *file, StringRef symName = {});
 
   void compileBitcodeFiles();
 

@@ -1,6 +1,16 @@
 #include <stdint.h>
 #include <sys/prctl.h>
 
+// If SSVE is defined, this program will start in streaming SVE mode. Otherwise,
+// if SVE is defined, it will start in non-streaming mode and activate the SVE
+// registers by writing to one of them. If neither SSVE or SVE are defined,
+// the program will start in non-streaming mode, with the SVE registers
+// inactive.
+//
+// For most programs the difference between inactive non-streaming SVE and
+// active is transparent. For lldb, there are some differences in how we use
+// ptrace in either scenario.
+
 // base is added to each value. If base = 2, then v0 = 2, v1 = 3, etc.
 void write_simd_regs(unsigned base) {
 #define WRITE_SIMD(NUM)                                                        \

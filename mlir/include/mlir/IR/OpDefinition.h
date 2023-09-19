@@ -932,10 +932,6 @@ public:
   }
   template <typename OpT = ConcreteType>
   enable_if_single_region<OpT> insert(Block::iterator insertPt, Operation *op) {
-    Block *body = getBody();
-    // Insert op before the block's terminator if it has one
-    if (insertPt == body->end() && body->hasTerminator())
-      insertPt = Block::iterator(body->getTerminator());
     getBody()->getOperations().insert(insertPt, op);
   }
 };

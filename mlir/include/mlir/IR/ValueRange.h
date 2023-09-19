@@ -165,13 +165,9 @@ public:
   /// Returns the OpOperand at the given index.
   OpOperand &operator[](unsigned index) const;
 
-  OperandRange::iterator begin() const {
-    return static_cast<OperandRange>(*this).begin();
-  }
-
-  OperandRange::iterator end() const {
-    return static_cast<OperandRange>(*this).end();
-  }
+  /// Iterators enumerate OpOperands.
+  MutableArrayRef<OpOperand>::iterator begin() const;
+  MutableArrayRef<OpOperand>::iterator end() const;
 
 private:
   /// Update the length of this range to the one provided.

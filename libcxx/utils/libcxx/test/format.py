@@ -35,39 +35,6 @@ def _checkBaseSubstitutions(substitutions):
     for s in ["%{cxx}", "%{compile_flags}", "%{link_flags}", "%{flags}", "%{exec}"]:
         assert s in substitutions, "Required substitution {} was not provided".format(s)
 
-def _parseLitOutput(fullOutput):
-    """
-    Parse output of a Lit ShTest to extract the actual output of the contained commands.
-
-    This takes output of the form
-
-        $ ":" "RUN: at line 11"
-        $ "echo" "OUTPUT1"
-        # command output:
-        OUTPUT1
-
-        $ ":" "RUN: at line 12"
-        $ "echo" "OUTPUT2"
-        # command output:
-        OUTPUT2
-
-    and returns a string containing
-
-        OUTPUT1
-        OUTPUT2
-
-    as-if the commands had been run directly. This is a workaround for the fact
-    that Lit doesn't let us execute ShTest and retrieve the raw output without
-    injecting additional Lit output around it.
-    """
-    parsed = ''
-    for output in re.split('[$]\s*":"\s*"RUN: at line \d+"', fullOutput):
-        if output: # skip blank lines
-            commandOutput = re.search("# command output:\n(.+)\n$", output, flags=re.DOTALL)
-            if commandOutput:
-                parsed += commandOutput.group(1)
-    return parsed
-
 def _executeScriptInternal(test, litConfig, commands):
     """
     Returns (stdout, stderr, exitCode, timeoutInfo, parsedCommands)
@@ -79,20 +46,11 @@ def _executeScriptInternal(test, litConfig, commands):
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
     res = lit.TestRunner.executeScriptInternal(
-        test, litConfig, tmpBase, parsedCommands, execDir
+        test, litConfig, tmpBase, parsedCommands, execDir, debug=False
     )
     if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
         res = ("", res.output, 127, None)
     (out, err, exitCode, timeoutInfo) = res
-
-    # TODO: As a temporary workaround until https://reviews.llvm.org/D81892 lands, manually
-    #       split any stderr output that is included in stdout. It shouldn't be there, but
-    #       the Lit internal shell conflates stderr and stdout.
-    conflatedErrorOutput = re.search("(# command stderr:.+$)", out, flags=re.DOTALL)
-    if conflatedErrorOutput:
-        conflatedErrorOutput = conflatedErrorOutput.group(0)
-        out = out[: -len(conflatedErrorOutput)]
-        err += conflatedErrorOutput
 
     return (out, err, exitCode, timeoutInfo, parsedCommands)
 
@@ -400,9 +358,8 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             raise RuntimeError(f"Error while trying to generate gen test\nstdout:\n{out}\n\nstderr:\n{err}")
 
         # Split the generated output into multiple files and generate one test for each file
-        parsed = _parseLitOutput(out)
-        for (subfile, content) in self._splitFile(parsed):
-            generatedFile = testSuite.getExecPath(pathInSuite + (subfile, ))
+        for subfile, content in self._splitFile(out):
+            generatedFile = testSuite.getExecPath(pathInSuite + (subfile,))
             os.makedirs(os.path.dirname(generatedFile), exist_ok=True)
             with open(generatedFile, 'w') as f:
                 f.write(content)
