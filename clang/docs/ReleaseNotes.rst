@@ -304,7 +304,7 @@ Bug Fixes to C++ Support
 - Fix crash for a lambda attribute with a statement expression
   that contains a `return`.
   (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
-  
+
 - Clang now no longer asserts when an UnresolvedLookupExpr is used as an
   expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
 
