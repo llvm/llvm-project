@@ -522,6 +522,14 @@ OpOperand &MutableOperandRange::operator[](unsigned index) const {
   return owner->getOpOperand(start + index);
 }
 
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::begin() const {
+  return owner->getOpOperands().slice(start, length).begin();
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
+  return owner->getOpOperands().slice(start, length).end();
+}
+
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
 

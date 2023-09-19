@@ -107,7 +107,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB2_8
 ; GFX11-NEXT:  ; %bb.5: ; %bb18.preheader
 ; GFX11-NEXT:    s_load_b128 s[24:27], s[2:3], 0x44
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mul_hi_u32 s6, s25, s24
 ; GFX11-NEXT:    s_mul_i32 s7, s25, s24
@@ -125,26 +125,26 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s6, s21, s6
 ; GFX11-NEXT:    s_lshl_b64 s[18:19], s[6:7], 1
-; GFX11-NEXT:    global_load_u16 v2, v1, s[18:19]
+; GFX11-NEXT:    global_load_u16 v1, v2, s[18:19]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v2
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v1
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB2_6: ; %bb18
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_cmp_ne_u16_e64 s6, s7, 0
-; GFX11-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v1
+; GFX11-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s6
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX11-NEXT:    s_and_b32 vcc_lo, s8, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v3, v2, v3, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v1, v3, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v0, v2, vcc_lo
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, 0
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
 ; GFX11-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 s6, 0x100, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

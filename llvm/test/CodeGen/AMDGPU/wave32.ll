@@ -523,22 +523,22 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX1032-NEXT:    v_min_u32_e32 v1, 0x100, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, 0
-; GFX1032-NEXT:    s_mov_b32 s4, 0
-; GFX1032-NEXT:    ; implicit-def: $sgpr3
+; GFX1032-NEXT:    s_mov_b32 s3, 0
+; GFX1032-NEXT:    ; implicit-def: $sgpr4
 ; GFX1032-NEXT:    s_branch .LBB11_4
 ; GFX1032-NEXT:  .LBB11_2: ; %bb8
 ; GFX1032-NEXT:    ; in Loop: Header=BB11_4 Depth=1
-; GFX1032-NEXT:    s_add_i32 s4, s4, 1
+; GFX1032-NEXT:    s_add_i32 s3, s3, 1
 ; GFX1032-NEXT:    global_store_dword v2, v0, s[0:1]
-; GFX1032-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s4, v1
+; GFX1032-NEXT:    v_cmp_ge_u32_e32 vcc_lo, s3, v1
 ; GFX1032-NEXT:    s_add_u32 s0, s0, 4
 ; GFX1032-NEXT:    s_addc_u32 s1, s1, 0
-; GFX1032-NEXT:    s_andn2_b32 s3, s3, exec_lo
+; GFX1032-NEXT:    s_andn2_b32 s4, s4, exec_lo
 ; GFX1032-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
-; GFX1032-NEXT:    s_or_b32 s3, s3, s5
+; GFX1032-NEXT:    s_or_b32 s4, s4, s5
 ; GFX1032-NEXT:  .LBB11_3: ; %Flow
 ; GFX1032-NEXT:    ; in Loop: Header=BB11_4 Depth=1
-; GFX1032-NEXT:    s_and_b32 s5, exec_lo, s3
+; GFX1032-NEXT:    s_and_b32 s5, exec_lo, s4
 ; GFX1032-NEXT:    s_or_b32 s2, s5, s2
 ; GFX1032-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
 ; GFX1032-NEXT:    s_cbranch_execz .LBB11_6
@@ -546,12 +546,12 @@ define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1032-NEXT:    global_load_dword v3, v2, s[0:1]
-; GFX1032-NEXT:    s_or_b32 s3, s3, exec_lo
+; GFX1032-NEXT:    s_or_b32 s4, s4, exec_lo
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 11, v3
 ; GFX1032-NEXT:    s_cbranch_vccz .LBB11_2
 ; GFX1032-NEXT:  ; %bb.5: ; in Loop: Header=BB11_4 Depth=1
-; GFX1032-NEXT:    ; implicit-def: $sgpr4
+; GFX1032-NEXT:    ; implicit-def: $sgpr3
 ; GFX1032-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX1032-NEXT:    s_branch .LBB11_3
 ; GFX1032-NEXT:  .LBB11_6: ; %.loopexit
@@ -1803,64 +1803,64 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1032:       ; %bb.0: ; %entry
 ; GFX1032-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1032-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX1032-NEXT:    v_mov_b32_e32 v7, v3
+; GFX1032-NEXT:    v_mov_b32_e32 v6, v2
+; GFX1032-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1032-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1032-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1032-NEXT:    s_branch .LBB33_2
 ; GFX1032-NEXT:  .LBB33_1: ; %body
 ; GFX1032-NEXT:    ; in Loop: Header=BB33_2 Depth=1
-; GFX1032-NEXT:    image_sample v[0:3], v4, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX1032-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX1032-NEXT:    v_add_f32_e32 v8, 2.0, v8
 ; GFX1032-NEXT:    s_cbranch_execz .LBB33_4
 ; GFX1032-NEXT:  .LBB33_2: ; %loop
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0x40e00000, v8
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
-; GFX1032-NEXT:    v_mov_b32_e32 v7, v3
-; GFX1032-NEXT:    v_mov_b32_e32 v6, v2
-; GFX1032-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1032-NEXT:    v_mov_b32_e32 v4, v0
-; GFX1032-NEXT:    s_cbranch_vccz .LBB33_1
-; GFX1032-NEXT:  ; %bb.3:
-; GFX1032-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1032-NEXT:    ; implicit-def: $vgpr8
-; GFX1032-NEXT:  .LBB33_4: ; %break
-; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s0
-; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1032-NEXT:    s_cbranch_vccz .LBB33_1
+; GFX1032-NEXT:  ; %bb.3:
+; GFX1032-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX1032-NEXT:    ; implicit-def: $vgpr8
+; GFX1032-NEXT:  .LBB33_4: ; %break
+; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s0
+; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    ; return to shader part epilog
 ;
 ; GFX1064-LABEL: test_loop_vcc:
 ; GFX1064:       ; %bb.0: ; %entry
 ; GFX1064-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1064-NEXT:    s_wqm_b64 exec, exec
+; GFX1064-NEXT:    v_mov_b32_e32 v7, v3
+; GFX1064-NEXT:    v_mov_b32_e32 v6, v2
+; GFX1064-NEXT:    v_mov_b32_e32 v5, v1
+; GFX1064-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX1064-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX1064-NEXT:    s_branch .LBB33_2
 ; GFX1064-NEXT:  .LBB33_1: ; %body
 ; GFX1064-NEXT:    ; in Loop: Header=BB33_2 Depth=1
-; GFX1064-NEXT:    image_sample v[0:3], v4, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX1064-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX1064-NEXT:    v_add_f32_e32 v8, 2.0, v8
 ; GFX1064-NEXT:    s_cbranch_execz .LBB33_4
 ; GFX1064-NEXT:  .LBB33_2: ; %loop
 ; GFX1064-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1064-NEXT:    v_cmp_lt_f32_e32 vcc, 0x40e00000, v8
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
-; GFX1064-NEXT:    v_mov_b32_e32 v7, v3
-; GFX1064-NEXT:    v_mov_b32_e32 v6, v2
-; GFX1064-NEXT:    v_mov_b32_e32 v5, v1
-; GFX1064-NEXT:    v_mov_b32_e32 v4, v0
-; GFX1064-NEXT:    s_cbranch_vccz .LBB33_1
-; GFX1064-NEXT:  ; %bb.3:
-; GFX1064-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1064-NEXT:    ; implicit-def: $vgpr8
-; GFX1064-NEXT:  .LBB33_4: ; %break
-; GFX1064-NEXT:    s_and_b64 exec, exec, s[0:1]
-; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX1064-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, v7
+; GFX1064-NEXT:    s_cbranch_vccz .LBB33_1
+; GFX1064-NEXT:  ; %bb.3:
+; GFX1064-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX1064-NEXT:    ; implicit-def: $vgpr8
+; GFX1064-NEXT:  .LBB33_4: ; %break
+; GFX1064-NEXT:    s_and_b64 exec, exec, s[0:1]
+; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    ; return to shader part epilog
 entry:
   br label %loop
