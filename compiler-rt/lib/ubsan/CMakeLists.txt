@@ -207,8 +207,7 @@ else()
               RTSanitizerCommonLibc
               RTSanitizerCommonCoverage
               RTSanitizerCommonSymbolizer
-              # FIXME: Some wrong with C++ demangling.
-              # RTSanitizerCommonSymbolizerInternal
+              RTSanitizerCommonSymbolizerInternal
               RTUbsan
               RTUbsan_standalone
               RTInterception
@@ -253,8 +252,7 @@ else()
                 RTSanitizerCommonLibc
                 RTSanitizerCommonCoverage
                 RTSanitizerCommonSymbolizer
-                # FIXME: Some wrong with C++ demangling.
-                # RTSanitizerCommonSymbolizerInternal
+                RTSanitizerCommonSymbolizerInternal
                 RTUbsan
                 RTUbsan_cxx
                 RTUbsan_standalone

@@ -50,8 +50,8 @@ static bool isSparseTensor(Value v) {
 }
 static bool isSparseTensor(OpOperand *op) { return isSparseTensor(op->get()); }
 
-// Helper method to find zero/uninitialized allocation.
-static bool isAlloc(OpOperand *op, bool isZero) {
+// Helper method to find zero/uninitialized tensor materialization.
+static bool isMaterializing(OpOperand *op, bool isZero) {
   Value val = op->get();
   // Check allocation, with zero alloc when required.
   if (auto alloc = val.getDefiningOp<AllocTensorOp>()) {
@@ -60,6 +60,9 @@ static bool isAlloc(OpOperand *op, bool isZero) {
       return copy && isZeroValue(copy);
     return !copy;
   }
+  // Check for empty tensor materialization.
+  if (auto empty = val.getDefiningOp<tensor::EmptyOp>())
+    return !isZero;
   // Last resort for zero alloc: the whole value is zero.
   return isZero && isZeroValue(val);
 }
@@ -219,24 +222,22 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     if (!op.hasTensorSemantics() || op.getNumResults() != 1 ||
-        !isAlloc(op.getDpsInitOperand(0), /*isZero=*/false) ||
+        !isMaterializing(op.getDpsInitOperand(0), /*isZero=*/false) ||
         !isZeroYield(op) || !op.getDpsInitOperand(0)->get().hasOneUse())
       return failure();
     auto outputType = getRankedTensorType(op.getResult(0));
-    // Yielding zero on newly allocated (all-zero) sparse tensors can be
-    // optimized out directly (regardless of dynamic or static size).
+    // Yielding zero on newly materialized sparse tensor can be
+    // optimized directly (regardless of dynamic or static size).
     if (getSparseTensorEncoding(outputType)) {
       rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
       return success();
     }
-    // Incorporate zero value into allocation copy.
+    // Use static zero value directly instead of materialization.
     if (!outputType.hasStaticShape())
       return failure();
-    Value zero = constantZero(rewriter, op.getLoc(), op.getResult(0).getType());
-    AllocTensorOp a =
-        op.getDpsInitOperand(0)->get().getDefiningOp<AllocTensorOp>();
-    rewriter.updateRootInPlace(a, [&]() { a.getCopyMutable().assign(zero); });
-    rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
+    Operation *def = op.getDpsInitOperand(0)->get().getDefiningOp();
+    rewriter.replaceOp(op, constantZero(rewriter, op.getLoc(), outputType));
+    rewriter.eraseOp(def);
     return success();
   }
 };
@@ -286,8 +287,8 @@ public:
         !prod.getResult(0).hasOneUse())
       return failure();
     // Sampling consumer and sum of multiplication chain producer.
-    if (!isAlloc(op.getDpsInitOperand(0), /*isZero=*/false) ||
-        !isAlloc(prod.getDpsInitOperand(0), /*isZero=*/true) ||
+    if (!isMaterializing(op.getDpsInitOperand(0), /*isZero=*/false) ||
+        !isMaterializing(prod.getDpsInitOperand(0), /*isZero=*/true) ||
         !isSampling(op) || !isSumOfMul(prod))
       return failure();
     // Modify operand structure of producer and consumer.
@@ -327,6 +328,7 @@ public:
     last = rewriter.clone(*acc, mapper)->getResult(0);
     rewriter.create<linalg::YieldOp>(loc, last);
     // Force initial value on merged allocation for dense outputs.
+    // TODO: deal with non alloc tensor here one day
     if (!getSparseTensorEncoding(op.getResult(0).getType())) {
       Value init = prod.getDpsInitOperand(0)
                        ->get()
@@ -556,8 +558,8 @@ public:
     auto red = cast<linalg::YieldOp>(op.getRegion().front().getTerminator())
                    .getOperand(0)
                    .getDefiningOp();
-    if (!isa<arith::AndIOp, arith::MulIOp, arith::MulFOp, arith::MinFOp,
-             arith::MinSIOp, arith::MinUIOp, arith::MaxFOp, arith::MaxSIOp,
+    if (!isa<arith::AndIOp, arith::MulIOp, arith::MulFOp, arith::MinimumFOp,
+             arith::MinSIOp, arith::MinUIOp, arith::MaximumFOp, arith::MaxSIOp,
              arith::MaxUIOp>(red))
       return failure();
     Value s0 = op.getBlock()->getArgument(0);
@@ -1120,8 +1122,6 @@ private:
     sizesForTensor(rewriter, sizes, loc, srcTp, src);
 
     Value dst = allocDenseTensor(rewriter, loc, dstTp, sizes);
-    Block *insertionBlock = rewriter.getInsertionBlock();
-    bool noEscape = bufferization::allocationDoesNotEscape(op->getOpResult(0));
 
     rewriter.create<ForeachOp>(loc, src, std::nullopt,
                                [&](OpBuilder &builder, Location loc,
@@ -1132,12 +1132,6 @@ private:
                                });
 
     rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, dstTp, dst);
-
-    // Deallocate the buffer.
-    if (noEscape) {
-      rewriter.setInsertionPoint(insertionBlock->getTerminator());
-      deallocDenseTensor(rewriter, loc, dst);
-    }
     return success();
   }
 

@@ -8,7 +8,6 @@ foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
 
   add_custom_command(OUTPUT RTSanitizerCommonSymbolizerInternal.${arch}.o
                      DEPENDS ${RTSanitizerCommonSymbolizerInternalDir} 
-                             clang lld llvm-tblgen opt llvm-ar llvm-link llvm-ranlib llvm-symbolizer
                              sanitizer_wrappers.cpp
                              sanitizer_symbolize.cpp
                              scripts/build_symbolizer.sh

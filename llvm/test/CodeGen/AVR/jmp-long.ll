@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -march avr -mattr=jmpcall < %s | llvm-objdump -dr --mattr=jmpcall - | FileCheck %s
+; RUN: llc -filetype=obj -mtriple=avr -mattr=jmpcall < %s | llvm-objdump -dr --mattr=jmpcall - | FileCheck %s
 
 ; Test the fix in https://reviews.llvm.org/D78459.
 ; Long branches (that use jmp instead of rjmp) were broken: the jump was to a

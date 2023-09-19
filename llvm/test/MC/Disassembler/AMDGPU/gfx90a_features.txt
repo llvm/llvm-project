@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx90a -disassemble -show-encoding %s | FileCheck --check-prefix=GFX90A %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -disassemble -show-encoding %s | FileCheck --check-prefix=GFX90A %s
 
 # GFX90A: v_pk_fma_f32 v[8:9], v[0:1], s[0:1], v[4:5] ; encoding: [0x08,0x40,0xb0,0xd3,0x00,0x01,0x10,0x1c]
 0x08,0x40,0xb0,0xd3,0x00,0x01,0x10,0x1c

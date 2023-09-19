@@ -362,8 +362,9 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
       TODO(loc, "parent component in structure constructor");
 
-    llvm::StringRef name = toStringRef(sym->name());
+    std::string name = converter.getRecordTypeFieldName(sym);
     mlir::Type componentTy = recTy.getType(name);
+    assert(componentTy && "failed to retrieve component");
     // FIXME: type parameters must come from the derived-type-spec
     auto field = builder.create<fir::FieldIndexOp>(
         loc, fieldTy, name, type,

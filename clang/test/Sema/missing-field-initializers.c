@@ -50,3 +50,14 @@ struct { int:5; int a; int:5; int b; int:5; } noNamedImplicit[] = {
   { 1, 2 },
   { 1 } // expected-warning {{missing field 'b' initializer}}
 };
+
+// GH66300
+struct S {
+  int f0;
+  int f1[];
+};
+
+// We previously would accidentally diagnose missing a field initializer for
+// f1, now we no longer issue that warning (note, this code is still unsafe
+// because of the buffer overrun).
+struct S s = {1, {1, 2}};

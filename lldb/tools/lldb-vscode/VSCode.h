@@ -167,6 +167,8 @@ struct VSCode {
   std::atomic<bool> sent_terminated_event;
   bool stop_at_entry;
   bool is_attach;
+  bool enable_auto_variable_summaries;
+  bool enable_synthetic_child_debugging;
   // The process event thread normally responds to process exited events by
   // shutting down the entire adapter. When we're restarting, we keep the id of
   // the old process here so we can detect this case and keep running.

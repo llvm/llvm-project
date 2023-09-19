@@ -12,6 +12,9 @@ subroutine test
       integer, intent(in), optional :: x
       real, intent(in), pointer :: y
     end
+    subroutine optionalAllocatable(x)
+      integer, intent(in), allocatable, optional :: x
+    end
     function f0()
       real :: f0
     end function
@@ -95,6 +98,7 @@ subroutine test
   dt4x = dt4(null(dt2x%pps0))
   call canbenull(null(), null()) ! fine
   call canbenull(null(mold=ip0), null(mold=rp0)) ! fine
+  call optionalAllocatable(null(mold=ip0)) ! fine
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null())
   !ERROR: Null pointer argument requires an explicit interface

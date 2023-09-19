@@ -125,18 +125,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   Value *MergedVal = nullptr;
   if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
-    [[maybe_unused]] auto *RecordVal2 = cast<RecordValue>(&Val2);
+    auto *RecordVal2 = cast<RecordValue>(&Val2);
 
-    // Values to be merged are always associated with the same location in
-    // `LocToVal`. The location stored in `RecordVal` should therefore also
-    // be the same.
-    assert(&RecordVal1->getLoc() == &RecordVal2->getLoc());
-
-    // `RecordVal1` and `RecordVal2` may have different properties associated
-    // with them. Create a new `RecordValue` without any properties so that we
-    // soundly approximate both values. If a particular analysis needs to merge
-    // properties, it should do so in `DataflowAnalysis::merge()`.
-    MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    if (&RecordVal1->getLoc() == &RecordVal2->getLoc())
+      // `RecordVal1` and `RecordVal2` may have different properties associated
+      // with them. Create a new `RecordValue` with the same location but
+      // without any properties so that we soundly approximate both values. If a
+      // particular analysis needs to merge properties, it should do so in
+      // `DataflowAnalysis::merge()`.
+      MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    else
+      // If the locations for the two records are different, need to create a
+      // completely new value.
+      MergedVal = MergedEnv.createValue(Type);
   } else {
     MergedVal = MergedEnv.createValue(Type);
   }
@@ -287,6 +288,18 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  if (!C.getMethodDecl())
+    return nullptr;
+  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  if (!Body || Body->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    if (auto *Return = RS->getRetValue())
+      return dyn_cast<MemberExpr>(Return->IgnoreParenImpCasts());
+  return nullptr;
+}
+
 static void
 getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
@@ -323,6 +336,12 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();

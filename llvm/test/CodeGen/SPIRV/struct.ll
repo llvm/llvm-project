@@ -1,16 +1,17 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 %struct.ST = type { i32, i32, i32 }
 
-; CHECK-SPIRV:     OpName %[[#struct:]] "struct.ST"
-; CHECK-SPIRV:     %[[#int:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: %[[#struct]] = OpTypeStruct %[[#int]] %[[#int]] %[[#int]]
-; CHECK-SPIRV-DAG: %[[#structP:]] = OpTypePointer Function %[[#struct]]
-; CHECK-SPIRV-DAG: %[[#intP:]] = OpTypePointer Function %[[#int]]
-; CHECK-SPIRV:     %[[#zero:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV:     %[[#one:]] = OpConstant %[[#int]] 1
-; CHECK-SPIRV:     %[[#two:]] = OpConstant %[[#int]] 2
-; CHECK-SPIRV:     %[[#three:]] = OpConstant %[[#int]] 3
+; CHECK-DAG: OpName %[[#struct:]] "struct.ST"
+; CHECK-DAG: %[[#char:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#int:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#struct]] = OpTypeStruct %[[#int]] %[[#int]] %[[#int]]
+; CHECK-DAG: %[[#structP:]] = OpTypePointer Function %[[#struct]]
+; CHECK-DAG: %[[#intP:]] = OpTypePointer Function %[[#char]]
+; CHECK-DAG: %[[#zero:]] = OpConstant %[[#int]] 0
+; CHECK-DAG: %[[#one:]] = OpConstant %[[#int]] 1
+; CHECK-DAG: %[[#two:]] = OpConstant %[[#int]] 2
+; CHECK-DAG: %[[#three:]] = OpConstant %[[#int]] 3
 
 define dso_local spir_func i32 @func() {
 entry:

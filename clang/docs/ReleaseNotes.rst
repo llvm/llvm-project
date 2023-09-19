@@ -41,6 +41,9 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The default extension name for PCH generation (``-c -xc-header`` and ``-c
+  -xc++-header``) is now ``.pch`` instead of ``.gch``.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -164,8 +167,11 @@ Improvements to Clang's diagnostics
   result in string truncation.
   (`#64871: <https://github.com/llvm/llvm-project/issues/64871>`_).
   Also clang no longer emits false positive warnings about the output length of
-  ``%g`` format specifier.
+  ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
+- Clang no longer emits irrelevant notes about unsatisfied constraint expressions
+  on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
+  (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -215,9 +221,11 @@ Bug Fixes in This Version
 - Support MSVC predefined macro expressions in constant expressions and in
   local structs.
 - Correctly parse non-ascii identifiers that appear immediately after a line splicing
-  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_`)
+  (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_)
 - Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
   an invalid conversion during method function overload resolution.
+- Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
+  (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -272,8 +280,30 @@ Bug Fixes to C++ Support
 
 - Fix crash when the trailing return type of a generic and dependent
   lambda refers to an init-capture.
-  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_` and
-  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_`)
+  (`#65067 <https://github.com/llvm/llvm-project/issues/65067>`_ and
+  `#63675 <https://github.com/llvm/llvm-project/issues/63675>`_)
+
+- Clang now properly handles out of line template specializations when there is
+  a non-template inner-class between the function and the class template.
+  (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
+
+- Clang now properly converts static lambda call operator to function
+  pointers on win32.
+  (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
+
+- Fixed some cases where the source location for an instantiated specialization
+  of a function template or a member function of a class template was assigned
+  the location of a non-defining declaration rather than the location of the
+  definition the specialization was instantiated from.
+  (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
+
+- Fix a crash when a default member initializer of a base aggregate
+  makes an invalid call to an immediate function.
+  (`#66324 <https://github.com/llvm/llvm-project/issues/66324>`_)
+
+- Fix crash for a lambda attribute with a statement expression
+  that contains a `return`.
+  (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -314,6 +344,23 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+Android Support
+^^^^^^^^^^^^^^^
+
+- Android target triples are usually suffixed with a version. Clang searches for
+  target-specific runtime and standard libraries in directories named after the
+  target (e.g. if you're building with ``--target=aarch64-none-linux-android21``,
+  Clang will look for ``lib/aarch64-none-linux-android21`` under its resource
+  directory to find runtime libraries). If an exact match isn't found, Clang
+  would previously fall back to a directory without any version (which would be
+  ``lib/aarch64-none-linux-android`` in our example). Clang will now look for
+  directories for lower versions and use the newest version it finds instead,
+  e.g. if you have ``lib/aarch64-none-linux-android21`` and
+  ``lib/aarch64-none-linux-android29``, ``-target aarch64-none-linux-android23``
+  will use the former and ``-target aarch64-none-linux-android30`` will use the
+  latter. Falling back to a versionless directory will now emit a warning, and
+  the fallback will be removed in Clang 19.
 
 Windows Support
 ^^^^^^^^^^^^^^^
@@ -402,6 +449,13 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
+  taint on ``strlen`` and ``strnlen`` calls, unless these are marked
+  explicitly propagators in the user-provided taint configuration file.
+  This removal empirically reduces the number of false positive reports.
+  Read the PR for the details.
+  (`#66086 <https://github.com/llvm/llvm-project/pull/66086>`_)
 
 .. _release-notes-sanitizers:
 

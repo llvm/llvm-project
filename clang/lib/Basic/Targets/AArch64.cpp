@@ -336,7 +336,18 @@ void AArch64TargetInfo::getTargetDefinesARMV94A(const LangOptions &Opts,
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
-  Builder.defineMacro("__aarch64__");
+  if (getTriple().isWindowsArm64EC()) {
+    // Define the same set of macros as would be defined on x86_64 to ensure that
+    // ARM64EC datatype layouts match those of x86_64 compiled code
+    Builder.defineMacro("__amd64__");
+    Builder.defineMacro("__amd64");
+    Builder.defineMacro("__x86_64");
+    Builder.defineMacro("__x86_64__");
+    Builder.defineMacro("__arm64ec__");
+  } else {
+    Builder.defineMacro("__aarch64__");
+  }
+
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
@@ -968,7 +979,7 @@ bool AArch64TargetInfo::initFeatureMap(
   // Parse the CPU and add any implied features.
   std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
   if (CpuInfo) {
-    uint64_t Exts = CpuInfo->getImpliedExtensions();
+    auto Exts = CpuInfo->getImpliedExtensions();
     std::vector<StringRef> CPUFeats;
     llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
     for (auto F : CPUFeats) {
@@ -1466,7 +1477,13 @@ MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
 void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
   WindowsARM64TargetInfo::getTargetDefines(Opts, Builder);
-  Builder.defineMacro("_M_ARM64", "1");
+  if (getTriple().isWindowsArm64EC()) {
+    Builder.defineMacro("_M_X64", "100");
+    Builder.defineMacro("_M_AMD64", "100");
+    Builder.defineMacro("_M_ARM64EC", "1");
+  } else {
+    Builder.defineMacro("_M_ARM64", "1");
+  }
 }
 
 TargetInfo::CallingConvKind

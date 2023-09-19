@@ -400,7 +400,8 @@ public:
   void clear();
 
   const std::optional<StrOffsetsContributionDescriptor> &
-  getStringOffsetsTableContribution() const {
+  getStringOffsetsTableContribution() {
+    extractDIEsIfNeeded(true /*CUDIeOnly*/);
     return StringOffsetsTableContribution;
   }
 

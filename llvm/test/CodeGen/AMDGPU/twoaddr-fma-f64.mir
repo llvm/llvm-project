@@ -56,7 +56,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_sgpr_src0_f64
-# GCN: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
+# GCN: V_FMA_F64_e64 0, killed %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_sgpr_src0_f64
@@ -70,12 +70,13 @@ body:             |
 
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %2 = IMPLICIT_DEF
     %3 = V_FMAC_F64_e32 killed %0, %1, %2, implicit $mode, implicit $exec
 
 ...
 
 # GCN-LABEL: name: test_fmaak_inlineimm_src0_f64
-# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1:vreg_64_align2, 0, 0, implicit $mode, implicit $exec
+# GCN: V_FMA_F64_e64 0, 4611686018427387904, 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
 
 ---
 name:            test_fmaak_inlineimm_src0_f64
@@ -87,6 +88,7 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %1 = IMPLICIT_DEF
     %2 = V_FMAC_F64_e32 4611686018427387904, %0, %1, implicit $mode, implicit $exec
 
 ...
@@ -104,6 +106,7 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %1 = IMPLICIT_DEF
     %2 = V_FMAC_F64_e32 4636737291354636288, %0, %1, implicit $mode, implicit $exec
 
 ...
@@ -124,6 +127,7 @@ body:             |
   bb.0:
 
     %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %1 = IMPLICIT_DEF
     %2 = V_FMAC_F64_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
 
 ...

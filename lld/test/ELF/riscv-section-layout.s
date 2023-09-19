@@ -20,6 +20,7 @@
 # NOSDATA-NEXT: .tbss
 # NOSDATA-NEXT: .dynamic
 # NOSDATA-NEXT: .got
+# NOSDATA-NEXT: .relro_padding
 # NOSDATA-NEXT: .data    PROGBITS [[#%x,DATA:]]
 # NOSDATA-NEXT: .bss     NOBITS   [[#%x,BSS:]]
 
@@ -36,6 +37,7 @@
 # CHECK-NEXT: .tbss
 # CHECK-NEXT: .dynamic
 # CHECK-NEXT: .got
+# CHECK-NEXT: .relro_padding
 # CHECK-NEXT: .data
 # CHECK-NEXT: .sdata     PROGBITS [[#%x,SDATA:]]
 # CHECK-NEXT: .sbss      NOBITS   [[#%x,SBSS:]]

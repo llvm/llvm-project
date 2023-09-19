@@ -7,8 +7,8 @@ target triple = "powerpc64-unknown-linux-gnu"
 define void @copy_to_conceal(ptr %inp) #0 {
 ; CHECK-LABEL: copy_to_conceal:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vxor 2, 2, 2
 ; CHECK-NEXT:    addi 4, 1, -16
+; CHECK-NEXT:    vxor 2, 2, 2
 ; CHECK-NEXT:    stvx 2, 0, 4
 ; CHECK-NEXT:    ld 4, -8(1)
 ; CHECK-NEXT:    std 4, 8(3)

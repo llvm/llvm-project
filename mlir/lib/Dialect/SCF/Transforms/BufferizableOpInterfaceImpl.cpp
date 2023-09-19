@@ -134,14 +134,7 @@ struct ExecuteRegionOpInterface
     // TODO: scf.execute_region with multiple yields are not supported.
     if (!getUniqueYieldOp(executeRegionOp))
       return op->emitOpError("op without unique scf.yield is not supported");
-    const auto &options =
-        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-    // allow-return-allocs is required for ops with multiple blocks.
-    if (options.allowReturnAllocs ||
-        executeRegionOp.getRegion().getBlocks().size() == 1)
-      return success();
-    return op->emitOpError(
-        "op cannot be bufferized without allow-return-allocs");
+    return success();
   }
 
   AliasingOpOperandList
@@ -332,7 +325,7 @@ DenseSet<int64_t> getEquivalentBuffers(Block::BlockArgListType bbArgs,
 /// Helper function for loop bufferization. Return the bufferized values of the
 /// given OpOperands. If an operand is not a tensor, return the original value.
 static FailureOr<SmallVector<Value>>
-getBuffers(RewriterBase &rewriter, MutableArrayRef<OpOperand> operands,
+getBuffers(RewriterBase &rewriter, MutableOperandRange operands,
            const BufferizationOptions &options) {
   SmallVector<Value> result;
   for (OpOperand &opOperand : operands) {
@@ -552,9 +545,8 @@ struct ForOpInterface
         yieldValues.push_back(value);
         continue;
       }
-      FailureOr<Value> alloc =
-          allocateTensorForShapedValue(rewriter, yieldOp.getLoc(), value,
-                                       /*escape=*/true, state.getOptions());
+      FailureOr<Value> alloc = allocateTensorForShapedValue(
+          rewriter, yieldOp.getLoc(), value, state.getOptions());
       if (failed(alloc))
         return failure();
       yieldValues.push_back(*alloc);
@@ -606,7 +598,7 @@ struct ForOpInterface
 
     // The new memref init_args of the loop.
     FailureOr<SmallVector<Value>> maybeInitArgs =
-        getBuffers(rewriter, forOp.getIterOpOperands(), options);
+        getBuffers(rewriter, forOp.getInitArgsMutable(), options);
     if (failed(maybeInitArgs))
       return failure();
     SmallVector<Value> initArgs = *maybeInitArgs;
@@ -661,7 +653,7 @@ struct ForOpInterface
                                const AnalysisState &state) const {
     const auto &options =
         static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-    if (options.allowReturnAllocs)
+    if (options.allowReturnAllocsFromLoops)
       return success();
 
     auto forOp = cast<scf::ForOp>(op);
@@ -799,9 +791,8 @@ struct WhileOpInterface
         beforeYieldValues.push_back(value);
         continue;
       }
-      FailureOr<Value> alloc =
-          allocateTensorForShapedValue(rewriter, conditionOp.getLoc(), value,
-                                       /*escape=*/true, state.getOptions());
+      FailureOr<Value> alloc = allocateTensorForShapedValue(
+          rewriter, conditionOp.getLoc(), value, state.getOptions());
       if (failed(alloc))
         return failure();
       beforeYieldValues.push_back(*alloc);
@@ -825,7 +816,7 @@ struct WhileOpInterface
 
     // The new memref init_args of the loop.
     FailureOr<SmallVector<Value>> maybeInitArgs =
-        getBuffers(rewriter, whileOp->getOpOperands(), options);
+        getBuffers(rewriter, whileOp.getInitsMutable(), options);
     if (failed(maybeInitArgs))
       return failure();
     SmallVector<Value> initArgs = *maybeInitArgs;
@@ -947,7 +938,7 @@ struct WhileOpInterface
     auto whileOp = cast<scf::WhileOp>(op);
     const auto &options =
         static_cast<const OneShotBufferizationOptions &>(state.getOptions());
-    if (options.allowReturnAllocs)
+    if (options.allowReturnAllocsFromLoops)
       return success();
 
     auto conditionOp = whileOp.getConditionOp();

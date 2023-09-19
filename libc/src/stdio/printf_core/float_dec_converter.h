@@ -299,100 +299,11 @@ public:
     return 0;
   }
 
-  int write_last_block_dec(BlockInt block, size_t block_digits,
-                           RoundDirection round) {
-    char end_buff[BLOCK_SIZE];
+  int write_last_block(BlockInt block, size_t block_digits,
+                       RoundDirection round, int exponent = 0,
+                       char exp_char = '\0') {
+    bool has_exp = (exp_char != '\0');
 
-    const DecimalString buf(block + (MAX_BLOCK + 1));
-    const cpp::string_view int_to_str = buf.view();
-
-    // copy the last block_digits characters into the start of end_buff.
-    // TODO: Replace with memcpy
-    for (size_t count = 0; count < block_digits; ++count) {
-      end_buff[count] = int_to_str[count + 1 + (BLOCK_SIZE - block_digits)];
-    }
-
-    char low_digit = '0';
-    if (block_digits > 0) {
-      low_digit = end_buff[block_digits - 1];
-    } else if (max_block_count > 0) {
-      low_digit = '9';
-    } else if (buffered_digits > 0) {
-      low_digit = block_buffer[buffered_digits - 1];
-    }
-
-    bool round_up_max_blocks = false;
-
-    // Round up
-    if (round == RoundDirection::Up ||
-        (round == RoundDirection::Even && low_digit % 2 != 0)) {
-      bool has_carry = true;
-      round_up_max_blocks = true; // if we're rounding up, we might need to
-                                  // round up the max blocks that are buffered.
-      // handle the low block that we're adding
-      for (int count = static_cast<int>(block_digits) - 1;
-           count >= 0 && has_carry; --count) {
-        if (end_buff[count] == '9') {
-          end_buff[count] = '0';
-        } else {
-          end_buff[count] += 1;
-          has_carry = false;
-          round_up_max_blocks = false; // If the low block isn't all nines, then
-                                       // the max blocks aren't rounded up.
-        }
-      }
-      // handle the high block that's buffered
-      for (int count = static_cast<int>(buffered_digits) - 1;
-           count >= 0 && has_carry; --count) {
-        if (block_buffer[count] == '9') {
-          block_buffer[count] = '0';
-        } else {
-          block_buffer[count] += 1;
-          has_carry = false;
-        }
-      }
-
-      // has_carry should only be true here if every previous digit is 9, which
-      // implies that the number has never been written.
-      if (has_carry /* && !has_written */) {
-        ++total_digits;
-        ++digits_before_decimal;
-        // Normally write_left_padding is called by flush_buffer but since we're
-        // rounding up all of the digits, the ones in the buffer are wrong and
-        // can't be flushed.
-        RET_IF_RESULT_NEGATIVE(
-            padding_writer.write_left_padding(writer, total_digits));
-        // Now we know we need to print a leading 1, zeroes up to the decimal
-        // point, the decimal point, and then finally digits after it.
-        RET_IF_RESULT_NEGATIVE(writer->write('1'));
-        // digits_before_decimal - 1 to account for the leading '1'
-        RET_IF_RESULT_NEGATIVE(writer->write('0', digits_before_decimal - 1));
-        if (has_decimal_point) {
-          RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
-          // add one to digits_before_decimal to account for the decimal point
-          // itself.
-          if (total_digits > digits_before_decimal + 1) {
-            RET_IF_RESULT_NEGATIVE(
-                writer->write('0', total_digits - (digits_before_decimal + 1)));
-          }
-        }
-        total_digits_written = total_digits;
-        return 0;
-      }
-    }
-    // Either we intend to round down, or the rounding up is complete. Flush the
-    // buffers.
-
-    RET_IF_RESULT_NEGATIVE(flush_buffer(round_up_max_blocks));
-
-    // And then write the final block.
-    RET_IF_RESULT_NEGATIVE(writer->write({end_buff, block_digits}));
-    total_digits_written += block_digits;
-    return 0;
-  }
-
-  int write_last_block_exp(uint32_t block, size_t block_digits,
-                           RoundDirection round, int exponent, char exp_char) {
     char end_buff[BLOCK_SIZE];
 
     {
@@ -450,48 +361,74 @@ public:
       // has_carry should only be true here if every previous digit is 9, which
       // implies that the number has never been written.
       if (has_carry /* && !has_written */) {
-        // Since this is exponential notation, we don't write any more digits
-        // but we do increment the exponent.
-        ++exponent;
+        if (has_exp) { // This is in %e style
+          // Since this is exponential notation, we don't write any more digits
+          // but we do increment the exponent.
+          ++exponent;
 
-        const ExponentString buf(exponent);
-        const cpp::string_view int_to_str = buf.view();
+          const ExponentString buf(exponent);
+          const cpp::string_view int_to_str = buf.view();
 
-        // TODO: also change this to calculate the width of the number more
-        // efficiently.
-        size_t exponent_width = int_to_str.size();
-        size_t number_digits =
-            buffered_digits + (max_block_count * BLOCK_SIZE) + block_digits;
+          // TODO: also change this to calculate the width of the number more
+          // efficiently.
+          size_t exponent_width = int_to_str.size();
+          size_t number_digits =
+              buffered_digits + (max_block_count * BLOCK_SIZE) + block_digits;
 
-        // Here we have to recalculate the total number of digits since the
-        // exponent's width may have changed. We're only adding 1 to exponent
-        // width since exp_str appends the sign.
-        total_digits =
-            (has_decimal_point ? 1 : 0) + number_digits + 1 + exponent_width;
+          // Here we have to recalculate the total number of digits since the
+          // exponent's width may have changed. We're only adding 1 to exponent
+          // width since exp_str appends the sign.
+          total_digits =
+              (has_decimal_point ? 1 : 0) + number_digits + 1 + exponent_width;
 
-        // Normally write_left_padding is called by flush_buffer but since we're
-        // rounding up all of the digits, the ones in the buffer are wrong and
-        // can't be flushed.
-        RET_IF_RESULT_NEGATIVE(
-            padding_writer.write_left_padding(writer, total_digits));
-        // Now we know we need to print a leading 1, the decimal point, and then
-        // zeroes after it.
-        RET_IF_RESULT_NEGATIVE(writer->write('1'));
-        // digits_before_decimal - 1 to account for the leading '1'
-        if (has_decimal_point) {
-          RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
-          // This is just the length of the number, not including the decimal
-          // point, or exponent.
+          // Normally write_left_padding is called by flush_buffer but since
+          // we're rounding up all of the digits, the ones in the buffer are
+          // wrong and can't be flushed.
+          RET_IF_RESULT_NEGATIVE(
+              padding_writer.write_left_padding(writer, total_digits));
+          // Now we know we need to print a leading 1, the decimal point, and
+          // then zeroes after it.
+          RET_IF_RESULT_NEGATIVE(writer->write('1'));
+          // digits_before_decimal - 1 to account for the leading '1'
+          if (has_decimal_point) {
+            RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
+            // This is just the length of the number, not including the decimal
+            // point, or exponent.
 
-          if (number_digits > 1) {
-            RET_IF_RESULT_NEGATIVE(writer->write('0', number_digits - 1));
+            if (number_digits > 1) {
+              RET_IF_RESULT_NEGATIVE(writer->write('0', number_digits - 1));
+            }
           }
-        }
-        RET_IF_RESULT_NEGATIVE(writer->write(exp_char));
-        RET_IF_RESULT_NEGATIVE(writer->write(int_to_str));
+          RET_IF_RESULT_NEGATIVE(writer->write(exp_char));
+          RET_IF_RESULT_NEGATIVE(writer->write(int_to_str));
 
-        total_digits_written = total_digits;
-        return WRITE_OK;
+          total_digits_written = total_digits;
+          return WRITE_OK;
+        } else { // This is in %f style
+          ++total_digits;
+          ++digits_before_decimal;
+          // Normally write_left_padding is called by flush_buffer but since
+          // we're rounding up all of the digits, the ones in the buffer are
+          // wrong and can't be flushed.
+          RET_IF_RESULT_NEGATIVE(
+              padding_writer.write_left_padding(writer, total_digits));
+          // Now we know we need to print a leading 1, zeroes up to the decimal
+          // point, the decimal point, and then finally digits after it.
+          RET_IF_RESULT_NEGATIVE(writer->write('1'));
+          // digits_before_decimal - 1 to account for the leading '1'
+          RET_IF_RESULT_NEGATIVE(writer->write('0', digits_before_decimal - 1));
+          if (has_decimal_point) {
+            RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
+            // add one to digits_before_decimal to account for the decimal point
+            // itself.
+            if (total_digits > digits_before_decimal + 1) {
+              RET_IF_RESULT_NEGATIVE(writer->write(
+                  '0', total_digits - (digits_before_decimal + 1)));
+            }
+          }
+          total_digits_written = total_digits;
+          return WRITE_OK;
+        }
       }
     }
     // Either we intend to round down, or the rounding up is complete. Flush the
@@ -509,10 +446,11 @@ public:
     buffered_digits = block_digits;
     RET_IF_RESULT_NEGATIVE(flush_buffer());
 
-    RET_IF_RESULT_NEGATIVE(writer->write(exp_char));
-    const ExponentString buf(exponent);
-    RET_IF_RESULT_NEGATIVE(writer->write(buf.view()));
-
+    if (has_exp) {
+      RET_IF_RESULT_NEGATIVE(writer->write(exp_char));
+      const ExponentString buf(exponent);
+      RET_IF_RESULT_NEGATIVE(writer->write(buf.view()));
+    }
     total_digits_written = total_digits;
 
     return WRITE_OK;
@@ -634,7 +572,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
         round = get_round_direction(last_digit, truncated, is_negative);
 
         RET_IF_RESULT_NEGATIVE(
-            float_writer.write_last_block_dec(digits, maximum, round));
+            float_writer.write_last_block(digits, maximum, round));
         break;
       }
     }
@@ -800,7 +738,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   }
   round = get_round_direction(last_digit, truncated, is_negative);
 
-  RET_IF_RESULT_NEGATIVE(float_writer.write_last_block_exp(
+  RET_IF_RESULT_NEGATIVE(float_writer.write_last_block(
       digits, maximum, round, final_exponent, a + 'E' - 'A'));
 
   RET_IF_RESULT_NEGATIVE(float_writer.right_pad());

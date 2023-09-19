@@ -1,20 +1,20 @@
-# RUN: llvm-mc -arch=hexagon -mv5 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V5 %s
-# RUN: llvm-mc -arch=hexagon -mv55 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V55 %s
-# RUN: llvm-mc -arch=hexagon -mv60 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V60 %s
-# RUN: llvm-mc -arch=hexagon -mv62 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V62 %s
-# RUN: llvm-mc -arch=hexagon -mv65 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V65 %s
-# RUN: llvm-mc -arch=hexagon -mv67 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V67 %s
-# RUN: llvm-mc -arch=hexagon -mv68 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V68 %s
-# RUN: llvm-mc -arch=hexagon -mv69 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V69 %s
+# RUN: llvm-mc -triple=hexagon -mv5 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V5 %s
+# RUN: llvm-mc -triple=hexagon -mv55 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V55 %s
+# RUN: llvm-mc -triple=hexagon -mv60 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V60 %s
+# RUN: llvm-mc -triple=hexagon -mv62 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V62 %s
+# RUN: llvm-mc -triple=hexagon -mv65 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V65 %s
+# RUN: llvm-mc -triple=hexagon -mv67 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V67 %s
+# RUN: llvm-mc -triple=hexagon -mv68 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V68 %s
+# RUN: llvm-mc -triple=hexagon -mv69 -filetype=obj %s | llvm-readelf -h - | FileCheck --check-prefix=CHECK-V69 %s
 
-# RUN: llvm-mc -arch=hexagon -mv5 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv55 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv60 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv62 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv65 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv67 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv68 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
-# RUN: llvm-mc -arch=hexagon -mv69 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv5 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv55 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv60 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv62 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv65 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv67 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv68 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
+# RUN: llvm-mc -triple=hexagon -mv69 -filetype=obj %s | llvm-objdump --disassemble - | FileCheck --check-prefix=CHECK-OBJDUMP %s
     .text
 r1 = r1
 

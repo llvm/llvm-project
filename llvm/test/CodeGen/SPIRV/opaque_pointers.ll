@@ -1,11 +1,11 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
 
-; CHECK: %[[#Int8Ty:]] = OpTypeInt 8 0
-; CHECK: %[[#PtrTy:]] = OpTypePointer Function %[[#Int8Ty]]
-; CHECK: %[[#Int64Ty:]] = OpTypeInt 64 0
-; CHECK: %[[#FTy:]] = OpTypeFunction %[[#Int64Ty]] %[[#PtrTy]]
-; CHECK: %[[#Int32Ty:]] = OpTypeInt 32 0
-; CHECK: %[[#Const:]] = OpConstant %[[#Int32Ty]] 0
+; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#PtrTy:]] = OpTypePointer Function %[[#Int8Ty]]
+; CHECK-DAG: %[[#Int64Ty:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#FTy:]] = OpTypeFunction %[[#Int64Ty]] %[[#PtrTy]]
+; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#Const:]] = OpConstant %[[#Int32Ty]] 0
 ; CHECK: OpFunction %[[#Int64Ty]] None %[[#FTy]]
 ; CHECK: %[[#Parm:]] = OpFunctionParameter %[[#PtrTy]]
 ; CHECK: OpStore %[[#Parm]] %[[#Const]] Aligned 4

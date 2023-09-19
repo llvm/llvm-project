@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: ds_add_u32 v1, v2 offset:65535          ; encoding: [0xff,0xff,0x00,0xd8,0x01,0x02,0x00,0x00]
 0xff,0xff,0x00,0xd8,0x01,0x02,0x00,0x00

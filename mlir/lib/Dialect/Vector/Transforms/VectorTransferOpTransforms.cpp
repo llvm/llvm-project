@@ -206,6 +206,10 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
       users.append(subView->getUsers().begin(), subView->getUsers().end());
       continue;
     }
+    if (auto collapsed = dyn_cast<memref::CollapseShapeOp>(user)) {
+      users.append(collapsed->getUsers().begin(), collapsed->getUsers().end());
+      continue;
+    }
     if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
       continue;
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {
