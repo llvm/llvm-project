@@ -12,6 +12,7 @@
 
 let TargetPrefix = "spv" in {
   def int_spv_assign_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
+  def int_spv_assign_ptr_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
   def int_spv_assign_name : Intrinsic<[], [llvm_any_ty, llvm_vararg_ty]>;
 
   def int_spv_track_constant : Intrinsic<[llvm_any_ty], [llvm_any_ty, llvm_metadata_ty]>;
