@@ -265,8 +265,9 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
-  assert((!TT.isOSAIX() || !RM || *RM == Reloc::PIC_) &&
-         "Invalid relocation model for AIX.");
+  if (TT.isOSAIX() && RM && *RM != Reloc::PIC_)
+    report_fatal_error("invalid relocation model, AIX only supports PIC",
+                       false);
 
   if (RM)
     return *RM;
