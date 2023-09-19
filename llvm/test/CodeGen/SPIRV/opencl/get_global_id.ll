@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -opaque-pointers=0 %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ;; The set of valid inputs for get_global_id depends on the runtime NDRange,
 ;; but inputs outside of [0, 2] always return 0.

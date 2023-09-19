@@ -1476,9 +1476,21 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   // FIXME: don't use MachineIRBuilder here, replace it with BuildMI.
   MachineIRBuilder MIRBuilder(I);
   const GlobalValue *GV = I.getOperand(1).getGlobal();
-  SPIRVType *ResType = GR.getOrCreateSPIRVType(
-      GV->getType(), MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
-
+  Type *GVType = GV->getValueType();
+  SPIRVType *PointerBaseType;
+  if (GVType->isArrayTy()) {
+    SPIRVType *ArrayElementType =
+        GR.getOrCreateSPIRVType(GVType->getArrayElementType(), MIRBuilder,
+                                SPIRV::AccessQualifier::ReadWrite, false);
+    PointerBaseType = GR.getOrCreateSPIRVArrayType(
+        ArrayElementType, GVType->getArrayNumElements(), I, TII);
+  } else {
+    PointerBaseType = GR.getOrCreateSPIRVType(
+        GVType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, false);
+  }
+  SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(
+      PointerBaseType, I, TII,
+      addressSpaceToStorageClass(GV->getAddressSpace()));
   std::string GlobalIdent = GV->getGlobalIdentifier();
   // We have functions as operands in tests with blocks of instruction e.g. in
   // transcoding/global_block.ll. These operands are not used and should be
@@ -1489,8 +1501,6 @@ bool SPIRVInstructionSelector::selectGlobalValue(
     MachineBasicBlock &BB = *I.getParent();
     Register NewReg = GR.find(ConstVal, GR.CurMF);
     if (!NewReg.isValid()) {
-      SPIRVType *SpvBaseTy = GR.getOrCreateSPIRVIntegerType(8, I, TII);
-      ResType = GR.getOrCreateSPIRVPointerType(SpvBaseTy, I, TII);
       Register NewReg = ResVReg;
       GR.add(ConstVal, GR.CurMF, NewReg);
       return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))

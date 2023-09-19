@@ -629,20 +629,11 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
 
   Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
-    Type *Int8PtrTy =
-        Type::getInt8PtrTy(DeadIntrinsic->getContext(),
-                           OrigDest->getType()->getPointerAddressSpace());
-    Value *Dest = OrigDest;
-    if (OrigDest->getType() != Int8PtrTy)
-      Dest = CastInst::CreatePointerCast(OrigDest, Int8PtrTy, "", DeadI);
     Value *Indices[1] = {
         ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
-        Type::getInt8Ty(DeadIntrinsic->getContext()), Dest, Indices, "", DeadI);
+        Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "", DeadI);
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
-    if (NewDestGEP->getType() != OrigDest->getType())
-      NewDestGEP = CastInst::CreatePointerCast(NewDestGEP, OrigDest->getType(),
-                                               "", DeadI);
     DeadIntrinsic->setDest(NewDestGEP);
   }
 
