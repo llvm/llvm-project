@@ -1,8 +1,15 @@
 # Check that -a/-v/-vv makes the line number of the failing RUN command clear.
 
-# RUN: not %{lit} -a %{inputs}/shtest-run-at-line | FileCheck %s
-# RUN: not %{lit} -v %{inputs}/shtest-run-at-line | FileCheck %s
-# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line | FileCheck %s
+
+# This diagnostic sometimes appears in windows when using bash as an external
+# shell.  Ignore it so we can strictly check the relevant output.
+#
+# DEFINE: %{filter} = \
+# DEFINE:   grep -v 'bash.exe: warning: could not find /tmp, please create!'
+
+# RUN: not %{lit} -a %{inputs}/shtest-run-at-line | %{filter} | FileCheck %s
+# RUN: not %{lit} -v %{inputs}/shtest-run-at-line | %{filter} | FileCheck %s
+# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line | %{filter} | FileCheck %s
 # END.
 
 
