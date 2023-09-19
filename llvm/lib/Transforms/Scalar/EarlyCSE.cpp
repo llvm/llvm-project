@@ -561,13 +561,13 @@ namespace {
 
 struct GEPValue {
   Instruction *Inst;
-  std::optional<uint64_t> ConstantOffset;
+  std::optional<int64_t> ConstantOffset;
 
   GEPValue(Instruction *I) : Inst(I) {
     assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
   }
 
-  GEPValue(Instruction *I, std::optional<uint64_t> ConstantOffset)
+  GEPValue(Instruction *I, std::optional<int64_t> ConstantOffset)
       : Inst(I), ConstantOffset(ConstantOffset) {
     assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
   }
@@ -1651,7 +1651,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       auto *GEP = cast<GetElementPtrInst>(&Inst);
       APInt Offset = APInt(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
       GEPValue GEPVal(GEP, GEP->accumulateConstantOffset(SQ.DL, Offset)
-                               ? Offset.tryZExtValue()
+                               ? Offset.trySExtValue()
                                : std::nullopt);
       if (Value *V = AvailableGEPs.lookup(GEPVal)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE GEP: " << Inst << "  to: " << *V
