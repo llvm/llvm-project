@@ -90,6 +90,10 @@ compiler-rt:sanitizer:
   - compiler-rt/lib/scudo/**
   - compiler-rt/test/scudo/**
 
+compiler-rt:scudo:
+  - compiler-rt/lib/scudo/**
+  - compiler-rt/test/scudo/**
+
 xray:
   - llvm/tools/llvm-xray/**
   - compiler-rt/*/xray/**
