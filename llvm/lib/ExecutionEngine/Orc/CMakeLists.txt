@@ -26,6 +26,7 @@ add_llvm_component_library(LLVMOrcJIT
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
+  IRPartitionLayer.cpp
   JITTargetMachineBuilder.cpp
   LazyReexports.cpp
   Layer.cpp
