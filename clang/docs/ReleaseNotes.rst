@@ -346,7 +346,7 @@ Android Support
 
 - Android target triples are usually suffixed with a version. Clang searches for
   target-specific runtime and standard libraries in directories named after the
-  target (e.g. if you're building with ``-target aarch64-none-linux-android21``,
+  target (e.g. if you're building with ``--target=aarch64-none-linux-android21``,
   Clang will look for ``lib/aarch64-none-linux-android21`` under its resource
   directory to find runtime libraries). If an exact match isn't found, Clang
   would previously fall back to a directory without any version (which would be
