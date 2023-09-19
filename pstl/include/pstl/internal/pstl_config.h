@@ -61,16 +61,14 @@
 // the actual GCC version on the system.
 #define _PSTL_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
-#if defined(__clang__)
+#if __clang__
 // according to clang documentation, version can be vendor specific
 #    define _PSTL_CLANG_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
 #endif
 
 // Enable SIMD for compilers that support OpenMP 4.0
-#if (defined(_OPENMP) && _OPENMP >= 201307) || \
-    (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1600) || \
-    (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || \
-    defined(__clang__)
+#if defined(__clang__) || (_OPENMP >= 201307) || __INTEL_LLVM_COMPILER || (__INTEL_COMPILER >= 1600) ||                \
+    (!defined(__INTEL_LLVM_COMPILER) && !defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900)
 #    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
 #    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))
@@ -84,13 +82,13 @@
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM)
 #endif //Enable SIMD
 
-#if defined(__INTEL_COMPILER)
+#if (__INTEL_LLVM_COMPILER || __INTEL_COMPILER)
 #    define _PSTL_PRAGMA_FORCEINLINE _PSTL_PRAGMA(forceinline)
 #else
 #    define _PSTL_PRAGMA_FORCEINLINE
 #endif
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1900
+#if (__INTEL_LLVM_COMPILER >= 20230100 || __INTEL_COMPILER >= 1900)
 #    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _PSTL_PRAGMA(omp simd reduction(inscan, PRM))
 #    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan inclusive(PRM))
 #    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM) _PSTL_PRAGMA(omp scan exclusive(PRM))
@@ -123,28 +121,31 @@
 #   define _PSTL_CPP14_VARIABLE_TEMPLATES_PRESENT
 #endif
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1800
-#   define _PSTL_EARLYEXIT_PRESENT
-#   define _PSTL_MONOTONIC_PRESENT
+#define _PSTL_EARLYEXIT_PRESENT (__INTEL_COMPILER >= 1800)
+#define _PSTL_MONOTONIC_PRESENT (__INTEL_COMPILER >= 1800)
+
+#if (_OPENMP >= 201307 || __INTEL_LLVM_COMPILER || __INTEL_COMPILER >= 1900 ||                                         \
+     !defined(__INTEL_LLVM_COMPILER) && !defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900)
+#    define _PSTL_UDR_PRESENT 1
+#else
+#    define _PSTL_UDR_PRESENT 0
 #endif
 
-#if (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1900) || \
-    (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || \
-    (defined(_OPENMP) && _OPENMP >= 201307)
-#    define _PSTL_UDR_PRESENT
+// TODO: enable UDS on Windows with Intel LLVM-based compiler when it is fixed
+#if (__INTEL_LLVM_COMPILER >= 20230100 && !defined(_MSC_VER)) ||                                                       \
+    (__INTEL_COMPILER >= 1900 && __INTEL_COMPILER_BUILD_DATE >= 20180626)
+#    define _PSTL_UDS_PRESENT 1
+#else
+#    define _PSTL_UDS_PRESENT 0
 #endif
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1900 && __INTEL_COMPILER_BUILD_DATE >= 20180626
-#   define _PSTL_UDS_PRESENT
-#endif
-
-#if defined(_PSTL_EARLYEXIT_PRESENT)
+#if _PSTL_EARLYEXIT_PRESENT
 #    define _PSTL_PRAGMA_SIMD_EARLYEXIT _PSTL_PRAGMA(omp simd early_exit)
 #else
 #    define _PSTL_PRAGMA_SIMD_EARLYEXIT
 #endif
 
-#if defined(_PSTL_MONOTONIC_PRESENT)
+#if _PSTL_MONOTONIC_PRESENT
 #    define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC(PRM) _PSTL_PRAGMA(omp ordered simd monotonic(PRM))
 #    define _PSTL_PRAGMA_SIMD_ORDERED_MONOTONIC_2ARGS(PRM1, PRM2) _PSTL_PRAGMA(omp ordered simd monotonic(PRM1, PRM2))
 #else
@@ -160,22 +161,22 @@
 // omp_priv - refers to the private copy of the initial value
 // omp_orig - refers to the original variable to be reduced
 #define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                       \
-    _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
+    _PSTL_PRAGMA(omp declare reduction(NAME : OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 1600
+#if (__INTEL_COMPILER >= 1600)
 #    define _PSTL_PRAGMA_VECTOR_UNALIGNED _PSTL_PRAGMA(vector unaligned)
 #else
 #    define _PSTL_PRAGMA_VECTOR_UNALIGNED
 #endif
 
 // Check the user-defined macro to use non-temporal stores
-#if defined(PSTL_USE_NONTEMPORAL_STORES) && (__INTEL_COMPILER >= 1600)
+#if defined(PSTL_USE_NONTEMPORAL_STORES) && (__INTEL_LLVM_COMPILER || __INTEL_COMPILER >= 1600)
 #    define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED _PSTL_PRAGMA(vector nontemporal)
 #else
 #    define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
 #endif
 
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER) // the preprocessors don't type a message location
+#if _MSC_VER || __INTEL_COMPILER //the preprocessors don't type a message location
 #    define _PSTL_PRAGMA_LOCATION __FILE__ ":" _PSTL_STRING(__LINE__) ": [Parallel STL message]: "
 #else
 #    define _PSTL_PRAGMA_LOCATION " [Parallel STL message]: "
@@ -183,7 +184,7 @@
 
 #define _PSTL_PRAGMA_MESSAGE_IMPL(x) _PSTL_PRAGMA(message(_PSTL_STRING_CONCAT(_PSTL_PRAGMA_LOCATION, x)))
 
-#if defined(_PSTL_USAGE_WARNINGS)
+#if _PSTL_USAGE_WARNINGS
 #    define _PSTL_PRAGMA_MESSAGE(x) _PSTL_PRAGMA_MESSAGE_IMPL(x)
 #    define _PSTL_PRAGMA_MESSAGE_POLICIES(x) _PSTL_PRAGMA_MESSAGE_IMPL(x)
 #else
@@ -197,8 +198,14 @@
 #   define _PSTL_CPP11_STD_ROTATE_BROKEN
 #endif
 
-#if defined(__INTEL_COMPILER) && __INTEL_COMPILER == 1800
-#   define _PSTL_ICC_18_OMP_SIMD_BROKEN
+#define _PSTL_ICC_18_OMP_SIMD_BROKEN (__INTEL_COMPILER == 1800)
+
+// This 'broken' macro should be defined to 1 till the compiler processes 'omp simd' code correctly
+// TODO: limit the macro with a specific version once the issue is fixed
+#if defined(_MSC_VER) && __INTEL_LLVM_COMPILER
+#    define _PSTL_ICPX_OMP_SIMD_DESTROY_WINDOWS_BROKEN 1
+#else
+#    define _PSTL_ICPX_OMP_SIMD_DESTROY_WINDOWS_BROKEN 0
 #endif
 
-#endif /* _PSTL_CONFIG_H */
+#endif // _PSTL_CONFIG_H
