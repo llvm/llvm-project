@@ -48,6 +48,7 @@ extern "C" {
   };                                                                           \
   typedef struct name name
 
+DEFINE_C_API_STRUCT(MlirAsmState, void);
 DEFINE_C_API_STRUCT(MlirBytecodeWriterConfig, void);
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
@@ -382,6 +383,29 @@ mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
 /// on inference failure and will emit diagnostics.
 MLIR_CAPI_EXPORTED void
 mlirOperationStateEnableResultTypeInference(MlirOperationState *state);
+
+//===----------------------------------------------------------------------===//
+// AsmState API.
+// While many of these are simple settings that could be represented in a
+// struct, they are wrapped in a heap allocated object and accessed via
+// functions to maximize the possibility of compatibility over time.
+//===----------------------------------------------------------------------===//
+
+/// Creates new AsmState, as with AsmState the IR should not be mutated
+/// in-between using this state.
+/// Must be freed with a call to mlirAsmStateDestroy().
+// TODO: This should be expanded to handle location & resouce map.
+MLIR_CAPI_EXPORTED MlirAsmState
+mlirAsmStateCreateForOperation(MlirOperation op, MlirOpPrintingFlags flags);
+
+/// Creates new AsmState from value.
+/// Must be freed with a call to mlirAsmStateDestroy().
+// TODO: This should be expanded to handle location & resouce map.
+MLIR_CAPI_EXPORTED MlirAsmState
+mlirAsmStateCreateForValue(MlirValue value, MlirOpPrintingFlags flags);
+
+/// Destroys printing flags created with mlirAsmStateCreate.
+MLIR_CAPI_EXPORTED void mlirAsmStateDestroy(MlirAsmState state);
 
 //===----------------------------------------------------------------------===//
 // Op Printing flags API.
@@ -815,7 +839,7 @@ mlirValuePrint(MlirValue value, MlirStringCallback callback, void *userData);
 
 /// Prints a value as an operand (i.e., the ValueID).
 MLIR_CAPI_EXPORTED void mlirValuePrintAsOperand(MlirValue value,
-                                                MlirOpPrintingFlags flags,
+                                                MlirAsmState state,
                                                 MlirStringCallback callback,
                                                 void *userData);
 
