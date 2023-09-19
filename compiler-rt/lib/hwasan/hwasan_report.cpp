@@ -423,6 +423,7 @@ class BaseReport {
   struct HeapChunk {
     uptr begin = 0;
     uptr size = 0;
+    u32 stack_id = 0;
     bool from_small_heap = false;
     bool is_allocated = false;
   };
@@ -458,6 +459,7 @@ BaseReport::HeapChunk BaseReport::CopyHeapChunk() const {
     result.size = chunk.ActualSize();
     result.from_small_heap = chunk.FromSmallHeap();
     result.is_allocated = chunk.IsAllocated();
+    result.stack_id = chunk.GetAllocStackId();
   }
   return result;
 }
@@ -793,12 +795,11 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   Printf("deallocated here:\n");
   Printf("%s", d.Default());
   stack->Print();
-  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
-  if (chunk.Beg()) {
+  if (heap.begin) {
     Printf("%s", d.Allocation());
     Printf("allocated here:\n");
     Printf("%s", d.Default());
-    GetStackTraceFromId(chunk.GetAllocStackId()).Print();
+    GetStackTraceFromId(heap.stack_id).Print();
   }
 
   InternalScopedString s;
