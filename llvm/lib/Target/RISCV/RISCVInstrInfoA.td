@@ -129,8 +129,9 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 
 /// AMOs
 
-multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT> {
-let Predicates = [HasStdExtA, NotHasStdExtZtso] in {
+multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
+                  list<Predicate> ExtraPreds = []> {
+let Predicates = !listconcat([HasStdExtA, NotHasStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
                   !cast<RVInst>(BaseInst), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -142,7 +143,7 @@ let Predicates = [HasStdExtA, NotHasStdExtZtso] in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_seq_cst"),
                   !cast<RVInst>(BaseInst#"_AQ_RL"), vt>;
 }
-let Predicates = [HasStdExtA, HasStdExtZtso] in {
+let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_monotonic"),
                   !cast<RVInst>(BaseInst), vt>;
   def : PatGprGpr<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -156,8 +157,6 @@ let Predicates = [HasStdExtA, HasStdExtZtso] in {
 }
 }
 
-let Predicates = [HasStdExtA] in {
-
 defm : AMOPat<"atomic_swap_32", "AMOSWAP_W">;
 defm : AMOPat<"atomic_load_add_32", "AMOADD_W">;
 defm : AMOPat<"atomic_load_and_32", "AMOAND_W">;
@@ -167,6 +166,8 @@ defm : AMOPat<"atomic_load_max_32", "AMOMAX_W">;
 defm : AMOPat<"atomic_load_min_32", "AMOMIN_W">;
 defm : AMOPat<"atomic_load_umax_32", "AMOMAXU_W">;
 defm : AMOPat<"atomic_load_umin_32", "AMOMINU_W">;
+
+let Predicates = [HasStdExtA] in {
 
 /// Pseudo AMOs
 
@@ -315,17 +316,17 @@ def : Pat<(int_riscv_masked_cmpxchg_i32
 
 } // Predicates = [HasStdExtA]
 
-let Predicates = [HasStdExtA, IsRV64] in {
+defm : AMOPat<"atomic_swap_64", "AMOSWAP_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_add_64", "AMOADD_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_and_64", "AMOAND_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_or_64", "AMOOR_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_xor_64", "AMOXOR_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_max_64", "AMOMAX_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_min_64", "AMOMIN_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64, [IsRV64]>;
 
-defm : AMOPat<"atomic_swap_64", "AMOSWAP_D", i64>;
-defm : AMOPat<"atomic_load_add_64", "AMOADD_D", i64>;
-defm : AMOPat<"atomic_load_and_64", "AMOAND_D", i64>;
-defm : AMOPat<"atomic_load_or_64", "AMOOR_D", i64>;
-defm : AMOPat<"atomic_load_xor_64", "AMOXOR_D", i64>;
-defm : AMOPat<"atomic_load_max_64", "AMOMAX_D", i64>;
-defm : AMOPat<"atomic_load_min_64", "AMOMIN_D", i64>;
-defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D", i64>;
-defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64>;
+let Predicates = [HasStdExtA, IsRV64] in {
 
 /// 64-bit pseudo AMOs
 
