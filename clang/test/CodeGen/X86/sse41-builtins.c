@@ -358,7 +358,7 @@ __m128i test_mm_stream_load_si128(__m128i const *a) {
   return _mm_stream_load_si128(a);
 }
 
-__m128i test_mm_stream_load_si128_void(void const *a) {
+__m128i test_mm_stream_load_si128_void(const void *a) {
   // CHECK-LABEL: test_mm_stream_load_si128_void
   // CHECK: load <2 x i64>, ptr %{{.*}}, align 16, !nontemporal
   return _mm_stream_load_si128(a);

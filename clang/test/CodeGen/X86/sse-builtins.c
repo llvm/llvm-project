@@ -720,8 +720,8 @@ void test_mm_stream_ps(float*A, __m128 B) {
   _mm_stream_ps(A, B);
 }
 
-void test_mm_stream_ps_2(void*A, __m128 B) {
-  // CHECK-LABEL: test_mm_stream_ps_2
+void test_mm_stream_ps_void(void *A, __m128 B) {
+  // CHECK-LABEL: test_mm_stream_ps_void
   // CHECK: store <4 x float> %{{.*}}, ptr %{{.*}}, align 16, !nontemporal
   _mm_stream_ps(A, B);
 }
