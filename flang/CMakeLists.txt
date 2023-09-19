@@ -326,6 +326,14 @@ else ()
   add_compile_definitions(FLANG_LITTLE_ENDIAN=1)
 endif ()
 
+if (CYGWIN)
+  # On most UNIX like platforms g++ and clang++ define _GNU_SOURCE as a
+  # predefined macro, which turns on all of the wonderful libc extensions.
+  # However g++ doesn't do this in Cygwin so we have to define it ourselfs
+  # since we depend on GNU/POSIX/BSD extensions.
+  add_definitions(-D_GNU_SOURCE=1)
+endif()
+
 # Configure Flang's Version.inc file.
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/flang/Version.inc.in
