@@ -96,12 +96,12 @@ struct CondBranchOpInterface
         mapping[retained] = ownership;
       }
       SmallVector<Value> replacements, ownerships;
-      for (Value operand : destOperands) {
-        replacements.push_back(operand);
-        if (isMemref(operand)) {
-          assert(mapping.contains(operand) &&
+      for (OpOperand &operand : destOperands) {
+        replacements.push_back(operand.get());
+        if (isMemref(operand.get())) {
+          assert(mapping.contains(operand.get()) &&
                  "Should be contained at this point");
-          ownerships.push_back(mapping[operand]);
+          ownerships.push_back(mapping[operand.get()]);
         }
       }
       replacements.append(ownerships);
