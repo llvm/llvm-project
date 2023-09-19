@@ -300,8 +300,8 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
   //   }
   Value upper = irMap.lookup(forallOp.getUpperBound()[0]);
   scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, row, upper, inc);
-  rewriter.cloneRegionBefore(forallOp.getLoopBody(), forOp.getLoopBody(),
-                             forOp.getLoopBody().begin(), irMap);
+  rewriter.cloneRegionBefore(forallOp.getRegion(), forOp.getRegion(),
+                             forOp.getRegion().begin(), irMap);
 
   // Done.
   rewriter.setInsertionPointAfter(forOp);

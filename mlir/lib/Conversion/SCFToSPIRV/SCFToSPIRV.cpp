@@ -163,7 +163,7 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
     signatureConverter.remapInput(0, newIndVar);
     for (unsigned i = 1, e = body->getNumArguments(); i < e; i++)
       signatureConverter.remapInput(i, header->getArgument(i));
-    body = rewriter.applySignatureConversion(&forOp.getLoopBody(),
+    body = rewriter.applySignatureConversion(&forOp.getRegion(),
                                              signatureConverter);
 
     // Move the blocks from the forOp into the loopOp. This is the body of the
