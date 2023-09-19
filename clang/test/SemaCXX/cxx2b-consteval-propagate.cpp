@@ -340,9 +340,11 @@ constexpr int escalating(auto) {
 }
 struct S {
     static constexpr int a = escalating(0); // expected-note 2{{in call to}}
-    // expected-error@-1 {{call to immediate function 'escalating<int>' is not a constant expression}}
+    // expected-error@-1 {{call to immediate function 'GH65985::escalating<int>' is not a constant expression}}
     // expected-error@-2 {{constexpr variable 'a' must be initialized by a constant expression}}
 };
+
+}
 
 namespace GH66324 {
 
