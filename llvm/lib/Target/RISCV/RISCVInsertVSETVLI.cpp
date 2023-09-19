@@ -1426,43 +1426,6 @@ static bool isNonZeroAVL(const MachineOperand &MO) {
   return 0 != MO.getImm();
 }
 
-// Return true if we can mutate PrevMI to match MI without changing any the
-// fields which would be observed.
-static bool canMutatePriorConfig(const MachineInstr &PrevMI,
-                                 const MachineInstr &MI,
-                                 const DemandedFields &Used) {
-  // If the VL values aren't equal, return false if either a) the former is
-  // demanded, or b) we can't rewrite the former to be the later for
-  // implementation reasons.
-  if (!isVLPreservingConfig(MI)) {
-    if (Used.VLAny)
-      return false;
-
-    // We don't bother to handle the equally zero case here as it's largely
-    // uninteresting.
-    if (Used.VLZeroness) {
-      if (isVLPreservingConfig(PrevMI))
-        return false;
-      if (!isNonZeroAVL(MI.getOperand(1)) ||
-          !isNonZeroAVL(PrevMI.getOperand(1)))
-        return false;
-    }
-
-    // TODO: Track whether the register is defined between
-    // PrevMI and MI.
-    if (MI.getOperand(1).isReg() &&
-        RISCV::X0 != MI.getOperand(1).getReg())
-      return false;
-  }
-
-  if (!PrevMI.getOperand(2).isImm() || !MI.getOperand(2).isImm())
-    return false;
-
-  auto PriorVType = PrevMI.getOperand(2).getImm();
-  auto VType = MI.getOperand(2).getImm();
-  return areCompatibleVTYPEs(PriorVType, VType, Used);
-}
-
 void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
@@ -1475,36 +1438,74 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI));
+      // We can't handle the case when the source AVL
+      // register of *NextMI is defined after MI
+      if (NextMI && NextMI->getOperand(1).isReg() && MI.getOperand(0).isReg() &&
+          MI.getOperand(0).getReg() == NextMI->getOperand(1).getReg())
+        Used.demandVL();
       continue;
     }
 
     Register VRegDef = MI.getOperand(0).getReg();
     if (VRegDef != RISCV::X0 &&
-        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef)))
-      Used.demandVL();
+        !(VRegDef.isVirtual() && MRI->use_nodbg_empty(VRegDef))) {
+      for (MachineInstr &UserMI : MRI->use_nodbg_instructions(VRegDef)) {
+        // ignore uses by *NextMI since we will deal with them explicitly
+        if (!NextMI || !UserMI.isIdenticalTo(*NextMI)) {
+          Used.demandVL();
+          break;
+        }
+      }
+    }
 
     if (NextMI) {
-      if (!Used.usedVL() && !Used.usedVTYPE()) {
-        ToDelete.push_back(&MI);
-        // Leave NextMI unchanged
-        continue;
-      } else if (canMutatePriorConfig(MI, *NextMI, Used)) {
-        if (!isVLPreservingConfig(*NextMI)) {
-          MI.getOperand(0).setReg(NextMI->getOperand(0).getReg());
-          MI.getOperand(0).setIsDead(false);
-          if (NextMI->getOperand(1).isImm())
-            MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
-          else
-            MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
-          MI.setDesc(NextMI->getDesc());
+      auto NextVRegDef = NextMI->getOperand(0).getReg();
+      auto &AVLOp = MI.getOperand(1), &NextAVLOp = NextMI->getOperand(1);
+      auto &VLTypeOp = MI.getOperand(2), &NextVLTypeOp = NextMI->getOperand(2);
+      if (areCompatibleVTYPEs(VLTypeOp.getImm(), NextVLTypeOp.getImm(), Used)) {
+        bool VLUsed =
+            Used.VLAny || (Used.VLZeroness &&
+                           (!isNonZeroAVL(AVLOp) || !isNonZeroAVL(NextAVLOp)));
+        if (isVLPreservingConfig(*NextMI) || !VLUsed) {
+          // set VLType of MI to that of *NextMI
+          VLTypeOp.setImm(NextVLTypeOp.getImm());
+          // remove *NextMI and potentially replace its uses with MI
+          ToDelete.push_back(NextMI);
+          if (NextVRegDef != RISCV::X0 && !MRI->use_nodbg_empty(NextVRegDef)) {
+            if (VRegDef != RISCV::X0)
+              MRI->replaceRegWith(NextVRegDef, VRegDef);
+            else {
+              MI.getOperand(0).ChangeToRegister(
+                  MRI->createVirtualRegister(&RISCV::GPRRegClass), true);
+              MRI->replaceRegWith(NextVRegDef, MI.getOperand(0).getReg());
+            }
+          }
+          // is the AVL op of *NextMI a non-zero reg storing the result of MI?
+          bool KeepAVL = NextAVLOp.isReg() && NextAVLOp.getReg() == VRegDef &&
+                         VRegDef != RISCV::X0;
+          // set AVL of MI to that of *NextMI whenever it makes sense to do so
+          if (!isVLPreservingConfig(*NextMI) && !KeepAVL) {
+            if (NextAVLOp.isImm())
+              AVLOp.ChangeToImmediate(NextAVLOp.getImm());
+            else {
+              AVLOp.ChangeToRegister(NextAVLOp.getReg(), false);
+              // ensure that *MI did not inadvertently become VL-preserving
+              if (VRegDef == RISCV::X0 && AVLOp.getReg() == RISCV::X0)
+                MI.getOperand(0).ChangeToRegister(
+                    MRI->createVirtualRegister(&RISCV::GPRRegClass), true);
+            }
+            MI.setDesc(NextMI->getDesc());
+          }
         }
-        MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
-        ToDelete.push_back(NextMI);
-        // fallthrough
       }
     }
     NextMI = &MI;
     Used = getDemanded(MI, MRI);
+    // ignore such uses since we can handle them explicitly
+    if (VRegDef == RISCV::X0) {
+      Used.VLAny = false;
+      Used.VLZeroness = false;
+    }
   }
 
   for (auto *MI : ToDelete)

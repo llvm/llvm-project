@@ -2530,10 +2530,9 @@ define <8 x i32> @mgather_baseidx_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB35_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -2557,9 +2556,8 @@ define <8 x i32> @mgather_baseidx_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB35_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
@@ -2577,9 +2575,8 @@ define <8 x i32> @mgather_baseidx_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB35_6
@@ -2590,10 +2587,9 @@ define <8 x i32> @mgather_baseidx_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB35_7
 ; RV64ZVE32F-NEXT:  .LBB35_14: # %cond.load10
@@ -2613,9 +2609,8 @@ define <8 x i32> @mgather_baseidx_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB35_11
@@ -2626,9 +2621,8 @@ define <8 x i32> @mgather_baseidx_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 x i1>
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -2680,10 +2674,9 @@ define <8 x i32> @mgather_baseidx_sext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB36_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -2707,9 +2700,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB36_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
@@ -2727,9 +2719,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB36_6
@@ -2740,10 +2731,9 @@ define <8 x i32> @mgather_baseidx_sext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB36_7
 ; RV64ZVE32F-NEXT:  .LBB36_14: # %cond.load10
@@ -2763,9 +2753,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB36_11
@@ -2776,9 +2765,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -2834,10 +2822,9 @@ define <8 x i32> @mgather_baseidx_zext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB37_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -2862,9 +2849,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB37_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
@@ -2883,9 +2869,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB37_6
@@ -2897,9 +2882,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB37_7
@@ -2922,9 +2906,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB37_11
@@ -2936,9 +2919,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i8_v8i32(ptr %base, <8 x i8> %idxs, <8 
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -2992,10 +2974,9 @@ define <8 x i32> @mgather_baseidx_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB38_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -3019,9 +3000,8 @@ define <8 x i32> @mgather_baseidx_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB38_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
@@ -3039,9 +3019,8 @@ define <8 x i32> @mgather_baseidx_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB38_6
@@ -3052,10 +3031,9 @@ define <8 x i32> @mgather_baseidx_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB38_7
 ; RV64ZVE32F-NEXT:  .LBB38_14: # %cond.load10
@@ -3075,9 +3053,8 @@ define <8 x i32> @mgather_baseidx_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB38_11
@@ -3088,9 +3065,8 @@ define <8 x i32> @mgather_baseidx_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -3143,10 +3119,9 @@ define <8 x i32> @mgather_baseidx_sext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB39_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -3170,9 +3145,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB39_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
@@ -3190,9 +3164,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB39_6
@@ -3203,10 +3176,9 @@ define <8 x i32> @mgather_baseidx_sext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a2
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB39_7
 ; RV64ZVE32F-NEXT:  .LBB39_14: # %cond.load10
@@ -3226,9 +3198,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    lw a2, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB39_11
@@ -3239,9 +3210,8 @@ define <8 x i32> @mgather_baseidx_sext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -3298,10 +3268,9 @@ define <8 x i32> @mgather_baseidx_zext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    lw a3, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a3
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a3
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB40_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -3326,9 +3295,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    lw a3, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a3
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a3
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB40_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
@@ -3347,9 +3315,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    lw a3, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v12, a3
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a3, a2, 8
 ; RV64ZVE32F-NEXT:    beqz a3, .LBB40_6
@@ -3361,10 +3328,9 @@ define <8 x i32> @mgather_baseidx_zext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    lw a3, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a3
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a3
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a3, a2, 16
 ; RV64ZVE32F-NEXT:    beqz a3, .LBB40_7
 ; RV64ZVE32F-NEXT:  .LBB40_14: # %cond.load10
@@ -3386,9 +3352,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    lw a3, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v12, a3
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v12, a3
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a2, a2, -128
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB40_11
@@ -3400,9 +3365,8 @@ define <8 x i32> @mgather_baseidx_zext_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    lw a0, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -8333,10 +8297,9 @@ define <8 x float> @mgather_baseidx_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v9, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB74_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -8360,9 +8323,8 @@ define <8 x float> @mgather_baseidx_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB74_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
@@ -8380,9 +8342,8 @@ define <8 x float> @mgather_baseidx_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB74_6
@@ -8393,10 +8354,9 @@ define <8 x float> @mgather_baseidx_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB74_7
 ; RV64ZVE32F-NEXT:  .LBB74_14: # %cond.load10
@@ -8416,9 +8376,8 @@ define <8 x float> @mgather_baseidx_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB74_11
@@ -8429,9 +8388,8 @@ define <8 x float> @mgather_baseidx_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <8 x i
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -8483,10 +8441,9 @@ define <8 x float> @mgather_baseidx_sext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v9, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB75_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -8510,9 +8467,8 @@ define <8 x float> @mgather_baseidx_sext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB75_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
@@ -8530,9 +8486,8 @@ define <8 x float> @mgather_baseidx_sext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB75_6
@@ -8543,10 +8498,9 @@ define <8 x float> @mgather_baseidx_sext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB75_7
 ; RV64ZVE32F-NEXT:  .LBB75_14: # %cond.load10
@@ -8566,9 +8520,8 @@ define <8 x float> @mgather_baseidx_sext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB75_11
@@ -8579,9 +8532,8 @@ define <8 x float> @mgather_baseidx_sext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -8637,10 +8589,9 @@ define <8 x float> @mgather_baseidx_zext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v9, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB76_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -8665,9 +8616,8 @@ define <8 x float> @mgather_baseidx_zext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB76_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
@@ -8686,9 +8636,8 @@ define <8 x float> @mgather_baseidx_zext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB76_6
@@ -8700,9 +8649,8 @@ define <8 x float> @mgather_baseidx_zext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB76_7
@@ -8725,9 +8673,8 @@ define <8 x float> @mgather_baseidx_zext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB76_11
@@ -8739,9 +8686,8 @@ define <8 x float> @mgather_baseidx_zext_v8i8_v8f32(ptr %base, <8 x i8> %idxs, <
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -8795,10 +8741,9 @@ define <8 x float> @mgather_baseidx_v8i16_v8f32(ptr %base, <8 x i16> %idxs, <8 x
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v9, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB77_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -8822,9 +8767,8 @@ define <8 x float> @mgather_baseidx_v8i16_v8f32(ptr %base, <8 x i16> %idxs, <8 x
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB77_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
@@ -8842,9 +8786,8 @@ define <8 x float> @mgather_baseidx_v8i16_v8f32(ptr %base, <8 x i16> %idxs, <8 x
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB77_6
@@ -8855,10 +8798,9 @@ define <8 x float> @mgather_baseidx_v8i16_v8f32(ptr %base, <8 x i16> %idxs, <8 x
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB77_7
 ; RV64ZVE32F-NEXT:  .LBB77_14: # %cond.load10
@@ -8878,9 +8820,8 @@ define <8 x float> @mgather_baseidx_v8i16_v8f32(ptr %base, <8 x i16> %idxs, <8 x
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB77_11
@@ -8891,9 +8832,8 @@ define <8 x float> @mgather_baseidx_v8i16_v8f32(ptr %base, <8 x i16> %idxs, <8 x
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -8946,10 +8886,9 @@ define <8 x float> @mgather_baseidx_sext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v9, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB78_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -8973,9 +8912,8 @@ define <8 x float> @mgather_baseidx_sext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB78_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
@@ -8993,9 +8931,8 @@ define <8 x float> @mgather_baseidx_sext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB78_6
@@ -9006,10 +8943,9 @@ define <8 x float> @mgather_baseidx_sext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a2, a1, 16
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB78_7
 ; RV64ZVE32F-NEXT:  .LBB78_14: # %cond.load10
@@ -9029,9 +8965,8 @@ define <8 x float> @mgather_baseidx_sext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a2, a2, 2
 ; RV64ZVE32F-NEXT:    add a2, a0, a2
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a2)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a1, a1, -128
 ; RV64ZVE32F-NEXT:    beqz a1, .LBB78_11
@@ -9042,9 +8977,8 @@ define <8 x float> @mgather_baseidx_sext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -9101,10 +9035,9 @@ define <8 x float> @mgather_baseidx_zext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v9, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 1
 ; RV64ZVE32F-NEXT:  .LBB79_4: # %else2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; RV64ZVE32F-NEXT:    vslidedown.vi v9, v8, 4
@@ -9129,9 +9062,8 @@ define <8 x float> @mgather_baseidx_zext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 5
 ; RV64ZVE32F-NEXT:  .LBB79_9: # %else14
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
@@ -9150,9 +9082,8 @@ define <8 x float> @mgather_baseidx_zext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 2
 ; RV64ZVE32F-NEXT:    andi a3, a2, 8
 ; RV64ZVE32F-NEXT:    beqz a3, .LBB79_6
@@ -9164,10 +9095,9 @@ define <8 x float> @mgather_baseidx_zext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
-; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
-; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 3
+; RV64ZVE32F-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
+; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 3
 ; RV64ZVE32F-NEXT:    andi a3, a2, 16
 ; RV64ZVE32F-NEXT:    beqz a3, .LBB79_7
 ; RV64ZVE32F-NEXT:  .LBB79_14: # %cond.load10
@@ -9189,9 +9119,8 @@ define <8 x float> @mgather_baseidx_zext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a3, a3, 2
 ; RV64ZVE32F-NEXT:    add a3, a0, a3
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a3)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v12, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v12, 6
 ; RV64ZVE32F-NEXT:    andi a2, a2, -128
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB79_11
@@ -9203,9 +9132,8 @@ define <8 x float> @mgather_baseidx_zext_v8i16_v8f32(ptr %base, <8 x i16> %idxs,
 ; RV64ZVE32F-NEXT:    slli a1, a1, 2
 ; RV64ZVE32F-NEXT:    add a0, a0, a1
 ; RV64ZVE32F-NEXT:    flw fa5, 0(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64ZVE32F-NEXT:    vfmv.s.f v8, fa5
 ; RV64ZVE32F-NEXT:    vslideup.vi v10, v8, 7
 ; RV64ZVE32F-NEXT:    vmv2r.v v8, v10
 ; RV64ZVE32F-NEXT:    ret
@@ -13481,13 +13409,13 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB107_2
 ; RV64ZVE32F-NEXT:  .LBB107_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lbu a2, 5(a0)
-; RV64ZVE32F-NEXT:    lbu a3, 4(a0)
-; RV64ZVE32F-NEXT:    slli a2, a2, 8
-; RV64ZVE32F-NEXT:    or a2, a2, a3
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 4
+; RV64ZVE32F-NEXT:    lbu a3, 1(a2)
+; RV64ZVE32F-NEXT:    lbu a2, 0(a2)
+; RV64ZVE32F-NEXT:    slli a3, a3, 8
+; RV64ZVE32F-NEXT:    or a2, a3, a2
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB107_3
@@ -13608,10 +13536,10 @@ define <8 x i16> @mgather_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB108_2
 ; RV64ZVE32F-NEXT:  .LBB108_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 2(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 2
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB108_3
@@ -13717,10 +13645,10 @@ define <8 x i16> @mgather_strided_2xSEW_with_offset(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB109_2
 ; RV64ZVE32F-NEXT:  .LBB109_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 6(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 6
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB109_3
@@ -13826,10 +13754,10 @@ define <8 x i16> @mgather_reverse_unit_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB110_2
 ; RV64ZVE32F-NEXT:  .LBB110_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 30(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 30
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB110_3
@@ -13935,10 +13863,10 @@ define <8 x i16> @mgather_reverse_strided_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB111_2
 ; RV64ZVE32F-NEXT:  .LBB111_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 30(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 30
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB111_3
@@ -14042,10 +13970,10 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB112_2
 ; RV64ZVE32F-NEXT:  .LBB112_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 2(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 2
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB112_3
@@ -14152,10 +14080,10 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB113_2
 ; RV64ZVE32F-NEXT:  .LBB113_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 2(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 2
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB113_3
@@ -14264,10 +14192,9 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned2(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB114_2
 ; RV64ZVE32F-NEXT:  .LBB114_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 4(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    lh a3, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a3
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB114_3
@@ -14378,10 +14305,10 @@ define <8 x i16> @mgather_gather_4xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB115_2
 ; RV64ZVE32F-NEXT:  .LBB115_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 2(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 2
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB115_3
@@ -14489,10 +14416,10 @@ define <8 x i16> @mgather_gather_4xSEW_partial_align(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB116_2
 ; RV64ZVE32F-NEXT:  .LBB116_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 2(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 2
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB116_3
@@ -14612,10 +14539,10 @@ define <8 x i16> @mgather_shuffle_rotate(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB118_2
 ; RV64ZVE32F-NEXT:  .LBB118_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 10(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 10
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB118_3
@@ -14723,10 +14650,10 @@ define <8 x i16> @mgather_shuffle_vrgather(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 2
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB119_2
 ; RV64ZVE32F-NEXT:  .LBB119_10: # %cond.load1
-; RV64ZVE32F-NEXT:    lh a2, 4(a0)
-; RV64ZVE32F-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
+; RV64ZVE32F-NEXT:    addi a2, a0, 4
+; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
 ; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB119_3
