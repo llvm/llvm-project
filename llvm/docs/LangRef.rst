@@ -3395,11 +3395,12 @@ The default LLVM floating-point environment assumes that traps are disabled and
 status flags are not observable. Therefore, floating-point math operations do
 not have side effects and may be speculated freely. Results assume the
 round-to-nearest rounding mode, and subnormals are assumed to be preserved.
-Running default LLVM code in an environment where these assumptions are not met
-can lead to undefined behavior.
 
-Code that requires different behavior than this should use the
-:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+Running LLVM code in an environment where these assumptions are not met can lead
+to undefined behavior. The ``strictfp`` and ``denormal-fp-math`` attributes as
+well as :ref:`Constrained Floating-Point Intrinsics <constrainedfp>` can be used
+to weaken LLVM's assumptions and ensure defined behavior in non-default
+floating-point environments; see their respective documentation for details.
 
 .. _floatnan:
 
