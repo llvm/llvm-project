@@ -1112,22 +1112,7 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     assert(inserted.second && "entity must have been emplaced");
     (void)inserted;
   } else {
-    if (constructStack.empty() &&
-        mlir::isa<hlfir::RegionAssignOp>(region.getParentOp())) {
-      // Here the clean-up code is inserted after the original
-      // RegionAssignOp, so that the assignment code happens
-      // before the cleanup. We do this only for standalone
-      // operations, because the clean-up is handled specially
-      // during lowering of the parent constructs if any
-      // (e.g. see generateNoneElementalCleanupIfAny for
-      // WhereOp).
-      auto insertionPoint = builder.saveInsertionPoint();
-      builder.setInsertionPointAfter(region.getParentOp());
-      generateCleanupIfAny(oldYield);
-      builder.restoreInsertionPoint(insertionPoint);
-    } else {
-      generateCleanupIfAny(oldYield);
-    }
+    generateCleanupIfAny(oldYield);
   }
 }
 
