@@ -1095,10 +1095,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(
                     "echo '\\1' > nul && " if command else "echo '\\1' > nul"
                 )
-        if litConfig.echo_all_commands:
-            f.write("@echo on\n")
-        else:
-            f.write("@echo off\n")
+        f.write("@echo on\n")
         f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
@@ -1108,8 +1105,7 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
         if test.config.pipefail:
             f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
-        if litConfig.echo_all_commands:
-            f.write(b"set -x;" if mode == "wb" else "set -x;")
+        f.write(b"set -x;" if mode == "wb" else "set -x;")
         if sys.version_info > (3, 0) and mode == "wb":
             f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
@@ -2035,6 +2031,11 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     def runOnce(execdir):
+        # script is modified below (for litConfig.per_test_coverage, and for
+        # %dbg expansions).  runOnce can be called multiple times, but applying
+        # the modifications multiple times can corrupt script, so always modify
+        # a copy.
+        scriptCopy = script[:]
         # Set unique LLVM_PROFILE_FILE for each run command
         if litConfig.per_test_coverage:
             # Extract the test case name from the test object, and remove the
@@ -2042,7 +2043,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
             test_case_name = test.path_in_suite[-1]
             test_case_name = test_case_name.rsplit(".", 1)[0]
             coverage_index = 0  # Counter for coverage file index
-            for i, ln in enumerate(script):
+            for i, ln in enumerate(scriptCopy):
                 match = re.fullmatch(kPdbgRegex, ln)
                 if match:
                     dbg = match.group(1)
@@ -2054,12 +2055,12 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
                 command = f"export LLVM_PROFILE_FILE={profile}; {command}"
                 if match:
                     command = buildPdbgCommand(dbg, command)
-                script[i] = command
+                scriptCopy[i] = command
 
         if useExternalSh:
-            res = executeScript(test, litConfig, tmpBase, script, execdir)
+            res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
         else:
-            res = executeScriptInternal(test, litConfig, tmpBase, script, execdir)
+            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
         if isinstance(res, lit.Test.Result):
             return res
 
@@ -2079,14 +2080,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
     attempts = test.allowed_retries + 1
-    scriptInit = script
     for i in range(attempts):
-        # runOnce modifies script, but applying the modifications again to the
-        # result can corrupt script, so we restore the original upon a retry.
-        # A cleaner solution would be for runOnce to encapsulate operating on a
-        # copy of script, but we actually want it to modify the original script
-        # so we can print the modified version under "Script:" below.
-        script = scriptInit[:]
         res = runOnce(execdir)
         if isinstance(res, lit.Test.Result):
             return res
@@ -2101,7 +2095,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
         status = Test.FLAKYPASS
 
     # Form the output log.
-    output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % ("\n".join(script), exitCode)
+    output = f"Exit Code: {exitCode}\n"
 
     if timeoutInfo is not None:
         output += """Timeout: %s\n""" % (timeoutInfo,)
