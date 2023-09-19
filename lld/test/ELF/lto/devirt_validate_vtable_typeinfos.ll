@@ -3,7 +3,7 @@
 ;; Common artifacts
 ; RUN: opt --thinlto-bc -o %t1.o %s
 ; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t1_hybrid.o %s
-; RUN: cp %s %t1_regular.ll
+; RUN: cat %s > %t1_regular.ll
 ; RUN: echo '!llvm.module.flags = !{!12, !13}' >> %t1_regular.ll
 ; RUN: echo '!12 = !{i32 1, !"ThinLTO", i32 0}' >> %t1_regular.ll
 ; RUN: echo '!13 = !{i32 1, !"EnableSplitLTOUnit", i32 1}' >> %t1_regular.ll

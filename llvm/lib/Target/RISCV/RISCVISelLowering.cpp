@@ -13623,10 +13623,11 @@ static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
     // TODO: This offset check is too strict if we support fully
     // misaligned memory operations.
     uint64_t C = Index->getConstantOperandVal(i);
-    if (C % ElementSize != 0)
-      return false;
-    if (i % 2 == 0)
+    if (i % 2 == 0) {
+      if (C % WiderElementSize != 0)
+        return false;
       continue;
+    }
     uint64_t Last = Index->getConstantOperandVal(i-1);
     if (C != Last + ElementSize)
       return false;
@@ -14465,6 +14466,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                  DAG.getUNDEF(XLenVT), Mask, PassThru,
                                  Load->getMemoryVT(), Load->getMemOperand(),
                                  ISD::UNINDEXED, ISD::NON_EXTLOAD);
+      return SDValue();
+    }
+    case Intrinsic::riscv_masked_strided_store: {
+      auto *Store = cast<MemIntrinsicSDNode>(N);
+      SDValue Value = N->getOperand(2);
+      SDValue Base = N->getOperand(3);
+      SDValue Stride = N->getOperand(4);
+      SDValue Mask = N->getOperand(5);
+
+      // If the stride is equal to the element size in bytes,  we can use
+      // a masked.store.
+      const unsigned ElementSize = Value.getValueType().getScalarStoreSize();
+      if (auto *StrideC = dyn_cast<ConstantSDNode>(Stride);
+          StrideC && StrideC->getZExtValue() == ElementSize)
+        return DAG.getMaskedStore(Store->getChain(), DL, Value, Base,
+                                  DAG.getUNDEF(XLenVT), Mask,
+                                  Store->getMemoryVT(), Store->getMemOperand(),
+                                  ISD::UNINDEXED, false);
       return SDValue();
     }
     case Intrinsic::riscv_vcpop:

@@ -1302,8 +1302,8 @@ void IslNodeBuilder::allocateNewArrays(BBPair StartExitBlocks) {
       SAI->setBasePtr(CreatedArray);
 
       // Insert the free call at polly.exiting
-      CallInst::CreateFree(CreatedArray,
-                           std::get<1>(StartExitBlocks)->getTerminator());
+      Builder.SetInsertPoint(std::get<1>(StartExitBlocks)->getTerminator());
+      Builder.CreateFree(CreatedArray);
     } else {
       auto InstIt = Builder.GetInsertBlock()
                         ->getParent()

@@ -237,7 +237,7 @@ observation: 39
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 3582.0
+priority: 3598.0
 reward: 0.0
 observation: 40
 li_size: 0
@@ -249,7 +249,7 @@ observation: 41
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 3566.0
+priority: 3582.0
 reward: 0.0
 observation: 42
 li_size: 0
@@ -291,7 +291,7 @@ observation: 48
 li_size: 0
 stage: 0
 weight: 0.0
-priority: 4368.0
+priority: 4384.0
 reward: 0.0
 observation: 49
 li_size: 0
