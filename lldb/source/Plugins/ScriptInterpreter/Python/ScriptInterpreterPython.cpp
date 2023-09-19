@@ -2438,24 +2438,11 @@ ConstString ScriptInterpreterPythonImpl::GetSyntheticTypeName(
   }
 
   PythonObject py_return = std::move(expected_py_return.get());
+  if (!py_return.IsAllocated() || !PythonString::Check(py_return.get()))
+    return {};
 
-  ConstString ret_val;
-  bool got_string = false;
-  std::string buffer;
-
-  if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
-    PythonString py_string(PyRefType::Borrowed, py_return.get());
-    llvm::StringRef return_data(py_string.GetString());
-    if (!return_data.empty()) {
-      buffer.assign(return_data.data(), return_data.size());
-      got_string = true;
-    }
-  }
-
-  if (got_string)
-    ret_val.SetCStringWithLength(buffer.c_str(), buffer.size());
-
-  return ret_val;
+  PythonString type_name(PyRefType::Borrowed, py_return.get());
+  return ConstString(py_string.GetString());
 }
 
 bool ScriptInterpreterPythonImpl::RunScriptFormatKeyword(
