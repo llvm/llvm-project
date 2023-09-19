@@ -28,6 +28,9 @@ static cl::opt<bool> EnableSpillVGPRToAGPR(
 
 // Find a register matching \p RC from \p LiveUnits which is unused and
 // available throughout the function. On failure, returns AMDGPU::NoRegister.
+// TODO: Rewrite the loop here to iterate over MCRegUnits instead of
+// MCRegisters. This should reduce the number of iterations and avoid redundant
+// checking.
 static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
                                      const LiveRegUnits &LiveUnits,
                                      const TargetRegisterClass &RC) {
