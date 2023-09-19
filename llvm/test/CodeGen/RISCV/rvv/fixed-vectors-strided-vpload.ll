@@ -99,9 +99,8 @@ define <8 x i8> @strided_vpload_v8i8(ptr %ptr, i32 signext %stride, <8 x i1> %m,
 define <8 x i8> @strided_vpload_v8i8_unit_stride(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8i8_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i32(ptr %ptr, i32 1, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %load
@@ -146,9 +145,8 @@ define <8 x i16> @strided_vpload_v8i16(ptr %ptr, i32 signext %stride, <8 x i1> %
 define <8 x i16> @strided_vpload_v8i16_unit_stride(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8i16_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <8 x i16> @llvm.experimental.vp.strided.load.v8i16.p0.i32(ptr %ptr, i32 2, <8 x i1> %m, i32 %evl)
   ret <8 x i16> %load
@@ -193,9 +191,8 @@ define <4 x i32> @strided_vpload_v4i32(ptr %ptr, i32 signext %stride, <4 x i1> %
 define <4 x i32> @strided_vpload_v4i32_unit_stride(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4i32_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i32(ptr %ptr, i32 4, <4 x i1> %m, i32 %evl)
   ret <4 x i32> %load
@@ -240,9 +237,8 @@ define <2 x i64> @strided_vpload_v2i64(ptr %ptr, i32 signext %stride, <2 x i1> %
 define <2 x i64> @strided_vpload_v2i64_unit_stride(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2i64_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i32(ptr %ptr, i32 8, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %load
@@ -335,9 +331,8 @@ define <8 x half> @strided_vpload_v8f16(ptr %ptr, i32 signext %stride, <8 x i1> 
 define <8 x half> @strided_vpload_v8f16_unit_stride(ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v8f16_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vlse16.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <8 x half> @llvm.experimental.vp.strided.load.v8f16.p0.i32(ptr %ptr, i32 2, <8 x i1> %m, i32 %evl)
   ret <8 x half> %load
@@ -370,9 +365,8 @@ define <4 x float> @strided_vpload_v4f32(ptr %ptr, i32 signext %stride, <4 x i1>
 define <4 x float> @strided_vpload_v4f32_unit_stride(ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v4f32_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <4 x float> @llvm.experimental.vp.strided.load.v4f32.p0.i32(ptr %ptr, i32 4, <4 x i1> %m, i32 %evl)
   ret <4 x float> %load
@@ -417,9 +411,8 @@ define <2 x double> @strided_vpload_v2f64(ptr %ptr, i32 signext %stride, <2 x i1
 define <2 x double> @strided_vpload_v2f64_unit_stride(ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpload_v2f64_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vlse64.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <2 x double> @llvm.experimental.vp.strided.load.v2f64.p0.i32(ptr %ptr, i32 8, <2 x i1> %m, i32 %evl)
   ret <2 x double> %load
