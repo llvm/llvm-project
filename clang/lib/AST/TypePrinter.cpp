@@ -2218,8 +2218,8 @@ printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
     } else {
       if (!FirstArg)
         OS << Comma;
-      //if (Argument.getKind() == TemplateArgument::Type)
-      //  OS << "class ";
+      if (Policy.MSVCFormatting && Argument.getKind() == TemplateArgument::Type)
+        OS << "class ";
 
       // Tries to print the argument with location info if exists.
       printArgument(Arg, Policy, ArgOS,
