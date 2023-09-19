@@ -34,6 +34,11 @@ static cl::opt<bool> AmdgcnSkipCacheInvalidations(
     "amdgcn-skip-cache-invalidations", cl::init(false), cl::Hidden,
     cl::desc("Use this to skip inserting cache invalidating instructions."));
 
+static cl::opt<bool> AmdgcnDisableSoftWaitcnt(
+    "amdgcn-disable-soft-waitcnt", cl::init(false), cl::Hidden,
+    cl::desc("Use this option to disable 'soft' waitcnt instructions in the "
+             "memory-legalizer."));
+
 namespace {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -270,6 +275,10 @@ protected:
 
   /// Whether to insert cache invalidating instructions.
   bool InsertCacheInv;
+
+  /// Either regular or soft waitcnt opcode.
+  unsigned WAITCNT_Opcode;
+  unsigned WAITCNT_VSCNT_Opcode;
 
   SICacheControl(const GCNSubtarget &ST);
 
@@ -832,6 +841,11 @@ SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
   InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+  WAITCNT_Opcode =
+      AmdgcnDisableSoftWaitcnt ? AMDGPU::S_WAITCNT : AMDGPU::S_WAITCNT_soft;
+  WAITCNT_VSCNT_Opcode = AmdgcnDisableSoftWaitcnt
+                             ? AMDGPU::S_WAITCNT_VSCNT
+                             : AMDGPU::S_WAITCNT_VSCNT_soft;
 }
 
 bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
@@ -1055,8 +1069,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             VMCnt ? 0 : getVmcntBitMask(IV),
                             getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
-        .addImm(WaitCntImmediate);
+    BuildMI(MBB, MI, DL, TII->get(WAITCNT_Opcode)).addImm(WaitCntImmediate);
     Changed = true;
   }
 
@@ -1964,13 +1977,12 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             VMCnt ? 0 : getVmcntBitMask(IV),
                             getExpcntBitMask(IV),
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
-        .addImm(WaitCntImmediate);
+    BuildMI(MBB, MI, DL, TII->get(WAITCNT_Opcode)).addImm(WaitCntImmediate);
     Changed = true;
   }
 
   if (VSCnt) {
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
+    BuildMI(MBB, MI, DL, TII->get(WAITCNT_VSCNT_Opcode))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
         .addImm(0);
     Changed = true;
