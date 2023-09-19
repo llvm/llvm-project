@@ -6,157 +6,158 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; SPARC-LABEL: muloti_test:
 ; SPARC:         .cfi_startproc
 ; SPARC-NEXT:  ! %bb.0: ! %start
-; SPARC-NEXT:    save %sp, -112, %sp
+; SPARC-NEXT:    save %sp, -96, %sp
 ; SPARC-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC-NEXT:    .cfi_window_save
 ; SPARC-NEXT:    .cfi_register %o7, %i7
-; SPARC-NEXT:    ld [%fp+92], %l4
-; SPARC-NEXT:    ld [%fp+96], %g2
-; SPARC-NEXT:    umul %i2, %i5, %g3
-; SPARC-NEXT:    rd %y, %g4
-; SPARC-NEXT:    st %g4, [%fp+-12] ! 4-byte Folded Spill
-; SPARC-NEXT:    umul %i4, %i3, %g4
+; SPARC-NEXT:    mov %i3, %g2
+; SPARC-NEXT:    mov %i2, %g4
+; SPARC-NEXT:    umul %i2, %i5, %i2
+; SPARC-NEXT:    rd %y, %o0
+; SPARC-NEXT:    ld [%fp+92], %l6
+; SPARC-NEXT:    umul %i4, %i3, %i3
+; SPARC-NEXT:    rd %y, %o2
+; SPARC-NEXT:    ld [%fp+96], %g3
+; SPARC-NEXT:    umul %i5, %g2, %l0
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    umul %l6, %i1, %l2
+; SPARC-NEXT:    rd %y, %l3
+; SPARC-NEXT:    add %i3, %i2, %i2
+; SPARC-NEXT:    umul %i0, %g3, %i3
 ; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    st %g2, [%sp+96]
-; SPARC-NEXT:    umul %i5, %i3, %l1
-; SPARC-NEXT:    rd %y, %l6
-; SPARC-NEXT:    st %l4, [%sp+92]
-; SPARC-NEXT:    umul %l4, %i1, %l2
-; SPARC-NEXT:    rd %y, %l0
-; SPARC-NEXT:    st %l0, [%fp+-4] ! 4-byte Folded Spill
-; SPARC-NEXT:    add %g4, %g3, %g3
-; SPARC-NEXT:    umul %i0, %g2, %g4
-; SPARC-NEXT:    rd %y, %l0
-; SPARC-NEXT:    st %l0, [%fp+-8] ! 4-byte Folded Spill
-; SPARC-NEXT:    add %l6, %g3, %l3
-; SPARC-NEXT:    umul %i1, %g2, %g2
-; SPARC-NEXT:    rd %y, %l0
-; SPARC-NEXT:    add %g4, %l2, %g3
-; SPARC-NEXT:    add %l0, %g3, %l2
-; SPARC-NEXT:    addcc %g2, %l1, %l1
-; SPARC-NEXT:    addxcc %l2, %l3, %l7
-; SPARC-NEXT:    mov %g0, %o0
-; SPARC-NEXT:    mov %g0, %o1
-; SPARC-NEXT:    mov %i2, %o2
-; SPARC-NEXT:    mov %i3, %o3
-; SPARC-NEXT:    mov %g0, %o4
-; SPARC-NEXT:    call __multi3
-; SPARC-NEXT:    mov %g0, %o5
-; SPARC-NEXT:    addcc %o1, %l1, %g3
-; SPARC-NEXT:    addxcc %o0, %l7, %g2
-; SPARC-NEXT:    mov 1, %g4
-; SPARC-NEXT:    cmp %g2, %o0
-; SPARC-NEXT:    mov %o3, %i3
+; SPARC-NEXT:    add %l7, %i2, %o1
+; SPARC-NEXT:    umul %i1, %g3, %i2
+; SPARC-NEXT:    rd %y, %l1
+; SPARC-NEXT:    add %i3, %l2, %i3
+; SPARC-NEXT:    add %l1, %i3, %l2
+; SPARC-NEXT:    addcc %i2, %l0, %l0
+; SPARC-NEXT:    umul %g2, %g3, %i3
+; SPARC-NEXT:    rd %y, %i2
+; SPARC-NEXT:    addxcc %l2, %o1, %o4
+; SPARC-NEXT:    umul %g4, %g3, %g3
+; SPARC-NEXT:    rd %y, %l4
+; SPARC-NEXT:    addcc %g3, %i2, %i2
+; SPARC-NEXT:    addxcc %l4, 0, %g3
+; SPARC-NEXT:    umul %g2, %l6, %g2
+; SPARC-NEXT:    rd %y, %l4
+; SPARC-NEXT:    addcc %g2, %i2, %i2
+; SPARC-NEXT:    addxcc %l4, 0, %g2
+; SPARC-NEXT:    addcc %g3, %g2, %g2
+; SPARC-NEXT:    addxcc %g0, 0, %g3
+; SPARC-NEXT:    umul %g4, %l6, %l4
+; SPARC-NEXT:    rd %y, %o3
+; SPARC-NEXT:    addcc %l4, %g2, %l4
+; SPARC-NEXT:    addxcc %o3, %g3, %o3
+; SPARC-NEXT:    addcc %l4, %l0, %g2
+; SPARC-NEXT:    addxcc %o3, %o4, %g3
+; SPARC-NEXT:    mov 1, %l0
+; SPARC-NEXT:    cmp %g3, %o3
 ; SPARC-NEXT:    bcs .LBB0_2
-; SPARC-NEXT:    mov %g4, %o3
+; SPARC-NEXT:    mov %l0, %o4
 ; SPARC-NEXT:  ! %bb.1: ! %start
-; SPARC-NEXT:    mov %g0, %o3
+; SPARC-NEXT:    mov %g0, %o4
 ; SPARC-NEXT:  .LBB0_2: ! %start
-; SPARC-NEXT:    cmp %g3, %o1
+; SPARC-NEXT:    cmp %g2, %l4
 ; SPARC-NEXT:    bcs .LBB0_4
-; SPARC-NEXT:    mov %g4, %l1
+; SPARC-NEXT:    mov %l0, %l4
 ; SPARC-NEXT:  ! %bb.3: ! %start
-; SPARC-NEXT:    mov %g0, %l1
+; SPARC-NEXT:    mov %g0, %l4
 ; SPARC-NEXT:  .LBB0_4: ! %start
-; SPARC-NEXT:    cmp %g2, %o0
+; SPARC-NEXT:    cmp %g3, %o3
 ; SPARC-NEXT:    be .LBB0_6
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:  ! %bb.5: ! %start
-; SPARC-NEXT:    mov %o3, %l1
+; SPARC-NEXT:    mov %o4, %l4
 ; SPARC-NEXT:  .LBB0_6: ! %start
-; SPARC-NEXT:    cmp %i2, 0
+; SPARC-NEXT:    cmp %g4, 0
 ; SPARC-NEXT:    bne .LBB0_8
-; SPARC-NEXT:    mov %g4, %i2
+; SPARC-NEXT:    mov %l0, %g4
 ; SPARC-NEXT:  ! %bb.7: ! %start
-; SPARC-NEXT:    mov %g0, %i2
+; SPARC-NEXT:    mov %g0, %g4
 ; SPARC-NEXT:  .LBB0_8: ! %start
 ; SPARC-NEXT:    cmp %i4, 0
 ; SPARC-NEXT:    bne .LBB0_10
-; SPARC-NEXT:    mov %g4, %o1
+; SPARC-NEXT:    mov %l0, %o3
 ; SPARC-NEXT:  ! %bb.9: ! %start
-; SPARC-NEXT:    mov %g0, %o1
+; SPARC-NEXT:    mov %g0, %o3
 ; SPARC-NEXT:  .LBB0_10: ! %start
-; SPARC-NEXT:    cmp %l5, 0
+; SPARC-NEXT:    cmp %o2, 0
 ; SPARC-NEXT:    bne .LBB0_12
-; SPARC-NEXT:    mov %g4, %o0
+; SPARC-NEXT:    mov %l0, %o2
 ; SPARC-NEXT:  ! %bb.11: ! %start
-; SPARC-NEXT:    mov %g0, %o0
+; SPARC-NEXT:    mov %g0, %o2
 ; SPARC-NEXT:  .LBB0_12: ! %start
-; SPARC-NEXT:    ld [%fp+-12], %l5 ! 4-byte Folded Reload
-; SPARC-NEXT:    cmp %l5, 0
+; SPARC-NEXT:    cmp %o0, 0
 ; SPARC-NEXT:    bne .LBB0_14
-; SPARC-NEXT:    mov %g4, %l5
+; SPARC-NEXT:    mov %l0, %o0
 ; SPARC-NEXT:  ! %bb.13: ! %start
-; SPARC-NEXT:    mov %g0, %l5
+; SPARC-NEXT:    mov %g0, %o0
 ; SPARC-NEXT:  .LBB0_14: ! %start
-; SPARC-NEXT:    cmp %l3, %l6
+; SPARC-NEXT:    cmp %o1, %l7
 ; SPARC-NEXT:    bcs .LBB0_16
-; SPARC-NEXT:    mov %g4, %l3
+; SPARC-NEXT:    mov %l0, %l7
 ; SPARC-NEXT:  ! %bb.15: ! %start
-; SPARC-NEXT:    mov %g0, %l3
+; SPARC-NEXT:    mov %g0, %l7
 ; SPARC-NEXT:  .LBB0_16: ! %start
-; SPARC-NEXT:    cmp %l4, 0
+; SPARC-NEXT:    cmp %l6, 0
 ; SPARC-NEXT:    bne .LBB0_18
-; SPARC-NEXT:    mov %g4, %l4
+; SPARC-NEXT:    mov %l0, %l6
 ; SPARC-NEXT:  ! %bb.17: ! %start
-; SPARC-NEXT:    mov %g0, %l4
+; SPARC-NEXT:    mov %g0, %l6
 ; SPARC-NEXT:  .LBB0_18: ! %start
 ; SPARC-NEXT:    cmp %i0, 0
 ; SPARC-NEXT:    bne .LBB0_20
-; SPARC-NEXT:    mov %g4, %l7
+; SPARC-NEXT:    mov %l0, %o1
 ; SPARC-NEXT:  ! %bb.19: ! %start
-; SPARC-NEXT:    mov %g0, %l7
+; SPARC-NEXT:    mov %g0, %o1
 ; SPARC-NEXT:  .LBB0_20: ! %start
-; SPARC-NEXT:    ld [%fp+-8], %l6 ! 4-byte Folded Reload
-; SPARC-NEXT:    cmp %l6, 0
+; SPARC-NEXT:    cmp %l5, 0
 ; SPARC-NEXT:    bne .LBB0_22
-; SPARC-NEXT:    mov %g4, %l6
+; SPARC-NEXT:    mov %l0, %l5
 ; SPARC-NEXT:  ! %bb.21: ! %start
-; SPARC-NEXT:    mov %g0, %l6
+; SPARC-NEXT:    mov %g0, %l5
 ; SPARC-NEXT:  .LBB0_22: ! %start
-; SPARC-NEXT:    and %o1, %i2, %i2
-; SPARC-NEXT:    ld [%fp+-4], %o1 ! 4-byte Folded Reload
-; SPARC-NEXT:    cmp %o1, 0
-; SPARC-NEXT:    and %l7, %l4, %o1
+; SPARC-NEXT:    and %o3, %g4, %g4
+; SPARC-NEXT:    cmp %l3, 0
+; SPARC-NEXT:    and %o1, %l6, %o1
 ; SPARC-NEXT:    bne .LBB0_24
-; SPARC-NEXT:    mov %g4, %l4
+; SPARC-NEXT:    mov %l0, %l3
 ; SPARC-NEXT:  ! %bb.23: ! %start
-; SPARC-NEXT:    mov %g0, %l4
+; SPARC-NEXT:    mov %g0, %l3
 ; SPARC-NEXT:  .LBB0_24: ! %start
-; SPARC-NEXT:    or %i2, %o0, %l7
-; SPARC-NEXT:    cmp %l2, %l0
-; SPARC-NEXT:    or %o1, %l6, %l2
+; SPARC-NEXT:    or %g4, %o2, %l6
+; SPARC-NEXT:    cmp %l2, %l1
+; SPARC-NEXT:    or %o1, %l5, %l2
 ; SPARC-NEXT:    bcs .LBB0_26
-; SPARC-NEXT:    mov %g4, %i2
+; SPARC-NEXT:    mov %l0, %g4
 ; SPARC-NEXT:  ! %bb.25: ! %start
-; SPARC-NEXT:    mov %g0, %i2
+; SPARC-NEXT:    mov %g0, %g4
 ; SPARC-NEXT:  .LBB0_26: ! %start
-; SPARC-NEXT:    or %l7, %l5, %l0
+; SPARC-NEXT:    or %l6, %o0, %l1
 ; SPARC-NEXT:    or %i5, %i4, %i4
 ; SPARC-NEXT:    cmp %i4, 0
-; SPARC-NEXT:    or %l2, %l4, %l2
+; SPARC-NEXT:    or %l2, %l3, %l2
 ; SPARC-NEXT:    bne .LBB0_28
-; SPARC-NEXT:    mov %g4, %i4
+; SPARC-NEXT:    mov %l0, %i4
 ; SPARC-NEXT:  ! %bb.27: ! %start
 ; SPARC-NEXT:    mov %g0, %i4
 ; SPARC-NEXT:  .LBB0_28: ! %start
-; SPARC-NEXT:    or %l0, %l3, %i5
+; SPARC-NEXT:    or %l1, %l7, %i5
 ; SPARC-NEXT:    or %i1, %i0, %i0
 ; SPARC-NEXT:    cmp %i0, 0
 ; SPARC-NEXT:    bne .LBB0_30
-; SPARC-NEXT:    or %l2, %i2, %i0
+; SPARC-NEXT:    or %l2, %g4, %i0
 ; SPARC-NEXT:  ! %bb.29: ! %start
-; SPARC-NEXT:    mov %g0, %g4
+; SPARC-NEXT:    mov %g0, %l0
 ; SPARC-NEXT:  .LBB0_30: ! %start
-; SPARC-NEXT:    and %g4, %i4, %i1
+; SPARC-NEXT:    and %l0, %i4, %i1
 ; SPARC-NEXT:    or %i1, %i0, %i0
 ; SPARC-NEXT:    or %i0, %i5, %i0
-; SPARC-NEXT:    or %i0, %l1, %i0
+; SPARC-NEXT:    or %i0, %l4, %i0
 ; SPARC-NEXT:    and %i0, 1, %i4
-; SPARC-NEXT:    mov %g2, %i0
-; SPARC-NEXT:    mov %g3, %i1
+; SPARC-NEXT:    mov %g3, %i0
 ; SPARC-NEXT:    ret
-; SPARC-NEXT:    restore %g0, %o2, %o2
+; SPARC-NEXT:    restore %g0, %g2, %o1
 ;
 ; SPARC64-LABEL: muloti_test:
 ; SPARC64:         .cfi_startproc

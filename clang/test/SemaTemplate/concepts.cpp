@@ -994,3 +994,40 @@ void test_params() {
 }
 
 }
+
+namespace GH54678 {
+template<class>
+concept True = true;
+
+template<class>
+concept False = false; // expected-note 9 {{'false' evaluated to false}}
+
+template<class>
+concept Irrelevant = false;
+
+template <typename T>
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+
+template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
+template<class T> void bbb(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (False<T> || False<T>) && True<T> {} // expected-note 2 {{'long' does not satisfy 'False'}}
+template<class T> void ccc(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (True<T> || Irrelevant<T>) && False<T> {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+template<class T> void ddd(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'int' does not satisfy 'False'}}
+template<class T> void eee(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
+
+template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+
+void test() {
+    aaa(42); // expected-error {{no matching function}}
+    bbb(42L); // expected-error{{no matching function}}
+    ccc(42UL); // expected-error {{no matching function}}
+    ddd(42); // expected-error {{no matching function}}
+    eee(42L); // expected-error {{no matching function}}
+    fff(42UL); // expected-error {{no matching function}}
+}
+}

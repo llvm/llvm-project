@@ -15,6 +15,7 @@ define void @private_za() "aarch64_pstate_za_new" {
 ; CHECK-NEXT:    br label [[TMP0]]
 ; CHECK:       0:
 ; CHECK-NEXT:    call void @llvm.aarch64.sme.za.enable()
+; CHECK-NEXT:    call void @llvm.aarch64.sme.zero(i32 255)
 ; CHECK-NEXT:    call void @shared_za_callee()
 ; CHECK-NEXT:    call void @llvm.aarch64.sme.za.disable()
 ; CHECK-NEXT:    ret void
@@ -35,6 +36,7 @@ define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_pstate_
 ; CHECK-NEXT:    br label [[ENTRY]]
 ; CHECK:       entry:
 ; CHECK-NEXT:    call void @llvm.aarch64.sme.za.enable()
+; CHECK-NEXT:    call void @llvm.aarch64.sme.zero(i32 255)
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[COND:%.*]], 1
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.else:

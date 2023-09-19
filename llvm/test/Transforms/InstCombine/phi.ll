@@ -2364,8 +2364,75 @@ _Z3fooPKc.exit20:
   ret i1 %and9
 }
 
-define i1 @fold_or_phi_into_or_icmp(ptr noundef readnone %dv1, ptr noundef %val1, ptr noundef readnone %dv2, ptr noundef %val2) {
+define i1 @fold_or_phi_into_or_icmp(ptr noundef readnone %dv1, ptr noundef readnone %dv2, ptr noundef %val1, ptr noundef %val2, i64 %i1, i64 %i2) {
 ; CHECK-LABEL: @fold_or_phi_into_or_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[COND_I:%.*]]
+; CHECK:       cond.i:
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
+; CHECK:       _Z3fooPKc.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I1:%.*]], [[COND_I]] ]
+; CHECK-NEXT:    [[CMP_I10:%.*]] = icmp eq ptr [[VAL2:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I10]], label [[_Z3FOOPKC_EXIT19:%.*]], label [[COND_I11:%.*]]
+; CHECK:       cond.i11:
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT19]]
+; CHECK:       _Z3fooPKc.exit19:
+; CHECK-NEXT:    [[RETVAL_0_I20:%.*]] = phi i64 [ 0, [[_Z3FOOPKC_EXIT]] ], [ [[I2:%.*]], [[COND_I11]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[RETVAL_0_I]], [[RETVAL_0_I20]]
+; CHECK-NEXT:    [[OR_COND_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[OR_COND_NOT]], label [[IF_THEN:%.*]], label [[IF_END4:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[DV1:%.*]], [[DV2:%.*]]
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       if.end4:
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i64 [[RETVAL_0_I20]], 0
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[RETVAL_0_I]], 0
+; CHECK-NEXT:    [[OR_COND10:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP]], [[IF_THEN]] ], [ [[OR_COND10]], [[IF_END4]] ]
+; CHECK-NEXT:    ret i1 [[RETVAL_0]]
+;
+entry:
+  %cmp.i = icmp eq ptr %val1, null
+  br i1 %cmp.i, label %_Z3fooPKc.exit, label %cond.i
+
+cond.i:
+  br label %_Z3fooPKc.exit
+
+_Z3fooPKc.exit:
+  %retval.0.i = phi i64 [ 0, %entry ], [ %i1, %cond.i ]
+  %cmp.i10 = icmp eq ptr %val2, null
+  br i1 %cmp.i10, label %_Z3fooPKc.exit19, label %cond.i11
+
+cond.i11:
+  br label %_Z3fooPKc.exit19
+
+_Z3fooPKc.exit19:
+  %retval.0.i20 = phi i64 [ 0, %_Z3fooPKc.exit ], [ %i2, %cond.i11 ]
+  %0 = or i64 %retval.0.i, %retval.0.i20
+  %or.cond.not = icmp eq i64 %0, 0
+  br i1 %or.cond.not, label %if.then, label %if.end4
+
+if.then:
+  %cmp = icmp eq ptr %dv1, %dv2
+  br label %cleanup
+
+if.end4:
+  %tobool2 = icmp ne i64 %retval.0.i20, 0
+  %tobool = icmp ne i64 %retval.0.i, 0
+  %or.cond10 = and i1 %tobool, %tobool2
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i1 [ %cmp, %if.then ], [ %or.cond10, %if.end4 ]
+  ret i1 %retval.0
+}
+
+
+define i1 @fold_or_phi_into_or_icmp2(ptr noundef readnone %dv1, ptr noundef %val1, ptr noundef readnone %dv2, ptr noundef %val2) {
+; CHECK-LABEL: @fold_or_phi_into_or_icmp2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[WHILE_COND_I:%.*]]

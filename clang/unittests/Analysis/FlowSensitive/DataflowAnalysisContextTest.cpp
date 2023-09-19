@@ -46,6 +46,22 @@ TEST_F(DataflowAnalysisContextTest, AddFlowConditionConstraint) {
   EXPECT_TRUE(Context.flowConditionImplies(FC, C));
 }
 
+TEST_F(DataflowAnalysisContextTest, AddInvariant) {
+  Atom FC = A.makeFlowConditionToken();
+  auto &C = A.makeAtomRef(A.makeAtom());
+  Context.addInvariant(C);
+  EXPECT_TRUE(Context.flowConditionImplies(FC, C));
+}
+
+TEST_F(DataflowAnalysisContextTest, InvariantAndFCConstraintInteract) {
+  Atom FC = A.makeFlowConditionToken();
+  auto &C = A.makeAtomRef(A.makeAtom());
+  auto &D = A.makeAtomRef(A.makeAtom());
+  Context.addInvariant(A.makeImplies(C, D));
+  Context.addFlowConditionConstraint(FC, C);
+  EXPECT_TRUE(Context.flowConditionImplies(FC, D));
+}
+
 TEST_F(DataflowAnalysisContextTest, ForkFlowCondition) {
   Atom FC1 = A.makeFlowConditionToken();
   auto &C1 = A.makeAtomRef(A.makeAtom());

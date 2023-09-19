@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -sparsification --canonicalize | FileCheck %s
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #trait_scale = {

@@ -210,7 +210,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
         list(APPEND packager_images
              --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
        endif()
-      list(APPEND gpu_target_names ${gpu_target_name})
+      list(APPEND gpu_target_objects ${input_file})
     endforeach()
 
     # After building the target for the desired GPUs we must package the output
@@ -222,7 +222,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     add_custom_command(OUTPUT ${packaged_output_name}
                        COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
                                ${packager_images} -o ${packaged_output_name}
-                       DEPENDS ${gpu_target_names} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
+                       DEPENDS ${gpu_target_objects} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
                        COMMENT "Packaging LLVM offloading binary")
     add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
     list(APPEND packaged_gpu_names ${packaged_target_name})
@@ -242,7 +242,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
-    DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
+    DEPENDS ${gpu_target_objects} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
   )
   set(stub_target_name ${fq_target_name}.__stub__)
   add_custom_target(${stub_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename})
@@ -559,6 +559,8 @@ function(create_entrypoint_object fq_target_name)
     return()
   endif()
 
+  set(internal_target_name ${fq_target_name}.__internal__)
+
   if(ADD_ENTRYPOINT_OBJ_ALIAS)
     # Alias targets help one add aliases to other entrypoint object targets.
     # One can use alias targets setup OS/machine independent entrypoint targets.
@@ -586,10 +588,22 @@ function(create_entrypoint_object fq_target_name)
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
-    add_custom_target(${fq_target_name})
-    add_dependencies(${fq_target_name} ${fq_dep_name})
     get_target_property(object_file ${fq_dep_name} "OBJECT_FILE")
     get_target_property(object_file_raw ${fq_dep_name} "OBJECT_FILE_RAW")
+    add_library(
+      ${internal_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file_raw}
+    )
+    add_dependencies(${internal_target_name} ${fq_dep_name})
+    add_library(
+      ${fq_target_name}
+      EXCLUDE_FROM_ALL
+      OBJECT
+      ${object_file}
+    )
+    add_dependencies(${fq_target_name} ${fq_dep_name} ${internal_target_name})
     set_target_properties(
       ${fq_target_name}
       PROPERTIES
@@ -619,7 +633,6 @@ function(create_entrypoint_object fq_target_name)
     "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
-  set(internal_target_name ${fq_target_name}.__internal__)
   set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
@@ -659,6 +672,7 @@ function(create_entrypoint_object fq_target_name)
     target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
     target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
     add_dependencies(${internal_target_name} ${full_deps_list})
+    target_link_libraries(${internal_target_name} ${full_deps_list})
 
     add_library(
       ${fq_target_name}
@@ -672,6 +686,7 @@ function(create_entrypoint_object fq_target_name)
     target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
     target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
     add_dependencies(${fq_target_name} ${full_deps_list})
+    target_link_libraries(${fq_target_name} ${full_deps_list})
   endif()
 
   set_target_properties(

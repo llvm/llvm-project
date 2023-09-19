@@ -8,6 +8,7 @@
 
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -21,6 +22,7 @@
 #include "flang/Runtime/stop.h"
 #include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -37,6 +39,9 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   if (parentOp->getDialect()->getNamespace() ==
       mlir::omp::OpenMPDialect::getDialectNamespace())
     Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
+  else if (parentOp->getDialect()->getNamespace() ==
+           mlir::acc::OpenACCDialect::getDialectNamespace())
+    Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
   else
     builder.create<fir::UnreachableOp>(loc);
   mlir::Block *newBlock = curBlock->splitBlock(builder.getInsertionPoint());

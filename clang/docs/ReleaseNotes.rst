@@ -41,6 +41,9 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- The default extension name for PCH generation (``-c -xc-header`` and ``-c
+  -xc++-header``) is now ``.pch`` instead of ``.gch``.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -166,6 +169,9 @@ Improvements to Clang's diagnostics
   Also clang no longer emits false positive warnings about the output length of
   ``%g`` format specifier and about ``%o, %x, %X`` with ``#`` flag.
 - Clang now emits ``-Wcast-qual`` for functional-style cast expressions.
+- Clang no longer emits irrelevant notes about unsatisfied constraint expressions
+  on the left-hand side of ``||`` when the right-hand side constraint is satisfied.
+  (`#54678: <https://github.com/llvm/llvm-project/issues/54678>`_).
 
 Bug Fixes in This Version
 -------------------------
@@ -281,9 +287,21 @@ Bug Fixes to C++ Support
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
+<<<<<<< HEAD
 - Fix a crash when calling a non-constant immediate function
   in the initializer of a static data member.
   (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
+=======
+- Clang now properly converts static lambda call operator to function
+  pointers on win32.
+  (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
+
+- Fixed some cases where the source location for an instantiated specialization
+  of a function template or a member function of a class template was assigned
+  the location of a non-defining declaration rather than the location of the
+  definition the specialization was instantiated from.
+  (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
+>>>>>>> llvm_be_very_careful/main
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

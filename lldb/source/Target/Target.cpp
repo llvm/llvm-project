@@ -3859,11 +3859,10 @@ void Target::StopHookScripted::GetSubclassDescription(
   s.Indent("Args:\n");
   s.SetIndentLevel(s.GetIndentLevel() + 4);
 
-  auto print_one_element = [&s](ConstString key,
+  auto print_one_element = [&s](llvm::StringRef key,
                                 StructuredData::Object *object) {
     s.Indent();
-    s.Printf("%s : %s\n", key.GetCString(),
-              object->GetStringValue().str().c_str());
+    s.Format("{0} : {1}\n", key, object->GetStringValue());
     return true;
   };
 
@@ -4237,8 +4236,8 @@ bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
 }
 
 bool TargetProperties::GetPreloadSymbols() const {
-  if (INTERRUPT_REQUESTED(m_target->GetDebugger(), 
-      "Interrupted checking preload symbols")) {
+  if (INTERRUPT_REQUESTED(m_target->GetDebugger(),
+                          "Interrupted checking preload symbols")) {
     return false;
   }
   const uint32_t idx = ePropertyPreloadSymbols;
@@ -4536,6 +4535,12 @@ void TargetProperties::CheckJITObjectsDir() {
 
 bool TargetProperties::GetEnableSyntheticValue() const {
   const uint32_t idx = ePropertyEnableSynthetic;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+bool TargetProperties::ShowHexVariableValuesWithLeadingZeroes() const {
+  const uint32_t idx = ePropertyShowHexVariableValuesWithLeadingZeroes;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
 }

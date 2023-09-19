@@ -68,7 +68,7 @@ struct ExecutionEngineOptions {
 
   /// `jitCodeGenOptLevel`, when provided, is used as the optimization level for
   /// target code generation.
-  std::optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
+  std::optional<llvm::CodeGenOptLevel> jitCodeGenOptLevel;
 
   /// If `sharedLibPaths` are provided, the underlying JIT-compilation will
   /// open and link the shared libraries for symbol resolution. Libraries that

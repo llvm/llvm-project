@@ -29,33 +29,12 @@ transform.sequence failures(propagate) {
   // lowering TD macros.
   transform.apply_patterns to %f {
     transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.transfer_permutation_patterns
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerparallel"
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.lower_transfer max_transfer_rank = 1
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.lower_shape_cast
-  } : !transform.any_op
-
-  transform.apply_patterns to %f {
     transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
   } : !transform.any_op
 }

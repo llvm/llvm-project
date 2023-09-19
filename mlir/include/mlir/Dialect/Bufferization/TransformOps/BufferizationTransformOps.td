@@ -82,10 +82,9 @@ def OneShotBufferizeOp
   let arguments = (
       ins TransformHandleTypeInterface:$target,
       OptionalAttr<LayoutMapOption>:$function_boundary_type_conversion,
-      DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs,
+      DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs_from_loops,
       DefaultValuedAttr<BoolAttr, "false">:$allow_unknown_ops,
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
-      DefaultValuedAttr<BoolAttr, "true">:$create_deallocs,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
       DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
       DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);
@@ -109,19 +108,17 @@ def EliminateEmptyTensorsOp
          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let description = [{
     Try to eliminate all `tensor.empty` ops within the targeted op by replacing
-    them with a destination tensor.
+    them with another destination tensor.
 
-    `tensor.empty` ops cannot be bufferizes. They can either be converted to
-    `bufferization.alloc_tensor` or replaced with another tensor (via this
-    transform). `tensor.empty` does not specify the contents of the returned
+    "tensor.empty" ops cannot be bufferized. They can either be converted to
+    "bufferization.alloc_tensor" or replaced with another tensor (via this
+    transform). "tensor.empty" does not specify the contents of the returned
     tensor so their results can be replaced with arbitrary tensor values as long
     as the dimensions match.
 
-    This transform looks for `tensor.empty` ops where the SSA use-def chain of
-    the result ends in a supported "anchor op" (always following the aliasing
-    OpOperand/OpResult chain). Currently supported anchor ops are:
-    - `tensor.insert_slice`
-    - `bufferization.yield` (inside `bufferization.alloc_tensor`)
+    This transformation looks for subset ops that insert a tensor that
+    originates from a "tensor.empty" (as per the reverse use-def chain). Such
+    "tensor.empty" ops are replaced with the destination subset.
 
     Example:
 
@@ -137,6 +134,10 @@ def EliminateEmptyTensorsOp
     %1 = linalg.fill ... outs(%0)
     %2 = tensor.insert_slice %1 into %t[1][5][1]
     ```
+
+    In the above example, the subset op is "tensor.insert_slice". When tracing
+    back the reverse use-def chain of a the source, we end up at a
+    "tensor.empty" op.
 
     The above example can bufferize without an allocation (in the absence of
     other conflicts) because there is no longer a `tensor.empty` op.

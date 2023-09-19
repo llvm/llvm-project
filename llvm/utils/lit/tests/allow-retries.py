@@ -39,3 +39,15 @@
 # RUN: rm -f %t.counter
 # RUN: %{lit} %{inputs}/test_retry_attempts/test.py -Dcounter=%t.counter -Dpython=%{python} | FileCheck --check-prefix=CHECK-TEST6 %s
 # CHECK-TEST6: Passed With Retry: 1
+
+# This test checks that --per-test-coverage doesn't accumulate inserted
+# LLVM_PROFILE_FILE= commands across retries.
+#
+# RUN: rm -f %t.counter
+# RUN: %{lit} -a %{inputs}/test_retry_attempts/test.py --per-test-coverage\
+# RUN:     -Dcounter=%t.counter -Dpython=%{python} | \
+# RUN:   FileCheck --check-prefix=CHECK-TEST7 %s
+#     CHECK-TEST7: Command Output (stdout):
+#     CHECK-TEST7: LLVM_PROFILE_FILE=
+# CHECK-TEST7-NOT: LLVM_PROFILE_FILE=
+#     CHECK-TEST7: Passed With Retry: 1
