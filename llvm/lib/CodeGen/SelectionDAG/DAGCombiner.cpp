@@ -6299,6 +6299,33 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Combine `(select c, (X & 1), 0)` -> `(and (zext c), X)`.
+// We canonicalize to the `select` form in the middle end, but the `and` form
+// gets better codegen and all tested targets (arm, x86, riscv)
+static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
+                                     const SDLoc &DL, SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!isNullConstant(F))
+    return SDValue();
+
+  EVT CondVT = Cond.getValueType();
+  if (TLI.getBooleanContents(CondVT) !=
+      TargetLoweringBase::ZeroOrOneBooleanContent)
+    return SDValue();
+
+  if (T.getOpcode() != ISD::AND)
+    return SDValue();
+
+  if (!isOneConstant(T.getOperand(1)))
+    return SDValue();
+
+  EVT OpVT = T.getValueType();
+
+  SDValue CondMask =
+      OpVT == CondVT ? Cond : DAG.getBoolExtOrTrunc(Cond, DL, OpVT, CondVT);
+  return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
+}
+
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an And operation to a single value. This makes them reusable in the context
 /// of visitSELECT(). Rules involving constants are not included as
@@ -11608,6 +11635,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (!VT.isVector())
     if (SDValue BinOp = foldSelectOfBinops(N))
       return BinOp;
+
+  if (SDValue R = combineSelectAsExtAnd(N0, N1, N2, DL, DAG))
+    return R;
 
   return SDValue();
 }

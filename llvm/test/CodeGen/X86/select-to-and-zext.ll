@@ -5,22 +5,18 @@
 define i32 @from_cmpeq(i32 %xx, i32 %y) {
 ; X86-LABEL: from_cmpeq:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $9, {{[0-9]+}}(%esp)
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_1:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    cmpl $9, {{[0-9]+}}(%esp)
+; X86-NEXT:    sete %al
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: from_cmpeq:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $1, %esi
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $9, %edi
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %x = icmp eq i32 %xx, 9
   %masked = and i32 %y, 1
@@ -58,22 +54,16 @@ define i32 @from_cmpeq_fail_bad_andmask(i32 %xx, i32 %y) {
 define i32 @from_i1(i1 %x, i32 %y) {
 ; X86-LABEL: from_i1:
 ; X86:       # %bb.0:
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB2_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB2_1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: from_i1:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $1, %esi
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    cmovnel %esi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
   %masked = and i32 %y, 1
   %r = select i1 %x, i32 %masked, i32 0
@@ -83,22 +73,16 @@ define i32 @from_i1(i1 %x, i32 %y) {
 define i32 @from_trunc_i8(i8 %xx, i32 %y) {
 ; X86-LABEL: from_trunc_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB3_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB3_1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: from_trunc_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $1, %esi
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    cmovnel %esi, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
   %masked = and i32 %y, 1
   %x = trunc i8 %xx to i1
@@ -109,22 +93,17 @@ define i32 @from_trunc_i8(i8 %xx, i32 %y) {
 define i32 @from_trunc_i64(i64 %xx, i32 %y) {
 ; X86-LABEL: from_trunc_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    jne .LBB4_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB4_1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: from_trunc_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $1, %esi
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    cmovnel %esi, %eax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %masked = and i32 %y, 1
   %x = trunc i64 %xx to i1

@@ -31,9 +31,8 @@ define i32 @from_cmpeq_fail_bad_andmask(i32 %xx, i32 %y) {
 define i32 @from_i1(i1 %x, i32 %y) {
 ; CHECK-LABEL: from_i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0x1
-; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    csel w0, w8, wzr, ne
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %masked = and i32 %y, 1
   %r = select i1 %x, i32 %masked, i32 0
@@ -43,9 +42,8 @@ define i32 @from_i1(i1 %x, i32 %y) {
 define i32 @from_trunc_i8(i8 %xx, i32 %y) {
 ; CHECK-LABEL: from_trunc_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0x1
-; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    csel w0, w8, wzr, ne
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %masked = and i32 %y, 1
   %x = trunc i8 %xx to i1
@@ -56,9 +54,8 @@ define i32 @from_trunc_i8(i8 %xx, i32 %y) {
 define i32 @from_trunc_i64(i64 %xx, i32 %y) {
 ; CHECK-LABEL: from_trunc_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0x1
-; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    csel w0, w8, wzr, ne
+; CHECK-NEXT:    and w8, w0, w1
+; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %masked = and i32 %y, 1
   %x = trunc i64 %xx to i1
