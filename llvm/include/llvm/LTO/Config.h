@@ -80,6 +80,12 @@ struct Config {
   /// link.
   bool HasWholeProgramVisibility = false;
 
+  /// We're validating that all native vtables have corresponding type infos.
+  bool ValidateAllVtablesHaveTypeInfos = false;
+  /// If all native vtables have corresponding type infos, allow
+  /// usage of RTTI to block devirtualization on types used in native files.
+  bool AllVtablesHaveTypeInfos = false;
+
   /// Always emit a Regular LTO object even when it is empty because no Regular
   /// LTO modules were linked. This option is useful for some build system which
   /// want to know a priori all possible output files.
