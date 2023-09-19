@@ -11907,12 +11907,8 @@ gentbl_cc_library(
 
 cc_library(
     name = "MLProgramDialect",
-    srcs = glob([
-        "lib/Dialect/MLProgram/IR/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/mlir/Dialect/MLProgram/**/*.h",
-    ]),
+    srcs = glob(["lib/Dialect/MLProgram/IR/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/MLProgram/IR/*.h"]),
     includes = ["include"],
     deps = [
         ":ControlFlowInterfaces",
