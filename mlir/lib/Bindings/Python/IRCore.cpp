@@ -2768,6 +2768,24 @@ void mlir::python::populateIRCore(py::module &m) {
                                return PyOpAttributeMap(
                                    self.getOperation().getRef());
                              })
+      .def_property_readonly(
+          "context",
+          [](PyOperationBase &self) {
+            PyOperation &concreteOperation = self.getOperation();
+            concreteOperation.checkValid();
+            return concreteOperation.getContext().getObject();
+          },
+          "Context that owns the Operation")
+      .def_property_readonly("name",
+                             [](PyOperationBase &self) {
+                               auto &concreteOperation = self.getOperation();
+                               concreteOperation.checkValid();
+                               MlirOperation operation =
+                                   concreteOperation.get();
+                               MlirStringRef name = mlirIdentifierStr(
+                                   mlirOperationGetName(operation));
+                               return py::str(name.data, name.length);
+                             })
       .def_property_readonly("operands",
                              [](PyOperationBase &self) {
                                return PyOpOperandList(
@@ -2813,6 +2831,14 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           "Returns the source location the operation was defined or derived "
           "from.")
+      .def_property_readonly("parent",
+                             [](PyOperationBase &self) -> py::object {
+                               auto parent =
+                                   self.getOperation().getParentOperation();
+                               if (parent)
+                                 return parent->getObject();
+                               return py::none();
+                             })
       .def(
           "__str__",
           [](PyOperationBase &self) {
@@ -2856,6 +2882,12 @@ void mlir::python::populateIRCore(py::module &m) {
            "Puts self immediately before the other operation in its parent "
            "block.")
       .def(
+          "clone",
+          [](PyOperationBase &self, py::object ip) {
+            return self.getOperation().clone(ip);
+          },
+          py::arg("ip") = py::none())
+      .def(
           "detach_from_parent",
           [](PyOperationBase &self) {
             PyOperation &operation = self.getOperation();
@@ -2866,7 +2898,8 @@ void mlir::python::populateIRCore(py::module &m) {
             operation.detachFromParent();
             return operation.createOpView();
           },
-          "Detaches the operation from its parent block.");
+          "Detaches the operation from its parent block.")
+      .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); });
 
   py::class_<PyOperation, PyOperationBase>(m, "Operation", py::module_local())
       .def_static("create", &PyOperation::create, py::arg("name"),
@@ -2887,45 +2920,17 @@ void mlir::python::populateIRCore(py::module &m) {
           py::arg("context") = py::none(),
           "Parses an operation. Supports both text assembly format and binary "
           "bytecode format.")
-      .def_property_readonly("parent",
-                             [](PyOperation &self) -> py::object {
-                               auto parent = self.getParentOperation();
-                               if (parent)
-                                 return parent->getObject();
-                               return py::none();
-                             })
-      .def("erase", &PyOperation::erase)
-      .def("clone", &PyOperation::clone, py::arg("ip") = py::none())
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyOperation::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyOperation::createFromCapsule)
-      .def_property_readonly("name",
-                             [](PyOperation &self) {
-                               self.checkValid();
-                               MlirOperation operation = self.get();
-                               MlirStringRef name = mlirIdentifierStr(
-                                   mlirOperationGetName(operation));
-                               return py::str(name.data, name.length);
-                             })
-      .def_property_readonly(
-          "context",
-          [](PyOperation &self) {
-            self.checkValid();
-            return self.getContext().getObject();
-          },
-          "Context that owns the Operation")
+      .def_property_readonly("operation", [](py::object self) { return self; })
       .def_property_readonly("opview", &PyOperation::createOpView);
 
   auto opViewClass =
       py::class_<PyOpView, PyOperationBase>(m, "OpView", py::module_local())
           .def(py::init<py::object>(), py::arg("operation"))
           .def_property_readonly("operation", &PyOpView::getOperationObject)
-          .def_property_readonly(
-              "context",
-              [](PyOpView &self) {
-                return self.getOperation().getContext().getObject();
-              },
-              "Context that owns the Operation")
+          .def_property_readonly("opview", [](py::object self) { return self; })
           .def("__str__", [](PyOpView &self) {
             return py::str(self.getOperationObject());
           });
