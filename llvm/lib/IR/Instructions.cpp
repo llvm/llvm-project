@@ -809,61 +809,6 @@ void CallInst::updateProfWeight(uint64_t S, uint64_t T) {
   setMetadata(LLVMContext::MD_prof, MDNode::get(getContext(), Vals));
 }
 
-static Instruction *createFree(Value *Source,
-                               ArrayRef<OperandBundleDef> Bundles,
-                               Instruction *InsertBefore,
-                               BasicBlock *InsertAtEnd) {
-  assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
-         "createFree needs either InsertBefore or InsertAtEnd");
-  assert(Source->getType()->isPointerTy() &&
-         "Can not free something of nonpointer type!");
-
-  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module *M = BB->getParent()->getParent();
-
-  Type *VoidTy = Type::getVoidTy(M->getContext());
-  Type *VoidPtrTy = PointerType::getUnqual(M->getContext());
-  // prototype free as "void free(void*)"
-  FunctionCallee FreeFunc = M->getOrInsertFunction("free", VoidTy, VoidPtrTy);
-  CallInst *Result = nullptr;
-  if (InsertBefore)
-    Result = CallInst::Create(FreeFunc, Source, Bundles, "", InsertBefore);
-  else
-    Result = CallInst::Create(FreeFunc, Source, Bundles, "");
-  Result->setTailCall();
-  if (Function *F = dyn_cast<Function>(FreeFunc.getCallee()))
-    Result->setCallingConv(F->getCallingConv());
-
-  return Result;
-}
-
-/// CreateFree - Generate the IR for a call to the builtin free function.
-Instruction *CallInst::CreateFree(Value *Source, Instruction *InsertBefore) {
-  return createFree(Source, std::nullopt, InsertBefore, nullptr);
-}
-Instruction *CallInst::CreateFree(Value *Source,
-                                  ArrayRef<OperandBundleDef> Bundles,
-                                  Instruction *InsertBefore) {
-  return createFree(Source, Bundles, InsertBefore, nullptr);
-}
-
-/// CreateFree - Generate the IR for a call to the builtin free function.
-/// Note: This function does not add the call to the basic block, that is the
-/// responsibility of the caller.
-Instruction *CallInst::CreateFree(Value *Source, BasicBlock *InsertAtEnd) {
-  Instruction *FreeCall =
-      createFree(Source, std::nullopt, nullptr, InsertAtEnd);
-  assert(FreeCall && "CreateFree did not create a CallInst");
-  return FreeCall;
-}
-Instruction *CallInst::CreateFree(Value *Source,
-                                  ArrayRef<OperandBundleDef> Bundles,
-                                  BasicBlock *InsertAtEnd) {
-  Instruction *FreeCall = createFree(Source, Bundles, nullptr, InsertAtEnd);
-  assert(FreeCall && "CreateFree did not create a CallInst");
-  return FreeCall;
-}
-
 //===----------------------------------------------------------------------===//
 //                        InvokeInst Implementation
 //===----------------------------------------------------------------------===//
