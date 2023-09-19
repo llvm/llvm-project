@@ -108,6 +108,7 @@ static void MaybePrintAndroidHelpUrl() {
 #endif
 }
 
+namespace {
 // A RAII object that holds a copy of the current thread stack ring buffer.
 // The actual stack buffer may change while we are iterating over it (for
 // example, Printf may call syslog() which can itself be built with hwasan).
@@ -143,6 +144,7 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
   const char *Location() { return Green(); }
   const char *Thread() { return Green(); }
 };
+}  // namespace
 
 static bool FindHeapAllocation(HeapAllocationsRingBuffer *rb, uptr tagged_addr,
                                HeapAllocationRecord *har, uptr *ring_index,
@@ -373,7 +375,7 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
   }
 }
 
-void PrintAddressDescription(
+static void PrintAddressDescription(
     uptr tagged_addr, uptr access_size,
     StackAllocationsRingBuffer *current_stack_allocations) {
   Decorator d;
@@ -564,7 +566,7 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       "description of short granule tags\n");
 }
 
-uptr GetTopPc(StackTrace *stack) {
+static uptr GetTopPc(StackTrace *stack) {
   return stack->size ? StackTrace::GetPreviousInstructionPc(stack->trace[0])
                      : 0;
 }
