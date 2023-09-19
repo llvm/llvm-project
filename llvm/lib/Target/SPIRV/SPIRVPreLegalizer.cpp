@@ -248,7 +248,8 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         SPIRVType *BaseTy = GR->getOrCreateSPIRVType(
             getMDOperandAsType(MI.getOperand(2).getMetadata(), 0), MIB);
         SPIRVType *AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo());
+            BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
+            addressSpaceToStorageClass(MI.getOperand(3).getImm()));
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
