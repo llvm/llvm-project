@@ -139,12 +139,6 @@ bool types::isAcceptedByClang(ID Id) {
 
   case TY_Asm:
   case TY_C: case TY_PP_C:
-    /* FIXME Fortran types may not be necessary, since they are not accepted by
-     * Clang directly */
-  case TY_Fortran:
-  case TY_PP_Fortran:
-  case TY_F_FixedForm:
-  case TY_PP_F_FixedForm:
   case TY_CL: case TY_CLCXX:
   case TY_CUDA: case TY_PP_CUDA:
   case TY_CUDA_DEVICE:
@@ -178,13 +172,10 @@ bool types::isAcceptedByFlang(ID Id) {
 
   case TY_Fortran:
   case TY_PP_Fortran:
-  case TY_F_FixedForm:
-  case TY_PP_F_FixedForm:
     return true;
-  // FIXME: Causes a crash in flang_runtime
   case TY_LLVM_IR:
   case TY_LLVM_BC:
-    return false;
+    return true;
   }
 }
 
@@ -224,20 +215,6 @@ bool types::isDerivedFromC(ID Id) {
   case TY_PP_CXXModule:
     return true;
   }
-}
-
-bool types::isFreeFormFortran(ID Id) {
-  if (!isAcceptedByFlang(Id))
-    return false;
-
-  return (Id == TY_Fortran || Id == TY_PP_Fortran);
-}
-
-bool types::isFixedFormFortran(ID Id) {
-  if (!isAcceptedByFlang(Id))
-    return false;
-
-  return (Id == TY_F_FixedForm || Id == TY_PP_F_FixedForm);
 }
 
 bool types::isObjC(ID Id) {
@@ -317,16 +294,15 @@ bool types::isHIP(ID Id) {
 bool types::isHLSL(ID Id) { return Id == TY_HLSL; }
 
 bool types::isSrcFile(ID Id) {
-  return Id != TY_Object &&
-         ((getPreprocessedType(Id) != TY_INVALID) || isAcceptedByFlang(Id));
+   return Id != TY_Object && getPreprocessedType(Id) != TY_INVALID;
 }
 
 types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
   return llvm::StringSwitch<types::ID>(Ext)
       .Case("c", TY_C)
       .Case("C", TY_CXX)
-      .Case("F", TY_F_FixedForm)
-      .Case("f", TY_PP_F_FixedForm)
+      .Case("F", TY_Fortran)
+      .Case("f", TY_PP_Fortran)
       .Case("h", TY_CHeader)
       .Case("H", TY_CXXHeader)
       .Case("i", TY_PP_C)
@@ -368,14 +344,10 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("f90", TY_PP_Fortran)
       .Case("F95", TY_Fortran)
       .Case("f95", TY_PP_Fortran)
-      .Case("for", TY_PP_F_FixedForm)
-      .Case("FOR", TY_PP_F_FixedForm)
-      .Case("fpp", TY_F_FixedForm)
-      .Case("FPP", TY_F_FixedForm)
-      .Case("f03", TY_PP_Fortran)
-      .Case("f08", TY_PP_Fortran)
-      .Case("F03", TY_Fortran)
-      .Case("F08", TY_Fortran)
+      .Case("for", TY_PP_Fortran)
+      .Case("FOR", TY_PP_Fortran)
+      .Case("fpp", TY_Fortran)
+      .Case("FPP", TY_Fortran)
       .Case("gch", TY_PCH)
       .Case("hip", TY_HIP)
       .Case("hipi", TY_PP_HIP)
@@ -413,36 +385,6 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(ID Id, phases::ID LastPhase) {
   llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> P;
-  if (isAcceptedByFlang(Id)) {
-    // Delegate preprocessing to the "upper" part of Fortran compiler,
-    // preprocess for other preprocessable inputs
-    if (getPreprocessedType(Id) != TY_INVALID && !isAcceptedByFlang(Id)) {
-      P.push_back(phases::Preprocess);
-    }
-
-    if (getPrecompiledType(Id) != TY_INVALID) {
-      P.push_back(phases::Precompile);
-    }
-
-    if (!onlyPrecompileType(Id)) {
-      if (!onlyAssembleType(Id)) {
-        if (isAcceptedByFlang(Id)) {
-          P.push_back(phases::FortranFrontend);
-          P.push_back(phases::Compile);
-          P.push_back(phases::Backend);
-        } else {
-          P.push_back(phases::Compile);
-          P.push_back(phases::Backend);
-        }
-      }
-      P.push_back(phases::Assemble);
-    }
-    if (!onlyPrecompileType(Id)) {
-      P.push_back(phases::Link);
-    }
-    assert(0 < P.size() && "Not enough phases in list");
-    return P;
-  }
 
   const auto &Info = getInfo(Id);
   for (int I = 0; I <= LastPhase; ++I)

@@ -342,15 +342,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
       (PhaseArg = DAL.getLastArg(options::OPT_M, options::OPT_MM)) ||
       (PhaseArg = DAL.getLastArg(options::OPT__SLASH_P)) ||
       CCGenDiagnostics) {
-    if (IsFlangMode() && (DAL.getLastArg(options::OPT_E)))
-      FinalPhase = phases::FortranFrontend;
-    else
-      FinalPhase = phases::Preprocess;
-
-    // -fsyntax-only stops Fortran compilation after FortranFrontend
-  } else if (IsFlangMode() &&
-             (PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only))) {
-    FinalPhase = phases::FortranFrontend;
+    FinalPhase = phases::Preprocess;
 
     // --precompile only runs up to precompilation.
     // Options that cause the output of C++20 compiled module interfaces or
@@ -2139,11 +2131,7 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
 void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   if (IsFlangMode()) {
-#if defined(CLANG_LLVM_FLANG)
-    OS << getClangToolFullVersion("flang-new") << '\n';
-#else
-    OS << getClangToolFullVersion("flang-classic") << '\n';
-#endif
+    OS << getClangToolFullVersion("alpha flang-new") << '\n';
   } else {
     // FIXME: The following handlers should use a callback mechanism, we don't
     // know what the client would like to do.
@@ -5127,11 +5115,6 @@ Action *Driver::ConstructPhaseAction(
 
     return C.MakeAction<PrecompileJobAction>(Input, OutputTy);
   }
-  case phases::FortranFrontend: {
-    if (Args.hasArg(options::OPT_fsyntax_only))
-      return C.MakeAction<FortranFrontendJobAction>(Input, types::TY_Nothing);
-    return C.MakeAction<FortranFrontendJobAction>(Input, types::TY_LLVM_IR);
-  }
   case phases::Compile: {
     if (Args.hasArg(options::OPT_fsyntax_only))
       return C.MakeAction<CompileJobAction>(Input, types::TY_Nothing);
@@ -6967,9 +6950,7 @@ Driver::getOptionVisibilityMask(bool UseDriverMode) const {
   if (IsDXCMode())
     return llvm::opt::Visibility(options::DXCOption);
   if (IsFlangMode()) {
-    // TODO: Does flang really want *all* of the clang driver options?
-    // We probably need to annotate more specifically.
-    return llvm::opt::Visibility(options::ClangOption | options::FlangOption);
+    return llvm::opt::Visibility(options::FlangOption);
   }
   return llvm::opt::Visibility(options::ClangOption);
 }

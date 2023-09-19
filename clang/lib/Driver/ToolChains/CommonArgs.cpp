@@ -75,24 +75,6 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-/// \brief Determine if Fortran link libraies are needed
-bool clang::driver::tools::needFortranLibs(const Driver &D,
-                                           const ArgList &Args) {
-  if (D.IsFlangMode() && !Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_noFlangLibs)) {
-    return true;
-  }
-
-  return false;
-}
-
-/// \brief Determine if Fortran "main" object is needed
-static bool needFortranMain(const Driver &D, const ArgList &Args) {
-  return (tools::needFortranLibs(D, Args) &&
-          (!Args.hasArg(options::OPT_Mnomain) ||
-           !Args.hasArg(options::OPT_no_fortran_main)));
-}
-
 static void renderRpassOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                const StringRef PluginOptPrefix) {
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
@@ -325,14 +307,6 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
       A.renderAsInput(Args, CmdArgs);
   }
 
-   if (!SeenFirstLinkerInput && needFortranMain(D, Args)) {
-     CmdArgs.push_back("-lflangmain");
-   }
-
-  // Claim "no Fortran main" arguments
-  for (auto Arg :
-       Args.filtered(options::OPT_no_fortran_main, options::OPT_Mnomain))
-    Arg->claim();
 }
 
 void tools::addLinkerCompressDebugSectionsOption(

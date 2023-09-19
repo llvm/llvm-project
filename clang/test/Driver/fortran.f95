@@ -3,7 +3,6 @@
 
 ! AOCC team xfails this test as its thought to be f18.
 
-! XFAIL: *
 ! UNSUPPORTED
 
 ! RUN: %clang -target x86_64-unknown-linux-gnu -integrated-as -c %s -### 2>&1 \

@@ -1,7 +1,6 @@
 ! Check that flang -fc1 is invoked when in --driver-mode=flang.
 
 ! AOCC team xfails this test as its thought to be f18.
-! XFAIL: *
 ! UNSUPPORTED
 
 ! This is a copy of flang_ucase.F90 because the driver has logic in it which

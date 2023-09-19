@@ -775,11 +775,6 @@ public:
   virtual VersionTuple computeMSVCVersion(const Driver *D,
                                           const llvm::opt::ArgList &Args) const;
 
-  /// AddFortranStdlibLibArgs - Add the system specific linker arguments to use
-  /// for the given Fortran runtime library type.
-  virtual void AddFortranStdlibLibArgs(const llvm::opt::ArgList &Args,
-                                       llvm::opt::ArgStringList &CmdArgs) const;
-
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
   getDeviceLibs(const llvm::opt::ArgList &Args) const;
