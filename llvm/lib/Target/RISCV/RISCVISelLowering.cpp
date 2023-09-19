@@ -14055,6 +14055,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
            MGN->getBasePtr(), Index, ScaleOp},
           MGN->getMemOperand(), IndexType, MGN->getExtensionType());
 
+    if (Index.getOpcode() == ISD::BUILD_VECTOR &&
+        MGN->getExtensionType() == ISD::NON_EXTLOAD) {
+      if (std::optional<VIDSequence> SimpleVID = isSimpleVIDSequence(Index);
+          SimpleVID && SimpleVID->StepDenominator == 1) {
+        const int64_t StepNumerator = SimpleVID->StepNumerator;
+        const int64_t Addend = SimpleVID->Addend;
+
+        // Note: We don't need to check alignment here since (by assumption
+        // from the existance of the gather), our offsets must be sufficiently
+        // aligned.
+
+        const EVT PtrVT = getPointerTy(DAG.getDataLayout());
+        assert(MGN->getBasePtr()->getValueType(0) == PtrVT);
+        assert(IndexType == ISD::UNSIGNED_SCALED);
+        SDValue BasePtr = DAG.getNode(ISD::ADD, DL, PtrVT, MGN->getBasePtr(),
+                                      DAG.getConstant(Addend, DL, PtrVT));
+
+        SDVTList VTs = DAG.getVTList({VT, MVT::Other});
+        SDValue IntID =
+          DAG.getTargetConstant(Intrinsic::riscv_masked_strided_load, DL,
+                                XLenVT);
+        SDValue Ops[] =
+          {MGN->getChain(), IntID, MGN->getPassThru(), BasePtr,
+           DAG.getConstant(StepNumerator, DL, XLenVT), MGN->getMask()};
+        return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
+                                       Ops, VT, MGN->getMemOperand());
+      }
+    }
+
     SmallVector<int> ShuffleMask;
     if (MGN->getExtensionType() == ISD::NON_EXTLOAD &&
         matchIndexAsShuffle(VT, Index, MGN->getMask(), ShuffleMask)) {
