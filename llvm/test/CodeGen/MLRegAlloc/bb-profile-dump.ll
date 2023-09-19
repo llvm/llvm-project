@@ -22,10 +22,10 @@ ifNotEqual:
     ret i64 %sum
 }
 
-; CHECK: f2,0,1.000000e+00
-; CHECK-NEXT: f1,0,1.000000e+00
-; CHECK-NEXT: f1,1,5.000000e-01
-; CHECK-NEXT: f1,2,1.000000e+00
+; CHECK: f2,0,8
+; CHECK-NEXT: f1,0,16
+; CHECK-NEXT: f1,1,8
+; CHECK-NEXT: f1,2,16
 
 ; Check that if we pass -mbb-profile-dump but don't set -basic-block-sections,
 ; we get an appropriate error message
