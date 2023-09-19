@@ -740,7 +740,7 @@ void DWARFUnit::updateAddressDieMap(DWARFDie Die) {
 DWARFDie DWARFUnit::getSubroutineForAddress(uint64_t Address) {
   extractDIEsIfNeeded(false);
   if (AddrDieMap.empty())
-    updateAddressDieMap(getUnitDIE());
+    updateAddressDieMap(getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/false));
   auto R = AddrDieMap.upper_bound(Address);
   if (R == AddrDieMap.begin())
     return DWARFDie();

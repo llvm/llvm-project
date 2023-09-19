@@ -1024,9 +1024,17 @@ void DWARFContext::dump(
   auto dumpDebugInfo = [&](const char *Name, unit_iterator_range Units) {
     OS << '\n' << Name << " contents:\n";
     if (auto DumpOffset = DumpOffsets[DIDT_ID_DebugInfo])
-      for (const auto &U : Units)
+      for (const auto &U : Units) {
         U->getDIEForOffset(*DumpOffset)
             .dump(OS, 0, DumpOpts.noImplicitRecursion());
+        DWARFDie CUDie = U->getUnitDIE(false);
+        DWARFDie CUNonSkeletonDie = U->getNonSkeletonUnitDIE(false);
+        if (CUNonSkeletonDie && CUDie != CUNonSkeletonDie) {
+          CUNonSkeletonDie.getDwarfUnit()->getDIEForOffset(*DumpOffset)
+              .dump(OS, 0, DumpOpts.noImplicitRecursion());
+
+        }
+      }
     else
       for (const auto &U : Units)
         U->dump(OS, DumpOpts);
