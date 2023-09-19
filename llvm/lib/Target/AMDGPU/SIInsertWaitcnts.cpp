@@ -483,7 +483,7 @@ public:
   bool generateWaitcnt(AMDGPU::Waitcnt Wait,
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
-                       MachineInstr *OldWaitcntInstr);
+                       MachineInstr *OldWaitcntInstr) const;
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
@@ -1296,7 +1296,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                                        MachineBasicBlock::instr_iterator It,
                                        MachineBasicBlock &Block,
                                        WaitcntBrackets &ScoreBrackets,
-                                       MachineInstr *OldWaitcntInstr) {
+                                       MachineInstr *OldWaitcntInstr) const {
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
 
