@@ -765,27 +765,29 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
 def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
     Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
                Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
-               AffineMapAttr:$nx, OptionalAttr<IndexAttr>:$ny,
+               AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
                SparseTensorSortKindAttr:$algorithm)>  {
   let summary = "Sorts the arrays in xs and ys lexicographically on the "
                 "integral values found in the xs list";
   let description = [{
-    Sparse_tensor.sort_coo is similar to sparse_tensor.sort, except that all the
-    `xs` values and some `ys` values are put in the linear buffer `xy`. The
-    optional index attribute `nx` provides the number of `xs` values in `xy`.
-    When `nx` is not explicitly specified, its value is 1. The optional index
-    attribute `ny` provides the number of `ys` values in `xy`. When `ny` is not
-    explicitly specified, its value is 0. This instruction supports a more
-    efficient way to store the COO definition in sparse tensor type.
+    Sparse_tensor.sort_coo sort the `xs` values along with some `ys` values
+    that are put in a single linear buffer `xy`.
+    The affine map attribute `perm_map` specifies the permutation to be applied on
+    the `xs` before comparison, the rank of the permutation map
+    also specifies the number of `xs` values in `xy`.
+    The optional index attribute `ny` provides the number of `ys` values in `xy`.
+    When `ny` is not explicitly specified, its value is 0.
+    This instruction supports a more efficient way to store the COO definition
+    in sparse tensor type.
 
-    The buffer xy should have a dimension not less than n * (nx + ny) while the
+    The buffer xy should have a dimension not less than n * (rank(perm_map) + ny) while the
     buffers in `ys` should have a dimension not less than `n`. The behavior of
     the operator is undefined if this condition is not met.
 
     Example:
 
     ```mlir
-    sparse_tensor.sort_coo insertion_sort_stable %n, %x { nx = 2 : index}
+    sparse_tensor.sort_coo insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
       : memref<?xindex>
     ```
 

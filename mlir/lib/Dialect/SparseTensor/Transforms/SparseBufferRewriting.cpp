@@ -54,8 +54,11 @@ using FuncGeneratorType = function_ref<void(OpBuilder &, ModuleOp, func::FuncOp,
 static void getMangledSortHelperFuncName(llvm::raw_svector_ostream &nameOstream,
                                          StringRef namePrefix, AffineMap xPerm,
                                          uint64_t ny, ValueRange operands) {
-  nameOstream << namePrefix << xPerm << "_"
-              << getMemRefType(operands[xStartIdx]).getElementType();
+  nameOstream << namePrefix;
+  for (auto res : xPerm.getResults())
+    nameOstream << res.cast<AffineDimExpr>().getPosition() << "_";
+
+  nameOstream << getMemRefType(operands[xStartIdx]).getElementType();
   nameOstream << "_coo_" << ny;
 
   constexpr uint64_t yBufferOffset = 1;
@@ -1405,7 +1408,7 @@ public:
     xys.push_back(op.getXy());
     xys.append(op.getYs().begin(), op.getYs().end());
 
-    auto xPerm = op.getNx();
+    auto xPerm = op.getPermMap();
     uint64_t ny = 0;
     if (auto nyAttr = op.getNyAttr())
       ny = nyAttr.getInt();

@@ -1354,6 +1354,14 @@ LogicalResult SelectOp::verify() {
 }
 
 LogicalResult SortCooOp::verify() {
+  AffineMap xPerm = getPermMap();
+  uint64_t nx = xPerm.getNumDims();
+  if (nx < 1)
+    emitError(llvm::formatv("Expected rank(perm_map) > 1, got {0}", nx));
+
+  if (!xPerm.isPermutation())
+    emitError(llvm::formatv("Expected a permutation map, got {0}", xPerm));
+
   std::optional<int64_t> cn = getConstantIntValue(getN());
   // We can't check the size of the buffers when n or buffer dimensions aren't
   // compile-time constants.
@@ -1361,12 +1369,6 @@ LogicalResult SortCooOp::verify() {
     return success();
 
   uint64_t n = cn.value();
-  uint64_t nx = 1;
-  if (auto nxAttr = getNxAttr()) {
-    nx = nxAttr.getAffineMap().getNumResults();
-    if (nx < 1)
-      emitError(llvm::formatv("Expected nx > 1, got {0}", nx));
-  }
   uint64_t ny = 0;
   if (auto nyAttr = getNyAttr()) {
     ny = nyAttr.getInt();
@@ -1381,7 +1383,8 @@ LogicalResult SortCooOp::verify() {
       emitError(llvm::formatv("{0} got {1} < {2}", message, sh, minSize));
   };
 
-  checkDim(getXy(), n * (nx + ny), "Expected dimension(xy) >= n * (nx + ny)");
+  checkDim(getXy(), n * (nx + ny),
+           "Expected dimension(xy) >= n * (rank(perm_map) + ny)");
 
   for (Value opnd : getYs()) {
     checkDim(opnd, n, "Expected dimension(y) >= n");
