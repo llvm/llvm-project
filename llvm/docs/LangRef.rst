@@ -3398,25 +3398,44 @@ round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 Running default LLVM code in an environment where these assumptions are not met
 can lead to undefined behavior.
 
-The representation bits of a floating-point value do not mutate arbitrarily; if
-there is no floating-point operation being performed, the NaN payload (if any)
-is preserved.
+Code that requires different behavior than this should use the
+:ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
+
+.. _floatnan:
+
+Behavior of Floating-Point NaN values
+-------------------------------------
+
+A floating-point NaN value consists of a sign bit, a quiet/signaling bit, and a
+payload (which makes up the rest of the mantissa except for the quiet/signaling
+bit). LLVM assumes that the quiet/signaling bit being set to ``1`` indicates a
+quiet NaN (QNan), and a value of ``0`` indicates a signaling NaN (SNaN). In the
+following we will hence just call it the "quiet bit"
+
+The representation bits of a floating-point value do not mutate arbitrarily; in
+particular, if there is no floating-point operation being performed, NaN signs,
+quiet bits, and payloads are preserved.
+
+For the purpose of this section, ``bitcast`` as well as the following operations
+are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
+``llvm.copysign``. They act directly on the underlying bit representation and
+never change anything except for the sign bit.
 
 When a floating-point math operation produces a NaN value, the result has a
-non-deterministic sign. The payload is non-deterministically chosen from the
-following set:
+non-deterministic sign. The quiet bit and payload are non-deterministically
+chosen from the following set of options:
 
-- The payload that is all-zero except that the ``quiet`` bit is set.
-  ("Preferred NaN" case)
-- The payload of any input operand that is a NaN, bit-wise ORed with a payload that has
-  the ``quiet`` bit set. ("Quieting NaN propagation" case)
-- The payload of any input operand that is a NaN. ("Unchanged NaN propagation" case)
-- A target-specific set of further NaN payloads, that definitely all have their
-  ``quiet`` bit set. The set can depend on the payloads of the input NaNs.
-  This set is empty on x86 and ARM, but can be non-empty on other architectures.
-  (For instance, on wasm, if any input NaN is not the preferred NaN, then
-  this set contains all quiet NaNs; otherwise, it is empty.
-  On SPARC, this set consists of the all-one payload.)
+- The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
+- The quiet bit is set and the payload is copied from any input operand that is
+  a NaN. ("Quieting NaN propagation" case)
+- The quiet bit and payload are copied from any input operand that is a NaN.
+  ("Unchanged NaN propagation" case)
+- The quiet bit is set and the payload is picked from a target-specific set of
+  further possible NaN payloads. The set can depend on the payloads of the input
+  NaNs. This set is empty on x86 and ARM, but can be non-empty on other
+  architectures. (For instance, on wasm, if any input NaN does not have the
+  preferred all-zero payload, then this set contains all possible payloads;
+  otherwise, it is empty. On SPARC, this set consists of the all-one payload.)
 
 In particular, if all input NaNs are quiet, then the output NaN is definitely
 quiet. Signaling NaN outputs can only occur if they are provided as an input
@@ -3427,8 +3446,22 @@ quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0.
 
 Code that requires different behavior than this should use the
 :ref:`Constrained Floating-Point Intrinsics <constrainedfp>`.
-In particular, constrained intrinsics rule out the "Unchanged NaN propagation" case;
-they are guaranteed to return a QNaN.
+In particular, constrained intrinsics rule out the "Unchanged NaN propagation"
+case; they are guaranteed to return a QNaN.
+
+Unfortunately, due to hard-or-impossible-to-fix issues, LLVM violates its own
+specification on some architectures:
+- x86-32 without SSE2 enabled may convert floating-point values to x86_fp80 and
+  back when performing floating-point math operations; this can lead to results
+  with different precision than expected and it can alter NaN values. Since
+  optimizations can make contradiction assumptions, this can lead to arbitrary
+  miscompilations. See `issue #44218
+  <https://github.com/llvm/llvm-project/issues/44218>`_.
+- x86-32 (even with SSE2 enabled) may implicitly perform such a conversion on
+  values returned from a function.
+- Older MIPS versions use the opposite polarity for the quiet/signaling bit, and
+  LLVM does not correctly represent this. See `issue #60796
+  <https://github.com/llvm/llvm-project/issues/60796>`_.
 
 .. _fastmath:
 
