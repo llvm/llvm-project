@@ -345,6 +345,9 @@ Bug Fixes to C++ Support
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
+- Fix a crash when calling a non-constant immediate function
+  in the initializer of a static data member.
+  (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
 - Clang now properly converts static lambda call operator to function
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
@@ -362,6 +365,9 @@ Bug Fixes to C++ Support
 - Fix crash for a lambda attribute with a statement expression
   that contains a `return`.
   (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
+
+- Clang now no longer asserts when an UnresolvedLookupExpr is used as an
+  expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

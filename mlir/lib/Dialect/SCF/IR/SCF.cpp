@@ -530,7 +530,7 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-Region &ForOp::getLoopBody() { return getRegion(); }
+SmallVector<Region *> ForOp::getLoopRegions() { return {&getRegion()}; }
 
 ForOp mlir::scf::getForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
@@ -558,11 +558,11 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for loop not to enter the
   // body.
-  regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
 }
 
-Region &ForallOp::getLoopBody() { return getRegion(); }
+SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 
 /// Promotes the loop body of a forallOp to its containing block if it can be
 /// determined that the loop has a single iteration.
@@ -894,7 +894,7 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       blockArgs.reserve(op.getInitArgs().size() + 1);
       blockArgs.push_back(op.getLowerBound());
       llvm::append_range(blockArgs, op.getInitArgs());
-      replaceOpWithRegion(rewriter, op, op.getLoopBody(), blockArgs);
+      replaceOpWithRegion(rewriter, op, op.getRegion(), blockArgs);
       return success();
     }
 
@@ -2872,7 +2872,7 @@ void ParallelOp::print(OpAsmPrinter &p) {
       /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
 }
 
-Region &ParallelOp::getLoopBody() { return getRegion(); }
+SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
@@ -2926,7 +2926,7 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
       // loop body and nested ReduceOp's
       SmallVector<Value> results;
       results.reserve(op.getInitVals().size());
-      for (auto &bodyOp : op.getLoopBody().front().without_terminator()) {
+      for (auto &bodyOp : op.getBody()->without_terminator()) {
         auto reduce = dyn_cast<ReduceOp>(bodyOp);
         if (!reduce) {
           rewriter.clone(bodyOp, mapping);
@@ -2965,7 +2965,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
 
   LogicalResult matchAndRewrite(ParallelOp op,
                                 PatternRewriter &rewriter) const override {
-    Block &outerBody = op.getLoopBody().front();
+    Block &outerBody = *op.getBody();
     if (!llvm::hasSingleElement(outerBody.without_terminator()))
       return failure();
 
@@ -2985,7 +2985,7 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
 
     auto bodyBuilder = [&](OpBuilder &builder, Location /*loc*/,
                            ValueRange iterVals, ValueRange) {
-      Block &innerBody = innerOp.getLoopBody().front();
+      Block &innerBody = *innerOp.getBody();
       assert(iterVals.size() ==
              (outerBody.getNumArguments() + innerBody.getNumArguments()));
       IRMapping mapping;
@@ -3201,6 +3201,10 @@ void WhileOp::getSuccessorRegions(RegionBranchPoint point,
 
   regions.emplace_back(getResults());
   regions.emplace_back(&getAfter(), getAfter().getArguments());
+}
+
+SmallVector<Region *> WhileOp::getLoopRegions() {
+  return {&getBefore(), &getAfter()};
 }
 
 /// Parses a `while` op.

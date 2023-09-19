@@ -36,6 +36,21 @@ static bool isDummyArgument(mlir::Value v) {
   return blockArg.getOwner()->isEntryBlock();
 }
 
+/// Temporary function to skip through all the no op operations
+/// TODO: Generalize support of fir.load
+static mlir::Value getOriginalDef(mlir::Value v) {
+  mlir::Operation *defOp;
+  bool breakFromLoop = false;
+  while (!breakFromLoop && (defOp = v.getDefiningOp())) {
+    llvm::TypeSwitch<Operation *>(defOp)
+        .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
+        .Case<fir::DeclareOp, hlfir::DeclareOp>(
+            [&](auto op) { v = op.getMemref(); })
+        .Default([&](auto op) { breakFromLoop = true; });
+  }
+  return v;
+}
+
 namespace fir {
 
 void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
@@ -82,10 +97,26 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
-  if (lhsSrc.kind == SourceKind::Indirect ||
-      lhsSrc.kind == SourceKind::Unknown ||
-      rhsSrc.kind == SourceKind::Indirect || rhsSrc.kind == SourceKind::Unknown)
+  if (lhsSrc.kind > SourceKind::Direct || rhsSrc.kind > SourceKind::Direct) {
     return AliasResult::MayAlias;
+  }
+
+  // SourceKind::Direct is set for the addresses wrapped in a global boxes.
+  // ie: fir.global @_QMpointersEp : !fir.box<!fir.ptr<f32>>
+  // Though nothing is known about them, they would only alias with targets or
+  // pointers
+  bool directSourceToNonTargetOrPointer = false;
+  if (lhsSrc.u != rhsSrc.u) {
+    if ((lhsSrc.kind == SourceKind::Direct && !rhsSrc.isTargetOrPointer()) ||
+        (rhsSrc.kind == SourceKind::Direct && !lhsSrc.isTargetOrPointer()))
+      directSourceToNonTargetOrPointer = true;
+  }
+
+  if (lhsSrc.kind == SourceKind::Direct ||
+      rhsSrc.kind == SourceKind::Direct) {
+    if (!directSourceToNonTargetOrPointer)
+      return AliasResult::MayAlias;
+  }
 
   if (lhsSrc.kind == rhsSrc.kind) {
     if (lhsSrc.u == rhsSrc.u) {
@@ -103,9 +134,6 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
         lhsSrc.kind == SourceKind::Global)
       return AliasResult::NoAlias;
 
-    assert(lhsSrc.kind == SourceKind::Argument &&
-           "unexpected memory source kind");
-
     // Dummy TARGET/POINTER arguments may alias.
     if (lhsSrc.isTargetOrPointer() && rhsSrc.isTargetOrPointer())
       return AliasResult::MayAlias;
@@ -122,7 +150,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::NoAlias;
   }
 
-  assert(lhsSrc.kind != rhsSrc.kind && "memory source kinds must be the same");
+  assert(lhsSrc.kind != rhsSrc.kind && "memory source kinds must be different");
 
   Source *src1, *src2;
   if (lhsSrc.kind < rhsSrc.kind) {
@@ -132,18 +160,6 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     src1 = &rhsSrc;
     src2 = &lhsSrc;
   }
-
-  assert(src2->kind <= SourceKind::HostAssoc &&
-         "unexpected memory source kind");
-  if (src1->kind == SourceKind::Allocate)
-    return AliasResult::NoAlias;
-
-  assert(((src1->kind == SourceKind::Global &&
-           (src2->kind == SourceKind::Argument ||
-            src2->kind == SourceKind::HostAssoc)) ||
-          (src1->kind == SourceKind::Argument &&
-           src2->kind == SourceKind::HostAssoc)) &&
-         "unexpected memory source kinds");
 
   if (src1->kind == SourceKind::Argument &&
       src2->kind == SourceKind::HostAssoc) {
@@ -229,6 +245,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   mlir::Type ty;
   bool breakFromLoop{false};
   bool approximateSource{false};
+  bool followBoxAddr{false};
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   while (defOp && !breakFromLoop) {
@@ -244,22 +261,74 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
         })
+        .Case<fir::BoxAddrOp>([&](auto op) {
+          v = op->getOperand(0);
+          defOp = v.getDefiningOp();
+          if (mlir::isa<fir::BaseBoxType>(v.getType()))
+            followBoxAddr = true;
+        })
+        .Case<fir::ArrayCoorOp, fir::CoordinateOp>([&](auto op) {
+          v = op->getOperand(0);
+          defOp = v.getDefiningOp();
+          if (mlir::isa<fir::BaseBoxType>(v.getType()))
+            followBoxAddr = true;
+          approximateSource = true;
+        })
+        .Case<fir::EmboxOp, fir::ReboxOp>([&](auto op) {
+          if (followBoxAddr) {
+            v = op->getOperand(0);
+            defOp = v.getDefiningOp();
+          } else
+            breakFromLoop = true;
+        })
         .Case<fir::LoadOp>([&](auto op) {
-          // No further tracking for addresses loaded from memory (e.g. a box)
-          // right now.
+          if (followBoxAddr && mlir::isa<fir::BaseBoxType>(op.getType())) {
+            // For now, support the load of an argument or fir.address_of
+            // TODO: generalize to all operations (in particular fir.alloca and
+            // fir.allocmem)
+            auto def = getOriginalDef(op.getMemref());
+            if (isDummyArgument(def) ||
+                def.template getDefiningOp<fir::AddrOfOp>()) {
+              v = def;
+              defOp = v.getDefiningOp();
+              return;
+            }
+          }
+          // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
           breakFromLoop = true;
         })
         .Case<fir::AddrOfOp>([&](auto op) {
           // Address of a global scope object.
-          type = SourceKind::Global;
           ty = v.getType();
+
+          // When the global is a
+          // fir.global @_QMpointersEp : !fir.box<!fir.ptr<f32>>
+          //   or
+          // fir.global @_QMpointersEp : !fir.box<!fir.heap<f32>>
+          //
+          // and when following through the wrapped address, capture
+          // the fact that there is nothing known about it. Therefore setting
+          // the source to Direct.
+          //
+          // When not following the wrapped address, then consider the address
+          // of the box, which has nothing to do with the wrapped address and
+          // lies in the global memory space.
+          if (followBoxAddr &&
+              mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(ty)))
+            type = SourceKind::Direct;
+          else
+            type = SourceKind::Global;
+
           if (fir::valueHasFirAttribute(v,
                                         fir::GlobalOp::getTargetAttrNameStr()))
             attributes.set(Attribute::Target);
 
+          // TODO: Take followBoxAddr into account when setting the pointer
+          // attribute
           if (Source::isPointerReference(ty))
             attributes.set(Attribute::Pointer);
+
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
         })
@@ -278,7 +347,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
             breakFromLoop = true;
             return;
           }
-
+          // TODO: Look for the fortran attributes present on the operation
           // Track further through the operand
           v = op.getMemref();
           defOp = v.getDefiningOp();

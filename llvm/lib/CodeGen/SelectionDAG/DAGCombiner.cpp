@@ -539,6 +539,8 @@ namespace {
     SDValue visitMSCATTER(SDNode *N);
     SDValue visitVPGATHER(SDNode *N);
     SDValue visitVPSCATTER(SDNode *N);
+    SDValue visitVP_STRIDED_LOAD(SDNode *N);
+    SDValue visitVP_STRIDED_STORE(SDNode *N);
     SDValue visitFP_TO_FP16(SDNode *N);
     SDValue visitFP16_TO_FP(SDNode *N);
     SDValue visitFP_TO_BF16(SDNode *N);
@@ -11872,6 +11874,21 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   return SDValue();
 }
 
+SDValue DAGCombiner::visitVP_STRIDED_STORE(SDNode *N) {
+  auto *SST = cast<VPStridedStoreSDNode>(N);
+  EVT EltVT = SST->getValue().getValueType().getVectorElementType();
+  // Combine strided stores with unit-stride to a regular VP store.
+  if (auto *CStride = dyn_cast<ConstantSDNode>(SST->getStride());
+      CStride && CStride->getZExtValue() == EltVT.getStoreSize()) {
+    return DAG.getStoreVP(SST->getChain(), SDLoc(N), SST->getValue(),
+                          SST->getBasePtr(), SST->getOffset(), SST->getMask(),
+                          SST->getVectorLength(), SST->getMemoryVT(),
+                          SST->getMemOperand(), SST->getAddressingMode(),
+                          SST->isTruncatingStore(), SST->isCompressingStore());
+  }
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVPGATHER(SDNode *N) {
   VPGatherSDNode *MGT = cast<VPGatherSDNode>(N);
   SDValue Mask = MGT->getMask();
@@ -11956,6 +11973,22 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
     return SDValue(N, 0);
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitVP_STRIDED_LOAD(SDNode *N) {
+  auto *SLD = cast<VPStridedLoadSDNode>(N);
+  EVT EltVT = SLD->getValueType(0).getVectorElementType();
+  // Combine strided loads with unit-stride to a regular VP load.
+  if (auto *CStride = dyn_cast<ConstantSDNode>(SLD->getStride());
+      CStride && CStride->getZExtValue() == EltVT.getStoreSize()) {
+    SDValue NewLd = DAG.getLoadVP(
+        SLD->getAddressingMode(), SLD->getExtensionType(), SLD->getValueType(0),
+        SDLoc(N), SLD->getChain(), SLD->getBasePtr(), SLD->getOffset(),
+        SLD->getMask(), SLD->getVectorLength(), SLD->getMemoryVT(),
+        SLD->getMemOperand(), SLD->isExpandingLoad());
+    return CombineTo(N, NewLd, NewLd.getValue(1));
+  }
   return SDValue();
 }
 
@@ -25974,6 +26007,14 @@ SDValue DAGCombiner::visitVPOp(SDNode *N) {
 
   if (N->getOpcode() == ISD::VP_SCATTER)
     if (SDValue SD = visitVPSCATTER(N))
+      return SD;
+
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_LOAD)
+    if (SDValue SD = visitVP_STRIDED_LOAD(N))
+      return SD;
+
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_STRIDED_STORE)
+    if (SDValue SD = visitVP_STRIDED_STORE(N))
       return SD;
 
   // VP operations in which all vector elements are disabled - either by

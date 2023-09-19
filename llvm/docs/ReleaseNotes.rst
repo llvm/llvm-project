@@ -237,6 +237,8 @@ Changes to the LLVM tools
 
 * ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
   default behavior closer in line with ``objdump``.
+* ``llvm-nm`` now supports the ``--line-numbers`` (``-l``) option to use
+  debugging information to print symbols' filenames and line numbers.
 
 Changes to LLDB
 ---------------------------------
