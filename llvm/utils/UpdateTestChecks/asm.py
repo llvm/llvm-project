@@ -202,15 +202,11 @@ ASM_FUNCTION_WASM_RE = re.compile(
     flags=(re.M | re.S),
 )
 
-# We parse the function name from the comments issued by the backend:
-# ; -- Begin function <name>
-# and then the final comment
-# ; -- End function
-# If these change in the future, we need to change the regex.
+# We parse the function name from OpName, and grab the variable name 'var'
+# for this function. Then we match that when the variable is assigned with
+# OpFunction and match its body.
 ASM_FUNCTION_SPIRV_RE = re.compile(
-    r"[ \t]+; \-\- Begin function (?P<func>[^\n]+)\n"
-    r"(?P<body>.*?)\n"
-    r"[ \t]+; \-\- End function",
+    r'OpName (?P<var>%[0-9]+) "(?P<func>[^"]+)".*(?P<body>(?P=var) = OpFunction.+?OpFunctionEnd)',
     flags=(re.M | re.S),
 )
 

@@ -118,7 +118,6 @@ void SPIRVAsmPrinter::emitFunctionHeader() {
     OutStreamer->getCommentOS()
         << "-- Begin function "
         << GlobalValue::dropLLVMManglingEscape(F.getName()) << '\n';
-    OutStreamer->addBlankLine();
   }
 
   auto Section = getObjFileLowering().SectionForGlobal(&F, TM);

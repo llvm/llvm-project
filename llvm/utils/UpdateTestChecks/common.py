@@ -196,13 +196,6 @@ def parse_commandline_args(parser):
         default=[],
         help="List of regular expressions such that, for matching global value declarations, literal integer values should be encoded in hex in the associated FileCheck directives",
     )
-    parser.add_argument(
-        "--skip-check-label",
-        action="store_true",
-        dest="skip_check_label",
-        default=False,
-        help="Skip CHECK-LABEL line generation per function",
-    )
     # FIXME: in 3.9, we can use argparse.BooleanOptionalAction. At that point,
     # we need to rename the flag to just -generate-body-for-unused-prefixes.
     parser.add_argument(
@@ -219,11 +212,10 @@ def parse_commandline_args(parser):
     )
     args = parser.parse_args()
     # TODO: This should not be handled differently from the other options
-    global _verbose, _global_value_regex, _global_hex_value_regex, _skip_check_label
+    global _verbose, _global_value_regex, _global_hex_value_regex
     _verbose = args.verbose
     _global_value_regex = args.global_value_regex
     _global_hex_value_regex = args.global_hex_value_regex
-    _skip_check_label = args.skip_check_label
     return args
 
 
@@ -1314,7 +1306,7 @@ def add_checks(
                 output_lines.append(
                     "%s %s-SAME: %s" % (comment_marker, checkprefix, args_and_sig)
                 )
-            elif not _skip_check_label:
+            else:
                 output_lines.append(
                     check_label_format
                     % (
