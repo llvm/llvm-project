@@ -384,6 +384,8 @@ Static Analyzer
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
 
+- Fix false positive in mutation check when using pointer to member function.
+
 .. _release-notes-sanitizers:
 
 Sanitizers

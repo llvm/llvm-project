@@ -976,3 +976,16 @@ void auto_usage_variants() {
   auto &auto_td1 = auto_td0;
   auto *auto_td2 = &auto_td0;
 }
+
+using PointerToMemberFunction = int (Value::*)();
+void member_pointer(Value &x, PointerToMemberFunction m) {
+  Value &member_pointer_tmp = x;
+  (member_pointer_tmp.*m)();
+}
+
+using PointerToConstMemberFunction = int (Value::*)() const;
+void member_pointer_const(Value &x, PointerToConstMemberFunction m) {
+  Value &member_pointer_tmp = x;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'member_pointer_tmp' of type 'Value &' can be declared 'const'
+  (member_pointer_tmp.*m)();
+}
