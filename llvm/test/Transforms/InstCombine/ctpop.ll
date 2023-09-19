@@ -475,3 +475,16 @@ define i32 @parity_xor_extra_use2(i32 %arg, i32 %arg1) {
   %i5 = xor i32 %i2, %i4
   ret i32 %i5
 }
+
+define i32 @select_ctpop_zero(i32 %x) {
+; CHECK-LABEL: @select_ctpop_zero(
+; CHECK-NEXT:    [[CTPOP:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 0, i32 [[CTPOP]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %x, 0
+  %res = select i1 %cmp, i32 0, i32 %ctpop
+  ret i32 %res
+}
