@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -97,6 +98,7 @@ static bool Demangle;
 static bool DynamicSyms;
 static bool ExportSymbols;
 static bool ExternalOnly;
+static bool LineNumbers;
 static OutputFormatTy OutputFormat;
 static bool NoLLVMBitcode;
 static bool NoSort;
@@ -551,8 +553,6 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
       }
     }
   }
-
-  outs() << "\n";
 }
 
 // Table that maps Darwin's Mach-O stab constants to strings to allow printing.
@@ -689,9 +689,88 @@ static void printExportSymbolList(const std::vector<NMSymbol> &SymbolList) {
   }
 }
 
+static void printLineNumbers(symbolize::LLVMSymbolizer &Symbolizer,
+                             const NMSymbol &S) {
+  const auto *Obj = dyn_cast<ObjectFile>(S.Sym.getObject());
+  if (!Obj)
+    return;
+  const SymbolRef Sym(S.Sym);
+  uint64_t SectionIndex = object::SectionedAddress::UndefSection;
+  section_iterator Sec = cantFail(Sym.getSection());
+  if (Sec != Obj->section_end())
+    SectionIndex = Sec->getIndex();
+  object::SectionedAddress Address = {cantFail(Sym.getAddress()), SectionIndex};
+
+  std::string FileName;
+  uint32_t Line;
+  switch (S.TypeChar) {
+  // For undefined symbols, find the first relocation for that symbol with a
+  // line number.
+  case 'U': {
+    for (const SectionRef RelocsSec : Obj->sections()) {
+      if (RelocsSec.relocations().empty())
+        continue;
+      SectionRef TextSec = *cantFail(RelocsSec.getRelocatedSection());
+      if (!TextSec.isText())
+        continue;
+      for (const RelocationRef R : RelocsSec.relocations()) {
+        if (R.getSymbol() != Sym)
+          continue;
+        Expected<DILineInfo> ResOrErr = Symbolizer.symbolizeCode(
+            *Obj, {TextSec.getAddress() + R.getOffset(), SectionIndex});
+        if (!ResOrErr) {
+          error(ResOrErr.takeError(), Obj->getFileName());
+          return;
+        }
+        if (ResOrErr->FileName == DILineInfo::BadString)
+          return;
+        FileName = std::move(ResOrErr->FileName);
+        Line = ResOrErr->Line;
+        break;
+      }
+      if (!FileName.empty())
+        break;
+    }
+    if (FileName.empty())
+      return;
+    break;
+  }
+  case 't':
+  case 'T': {
+    Expected<DILineInfo> ResOrErr = Symbolizer.symbolizeCode(*Obj, Address);
+    if (!ResOrErr) {
+      error(ResOrErr.takeError(), Obj->getFileName());
+      return;
+    }
+    if (ResOrErr->FileName == DILineInfo::BadString)
+      return;
+    FileName = std::move(ResOrErr->FileName);
+    Line = ResOrErr->Line;
+    break;
+  }
+  default: {
+    Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(*Obj, Address);
+    if (!ResOrErr) {
+      error(ResOrErr.takeError(), Obj->getFileName());
+      return;
+    }
+    if (ResOrErr->DeclFile.empty())
+      return;
+    FileName = std::move(ResOrErr->DeclFile);
+    Line = ResOrErr->DeclLine;
+    break;
+  }
+  }
+  outs() << '\t' << FileName << ':' << Line;
+}
+
 static void printSymbolList(SymbolicFile &Obj,
                             std::vector<NMSymbol> &SymbolList, bool printName,
                             StringRef ArchiveName, StringRef ArchitectureName) {
+  std::optional<symbolize::LLVMSymbolizer> Symbolizer;
+  if (LineNumbers)
+    Symbolizer.emplace();
+
   if (!PrintFileName) {
     if ((OutputFormat == bsd || OutputFormat == posix ||
          OutputFormat == just_symbols) &&
@@ -798,7 +877,7 @@ static void printSymbolList(SymbolicFile &Obj,
                         printFormat);
     } else if (OutputFormat == posix) {
       outs() << Name << " " << S.TypeChar << " " << SymbolAddrStr << " "
-             << (MachO ? "0" : SymbolSizeStr) << "\n";
+             << (MachO ? "0" : SymbolSizeStr);
     } else if (OutputFormat == bsd || (OutputFormat == darwin && !MachO)) {
       if (PrintAddress)
         outs() << SymbolAddrStr << ' ';
@@ -819,12 +898,14 @@ static void printSymbolList(SymbolicFile &Obj,
         } else
           outs() << S.IndirectName << ")";
       }
-      outs() << "\n";
     } else if (OutputFormat == sysv) {
       outs() << left_justify(Name, 20) << "|" << SymbolAddrStr << "|   "
              << S.TypeChar << "  |" << right_justify(S.TypeName, 18) << "|"
-             << SymbolSizeStr << "|     |" << S.SectionName << "\n";
+             << SymbolSizeStr << "|     |" << S.SectionName;
     }
+    if (LineNumbers)
+      printLineNumbers(*Symbolizer, S);
+    outs() << '\n';
   }
 
   SymbolList.clear();
@@ -2415,6 +2496,7 @@ int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
   else
     error("--format value should be one of: bsd, posix, sysv, darwin, "
           "just-symbols");
+  LineNumbers = Args.hasArg(OPT_line_numbers);
   NoLLVMBitcode = Args.hasArg(OPT_no_llvm_bc);
   NoSort = Args.hasArg(OPT_no_sort);
   NoWeakSymbols = Args.hasArg(OPT_no_weak);
