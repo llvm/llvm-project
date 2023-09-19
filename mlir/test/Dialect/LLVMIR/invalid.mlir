@@ -1336,16 +1336,18 @@ func.func @invalid_target_ext_atomic(%arg0 : !llvm.ptr) {
 
 // -----
 
-func.func @invalid_target_ext_constant() {
+func.func @invalid_target_ext_constant_unsupported() {
   // expected-error@+1 {{target extension type does not support zero-initializer}}
-  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"invalid_constant">
+  %0 = llvm.mlir.zero : !llvm.target<"invalid_constant">
+  llvm.return
 }
 
 // -----
 
 func.func @invalid_target_ext_constant() {
-  // expected-error@+1 {{only zero-initializer allowed for target extension types}}
-  %0 = llvm.mlir.constant(42 : index) : !llvm.target<"spirv.Event">
+  // expected-error@+1 {{does not support target extension type.}}
+  %0 = llvm.mlir.constant(0 : index) : !llvm.target<"spirv.Event">
+  llvm.return
 }
 
 // -----

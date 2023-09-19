@@ -11,9 +11,9 @@ entry:
 
 ; FIXME: Crashing is not really the correct behavior here, we really should just emit nothing
 ; CHECK: Cannot select: {{0x[0-9,a-f]+|t[0-9]+}}: ch = Prefetch
-; CHECK: {{0x[0-9,a-f]+|t[0-9]+}}: i32 = Constant<0>
-; CHECK-NEXT: {{0x[0-9,a-f]+|t[0-9]+}}: i32 = Constant<3>
-; CHECK-NEXT: {{0x[0-9,a-f]+|t[0-9]+}}: i32 = Constant<0>
+; CHECK: {{0x[0-9,a-f]+|t[0-9]+}}: i32 = TargetConstant<0>
+; CHECK-NEXT: {{0x[0-9,a-f]+|t[0-9]+}}: i32 = TargetConstant<3>
+; CHECK-NEXT: {{0x[0-9,a-f]+|t[0-9]+}}: i32 = TargetConstant<0>
 
 }
 

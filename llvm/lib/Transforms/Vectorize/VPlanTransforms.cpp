@@ -799,11 +799,55 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
+/// Returns true is \p V is constant one.
+static bool isConstantOne(VPValue *V) {
+  if (!V->isLiveIn())
+    return false;
+  auto *C = dyn_cast<ConstantInt>(V->getLiveInIRValue());
+  return C && C->isOne();
+}
+
+/// Returns the llvm::Instruction opcode for \p R.
+static unsigned getOpcodeForRecipe(VPRecipeBase &R) {
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(&R))
+    return WidenR->getUnderlyingInstr()->getOpcode();
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R))
+    return RepR->getUnderlyingInstr()->getOpcode();
+  if (auto *VPI = dyn_cast<VPInstruction>(&R))
+    return VPI->getOpcode();
+  return 0;
+}
+
+/// Try to simplify recipe \p R.
+static void simplifyRecipe(VPRecipeBase &R) {
+  unsigned Opcode = getOpcodeForRecipe(R);
+  if (Opcode == Instruction::Mul) {
+    VPValue *A = R.getOperand(0);
+    VPValue *B = R.getOperand(1);
+    if (isConstantOne(A))
+      return R.getVPSingleValue()->replaceAllUsesWith(B);
+    if (isConstantOne(B))
+      return R.getVPSingleValue()->replaceAllUsesWith(A);
+  }
+}
+
+/// Try to simplify the recipes in \p Plan.
+static void simplifyRecipes(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      simplifyRecipe(R);
+    }
+  }
+}
+
 void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
   removeRedundantCanonicalIVs(Plan);
   removeRedundantInductionCasts(Plan);
 
   optimizeInductions(Plan, SE);
+  simplifyRecipes(Plan);
   removeDeadRecipes(Plan);
 
   createAndOptimizeReplicateRegions(Plan);

@@ -6586,23 +6586,25 @@ LegalizerHelper::lowerIntrinsicRound(MachineInstr &MI) {
   // round(x) =>
   //  t = trunc(x);
   //  d = fabs(x - t);
-  //  o = copysign(1.0f, x);
-  //  return t + (d >= 0.5 ? o : 0.0);
+  //  o = copysign(d >= 0.5 ? 1.0 : 0.0, x);
+  //  return t + o;
 
   auto T = MIRBuilder.buildIntrinsicTrunc(Ty, X, Flags);
 
   auto Diff = MIRBuilder.buildFSub(Ty, X, T, Flags);
   auto AbsDiff = MIRBuilder.buildFAbs(Ty, Diff, Flags);
-  auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
-  auto One = MIRBuilder.buildFConstant(Ty, 1.0);
+
   auto Half = MIRBuilder.buildFConstant(Ty, 0.5);
-  auto SignOne = MIRBuilder.buildFCopysign(Ty, One, X);
+  auto Cmp =
+      MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, CondTy, AbsDiff, Half, Flags);
 
-  auto Cmp = MIRBuilder.buildFCmp(CmpInst::FCMP_OGE, CondTy, AbsDiff, Half,
-                                  Flags);
-  auto Sel = MIRBuilder.buildSelect(Ty, Cmp, SignOne, Zero, Flags);
+  // Could emit G_UITOFP instead
+  auto One = MIRBuilder.buildFConstant(Ty, 1.0);
+  auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
+  auto BoolFP = MIRBuilder.buildSelect(Ty, Cmp, One, Zero);
+  auto SignedOffset = MIRBuilder.buildFCopysign(Ty, BoolFP, X);
 
-  MIRBuilder.buildFAdd(DstReg, T, Sel, Flags);
+  MIRBuilder.buildFAdd(DstReg, T, SignedOffset, Flags);
 
   MI.eraseFromParent();
   return Legalized;

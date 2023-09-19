@@ -924,7 +924,6 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
       targetShape.back() == 1)
     return VectorMemoryAccessKind::Gather;
 
-
   // 2. Assume that it's a gather load when reading _from_ a tensor for which
   // the trailing dimension is 1, e.g. `tensor<1x4x1xi32>`.
   // TODO: Relax this condition.
@@ -1484,6 +1483,10 @@ static LogicalResult vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op) {
 static LogicalResult
 isValidMaskedInputVector(ArrayRef<int64_t> shape,
                          ArrayRef<int64_t> inputVectorSizes) {
+  LDBG("Iteration space static sizes:");
+  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
+  LLVM_DEBUG(llvm::dbgs() << "\n");
+
   if (inputVectorSizes.size() != shape.size()) {
     LDBG("Input vector sizes don't match the number of loops");
     return failure();

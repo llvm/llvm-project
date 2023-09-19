@@ -1,5 +1,5 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2  %s
-; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=carrizo -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2  %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2  %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-unknown-amdhsa -mcpu=carrizo -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2  %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tahiti -verify-machineinstrs | FileCheck -check-prefixes=ALL,CO-V2 %s

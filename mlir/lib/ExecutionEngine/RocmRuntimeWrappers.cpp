@@ -38,6 +38,11 @@ extern "C" hipModule_t mgpuModuleLoad(void *data) {
   return module;
 }
 
+extern "C" hipModule_t mgpuModuleLoadJIT(void *data, int optLevel) {
+  assert(false && "This function is not available in HIP.");
+  return nullptr;
+}
+
 extern "C" void mgpuModuleUnload(hipModule_t module) {
   HIP_REPORT_IF_ERROR(hipModuleUnload(module));
 }

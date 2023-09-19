@@ -536,7 +536,7 @@ private:
   std::unique_ptr<Module> M;
   EngineKind::Kind WhichEngine;
   std::string *ErrorStr;
-  CodeGenOpt::Level OptLevel;
+  CodeGenOptLevel OptLevel;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   std::shared_ptr<LegacyJITSymbolResolver> Resolver;
   TargetOptions Options;
@@ -586,8 +586,8 @@ public:
   }
 
   /// setOptLevel - Set the optimization level for the JIT.  This option
-  /// defaults to CodeGenOpt::Default.
-  EngineBuilder &setOptLevel(CodeGenOpt::Level l) {
+  /// defaults to CodeGenOptLevel::Default.
+  EngineBuilder &setOptLevel(CodeGenOptLevel l) {
     OptLevel = l;
     return *this;
   }

@@ -1,12 +1,12 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK: %[[#ExtInstSetId:]] = OpExtInstImport "OpenCL.std"
-; CHECK: %[[#Float:]] = OpTypeFloat 32
-; CHECK: %[[#Double:]] = OpTypeFloat 64
-; CHECK: %[[#Double4:]] = OpTypeVector %[[#Double]] 4
-; CHECK: %[[#FloatArg:]] = OpConstant %[[#Float]]
-; CHECK: %[[#DoubleArg:]] = OpConstant %[[#Double]]
-; CHECK: %[[#Double4Arg:]] = OpConstantComposite %[[#Double4]]
+; CHECK-DAG: %[[#ExtInstSetId:]] = OpExtInstImport "OpenCL.std"
+; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#Double:]] = OpTypeFloat 64
+; CHECK-DAG: %[[#Double4:]] = OpTypeVector %[[#Double]] 4
+; CHECK-DAG: %[[#FloatArg:]] = OpConstant %[[#Float]]
+; CHECK-DAG: %[[#DoubleArg:]] = OpConstant %[[#Double]]
+; CHECK-DAG: %[[#Double4Arg:]] = OpConstantComposite %[[#Double4]]
 
 ;; We need to store sqrt results, otherwise isel does not emit sqrts as dead insts.
 define spir_func void @test_sqrt(float* %x, double* %y, <4 x double>* %z) {

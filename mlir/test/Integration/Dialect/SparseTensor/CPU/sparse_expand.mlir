@@ -44,7 +44,7 @@ module {
   //
   func.func @matmul(%A: tensor<8x2xf64, #CSC>,
                     %B: tensor<2x4xf64, #CSC>) -> tensor<8x4xf64, #CSC> {
-    %C = bufferization.alloc_tensor() : tensor<8x4xf64, #CSC>
+    %C = tensor.empty() : tensor<8x4xf64, #CSC>
     %D = linalg.matmul
       ins(%A, %B: tensor<8x2xf64, #CSC>, tensor<2x4xf64, #CSC>)
          outs(%C: tensor<8x4xf64, #CSC>) -> tensor<8x4xf64, #CSC>

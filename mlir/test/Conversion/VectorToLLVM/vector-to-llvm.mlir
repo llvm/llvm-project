@@ -2260,3 +2260,13 @@ func.func @vector_scalable_extract(%vec: vector<[4]xf32>) -> vector<8xf32> {
   %0 = vector.scalable.extract %vec[0] : vector<8xf32> from vector<[4]xf32>
   return %0 : vector<8xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @make_fixed_vector_of_scalable_vector
+func.func @make_fixed_vector_of_scalable_vector(%f : f64) -> vector<3x[2]xf64>
+{
+  // CHECK: %{{.*}} = llvm.mlir.undef : !llvm.array<3 x vector<[2]xf64>>
+  %res = vector.broadcast %f : f64 to vector<3x[2]xf64>
+  return %res : vector<3x[2]xf64>
+}

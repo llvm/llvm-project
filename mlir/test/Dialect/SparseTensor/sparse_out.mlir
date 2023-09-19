@@ -5,12 +5,11 @@
 }>
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (i,j)>
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #SparseTensor = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed", "compressed" ]
+  map = (d0, d1, d2) -> (d0 : compressed, d1 : compressed, d2 : compressed)
 }>
 
 #trait_scale_inpl = {

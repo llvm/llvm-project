@@ -765,7 +765,7 @@ declare <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0.i32(
 define <vscale x 16 x double> @strided_load_nxv16f64(ptr %ptr, i64 %stride, <vscale x 16 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_load_nxv16f64:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vmv1r.v v8, v0
+; CHECK-RV32-NEXT:    vmv1r.v v9, v0
 ; CHECK-RV32-NEXT:    csrr a4, vlenb
 ; CHECK-RV32-NEXT:    sub a2, a3, a4
 ; CHECK-RV32-NEXT:    sltu a5, a3, a2
@@ -779,17 +779,18 @@ define <vscale x 16 x double> @strided_load_nxv16f64(ptr %ptr, i64 %stride, <vsc
 ; CHECK-RV32-NEXT:    add a5, a0, a5
 ; CHECK-RV32-NEXT:    srli a4, a4, 3
 ; CHECK-RV32-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
-; CHECK-RV32-NEXT:    vslidedown.vx v0, v8, a4
+; CHECK-RV32-NEXT:    vslidedown.vx v8, v9, a4
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV32-NEXT:    vlse64.v v16, (a5), a1, v0.t
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vmv1r.v v0, v8
+; CHECK-RV32-NEXT:    vmv1r.v v0, v9
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1, v0.t
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_load_nxv16f64:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vmv1r.v v8, v0
+; CHECK-RV64-NEXT:    vmv1r.v v9, v0
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    sub a3, a2, a4
 ; CHECK-RV64-NEXT:    sltu a5, a2, a3
@@ -803,11 +804,12 @@ define <vscale x 16 x double> @strided_load_nxv16f64(ptr %ptr, i64 %stride, <vsc
 ; CHECK-RV64-NEXT:    add a5, a0, a5
 ; CHECK-RV64-NEXT:    srli a4, a4, 3
 ; CHECK-RV64-NEXT:    vsetvli a6, zero, e8, mf4, ta, ma
-; CHECK-RV64-NEXT:    vslidedown.vx v0, v8, a4
+; CHECK-RV64-NEXT:    vslidedown.vx v8, v9, a4
 ; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV64-NEXT:    vlse64.v v16, (a5), a1, v0.t
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    vmv1r.v v0, v8
+; CHECK-RV64-NEXT:    vmv1r.v v0, v9
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1, v0.t
 ; CHECK-RV64-NEXT:    ret
   %v = call <vscale x 16 x double> @llvm.experimental.vp.strided.load.nxv16f64.p0.i64(ptr %ptr, i64 %stride, <vscale x 16 x i1> %mask, i32 %evl)

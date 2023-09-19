@@ -443,14 +443,18 @@ int testSprintf_propagates_taint(char *buf, char *msg) {
   return 1 / x;                    // expected-warning {{Division by a tainted value, possibly zero}}
 }
 
-void test_wchar_apis_propagate(const char *path) {
+void test_wchar_apis_dont_propagate(const char *path) {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
+
   FILE *f = fopen(path, "r");
   clang_analyzer_isTainted_charp((char*)f);  // expected-warning {{YES}}
   wchar_t wbuf[10];
   fgetws(wbuf, sizeof(wbuf)/sizeof(*wbuf), f);
   clang_analyzer_isTainted_wchar(*wbuf); // expected-warning {{YES}}
   int n = wcslen(wbuf);
-  clang_analyzer_isTainted_int(n); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(n); // expected-warning {{NO}}
 
   wchar_t dst[100] = L"ABC";
   clang_analyzer_isTainted_wchar(*dst); // expected-warning {{NO}}
@@ -458,7 +462,7 @@ void test_wchar_apis_propagate(const char *path) {
   clang_analyzer_isTainted_wchar(*dst); // expected-warning {{YES}}
 
   int m = wcslen(dst);
-  clang_analyzer_isTainted_int(m); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(m); // expected-warning {{NO}}
 }
 
 int scanf_s(const char *format, ...);
@@ -948,21 +952,27 @@ void testStrndupa(size_t n) {
 }
 
 size_t strlen(const char *s);
-void testStrlen() {
+void testStrlen_dont_propagate() {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
   char s[10];
   scanf("%9s", s);
 
   size_t result = strlen(s);
-  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+  // strlen propagating taint would bring in many false positives
+  clang_analyzer_isTainted_int(result); // expected-warning {{NO}}
 }
 
 size_t strnlen(const char *s, size_t maxlen);
-void testStrnlen(size_t maxlen) {
+void testStrnlen_dont_propagate(size_t maxlen) {
+  // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+  // See the details here: https://github.com/llvm/llvm-project/pull/66086
+  // This isn't ideal, but this is only what we have now.
   char s[10];
   scanf("%9s", s);
-
   size_t result = strnlen(s, maxlen);
-  clang_analyzer_isTainted_int(result); // expected-warning {{YES}}
+  clang_analyzer_isTainted_int(result); // expected-warning {{NO}}
 }
 
 long strtol(const char *restrict nptr, char **restrict endptr, int base);
