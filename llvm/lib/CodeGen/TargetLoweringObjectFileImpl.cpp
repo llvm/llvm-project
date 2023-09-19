@@ -1039,13 +1039,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // name, or a unique ID for the section.
   SmallString<128> Name;
   StringRef FunctionSectionName = MBB.getParent()->getSection()->getName();
-  if (!FunctionSectionName.equals(".text") &&
-      !FunctionSectionName.startswith(".text.")) {
-    // If the original function has a custom non-dot-text section, then emit
-    // all basic block sections into that section too, but with a unique id.
-    Name = FunctionSectionName;
-    UniqueID = NextUniqueID++;
-  } else {
+  if (FunctionSectionName.equals(".text") ||
+      FunctionSectionName.startswith(".text.")) {
+    // Function is in a regular .text section.
     StringRef FunctionName = MBB.getParent()->getName();
     if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
       Name += BBSectionsColdTextPrefix;
@@ -1063,6 +1059,11 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
         UniqueID = NextUniqueID++;
       }
     }
+  } else {
+    // If the original function has a custom non-dot-text section, then emit
+    // all basic block sections into that section too, each with a unique id.
+    Name = FunctionSectionName;
+    UniqueID = NextUniqueID++;
   }
 
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
