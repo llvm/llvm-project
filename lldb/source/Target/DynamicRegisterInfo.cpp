@@ -614,10 +614,11 @@ void DynamicRegisterInfo::Finalize(const ArchSpec &arch) {
   ConfigureOffsets();
 
   // Check if register info is reconfigurable
-  // AArch64 SVE register set has configurable register sizes
+  // AArch64 SVE register set has configurable register sizes, as does the ZA
+  // register that SME added (the streaming state of SME reuses the SVE state).
   if (arch.GetTriple().isAArch64()) {
     for (const auto &reg : m_regs) {
-      if (strcmp(reg.name, "vg") == 0) {
+      if ((strcmp(reg.name, "vg") == 0) || (strcmp(reg.name, "svg") == 0)) {
         m_is_reconfigurable = true;
         break;
       }

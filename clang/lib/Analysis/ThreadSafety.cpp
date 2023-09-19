@@ -1773,7 +1773,8 @@ void BuildLockset::checkPtAccess(const Expr *Exp, AccessKind AK,
 ///
 /// \param Exp   The call expression.
 /// \param D     The callee declaration.
-/// \param Self  If \p Exp = nullptr, the implicit this argument.
+/// \param Self  If \p Exp = nullptr, the implicit this argument or the argument
+///              of an implicitly called cleanup function.
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                               til::LiteralPtr *Self, SourceLocation Loc) {
@@ -2417,6 +2418,15 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
                                     AD.getTriggerStmt()->getEndLoc());
           break;
         }
+
+        case CFGElement::CleanupFunction: {
+          const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
+          LocksetBuilder.handleCall(/*Exp=*/nullptr, CF.getFunctionDecl(),
+                                    SxBuilder.createVariable(CF.getVarDecl()),
+                                    CF.getVarDecl()->getLocation());
+          break;
+        }
+
         case CFGElement::TemporaryDtor: {
           auto TD = BI.castAs<CFGTemporaryDtor>();
 
