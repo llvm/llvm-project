@@ -7,9 +7,8 @@ define i32 @redundant_add(i32 %a, i32 %b, i32  %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[B]], [[C]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[ADD]], [[MUL]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[MUL2]], [[ADD1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[MUL2]], [[ADD]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
 entry:
@@ -27,9 +26,8 @@ define i32 @redundant_mul(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[B]], [[C]]
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[B]], [[C]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[ADD]], [[MUL]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[MUL2]], [[MUL1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[MUL2]], [[MUL]]
 ; CHECK-NEXT:    ret i32 [[ADD1]]
 ;
 entry:
@@ -47,11 +45,9 @@ define i32 @redundant_add_x2(i32 noundef %a, i32 noundef %b, i32 noundef %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[B]], [[C]]
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[ADD]], [[MUL]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[MUL2]], [[ADD1]]
-; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[A]], [[B]]
-; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD2]], [[ADD3]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[MUL2]], [[ADD]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD2]], [[ADD]]
 ; CHECK-NEXT:    ret i32 [[ADD4]]
 ;
 entry:

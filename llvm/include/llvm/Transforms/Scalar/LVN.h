@@ -8,6 +8,9 @@ namespace llvm {
 class LVNPass : public PassInfoMixin<LVNPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+private:
+  void runOnBasicBlock(BasicBlock &BB);
 };
 
 } // end namespace llvm
