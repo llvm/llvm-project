@@ -287,11 +287,9 @@ Bug Fixes to C++ Support
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
-<<<<<<< HEAD
 - Fix a crash when calling a non-constant immediate function
   in the initializer of a static data member.
   (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
-=======
 - Clang now properly converts static lambda call operator to function
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
@@ -301,7 +299,6 @@ Bug Fixes to C++ Support
   the location of a non-defining declaration rather than the location of the
   definition the specialization was instantiated from.
   (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
->>>>>>> llvm_be_very_careful/main
 
 - Fix a crash when a default member initializer of a base aggregate
   makes an invalid call to an immediate function.
