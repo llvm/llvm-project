@@ -14040,7 +14040,6 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV32-LABEL: mgather_gather_2xSEW:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a1, 16513
-; RV32-NEXT:    addi a1, a1, 512
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vmv.s.x v9, a1
 ; RV32-NEXT:    vluxei8.v v8, (a0), v9
@@ -14049,7 +14048,6 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64V-LABEL: mgather_gather_2xSEW:
 ; RV64V:       # %bb.0:
 ; RV64V-NEXT:    lui a1, 16513
-; RV64V-NEXT:    addiw a1, a1, 512
 ; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64V-NEXT:    vmv.s.x v9, a1
 ; RV64V-NEXT:    vluxei8.v v8, (a0), v9
@@ -14099,7 +14097,7 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 4
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB112_3
 ; RV64ZVE32F-NEXT:  .LBB112_11: # %cond.load4
-; RV64ZVE32F-NEXT:    addi a2, a0, 18
+; RV64ZVE32F-NEXT:    addi a2, a0, 16
 ; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 3, e16, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
@@ -14107,7 +14105,7 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    andi a2, a1, 8
 ; RV64ZVE32F-NEXT:    beqz a2, .LBB112_4
 ; RV64ZVE32F-NEXT:  .LBB112_12: # %cond.load7
-; RV64ZVE32F-NEXT:    addi a2, a0, 20
+; RV64ZVE32F-NEXT:    addi a2, a0, 18
 ; RV64ZVE32F-NEXT:    lh a2, 0(a2)
 ; RV64ZVE32F-NEXT:    vsetivli zero, 4, e16, m1, tu, ma
 ; RV64ZVE32F-NEXT:    vmv.s.x v9, a2
@@ -14147,7 +14145,7 @@ define <8 x i16> @mgather_gather_2xSEW(ptr %base) {
 ; RV64ZVE32F-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i16 0
   %allones = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
-  %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 9, i32 10, i32 4, i32 5, i32 2, i32 3>
+  %ptrs = getelementptr inbounds i16, ptr %base, <8 x i32>  <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 2, i32 3>
   %v = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %allones, <8 x i16> poison)
   ret <8 x i16> %v
 }
@@ -14274,19 +14272,19 @@ define <8 x i16> @mgather_gather_2xSEW_unaligned(ptr %base) {
 define <8 x i16> @mgather_gather_2xSEW_unaligned2(ptr %base) {
 ; RV32-LABEL: mgather_gather_2xSEW_unaligned2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 16513
-; RV32-NEXT:    addi a1, a1, 514
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v9, a1
+; RV32-NEXT:    lui a1, %hi(.LCPI114_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI114_0)
+; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV32-NEXT:    vle8.v v9, (a1)
 ; RV32-NEXT:    vluxei8.v v8, (a0), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64V-LABEL: mgather_gather_2xSEW_unaligned2:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    lui a1, 16513
-; RV64V-NEXT:    addiw a1, a1, 514
-; RV64V-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64V-NEXT:    vmv.s.x v9, a1
+; RV64V-NEXT:    lui a1, %hi(.LCPI114_0)
+; RV64V-NEXT:    addi a1, a1, %lo(.LCPI114_0)
+; RV64V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV64V-NEXT:    vle8.v v9, (a1)
 ; RV64V-NEXT:    vluxei8.v v8, (a0), v9
 ; RV64V-NEXT:    ret
 ;
