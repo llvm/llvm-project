@@ -87,9 +87,6 @@ public:
                          ArrayRef<const Formula *> Operands,
                          unsigned Value = 0);
 
-  // Parse Formulas using Arena rather than caling this function directly.
-  static Formula *parse(llvm::BumpPtrAllocator &Alloc, llvm::StringRef &);
-
 private:
   Formula() = default;
   Formula(const Formula &) = delete;

@@ -100,8 +100,8 @@ BoolValue &Arena::makeBoolValue(const Formula &F) {
 
 namespace {
 const Formula *parse(Arena &A, llvm::StringRef &In) {
-  auto EatWhitespace = [&] { In = In.ltrim(' '); };
-  EatWhitespace();
+  auto EatSpaces = [&] { In = In.ltrim(' '); };
+  EatSpaces();
 
   if (In.consume_front("!")) {
     if (auto *Arg = parse(A, In))
@@ -114,7 +114,7 @@ const Formula *parse(Arena &A, llvm::StringRef &In) {
     if (!Arg1)
       return nullptr;
 
-    EatWhitespace();
+    EatSpaces();
     decltype(&Arena::makeOr) Op;
     if (In.consume_front("|"))
       Op = &Arena::makeOr;
@@ -131,13 +131,15 @@ const Formula *parse(Arena &A, llvm::StringRef &In) {
     if (!Arg2)
       return nullptr;
 
-    EatWhitespace();
+    EatSpaces();
     if (!In.consume_front(")"))
       return nullptr;
 
     return &(A.*Op)(*Arg1, *Arg2);
   }
 
+  // For now, only support unnamed variables V0, V1 etc.
+  // FIXME: parse e.g. "X" by allocating an atom and storing a name somewhere.
   if (In.consume_front("V")) {
     std::underlying_type_t<Atom> At;
     if (In.consumeInteger(10, At))
@@ -154,13 +156,13 @@ const Formula *parse(Arena &A, llvm::StringRef &In) {
 }
 
 class FormulaParseError : public llvm::ErrorInfo<FormulaParseError> {
-  unsigned Offset;
   std::string Formula;
+  unsigned Offset;
 
 public:
   static char ID;
   FormulaParseError(llvm::StringRef Formula, unsigned Offset)
-      : Offset(Offset), Formula(Formula) {}
+      : Formula(Formula), Offset(Offset) {}
 
   void log(raw_ostream &OS) const override {
     OS << "bad formula at offset " << Offset << "\n";

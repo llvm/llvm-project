@@ -140,7 +140,7 @@ TEST_F(ArenaTest, Interning) {
   EXPECT_EQ(&B1.formula(), &F1);
 }
 
-TEST_F(ArenaTest, Parse) {
+TEST_F(ArenaTest, ParseFormula) {
   Atom V5{5};
   Atom V6{6};
   EXPECT_THAT_EXPECTED(A.parseFormula("V5"), HasValue(Ref(A.makeAtomRef(V5))));
