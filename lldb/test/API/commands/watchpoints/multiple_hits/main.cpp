@@ -1,6 +1,5 @@
-#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdint.h>
 alignas(16) uint8_t buf[32];
 // This uses inline assembly to generate an instruction that writes to a large
 // block of memory. If it fails on your compiler/architecture, please add
@@ -9,7 +8,6 @@ alignas(16) uint8_t buf[32];
 // this test.
 
 int main() {
-  memset(buf, UINT32_MAX, 8);
 #if defined(__i386__) || defined(__x86_64__)
   asm volatile ("movdqa %%xmm0, %0" : : "m"(buf));
 #elif defined(__arm__)
