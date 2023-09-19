@@ -68,7 +68,7 @@
 # RUN: llvm-mc -g --filetype=obj %t/data-dwarf.s -triple=x86_64-pc-linux -o %t/data-dwarf.o
 # RUN: llvm-nm --line-numbers %t/data-dwarf.o | FileCheck %s --check-prefix=DATA-DWARF --match-full-lines --implicit-check-not={{.}}
 
-# DATA-DWARF: 0000000000000000 D defined_data /tmp/tmp.c:1
+# DATA-DWARF: 0000000000000000 D defined_data /tmp{{\\|/}}tmp.c:1
 
 #--- main.s
 .text
