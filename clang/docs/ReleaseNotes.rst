@@ -208,6 +208,7 @@ C23 Feature Support
 
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
   checked integer arithmetic. It is also exposed in pre-C23 modes.
+- Clang now supports ``N3018 The constexpr specifier for object definitions``.
 
 - Completed the implementation of
   `N2508 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf>`_. We
