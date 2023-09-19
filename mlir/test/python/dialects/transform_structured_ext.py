@@ -495,15 +495,15 @@ def testTileToForallMapping(target):
 
 @run
 @create_sequence
-def testVectorizeChildrenAllAttrs(target):
-    structured.VectorizeChildrenOp(
+def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
+    structured.VectorizeChildrenAndApplyPatternsOp(
         target,
         disable_multi_reduction_to_contract_patterns=True,
         disable_transfer_permutation_map_lowering_patterns=True,
         vectorize_nd_extract=True,
         vectorize_padding=True,
     )
-    # CHECK-LABEL: TEST: testVectorizeChildrenAllAttrs
+    # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
@@ -514,15 +514,15 @@ def testVectorizeChildrenAllAttrs(target):
 
 @run
 @create_sequence
-def testVectorizeChildrenNoAttrs(target):
-    structured.VectorizeChildrenOp(
+def testVectorizeChildrenAndApplyPatternsNoAttrs(target):
+    structured.VectorizeChildrenAndApplyPatternsOp(
         target,
         disable_multi_reduction_to_contract_patterns=False,
         disable_transfer_permutation_map_lowering_patterns=False,
         vectorize_nd_extract=False,
         vectorize_padding=False,
     )
-    # CHECK-LABEL: TEST: testVectorizeChildrenNoAttrs
+    # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsNoAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-NOT: disable_multi_reduction_to_contract_patterns

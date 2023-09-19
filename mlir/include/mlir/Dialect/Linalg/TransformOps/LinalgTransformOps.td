@@ -1947,10 +1947,11 @@ def TileToForallOp :
 }
 
 //===----------------------------------------------------------------------===//
-// VectorizeChildrenOp
+// VectorizeChildrenAndApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
-def VectorizeChildrenOp : Op<Transform_Dialect, "structured.vectorize_children",
+def VectorizeChildrenAndApplyPatternsOp :
+  Op<Transform_Dialect, "structured.vectorize_children_and_apply_patterns",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformEachOpTrait, TransformOpInterface,
      ReportTrackingListenerFailuresOpTrait]> {

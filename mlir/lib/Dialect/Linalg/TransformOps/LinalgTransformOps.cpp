@@ -2904,22 +2904,23 @@ LogicalResult TileToForallOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// VectorizeChildrenOp
+// VectorizeChildrenAndApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
-void transform::VectorizeChildrenOp::build(OpBuilder &builder,
-                                           OperationState &result, Value target,
-                                           bool vectorizePadding,
-                                           bool vectorizeExtract) {
+void transform::VectorizeChildrenAndApplyPatternsOp::build(
+    OpBuilder &builder, OperationState &result, Value target,
+    bool vectorizePadding, bool vectorizeExtract) {
   result.addOperands(target);
   if (vectorizePadding) {
     result.addAttribute(
-        VectorizeChildrenOp::getVectorizePaddingAttrName(result.name),
+        VectorizeChildrenAndApplyPatternsOp::getVectorizePaddingAttrName(
+            result.name),
         builder.getUnitAttr());
   }
   if (vectorizeExtract) {
     result.addAttribute(
-        VectorizeChildrenOp::getVectorizeNdExtractAttrName(result.name),
+        VectorizeChildrenAndApplyPatternsOp::getVectorizeNdExtractAttrName(
+            result.name),
         builder.getUnitAttr());
   }
   result.addTypes(transform::AnyOpType::get(builder.getContext()));
@@ -2927,7 +2928,7 @@ void transform::VectorizeChildrenOp::build(OpBuilder &builder,
 
 namespace {
 /// This is an helper only to call vectorize via a pattern inside of
-/// VectorizeChildrenOp::applyToOne.
+/// VectorizeChildrenAndApplyPatternsOp::applyToOne.
 struct VectorizationPattern : public RewritePattern {
   explicit VectorizationPattern(MLIRContext *context,
                                 bool vectorizeExtract = false)
@@ -2949,7 +2950,8 @@ private:
 };
 } // namespace
 
-DiagnosedSilenceableFailure transform::VectorizeChildrenOp::applyToOne(
+DiagnosedSilenceableFailure
+transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
