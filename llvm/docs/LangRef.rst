@@ -3410,7 +3410,7 @@ Behavior of Floating-Point NaN values
 A floating-point NaN value consists of a sign bit, a quiet/signaling bit, and a
 payload (which makes up the rest of the mantissa except for the quiet/signaling
 bit). LLVM assumes that the quiet/signaling bit being set to ``1`` indicates a
-quiet NaN (QNan), and a value of ``0`` indicates a signaling NaN (SNaN). In the
+quiet NaN (QNaN), and a value of ``0`` indicates a signaling NaN (SNaN). In the
 following we will hence just call it the "quiet bit"
 
 The representation bits of a floating-point value do not mutate arbitrarily; in
@@ -3419,12 +3419,13 @@ quiet bits, and payloads are preserved.
 
 For the purpose of this section, ``bitcast`` as well as the following operations
 are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
-``llvm.copysign``. They act directly on the underlying bit representation and
-never change anything except for the sign bit.
+``llvm.copysign``. These operations act directly on the underlying bit
+representation and never change anything except possibly for the sign bit.
 
-When a floating-point math operation produces a NaN value, the result has a
-non-deterministic sign. The quiet bit and payload are non-deterministically
-chosen from the following set of options:
+For floating-point math operations, unless specified otherwise, the following
+rules apply when a NaN value is returned: the result has a non-deterministic
+sign; the quiet bit and payload are non-deterministically chosen from the
+following set of options:
 
 - The quiet bit is set and the payload is all-zero. ("Preferred NaN" case)
 - The quiet bit is set and the payload is copied from any input operand that is
@@ -3455,11 +3456,11 @@ specification on some architectures:
 - x86-32 without SSE2 enabled may convert floating-point values to x86_fp80 and
   back when performing floating-point math operations; this can lead to results
   with different precision than expected and it can alter NaN values. Since
-  optimizations can make contradiction assumptions, this can lead to arbitrary
+  optimizations can make contradicting assumptions, this can lead to arbitrary
   miscompilations. See `issue #44218
   <https://github.com/llvm/llvm-project/issues/44218>`_.
 - x86-32 (even with SSE2 enabled) may implicitly perform such a conversion on
-  values returned from a function.
+  values returned from a function for some calling conventions.
 - Older MIPS versions use the opposite polarity for the quiet/signaling bit, and
   LLVM does not correctly represent this. See `issue #60796
   <https://github.com/llvm/llvm-project/issues/60796>`_.
