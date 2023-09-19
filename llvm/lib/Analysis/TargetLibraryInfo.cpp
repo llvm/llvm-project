@@ -1138,15 +1138,15 @@ void TargetLibraryInfoImpl::disableAllFunctions() {
 }
 
 static bool compareByScalarFnName(const VecDesc &LHS, const VecDesc &RHS) {
-  return LHS.ScalarFnName < RHS.ScalarFnName;
+  return LHS.getScalarFnName() < RHS.getScalarFnName();
 }
 
 static bool compareByVectorFnName(const VecDesc &LHS, const VecDesc &RHS) {
-  return LHS.VectorFnName < RHS.VectorFnName;
+  return LHS.getVectorFnName() < RHS.getVectorFnName();
 }
 
 static bool compareWithScalarFnName(const VecDesc &LHS, StringRef S) {
-  return LHS.ScalarFnName < S;
+  return LHS.getScalarFnName() < S;
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
@@ -1262,22 +1262,31 @@ bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {
 
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, funcName, compareWithScalarFnName);
-  return I != VectorDescs.end() && StringRef(I->ScalarFnName) == funcName;
+  return I != VectorDescs.end() && StringRef(I->getScalarFnName()) == funcName;
 }
 
-std::pair<StringRef, StringRef> TargetLibraryInfoImpl::getVectorizedFunction(
+StringRef TargetLibraryInfoImpl::getVectorizedFunction(StringRef F,
+                                                       const ElementCount &VF,
+                                                       bool Masked) const {
+  const VecDesc *VD = getMangledTLIVectorName(F, VF, Masked);
+  if (VD)
+    return VD->getVectorFnName();
+  return StringRef();
+}
+
+const VecDesc *TargetLibraryInfoImpl::getMangledTLIVectorName(
     StringRef F, const ElementCount &VF, bool Masked) const {
   F = sanitizeFunctionName(F);
   if (F.empty())
-    return std::make_pair(F, StringRef());
+    return nullptr;
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, F, compareWithScalarFnName);
-  while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == F) {
-    if ((I->VectorizationFactor == VF) && (I->Masked == Masked))
-      return std::make_pair(I->VectorFnName, I->MangledName);
+  while (I != VectorDescs.end() && StringRef(I->getScalarFnName()) == F) {
+    if ((I->getVectorizationFactor() == VF) && (I->getMasked() == Masked))
+      return &(*I);
     ++I;
   }
-  return std::make_pair(StringRef(), StringRef());
+  return nullptr;
 }
 
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
@@ -1349,11 +1358,11 @@ void TargetLibraryInfoImpl::getWidestVF(StringRef ScalarF,
 
   std::vector<VecDesc>::const_iterator I =
       llvm::lower_bound(VectorDescs, ScalarF, compareWithScalarFnName);
-  while (I != VectorDescs.end() && StringRef(I->ScalarFnName) == ScalarF) {
+  while (I != VectorDescs.end() && StringRef(I->getScalarFnName()) == ScalarF) {
     ElementCount *VF =
-        I->VectorizationFactor.isScalable() ? &ScalableVF : &FixedVF;
-    if (ElementCount::isKnownGT(I->VectorizationFactor, *VF))
-      *VF = I->VectorizationFactor;
+        I->getVectorizationFactor().isScalable() ? &ScalableVF : &FixedVF;
+    if (ElementCount::isKnownGT(I->getVectorizationFactor(), *VF))
+      *VF = I->getVectorizationFactor();
     ++I;
   }
 }

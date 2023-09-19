@@ -155,7 +155,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // Try to find the mapping for the scalar version of this intrinsic
   // and the exact vector width of the call operands in the
   // TargetLibraryInfo.
-  StringRef TLIName = TLI.getVectorizedFunction(ScalarName, VF).first;
+  StringRef TLIName = TLI.getVectorizedFunction(ScalarName, VF);
 
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Looking up TLI mapping for `"
                     << ScalarName << "` and vector width " << VF << ".\n");

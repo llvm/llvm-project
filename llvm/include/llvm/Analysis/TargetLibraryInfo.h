@@ -40,12 +40,27 @@ class Triple;
 /// <vparams> = "v", as many as are the numArgs.
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
-struct VecDesc {
+class VecDesc {
+private:
   StringRef ScalarFnName;
   StringRef VectorFnName;
   ElementCount VectorizationFactor;
   bool Masked;
   StringRef MangledName;
+
+public:
+  VecDesc() = delete;
+  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
+          ElementCount VectorizationFactor, bool Masked, StringRef MangledName)
+      : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
+        VectorizationFactor(VectorizationFactor), Masked(Masked),
+        MangledName(MangledName) {}
+
+  StringRef getScalarFnName() const { return ScalarFnName; }
+  StringRef getVectorFnName() const { return VectorFnName; }
+  ElementCount getVectorizationFactor() const { return VectorizationFactor; }
+  bool getMasked() const { return Masked; }
+  StringRef getMangledName() const { return MangledName; }
 };
 
   enum LibFunc : unsigned {
@@ -177,18 +192,24 @@ public:
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
   bool isFunctionVectorizable(StringRef F, const ElementCount &VF) const {
-    return !(getVectorizedFunction(F, VF, false).first.empty() &&
-             getVectorizedFunction(F, VF, true).first.empty());
+    return !(getVectorizedFunction(F, VF, false).empty() &&
+             getVectorizedFunction(F, VF, true).empty());
   }
 
   /// Return true if the function F has a vector equivalent with any
   /// vectorization factor.
   bool isFunctionVectorizable(StringRef F) const;
 
-  /// Return the name of the equivalent of F, vectorized with factor VF and it's
-  /// mangled name. If no such mapping exists, return empty strings.
-  std::pair<StringRef, StringRef>
-  getVectorizedFunction(StringRef F, const ElementCount &VF, bool Masked) const;
+  /// Return the name of the equivalent of F, vectorized with factor VF.
+  /// If no such mapping exists, return empty strings.
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+                                  bool Masked) const;
+
+  /// Return a pointer to a VecDesc object holding all info for scalar to vector
+  /// mappings in TLI for the equivalent of F, vectorized with factor VF.
+  /// If no such mapping exists, return nullpointer.
+  const VecDesc *getMangledTLIVectorName(StringRef F, const ElementCount &VF,
+                                         bool Masked) const;
 
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
@@ -364,10 +385,13 @@ public:
   bool isFunctionVectorizable(StringRef F) const {
     return Impl->isFunctionVectorizable(F);
   }
-  std::pair<StringRef, StringRef>
-  getVectorizedFunction(StringRef F, const ElementCount &VF,
-                        bool Masked = false) const {
+  StringRef getVectorizedFunction(StringRef F, const ElementCount &VF,
+                                  bool Masked = false) const {
     return Impl->getVectorizedFunction(F, VF, Masked);
+  }
+  const VecDesc *getMangledTLIVectorName(StringRef F, const ElementCount &VF,
+                                         bool Masked) const {
+    return Impl->getMangledTLIVectorName(F, VF, Masked);
   }
 
   /// Tests if the function is both available and a candidate for optimized code

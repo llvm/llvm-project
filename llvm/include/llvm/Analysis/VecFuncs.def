@@ -209,7 +209,7 @@ TLI_DEFINE_VECFUNC("cbrt", "__cbrtd2", FIXED(2), "_ZGV_LLVM_N2v_cbrt(__cbrtd2)")
 TLI_DEFINE_VECFUNC("cbrtf", "__cbrtf4", FIXED(4), "_ZGV_LLVM_N4v_cbrtf(__cbrtf4)")
 TLI_DEFINE_VECFUNC("pow", "__powd2", FIXED(2), "_ZGV_LLVM_N2vv_pow(__powd2)")
 TLI_DEFINE_VECFUNC("llvm.pow.f64", "__powd2", FIXED(2), "_ZGV_LLVM_N2vv_llvm.pow.f64(__powd2)")
-TLI_DEFINE_VECFUNC("powf", "__powf4", FIXED(4), "_ZGV_LLVM_N4vv_powf")
+TLI_DEFINE_VECFUNC("powf", "__powf4", FIXED(4), "_ZGV_LLVM_N4vv_powf(__powf4)")
 TLI_DEFINE_VECFUNC("llvm.pow.f32", "__powf4", FIXED(4), "_ZGV_LLVM_N4vv_llvm.pow.f32(__powf4)")
 
 // Exponential and Logarithmic Functions
