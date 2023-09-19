@@ -58,7 +58,7 @@ def SPIRV_LinkageAttributesAttr : SPIRV_Attr<"LinkageAttributes", "linkage_attri
 // target. Represents `VkCooperativeMatrixPropertiesNV`. See
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html
 def SPIRV_CooperativeMatrixPropertiesNVAttr :
-    SPIRV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props"> {
+    SPIRV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props_nv"> {
   let parameters = (ins
     "int":$m_size,
     "int":$n_size,
