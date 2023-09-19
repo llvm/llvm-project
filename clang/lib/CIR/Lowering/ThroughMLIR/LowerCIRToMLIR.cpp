@@ -501,12 +501,43 @@ public:
   }
 };
 
+class CIRScopeOpLowering : public mlir::OpRewritePattern<mlir::cir::ScopeOp> {
+  using mlir::OpRewritePattern<mlir::cir::ScopeOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ScopeOp scopeOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    // Empty scope: just remove it.
+    if (scopeOp.getRegion().empty()) {
+      rewriter.eraseOp(scopeOp);
+      return mlir::success();
+    }
+
+    for (auto &block : scopeOp.getRegion()) {
+      rewriter.setInsertionPointToEnd(&block);
+      auto *terminator = block.getTerminator();
+      rewriter.replaceOpWithNewOp<mlir::memref::AllocaScopeReturnOp>(
+          terminator, terminator->getOperands());
+    }
+
+    rewriter.setInsertionPoint(scopeOp);
+    auto newScopeOp = rewriter.create<mlir::memref::AllocaScopeOp>(
+        scopeOp.getLoc(), scopeOp.getResultTypes());
+    rewriter.inlineRegionBefore(scopeOp.getScopeRegion(),
+                                newScopeOp.getBodyRegion(),
+                                newScopeOp.getBodyRegion().end());
+    rewriter.replaceOp(scopeOp, newScopeOp);
+
+    return mlir::LogicalResult::success();
+  }
+};
+
 void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
                CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
                CIRCmpOpLowering, CIRBrOpLowering, CIRCallLowering,
-               CIRReturnLowering>(patterns.getContext());
+               CIRReturnLowering, CIRScopeOpLowering>(patterns.getContext());
   patterns.add<CIRFuncLowering>(converter, patterns.getContext());
 }
 
