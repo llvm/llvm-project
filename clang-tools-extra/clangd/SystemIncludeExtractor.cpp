@@ -345,7 +345,7 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
 
   // If driver was "../foo" then having to allowlist "/path/a/../foo" rather
   // than "/path/foo" is absurd.
-  // Allow either to match the whitelist, then proceed with "/path/a/../foo".
+  // Allow either to match the allowlist, then proceed with "/path/a/../foo".
   // This was our historical behavior, and it *could* resolve to something else.
   llvm::SmallString<256> NoDots(Driver);
   llvm::sys::path::remove_dots(NoDots, /*remove_dot_dot=*/true);
