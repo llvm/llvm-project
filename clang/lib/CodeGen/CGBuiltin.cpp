@@ -10785,13 +10785,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI_CopyInt64FromDouble) {
     Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());
-
-    if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
-        BuiltinID == AArch64::BI_CopyFloatFromInt32)
-      Arg = Builder.CreateSIToFP(Arg, RetTy);
-    else
-      Arg = Builder.CreateFPToSI(Arg, RetTy);
-    return Arg;
+    return Builder.CreateBitCast(Arg, RetTy);
   }
 
   if (BuiltinID == AArch64::BI_CountLeadingOnes ||
@@ -10817,20 +10811,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (BuiltinID == AArch64::BI_CountLeadingSigns ||
       BuiltinID == AArch64::BI_CountLeadingSigns64) {
     Value *Arg = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = Arg->getType();
 
-    Function *F;
-    if (BuiltinID == AArch64::BI_CountLeadingSigns) {
-      F = CGM.getIntrinsic(Intrinsic::aarch64_cls);
-      if (ArgType != Builder.getInt32Ty())
-        Arg =
-            Builder.CreateIntCast(Arg, Builder.getInt32Ty(), /*isSigned*/ true);
-    } else {
-      F = CGM.getIntrinsic(Intrinsic::aarch64_cls64);
-      if (ArgType != Builder.getInt64Ty())
-        Arg =
-            Builder.CreateIntCast(Arg, Builder.getInt64Ty(), /*isSigned*/ true);
-    }
+    Function *F = (BuiltinID == AArch64::BI_CountLeadingSigns)
+                      ? CGM.getIntrinsic(Intrinsic::aarch64_cls)
+                      : CGM.getIntrinsic(Intrinsic::aarch64_cls64);
+
     Value *Result = Builder.CreateCall(F, Arg, "cls");
     if (BuiltinID == AArch64::BI_CountLeadingSigns64)
       Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());

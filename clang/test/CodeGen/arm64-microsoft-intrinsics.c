@@ -269,12 +269,10 @@ double check__CopyDoubleFromInt64(__int64 arg1) {
   return _CopyDoubleFromInt64(arg1);
 }
 
-// CHECK-MSCOMPAT: %[[RETVAL:.*]] = alloca double, align 8
 // CHECK-MSCOMPAT: %[[ARG:.*]].addr = alloca i64, align 8
 // CHECK-MSCOMPAT: store i64 %[[ARG]], ptr %[[ARG]].addr, align 8
 // CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG]].addr, align 8
-// CHECK-MSCOMPAT: store i64 %[[VAR0]], ptr %[[RETVAL]], align 8
-// CHECK-MSCOMPAT: %[[VAR1:.*]] = load double, ptr %[[RETVAL]], align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = bitcast i64 %[[VAR0]] to double
 // CHECK-MSCOMPAT: ret double %[[VAR1]]
 // CHECK-LINUX: error: call to undeclared function '_CopyDoubleFromInt64'
 
@@ -282,12 +280,10 @@ float check__CopyFloatFromInt32(__int32 arg1) {
   return _CopyFloatFromInt32(arg1);
 }
 
-// CHECK-MSCOMPAT: %[[RETVAL:.*]] = alloca float, align 4
 // CHECK-MSCOMPAT: %[[ARG:.*]].addr = alloca i32, align 4
 // CHECK-MSCOMPAT: store i32 %[[ARG]], ptr %[[ARG]].addr, align 4
 // CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG]].addr, align 4
-// CHECK-MSCOMPAT: store i32 %[[VAR0]], ptr %[[RETVAL]], align 4
-// CHECK-MSCOMPAT: %[[VAR1:.*]] = load float, ptr %[[RETVAL]], align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = bitcast i32 %[[VAR0]] to float
 // CHECK-MSCOMPAT: ret float %[[VAR1]]
 // CHECK-LINUX: error: call to undeclared function '_CopyFloatFromInt32'
 
@@ -295,12 +291,10 @@ __int32 check__CopyInt32FromFloat(float arg1) {
   return _CopyInt32FromFloat(arg1);
 }
 
-// CHECK-MSCOMPAT: %[[RETVAL:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: %[[ARG:.*]].addr = alloca float, align 4
 // CHECK-MSCOMPAT: store float %[[ARG]], ptr %[[ARG]].addr, align 4
 // CHECK-MSCOMPAT: %[[VAR0:.*]] = load float, ptr %[[ARG]].addr, align 4
-// CHECK-MSCOMPAT: store float %[[VAR0]], ptr %[[RETVAL]], align 4
-// CHECK-MSCOMPAT: %[[VAR1:.*]] = load i32, ptr %[[RETVAL]], align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = bitcast float %[[VAR0]] to i32
 // CHECK-MSCOMPAT: ret i32 %[[VAR1]]
 // CHECK-LINUX: error: call to undeclared function '_CopyInt32FromFloat'
 
@@ -308,12 +302,10 @@ __int64 check__CopyInt64FromDouble(double arg1) {
   return _CopyInt64FromDouble(arg1);
 }
 
-// CHECK-MSCOMPAT: %[[RETVAL:.*]] = alloca i64, align 8
 // CHECK-MSCOMPAT: %[[ARG:.*]].addr = alloca double, align 8
 // CHECK-MSCOMPAT: store double %[[ARG]], ptr %[[ARG]].addr, align 8
 // CHECK-MSCOMPAT: %[[VAR0:.*]] = load double, ptr %[[ARG]].addr, align 8
-// CHECK-MSCOMPAT: store double %[[VAR0]], ptr %[[RETVAL]], align 8
-// CHECK-MSCOMPAT: %[[VAR1:.*]] = load i64, ptr %[[RETVAL]], align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = bitcast double %[[VAR0]] to i64
 // CHECK-MSCOMPAT: ret i64 %[[VAR1]]
 // CHECK-LINUX: error: call to undeclared function '_CopyInt64FromDouble'
 
@@ -321,86 +313,94 @@ unsigned int check__CountLeadingOnes(unsigned LONG arg1) {
   return _CountLeadingOnes(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i32, align 4
-// CHECK-MSVC: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR1:.*]] = xor i32 %[[VAR0]], -1
-// CHECK-MSVC: %[[VAR2:.*]] = call i32 @llvm.ctlz.i32(i32 %1, i1 false)
-// CHECK-MSVC: ret i32 %[[VAR2]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = xor i32 %[[VAR0]], -1
+// CHECK-MSCOMPAT: %[[VAR2:.*]] = call i32 @llvm.ctlz.i32(i32 %1, i1 false)
+// CHECK-MSCOMPAT: ret i32 %[[VAR2]]
+// CHECK-LINUX: error: call to undeclared function '_CountLeadingOnes'
 
 unsigned int check__CountLeadingOnes64(unsigned __int64 arg1) {
   return _CountLeadingOnes64(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i64, align 8
-// CHECK-MSVC: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR1:.*]] = xor i64 %[[VAR0]], -1
-// CHECK-MSVC: %[[VAR2:.*]] = call i64 @llvm.ctlz.i64(i64 %1, i1 false)
-// CHECK-MSVC: %[[VAR3:.*]] = trunc i64 %2 to i32
-// CHECK-MSVC: ret i32 %[[VAR3]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i64, align 8
+// CHECK-MSCOMPAT: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = xor i64 %[[VAR0]], -1
+// CHECK-MSCOMPAT: %[[VAR2:.*]] = call i64 @llvm.ctlz.i64(i64 %1, i1 false)
+// CHECK-MSCOMPAT: %[[VAR3:.*]] = trunc i64 %2 to i32
+// CHECK-MSCOMPAT: ret i32 %[[VAR3]]
+// CHECK-LINUX: error: call to undeclared function '_CountLeadingOnes64'
 
 unsigned int check__CountLeadingSigns(__int32 arg1) {
   return _CountLeadingSigns(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i32, align 4
-// CHECK-MSVC: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[CLS:.*]] = call i32 @llvm.aarch64.cls(i32 %[[VAR0]])
-// CHECK-MSVC: ret i32 %[[CLS]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[CLS:.*]] = call i32 @llvm.aarch64.cls(i32 %[[VAR0]])
+// CHECK-MSCOMPAT: ret i32 %[[CLS]]
+// CHECK-LINUX: error: call to undeclared function '_CountLeadingSigns'
 
 unsigned int check__CountLeadingSigns64(__int64 arg1) {
   return _CountLeadingSigns64(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i64, align 8
-// CHECK-MSVC: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[CLS:.*]] = call i32 @llvm.aarch64.cls64(i64 %[[VAR0]])
-// CHECK-MSVC: ret i32 %[[CLS]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i64, align 8
+// CHECK-MSCOMPAT: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[CLS:.*]] = call i32 @llvm.aarch64.cls64(i64 %[[VAR0]])
+// CHECK-MSCOMPAT: ret i32 %[[CLS]]
+// CHECK-LINUX: error: call to undeclared function '_CountLeadingSigns64'
 
 unsigned int check__CountLeadingZeros(__int32 arg1) {
   return _CountLeadingZeros(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i32, align 4
-// CHECK-MSVC: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR1:.*]] = call i32 @llvm.ctlz.i32(i32 %[[VAR0]], i1 false)
-// CHECK-MSVC: ret i32 %[[VAR1]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i32 @llvm.ctlz.i32(i32 %[[VAR0]], i1 false)
+// CHECK-MSCOMPAT: ret i32 %[[VAR1]]
+// CHECK-LINUX: error: call to undeclared function '_CountLeadingZeros'
 
 unsigned int check__CountLeadingZeros64(__int64 arg1) {
   return _CountLeadingZeros64(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i64, align 8
-// CHECK-MSVC: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR1:.*]] = call i64 @llvm.ctlz.i64(i64 %[[VAR0]], i1 false)
-// CHECK-MSVC: %[[VAR2:.*]] = trunc i64 %[[VAR1]] to i32
-// CHECK-MSVC: ret i32 %[[VAR2]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i64, align 8
+// CHECK-MSCOMPAT: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i64 @llvm.ctlz.i64(i64 %[[VAR0]], i1 false)
+// CHECK-MSCOMPAT: %[[VAR2:.*]] = trunc i64 %[[VAR1]] to i32
+// CHECK-MSCOMPAT: ret i32 %[[VAR2]]
+// CHECK-LINUX: error: call to undeclared function '_CountLeadingZeros64'
 
 unsigned int check_CountOneBits(unsigned LONG arg1) {
   return _CountOneBits(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i32, align 4
-// CHECK-MSVC: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
-// CHECK-MSVC: %[[VAR1:.*]] = call i32 @llvm.ctpop.i32(i32 %0)
-// CHECK-MSVC: ret i32 %[[VAR1]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i32 @llvm.ctpop.i32(i32 %0)
+// CHECK-MSCOMPAT: ret i32 %[[VAR1]]
+// CHECK-LINUX: error: call to undeclared function '_CountOneBits'
 
 unsigned int check_CountOneBits64(unsigned __int64 arg1) {
   return _CountOneBits64(arg1);
 }
 
-// CHECK-MSVC: %[[ARG1:.*]].addr = alloca i64, align 8
-// CHECK-MSVC: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
-// CHECK-MSVC: %[[VAR1:.*]] = call i64 @llvm.ctpop.i64(i64 %0)
-// CHECK-MSVC: %[[VAR2:.*]] = trunc i64 %1 to i32
-// CHECK-MSVC: ret i32 %[[VAR2]]
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i64, align 8
+// CHECK-MSCOMPAT: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i64 @llvm.ctpop.i64(i64 %0)
+// CHECK-MSCOMPAT: %[[VAR2:.*]] = trunc i64 %1 to i32
+// CHECK-MSCOMPAT: ret i32 %[[VAR2]]
+// CHECK-LINUX: error: call to undeclared function '_CountOneBits64'
 
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
