@@ -1433,10 +1433,17 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
       return sb_watchpoint;
 
     uint32_t watch_type = 0;
-    if (read)
+    if (read) {
       watch_type |= LLDB_WATCH_TYPE_READ;
-    if (write)
-      watch_type |= LLDB_WATCH_TYPE_WRITE;
+      // read + write, the most likely intention
+      // is to catch all writes to this, not just
+      // value modifications.
+      if (write)
+        watch_type |= LLDB_WATCH_TYPE_WRITE;
+    } else {
+      if (write)
+        watch_type |= LLDB_WATCH_TYPE_MODIFY;
+    }
 
     Status rc;
     CompilerType type(value_sp->GetCompilerType());
