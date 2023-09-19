@@ -55,6 +55,29 @@ def SPIRV_LinkageAttributesAttr : SPIRV_Attr<"LinkageAttributes", "linkage_attri
 }
 
 // Description of cooperative matrix operations supported on the
+// target. Represents `VkCooperativeMatrixPropertiesKHR`. See
+// https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkCooperativeMatrixPropertiesKHR.html
+def SPIRV_CooperativeMatrixPropertiesKHRAttr :
+    SPIRV_Attr<"CooperativeMatrixPropertiesKHR", "coop_matrix_props_khr"> {
+  let parameters = (ins
+    "uint32_t":$m_size,
+    "uint32_t":$n_size,
+    "uint32_t":$k_size,
+    "mlir::Type":$a_type,
+    "mlir::Type":$b_type,
+    "mlir::Type":$c_type,
+    "mlir::Type":$result_type,
+    "bool":$acc_sat,
+    "mlir::spirv::ScopeAttr":$scope
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def SPIRV_CooperativeMatrixPropertiesKHRArrayAttr :
+    TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesKHRAttr,
+                       "CooperativeMatrixPropertiesKHR array attribute">;
+
+// Description of cooperative matrix operations supported on the
 // target. Represents `VkCooperativeMatrixPropertiesNV`. See
 // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html
 def SPIRV_CooperativeMatrixPropertiesNVAttr :
@@ -130,6 +153,11 @@ def SPIRV_ResourceLimitsAttr : SPIRV_Attr<"ResourceLimits", "resource_limits"> {
 
     // The configurations of cooperative matrix operations
     // supported. Default is an empty list.
+    DefaultValuedParameter<
+      "ArrayAttr",
+      "nullptr"
+    >:$cooperative_matrix_properties_khr,
+
     DefaultValuedParameter<
       "ArrayAttr",
       "nullptr"
