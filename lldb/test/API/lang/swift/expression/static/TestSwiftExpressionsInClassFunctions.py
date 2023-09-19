@@ -52,8 +52,7 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            lldbutil.check_expression("i", str(i), False)
-            self.check_expression(self, self.frame(), "i", str(i), use_summary=False)
+            lldbutil.check_expression(self, self.frame(), "i", str(i), False)
             if i == 6:
               lldbutil.check_expression(self, self.frame(), "self", "a.H<Int>", use_summary=False)
               frame = threads[0].GetFrameAtIndex(0)
