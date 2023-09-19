@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This test is hitting Clang bugs with LSV in older versions of Clang.
-// UNSUPPORTED: clang-modules-build && (clang-15 || apple-clang-14)
+// UNSUPPORTED: clang-modules-build && clang-15
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
