@@ -1773,7 +1773,8 @@ void BuildLockset::checkPtAccess(const Expr *Exp, AccessKind AK,
 ///
 /// \param Exp   The call expression.
 /// \param D     The callee declaration.
-/// \param Self  If \p Exp = nullptr, the implicit this argument.
+/// \param Self  If \p Exp = nullptr, the implicit this argument or the argument
+///              of an implicitly called cleanup function.
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
                               til::LiteralPtr *Self, SourceLocation Loc) {
@@ -2265,8 +2266,11 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   const PostOrderCFGView *SortedGraph = walker.getSortedGraph();
   PostOrderCFGView::CFGBlockSet VisitedBlocks(CFGraph);
 
+  CFGBlockInfo &Initial = BlockInfo[CFGraph->getEntry().getBlockID()];
+  CFGBlockInfo &Final   = BlockInfo[CFGraph->getExit().getBlockID()];
+
   // Mark entry block as reachable
-  BlockInfo[CFGraph->getEntry().getBlockID()].Reachable = true;
+  Initial.Reachable = true;
 
   // Compute SSA names for local variables
   LocalVarMap.traverseCFG(CFGraph, SortedGraph, BlockInfo);
@@ -2282,8 +2286,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   // to initial lockset. Also turn off checking for lock and unlock functions.
   // FIXME: is there a more intelligent way to check lock/unlock functions?
   if (!SortedGraph->empty() && D->hasAttrs()) {
-    const CFGBlock *FirstBlock = *SortedGraph->begin();
-    FactSet &InitialLockset = BlockInfo[FirstBlock->getBlockID()].EntrySet;
+    assert(*SortedGraph->begin() == &CFGraph->getEntry());
+    FactSet &InitialLockset = Initial.EntrySet;
 
     CapExprSet ExclusiveLocksToAdd;
     CapExprSet SharedLocksToAdd;
@@ -2414,6 +2418,15 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
                                     AD.getTriggerStmt()->getEndLoc());
           break;
         }
+
+        case CFGElement::CleanupFunction: {
+          const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
+          LocksetBuilder.handleCall(/*Exp=*/nullptr, CF.getFunctionDecl(),
+                                    SxBuilder.createVariable(CF.getVarDecl()),
+                                    CF.getVarDecl()->getLocation());
+          break;
+        }
+
         case CFGElement::TemporaryDtor: {
           auto TD = BI.castAs<CFGTemporaryDtor>();
 
@@ -2455,15 +2468,12 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     }
   }
 
-  CFGBlockInfo *Initial = &BlockInfo[CFGraph->getEntry().getBlockID()];
-  CFGBlockInfo *Final   = &BlockInfo[CFGraph->getExit().getBlockID()];
-
   // Skip the final check if the exit block is unreachable.
-  if (!Final->Reachable)
+  if (!Final.Reachable)
     return;
 
   // By default, we expect all locks held on entry to be held on exit.
-  FactSet ExpectedExitSet = Initial->EntrySet;
+  FactSet ExpectedExitSet = Initial.EntrySet;
 
   // Adjust the expected exit set by adding or removing locks, as declared
   // by *-LOCK_FUNCTION and UNLOCK_FUNCTION.  The intersect below will then
@@ -2479,7 +2489,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     ExpectedExitSet.removeLock(FactMan, Lock);
 
   // FIXME: Should we call this function for all blocks which exit the function?
-  intersectAndWarn(ExpectedExitSet, Final->ExitSet, Final->ExitLoc,
+  intersectAndWarn(ExpectedExitSet, Final.ExitSet, Final.ExitLoc,
                    LEK_LockedAtEndOfFunction, LEK_NotLockedAtEndOfFunction);
 
   Handler.leaveFunction(CurrentFunction);

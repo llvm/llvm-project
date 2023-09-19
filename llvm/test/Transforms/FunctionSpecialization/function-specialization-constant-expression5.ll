@@ -3,7 +3,7 @@
 
 ; Check that we don't crash and specialise on a scalar global variable with byval attribute.
 
-; CHECK-NOT: wombat.{{[0-9]+}}
+; CHECK-NOT: wombat.specialized.{{[0-9]+}}
 
 %struct.pluto = type { %struct.spam }
 %struct.quux = type { i16 }

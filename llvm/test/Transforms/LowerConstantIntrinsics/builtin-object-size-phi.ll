@@ -61,3 +61,59 @@ if.end:
   %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false)
   ret i64 %size
 }
+
+define i64 @pick_max_same(i32 %n) {
+; CHECK-LABEL: @pick_max_same(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUFFER:%.*]] = alloca i8, i64 20, align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[OFFSETED:%.*]] = getelementptr i8, ptr [[BUFFER]], i64 10
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[OFFSETED]], [[IF_ELSE]] ], [ [[BUFFER]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 20
+;
+entry:
+  %buffer = alloca i8, i64 20
+  %cond = icmp eq i32 %n, 0
+  br i1 %cond, label %if.else, label %if.end
+
+if.else:
+  %offseted = getelementptr i8, ptr %buffer, i64 10
+  br label %if.end
+
+if.end:
+  %p = phi ptr [ %offseted, %if.else ], [ %buffer, %entry ]
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 false, i1 true, i1 false)
+  ret i64 %size
+}
+
+define i64 @pick_min_same(i32 %n) {
+; CHECK-LABEL: @pick_min_same(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BUFFER:%.*]] = alloca i8, i64 20, align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[OFFSETED:%.*]] = getelementptr i8, ptr [[BUFFER]], i64 10
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[OFFSETED]], [[IF_ELSE]] ], [ [[BUFFER]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i64 10
+;
+entry:
+  %buffer = alloca i8, i64 20
+  %cond = icmp eq i32 %n, 0
+  br i1 %cond, label %if.else, label %if.end
+
+if.else:
+  %offseted = getelementptr i8, ptr %buffer, i64 10
+  br label %if.end
+
+if.end:
+  %p = phi ptr [ %offseted, %if.else ], [ %buffer, %entry ]
+  %size = call i64 @llvm.objectsize.i64.p0(ptr %p, i1 true, i1 true, i1 false)
+  ret i64 %size
+}

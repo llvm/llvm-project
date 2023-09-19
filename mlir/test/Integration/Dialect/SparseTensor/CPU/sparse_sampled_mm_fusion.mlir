@@ -30,7 +30,7 @@
 // Do the same run, but now with direct IR generation and VLA vectorization.
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
-#SM = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#SM = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 #trait_sampled_dense_dense = {
   indexing_maps = [
@@ -121,7 +121,7 @@ module {
   func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
                                %arga: tensor<8x8xf64>,
                                %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
-    %1 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
+    %1 = tensor.empty() : tensor<8x8xf64, #SM>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
                                tensor<8x8xf64>, tensor<8x8xf64>)
@@ -154,7 +154,7 @@ module {
           linalg.yield %q : f64
     } -> tensor<8x8xf64>
     // Sample the result with elements-wise multiplication with sparse matrix.
-    %3 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
+    %3 = tensor.empty() : tensor<8x8xf64, #SM>
     %4 = linalg.generic #trait_scale
       ins(%2, %args : tensor<8x8xf64>, tensor<8x8xf64, #SM>)
       outs(%3 : tensor<8x8xf64, #SM>) {

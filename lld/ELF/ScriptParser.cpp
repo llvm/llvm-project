@@ -1083,7 +1083,7 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
   StringRef op = next();
   assert(op == "=" || op == "*=" || op == "/=" || op == "+=" || op == "-=" ||
          op == "&=" || op == "^=" || op == "|=" || op == "<<=" || op == ">>=");
-  // Note: GNU ld does not support %= or ^=.
+  // Note: GNU ld does not support %=.
   Expr e = readExpr();
   if (op != "=") {
     std::string loc = getCurrentLocation();

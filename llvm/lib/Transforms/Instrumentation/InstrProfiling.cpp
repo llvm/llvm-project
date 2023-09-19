@@ -766,6 +766,34 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
     if (isa<ConstantExpr>(NC))
       NC->dropAllReferences();
   }
+  if (DebugInfoCorrelate && !ReferencedNames.empty()) {
+    MDNode *Node = *M->debug_compile_units_begin();
+    DICompileUnit *CU = cast<DICompileUnit>(Node);
+    DIBuilder DB(*M, true, CU);
+    LLVMContext &Ctx = M->getContext();
+    SmallVector<llvm::Metadata *> Annots;
+    for (auto *NameVar: ReferencedNames) {
+      Metadata *CovFunctionNameAnnotation[] = {
+          MDString::get(Ctx, InstrProfCorrelator::CovFunctionNameAttributeName),
+          MDString::get(Ctx,
+                        std::string(getPGOFuncNameVarInitializer(NameVar))),
+      };
+      Annots.push_back(MDNode::get(Ctx, CovFunctionNameAnnotation));
+    }
+    auto Annotations = DB.getOrCreateArray(Annots);
+    auto *DICovName = DB.createGlobalVariableExpression(
+        CU, CoverageNamesVar->getName(), /*LinkageName=*/StringRef(),
+        CU->getFile(),
+        /*LineNo=*/0, DB.createUnspecifiedType("Coverage Type"),
+        /*IsLocalToUnit=*/true, /*IsDefined=*/true, /*Expr=*/nullptr,
+        /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
+        Annotations);
+    CoverageNamesVar->addDebugInfo(DICovName);
+    DB.finalize();
+    ReferencedNames.clear();
+    return;
+  }
+
   CoverageNamesVar->eraseFromParent();
 }
 

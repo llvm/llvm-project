@@ -89,6 +89,7 @@ protected:
 using HlfirSumLowering = HlfirReductionIntrinsic<hlfir::SumOp, true>;
 using HlfirProductLowering = HlfirReductionIntrinsic<hlfir::ProductOp, true>;
 using HlfirMaxvalLowering = HlfirReductionIntrinsic<hlfir::MaxvalOp, true>;
+using HlfirMinvalLowering = HlfirReductionIntrinsic<hlfir::MinvalOp, true>;
 using HlfirAnyLowering = HlfirReductionIntrinsic<hlfir::AnyOp, false>;
 using HlfirAllLowering = HlfirReductionIntrinsic<hlfir::AllOp, false>;
 
@@ -355,6 +356,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
                                                   stmtResultType);
   if (name == "maxval")
     return HlfirMaxvalLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "minval")
+    return HlfirMinvalLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")

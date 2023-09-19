@@ -196,13 +196,13 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:  # %bb.1: # %bb3.preheader
 ; CHECK-NEXT:    cmpldi r4, 1
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    addi r9, r3, 4002
+; CHECK-NEXT:    addi r10, r3, 4002
 ; CHECK-NEXT:    std r25, -56(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    li r6, -1
 ; CHECK-NEXT:    std r26, -48(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    li r7, 3
 ; CHECK-NEXT:    li r8, 5
-; CHECK-NEXT:    li r10, 9
+; CHECK-NEXT:    li r9, 9
 ; CHECK-NEXT:    std r27, -40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
@@ -213,17 +213,17 @@ define i64 @test_max_number_reminder(ptr %arg, i32 signext %arg1) {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # %bb3
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldx r11, r9, r6
-; CHECK-NEXT:    ld r12, 0(r9)
-; CHECK-NEXT:    ldx r0, r9, r5
-; CHECK-NEXT:    ldx r30, r9, r7
+; CHECK-NEXT:    ldx r11, r10, r6
+; CHECK-NEXT:    ld r12, 0(r10)
+; CHECK-NEXT:    ldx r0, r10, r5
+; CHECK-NEXT:    ldx r30, r10, r7
 ; CHECK-NEXT:    mulld r11, r12, r11
-; CHECK-NEXT:    ld r29, 4(r9)
-; CHECK-NEXT:    ldx r28, r9, r8
-; CHECK-NEXT:    ld r27, 12(r9)
-; CHECK-NEXT:    ld r26, 8(r9)
-; CHECK-NEXT:    ldx r25, r9, r10
-; CHECK-NEXT:    addi r9, r9, 1
+; CHECK-NEXT:    ld r29, 4(r10)
+; CHECK-NEXT:    ldx r28, r10, r8
+; CHECK-NEXT:    ld r27, 12(r10)
+; CHECK-NEXT:    ld r26, 8(r10)
+; CHECK-NEXT:    ldx r25, r10, r9
+; CHECK-NEXT:    addi r10, r10, 1
 ; CHECK-NEXT:    mulld r11, r11, r0
 ; CHECK-NEXT:    mulld r11, r11, r30
 ; CHECK-NEXT:    mulld r11, r11, r29

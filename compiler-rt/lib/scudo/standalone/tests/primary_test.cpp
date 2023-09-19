@@ -8,6 +8,7 @@
 
 #include "tests/scudo_unit_test.h"
 
+#include "allocator_config.h"
 #include "primary32.h"
 #include "primary64.h"
 #include "size_class_map.h"
@@ -283,7 +284,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
 }
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
-  using Primary = TestAllocator<TypeParam, scudo::SvelteSizeClassMap>;
+  using Primary = TestAllocator<TypeParam, scudo::Config::Primary::SizeClassMap>;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   std::mutex Mutex;

@@ -59,7 +59,7 @@ inline value_type byte_swap(value_type value) {
 }
 
 /// Read a value of a particular endianness from memory.
-template <typename value_type, std::size_t alignment>
+template <typename value_type, std::size_t alignment = unaligned>
 inline value_type read(const void *memory, endianness endian) {
   value_type ret;
 
@@ -93,7 +93,7 @@ inline value_type readNext(const CharT *&memory) {
 }
 
 /// Write a value to memory with a particular endianness.
-template <typename value_type, std::size_t alignment>
+template <typename value_type, std::size_t alignment = unaligned>
 inline void write(void *memory, value_type value, endianness endian) {
   value = byte_swap<value_type>(value, endian);
   memcpy(LLVM_ASSUME_ALIGNED(
@@ -349,10 +349,6 @@ using aligned_big_t = detail::packed_endian_specific_integral<T, big, aligned>;
 
 namespace endian {
 
-template <typename T> inline T read(const void *P, endianness E) {
-  return read<T, unaligned>(P, E);
-}
-
 template <typename T, endianness E> inline T read(const void *P) {
   return *(const detail::packed_endian_specific_integral<T, E, unaligned> *)P;
 }
@@ -383,10 +379,6 @@ inline uint64_t read64le(const void *P) { return read64<little>(P); }
 inline uint16_t read16be(const void *P) { return read16<big>(P); }
 inline uint32_t read32be(const void *P) { return read32<big>(P); }
 inline uint64_t read64be(const void *P) { return read64<big>(P); }
-
-template <typename T> inline void write(void *P, T V, endianness E) {
-  write<T, unaligned>(P, V, E);
-}
 
 template <typename T, endianness E> inline void write(void *P, T V) {
   *(detail::packed_endian_specific_integral<T, E, unaligned> *)P = V;

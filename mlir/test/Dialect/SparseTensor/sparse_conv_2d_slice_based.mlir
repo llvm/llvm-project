@@ -4,7 +4,7 @@
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d3)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
 
-#DCSR = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>
+#DCSR = #sparse_tensor.encoding<{ map = (d0, d1) -> (d0 : compressed, d1 : compressed) }>
 
 // CHECK-LABEL:   func.func @conv2d_all_sparse_CSR(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<8x8xi32, #sparse_tensor.encoding<{{.*}}>>,

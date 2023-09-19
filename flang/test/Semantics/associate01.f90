@@ -23,24 +23,24 @@ module m1
     integer, pointer :: ip
     associate (sel => iptr(itarget))
       ip => sel
-      !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+      !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
       if (.not. associated(sel)) stop
     end associate
     associate (sel => tv%iptr(itarget))
       ip => sel
-      !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+      !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
       if (.not. associated(sel)) stop
     end associate
     associate (sel => (iptr(itarget)))
       !ERROR: In assignment to object pointer 'ip', the target 'sel' is not an object with POINTER or TARGET attributes
       ip => sel
-      !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+      !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
       if (.not. associated(sel)) stop
     end associate
     associate (sel => 0 + iptr(itarget))
       !ERROR: In assignment to object pointer 'ip', the target 'sel' is not an object with POINTER or TARGET attributes
       ip => sel
-      !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
+      !ERROR: POINTER= argument of ASSOCIATED() must be a pointer
       if (.not. associated(sel)) stop
     end associate
   end subroutine

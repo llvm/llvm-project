@@ -70,6 +70,10 @@ struct TestLowerToNVVMOptions
       *this, "cubin-features",
       llvm::cl::desc("Features to use to serialize to cubin."),
       llvm::cl::init("+ptx60")};
+  PassOptions::Option<std::string> cubinFormat{
+      *this, "cubin-format",
+      llvm::cl::desc("Compilation format to use to serialize to cubin."),
+      llvm::cl::init("isa")};
 };
 
 //===----------------------------------------------------------------------===//
@@ -257,7 +261,9 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
   pm.addPass(createGpuToLLVMConversionPass(gpuToLLVMConversionOptions));
 
   // Serialize all GPU modules to binaries.
-  pm.addPass(createGpuModuleToBinaryPass());
+  GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+  gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;
+  pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
 
   // Convert vector to LLVM (always needed).
   // TODO: C++20 designated initializers.

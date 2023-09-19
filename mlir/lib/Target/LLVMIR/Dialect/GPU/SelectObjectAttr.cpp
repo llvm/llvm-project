@@ -44,6 +44,9 @@ public:
                              Operation *binaryOperation,
                              llvm::IRBuilderBase &builder,
                              LLVM::ModuleTranslation &moduleTranslation) const;
+
+  // Returns the selected object for embedding.
+  gpu::ObjectAttr getSelectedObject(gpu::BinaryOp op) const;
 };
 // Returns an identifier for the global string holding the binary.
 std::string getBinaryIdentifier(StringRef binaryName) {
@@ -58,24 +61,15 @@ void mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(
   });
 }
 
-LogicalResult SelectObjectAttrImpl::embedBinary(
-    Attribute attribute, Operation *operation, llvm::IRBuilderBase &builder,
-    LLVM::ModuleTranslation &moduleTranslation) const {
-  assert(operation && "The binary operation must be non null.");
-  if (!operation)
-    return failure();
-
-  auto op = mlir::dyn_cast<gpu::BinaryOp>(operation);
-  if (!op) {
-    operation->emitError("Operation must be a GPU binary.");
-    return failure();
-  }
-
+gpu::ObjectAttr
+SelectObjectAttrImpl::getSelectedObject(gpu::BinaryOp op) const {
   ArrayRef<Attribute> objects = op.getObjectsAttr().getValue();
 
   // Obtain the index of the object to select.
   int64_t index = -1;
-  if (Attribute target = cast<gpu::SelectObjectAttr>(attribute).getTarget()) {
+  if (Attribute target =
+          cast<gpu::SelectObjectAttr>(op.getOffloadingHandlerAttr())
+              .getTarget()) {
     // If the target attribute is a number it is the index. Otherwise compare
     // the attribute to every target inside the object array to find the index.
     if (auto indexAttr = mlir::dyn_cast<IntegerAttr>(target)) {
@@ -95,10 +89,28 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   }
 
   if (index < 0 || index >= static_cast<int64_t>(objects.size())) {
-    op->emitError("The requested target object couldn't be found.");
+    op->emitError("the requested target object couldn't be found");
+    return nullptr;
+  }
+  return mlir::dyn_cast<gpu::ObjectAttr>(objects[index]);
+}
+
+LogicalResult SelectObjectAttrImpl::embedBinary(
+    Attribute attribute, Operation *operation, llvm::IRBuilderBase &builder,
+    LLVM::ModuleTranslation &moduleTranslation) const {
+  assert(operation && "The binary operation must be non null.");
+  if (!operation)
+    return failure();
+
+  auto op = mlir::dyn_cast<gpu::BinaryOp>(operation);
+  if (!op) {
+    operation->emitError("operation must be a GPU binary");
     return failure();
   }
-  auto object = mlir::dyn_cast<gpu::ObjectAttr>(objects[index]);
+
+  gpu::ObjectAttr object = getSelectedObject(op);
+  if (!object)
+    return failure();
 
   llvm::Module *module = moduleTranslation.getLLVMModule();
 
@@ -130,6 +142,9 @@ public:
   // Get the module load callee.
   FunctionCallee getModuleLoadFn();
 
+  // Get the module load JIT callee.
+  FunctionCallee getModuleLoadJITFn();
+
   // Get the module unload callee.
   FunctionCallee getModuleUnloadFn();
 
@@ -149,7 +164,8 @@ public:
   Value *createKernelArgArray(mlir::gpu::LaunchFuncOp op);
 
   // Create the full kernel launch.
-  mlir::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op);
+  mlir::LogicalResult createKernelLaunch(mlir::gpu::LaunchFuncOp op,
+                                         mlir::gpu::ObjectAttr object);
 
 private:
   Module &module;
@@ -174,13 +190,22 @@ LogicalResult SelectObjectAttrImpl::launchKernel(
 
   auto launchFuncOp = mlir::dyn_cast<gpu::LaunchFuncOp>(launchFuncOperation);
   if (!launchFuncOp) {
-    launchFuncOperation->emitError("Operation must be a GPU launch func Op.");
+    launchFuncOperation->emitError("operation must be a GPU launch func Op.");
     return failure();
   }
 
+  auto binOp = mlir::dyn_cast<gpu::BinaryOp>(binaryOperation);
+  if (!binOp) {
+    binaryOperation->emitError("operation must be a GPU binary.");
+    return failure();
+  }
+  gpu::ObjectAttr object = getSelectedObject(binOp);
+  if (!object)
+    return failure();
+
   return llvm::LaunchKernel(*moduleTranslation.getLLVMModule(), builder,
                             moduleTranslation)
-      .createKernelLaunch(launchFuncOp);
+      .createKernelLaunch(launchFuncOp, object);
 }
 
 llvm::LaunchKernel::LaunchKernel(
@@ -213,6 +238,12 @@ llvm::FunctionCallee llvm::LaunchKernel::getModuleLoadFn() {
   return module.getOrInsertFunction(
       "mgpuModuleLoad",
       FunctionType::get(ptrTy, ArrayRef<Type *>({ptrTy}), false));
+}
+
+llvm::FunctionCallee llvm::LaunchKernel::getModuleLoadJITFn() {
+  return module.getOrInsertFunction(
+      "mgpuModuleLoadJIT",
+      FunctionType::get(ptrTy, ArrayRef<Type *>({ptrTy, i32Ty}), false));
 }
 
 llvm::FunctionCallee llvm::LaunchKernel::getModuleUnloadFn() {
@@ -299,7 +330,8 @@ llvm::LaunchKernel::createKernelArgArray(mlir::gpu::LaunchFuncOp op) {
 // call %streamDestroy(%4)
 // call %moduleUnload(%1)
 mlir::LogicalResult
-llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op) {
+llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
+                                       mlir::gpu::ObjectAttr object) {
   auto llvmValue = [&](mlir::Value value) -> Value * {
     Value *v = moduleTranslation.lookupValue(value);
     assert(v && "Value has not been translated.");
@@ -326,13 +358,29 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op) {
   // Create the argument array.
   Value *argArray = createKernelArgArray(op);
 
+  // Default JIT optimization level.
+  llvm::Constant *optV = llvm::ConstantInt::get(i32Ty, 0);
+  // Check if there's an optimization level embedded in the object.
+  DictionaryAttr objectProps = object.getProperties();
+  mlir::Attribute optAttr;
+  if (objectProps && (optAttr = objectProps.get("O"))) {
+    auto optLevel = dyn_cast<IntegerAttr>(optAttr);
+    if (!optLevel)
+      return op.emitError("the optimization level must be an integer");
+    optV = llvm::ConstantInt::get(i32Ty, optLevel.getValue());
+  }
+
   // Load the kernel module.
   StringRef moduleName = op.getKernelModuleName().getValue();
   std::string binaryIdentifier = getBinaryIdentifier(moduleName);
   Value *binary = module.getGlobalVariable(binaryIdentifier, true);
   if (!binary)
     return op.emitError() << "Couldn't find the binary: " << binaryIdentifier;
-  Value *moduleObject = builder.CreateCall(getModuleLoadFn(), {binary});
+
+  Value *moduleObject =
+      object.getFormat() == gpu::CompilationTarget::Assembly
+          ? builder.CreateCall(getModuleLoadJITFn(), {binary, optV})
+          : builder.CreateCall(getModuleLoadFn(), {binary});
 
   // Load the kernel function.
   Value *moduleFunction = builder.CreateCall(

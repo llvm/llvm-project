@@ -142,8 +142,11 @@ std::size_t Descriptor::Elements() const {
 
 int Descriptor::Allocate() {
   std::size_t byteSize{Elements() * ElementBytes()};
-  void *p{std::malloc(byteSize)};
-  if (!p && byteSize) {
+  // Zero size allocation is possible in Fortran and the resulting
+  // descriptor must be allocated/associated. Since std::malloc(0)
+  // result is implementation defined, always allocate at least one byte.
+  void *p{byteSize ? std::malloc(byteSize) : std::malloc(1)};
+  if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
   // TODO: image synchronization

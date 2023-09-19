@@ -32,7 +32,7 @@ func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coord
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth=32, crdWidth=32}>
 
 func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>)
                             -> tensor<100x2xf64, #SparseVector> {
@@ -68,7 +68,7 @@ func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: ten
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth=32, crdWidth=32}>
 
 func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>) {
   // expected-error@+1 {{input/output trailing COO level-ranks don't match}}
@@ -270,7 +270,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 // -----
 
-#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"]}>
+#COO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
 
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#COO>) -> index {
   // expected-error@+1 {{requested position memory size on a singleton level}}
@@ -371,7 +371,7 @@ func.func @sparse_convert_unranked(%arg0: tensor<*xf32>) -> tensor<10xf32> {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 
 func.func @sparse_convert_rank_mismatch(%arg0: tensor<10x10xf64, #DCSR>) -> tensor<?xf64> {
   // expected-error@+1 {{unexpected conversion mismatch in rank}}
@@ -658,7 +658,7 @@ func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
 
 #C = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 #DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-#DCC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed", "compressed"]}>
+#DCC = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : compressed)}>
 func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
                                         %arg1: tensor<3x4xf64, #DC>,
                                         %arg2: tensor<4x4x4xf64, #DCC>) -> tensor<9x4xf64, #DC> {
@@ -714,7 +714,7 @@ func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Unmatched number of arguments in the block}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -725,7 +725,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Expecting Index type for argument at index 1}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -736,7 +736,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -747,7 +747,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
   sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
@@ -758,7 +758,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   // expected-error@+1 {{Mismatch in number of init arguments and results}}
   sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 do {
@@ -769,7 +769,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   // expected-error@+1 {{Mismatch in types of init arguments and results}}
   %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> i32 do {
@@ -780,7 +780,7 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 // -----
 
-#DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
+#DCSR = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed, d1 : compressed)}>
 func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
   // expected-error@+1 {{Mismatch in types of yield values and results}}
   %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> f32 do {

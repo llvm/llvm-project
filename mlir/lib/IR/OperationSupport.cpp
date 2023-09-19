@@ -517,6 +517,19 @@ void MutableOperandRange::updateLength(unsigned newLength) {
   }
 }
 
+OpOperand &MutableOperandRange::operator[](unsigned index) const {
+  assert(index < length && "index is out of bounds");
+  return owner->getOpOperand(start + index);
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::begin() const {
+  return owner->getOpOperands().slice(start, length).begin();
+}
+
+MutableArrayRef<OpOperand>::iterator MutableOperandRange::end() const {
+  return owner->getOpOperands().slice(start, length).end();
+}
+
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
 
@@ -768,7 +781,8 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
       lhs->getNumSuccessors() != rhs->getNumSuccessors() ||
       lhs->getNumOperands() != rhs->getNumOperands() ||
       lhs->getNumResults() != rhs->getNumResults() ||
-      lhs->hashProperties() != rhs->hashProperties())
+      !lhs->getName().compareOpProperties(lhs->getPropertiesStorage(),
+                                        rhs->getPropertiesStorage()))
     return false;
   if (!(flags & IgnoreLocations) && lhs->getLoc() != rhs->getLoc())
     return false;

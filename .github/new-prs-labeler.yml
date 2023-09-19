@@ -110,16 +110,26 @@ mlir:
   - mlir/**
 
 mlir:core:
-  - mlir/**/Support/**
-  - mlir/**/Parser/**
-  - mlir/**/IR/**
-  - mlir/**/Bytecode/**
-  - mlir/**/AsmParser/**
-  - mlir/**/Pass/**
-  - mlir/**/tools/**
-  - mlir/**/Reducer/**
-  - mlir/**/Transforms/**
-  - mlir/**/Debug/**
+  - mlir/include/mlir/Support/**
+  - mlir/lib/Support/**
+  - mlir/include/mlir/Parser/**
+  - mlir/lib/Parser/**
+  - mlir/include/mlir/IR/**
+  - mlir/lib/IR/**
+  - mlir/include/mlir/Bytecode/**
+  - mlir/lib/Bytecode/**
+  - mlir/include/mlir/AsmParser/**
+  - mlir/lib/AsmParser/**
+  - mlir/include/mlir/Pass/**
+  - mlir/lib/Pass/**
+  - mlir/include/mlir/Tools/**
+  - mlir/lib/Tools/**
+  - mlir/include/mlir/Reducer/**
+  - mlir/lib/Reducer/**
+  - mlir/include/mlir/Transforms/**
+  - mlir/lib/Transforms/**
+  - mlir/include/mlir/Debug/**
+  - mlir/lib/Debug/**
   - mlir/tools/**
 
 mlir:ods:
@@ -222,6 +232,11 @@ mlir:scf:
 
 mlir:spirv:
   - mlir/**/SPIRV/**
+  - mlir/**/SPIRVTo*/**
+  - mlir/**/*ToSPIRV/**
+  - mlir/tools/mlir-spirv-cpu-runner/**
+  - mlir/tools/mlir-vulkan-runner/**
+  - mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp
 
 mlir:shape:
   - mlir/**/Shape/**
@@ -295,7 +310,10 @@ vectorizers:
   - llvm/include/llvm/Transforms/Vectorize/**
 
 clang:
-  - clang/**
+  - any:
+    - clang/**
+    - '!clang/**/Format/**'
+    - '!clang/tools/clang-format/**'
 
 testing-tools:
   - llvm/include/llvm/FileCheck/**
@@ -505,6 +523,12 @@ llvm:analysis:
   - llvm/test/Analysis/**
   - llvm/unittests/Analysis/**
 
+llvm:adt:
+  - llvm/**/ADT/*
+
+llvm:support:
+  - llvm/**/Support/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
@@ -542,12 +566,19 @@ llvm:SelectionDAG:
   - llvm/include/llvm/CodeGen/ISDOpcodes.h
 
 backend:DirectX:
-  - llvm/lib/Target/DirectX/**
-  - llvm/test/CodeGen/DirectX/**
-  - llvm/tools/dxil-dis
-  - llvm/test/tools/dxil-dis
-  - clang/lib/Basic/Targets/DirectX*
-  - llvm/include/llvm/IR/IntrinsicsDirectX.td
+  - '**/*DirectX*'
+  - '**/*DXIL*'
+  - '**/*dxil*'
+  - '**/*DirectX*/**'
+  - '**/*DXIL*/**'
+  - '**/*dxil*/**'
+
+backend:SPIR-V:
+  - clang/lib/Driver/ToolChains/SPIRV.*
+  - llvm/lib/Target/SPIRV/**
+  - llvm/test/CodeGen/SPIRV/**
+  - llvm/test/Frontend/HLSL/**
+  - llvm/docs/SPIRVUsage.rst
 
 mlgo:
   - llvm/lib/Analysis/ML*
