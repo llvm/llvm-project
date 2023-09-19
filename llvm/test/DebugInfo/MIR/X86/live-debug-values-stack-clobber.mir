@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -run-pass=livedebugvalues | FileCheck %s
+# RUN: llc -experimental-debug-variable-locations=true -mtriple=x86_64-unknown-unknown %s -o - -run-pass=livedebugvalues | FileCheck %s
 #
 # Fix some of PR42772. Consider the code below: the arguments are forced onto
 # the stack by the FORCE_SPILL macro, and go out of liveness if the
