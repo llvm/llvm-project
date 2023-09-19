@@ -17562,10 +17562,15 @@ define i64 @atomicrmw_xchg_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17601,10 +17606,15 @@ define i64 @atomicrmw_xchg_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b release
   ret i64 %1
 }
@@ -17640,10 +17650,15 @@ define i64 @atomicrmw_xchg_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -17679,10 +17694,15 @@ define i64 @atomicrmw_xchg_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xchg_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoswap.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xchg_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoswap.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xchg_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoswap.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xchg ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -17757,10 +17777,15 @@ define i64 @atomicrmw_add_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17796,10 +17821,15 @@ define i64 @atomicrmw_add_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b release
   ret i64 %1
 }
@@ -17835,10 +17865,15 @@ define i64 @atomicrmw_add_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -17874,10 +17909,15 @@ define i64 @atomicrmw_add_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_add_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_add_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_add_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw add ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -17953,11 +17993,17 @@ define i64 @atomicrmw_sub_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -17993,11 +18039,17 @@ define i64 @atomicrmw_sub_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b release
   ret i64 %1
 }
@@ -18033,11 +18085,17 @@ define i64 @atomicrmw_sub_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -18073,11 +18131,17 @@ define i64 @atomicrmw_sub_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_sub_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    neg a1, a1
-; RV64IA-NEXT:    amoadd.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_sub_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    neg a1, a1
+; RV64IA-WMO-NEXT:    amoadd.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_sub_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    neg a1, a1
+; RV64IA-TSO-NEXT:    amoadd.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw sub ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -18152,10 +18216,15 @@ define i64 @atomicrmw_and_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -18191,10 +18260,15 @@ define i64 @atomicrmw_and_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b release
   ret i64 %1
 }
@@ -18230,10 +18304,15 @@ define i64 @atomicrmw_and_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -18269,10 +18348,15 @@ define i64 @atomicrmw_and_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_and_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoand.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_and_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoand.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_and_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoand.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw and ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -18613,10 +18697,15 @@ define i64 @atomicrmw_or_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -18652,10 +18741,15 @@ define i64 @atomicrmw_or_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b release
   ret i64 %1
 }
@@ -18691,10 +18785,15 @@ define i64 @atomicrmw_or_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -18730,10 +18829,15 @@ define i64 @atomicrmw_or_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_or_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_or_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_or_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw or ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -18808,10 +18912,15 @@ define i64 @atomicrmw_xor_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -18847,10 +18956,15 @@ define i64 @atomicrmw_xor_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b release
   ret i64 %1
 }
@@ -18886,10 +19000,15 @@ define i64 @atomicrmw_xor_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -18925,10 +19044,15 @@ define i64 @atomicrmw_xor_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_xor_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amoxor.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_xor_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amoxor.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_xor_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amoxor.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw xor ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -19231,10 +19355,15 @@ define i64 @atomicrmw_max_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -19384,10 +19513,15 @@ define i64 @atomicrmw_max_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b release
   ret i64 %1
 }
@@ -19537,10 +19671,15 @@ define i64 @atomicrmw_max_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -19690,10 +19829,15 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_max_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomax.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_max_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomax.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_max_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomax.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw max ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -19996,10 +20140,15 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -20149,10 +20298,15 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b release
   ret i64 %1
 }
@@ -20302,10 +20456,15 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -20455,10 +20614,15 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_min_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomin.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_min_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomin.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_min_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomin.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw min ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -20761,10 +20925,15 @@ define i64 @atomicrmw_umax_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -20914,10 +21083,15 @@ define i64 @atomicrmw_umax_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b release
   ret i64 %1
 }
@@ -21067,10 +21241,15 @@ define i64 @atomicrmw_umax_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -21220,10 +21399,15 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umax_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umax_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amomaxu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umax_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amomaxu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umax ptr %a, i64 %b seq_cst
   ret i64 %1
 }
@@ -21526,10 +21710,15 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_acquire:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.aq a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_acquire:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.aq a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_acquire:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b acquire
   ret i64 %1
 }
@@ -21679,10 +21868,15 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_release:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.rl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_release:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.rl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_release:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b release
   ret i64 %1
 }
@@ -21832,10 +22026,15 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_acq_rel:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_acq_rel:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_acq_rel:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b acq_rel
   ret i64 %1
 }
@@ -21985,10 +22184,15 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
-; RV64IA-LABEL: atomicrmw_umin_i64_seq_cst:
-; RV64IA:       # %bb.0:
-; RV64IA-NEXT:    amominu.d.aqrl a0, a1, (a0)
-; RV64IA-NEXT:    ret
+; RV64IA-WMO-LABEL: atomicrmw_umin_i64_seq_cst:
+; RV64IA-WMO:       # %bb.0:
+; RV64IA-WMO-NEXT:    amominu.d.aqrl a0, a1, (a0)
+; RV64IA-WMO-NEXT:    ret
+;
+; RV64IA-TSO-LABEL: atomicrmw_umin_i64_seq_cst:
+; RV64IA-TSO:       # %bb.0:
+; RV64IA-TSO-NEXT:    amominu.d a0, a1, (a0)
+; RV64IA-TSO-NEXT:    ret
   %1 = atomicrmw umin ptr %a, i64 %b seq_cst
   ret i64 %1
 }
