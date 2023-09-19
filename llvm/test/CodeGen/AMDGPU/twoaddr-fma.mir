@@ -1,5 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GCN %s
 # RUN: llc -march=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GCN %s
 
 # GCN-LABEL: name: test_fmamk_reg_imm_f32
 # GCN: %2:vgpr_32 = IMPLICIT_DEF
@@ -44,7 +46,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_f32
-# GCN: %1:vgpr_32 = IMPLICIT_DEF
+# GCN: %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
 # GCN-NOT: V_MOV_B32
 # GCN: V_FMAAK_F32 killed %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
@@ -59,7 +61,7 @@ body:             |
     %0 = IMPLICIT_DEF
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
     %2 = V_FMAC_F32_e32 killed %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
-
+    S_ENDPGM 0, implicit %1
 ...
 
 
@@ -82,7 +84,7 @@ body:             |
     %1 = V_MOV_B32_e32 1078523331, implicit $exec
     %2 = IMPLICIT_DEF
     %3 = V_FMAC_F32_e32 killed %0, %1, %2, implicit $mode, implicit $exec
-
+    S_ENDPGM 0, implicit %2
 ...
 
 # GCN-LABEL: name: test_fmaak_inlineimm_src0_f32
@@ -102,7 +104,7 @@ body:             |
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
     %1 = IMPLICIT_DEF
     %2 = V_FMAC_F32_e32 1073741824, %0, %1, implicit $mode, implicit $exec
-
+    S_ENDPGM 0, implicit %1
 ...
 
 # GCN-LABEL: name: test_fmaak_otherimm_src0_f32
@@ -120,7 +122,7 @@ body:             |
     %0 = V_MOV_B32_e32 1078523331, implicit $exec
     %1 = IMPLICIT_DEF
     %2 = V_FMAC_F32_e32 1120403456, %0, %1, implicit $mode, implicit $exec
-
+    S_ENDPGM 0, implicit %1
 ...
 
 # GCN-LABEL: name: test_fmaak_other_constantlike_src0_f32
@@ -204,6 +206,7 @@ body: |
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = V_FMAC_F32_e64 1, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
 ...
 
 # GCN-LABEL: name: test_fma_src1mods
@@ -216,6 +219,7 @@ body: |
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 1, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
 ...
 
 # GCN-LABEL: name: test_fma_src2mods
@@ -228,4 +232,5 @@ body: |
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 0, %1, 1, %2, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %2
 ...
