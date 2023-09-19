@@ -99,9 +99,8 @@ define void @strided_vpstore_nxv8i8(<vscale x 8 x i8> %val, ptr %ptr, i32 signex
 define void @strided_vpstore_nxv8i8_unit_stride(<vscale x 8 x i8> %val, ptr %ptr, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv8i8_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
-; CHECK-NEXT:    vsse8.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv8i8.p0.i32(<vscale x 8 x i8> %val, ptr %ptr, i32 1, <vscale x 8 x i1> %m, i32 %evl)
   ret void
@@ -146,9 +145,8 @@ define void @strided_vpstore_nxv4i16(<vscale x 4 x i16> %val, ptr %ptr, i32 sign
 define void @strided_vpstore_nxv4i16_unit_stride(<vscale x 4 x i16> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv4i16_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vsse16.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv4i16.p0.i32(<vscale x 4 x i16> %val, ptr %ptr, i32 2, <vscale x 4 x i1> %m, i32 %evl)
   ret void
@@ -205,9 +203,8 @@ define void @strided_vpstore_nxv4i32(<vscale x 4 x i32> %val, ptr %ptr, i32 sign
 define void @strided_vpstore_nxv4i32_unit_stride(<vscale x 4 x i32> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv4i32_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vsse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv4i32.p0.i32(<vscale x 4 x i32> %val, ptr %ptr, i32 4, <vscale x 4 x i1> %m, i32 %evl)
   ret void
@@ -240,9 +237,8 @@ define void @strided_vpstore_nxv1i64(<vscale x 1 x i64> %val, ptr %ptr, i32 sign
 define void @strided_vpstore_nxv1i64_unit_stride(<vscale x 1 x i64> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv1i64_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vsse64.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv1i64.p0.i32(<vscale x 1 x i64> %val, ptr %ptr, i32 8, <vscale x 1 x i1> %m, i32 %evl)
   ret void
@@ -323,9 +319,8 @@ define void @strided_vpstore_nxv4f16(<vscale x 4 x half> %val, ptr %ptr, i32 sig
 define void @strided_vpstore_nxv4f16_unit_stride(<vscale x 4 x half> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv4f16_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vsse16.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv4f16.p0.i32(<vscale x 4 x half> %val, ptr %ptr, i32 2, <vscale x 4 x i1> %m, i32 %evl)
   ret void
@@ -382,9 +377,8 @@ define void @strided_vpstore_nxv4f32(<vscale x 4 x float> %val, ptr %ptr, i32 si
 define void @strided_vpstore_nxv4f32_unit_stride(<vscale x 4 x float> %val, ptr %ptr, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv4f32_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; CHECK-NEXT:    vsse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv4f32.p0.i32(<vscale x 4 x float> %val, ptr %ptr, i32 4, <vscale x 4 x i1> %m, i32 %evl)
   ret void
@@ -417,9 +411,8 @@ define void @strided_vpstore_nxv1f64(<vscale x 1 x double> %val, ptr %ptr, i32 s
 define void @strided_vpstore_nxv1f64_unit_stride(<vscale x 1 x double> %val, ptr %ptr, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_nxv1f64_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vsse64.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv1f64.p0.i32(<vscale x 1 x double> %val, ptr %ptr, i32 8, <vscale x 1 x i1> %m, i32 %evl)
   ret void

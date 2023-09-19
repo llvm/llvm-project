@@ -87,9 +87,8 @@ define void @strided_vpstore_v8i8(<8 x i8> %val, ptr %ptr, i32 signext %stride, 
 define void @strided_vpstore_v8i8_unit_stride(<8 x i8> %val, ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v8i8_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vsse8.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse8.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v8i8.p0.i32(<8 x i8> %val, ptr %ptr, i32 1, <8 x i1> %m, i32 %evl)
   ret void
@@ -134,9 +133,8 @@ define void @strided_vpstore_v8i16(<8 x i16> %val, ptr %ptr, i32 signext %stride
 define void @strided_vpstore_v8i16_unit_stride(<8 x i16> %val, ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v8i16_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vsse16.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v8i16.p0.i32(<8 x i16> %val, ptr %ptr, i32 2, <8 x i1> %m, i32 %evl)
   ret void
@@ -169,9 +167,8 @@ define void @strided_vpstore_v4i32(<4 x i32> %val, ptr %ptr, i32 signext %stride
 define void @strided_vpstore_v4i32_unit_stride(<4 x i32> %val, ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v4i32_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vsse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v4i32.p0.i32(<4 x i32> %val, ptr %ptr, i32 4, <4 x i1> %m, i32 %evl)
   ret void
@@ -204,9 +201,8 @@ define void @strided_vpstore_v2i64(<2 x i64> %val, ptr %ptr, i32 signext %stride
 define void @strided_vpstore_v2i64_unit_stride(<2 x i64> %val, ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v2i64_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vsse64.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v2i64.p0.i32(<2 x i64> %val, ptr %ptr, i32 8, <2 x i1> %m, i32 %evl)
   ret void
@@ -275,9 +271,8 @@ define void @strided_vpstore_v8f16(<8 x half> %val, ptr %ptr, i32 signext %strid
 define void @strided_vpstore_v8f16_unit_stride(<8 x half> %val, ptr %ptr, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v8f16_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 2
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vsse16.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v8f16.p0.i32(<8 x half> %val, ptr %ptr, i32 2, <8 x i1> %m, i32 %evl)
   ret void
@@ -310,9 +305,8 @@ define void @strided_vpstore_v4f32(<4 x float> %val, ptr %ptr, i32 signext %stri
 define void @strided_vpstore_v4f32_unit_stride(<4 x float> %val, ptr %ptr, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v4f32_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vsse32.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v4f32.p0.i32(<4 x float> %val, ptr %ptr, i32 4, <4 x i1> %m, i32 %evl)
   ret void
@@ -345,9 +339,8 @@ define void @strided_vpstore_v2f64(<2 x double> %val, ptr %ptr, i32 signext %str
 define void @strided_vpstore_v2f64_unit_stride(<2 x double> %val, ptr %ptr, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: strided_vpstore_v2f64_unit_stride:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 8
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; CHECK-NEXT:    vsse64.v v8, (a0), a2, v0.t
+; CHECK-NEXT:    vse64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v2f64.p0.i32(<2 x double> %val, ptr %ptr, i32 8, <2 x i1> %m, i32 %evl)
   ret void
