@@ -192,6 +192,8 @@ public:
   /// expression.  Text() should contain the definition of this function.
   const char *FunctionName() override { return "$__lldb_expr"; }
 
+  /// Returns whether the call to Parse on this user expression is cacheable.
+  virtual bool IsParseCacheable() { return true; }
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
   lldb::LanguageType Language() const override { return m_language; }
