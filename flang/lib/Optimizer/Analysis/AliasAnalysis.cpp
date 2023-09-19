@@ -95,25 +95,26 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
              llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
              llvm::dbgs() << "\n";);
 
-  // SourceKind::Unknown is set for the addresses wrapped in a global boxes.
+  // Indirect case currently not handled. Conservatively assume
+  // it aliases with everything
+  if (lhsSrc.kind > SourceKind::Direct || rhsSrc.kind > SourceKind::Direct) {
+    return AliasResult::MayAlias;
+  }
+
+  // SourceKind::Direct is set for the addresses wrapped in a global boxes.
   // ie: fir.global @_QMpointersEp : !fir.box<!fir.ptr<f32>>
   // Though nothing is known about them, they would only alias with targets or
   // pointers
-  bool unknownSourceToNonTargetOrPointer = false;
+  bool directSourceToNonTargetOrPointer = false;
   if (lhsSrc.u != rhsSrc.u) {
-    if ((lhsSrc.kind == SourceKind::Unknown && !rhsSrc.isTargetOrPointer()) ||
-        (rhsSrc.kind == SourceKind::Unknown && !lhsSrc.isTargetOrPointer())) {
-      unknownSourceToNonTargetOrPointer = true;
-    }
+    if ((lhsSrc.kind == SourceKind::Direct && !rhsSrc.isTargetOrPointer()) ||
+        (rhsSrc.kind == SourceKind::Direct && !lhsSrc.isTargetOrPointer()))
+      directSourceToNonTargetOrPointer = true;
   }
 
-  // Indirect case currently not handled. Conservatively assume
-  // it aliases with everything
-  if (lhsSrc.kind == SourceKind::Indirect ||
-      lhsSrc.kind == SourceKind::Unknown ||
-      rhsSrc.kind == SourceKind::Indirect ||
-      rhsSrc.kind == SourceKind::Unknown) {
-    if (!unknownSourceToNonTargetOrPointer)
+  if (lhsSrc.kind == SourceKind::Direct ||
+      rhsSrc.kind == SourceKind::Direct) {
+    if (!directSourceToNonTargetOrPointer)
       return AliasResult::MayAlias;
   }
 
@@ -308,14 +309,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           //
           // and when following through the wrapped address, capture
           // the fact that there is nothing known about it. Therefore setting
-          // the source to unknown.
+          // the source to Direct.
           //
           // When not following the wrapped address, then consider the address
           // of the box, which has nothing to do with the wrapped address and
           // lies in the global memory space.
           if (followBoxAddr &&
               mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(ty)))
-            type = SourceKind::Unknown;
+            type = SourceKind::Direct;
           else
             type = SourceKind::Global;
 
