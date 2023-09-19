@@ -1269,7 +1269,8 @@ public:
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }
 
-  // \returns true is CSUB atomics support a no-return form.
+  // \returns true if CSUB (a.k.a. SUB_CLAMP on GFX12) and COND_SUB atomics
+  // support a no-return form.
   bool hasAtomicCSubNoRtnInsts() const { return HasAtomicCSubNoRtnInsts; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.

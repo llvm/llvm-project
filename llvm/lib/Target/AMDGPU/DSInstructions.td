@@ -757,8 +757,10 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                                   ValueType vt, string frag> {
   def : DSAtomicRetPat<inst, vt,
                         !cast<PatFrag>(frag#"_local_addrspace")>;
-  def : DSAtomicRetPat<noRetInst, vt,
-                        !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+    def : DSAtomicRetPat<noRetInst, vt,
+                          !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
 }
 
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_ds_cond_sub_u32">;
