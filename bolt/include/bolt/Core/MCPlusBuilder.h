@@ -170,6 +170,7 @@ protected:
   /// MCPlusBuilder classes must use convert/lower/create* interfaces instead.
   void setTailCall(MCInst &Inst);
 
+public:
   /// Transfer annotations from \p SrcInst to \p DstInst.
   void moveAnnotations(MCInst &&SrcInst, MCInst &DstInst) const {
     assert(!getAnnotationInst(DstInst) &&
@@ -182,7 +183,6 @@ protected:
     removeAnnotationInst(SrcInst);
   }
 
-public:
   /// Return iterator range covering def operands.
   iterator_range<MCInst::iterator> defOperands(MCInst &Inst) const {
     return make_range(Inst.begin(),
