@@ -1889,6 +1889,13 @@ public:
                               BodyGenCallbackTy BodyGenCB,
                               FinalizeCallbackTy FiniCB);
 
+  /// Generator for `#omp teams`
+  ///
+  /// \param Loc The location where the teams construct was encountered.
+  /// \param BodyGenCB Callback that will generate the region code.
+  InsertPointTy createTeams(const LocationDescription &Loc,
+                            BodyGenCallbackTy BodyGenCB);
+
   /// Generate conditional branch and relevant BasicBlocks through which private
   /// threads copy the 'copyin' variables from Master copy to threadprivate
   /// copies.
