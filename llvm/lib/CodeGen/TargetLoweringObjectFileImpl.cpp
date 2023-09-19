@@ -1039,28 +1039,30 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // name, or a unique ID for the section.
   SmallString<128> Name;
   StringRef FunctionSectionName = MBB.getParent()->getSection()->getName();
-  if (!FunctionSectionName.equals(".text") && !FunctionSectionName.startswith(".text.")) {
-    // If the original function has a custom non-dot-text section, then split the cold part into that section too, but with a unique id.
+  if (!FunctionSectionName.equals(".text") &&
+      !FunctionSectionName.startswith(".text.")) {
+    // If the original function has a custom non-dot-text section, then split
+    // the cold part into that section too, but with a unique id.
     Name = FunctionSectionName;
     UniqueID = NextUniqueID++;
   } else {
-  StringRef FunctionName = MBB.getParent()->getName();
-  if (MBB.getSectionID() == MBBSectionID::ColdSectionID){
+    StringRef FunctionName = MBB.getParent()->getName();
+    if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
       Name += BBSectionsColdTextPrefix;
       Name += FunctionName;
-  } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
-    Name += ".text.eh.";
-    Name += FunctionName;
-  } else {
-    Name += FunctionSectionName;
-    if (TM.getUniqueBasicBlockSectionNames()) {
-      if (!Name.endswith("."))
-        Name += ".";
-      Name += MBB.getSymbol()->getName();
+    } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
+      Name += ".text.eh.";
+      Name += FunctionName;
     } else {
-      UniqueID = NextUniqueID++;
+      Name += FunctionSectionName;
+      if (TM.getUniqueBasicBlockSectionNames()) {
+        if (!Name.endswith("."))
+          Name += ".";
+        Name += MBB.getSymbol()->getName();
+      } else {
+        UniqueID = NextUniqueID++;
+      }
     }
-  }
   }
 
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
