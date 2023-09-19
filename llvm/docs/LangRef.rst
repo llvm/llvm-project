@@ -3433,15 +3433,19 @@ following set of options:
 - The quiet bit and payload are copied from any input operand that is a NaN.
   ("Unchanged NaN propagation" case)
 - The quiet bit is set and the payload is picked from a target-specific set of
-  further possible NaN payloads. The set can depend on the payloads of the input
-  NaNs. This set is empty on x86 and ARM, but can be non-empty on other
-  architectures. (For instance, on wasm, if any input NaN does not have the
-  preferred all-zero payload, then this set contains all possible payloads;
-  otherwise, it is empty. On SPARC, this set consists of the all-one payload.)
+  "extra" possible NaN payloads. The set can depend on the input operand values.
+  This set is empty on x86 and ARM, but can be non-empty on other architectures.
+  (For instance, on wasm, if any input NaN does not have the preferred all-zero
+  payload or any input NaN is an SNaN, then this set contains all possible
+  payloads; otherwise, it is empty. On SPARC, this set consists of the all-one
+  payload.)
 
-In particular, if all input NaNs are quiet, then the output NaN is definitely
-quiet. Signaling NaN outputs can only occur if they are provided as an input
-value. For example, "fmul SNaN, 1.0" may be simplified to SNaN rather than QNaN.
+In particular, if all input NaNs are quiet (or if there are no input NaNs), then
+the output NaN is definitely quiet. Signaling NaN outputs can only occur if they
+are provided as an input value. For example, "fmul SNaN, 1.0" may be simplified
+to SNaN rather than QNaN. Similarly, if all input NaNs are preferred (or if
+there are no input NaNs) and the target does not have any "extra" NaN payloads,
+then the output NaN is guaranteed to be preferred.
 
 Floating-point math operations are allowed to treat all NaNs as if they were
 quiet NaNs. For example, "pow(1.0, SNaN)" may be simplified to 1.0.
