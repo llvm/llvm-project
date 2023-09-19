@@ -206,7 +206,7 @@ define ptr @callee9() {
 
 define ptr @caller9_fail_creates_ub() {
 ; CHECK-LABEL: define ptr @caller9_fail_creates_ub() {
-; CHECK-NEXT:    [[R_I:%.*]] = call noundef nonnull ptr @foo()
+; CHECK-NEXT:    [[R_I:%.*]] = call noundef ptr @foo()
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
@@ -239,7 +239,7 @@ define ptr @callee10() {
 
 define ptr @caller10_fail_maybe_poison() {
 ; CHECK-LABEL: define ptr @caller10_fail_maybe_poison() {
-; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @foo()
+; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo()
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
@@ -259,7 +259,7 @@ define ptr @caller10_okay_will_be_ub() {
 
 define noundef ptr @caller10_okay_will_be_ub_todo() {
 ; CHECK-LABEL: define noundef ptr @caller10_okay_will_be_ub_todo() {
-; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @foo()
+; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo()
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
