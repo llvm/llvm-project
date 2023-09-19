@@ -72,7 +72,7 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            lldbutil.check_expression(self.frame(), "i", str(i), use_summary=False)
+            lldbutil.check_expression(self, self.frame(), "i", str(i), use_summary=False)
 
             self.runCmd("continue")
 
@@ -108,8 +108,8 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            lldbutil.check_expression(self.frame(), "m_t", str(class_bkpts[i]), use_summary=False)
-            lldbutil.check_expression(self.frame(), "m_s.m_s", str(class_bkpts[i]), use_summary=False)
+            lldbutil.check_expression(self, self.frame(), "m_t", str(class_bkpts[i]), use_summary=False)
+            lldbutil.check_expression(self, self.frame(), "m_s.m_s", str(class_bkpts[i]), use_summary=False)
 
             self.runCmd("continue")
 

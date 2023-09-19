@@ -46,7 +46,7 @@ class TestExclusivitySuppression(TestBase):
         frame = thread.frames[0]
         self.assertTrue(frame, "Frame 0 is valid.")
 
-        self.check_expression(frame, "w.s.i", "8", use_summary=False)
+        lldbutil.check_expression(self, frame, "w.s.i", "8", use_summary=False)
 
     # Test that we properly handle nested expression evaluations by:
     # (1) Breaking at breakpoint 1
