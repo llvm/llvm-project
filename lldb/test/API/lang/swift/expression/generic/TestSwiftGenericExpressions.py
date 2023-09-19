@@ -41,25 +41,6 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         self.build()
         self.do_ivar_test()
 
-    def check_expression(self, expression, expected_result, use_summary=True):
-        opts = lldb.SBExpressionOptions()
-        opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
-        value = self.frame().EvaluateExpression(expression, opts)
-        self.assertTrue(value.IsValid(), expression + "returned a valid value")
-
-        self.assertSuccess(value.GetError(), "expression failed")
-        if self.TraceOn():
-            print(value.GetSummary())
-            print(value.GetValue())
-
-        if use_summary:
-            answer = value.GetSummary()
-        else:
-            answer = value.GetValue()
-        report_str = "Use summary: %d %s expected: %s got: %s" % (
-            use_summary, expression, expected_result, answer)
-        self.assertTrue(answer == expected_result, report_str)
-
     def do_test(self):
         """Test expressions in generic contexts"""
         exe_name = "a.out"
@@ -91,7 +72,7 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            self.check_expression("i", str(i), use_summary=False)
+            lldbutil.check_expression(self.frame(), "i", str(i), use_summary=False)
 
             self.runCmd("continue")
 
@@ -127,10 +108,8 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
                 process, breakpoints[i])
 
             self.assertTrue(len(threads) == 1)
-            self.check_expression(
-                "m_t", str(class_bkpts[i]), use_summary=False)
-            self.check_expression(
-                "m_s.m_s", str(class_bkpts[i]), use_summary=False)
+            lldbutil.check_expression(self.frame(), "m_t", str(class_bkpts[i]), use_summary=False)
+            lldbutil.check_expression(self.frame(), "m_s.m_s", str(class_bkpts[i]), use_summary=False)
 
             self.runCmd("continue")
 
