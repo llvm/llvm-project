@@ -297,6 +297,14 @@ Bug Fixes to C++ Support
   definition the specialization was instantiated from.
   (`#26057 <https://github.com/llvm/llvm-project/issues/26057>`_`)
 
+- Fix a crash when a default member initializer of a base aggregate
+  makes an invalid call to an immediate function.
+  (`#66324 <https://github.com/llvm/llvm-project/issues/66324>`_)
+
+- Fix crash for a lambda attribute with a statement expression
+  that contains a `return`.
+  (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -336,6 +344,23 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+Android Support
+^^^^^^^^^^^^^^^
+
+- Android target triples are usually suffixed with a version. Clang searches for
+  target-specific runtime and standard libraries in directories named after the
+  target (e.g. if you're building with ``--target=aarch64-none-linux-android21``,
+  Clang will look for ``lib/aarch64-none-linux-android21`` under its resource
+  directory to find runtime libraries). If an exact match isn't found, Clang
+  would previously fall back to a directory without any version (which would be
+  ``lib/aarch64-none-linux-android`` in our example). Clang will now look for
+  directories for lower versions and use the newest version it finds instead,
+  e.g. if you have ``lib/aarch64-none-linux-android21`` and
+  ``lib/aarch64-none-linux-android29``, ``-target aarch64-none-linux-android23``
+  will use the former and ``-target aarch64-none-linux-android30`` will use the
+  latter. Falling back to a versionless directory will now emit a warning, and
+  the fallback will be removed in Clang 19.
 
 Windows Support
 ^^^^^^^^^^^^^^^

@@ -3430,9 +3430,11 @@ void mlir::python::populateIRCore(py::module &m) {
             MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
             if (useLocalScope)
               mlirOpPrintingFlagsUseLocalScope(flags);
-            mlirValuePrintAsOperand(self.get(), flags, printAccum.getCallback(),
+            MlirAsmState state = mlirAsmStateCreateForValue(self.get(), flags);
+            mlirValuePrintAsOperand(self.get(), state, printAccum.getCallback(),
                                     printAccum.getUserData());
             mlirOpPrintingFlagsDestroy(flags);
+            mlirAsmStateDestroy(state);
             return printAccum.join();
           },
           py::arg("use_local_scope") = false, kGetNameAsOperand)

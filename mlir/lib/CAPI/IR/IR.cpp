@@ -139,6 +139,51 @@ void mlirDialectRegistryDestroy(MlirDialectRegistry registry) {
 }
 
 //===----------------------------------------------------------------------===//
+// AsmState API.
+//===----------------------------------------------------------------------===//
+
+MlirAsmState mlirAsmStateCreateForOperation(MlirOperation op,
+                                            MlirOpPrintingFlags flags) {
+  return wrap(new AsmState(unwrap(op), *unwrap(flags)));
+}
+
+static Operation *findParent(Operation *op, bool shouldUseLocalScope) {
+  do {
+    // If we are printing local scope, stop at the first operation that is
+    // isolated from above.
+    if (shouldUseLocalScope && op->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
+
+    // Otherwise, traverse up to the next parent.
+    Operation *parentOp = op->getParentOp();
+    if (!parentOp)
+      break;
+    op = parentOp;
+  } while (true);
+  return op;
+}
+
+MlirAsmState mlirAsmStateCreateForValue(MlirValue value,
+                                        MlirOpPrintingFlags flags) {
+  Operation *op;
+  mlir::Value val = unwrap(value);
+  if (auto result = llvm::dyn_cast<OpResult>(val)) {
+    op = result.getOwner();
+  } else {
+    op = llvm::cast<BlockArgument>(val).getOwner()->getParentOp();
+    if (!op) {
+      emitError(val.getLoc()) << "<<UNKNOWN SSA VALUE>>";
+      return {nullptr};
+    }
+  }
+  op = findParent(op, unwrap(flags)->shouldUseLocalScope());
+  return wrap(new AsmState(op, *unwrap(flags)));
+}
+
+/// Destroys printing flags created with mlirAsmStateCreate.
+void mlirAsmStateDestroy(MlirAsmState state) { delete unwrap(state); }
+
+//===----------------------------------------------------------------------===//
 // Printing flags API.
 //===----------------------------------------------------------------------===//
 
@@ -840,11 +885,11 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
   unwrap(value).print(stream);
 }
 
-void mlirValuePrintAsOperand(MlirValue value, MlirOpPrintingFlags flags,
+void mlirValuePrintAsOperand(MlirValue value, MlirAsmState state,
                              MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
   Value cppValue = unwrap(value);
-  cppValue.printAsOperand(stream, *unwrap(flags));
+  cppValue.printAsOperand(stream, *unwrap(state));
 }
 
 MlirOpOperand mlirValueGetFirstUse(MlirValue value) {
