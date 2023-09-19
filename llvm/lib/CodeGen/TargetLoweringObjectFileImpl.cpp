@@ -1041,8 +1041,8 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   StringRef FunctionSectionName = MBB.getParent()->getSection()->getName();
   if (!FunctionSectionName.equals(".text") &&
       !FunctionSectionName.startswith(".text.")) {
-    // If the original function has a custom non-dot-text section, then split
-    // the cold part into that section too, but with a unique id.
+    // If the original function has a custom non-dot-text section, then emit
+    // all basic block sections into that section too, but with a unique id.
     Name = FunctionSectionName;
     UniqueID = NextUniqueID++;
   } else {
