@@ -180,7 +180,7 @@ void JITLinkLinker::loadObject(MemoryBufferRef Obj,
   }
 
   if ((*LG)->getTargetTriple().getArch() != BC.TheTriple->getArch()) {
-    errs() << "BOLT-ERROR: linking object withg arch "
+    errs() << "BOLT-ERROR: linking object with arch "
            << (*LG)->getTargetTriple().getArchName()
            << " into context with arch " << BC.TheTriple->getArchName() << "\n";
     exit(1);
