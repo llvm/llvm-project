@@ -750,6 +750,14 @@ def ParentOp1 : TEST_Op<"parent1"> {
 def ChildWithParentOneOf : TEST_Op<"child_with_parent_one_of",
                                 [ParentOneOf<["ParentOp", "ParentOp1"]>]>;
 
+// HasInterfaceParent trait
+def InterfaceParentOp : TEST_Op<"interface_parent",
+                [SingleBlock, NoTerminator, TestInterfaceParentInterface]> {
+  let regions = (region SizedRegion<1>:$region);
+}
+def InterfaceChildOp : TEST_Op<"interface_child",
+                               [HasInterfaceParent<"mlir::TestInterfaceParentInterface">]>;
+
 def TerminatorOp : TEST_Op<"finish", [Terminator]>;
 def SingleBlockImplicitTerminatorOp : TEST_Op<"SingleBlockImplicitTerminator",
     [SingleBlockImplicitTerminator<"TerminatorOp">]> {

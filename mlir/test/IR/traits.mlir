@@ -668,3 +668,21 @@ func.func @failed_attr_traits() {
   "test.attr_with_trait"() {attr = 42 : i32} : () -> ()
   return
 }
+
+// -----
+
+func.func @has_interface_parent_trait() {
+  // CHECK: "test.interface_parent"() ({
+  // CHECK:    "test.interface_child"() : () -> ()
+  "test.interface_parent"() ({
+    "test.interface_child"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @illegal_interface_parent_trait() {
+  // expected-error@+1 {{'test.interface_child' op expects parent op to implement interface 'TestInterfaceParentInterface'}}
+  "test.interface_child"() : () -> ()
+}

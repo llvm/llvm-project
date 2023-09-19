@@ -147,4 +147,8 @@ def TestOptionallyImplementedOpInterface
   }];
 }
 
+def TestInterfaceParentInterface : OpInterface<"TestInterfaceParentInterface"> {
+    let cppNamespace = "::mlir";
+}
+
 #endif // MLIR_TEST_DIALECT_TEST_INTERFACES

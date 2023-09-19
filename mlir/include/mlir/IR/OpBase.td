@@ -141,6 +141,11 @@ class ParentOneOf<list<string> ops>
     : ParamNativeOpTrait<"HasParent", !interleave(ops, ", ")>,
       StructuralOpTrait;
 
+// Op's parent operation implements the provided interface.
+class HasInterfaceParent<string interface>
+    : ParamNativeOpTrait<"HasInterfaceParent", interface>,
+      StructuralOpTrait;
+
 // Op result type is derived from the first attribute. If the attribute is an
 // subclass of `TypeAttrBase`, its value is used, otherwise, the type of the
 // attribute content is used.

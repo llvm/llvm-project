@@ -1334,6 +1334,24 @@ struct HasParent {
   };
 };
 
+/// This class provides a verifier for ops that are expecting their parent to
+/// implement a specific interface.
+template <typename ParentInterfaceType>
+struct HasInterfaceParent {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      if (llvm::isa_and_nonnull<ParentInterfaceType>(op->getParentOp()))
+        return success();
+
+      return op->emitOpError()
+             << "expects parent op to implement interface '"
+             << ParentInterfaceType::getInterfaceName() << "'";
+    }
+  };
+};
+
 /// A trait for operations that have an attribute specifying operand segments.
 ///
 /// Certain operations can have multiple variadic operands and their size

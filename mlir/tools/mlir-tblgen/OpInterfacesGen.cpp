@@ -499,7 +499,7 @@ static void emitInterfaceNameGetter(const Interface &interface,
   if (!isa<OpInterface>(interface))
     return;
   os << "  /// Returns the name of this interface.\n"
-     << "  static ::llvm::StringLiteral getOperationName() { return "
+     << "  static ::llvm::StringLiteral getInterfaceName() { return "
         "::llvm::StringLiteral( \""
      << interface.getName() << "\"); }\n";
 }
