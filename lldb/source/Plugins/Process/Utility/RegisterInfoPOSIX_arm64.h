@@ -135,12 +135,14 @@ public:
   bool IsMTEReg(unsigned reg) const;
   bool IsTLSReg(unsigned reg) const;
   bool IsSMEReg(unsigned reg) const;
+  bool IsSMERegZA(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;
   uint32_t GetRegNumFPCR() const;
   uint32_t GetRegNumFPSR() const;
   uint32_t GetRegNumSVEVG() const;
+  uint32_t GetRegNumSMESVG() const;
   uint32_t GetPAuthOffset() const;
   uint32_t GetMTEOffset() const;
   uint32_t GetTLSOffset() const;
