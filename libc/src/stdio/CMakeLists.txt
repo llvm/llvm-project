@@ -27,19 +27,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
 endif()
 
 add_entrypoint_object(
-  fflush
-  SRCS
-    fflush.cpp
-  HDRS
-    fflush.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   flockfile
   SRCS
     flockfile.cpp
@@ -58,19 +45,6 @@ add_entrypoint_object(
   HDRS
     funlockfile.h
   DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fseek
-  SRCS
-    fseek.cpp
-  HDRS
-    fseek.h
-  DEPENDS
-    libc.src.errno.errno
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
@@ -303,19 +277,6 @@ add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
 add_entrypoint_object(
-  ftell
-  SRCS
-    ftell.cpp
-  HDRS
-    ftell.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   remove
   ALIAS
   DEPENDS
@@ -327,6 +288,9 @@ add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
 add_stdio_entrypoint_object(ferror)
 add_stdio_entrypoint_object(ferror_unlocked)
+add_stdio_entrypoint_object(fseek)
+add_stdio_entrypoint_object(ftell)
+add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
