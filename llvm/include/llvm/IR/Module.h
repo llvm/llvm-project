@@ -251,7 +251,7 @@ public:
   }
 
   /// Get the data layout for the module's target platform.
-  const DataLayout &getDataLayout() const;
+  const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
   /// @returns a string containing the target triple.
@@ -920,6 +920,17 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the large data threshold
+  /// @{
+
+  /// Returns the code model (tiny, small, kernel, medium or large model)
+  std::optional<uint64_t> getLargeDataThreshold() const;
+
+  /// Set the code model (tiny, small, kernel, medium or large)
+  void setLargeDataThreshold(uint64_t Threshold);
   /// @}
 
   /// @name Utility functions for querying and setting PGO summary

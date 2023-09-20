@@ -2304,27 +2304,24 @@ define i1 @icmp_fold_into_phi_beyondBB(ptr noundef %val1, ptr noundef readonly %
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[TEST_0_I]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP1_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[TEST_0_I]], [[VAL1]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ [[TMP1]], [[WHILE_END_I]] ], [ false, [[ENTRY]] ]
 ; CHECK-NEXT:    [[CMP_I10:%.*]] = icmp eq ptr [[VAL2:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP_I10]], label [[_Z3FOOPKC_EXIT20:%.*]], label [[WHILE_COND_I11:%.*]]
 ; CHECK:       while.cond.i11:
 ; CHECK-NEXT:    [[TEST_0_I12:%.*]] = phi ptr [ [[INCDEC_PTR_I14:%.*]], [[WHILE_COND_I11]] ], [ [[VAL2]], [[_Z3FOOPKC_EXIT]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I12]], align 1
-; CHECK-NEXT:    [[CMP1_NOT_I13:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I12]], align 1
+; CHECK-NEXT:    [[CMP1_NOT_I13:%.*]] = icmp eq i8 [[TMP2]], 0
 ; CHECK-NEXT:    [[INCDEC_PTR_I14]] = getelementptr inbounds i8, ptr [[TEST_0_I12]], i64 1
 ; CHECK-NEXT:    br i1 [[CMP1_NOT_I13]], label [[WHILE_END_I15:%.*]], label [[WHILE_COND_I11]]
 ; CHECK:       while.end.i15:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[TEST_0_I12]], [[VAL2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TEST_0_I12]], [[VAL2]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT20]]
 ; CHECK:       _Z3fooPKc.exit20:
-; CHECK-NEXT:    [[RETVAL_0_I19:%.*]] = phi i1 [ [[TMP2]], [[WHILE_END_I15]] ], [ false, [[_Z3FOOPKC_EXIT]] ]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[RETVAL_0_I]], 0
-; CHECK-NEXT:    [[AND9:%.*]] = and i1 [[TOBOOL]], [[RETVAL_0_I19]]
+; CHECK-NEXT:    [[RETVAL_0_I19:%.*]] = phi i1 [ [[TMP3]], [[WHILE_END_I15]] ], [ false, [[_Z3FOOPKC_EXIT]] ]
+; CHECK-NEXT:    [[AND9:%.*]] = and i1 [[RETVAL_0_I]], [[RETVAL_0_I19]]
 ; CHECK-NEXT:    ret i1 [[AND9]]
 ;
 entry:
@@ -2365,4 +2362,175 @@ _Z3fooPKc.exit20:
   %tobool = icmp ne i64 %retval.0.i, 0
   %and9 = and i1 %tobool, %retval.0.i19
   ret i1 %and9
+}
+
+define i1 @fold_or_phi_into_or_icmp(ptr noundef readnone %dv1, ptr noundef readnone %dv2, ptr noundef %val1, ptr noundef %val2, i64 %i1, i64 %i2) {
+; CHECK-LABEL: @fold_or_phi_into_or_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[COND_I:%.*]]
+; CHECK:       cond.i:
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
+; CHECK:       _Z3fooPKc.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I1:%.*]], [[COND_I]] ]
+; CHECK-NEXT:    [[CMP_I10:%.*]] = icmp eq ptr [[VAL2:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I10]], label [[_Z3FOOPKC_EXIT19:%.*]], label [[COND_I11:%.*]]
+; CHECK:       cond.i11:
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT19]]
+; CHECK:       _Z3fooPKc.exit19:
+; CHECK-NEXT:    [[RETVAL_0_I20:%.*]] = phi i64 [ 0, [[_Z3FOOPKC_EXIT]] ], [ [[I2:%.*]], [[COND_I11]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[RETVAL_0_I]], [[RETVAL_0_I20]]
+; CHECK-NEXT:    [[OR_COND_NOT:%.*]] = icmp eq i64 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[OR_COND_NOT]], label [[IF_THEN:%.*]], label [[IF_END4:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[DV1:%.*]], [[DV2:%.*]]
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       if.end4:
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i64 [[RETVAL_0_I20]], 0
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[RETVAL_0_I]], 0
+; CHECK-NEXT:    [[OR_COND10:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP]], [[IF_THEN]] ], [ [[OR_COND10]], [[IF_END4]] ]
+; CHECK-NEXT:    ret i1 [[RETVAL_0]]
+;
+entry:
+  %cmp.i = icmp eq ptr %val1, null
+  br i1 %cmp.i, label %_Z3fooPKc.exit, label %cond.i
+
+cond.i:
+  br label %_Z3fooPKc.exit
+
+_Z3fooPKc.exit:
+  %retval.0.i = phi i64 [ 0, %entry ], [ %i1, %cond.i ]
+  %cmp.i10 = icmp eq ptr %val2, null
+  br i1 %cmp.i10, label %_Z3fooPKc.exit19, label %cond.i11
+
+cond.i11:
+  br label %_Z3fooPKc.exit19
+
+_Z3fooPKc.exit19:
+  %retval.0.i20 = phi i64 [ 0, %_Z3fooPKc.exit ], [ %i2, %cond.i11 ]
+  %0 = or i64 %retval.0.i, %retval.0.i20
+  %or.cond.not = icmp eq i64 %0, 0
+  br i1 %or.cond.not, label %if.then, label %if.end4
+
+if.then:
+  %cmp = icmp eq ptr %dv1, %dv2
+  br label %cleanup
+
+if.end4:
+  %tobool2 = icmp ne i64 %retval.0.i20, 0
+  %tobool = icmp ne i64 %retval.0.i, 0
+  %or.cond10 = and i1 %tobool, %tobool2
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i1 [ %cmp, %if.then ], [ %or.cond10, %if.end4 ]
+  ret i1 %retval.0
+}
+
+
+define i1 @fold_or_phi_into_or_icmp2(ptr noundef readnone %dv1, ptr noundef %val1, ptr noundef readnone %dv2, ptr noundef %val2) {
+; CHECK-LABEL: @fold_or_phi_into_or_icmp2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[TEST_0_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 1
+; CHECK-NEXT:    [[CMP1_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[TEST_0_I]], i64 1
+; CHECK-NEXT:    br i1 [[CMP1_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
+; CHECK:       _Z3fooPKc.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP_I10:%.*]] = icmp eq ptr [[VAL2:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I10]], label [[_Z3FOOPKC_EXIT19:%.*]], label [[WHILE_COND_I11:%.*]]
+; CHECK:       while.cond.i11:
+; CHECK-NEXT:    [[TEST_0_I12:%.*]] = phi ptr [ [[INCDEC_PTR_I14:%.*]], [[WHILE_COND_I11]] ], [ [[VAL2]], [[_Z3FOOPKC_EXIT]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I12]], align 1
+; CHECK-NEXT:    [[CMP1_NOT_I13:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[INCDEC_PTR_I14]] = getelementptr inbounds i8, ptr [[TEST_0_I12]], i64 1
+; CHECK-NEXT:    br i1 [[CMP1_NOT_I13]], label [[WHILE_END_I15:%.*]], label [[WHILE_COND_I11]]
+; CHECK:       while.end.i15:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I16:%.*]] = ptrtoint ptr [[TEST_0_I12]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I17:%.*]] = ptrtoint ptr [[VAL2]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB_I18:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I16]], [[SUB_PTR_RHS_CAST_I17]]
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT19]]
+; CHECK:       _Z3fooPKc.exit19:
+; CHECK-NEXT:    [[RETVAL_0_I20:%.*]] = phi i64 [ [[SUB_PTR_SUB_I18]], [[WHILE_END_I15]] ], [ 0, [[_Z3FOOPKC_EXIT]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[RETVAL_0_I]], [[RETVAL_0_I20]]
+; CHECK-NEXT:    [[OR_COND_NOT:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[OR_COND_NOT]], label [[IF_THEN:%.*]], label [[IF_END4:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[DV1:%.*]], [[DV2:%.*]]
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       if.end4:
+; CHECK-NEXT:    [[TOBOOL2:%.*]] = icmp ne i64 [[RETVAL_0_I20]], 0
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[RETVAL_0_I]], 0
+; CHECK-NEXT:    [[OR_COND10:%.*]] = and i1 [[TOBOOL]], [[TOBOOL2]]
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i1 [ [[CMP]], [[IF_THEN]] ], [ [[OR_COND10]], [[IF_END4]] ]
+; CHECK-NEXT:    ret i1 [[RETVAL_0]]
+;
+entry:
+  %cmp.i = icmp eq ptr %val1, null
+  br i1 %cmp.i, label %_Z3fooPKc.exit, label %while.cond.i
+
+while.cond.i:
+  %test.0.i = phi ptr [ %incdec.ptr.i, %while.cond.i ], [ %val1, %entry ]
+  %0 = load i8, ptr %test.0.i, align 1
+  %cmp1.not.i = icmp eq i8 %0, 0
+  %incdec.ptr.i = getelementptr inbounds i8, ptr %test.0.i, i64 1
+  br i1 %cmp1.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  br label %_Z3fooPKc.exit
+
+_Z3fooPKc.exit:
+  %retval.0.i = phi i64 [ %sub.ptr.sub.i, %while.end.i ], [ 0, %entry ]
+  %cmp.i10 = icmp eq ptr %val2, null
+  br i1 %cmp.i10, label %_Z3fooPKc.exit19, label %while.cond.i11
+
+while.cond.i11:
+  %test.0.i12 = phi ptr [ %incdec.ptr.i14, %while.cond.i11 ], [ %val2, %_Z3fooPKc.exit ]
+  %1 = load i8, ptr %test.0.i12, align 1
+  %cmp1.not.i13 = icmp eq i8 %1, 0
+  %incdec.ptr.i14 = getelementptr inbounds i8, ptr %test.0.i12, i64 1
+  br i1 %cmp1.not.i13, label %while.end.i15, label %while.cond.i11
+
+while.end.i15:
+  %sub.ptr.lhs.cast.i16 = ptrtoint ptr %test.0.i12 to i64
+  %sub.ptr.rhs.cast.i17 = ptrtoint ptr %val2 to i64
+  %sub.ptr.sub.i18 = sub i64 %sub.ptr.lhs.cast.i16, %sub.ptr.rhs.cast.i17
+  br label %_Z3fooPKc.exit19
+
+_Z3fooPKc.exit19:
+  %retval.0.i20 = phi i64 [ %sub.ptr.sub.i18, %while.end.i15 ], [ 0, %_Z3fooPKc.exit ]
+  %2 = or i64 %retval.0.i, %retval.0.i20
+  %or.cond.not = icmp eq i64 %2, 0
+  br i1 %or.cond.not, label %if.then, label %if.end4
+
+if.then:
+  %cmp = icmp eq ptr %dv1, %dv2
+  br label %cleanup
+
+if.end4:
+  %tobool2 = icmp ne i64 %retval.0.i20, 0
+  %tobool = icmp ne i64 %retval.0.i, 0
+  %or.cond10 = and i1 %tobool, %tobool2
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i1 [ %cmp, %if.then ], [ %or.cond10, %if.end4 ]
+  ret i1 %retval.0
 }

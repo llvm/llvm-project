@@ -1268,6 +1268,22 @@ std::optional<Procedure> Procedure::Characterize(
   return std::nullopt;
 }
 
+std::optional<Procedure> Procedure::Characterize(
+    const Expr<SomeType> &expr, FoldingContext &context) {
+  if (const auto *procRef{UnwrapProcedureRef(expr)}) {
+    return Characterize(*procRef, context);
+  } else if (const auto *procDesignator{
+                 std::get_if<ProcedureDesignator>(&expr.u)}) {
+    return Characterize(*procDesignator, context);
+  } else if (const Symbol * symbol{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
+    return Characterize(*symbol, context);
+  } else {
+    context.messages().Say(
+        "Expression '%s' is not a procedure"_err_en_US, expr.AsFortran());
+    return std::nullopt;
+  }
+}
+
 std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
     const ActualArguments &args, FoldingContext &context) {
   auto callee{Characterize(proc, context)};

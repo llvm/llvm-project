@@ -358,8 +358,8 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
             raise RuntimeError(f"Error while trying to generate gen test\nstdout:\n{out}\n\nstderr:\n{err}")
 
         # Split the generated output into multiple files and generate one test for each file
-        for (subfile, content) in self._splitFile(out):
-            generatedFile = testSuite.getExecPath(pathInSuite + (subfile, ))
+        for subfile, content in self._splitFile(out):
+            generatedFile = testSuite.getExecPath(pathInSuite + (subfile,))
             os.makedirs(os.path.dirname(generatedFile), exist_ok=True)
             with open(generatedFile, 'w') as f:
                 f.write(content)

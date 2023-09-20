@@ -3,8 +3,8 @@
 ; RUN: opt -passes="ipsccp<func-spec>,deadargelim" -funcspec-max-iters=1 -force-specialization -S < %s | FileCheck %s
 ; RUN: opt -passes="ipsccp<func-spec>,deadargelim" -funcspec-max-iters=0 -force-specialization -S < %s | FileCheck %s --check-prefix=DISABLED
 
-; DISABLED-NOT: @func.1(
-; DISABLED-NOT: @func.2(
+; DISABLED-NOT: @func.specialized.1(
+; DISABLED-NOT: @func.specialized.2(
 
 define internal i32 @func(ptr %0, i32 %1, ptr nocapture %2) {
   %4 = alloca i32, align 4
@@ -42,15 +42,15 @@ define internal void @decrement(ptr nocapture %0) {
 }
 
 define i32 @main(ptr %0, i32 %1) {
-; CHECK:    call void @func.2(ptr [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK:    call void @func.specialized.2(ptr [[TMP0:%.*]], i32 [[TMP1:%.*]])
   %3 = call i32 @func(ptr %0, i32 %1, ptr nonnull @increment)
-; CHECK:    call void @func.1(ptr [[TMP0]], i32 0)
+; CHECK:    call void @func.specialized.1(ptr [[TMP0]], i32 0)
   %4 = call i32 @func(ptr %0, i32 %3, ptr nonnull @decrement)
 ; CHECK:    ret i32 0
   ret i32 %4
 }
 
-; CHECK: @func.1(
+; CHECK: @func.specialized.1(
 ; CHECK:    [[TMP3:%.*]] = alloca i32, align 4
 ; CHECK:    store i32 [[TMP1:%.*]], ptr [[TMP3]], align 4
 ; CHECK:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -63,13 +63,13 @@ define i32 @main(ptr %0, i32 %1) {
 ; CHECK:    call void @decrement(ptr [[TMP9]])
 ; CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], -1
-; CHECK:    call void @func.1(ptr [[TMP0]], i32 [[TMP11]])
+; CHECK:    call void @func.specialized.1(ptr [[TMP0]], i32 [[TMP11]])
 ; CHECK:    br label [[TMP12:%.*]]
 ; CHECK:       12:
 ; CHECK:    ret void
 ;
 ;
-; CHECK: @func.2(
+; CHECK: @func.specialized.2(
 ; CHECK:    [[TMP3:%.*]] = alloca i32, align 4
 ; CHECK:    store i32 [[TMP1:%.*]], ptr [[TMP3]], align 4
 ; CHECK:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -82,7 +82,7 @@ define i32 @main(ptr %0, i32 %1) {
 ; CHECK:    call void @increment(ptr [[TMP9]])
 ; CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], -1
-; CHECK:    call void @func.2(ptr [[TMP0]], i32 [[TMP11]])
+; CHECK:    call void @func.specialized.2(ptr [[TMP0]], i32 [[TMP11]])
 ; CHECK:    br label [[TMP12:%.*]]
 ; CHECK:       12:
 ; CHECK:    ret void

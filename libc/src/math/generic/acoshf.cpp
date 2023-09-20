@@ -23,7 +23,9 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   FPBits_t xbits(x);
   uint32_t x_u = xbits.uintval();
 
-  if (LIBC_UNLIKELY(x < 1.0f)) {
+  if (LIBC_UNLIKELY(x <= 1.0f)) {
+    if (x == 1.0f)
+      return 0.0f;
     // x < 1.
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);

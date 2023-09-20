@@ -405,7 +405,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   EE.addModule(std::move(M));
 }
 
-CodeGenOpt::Level getOptLevel() {
+CodeGenOptLevel getOptLevel() {
   if (auto Level = CodeGenOpt::parseLevel(OptLevel))
     return *Level;
   WithColor::error(errs(), "lli") << "invalid optimization level.\n";
@@ -1206,18 +1206,32 @@ Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
 // For real JIT uses, the real compiler support libraries should be linked
 // in, somehow; this is a workaround to let tests pass.
 //
+// We need to make sure that this symbol actually is linked in when we
+// try to export it; if no functions allocate a large enough stack area,
+// nothing would reference it. Therefore, manually declare it and add a
+// reference to it. (Note, the declarations of _alloca/___chkstk_ms/__chkstk
+// are somewhat bogus, these functions use a different custom calling
+// convention.)
+//
 // TODO: Move this into libORC at some point, see
 // https://github.com/llvm/llvm-project/issues/56603.
 #ifdef __MINGW32__
 // This is a MinGW version of #pragma comment(linker, "...") that doesn't
 // require compiling with -fms-extensions.
 #if defined(__i386__)
+#undef _alloca
+extern "C" void _alloca(void);
+static __attribute__((used)) void (*const ref_func)(void) = _alloca;
 static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
     "-export:_alloca";
 #elif defined(__x86_64__)
+extern "C" void ___chkstk_ms(void);
+static __attribute__((used)) void (*const ref_func)(void) = ___chkstk_ms;
 static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
     "-export:___chkstk_ms";
 #else
+extern "C" void __chkstk(void);
+static __attribute__((used)) void (*const ref_func)(void) = __chkstk;
 static __attribute__((section(".drectve"), used)) const char export_chkstk[] =
     "-export:__chkstk";
 #endif

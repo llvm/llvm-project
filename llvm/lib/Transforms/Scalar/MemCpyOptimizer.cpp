@@ -22,6 +22,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -1291,12 +1292,8 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
       Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
-  unsigned DestAS = Dest->getType()->getPointerAddressSpace();
   Instruction *NewMemSet = Builder.CreateMemSet(
-      Builder.CreateGEP(
-          Builder.getInt8Ty(),
-          Builder.CreatePointerCast(Dest, Builder.getInt8PtrTy(DestAS)),
-          SrcSize),
+      Builder.CreateGEP(Builder.getInt8Ty(), Dest, SrcSize),
       MemSet->getOperand(1), MemsetLen, Alignment);
 
   assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(MemCpy)) &&
@@ -1417,74 +1414,6 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   return true;
 }
 
-using InsertionPt = PointerUnion<Instruction *, BasicBlock *>;
-/// Find the nearest Instruction or BasicBlock that dominates both I1 and
-/// I2.
-static InsertionPt findNearestCommonDominator(InsertionPt I1, InsertionPt I2,
-                                              DominatorTree *DT) {
-  auto GetParent = [](InsertionPt I) {
-    if (auto *BB = dyn_cast<BasicBlock *>(I))
-      return BB;
-    return cast<Instruction *>(I)->getParent();
-  };
-  BasicBlock *BB1 = GetParent(I1);
-  BasicBlock *BB2 = GetParent(I2);
-  if (BB1 == BB2) {
-    // BasicBlock InsertionPt means the terminator.
-    if (isa<BasicBlock *>(I1))
-      return I2;
-    if (isa<BasicBlock *>(I2))
-      return I1;
-    return cast<Instruction *>(I1)->comesBefore(cast<Instruction *>(I2)) ? I1
-                                                                         : I2;
-  }
-
-  // These checks are necessary, because findNearestCommonDominator for NodeT
-  // doesn't handle these.
-  if (!DT->isReachableFromEntry(BB2))
-    return I1;
-  if (!DT->isReachableFromEntry(BB1))
-    return I2;
-
-  BasicBlock *DomBB = DT->findNearestCommonDominator(BB1, BB2);
-  if (BB2 == DomBB)
-    return I2;
-  if (BB1 == DomBB)
-    return I1;
-  return DomBB;
-}
-
-/// Find the nearest Instruction or BasicBlock that post-dominates both I1 and
-/// I2.
-static InsertionPt findNearestCommonPostDominator(InsertionPt I1,
-                                                  InsertionPt I2,
-                                                  PostDominatorTree *PDT) {
-  auto GetParent = [](InsertionPt I) {
-    if (auto *BB = dyn_cast<BasicBlock *>(I))
-      return BB;
-    return cast<Instruction *>(I)->getParent();
-  };
-  BasicBlock *BB1 = GetParent(I1);
-  BasicBlock *BB2 = GetParent(I2);
-  if (BB1 == BB2) {
-    // BasicBlock InsertionPt means the first non-phi instruction.
-    if (isa<BasicBlock *>(I1))
-      return I2;
-    if (isa<BasicBlock *>(I2))
-      return I1;
-    return cast<Instruction *>(I1)->comesBefore(cast<Instruction *>(I2)) ? I2
-                                                                         : I1;
-  }
-  BasicBlock *PDomBB = PDT->findNearestCommonDominator(BB1, BB2);
-  if (!PDomBB)
-    return nullptr;
-  if (BB2 == PDomBB)
-    return I2;
-  if (BB1 == PDomBB)
-    return I1;
-  return PDomBB;
-}
-
 // Attempts to optimize the pattern whereby memory is copied from an alloca to
 // another alloca, where the two allocas don't have conflicting mod/ref. If
 // successful, the two allocas can be merged into one and the transfer can be
@@ -1533,7 +1462,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // to remove them.
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
-  InsertionPt Dom = nullptr, PDom = nullptr;
   SmallSet<Instruction *, 4> NoAliasInstrs;
 
   // Recursively track the user and check whether modified alias exist.
@@ -1554,6 +1482,15 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       Instruction *I = Worklist.back();
       Worklist.pop_back();
       for (const Use &U : I->uses()) {
+        auto *UI = cast<Instruction>(U.getUser());
+        // TODO: We can perform the transformation if we move src alloca to
+        // before the dominator of all uses. If any use that isn't dominated by
+        // SrcAlloca exists, non-dominating uses will be produced.
+        if (!DT->dominates(SrcAlloca, UI)) {
+          LLVM_DEBUG(dbgs() << "Stack Move: SrcAlloca doesn't dominate all "
+                               "uses for the location, bailing\n");
+          return false;
+        }
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
               dbgs()
@@ -1567,17 +1504,9 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           return false;
         case UseCaptureKind::PASSTHROUGH:
           // Instructions cannot have non-instruction users.
-          Worklist.push_back(cast<Instruction>(U.getUser()));
+          Worklist.push_back(UI);
           continue;
         case UseCaptureKind::NO_CAPTURE: {
-          auto *UI = cast<Instruction>(U.getUser());
-          if (!Dom) {
-            PDom = Dom = UI;
-          } else {
-            Dom = findNearestCommonDominator(Dom, UI, DT);
-            if (PDom)
-              PDom = findNearestCommonPostDominator(PDom, UI, PDT);
-          }
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
@@ -1682,60 +1611,10 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Drop metadata on the source alloca.
   SrcAlloca->dropUnknownNonDebugMetadata();
 
-  // Do "shrink wrap" the lifetimes, if the original lifetime intrinsics exists.
+  // TODO: Reconstruct merged lifetime markers.
+  // Remove all other lifetime markers. if the original lifetime intrinsics
+  // exists.
   if (!LifetimeMarkers.empty()) {
-    LLVMContext &C = SrcAlloca->getContext();
-    IRBuilder<> Builder(C);
-
-    ConstantInt *AllocaSize = ConstantInt::get(Type::getInt64Ty(C), Size);
-    // Create a new lifetime start marker before the first user of src or alloca
-    // users.
-    MemoryAccess *StartMA;
-    if (auto *DomI = dyn_cast_if_present<Instruction *>(Dom)) {
-      Builder.SetInsertPoint(DomI->getParent(), DomI->getIterator());
-      auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
-      StartMA = MSSAU->createMemoryAccessBefore(Start, nullptr,
-                                                MSSA->getMemoryAccess(DomI));
-    } else {
-      auto *DomB = cast<BasicBlock *>(Dom);
-      Builder.SetInsertPoint(DomB->getTerminator());
-      auto *Start = Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
-      StartMA = MSSAU->createMemoryAccessInBB(
-          Start, nullptr, Start->getParent(), MemorySSA::BeforeTerminator);
-    }
-    MSSAU->insertDef(cast<MemoryDef>(StartMA), /*RenameUses=*/true);
-
-    // Create a new lifetime end marker after the last user of src or alloca
-    // users. If there's no such postdominator, just don't bother; we could
-    // create one at each exit block, but that'd be essentially semantically
-    // meaningless.
-    // If the PDom is the terminator (e.g. invoke), see the next immediate post
-    // dominator.
-    if (auto *PDomI = dyn_cast_if_present<Instruction *>(PDom);
-        PDomI && PDomI->isTerminator()) {
-      auto *IPDomNode = (*PDT)[PDomI->getParent()]->getIDom();
-      PDom = IPDomNode ? IPDomNode->getBlock() : nullptr;
-    }
-    if (PDom) {
-      MemoryAccess *EndMA;
-      if (auto *PDomI = dyn_cast<Instruction *>(PDom)) {
-        // If PDom is Instruction ptr, insert after it, because it's a user of
-        // SrcAlloca.
-        Builder.SetInsertPoint(PDomI->getParent(), ++PDomI->getIterator());
-        auto *End = Builder.CreateLifetimeEnd(SrcAlloca, AllocaSize);
-        EndMA = MSSAU->createMemoryAccessAfter(End, nullptr,
-                                               MSSA->getMemoryAccess(PDomI));
-      } else {
-        auto *PDomB = cast<BasicBlock *>(PDom);
-        Builder.SetInsertPoint(PDomB, PDomB->getFirstInsertionPt());
-        auto *End = Builder.CreateLifetimeEnd(SrcAlloca, AllocaSize);
-        EndMA = MSSAU->createMemoryAccessInBB(End, nullptr, End->getParent(),
-                                              MemorySSA::Beginning);
-      }
-      MSSAU->insertDef(cast<MemoryDef>(EndMA), /*RenameUses=*/true);
-    }
-
-    // Remove all other lifetime markers.
     for (Instruction *I : LifetimeMarkers)
       eraseInstruction(I);
   }
@@ -1752,6 +1631,16 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   return true;
 }
 
+static bool isZeroSize(Value *Size) {
+  if (auto *I = dyn_cast<Instruction>(Size))
+    if (auto *Res = simplifyInstruction(I, I->getModule()->getDataLayout()))
+      Size = Res;
+  // Treat undef/poison size like zero.
+  if (auto *C = dyn_cast<Constant>(Size))
+    return isa<UndefValue>(C) || C->isNullValue();
+  return false;
+}
+
 /// Perform simplification of memcpy's.  If we have memcpy A
 /// which copies X to Y, and memcpy B which copies Y to Z, then we can rewrite
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
@@ -1763,6 +1652,14 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
 
   // If the source and destination of the memcpy are the same, then zap it.
   if (M->getSource() == M->getDest()) {
+    ++BBI;
+    eraseInstruction(M);
+    return true;
+  }
+
+  // If the size is zero, remove the memcpy. This also prevents infinite loops
+  // in processMemSetMemCpyDependence, which is a no-op for zero-length memcpys.
+  if (isZeroSize(M->getLength())) {
     ++BBI;
     eraseInstruction(M);
     return true;

@@ -20,20 +20,63 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 // GPU object attribute.
 //===----------------------------------------------------------------------===//
 
+// For documentation on this enum cases, see the `GPU_ObjectAttr` docs.
+def GPU_ObjectOffload : I32EnumAttrCase<"Offload", 1, "offload">;
+def GPU_ObjectISA : I32EnumAttrCase<"Assembly", 2, "assembly">;
+def GPU_ObjectBinary : I32EnumAttrCase<"Binary", 3, "bin">;
+def GPU_ObjectFatbin : I32EnumAttrCase<"Fatbin", 4, "fatbin">;
+def GPU_CompilationTargetEnum : GPU_I32Enum<
+  "CompilationTarget", "GPU compilation format", [
+    GPU_ObjectOffload,
+    GPU_ObjectISA,
+    GPU_ObjectBinary,
+    GPU_ObjectFatbin
+  ]>;
+
 def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
   let description = [{
-    A GPU object attribute pairs a GPU target with a binary string,
-    encapsulating the information of how the object was generated with the
-    object itself.
+    A GPU object attribute glues together a GPU target, the object kind, a
+    binary string with the object, and the object properties, encapsulating how
+    the object was generated and its properties with the object itself.
 
-    The target attribute must implement the `TargetAttrInterface` interface.
+    There are four object formats:
+    1. `Offload`: represents generic objects not described by the other three
+    formats, and its meaning is target-dependent. For example, on the NVPTX and
+    AMDGPU targets, this format is associated with LLVM bitcode.
+    2. `Assembly`: represents GPU assembly code. For example, in the NVPTX
+    target, assembly is PTX code, which can be JITted at runtime.
+    3. `Binary`: represents executable code for a GPU single architecture. For
+    example, PTX code that was compiled for a specific compute capability. Note
+    that this format is likely to throw an error if there is an architecture
+    mismatch between the compiled and running architecture.
+    4. `Fatbin`: represents a GPU fat binary with executable code for multiple
+    architectures. This format is the default; thus, it gets elided inassembly
+    code.
+
+    Object properties are specified through the `properties` dictionary
+    attribute and can be used to define additional information.
+    The target attribute must implement or promise the `TargetAttrInterface`
+    interface.
 
     ```
-      #gpu.object<#nvvm.target, "...">
+      #gpu.object<#rocdl.target, offload = "..."> // An offload object.
+      #gpu.object<#nvvm.target, properties = {O = 3 : i32}, assembly = "..."> // An assembly object with additional properties.
+      #gpu.object<#rocdl.target, bin = "..."> // A binary object.
+      #gpu.object<#nvvm.target, "..."> // A fatbin object.
     ```
   }];
-  let parameters = (ins "TargetAttrInterface":$target, "StringAttr":$object);
-  let assemblyFormat = [{`<` $target `,` $object `>`}];
+  let parameters = (ins
+    "Attribute":$target,
+    DefaultValuedParameter<"CompilationTarget", "CompilationTarget::Fatbin">:$format,
+    "StringAttr":$object,
+    OptionalParameter<"DictionaryAttr">:$properties
+  );
+  let assemblyFormat = [{ `<`
+      $target `,`  (`properties` `=` $properties ^ `,`)?
+      custom<Object>($format, $object)
+    `>`
+  }];
+  let genVerifyDecl = 1;
 }
 
 def GPUObjectArrayAttr :

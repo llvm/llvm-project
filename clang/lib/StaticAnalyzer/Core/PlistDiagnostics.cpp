@@ -804,7 +804,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
   o << " <key>files</key>\n"
        " <array>\n";
   for (FileID FID : Fids)
-    EmitString(o << "  ", SM.getFileEntryForID(FID)->getName()) << '\n';
+    EmitString(o << "  ", SM.getFileEntryRefForID(FID)->getName()) << '\n';
   o << " </array>\n";
 
   if (llvm::AreStatisticsEnabled() && DiagOpts.ShouldSerializeStats) {

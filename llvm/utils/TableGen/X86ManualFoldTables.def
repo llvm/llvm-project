@@ -225,6 +225,8 @@ NOFOLD(MMX_MOVQ64rr_REV)
 // =>
 // insertpsrm xmm1, m32, imm
 NOFOLD(INSERTPSrr)
+NOFOLD(VINSERTPSZrr)
+NOFOLD(VINSERTPSrr)
 #undef NOFOLD
 
 #ifndef ENTRY

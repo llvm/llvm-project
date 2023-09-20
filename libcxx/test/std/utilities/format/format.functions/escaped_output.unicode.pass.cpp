@@ -11,8 +11,8 @@
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
 
-// TODO FMT Investigate Windows and 32-bit AIX issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu, target=powerpc-ibm-aix{{.*}}
+// TODO FMT Investigate Windows issues.
+// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
 
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
@@ -565,7 +565,6 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 #  ifdef _LIBCPP_SHORT_WCHAR
   test_ill_formed_utf16();
-  assert(false);
 #  else  // _LIBCPP_SHORT_WCHAR
   test_ill_formed_utf32();
 #  endif // _LIBCPP_SHORT_WCHAR

@@ -264,6 +264,26 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
 }
 
 // COUNT()
+template <typename T, int MASK_KIND> class CountAccumulator {
+  using MaskT = Type<TypeCategory::Logical, MASK_KIND>;
+
+public:
+  CountAccumulator(const Constant<MaskT> &mask) : mask_{mask} {}
+  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
+    if (mask_.At(at).IsTrue()) {
+      auto incremented{element.AddSigned(Scalar<T>{1})};
+      overflow_ |= incremented.overflow;
+      element = incremented.value;
+    }
+  }
+  bool overflow() const { return overflow_; }
+  void Done(Scalar<T> &) const {}
+
+private:
+  const Constant<MaskT> &mask_;
+  bool overflow_{false};
+};
+
 template <typename T, int maskKind>
 static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
   using LogicalResult = Type<TypeCategory::Logical, maskKind>;
@@ -274,17 +294,9 @@ static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
               : Folder<LogicalResult>{context}.Folding(arg[0])}) {
     std::optional<int> dim;
     if (CheckReductionDIM(dim, context, arg, 1, mask->Rank())) {
-      bool overflow{false};
-      auto accumulator{
-          [&mask, &overflow](Scalar<T> &element, const ConstantSubscripts &at) {
-            if (mask->At(at).IsTrue()) {
-              auto incremented{element.AddSigned(Scalar<T>{1})};
-              overflow |= incremented.overflow;
-              element = incremented.value;
-            }
-          }};
+      CountAccumulator<T, maskKind> accumulator{*mask};
       Constant<T> result{DoReduction<T>(*mask, dim, Scalar<T>{}, accumulator)};
-      if (overflow) {
+      if (accumulator.overflow()) {
         context.messages().Say(
             "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
       }
@@ -513,9 +525,7 @@ static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
   if (std::optional<Constant<T>> array{
           ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    auto accumulator{[&](Scalar<T> &element, const ConstantSubscripts &at) {
-      element = (element.*operation)(array->At(at));
-    }};
+    OperationAccumulator<T> accumulator{*array, operation};
     return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};

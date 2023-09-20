@@ -2790,33 +2790,33 @@ define amdgpu_ps i32 @s_fshl_i32_5(i32 inreg %lhs, i32 inreg %rhs) {
 ; GFX6-LABEL: s_fshl_i32_5:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s1
-; GFX6-NEXT:    v_alignbit_b32 v0, s0, v0, -5
+; GFX6-NEXT:    v_alignbit_b32 v0, s0, v0, 27
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_fshl_i32_5:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s1
-; GFX8-NEXT:    v_alignbit_b32 v0, s0, v0, -5
+; GFX8-NEXT:    v_alignbit_b32 v0, s0, v0, 27
 ; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_fshl_i32_5:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_alignbit_b32 v0, s0, v0, -5
+; GFX9-NEXT:    v_alignbit_b32 v0, s0, v0, 27
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_fshl_i32_5:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_alignbit_b32 v0, s0, s1, -5
+; GFX10-NEXT:    v_alignbit_b32 v0, s0, s1, 27
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_fshl_i32_5:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, -5
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, 27
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -2828,33 +2828,33 @@ define amdgpu_ps i32 @s_fshl_i32_8(i32 inreg %lhs, i32 inreg %rhs) {
 ; GFX6-LABEL: s_fshl_i32_8:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s1
-; GFX6-NEXT:    v_alignbit_b32 v0, s0, v0, -8
+; GFX6-NEXT:    v_alignbit_b32 v0, s0, v0, 24
 ; GFX6-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-LABEL: s_fshl_i32_8:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s1
-; GFX8-NEXT:    v_alignbit_b32 v0, s0, v0, -8
+; GFX8-NEXT:    v_alignbit_b32 v0, s0, v0, 24
 ; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_fshl_i32_8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_alignbit_b32 v0, s0, v0, -8
+; GFX9-NEXT:    v_alignbit_b32 v0, s0, v0, 24
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_fshl_i32_8:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_alignbit_b32 v0, s0, s1, -8
+; GFX10-NEXT:    v_alignbit_b32 v0, s0, s1, 24
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_fshl_i32_8:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, -8
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, 24
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -2889,13 +2889,13 @@ define i32 @v_fshl_i32_5(i32 %lhs, i32 %rhs) {
 ; GCN-LABEL: v_fshl_i32_5:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_alignbit_b32 v0, v0, v1, -5
+; GCN-NEXT:    v_alignbit_b32 v0, v0, v1, 27
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_fshl_i32_5:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_alignbit_b32 v0, v0, v1, -5
+; GFX11-NEXT:    v_alignbit_b32 v0, v0, v1, 27
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i32 @llvm.fshl.i32(i32 %lhs, i32 %rhs, i32 5)
   ret i32 %result
@@ -2905,13 +2905,13 @@ define i32 @v_fshl_i32_8(i32 %lhs, i32 %rhs) {
 ; GCN-LABEL: v_fshl_i32_8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_alignbit_b32 v0, v0, v1, -8
+; GCN-NEXT:    v_alignbit_b32 v0, v0, v1, 24
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_fshl_i32_8:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_alignbit_b32 v0, v0, v1, -8
+; GFX11-NEXT:    v_alignbit_b32 v0, v0, v1, 24
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i32 @llvm.fshl.i32(i32 %lhs, i32 %rhs, i32 8)
   ret i32 %result

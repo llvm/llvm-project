@@ -18,41 +18,54 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 ; COMMON-LABEL: @test(
 
-; EPILOG: %xtraiter = and i32 %n
-; EPILOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
-; EPILOG:  br i1 %lcmp.mod, label %for.body.epil.preheader, label %for.end.loopexit
+; EPILOG: entry:
+; EPILOG:   br i1 %cmp1, label %for.end, label %for.body.preheader, !prof [[EPILOG_PROF_0:![0-9]+]]
+; EPILOG: for.body.preheader:
+; EPILOG:   %xtraiter = and i32 %n
+; EPILOG:   br i1 %1, label %for.end.loopexit.unr-lcssa, label %for.body.preheader.new, !prof [[EPILOG_PROF_1:![0-9]+]]
+
+; EPILOG: for.end.loopexit.unr-lcssa:
+; EPILOG:   %lcmp.mod = icmp ne i32 %xtraiter, 0
+; EPILOG:   br i1 %lcmp.mod, label %for.body.epil.preheader, label %for.end.loopexit, !prof [[EPILOG_PROF_2:![0-9]+]]
 
 ; NOEPILOG-NOT: %xtraiter = and i32 %n
 
-; PROLOG: %xtraiter = and i32 %n
-; PROLOG:  %lcmp.mod = icmp ne i32 %xtraiter, 0
-; PROLOG:  br i1 %lcmp.mod, label %for.body.prol.preheader, label %for.body.prol.loopexit
+; PROLOG: entry:
+; PROLOG:   br i1 %cmp1, label %for.end, label %for.body.preheader, !prof [[PROLOG_PROF_0:![0-9]+]]
+
+; PROLOG: for.body.preheader:
+; PROLOG:   %xtraiter = and i32 %n
+; PROLOG:   %lcmp.mod = icmp ne i32 %xtraiter, 0
+; PROLOG:   br i1 %lcmp.mod, label %for.body.prol.preheader, label %for.body.prol.loopexit, !prof [[PROLOG_PROF_1:![0-9]+]]
 
 ; NOPROLOG-NOT: %xtraiter = and i32 %n
 
 ; EPILOG: for.body.epil:
-; EPILOG: %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ],  [ %indvars.iv.unr, %for.body.epil.preheader ]
-; EPILOG:  %epil.iter.next = add i32 %epil.iter, 1
-; EPILOG:  %epil.iter.cmp = icmp ne i32 %epil.iter.next, %xtraiter
-; EPILOG:  br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !llvm.loop !0
+; EPILOG:   %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ],  [ %indvars.iv.unr, %for.body.epil.preheader ]
+; EPILOG:   %epil.iter.next = add i32 %epil.iter, 1
+; EPILOG:   %epil.iter.cmp = icmp ne i32 %epil.iter.next, %xtraiter
+; EPILOG:   br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !prof [[EPILOG_PROF_3:![0-9]+]], !llvm.loop [[EPILOG_LOOP:![0-9]+]]
 
 ; NOEPILOG: for.body:
 ; NOEPILOG-NOT: for.body.epil:
 
 ; PROLOG: for.body.prol:
-; PROLOG: %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body.prol ], [ 0, %for.body.prol.preheader ]
-; PROLOG:  %prol.iter.next = add i32 %prol.iter, 1
-; PROLOG:  %prol.iter.cmp = icmp ne i32 %prol.iter.next, %xtraiter
-; PROLOG:  br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !llvm.loop !0
+; PROLOG:   %indvars.iv.prol = phi i64 [ %indvars.iv.next.prol, %for.body.prol ], [ 0, %for.body.prol.preheader ]
+; PROLOG:   %prol.iter.next = add i32 %prol.iter, 1
+; PROLOG:   %prol.iter.cmp = icmp ne i32 %prol.iter.next, %xtraiter
+; PROLOG:   br i1 %prol.iter.cmp, label %for.body.prol, label %for.body.prol.loopexit.unr-lcssa, !prof [[PROLOG_PROF_2:![0-9]+]], !llvm.loop [[PROLOG_LOOP:![0-9]+]]
+
+; PROLOG: for.body.prol.loopexit:
+; PROLOG:   br i1 %2, label %for.end.loopexit, label %for.body.preheader.new, !prof [[PROLOG_PROF_1:![0-9]+]]
 
 ; NOPROLOG: for.body:
 ; NOPROLOG-NOT: for.body.prol:
 
 
-define i32 @test(ptr nocapture %a, i32 %n) nounwind uwtable readonly {
+define i32 @test(ptr nocapture %a, i32 %n) nounwind uwtable readonly !prof !2 {
 entry:
   %cmp1 = icmp eq i32 %n, 0
-  br i1 %cmp1, label %for.end, label %for.body
+  br i1 %cmp1, label %for.end, label %for.body, !prof !3
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
@@ -63,7 +76,7 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %n
-  br i1 %exitcond, label %for.end, label %for.body
+  br i1 %exitcond, label %for.end, label %for.body, !prof !4
 
 for.end:                                          ; preds = %for.body, %entry
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
@@ -274,12 +287,24 @@ exit2.loopexit:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.unroll.runtime.disable"}
+!2 = !{!"function_entry_count", i64 1}
+!3 = !{!"branch_weights", i32 1, i32 11}
+!4 = !{!"branch_weights", i32 1, i32 42}
 
 ; need to use LABEL here to separate function IR matching from metadata matching
 ; COMMON-LABEL: {{^}}!0 =
 
-; EPILOG-SAME: distinct !{!0, !1}
-; EPILOG: !1 = !{!"llvm.loop.unroll.disable"}
+; EPILOG: [[EPILOG_PROF_0]] = !{!"branch_weights", i32 1, i32 11}
+; EPILOG: [[EPILOG_PROF_1]] = !{!"branch_weights", i32 1, i32 127}
+; EPILOG: [[EPILOG_PROF_2]] = !{!"branch_weights", i32 1, i32 7}
+; EPILOG: [[EPILOG_PROF_3]] = !{!"branch_weights", i32 3, i32 1}
 
-; PROLOG-SAME: distinct !{!0, !1}
-; PROLOG: !1 = !{!"llvm.loop.unroll.disable"}
+; EPILOG: [[EPILOG_LOOP]] = distinct !{[[EPILOG_LOOP]], [[EPILOG_LOOP_1:![0-9]+]]}
+; EPILOG: [[EPILOG_LOOP_1]] = !{!"llvm.loop.unroll.disable"}
+
+; PROLOG: [[PROLOG_PROF_0]] = !{!"branch_weights", i32 1, i32 11}
+; PROLOG: [[PROLOG_PROF_1]] = !{!"branch_weights", i32 1, i32 127}
+; PROLOG: [[PROLOG_PROF_2]] = !{!"branch_weights", i32 3, i32 1}
+
+; PROLOG: distinct !{[[PROLOG_LOOP]], [[PROLOG_LOOP_1:![0-9]+]]}
+; PROLOG: [[PROLOG_LOOP_1]] = !{!"llvm.loop.unroll.disable"}

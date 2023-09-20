@@ -11,6 +11,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -35,6 +37,12 @@ static cl::list<std::string> ForceRemoveAttributes(
              "attribute will remove the attribute from all functions in the "
              "module. This "
              "option can be specified multiple times."));
+
+static cl::opt<std::string> CSVFilePath(
+    "forceattrs-csv-path", cl::Hidden,
+    cl::desc(
+        "Path to CSV file containing lines of function names and attributes to "
+        "add to them in the form of `f1,attr1` or `f2,attr2=str`."));
 
 /// If F has any forced attributes given on the command line, add them.
 /// If F has any forced remove attributes given on the command line, remove
@@ -80,12 +88,52 @@ static bool hasForceAttributes() {
 
 PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
                                               ModuleAnalysisManager &) {
-  if (!hasForceAttributes())
-    return PreservedAnalyses::all();
-
-  for (Function &F : M.functions())
-    forceAttributes(F);
-
-  // Just conservatively invalidate analyses, this isn't likely to be important.
-  return PreservedAnalyses::none();
+  bool Changed = false;
+  if (!CSVFilePath.empty()) {
+    auto BufferOrError = MemoryBuffer::getFileOrSTDIN(CSVFilePath);
+    if (!BufferOrError)
+      report_fatal_error("Cannot open CSV file.");
+    StringRef Buffer = BufferOrError.get()->getBuffer();
+    auto MemoryBuffer = MemoryBuffer::getMemBuffer(Buffer);
+    line_iterator It(*MemoryBuffer);
+    for (; !It.is_at_end(); ++It) {
+      auto SplitPair = It->split(',');
+      if (SplitPair.second.empty())
+        continue;
+      Function *Func = M.getFunction(SplitPair.first);
+      if (Func) {
+        if (Func->isDeclaration())
+          continue;
+        auto SecondSplitPair = SplitPair.second.split('=');
+        if (!SecondSplitPair.second.empty()) {
+          Func->addFnAttr(SecondSplitPair.first, SecondSplitPair.second);
+          Changed = true;
+        } else {
+          auto AttrKind = Attribute::getAttrKindFromName(SplitPair.second);
+          if (AttrKind != Attribute::None &&
+              Attribute::canUseAsFnAttr(AttrKind)) {
+            // TODO: There could be string attributes without a value, we should
+            // support those, too.
+            Func->addFnAttr(AttrKind);
+            Changed = true;
+          } else
+            errs() << "Cannot add " << SplitPair.second
+                   << " as an attribute name.\n";
+        }
+      } else {
+        errs() << "Function in CSV file at line " << It.line_number()
+               << " does not exist.\n";
+        // TODO: `report_fatal_error at end of pass for missing functions.
+        continue;
+      }
+    }
+  }
+  if (hasForceAttributes()) {
+    for (Function &F : M.functions())
+      forceAttributes(F);
+    Changed = true;
+  }
+  // Just conservatively invalidate analyses if we've made any changes, this
+  // isn't likely to be important.
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

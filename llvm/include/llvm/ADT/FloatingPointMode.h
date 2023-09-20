@@ -269,8 +269,12 @@ LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
 /// Return the test mask which returns true if the value's sign bit is flipped.
 FPClassTest fneg(FPClassTest Mask);
 
-/// Return the test mask which returns true if the value's sign bit is cleared.
-FPClassTest fabs(FPClassTest Mask);
+/// Return the test mask which returns true after fabs is applied to the value.
+FPClassTest inverse_fabs(FPClassTest Mask);
+
+/// Return the test mask which returns true if the value could have the same set
+/// of classes, but with a different sign.
+FPClassTest unknown_sign(FPClassTest Mask);
 
 /// Write a human readable form of \p Mask to \p OS
 raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);

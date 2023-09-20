@@ -31,8 +31,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #CSC = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : dense, d0 : compressed)
 }>
 
 module {
@@ -45,7 +44,7 @@ module {
   //
   func.func @matmul(%A: tensor<8x2xf64, #CSC>,
                     %B: tensor<2x4xf64, #CSC>) -> tensor<8x4xf64, #CSC> {
-    %C = bufferization.alloc_tensor() : tensor<8x4xf64, #CSC>
+    %C = tensor.empty() : tensor<8x4xf64, #CSC>
     %D = linalg.matmul
       ins(%A, %B: tensor<8x2xf64, #CSC>, tensor<2x4xf64, #CSC>)
          outs(%C: tensor<8x4xf64, #CSC>) -> tensor<8x4xf64, #CSC>

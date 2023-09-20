@@ -432,3 +432,18 @@ void RecoveryToDoWhileStmtCond() {
   // CHECK-NEXT:      `-IntegerLiteral {{.*}} 'int' 10
   do {} while (some_invalid_val + 1 < 10);
 }
+
+void RecoveryForStmtCond() {
+  // CHECK:FunctionDecl {{.*}} RecoveryForStmtCond
+  // CHECK-NEXT:`-CompoundStmt {{.*}}
+  // CHECK-NEXT:  `-ForStmt {{.*}}
+  // CHECK-NEXT:    |-DeclStmt {{.*}}
+  // CHECK-NEXT:    | `-VarDecl {{.*}}
+  // CHECK-NEXT:    |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
+  // CHECK-NEXT:    |-<<<NULL>>>
+  // CHECK-NEXT:    |-RecoveryExpr {{.*}} 'bool' contains-errors
+  // CHECK-NEXT:    |-UnaryOperator {{.*}} 'int' lvalue prefix '++'
+  // CHECK-NEXT:    | `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'i' 'int'
+  // CHECK-NEXT:    `-CompoundStmt {{.*}}
+  for (int i = 0; i < invalid; ++i) {}
+}

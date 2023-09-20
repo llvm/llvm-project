@@ -54,7 +54,7 @@ public:
 // TargetPassConfig, but can't put this logic into TargetPassConfig directly
 // because the CodeGen library can't depend on GlobalISel.
 std::unique_ptr<CSEConfigBase>
-getStandardCSEConfigForOpt(CodeGenOpt::Level Level);
+getStandardCSEConfigForOpt(CodeGenOptLevel Level);
 
 /// The CSE Analysis object.
 /// This installs itself as a delegate to the MachineFunction to track

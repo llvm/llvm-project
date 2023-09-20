@@ -525,9 +525,9 @@ define dso_local <16 x i8> @ld_disjoint_align32_vector(i64 %ptr) {
 ; CHECK-P8-LE-LABEL: ld_disjoint_align32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
 ; CHECK-P8-LE-NEXT:    lis r4, -15264
-; CHECK-P8-LE-NEXT:    lis r5, 15258
 ; CHECK-P8-LE-NEXT:    and r3, r3, r4
-; CHECK-P8-LE-NEXT:    ori r4, r5, 41712
+; CHECK-P8-LE-NEXT:    lis r4, 15258
+; CHECK-P8-LE-NEXT:    ori r4, r4, 41712
 ; CHECK-P8-LE-NEXT:    lxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-LE-NEXT:    blr
@@ -535,9 +535,9 @@ define dso_local <16 x i8> @ld_disjoint_align32_vector(i64 %ptr) {
 ; CHECK-P8-BE-LABEL: ld_disjoint_align32_vector:
 ; CHECK-P8-BE:       # %bb.0: # %entry
 ; CHECK-P8-BE-NEXT:    lis r4, -15264
-; CHECK-P8-BE-NEXT:    lis r5, 15258
 ; CHECK-P8-BE-NEXT:    and r3, r3, r4
-; CHECK-P8-BE-NEXT:    ori r4, r5, 41712
+; CHECK-P8-BE-NEXT:    lis r4, 15258
+; CHECK-P8-BE-NEXT:    ori r4, r4, 41712
 ; CHECK-P8-BE-NEXT:    lxvw4x v2, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
@@ -988,8 +988,8 @@ define dso_local void @st_unalign32_vector(ptr nocapture %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_unalign32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    lis r4, 1
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r4, r4, 34463
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
@@ -1022,8 +1022,8 @@ define dso_local void @st_align32_vector(ptr nocapture %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_align32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    lis r4, 1525
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r4, r4, 56600
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
@@ -1246,8 +1246,8 @@ define dso_local void @st_disjoint_unalign16_vector(i64 %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_disjoint_unalign16_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r3, r3, 6
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr
@@ -1283,8 +1283,8 @@ define dso_local void @st_disjoint_align16_vector(i64 %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_disjoint_align16_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    rldicr r3, r3, 0, 51
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r3, r3, 24
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr
@@ -1314,8 +1314,8 @@ define dso_local void @st_not_disjoint32_vector(i64 %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_not_disjoint32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r3, r3, 34463
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    oris r3, r3, 1
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr
@@ -1351,8 +1351,8 @@ define dso_local void @st_disjoint_unalign32_vector(i64 %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_disjoint_unalign32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    lis r4, 1
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    rldicr r3, r3, 0, 43
 ; CHECK-P8-LE-NEXT:    ori r4, r4, 34463
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
@@ -1393,20 +1393,20 @@ define dso_local void @st_disjoint_align32_vector(i64 %ptr, <16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_disjoint_align32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    lis r4, -15264
-; CHECK-P8-LE-NEXT:    lis r5, 15258
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    and r3, r3, r4
-; CHECK-P8-LE-NEXT:    ori r4, r5, 41712
+; CHECK-P8-LE-NEXT:    lis r4, 15258
+; CHECK-P8-LE-NEXT:    ori r4, r4, 41712
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-P8-LE-NEXT:    blr
 ;
 ; CHECK-P8-BE-LABEL: st_disjoint_align32_vector:
 ; CHECK-P8-BE:       # %bb.0: # %entry
 ; CHECK-P8-BE-NEXT:    lis r4, -15264
-; CHECK-P8-BE-NEXT:    lis r5, 15258
 ; CHECK-P8-BE-NEXT:    and r3, r3, r4
-; CHECK-P8-BE-NEXT:    ori r4, r5, 41712
+; CHECK-P8-BE-NEXT:    lis r4, 15258
+; CHECK-P8-BE-NEXT:    ori r4, r4, 41712
 ; CHECK-P8-BE-NEXT:    stxvw4x v2, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
@@ -1625,8 +1625,8 @@ define dso_local void @st_cst_unalign32_vector(<16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_cst_unalign32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    lis r3, 1
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r3, r3, 34463
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr
@@ -1659,8 +1659,8 @@ define dso_local void @st_cst_align32_vector(<16 x i8> %str) {
 ;
 ; CHECK-P8-LE-LABEL: st_cst_align32_vector:
 ; CHECK-P8-LE:       # %bb.0: # %entry
-; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    lis r3, 152
+; CHECK-P8-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-LE-NEXT:    ori r3, r3, 38428
 ; CHECK-P8-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-LE-NEXT:    blr

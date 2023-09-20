@@ -24,6 +24,9 @@ struct A
   static std::function<void()> global;
   static bool cancel;
 
+  A() = default;
+  A(const A&) = default;
+  A& operator=(const A&) = default;
   ~A() {
     DoNotOptimize(cancel);
     if (cancel)

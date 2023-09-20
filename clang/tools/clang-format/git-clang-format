@@ -13,11 +13,11 @@ clang-format git integration
 ============================
 
 This file provides a clang-format integration for git. Put it somewhere in your
-path and ensure that it is executable. Then, "git-clang-format" will invoke
+path and ensure that it is executable. Then, "git clang-format" will invoke
 clang-format on the changes in current files or a specific commit.
 
 For further details, run:
-git-clang-format -h
+git clang-format -h
 
 Requires Python 2.7 or Python 3
 """
@@ -32,7 +32,7 @@ import re
 import subprocess
 import sys
 
-usage = ('git-clang-format [OPTIONS] [<commit>] [<commit>|--staged] '
+usage = ('git clang-format [OPTIONS] [<commit>] [<commit>|--staged] '
          '[--] [<file>...]')
 
 desc = '''
@@ -42,13 +42,13 @@ only applied to the working directory, or in the stage/index.
 
 Examples:
   To format staged changes, i.e everything that's been `git add`ed:
-    git-clang-format
+    git clang-format
 
   To also format everything touched in the most recent commit:
-    git-clang-format HEAD~1
+    git clang-format HEAD~1
 
   If you're on a branch off main, to format everything touched on your branch:
-    git-clang-format main
+    git clang-format main
 
 If two commits are given (requires --diff), run clang-format on all lines in the
 second <commit> that differ from the first <commit>.
@@ -606,7 +606,7 @@ def apply_changes(old_tree, new_tree, force=False, patch_mode=False):
     index_tree = old_tree
   else:
     with temporary_index_file(new_tree):
-      run('git', 'checkout-index', '-a', '-f')
+      run('git', 'checkout-index', '-f', '--', *changed_files)
   return changed_files
 
 

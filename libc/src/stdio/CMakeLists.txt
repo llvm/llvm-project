@@ -26,172 +26,6 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
-add_subdirectory(printf_core)
-add_subdirectory(scanf_core)
-
-add_entrypoint_object(
-  clearerr
-  SRCS
-    clearerr.cpp
-  HDRS
-    clearerr.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  clearerr_unlocked
-  SRCS
-    clearerr_unlocked.cpp
-  HDRS
-    clearerr_unlocked.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  feof
-  SRCS
-    feof.cpp
-  HDRS
-    feof.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  feof_unlocked
-  SRCS
-    feof_unlocked.cpp
-  HDRS
-    feof_unlocked.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  ferror
-  SRCS
-    ferror.cpp
-  HDRS
-    ferror.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  ferror_unlocked
-  SRCS
-    ferror_unlocked.cpp
-  HDRS
-    ferror_unlocked.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fgetc
-  SRCS
-    fgetc.cpp
-  HDRS
-    fgetc.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fgetc_unlocked
-  SRCS
-    fgetc_unlocked.cpp
-  HDRS
-    fgetc_unlocked.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  getc
-  SRCS
-    getc.cpp
-  HDRS
-    getc.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  getc_unlocked
-  SRCS
-    getc_unlocked.cpp
-  HDRS
-    getc_unlocked.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  getchar
-  SRCS
-    getchar.cpp
-  HDRS
-    getchar.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  getchar_unlocked
-  SRCS
-    getc_unlocked.cpp
-  HDRS
-    getc_unlocked.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fgets
-  SRCS
-    fgets.cpp
-  HDRS
-    fgets.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
 add_entrypoint_object(
   fflush
   SRCS
@@ -224,71 +58,6 @@ add_entrypoint_object(
   HDRS
     funlockfile.h
   DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fwrite_unlocked
-  SRCS
-    fwrite_unlocked.cpp
-  HDRS
-    fwrite_unlocked.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fwrite
-  SRCS
-    fwrite.cpp
-  HDRS
-    fwrite.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  fputc
-  SRCS
-    fputc.cpp
-  HDRS
-    fputc.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  putc
-  SRCS
-    putc.cpp
-  HDRS
-    putc.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  putchar
-  SRCS
-    putchar.cpp
-  HDRS
-    putchar.h
-  DEPENDS
-    libc.src.errno.errno
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
@@ -428,6 +197,9 @@ endif()
 if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
   list(APPEND printf_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
 endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE)
+  list(APPEND printf_copts "-DLIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE")
+endif()
 
 if(LLVM_LIBC_FULL_BUILD)
   list(APPEND printf_deps
@@ -511,6 +283,9 @@ add_entrypoint_object(
     ${printf_copts}
 )
 
+add_subdirectory(printf_core)
+add_subdirectory(scanf_core)
+
 add_entrypoint_object(
   ftell
   SRCS
@@ -532,12 +307,30 @@ add_entrypoint_object(
 )
 
 # These entrypoints have multiple potential implementations.
+add_stdio_entrypoint_object(feof)
+add_stdio_entrypoint_object(feof_unlocked)
+add_stdio_entrypoint_object(ferror)
+add_stdio_entrypoint_object(ferror_unlocked)
+add_stdio_entrypoint_object(clearerr)
+add_stdio_entrypoint_object(clearerr_unlocked)
 add_stdio_entrypoint_object(fopen)
 add_stdio_entrypoint_object(fclose)
 add_stdio_entrypoint_object(fread_unlocked)
 add_stdio_entrypoint_object(fread)
 add_stdio_entrypoint_object(puts)
 add_stdio_entrypoint_object(fputs)
+add_stdio_entrypoint_object(fwrite_unlocked)
+add_stdio_entrypoint_object(fwrite)
+add_stdio_entrypoint_object(fputc)
+add_stdio_entrypoint_object(putc)
+add_stdio_entrypoint_object(putchar)
+add_stdio_entrypoint_object(fgetc)
+add_stdio_entrypoint_object(fgetc_unlocked)
+add_stdio_entrypoint_object(getc)
+add_stdio_entrypoint_object(getc_unlocked)
+add_stdio_entrypoint_object(getchar)
+add_stdio_entrypoint_object(getchar_unlocked)
+add_stdio_entrypoint_object(fgets)
 add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)

@@ -81,6 +81,10 @@ def SparcAsmParser : AsmParser {
   bit ShouldEmitMatchRegisterName = 0;
 }
 
+def SparcAsmParserVariant : AsmParserVariant {
+  let RegisterPrefix = "%";
+}
+
 //===----------------------------------------------------------------------===//
 // SPARC processors supported.
 //===----------------------------------------------------------------------===//
@@ -179,6 +183,7 @@ def Sparc : Target {
   // Pull in Instruction Info:
   let InstructionSet = SparcInstrInfo;
   let AssemblyParsers  = [SparcAsmParser];
+  let AssemblyParserVariants = [SparcAsmParserVariant];
   let AssemblyWriters = [SparcAsmWriter];
   let AllowRegisterRenaming = 1;
 }

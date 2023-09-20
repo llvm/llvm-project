@@ -28,25 +28,25 @@
 // BASIC: 25: linker, {4, 9, 14, 16, 19, 24}, image
 
 // Universal linked image.
-// RUN: %clang -target i386-apple-darwin9 -ccc-print-phases -x c %s -arch ppc -arch i386 2>&1 | FileCheck -check-prefix=ULI %s
+// RUN: %clang -target i386-apple-darwin9 -ccc-print-phases -x c %s -arch arm -arch i386 2>&1 | FileCheck -check-prefix=ULI %s
 // ULI: 0: input, "{{.*}}phases.c", c
 // ULI: 1: preprocessor, {0}, cpp-output
 // ULI: 2: compiler, {1}, ir
 // ULI: 3: backend, {2}, assembler
 // ULI: 4: assembler, {3}, object
 // ULI: 5: linker, {4}, image
-// ULI: 6: bind-arch, "ppc", {5}, image
+// ULI: 6: bind-arch, "arm", {5}, image
 // ULI: 7: bind-arch, "i386", {5}, image
 // ULI: 8: lipo, {6, 7}, image
 
 // Universal object file.
-// RUN: %clang -target i386-apple-darwin9 -ccc-print-phases -c -x c %s -arch ppc -arch i386 2>&1 | FileCheck -check-prefix=UOF %s
+// RUN: %clang -target i386-apple-darwin9 -ccc-print-phases -c -x c %s -arch arm -arch i386 2>&1 | FileCheck -check-prefix=UOF %s
 // UOF: 0: input, "{{.*}}phases.c", c
 // UOF: 1: preprocessor, {0}, cpp-output
 // UOF: 2: compiler, {1}, ir
 // UOF: 3: backend, {2}, assembler
 // UOF: 4: assembler, {3}, object
-// UOF: 5: bind-arch, "ppc", {4}, object
+// UOF: 5: bind-arch, "arm", {4}, object
 // UOF: 6: bind-arch, "i386", {4}, object
 // UOF: 7: lipo, {5, 6}, object
 

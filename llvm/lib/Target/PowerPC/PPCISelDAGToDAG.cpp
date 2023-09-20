@@ -151,7 +151,7 @@ namespace {
 
     PPCDAGToDAGISel() = delete;
 
-    explicit PPCDAGToDAGISel(PPCTargetMachine &tm, CodeGenOpt::Level OptLevel)
+    explicit PPCDAGToDAGISel(PPCTargetMachine &tm, CodeGenOptLevel OptLevel)
         : SelectionDAGISel(ID, tm, OptLevel), TM(tm) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override {
@@ -387,18 +387,19 @@ namespace {
     /// register can be improved, but it is wrong to substitute Reg+Reg for
     /// Reg in an asm, because the load or store opcode would have to change.
     bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                      unsigned ConstraintID,
+                                      InlineAsm::ConstraintCode ConstraintID,
                                       std::vector<SDValue> &OutOps) override {
       switch(ConstraintID) {
       default:
-        errs() << "ConstraintID: " << ConstraintID << "\n";
+        errs() << "ConstraintID: "
+               << InlineAsm::getMemConstraintName(ConstraintID) << "\n";
         llvm_unreachable("Unexpected asm memory constraint");
-      case InlineAsm::Constraint_es:
-      case InlineAsm::Constraint_m:
-      case InlineAsm::Constraint_o:
-      case InlineAsm::Constraint_Q:
-      case InlineAsm::Constraint_Z:
-      case InlineAsm::Constraint_Zy:
+      case InlineAsm::ConstraintCode::es:
+      case InlineAsm::ConstraintCode::m:
+      case InlineAsm::ConstraintCode::o:
+      case InlineAsm::ConstraintCode::Q:
+      case InlineAsm::ConstraintCode::Z:
+      case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
         const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -424,6 +425,7 @@ private:
     bool tryFoldSWTestBRCC(SDNode *N);
     bool trySelectLoopCountIntrinsic(SDNode *N);
     bool tryAsSingleRLDICL(SDNode *N);
+    bool tryAsSingleRLDCL(SDNode *N);
     bool tryAsSingleRLDICR(SDNode *N);
     bool tryAsSingleRLWINM(SDNode *N);
     bool tryAsSingleRLWINM8(SDNode *N);
@@ -754,8 +756,8 @@ static bool isThreadPointerAcquisitionNode(SDValue Base, SelectionDAG *CurDAG) {
 static bool canOptimizeTLSDFormToXForm(SelectionDAG *CurDAG, SDValue Base) {
 
   // Do not do this transformation at -O0.
-  if (CurDAG->getTarget().getOptLevel() == CodeGenOpt::None)
-    return false;
+  if (CurDAG->getTarget().getOptLevel() == CodeGenOptLevel::None)
+      return false;
 
   // In order to perform this optimization inside tryTLSXForm[Load|Store],
   // Base is expected to be an ADD_TLS node.
@@ -1165,6 +1167,31 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(Shift), getI32Imm(0));
   }
+  // 2-7) Patterns : High word == Low word
+  // This may require 2 to 3 instructions, depending on whether Lo32 can be
+  // materialized in 1 instruction.
+  if (Hi32 == Lo32) {
+    // Handle the first 32 bits.
+    uint64_t ImmHi16 = (Lo32 >> 16) & 0xffff;
+    uint64_t ImmLo16 = Lo32 & 0xffff;
+    if (isInt<16>(Lo32))
+      Result =
+          CurDAG->getMachineNode(PPC::LI8, dl, MVT::i64, getI32Imm(ImmLo16));
+    else if (!ImmLo16)
+      Result =
+          CurDAG->getMachineNode(PPC::LIS8, dl, MVT::i64, getI32Imm(ImmHi16));
+    else {
+      InstCnt = 3;
+      Result =
+          CurDAG->getMachineNode(PPC::LIS8, dl, MVT::i64, getI32Imm(ImmHi16));
+      Result = CurDAG->getMachineNode(PPC::ORI8, dl, MVT::i64,
+                                      SDValue(Result, 0), getI32Imm(ImmLo16));
+    }
+    // Use rldimi to insert the Low word into High word.
+    SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(32),
+                     getI32Imm(0)};
+    return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
+  }
 
   // Following patterns use 3 instructions to materialize the Imm.
   InstCnt = 3;
@@ -1215,20 +1242,7 @@ static SDNode *selectI64ImmDirect(SelectionDAG *CurDAG, const SDLoc &dl,
     return CurDAG->getMachineNode(PPC::RLDICL, dl, MVT::i64, SDValue(Result, 0),
                                   getI32Imm(TO), getI32Imm(LZ));
   }
-  // 3-4) Patterns : High word == Low word
-  if (Hi32 == Lo32) {
-    // Handle the first 32 bits.
-    uint64_t ImmHi16 = (Lo32 >> 16) & 0xffff;
-    unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
-    Result = CurDAG->getMachineNode(Opcode, dl, MVT::i64, getI32Imm(ImmHi16));
-    Result = CurDAG->getMachineNode(PPC::ORI8, dl, MVT::i64, SDValue(Result, 0),
-                                    getI32Imm(Lo32 & 0xffff));
-    // Use rldimi to insert the Low word into High word.
-    SDValue Ops[] = {SDValue(Result, 0), SDValue(Result, 0), getI32Imm(32),
-                     getI32Imm(0)};
-    return CurDAG->getMachineNode(PPC::RLDIMI, dl, MVT::i64, Ops);
-  }
-  // 3-5) Patterns : {******}{33 zeros}{******}
+  // 3-4) Patterns : {******}{33 zeros}{******}
   //                 {******}{33 ones}{******}
   // If the Imm contains 33 consecutive zeros/ones, it means that a total of 31
   // bits remain on both sides. Rotate right the Imm to construct an int<32>
@@ -4041,7 +4055,7 @@ bool PPCDAGToDAGISel::tryIntCompareInGPR(SDNode *N) {
   // This optimization will emit code that assumes 64-bit registers
   // so we don't want to run it in 32-bit mode. Also don't run it
   // on functions that are not to be optimized.
-  if (TM.getOptLevel() == CodeGenOpt::None || !TM.isPPC64())
+  if (TM.getOptLevel() == CodeGenOptLevel::None || !TM.isPPC64())
     return false;
 
   // For POWER10, it is more profitable to use the set boolean extension
@@ -5084,6 +5098,35 @@ bool PPCDAGToDAGISel::tryAsSingleRLWIMI(SDNode *N) {
   return false;
 }
 
+bool PPCDAGToDAGISel::tryAsSingleRLDCL(SDNode *N) {
+  assert(N->getOpcode() == ISD::AND && "ISD::AND SDNode expected");
+
+  uint64_t Imm64;
+  if (!isInt64Immediate(N->getOperand(1).getNode(), Imm64) || !isMask_64(Imm64))
+    return false;
+
+  SDValue Val = N->getOperand(0);
+
+  if (Val.getOpcode() != ISD::ROTL)
+    return false;
+
+  // Looking to try to avoid a situation like this one:
+  //   %2 = tail call i64 @llvm.fshl.i64(i64 %word, i64 %word, i64 23)
+  //   %and1 = and i64 %2, 9223372036854775807
+  // In this function we are looking to try to match RLDCL. However, the above
+  // DAG would better match RLDICL instead which is not what we are looking
+  // for here.
+  SDValue RotateAmt = Val.getOperand(1);
+  if (RotateAmt.getOpcode() == ISD::Constant)
+    return false;
+
+  unsigned MB = 64 - llvm::countr_one(Imm64);
+  SDLoc dl(N);
+  SDValue Ops[] = {Val.getOperand(0), RotateAmt, getI32Imm(MB, dl)};
+  CurDAG->SelectNodeTo(N, PPC::RLDCL, MVT::i64, Ops);
+  return true;
+}
+
 bool PPCDAGToDAGISel::tryAsSingleRLDICL(SDNode *N) {
   assert(N->getOpcode() == ISD::AND && "ISD::AND SDNode expected");
   uint64_t Imm64;
@@ -5604,8 +5647,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::AND:
     // If this is an 'and' with a mask, try to emit rlwinm/rldicl/rldicr
-    if (tryAsSingleRLWINM(N) || tryAsSingleRLWIMI(N) || tryAsSingleRLDICL(N) ||
-        tryAsSingleRLDICR(N) || tryAsSingleRLWINM8(N) || tryAsPairOfRLDICL(N))
+    if (tryAsSingleRLWINM(N) || tryAsSingleRLWIMI(N) || tryAsSingleRLDCL(N) ||
+        tryAsSingleRLDICL(N) || tryAsSingleRLDICR(N) || tryAsSingleRLWINM8(N) ||
+        tryAsPairOfRLDICL(N))
       return;
 
     // Other cases are autogenerated.
@@ -6623,7 +6667,7 @@ void PPCDAGToDAGISel::PreprocessISelDAG() {
 /// on the DAG representation.
 void PPCDAGToDAGISel::PostprocessISelDAG() {
   // Skip peepholes at -O0.
-  if (TM.getOptLevel() == CodeGenOpt::None)
+  if (TM.getOptLevel() == CodeGenOptLevel::None)
     return;
 
   PeepholePPC64();
@@ -7611,13 +7655,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       // is already in place on the operand, so copying the operand
       // is sufficient.
       ReplaceFlags = false;
-      // For these cases, the immediate may not be divisible by 4, in
-      // which case the fold is illegal for DS-form instructions.  (The
-      // other cases provide aligned addresses and are always safe.)
-      if (RequiresMod4Offset &&
-          (!isa<ConstantSDNode>(Base.getOperand(1)) ||
-           Base.getConstantOperandVal(1) % 4 != 0))
-        continue;
       break;
     case PPC::ADDIdtprelL:
       Flags = PPCII::MO_DTPREL_LO;
@@ -7669,6 +7706,18 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         UpdateHBase = true;
       }
     } else {
+      // Global addresses can be folded, but only if they are sufficiently
+      // aligned.
+      if (RequiresMod4Offset) {
+        if (GlobalAddressSDNode *GA =
+                dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
+          const GlobalValue *GV = GA->getGlobal();
+          Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
+          if (Alignment < 4)
+            continue;
+        }
+      }
+
       // If we're directly folding the addend from an addi instruction, then:
       //  1. In general, the offset on the memory access must be zero.
       //  2. If the addend is a constant, then it can be combined with a
@@ -7743,6 +7792,6 @@ void PPCDAGToDAGISel::PeepholePPC64() {
 /// PowerPC-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createPPCISelDag(PPCTargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel) {
+                                     CodeGenOptLevel OptLevel) {
   return new PPCDAGToDAGISel(TM, OptLevel);
 }

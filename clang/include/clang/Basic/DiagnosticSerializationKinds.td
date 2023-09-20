@@ -129,11 +129,6 @@ def warn_module_system_bit_conflict : Warning<
   "as a non-system module; any difference in diagnostic options will be ignored">,
   InGroup<ModuleConflict>;
 
-def warn_eagerly_load_for_standard_cplusplus_modules : Warning<
-  "the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;"
-  "consider to use '-fmodule-file=<module-name>=<BMI-path>' instead">,
-  InGroup<DiagGroup<"eager-load-cxx-named-modules">>;
-
 def warn_reading_std_cxx_module_by_implicit_paths : Warning<
   "it is deprecated to read module '%0' implicitly; it is going to be removed in clang 18; "
   "consider to specify the dependencies explicitly">,

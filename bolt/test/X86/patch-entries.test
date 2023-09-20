@@ -1,0 +1,10 @@
+# Checking crashes against injected binary functions created by patch
+# entries pass and debug info turned on. In these cases, we were
+# trying to fetch input to output maps on injected functions and
+# crashing.
+
+REQUIRES: system-linux
+
+RUN: %clang %cflags -no-pie -g %p/Inputs/patch-entries.c -fuse-ld=lld -o %t.exe \
+RUN:   -Wl,-q -I%p/../Inputs
+RUN: llvm-bolt -relocs %t.exe -o %t.out --update-debug-sections --force-patch

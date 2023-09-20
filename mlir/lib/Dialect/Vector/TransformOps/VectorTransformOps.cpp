@@ -64,6 +64,11 @@ void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
   vector::populateVectorReductionToContractPatterns(patterns);
 }
 
+void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorMaskOpLoweringPatterns(patterns);
+}
+
 void transform::ApplyRankReducingSubviewPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorTransferDropUnitDimsPatterns(patterns);
@@ -152,6 +157,11 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
     x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
         patterns, avx2LoweringOptions, /*benefit=*/10);
   }
+}
+
+void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateVectorNarrowTypeRewritePatterns(patterns);
 }
 
 void transform::ApplySplitTransferFullPartialPatternsOp::populatePatterns(

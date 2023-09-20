@@ -22,10 +22,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <utility>
 
 namespace clang {
@@ -50,6 +48,23 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
   return Result;
 }
 
+// Whether to consider equivalent two values with an unknown relation.
+//
+// FIXME: this function is a hack enabling unsoundness to support
+// convergence. Once we have widening support for the reference/pointer and
+// struct built-in models, this should be unconditionally `false` (and inlined
+// as such at its call sites).
+static bool equateUnknownValues(Value::Kind K) {
+  switch (K) {
+  case Value::Kind::Integer:
+  case Value::Kind::Pointer:
+  case Value::Kind::Record:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static bool compareDistinctValues(QualType Type, Value &Val1,
                                   const Environment &Env1, Value &Val2,
                                   const Environment &Env2,
@@ -66,18 +81,7 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
   case ComparisonResult::Different:
     return false;
   case ComparisonResult::Unknown:
-    switch (Val1.getKind()) {
-    case Value::Kind::Integer:
-    case Value::Kind::Pointer:
-    case Value::Kind::Record:
-      // FIXME: this choice intentionally introduces unsoundness to allow
-      // for convergence. Once we have widening support for the
-      // reference/pointer and struct built-in models, this should be
-      // `false`.
-      return true;
-    default:
-      return false;
-    }
+    return equateUnknownValues(Val1.getKind());
   }
   llvm_unreachable("All cases covered in switch");
 }
@@ -121,18 +125,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   Value *MergedVal = nullptr;
   if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
-    [[maybe_unused]] auto *RecordVal2 = cast<RecordValue>(&Val2);
+    auto *RecordVal2 = cast<RecordValue>(&Val2);
 
-    // Values to be merged are always associated with the same location in
-    // `LocToVal`. The location stored in `RecordVal` should therefore also
-    // be the same.
-    assert(&RecordVal1->getLoc() == &RecordVal2->getLoc());
-
-    // `RecordVal1` and `RecordVal2` may have different properties associated
-    // with them. Create a new `RecordValue` without any properties so that we
-    // soundly approximate both values. If a particular analysis needs to merge
-    // properties, it should do so in `DataflowAnalysis::merge()`.
-    MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    if (&RecordVal1->getLoc() == &RecordVal2->getLoc())
+      // `RecordVal1` and `RecordVal2` may have different properties associated
+      // with them. Create a new `RecordValue` with the same location but
+      // without any properties so that we soundly approximate both values. If a
+      // particular analysis needs to merge properties, it should do so in
+      // `DataflowAnalysis::merge()`.
+      MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
+    else
+      // If the locations for the two records are different, need to create a
+      // completely new value.
+      MergedVal = MergedEnv.createValue(Type);
   } else {
     MergedVal = MergedEnv.createValue(Type);
   }
@@ -167,8 +172,7 @@ static Value &widenDistinctValues(QualType Type, Value &Prev,
   if (auto *W = Model.widen(Type, Prev, PrevEnv, Current, CurrentEnv))
     return *W;
 
-  // Default of widening is a no-op: leave the current value unchanged.
-  return Current;
+  return equateUnknownValues(Prev.getKind()) ? Prev : Current;
 }
 
 // Returns whether the values in `Map1` and `Map2` compare equal for those
@@ -284,6 +288,18 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  if (!C.getMethodDecl())
+    return nullptr;
+  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  if (!Body || Body->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    if (auto *Return = RS->getRetValue())
+      return dyn_cast<MemberExpr>(Return->IgnoreParenImpCasts());
+  return nullptr;
+}
+
 static void
 getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
@@ -320,6 +336,12 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();

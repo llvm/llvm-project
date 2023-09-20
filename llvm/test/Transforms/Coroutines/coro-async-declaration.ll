@@ -28,7 +28,6 @@ entry:
   %4 = load i32, ptr getelementptr inbounds (%swift.async_func_pointer, ptr @"$s3foo1fyyYaFTu", i32 0, i32 1), align 8, !dbg !10
   %5 = zext i32 %4 to i64, !dbg !10
   %6 = call swiftcc ptr @swift_task_alloc(i64 %5), !dbg !10
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %6), !dbg !10
   %7 = load ptr, ptr %1, align 8, !dbg !10
   %8 = getelementptr inbounds <{ ptr, ptr }>, ptr %6, i32 0, i32 0, !dbg !10
   store ptr %7, ptr %8, align 8, !dbg !10
@@ -40,7 +39,6 @@ entry:
   %13 = call ptr @__swift_async_resume_project_context(ptr %12), !dbg !10
   store ptr %13, ptr %1, align 8, !dbg !10
   call swiftcc void @swift_task_dealloc(ptr %6), !dbg !10
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %6), !dbg !10
   %14 = load ptr, ptr %1, align 8, !dbg !11
   %15 = getelementptr inbounds <{ ptr, ptr }>, ptr %14, i32 0, i32 1, !dbg !11
   %16 = load ptr, ptr %15, align 8, !dbg !11
@@ -52,9 +50,6 @@ entry:
 ; Function Attrs: nounwind
 declare token @llvm.coro.id.async(i32, i32, i32, ptr) #0
 
-; Function Attrs: cold noreturn nounwind memory(inaccessiblemem: write)
-declare void @llvm.trap() #1
-
 ; Function Attrs: nounwind
 declare ptr @llvm.coro.begin(token, ptr writeonly) #0
 
@@ -62,11 +57,8 @@ declare swifttailcc void @"$s3foo1fyyYaF"(ptr swiftasync)
 
 declare swiftcc ptr @swift_task_alloc(i64)
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
-
 ; Function Attrs: nomerge nounwind
-declare ptr @llvm.coro.async.resume() #3
+declare ptr @llvm.coro.async.resume() #1
 
 define linkonce_odr hidden ptr @__swift_async_resume_project_context(ptr %0) !dbg !12 {
 entry:
@@ -86,12 +78,9 @@ entry:
 }
 
 ; Function Attrs: nomerge nounwind
-declare { ptr } @llvm.coro.suspend.async.sl_p0s(i32, ptr, ptr, ...) #3
+declare { ptr } @llvm.coro.suspend.async.sl_p0s(i32, ptr, ptr, ...) #1
 
 declare swiftcc void @swift_task_dealloc(ptr)
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 define internal swifttailcc void @"$s3foo3FooO3baryyYaF.0.1"(ptr %0, ptr %1) !dbg !17 {
 entry:
@@ -103,9 +92,7 @@ entry:
 declare i1 @llvm.coro.end.async(ptr, i1, ...) #0
 
 attributes #0 = { nounwind }
-attributes #1 = { cold noreturn nounwind memory(inaccessiblemem: write) }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { nomerge nounwind }
+attributes #1 = { nomerge nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

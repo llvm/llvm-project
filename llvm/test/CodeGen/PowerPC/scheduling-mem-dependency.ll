@@ -7,10 +7,12 @@ entry:
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: store_disjoint_memory:%bb.0
 ; CHECK:SU([[REG2:[0-9]+]]):   STD renamable $x{{[0-9]+}}, 24, renamable $x[[REG5:[0-9]+]]
-; CHECK-NOT: Successors:
+; CHECK-NOT: Predecessors:
+; CHECK: Successors:
 ; CHECK-NOT:    SU([[REG3]]): Ord  Latency=0 Memory
 ; CHECK:SU([[REG3:[0-9]+]]):   STD renamable $x{{[0-9]+}}, 16, renamable $x[[REG5]]
-; CHECK: Predecessors:
+; CHECK-NOT: Predecessors:
+; CHECK: Successors:
 ; CHECK-NOT:    SU([[REG2]]): Ord  Latency=0 Memory
   %arrayidx = getelementptr inbounds i64, ptr %P, i64 3
   store i64 %v, ptr %arrayidx

@@ -351,7 +351,7 @@ void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   } else {
     __kmpc_serialized_parallel(loc, gtid);
 
-#ifdef OMPT_SUPPORT
+#if OMPT_SUPPORT
     void *exit_frame_ptr;
 #endif
 
@@ -359,7 +359,7 @@ void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
       __kmp_invoke_microtask(VOLATILE_CAST(microtask_t) microtask, gtid,
                              /*npr=*/0,
                              /*argc=*/1, &args
-#ifdef OMPT_SUPPORT
+#if OMPT_SUPPORT
                              ,
                              &exit_frame_ptr
 #endif
@@ -369,7 +369,7 @@ void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
                              /*npr=*/0,
                              /*argc=*/0,
                              /*args=*/nullptr
-#ifdef OMPT_SUPPORT
+#if OMPT_SUPPORT
                              ,
                              &exit_frame_ptr
 #endif

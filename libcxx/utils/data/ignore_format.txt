@@ -166,7 +166,6 @@ libcxx/include/experimental/memory_resource
 libcxx/include/experimental/propagate_const
 libcxx/include/experimental/regex
 libcxx/include/experimental/set
-libcxx/include/experimental/simd
 libcxx/include/experimental/string
 libcxx/include/experimental/type_traits
 libcxx/include/experimental/unordered_map
@@ -284,7 +283,6 @@ libcxx/include/__iterator/ostreambuf_iterator.h
 libcxx/include/__iterator/ostream_iterator.h
 libcxx/include/__iterator/permutable.h
 libcxx/include/__iterator/prev.h
-libcxx/include/__iterator/projected.h
 libcxx/include/__iterator/readable_traits.h
 libcxx/include/__iterator/reverse_access.h
 libcxx/include/__iterator/reverse_iterator.h
@@ -537,7 +535,6 @@ libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
 libcxx/src/std_stream.h
 libcxx/src/string.cpp
-libcxx/src/strstream.cpp
 libcxx/src/support/ibm/mbsnrtowcs.cpp
 libcxx/src/support/ibm/wcsnrtombs.cpp
 libcxx/src/support/ibm/xlocale_zos.cpp

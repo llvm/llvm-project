@@ -112,6 +112,16 @@ add_libc_unittest(
     LibcMemoryHelpers
 )
 
+if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+
 add_fp_unittest(
   sprintf_test
   UNIT_TEST_ONLY
@@ -123,6 +133,8 @@ add_fp_unittest(
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.platform_defs
+  COMPILE_OPTIONS
+    ${sprintf_test_copts}
 )
 
 add_libc_unittest(
@@ -272,6 +284,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  fputc_test
+  HERMETIC_TEST_ONLY # writes to libc's stdout and stderr
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fputc_test.cpp
+  DEPENDS
+    libc.src.stdio.fputc
+    libc.src.stdio.putchar
+    libc.src.stdio.stdout
+    libc.src.stdio.stderr
+)
+
+add_libc_test(
   fopen_test
   SUITE
     libc_stdio_unittests
@@ -279,12 +305,12 @@ add_libc_test(
     fopen_test.cpp
   DEPENDS
     libc.src.stdio.fread
-    libc.src.stdio.fputs
+    libc.src.stdio.fwrite
     libc.src.stdio.fclose
     libc.src.stdio.fopen
 )
 
-add_libc_unittest(
+add_libc_test(
   putc_test
   SUITE
     libc_stdio_unittests
@@ -316,7 +342,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   fgetc_test
   SUITE
     libc_stdio_unittests
@@ -356,7 +382,7 @@ add_libc_unittest(
     libc.src.stdio.getc_unlocked
 )
 
-add_libc_unittest(
+add_libc_test(
   fgets_test
   SUITE
     libc_stdio_unittests

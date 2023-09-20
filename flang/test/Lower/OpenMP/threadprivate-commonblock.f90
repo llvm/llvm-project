@@ -12,11 +12,11 @@ module test
 
   !$omp threadprivate(/blk/)
 
-!CHECK: fir.global common @_QCblk(dense<0> : vector<103xi8>) : !fir.array<103xi8>
+!CHECK: fir.global common @blk_(dense<0> : vector<103xi8>) : !fir.array<103xi8>
 
 contains
   subroutine sub()
-!CHECK:  [[ADDR0:%.*]] = fir.address_of(@_QCblk) : !fir.ref<!fir.array<103xi8>>
+!CHECK:  [[ADDR0:%.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<103xi8>>
 !CHECK:  [[NEWADDR0:%.*]] = omp.threadprivate [[ADDR0]] : !fir.ref<!fir.array<103xi8>> -> !fir.ref<!fir.array<103xi8>>
 !CHECK-DAG:  [[ADDR1:%.*]] = fir.convert [[NEWADDR0]] : (!fir.ref<!fir.array<103xi8>>) -> !fir.ref<!fir.array<?xi8>>
 !CHECK-DAG:  [[C0:%.*]] = arith.constant 0 : index

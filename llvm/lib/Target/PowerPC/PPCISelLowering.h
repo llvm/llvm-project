@@ -980,16 +980,16 @@ namespace llvm {
                                       std::vector<SDValue> &Ops,
                                       SelectionDAG &DAG) const override;
 
-    unsigned
+    InlineAsm::ConstraintCode
     getInlineAsmMemConstraint(StringRef ConstraintCode) const override {
       if (ConstraintCode == "es")
-        return InlineAsm::Constraint_es;
+        return InlineAsm::ConstraintCode::es;
       else if (ConstraintCode == "Q")
-        return InlineAsm::Constraint_Q;
+        return InlineAsm::ConstraintCode::Q;
       else if (ConstraintCode == "Z")
-        return InlineAsm::Constraint_Z;
+        return InlineAsm::ConstraintCode::Z;
       else if (ConstraintCode == "Zy")
-        return InlineAsm::Constraint_Zy;
+        return InlineAsm::ConstraintCode::Zy;
       return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
     }
 

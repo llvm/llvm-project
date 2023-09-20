@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -sparsification -cse -sparse-vectorization="vl=8" -cse | \
 // RUN:   FileCheck %s
 
-#DenseVector = #sparse_tensor.encoding<{ lvlTypes = [ "dense" ] }>
+#DenseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : dense) }>
 
 #trait = {
   indexing_maps = [
@@ -48,7 +48,7 @@
 // CHECK:           }
 func.func @vops(%arga: tensor<1024xf32, #DenseVector>,
                 %argb: tensor<1024xf32, #DenseVector>) -> tensor<1024xf32> {
-  %init = bufferization.alloc_tensor() : tensor<1024xf32>
+  %init = tensor.empty() : tensor<1024xf32>
   %o = arith.constant 1.0 : f32
   %c = arith.constant 2.0 : f32
   %i = arith.constant 255 : i64
