@@ -661,6 +661,8 @@ public:
   /// Emit a long long directive and value.
   void emitInt64(uint64_t Value) const;
 
+  void emitSizeT(uint64_t Value) const;
+
   /// Emit something like ".long Hi-Lo" where the size in bytes of the directive
   /// is specified by Size and Hi/Lo specify the labels.  This implicitly uses
   /// .set if it is available.
