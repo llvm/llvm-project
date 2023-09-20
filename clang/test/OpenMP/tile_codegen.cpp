@@ -983,11 +983,11 @@ extern "C" void tfoo7() {
 // CHECK1-LABEL: define {{[^@]+}}@tfoo7
 // CHECK1-SAME: () #[[ATTR0]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    call void @_Z4foo7IiLi3ELi5EEvT_S0_(i32 noundef 0, i32 noundef 42)
+// CHECK1-NEXT:    call void @_Z4foo7IiTnT_Li3ETnS0_Li5EEvS0_S0_(i32 noundef 0, i32 noundef 42)
 // CHECK1-NEXT:    ret void
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@_Z4foo7IiLi3ELi5EEvT_S0_
+// CHECK1-LABEL: define {{[^@]+}}@_Z4foo7IiTnT_Li3ETnS0_Li5EEvS0_S0_
 // CHECK1-SAME: (i32 noundef [[START:%.*]], i32 noundef [[END:%.*]]) #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
@@ -1977,11 +1977,11 @@ extern "C" void tfoo7() {
 // CHECK2-LABEL: define {{[^@]+}}@tfoo7
 // CHECK2-SAME: () #[[ATTR2]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    call void @_Z4foo7IiLi3ELi5EEvT_S0_(i32 noundef 0, i32 noundef 42)
+// CHECK2-NEXT:    call void @_Z4foo7IiTnT_Li3ETnS0_Li5EEvS0_S0_(i32 noundef 0, i32 noundef 42)
 // CHECK2-NEXT:    ret void
 //
 //
-// CHECK2-LABEL: define {{[^@]+}}@_Z4foo7IiLi3ELi5EEvT_S0_
+// CHECK2-LABEL: define {{[^@]+}}@_Z4foo7IiTnT_Li3ETnS0_Li5EEvS0_S0_
 // CHECK2-SAME: (i32 noundef [[START:%.*]], i32 noundef [[END:%.*]]) #[[ATTR2]] comdat {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4

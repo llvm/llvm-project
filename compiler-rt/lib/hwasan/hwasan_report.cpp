@@ -357,8 +357,9 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       "to %zd bytes):\n",
       kShadowAlignment);
   PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
-    if (*tag >= 1 && *tag <= kShadowAlignment) {
-      uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
+    uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
+    if (*tag >= 1 && *tag <= kShadowAlignment &&
+        IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
       s.AppendF("%02x",
                 *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
     } else {

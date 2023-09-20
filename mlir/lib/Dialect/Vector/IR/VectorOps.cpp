@@ -42,9 +42,9 @@
 #include <cstdint>
 #include <numeric>
 
-#include "mlir/Dialect/Vector/IR/VectorOpsDialect.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorDialect.cpp.inc"
 // Pull in all enum type and utility function definitions.
-#include "mlir/Dialect/Vector/IR/VectorOpsEnums.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorEnums.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -256,7 +256,7 @@ struct BitmaskEnumStorage : public AttributeStorage {
 void VectorDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Vector/IR/VectorOpsAttrDefs.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorAttributes.cpp.inc"
       >();
 
   addOperations<
@@ -415,15 +415,17 @@ void MultiDimReductionOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 void vector::ReductionOp::build(OpBuilder &builder, OperationState &result,
-                                CombiningKind kind, Value vector) {
-  build(builder, result, kind, vector, /*acc=*/Value());
+                                CombiningKind kind, Value vector,
+                                arith::FastMathFlags fastMathFlags) {
+  build(builder, result, kind, vector, /*acc=*/Value(), fastMathFlags);
 }
 
 void vector::ReductionOp::build(OpBuilder &builder, OperationState &result,
-                                CombiningKind kind, Value vector, Value acc) {
+                                CombiningKind kind, Value vector, Value acc,
+                                arith::FastMathFlags fastMathFlags) {
   build(builder, result,
         llvm::cast<VectorType>(vector.getType()).getElementType(), kind, vector,
-        acc);
+        acc, fastMathFlags);
 }
 
 LogicalResult ReductionOp::verify() {
@@ -447,9 +449,13 @@ ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
   Type redType;
   Type resType;
   CombiningKindAttr kindAttr;
+  arith::FastMathFlagsAttr fastMathAttr;
   if (parser.parseCustomAttributeWithFallback(kindAttr, Type{}, "kind",
                                               result.attributes) ||
       parser.parseComma() || parser.parseOperandList(operandsInfo) ||
+      (succeeded(parser.parseOptionalKeyword("fastmath")) &&
+       parser.parseCustomAttributeWithFallback(fastMathAttr, Type{}, "fastmath",
+                                               result.attributes)) ||
       parser.parseColonType(redType) ||
       parser.parseKeywordType("into", resType) ||
       (!operandsInfo.empty() &&
@@ -470,6 +476,12 @@ void ReductionOp::print(OpAsmPrinter &p) {
   p << ", " << getVector();
   if (getAcc())
     p << ", " << getAcc();
+
+  if (getFastmathAttr() &&
+      getFastmathAttr().getValue() != arith::FastMathFlags::none) {
+    p << ' ' << getFastmathAttrName().getValue();
+    p.printStrippedAttrOrType(getFastmathAttr());
+  }
   p << " : " << getVector().getType() << " into " << getDest().getType();
 }
 
@@ -6049,7 +6061,7 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 //===----------------------------------------------------------------------===//
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Vector/IR/VectorOpsAttrDefs.cpp.inc"
+#include "mlir/Dialect/Vector/IR/VectorAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"

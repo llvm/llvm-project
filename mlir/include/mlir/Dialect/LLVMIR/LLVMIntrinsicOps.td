@@ -654,32 +654,14 @@ class LLVM_VecReductionI<string mnem>
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VecReductionAccBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
-                           [Pure, SameOperandsAndResultElementType]>,
-      Arguments<(ins element:$start_value, LLVM_VectorOf<element>:$input,
-                 DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {
-  let llvmBuilder = [{
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-        module,
-        llvm::Intrinsic::vector_reduce_}] # mnem # [{,
-        { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
-                           ", ") # [{
-        });
-    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    llvm::FastMathFlags origFM = builder.getFastMathFlags();
-    llvm::FastMathFlags tempFM = origFM;
-    tempFM.setAllowReassoc($reassoc);
-    builder.setFastMathFlags(tempFM);  // set fastmath flag
-    $res = builder.CreateCall(fn, operands);
-    builder.setFastMathFlags(origFM);  // restore fastmath flag
-  }];
-  let mlirBuilder = [{
-    bool allowReassoc = inst->getFastMathFlags().allowReassoc();
-    $res = $_builder.create<$_qualCppClassName>($_location,
-      $_resultType, $start_value, $input, allowReassoc);
-  }];
-}
+    : LLVM_OneResultIntrOp</*mnem=*/"vector.reduce." # mnem, 
+                           /*overloadedResults=*/[], 
+                           /*overloadedOperands=*/[1],
+                           /*traits=*/[Pure, SameOperandsAndResultElementType],
+                           /*equiresFastmath=*/1>,
+      Arguments<(ins element:$start_value,
+                     LLVM_VectorOf<element>:$input,
+                     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags)>;
 
 class LLVM_VecReductionAccF<string mnem>
     : LLVM_VecReductionAccBase<mnem, AnyFloat>;
