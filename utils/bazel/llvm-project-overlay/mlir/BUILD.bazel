@@ -2591,6 +2591,9 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":AffineUtils",
+        ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":LoopLikeInterface",
