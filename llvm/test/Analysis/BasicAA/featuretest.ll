@@ -131,7 +131,7 @@ define i32 @gep_distance_test3(ptr %A) {
 ;
 ; USE_ASSUME-LABEL: @gep_distance_test3(
 ; USE_ASSUME-NEXT:    [[C:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 4
-; USE_ASSUME-NEXT:    store i8 42, ptr [[C]], align 4
+; USE_ASSUME-NEXT:    store i8 42, ptr [[C]], align 1
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[A]], i64 4), "nonnull"(ptr [[A]]), "align"(ptr [[A]], i64 4) ]
 ; USE_ASSUME-NEXT:    ret i32 0
 ;

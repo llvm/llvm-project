@@ -394,12 +394,9 @@ public:
 
 protected:
   void notifyOperationRemoved(Operation *op) override {
-    // TODO: Walk can be removed when D144193 has landed.
-    op->walk([&](Operation *op) {
-      erasedOps.insert(op);
-      // Erase if present.
-      toMemrefOps.erase(op);
-    });
+    erasedOps.insert(op);
+    // Erase if present.
+    toMemrefOps.erase(op);
   }
 
   void notifyOperationInserted(Operation *op) override {

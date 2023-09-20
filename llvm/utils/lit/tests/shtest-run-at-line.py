@@ -1,8 +1,9 @@
 # Check that -a/-v/-vv makes the line number of the failing RUN command clear.
 
-# RUN: not %{lit} -a %{inputs}/shtest-run-at-line | FileCheck %s
-# RUN: not %{lit} -v %{inputs}/shtest-run-at-line | FileCheck %s
-# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line | FileCheck %s
+
+# RUN: not %{lit} -a %{inputs}/shtest-run-at-line | %{filter-lit} | FileCheck %s
+# RUN: not %{lit} -v %{inputs}/shtest-run-at-line | %{filter-lit} | FileCheck %s
+# RUN: not %{lit} -vv %{inputs}/shtest-run-at-line | %{filter-lit} | FileCheck %s
 # END.
 
 
