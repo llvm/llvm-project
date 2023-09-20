@@ -25,6 +25,7 @@
 #include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -321,56 +322,61 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
 
 void ReportStats() {}
 
-static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
-                                   void (*print_tag)(InternalScopedString &s,
-                                                     tag_t *tag)) {
+template <typename PrintTag>
+static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
+                                   InternalScopedString &s,
+                                   PrintTag print_tag) {
   const uptr row_len = 16;  // better be power of two.
-  tag_t *center_row_beg = reinterpret_cast<tag_t *>(
-      RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
-  tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
-  tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  InternalScopedString s;
-  for (tag_t *row = beg_row; row < end_row; row += row_len) {
+  uptr center_row_beg = RoundDownTo(addr, row_len);
+  uptr beg_row = center_row_beg - row_len * (num_rows / 2);
+  uptr end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
+  for (uptr row = beg_row; row < end_row; row += row_len) {
     s.Append(row == center_row_beg ? "=>" : "  ");
-    s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
+    s.AppendF("%p:", (void *)ShadowToMem(row));
     for (uptr i = 0; i < row_len; i++) {
-      s.Append(row + i == tag_ptr ? "[" : " ");
-      print_tag(s, &row[i]);
-      s.Append(row + i == tag_ptr ? "]" : " ");
+      s.Append(row + i == addr ? "[" : " ");
+      print_tag(s, row + i);
+      s.Append(row + i == addr ? "]" : " ");
     }
     s.AppendF("\n");
   }
-  Printf("%s", s.data());
 }
 
-static void PrintTagsAroundAddr(tag_t *tag_ptr) {
-  Printf(
+template <typename GetTag, typename GetShortTag>
+static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
+                                GetShortTag get_short_tag) {
+  InternalScopedString s;
+  addr = MemToShadow(addr);
+  s.AppendF(
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(tag_ptr, 17, [](InternalScopedString &s, tag_t *tag) {
-    s.AppendF("%02x", *tag);
-  });
+  PrintTagInfoAroundAddr(addr, 17, s,
+                         [&](InternalScopedString &s, uptr tag_addr) {
+                           tag_t tag = get_tag(tag_addr);
+                           s.AppendF("%02x", tag);
+                         });
 
-  Printf(
+  s.AppendF(
       "Tags for short granules around the buggy address (one tag corresponds "
       "to %zd bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
-    uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
-    if (*tag >= 1 && *tag <= kShadowAlignment &&
-        IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
-      s.AppendF("%02x",
-                *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
-    } else {
-      s.AppendF("..");
-    }
-  });
-  Printf(
+  PrintTagInfoAroundAddr(addr, 3, s,
+                         [&](InternalScopedString &s, uptr tag_addr) {
+                           tag_t tag = get_tag(tag_addr);
+                           if (tag >= 1 && tag <= kShadowAlignment) {
+                             tag_t short_tag = get_short_tag(tag_addr);
+                             s.AppendF("%02x", short_tag);
+                           } else {
+                             s.AppendF("..");
+                           }
+                         });
+  s.AppendF(
       "See "
       "https://clang.llvm.org/docs/"
       "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
       "description of short granule tags\n");
+  Printf("%s", s.data());
 }
 
 static uptr GetTopPc(const StackTrace *stack) {
@@ -390,7 +396,8 @@ class BaseReport {
         ptr_tag(GetTagFromPointer(tagged_addr)),
         heap(CopyHeapChunk()),
         allocations(CopyAllocations()),
-        candidate(FindBufferOverflowCandidate()) {}
+        candidate(FindBufferOverflowCandidate()),
+        shadow(CopyShadow()) {}
 
  protected:
   struct OverflowCandidate {
@@ -428,6 +435,15 @@ class BaseReport {
     bool is_allocated = false;
   };
 
+  struct Shadow {
+    uptr addr = 0;
+    tag_t tags[512] = {};
+    tag_t short_tags[ARRAY_SIZE(tags)] = {};
+  };
+
+  Shadow CopyShadow() const;
+  tag_t GetTagCopy(uptr addr) const;
+  tag_t GetShortTagCopy(uptr addr) const;
   HeapChunk CopyHeapChunk() const;
   Allocations CopyAllocations();
   OverflowCandidate FindBufferOverflowCandidate() const;
@@ -447,7 +463,44 @@ class BaseReport {
   const HeapChunk heap;
   const Allocations allocations;
   const OverflowCandidate candidate;
+
+  const Shadow shadow;
 };
+
+BaseReport::Shadow BaseReport::CopyShadow() const {
+  Shadow result;
+  if (!MemIsApp(untagged_addr))
+    return result;
+
+  result.addr = MemToShadow(untagged_addr) - ARRAY_SIZE(result.tags) / 2;
+  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i) {
+    uptr tag_addr = result.addr + i;
+    if (!MemIsShadow(tag_addr))
+      continue;
+    result.tags[i] = *reinterpret_cast<tag_t *>(tag_addr);
+    uptr granule_addr = ShadowToMem(tag_addr);
+    if (1 <= result.tags[i] && result.tags[i] <= kShadowAlignment &&
+        IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
+      result.short_tags[i] =
+          *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1);
+    }
+  }
+  return result;
+}
+
+tag_t BaseReport::GetTagCopy(uptr addr) const {
+  CHECK_GE(addr, shadow.addr);
+  uptr idx = addr - shadow.addr;
+  CHECK_LT(idx, ARRAY_SIZE(shadow.tags));
+  return shadow.tags[idx];
+}
+
+tag_t BaseReport::GetShortTagCopy(uptr addr) const {
+  CHECK_GE(addr, shadow.addr);
+  uptr idx = addr - shadow.addr;
+  CHECK_LT(idx, ARRAY_SIZE(shadow.short_tags));
+  return shadow.short_tags[idx];
+}
 
 BaseReport::HeapChunk BaseReport::CopyHeapChunk() const {
   HeapChunk result = {};
@@ -721,15 +774,6 @@ class InvalidFreeReport : public BaseReport {
 };
 
 InvalidFreeReport::~InvalidFreeReport() {
-  tag_t *tag_ptr = nullptr;
-  tag_t mem_tag = 0;
-  if (MemIsApp(untagged_addr)) {
-    tag_ptr = reinterpret_cast<tag_t *>(MemToShadow(untagged_addr));
-    if (MemIsShadow(reinterpret_cast<uptr>(tag_ptr)))
-      mem_tag = *tag_ptr;
-    else
-      tag_ptr = nullptr;
-  }
   Decorator d;
   Printf("%s", d.Error());
   uptr pc = GetTopPc(stack);
@@ -743,16 +787,21 @@ InvalidFreeReport::~InvalidFreeReport() {
            SanitizerToolName, bug_type, untagged_addr, pc);
   }
   Printf("%s", d.Access());
-  if (tag_ptr)
-    Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
+  if (shadow.addr) {
+    Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag,
+           GetTagCopy(MemToShadow(untagged_addr)));
+  }
   Printf("%s", d.Default());
 
   stack->Print();
 
   PrintAddressDescription();
 
-  if (tag_ptr)
-    PrintTagsAroundAddr(tag_ptr);
+  if (shadow.addr) {
+    PrintTagsAroundAddr(
+        untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
+        [&](uptr addr) { return GetShortTagCopy(addr); });
+  }
 
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
@@ -834,8 +883,9 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   Printf("%s", s.data());
   GetCurrentThread()->Announce();
 
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
-  PrintTagsAroundAddr(tag_ptr);
+  PrintTagsAroundAddr(
+      untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
+      [&](uptr addr) { return GetShortTagCopy(addr); });
 
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
@@ -912,7 +962,9 @@ TagMismatchReport::~TagMismatchReport() {
   PrintAddressDescription();
   t->Announce();
 
-  PrintTagsAroundAddr(tag_ptr);
+  PrintTagsAroundAddr(
+      untagged_addr + offset, [&](uptr addr) { return GetTagCopy(addr); },
+      [&](uptr addr) { return GetShortTagCopy(addr); });
 
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
