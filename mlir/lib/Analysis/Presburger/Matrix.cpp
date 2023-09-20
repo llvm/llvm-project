@@ -283,10 +283,8 @@ template <typename T> bool Matrix<T>::hasConsistentState() const {
   return true;
 }
 
-namespace mlir
-{
-namespace presburger
-{
+namespace mlir {
+namespace presburger {
 template class Matrix<MPInt>;
 template class Matrix<Fraction>;
 }
