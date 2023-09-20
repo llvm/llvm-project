@@ -877,7 +877,7 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
   } else {
     std::visit(
         [&](const auto &V) {
-          applyConcreteDbgVariableAttributes(V, DV, VariableDie);
+          applyConcreteDbgVariableAttributes(V, DV, *VariableDie);
         },
         DV.asVariant());
   }
@@ -885,12 +885,12 @@ DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV, bool Abstract) {
 }
 
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
-    const Loc::Single &Single, const DbgVariable &DV, DIE *VariableDie) {
+    const Loc::Single &Single, const DbgVariable &DV, DIE &VariableDie) {
   const DbgValueLoc *DVal = &Single.getValueLoc();
   if (!DVal->isVariadic()) {
     const DbgValueLocEntry *Entry = DVal->getLocEntries().begin();
     if (Entry->isLocation()) {
-      addVariableAddress(DV, *VariableDie, Entry->getLoc());
+      addVariableAddress(DV, VariableDie, Entry->getLoc());
     } else if (Entry->isInt()) {
       auto *Expr = Single.getExpr();
       if (Expr && Expr->getNumElements()) {
@@ -900,23 +900,23 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
         DwarfExpr.addFragmentOffset(Expr);
         DwarfExpr.addUnsignedConstant(Entry->getInt());
         DwarfExpr.addExpression(Expr);
-        addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+        addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
         if (DwarfExpr.TagOffset)
-          addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset,
+          addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset,
                   dwarf::DW_FORM_data1, *DwarfExpr.TagOffset);
       } else
-        addConstantValue(*VariableDie, Entry->getInt(), DV.getType());
+        addConstantValue(VariableDie, Entry->getInt(), DV.getType());
     } else if (Entry->isConstantFP()) {
-      addConstantFPValue(*VariableDie, Entry->getConstantFP());
+      addConstantFPValue(VariableDie, Entry->getConstantFP());
     } else if (Entry->isConstantInt()) {
-      addConstantValue(*VariableDie, Entry->getConstantInt(), DV.getType());
+      addConstantValue(VariableDie, Entry->getConstantInt(), DV.getType());
     } else if (Entry->isTargetIndexLocation()) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
       const DIBasicType *BT = dyn_cast<DIBasicType>(
           static_cast<const Metadata *>(DV.getVariable()->getType()));
       DwarfDebug::emitDebugLocValue(*Asm, BT, *DVal, DwarfExpr);
-      addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+      addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
     }
     return;
   }
@@ -977,25 +977,25 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     return;
 
   // Now attach the location information to the DIE.
-  addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+  addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)
-    addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+    addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
             *DwarfExpr.TagOffset);
 }
 
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
-    const Loc::Multi &Multi, const DbgVariable &DV, DIE *VariableDie) {
-  addLocationList(*VariableDie, dwarf::DW_AT_location,
+    const Loc::Multi &Multi, const DbgVariable &DV, DIE &VariableDie) {
+  addLocationList(VariableDie, dwarf::DW_AT_location,
                   Multi.getDebugLocListIndex());
   auto TagOffset = Multi.getDebugLocListTagOffset();
   if (TagOffset)
-    addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+    addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
             *TagOffset);
 }
 
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
                                                           const DbgVariable &DV,
-                                                          DIE *VariableDie) {
+                                                          DIE &VariableDie) {
   std::optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
@@ -1044,22 +1044,21 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
     // able to correctly interpret address space of the variable
     // address.
     const unsigned NVPTX_ADDR_local_space = 6;
-    addUInt(*VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
+    addUInt(VariableDie, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
             NVPTXAddressSpace.value_or(NVPTX_ADDR_local_space));
   }
-  addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+  addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
   if (DwarfExpr.TagOffset)
-    addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+    addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
             *DwarfExpr.TagOffset);
 }
 
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
     const Loc::EntryValue &EntryValue, const DbgVariable &DV,
-    DIE *VariableDie) {
+    DIE &VariableDie) {
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-  // Emit each expression as: EntryValue(Register) <other ops>
-  // <Fragment>.
+  // Emit each expression as: EntryValue(Register) <other ops> <Fragment>.
   for (auto [Register, Expr] : EntryValue.EntryValues) {
     DwarfExpr.addFragmentOffset(&Expr);
     DIExpressionCursor Cursor(Expr.getElements());
@@ -1068,12 +1067,12 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
         *Asm->MF->getSubtarget().getRegisterInfo(), Cursor, Register);
     DwarfExpr.addExpression(std::move(Cursor));
   }
-  addBlock(*VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+  addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
 }
 
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::Def &Def,
                                                           const DbgVariable &DV,
-                                                          DIE *VariableDie) {
+                                                          DIE &VariableDie) {
   for (auto &DbgDefProxy : Def.DbgDefProxies) {
     DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
     // FIXME(KZHURAVL): Remove EmptyLoc once we implement full
@@ -1082,13 +1081,13 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::Def &Def,
     DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),
                             *this, *ActualLoc, DbgDefProxy.Lifetime,
                             DbgDefProxy.Referrer);
-    addBlock(*VariableDie, dwarf::DW_AT_location,
+    addBlock(VariableDie, dwarf::DW_AT_location,
              ExprAST.finalize() ? ActualLoc : EmptyLoc);
   }
 }
 
 void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
-    const std::monostate &, const DbgVariable &DV, DIE *VariableDie) {}
+    const std::monostate &, const DbgVariable &DV, DIE &VariableDie) {}
 
 DIE *DwarfCompileUnit::constructVariableDIE(DbgVariable &DV,
                                             const LexicalScope &Scope,

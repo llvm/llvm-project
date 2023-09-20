@@ -105,27 +105,27 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// See \ref applyConcreteDbgVariableAttribute
   void applyConcreteDbgVariableAttributes(const Loc::Single &Single,
                                           const DbgVariable &DV,
-                                          DIE *VariableDie);
+                                          DIE &VariableDie);
   /// See \ref applyConcreteDbgVariableAttribute
   void applyConcreteDbgVariableAttributes(const Loc::Multi &Multi,
                                           const DbgVariable &DV,
-                                          DIE *VariableDie);
+                                          DIE &VariableDie);
   /// See \ref applyConcreteDbgVariableAttribute
   void applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
                                           const DbgVariable &DV,
-                                          DIE *VariableDie);
+                                          DIE &VariableDie);
   /// See \ref applyConcreteDbgVariableAttribute
   void applyConcreteDbgVariableAttributes(const Loc::EntryValue &EntryValue,
                                           const DbgVariable &DV,
-                                          DIE *VariableDie);
+                                          DIE &VariableDie);
   /// See \ref applyConcreteDbgVariableAttribute
   void applyConcreteDbgVariableAttributes(const Loc::Def &Def,
                                           const DbgVariable &DV,
-                                          DIE *VariableDie);
+                                          DIE &VariableDie);
   /// See \ref applyConcreteDbgVariableAttribute
   void applyConcreteDbgVariableAttributes(const std::monostate &,
                                           const DbgVariable &DV,
-                                          DIE *VariableDie);
+                                          DIE &VariableDie);
 
   ///@}
 
