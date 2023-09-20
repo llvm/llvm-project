@@ -563,7 +563,7 @@ class LLVM_aarch64_sme_read<string direction>
     : ArmSME_IntrOp<"read." # direction, /*overloadedOperands=*/[],
                     [AllShapesMatch<["vector", "pg", "res"]>,
                      AllElementTypesMatch<["vector", "res"]>],
-                    /*numResults*/1, /*overloadedResults*/[0]>,
+                    /*numResults=*/1, /*overloadedResults=*/[0]>,
       Arguments<(ins Arg<SVEVector, "Vector operand">:$vector,
                      Arg<SVEPredicate, "Vector predicate">:$pg,
                      Arg<I32, "Virtual tile ID">,
