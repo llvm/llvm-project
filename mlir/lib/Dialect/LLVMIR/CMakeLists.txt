@@ -57,6 +57,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRGPUDialect
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )
@@ -78,6 +79,6 @@ add_mlir_dialect_library(MLIRROCDLDialect
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRLLVMDialect
   MLIRSideEffectInterfaces
-  MLIRVectorToLLVM
   )
