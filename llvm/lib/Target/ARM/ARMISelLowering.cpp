@@ -2395,14 +2395,6 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          return isa<Instruction>(U) &&
                                 cast<Instruction>(U)->getParent() == BB;
                        }) > 2;
-      // The indirect call lowering hinders the MachineOutliner's ability to
-      // recognize common sequences. The resulting indirect calls all have the
-      // same target, but the outliner can't tell this a priori, since the
-      // branch target is turned into a register operand, and those can't (yet?)
-      // be assumed to have the same value at runtime.
-      const TargetOptions &Options = DAG.getTarget().Options;
-      if (Options.EnableMachineOutliner)
-        PreferIndirect = false;
     }
   }
   if (isTailCall) {

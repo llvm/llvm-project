@@ -169,6 +169,7 @@ class PRSubscriber:
 <summary>Changes</summary>
 
 {body}
+
 ---
 {patch_link}
 

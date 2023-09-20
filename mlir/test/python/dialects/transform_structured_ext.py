@@ -171,6 +171,16 @@ def testMatchOpNamesList(target):
 
 @run
 @create_sequence
+def testMaskedVectorizeNoArgs(target):
+    structured.MaskedVectorizeOp(target)
+    # CHECK-LABEL: TEST: testMaskedVectorizeNoArgs
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.masked_vectorize
+    # CHECK-NOT:     vector_sizes
+
+
+@run
+@create_sequence
 def testMaskedVectorizeStatic(target):
     structured.MaskedVectorizeOp(target, [16, 4])
     # CHECK-LABEL: TEST: testMaskedVectorizeStatic

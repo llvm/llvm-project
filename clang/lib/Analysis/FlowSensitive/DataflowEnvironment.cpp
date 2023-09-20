@@ -289,11 +289,14 @@ static void insertIfFunction(const Decl &D,
 }
 
 static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  if (!C.getMethodDecl())
+    return nullptr;
   auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
   if (!Body || Body->size() != 1)
     return nullptr;
   if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
-    return dyn_cast<MemberExpr>(RS->getRetValue()->IgnoreParenImpCasts());
+    if (auto *Return = RS->getRetValue())
+      return dyn_cast<MemberExpr>(Return->IgnoreParenImpCasts());
   return nullptr;
 }
 

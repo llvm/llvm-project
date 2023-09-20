@@ -155,7 +155,7 @@ define float @fold_fmul_distributive(float %x, float %y) {
   ret float %fmul
 }
 
-; test to make sure contract is not dropped such that we can generate fma from following sequence.
+; test to make sure contract is not dropped such that we can generate fma from following mul/add
 define amdgpu_kernel void @vec_mul_scalar_add_fma(<2 x float> %a, <2 x float> %b, float %c1, ptr addrspace(1) %inptr) {
 ; GFX906-LABEL: vec_mul_scalar_add_fma:
 ; GFX906:       ; %bb.0:

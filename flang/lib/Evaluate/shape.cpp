@@ -323,10 +323,10 @@ public:
         if (IsActuallyConstant(exprLowerBound)) {
           return std::move(exprLowerBound);
         } else {
-          // If the lower bound of the associated entity is not resolved to
+          // If the lower bound of the associated entity is not resolved to a
           // constant expression at the time of the association, it is unsafe
           // to re-evaluate it later in the associate construct. Statements
-          // in-between may have modified its operands value.
+          // in between may have modified its operands value.
           return ExtentExpr{DescriptorInquiry{std::move(base),
               DescriptorInquiry::Field::LowerBound, dimension_}};
         }
@@ -476,24 +476,23 @@ static MaybeExtentExpr GetNonNegativeExtent(
   }
 }
 
-MaybeExtentExpr GetAssociatedExtent(const NamedEntity &base,
-    const semantics::AssocEntityDetails &assoc, int dimension) {
-  if (auto shape{GetShape(assoc.expr())}) {
-    if (dimension < static_cast<int>(shape->size())) {
-      auto &extent{shape->at(dimension)};
-      if (extent && IsActuallyConstant(*extent)) {
+static MaybeExtentExpr GetAssociatedExtent(
+    const Symbol &symbol, int dimension) {
+  if (const auto *assoc{symbol.detailsIf<semantics::AssocEntityDetails>()};
+      assoc && !assoc->rank()) { // not SELECT RANK case
+    if (auto shape{GetShape(assoc->expr())};
+        shape && dimension < static_cast<int>(shape->size())) {
+      if (auto &extent{shape->at(dimension)};
+          // Don't return a non-constant extent, as the variables that
+          // determine the shape of the selector's expression may change
+          // during execution of the construct.
+          extent && IsActuallyConstant(*extent)) {
         return std::move(extent);
-      } else {
-        // Otherwise, evaluating the associated expression extent expression
-        // after the associate statement is unsafe given statements inside the
-        // associate may have modified the associated expression operands
-        // values.
-        return ExtentExpr{DescriptorInquiry{
-            NamedEntity{base}, DescriptorInquiry::Field::Extent, dimension}};
       }
     }
   }
-  return std::nullopt;
+  return ExtentExpr{DescriptorInquiry{
+      NamedEntity{symbol}, DescriptorInquiry::Field::Extent, dimension}};
 }
 
 MaybeExtentExpr GetExtent(
@@ -508,14 +507,16 @@ MaybeExtentExpr GetExtent(
       if (semantics::IsDescriptor(symbol) && dimension < *assoc->rank()) {
         return ExtentExpr{DescriptorInquiry{
             NamedEntity{base}, DescriptorInquiry::Field::Extent, dimension}};
+      } else {
+        return std::nullopt;
       }
     } else {
-      return GetAssociatedExtent(base, *assoc, dimension);
+      return GetAssociatedExtent(last, dimension);
     }
   }
   if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
     if (IsImpliedShape(symbol) && details->init()) {
-      if (auto shape{GetShape(symbol)}) {
+      if (auto shape{GetShape(symbol, invariantOnly)}) {
         if (dimension < static_cast<int>(shape->size())) {
           return std::move(shape->at(dimension));
         }
@@ -527,7 +528,7 @@ MaybeExtentExpr GetExtent(
           if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
             return extent;
           } else if (details->IsAssumedSize() && j == symbol.Rank()) {
-            return std::nullopt;
+            break;
           } else if (semantics::IsDescriptor(symbol)) {
             return ExtentExpr{DescriptorInquiry{NamedEntity{base},
                 DescriptorInquiry::Field::Extent, dimension}};
@@ -620,7 +621,7 @@ MaybeExtentExpr GetRawUpperBound(
       return std::nullopt;
     } else if (assoc->rank() && dimension >= *assoc->rank()) {
       return std::nullopt;
-    } else if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
+    } else if (auto extent{GetAssociatedExtent(symbol, dimension)}) {
       return ComputeUpperBound(
           GetRawLowerBound(base, dimension), std::move(extent));
     }
@@ -680,11 +681,9 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
             std::move(base), DescriptorInquiry::Field::Extent, dimension}};
         return ComputeUpperBound(std::move(lb), std::move(extent));
       }
-    } else if (assoc->expr()) {
-      if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
-        if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
-          return ComputeUpperBound(std::move(*lb), std::move(extent));
-        }
+    } else if (auto extent{GetAssociatedExtent(symbol, dimension)}) {
+      if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
+        return ComputeUpperBound(std::move(*lb), std::move(extent));
       }
     }
   }
@@ -768,7 +767,7 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
               auto resultShape{(*this)(subp.result())};
               if (resultShape && !useResultSymbolShape_) {
                 // Ensure the shape is constant. Otherwise, it may be referring
-                // to symbols that belong to the subroutine scope and are
+                // to symbols that belong to the function's scope and are
                 // meaningless on the caller side without the related call
                 // expression.
                 for (auto &extent : *resultShape) {
@@ -799,9 +798,6 @@ auto GetShapeHelper::operator()(const Component &component) const -> Result {
   } else if (symbol.has<semantics::ObjectEntityDetails>()) {
     NamedEntity base{Component{component}};
     return CreateShape(rank, base);
-  } else if (symbol.has<semantics::AssocEntityDetails>()) {
-    NamedEntity base{Component{component}};
-    return Result{CreateShape(rank, base)};
   } else {
     return (*this)(symbol);
   }
@@ -878,6 +874,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
     }
     return ScalarShape();
   } else if (const Symbol * symbol{call.proc().GetSymbol()}) {
+    auto restorer{common::ScopedSet(useResultSymbolShape_, false)};
     return (*this)(*symbol);
   } else if (const auto *intrinsic{call.proc().GetSpecificIntrinsic()}) {
     if (intrinsic->name == "shape" || intrinsic->name == "lbound" ||

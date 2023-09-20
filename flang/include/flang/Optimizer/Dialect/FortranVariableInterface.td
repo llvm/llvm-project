@@ -170,6 +170,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::parameter);
     }
 
+    /// Is this a host associated variable?
+    bool isHostAssoc() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::host_assoc);
+    }
+
     /// Interface verifier imlementation for declare operations.
     mlir::LogicalResult verifyDeclareLikeOpImpl(mlir::Value memRef);
 

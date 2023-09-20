@@ -102,7 +102,7 @@ func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 2.000000e+00 : f32
-// CHECK-DAG:       %[[VAL_5:.*]] = bufferization.alloc_tensor() : tensor<10x20xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
+// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty() : tensor<10x20xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<10x20xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<10x20xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<10x20xf32, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>> to memref<?xf32>
@@ -124,7 +124,7 @@ func.func @sparse_simply_dynamic2(%argx: tensor<32x16xf32, #DCSR>) -> tensor<32x
 // CHECK:         }
 func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20xf32, #DCSR> {
   %s = arith.constant 2.0 : f32
-  %xm = bufferization.alloc_tensor() : tensor<10x20xf32, #DCSR>
+  %xm = tensor.empty() : tensor<10x20xf32, #DCSR>
   %0 = linalg.generic #trait_scale
      ins(%arga: tensor<10x20xf32, #CSR>)
       outs(%xm: tensor<10x20xf32, #DCSR>) {
@@ -155,7 +155,7 @@ func.func @sparse_truly_dynamic(%arga: tensor<10x20xf32, #CSR>) -> tensor<10x20x
 // CHECK-DAG:       %[[VAL_TRUE:.*]] = arith.constant true
 // CHECK:           %[[VAL_5:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>>
-// CHECK:           %[[VAL_7:.*]] = bufferization.alloc_tensor(%[[VAL_5]], %[[VAL_6]]) : tensor<?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
+// CHECK:           %[[VAL_7:.*]] = tensor.empty(%[[VAL_5]], %[[VAL_6]]) : tensor<?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>> to memref<?xindex>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<?x?x?xi32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed" ] }>> to memref<?xindex>
@@ -286,7 +286,7 @@ func.func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>
   %d1 = tensor.dim %arga, %c1 : tensor<?x?x?xi32, #SparseTensor>
-  %xinit = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xi32, #DCSR>
+  %xinit = tensor.empty(%d0, %d1) : tensor<?x?xi32, #DCSR>
   %0 = linalg.generic #trait_sumred
     ins(%arga, %argb: tensor<?x?x?xi32, #SparseTensor>,
                       tensor<?x?x?xi32, #SparseTensor>)
@@ -318,7 +318,7 @@ func.func @sumred(%arga: tensor<?x?x?xi32, #SparseTensor>,
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant true
 // CHECK:           %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_7:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
-// CHECK:           %[[VAL_8:.*]] = bufferization.alloc_tensor(%[[VAL_6]], %[[VAL_7]]) : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
+// CHECK:           %[[VAL_8:.*]] = tensor.empty(%[[VAL_6]], %[[VAL_7]]) : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_9:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> to memref<?xindex>
 // CHECK:           %[[VAL_10:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> to memref<?xindex>
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<?x?xf32, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> to memref<?xindex>
@@ -401,7 +401,7 @@ func.func @matmat(%arga: tensor<?x?xf32, #DCSR>,
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arga, %c0 : tensor<?x?xf32, #DCSR>
   %d1 = tensor.dim %argb, %c1 : tensor<?x?xf32, #DCSR>
-  %cinit = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf32, #DCSR>
+  %cinit = tensor.empty(%d0, %d1) : tensor<?x?xf32, #DCSR>
   %0 = linalg.generic #trait_matmat
        ins(%arga, %argb: tensor<?x?xf32, #DCSR>,
                          tensor<?x?xf32, #DCSR>)

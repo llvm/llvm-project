@@ -1555,6 +1555,7 @@ def LLVM_ZeroOp
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 def LLVM_ConstantOp

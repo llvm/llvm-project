@@ -303,7 +303,7 @@ static Operation *isTensorChunkAccessedByUnknownOp(Operation *writeOp,
       // pass-through tensor arguments left from previous level of
       // hoisting.
       if (auto forUser = dyn_cast<scf::ForOp>(user)) {
-        Value arg = forUser.getLoopBody().getArgument(
+        Value arg = forUser.getBody()->getArgument(
             use.getOperandNumber() - forUser.getNumControlOperands() +
             /*iv value*/ 1);
         uses.push_back(arg.getUses());

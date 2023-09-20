@@ -640,6 +640,9 @@ class raw_ostream;
       renumberIndexes(newItr);
       llvm::sort(idx2MBBMap, less_first());
     }
+
+    /// Renumber all indexes using the default instruction distance.
+    void packIndexes();
   };
 
   // Specialize IntervalMapInfo for half-open slot index intervals.

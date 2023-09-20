@@ -19,6 +19,7 @@ class TestVSCode_completions(lldbvscode_testcase.VSCodeTestCaseBase):
             self.assertNotIn(not_expected_item, actual_list)
 
     @skipIfWindows
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test_completions(self):
         """
         Tests the completion request at different breakpoints

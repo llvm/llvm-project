@@ -363,7 +363,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   SmallVector<const DILocalVariable *, 16> DebugFnArgs;
 
   TBAAVerifier TBAAVerifyHelper;
-  ConvergenceVerifier CV;
+  ConvergenceVerifier ConvergenceVerifyHelper;
 
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
 
@@ -408,15 +408,15 @@ public:
     auto FailureCB = [this](const Twine &Message) {
       this->CheckFailed(Message);
     };
-    CV.initialize(OS, FailureCB, F);
+    ConvergenceVerifyHelper.initialize(OS, FailureCB, F);
 
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
     visit(const_cast<Function &>(F));
     verifySiblingFuncletUnwinds();
 
-    if (CV.sawTokens())
-      CV.verify(DT);
+    if (ConvergenceVerifyHelper.sawTokens())
+      ConvergenceVerifyHelper.verify(DT);
 
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
@@ -2867,6 +2867,7 @@ void Verifier::visitFunction(const Function &F) {
 //
 void Verifier::visitBasicBlock(BasicBlock &BB) {
   InstsInThisBlock.clear();
+  ConvergenceVerifyHelper.visit(BB);
 
   // Ensure that basic blocks have terminators!
   Check(BB.getTerminator(), "Basic Block does not have terminator!", &BB);
@@ -3568,7 +3569,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (Call.isInlineAsm())
     verifyInlineAsmCall(Call);
 
-  CV.visit(Call);
+  ConvergenceVerifyHelper.visit(Call);
 
   visitInstruction(Call);
 }
@@ -6298,20 +6299,6 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
   CheckDI(isType(Var->getRawType()), "invalid type ref", Var,
           Var->getRawType());
   verifyFnArgs(DII);
-
-  if (auto *Declare = dyn_cast<DbgDeclareInst>(&DII)) {
-    if (auto *Alloca = dyn_cast_or_null<AllocaInst>(Declare->getAddress())) {
-      DIExpression *Expr = Declare->getExpression();
-      std::optional<uint64_t> FragSize = Declare->getFragmentSizeInBits();
-      std::optional<TypeSize> AllocSize = Alloca->getAllocationSizeInBits(DL);
-      if (FragSize && AllocSize && !AllocSize->isScalable() &&
-          !Expr->isComplex()) {
-        CheckDI(*FragSize <= AllocSize->getFixedValue(),
-                "llvm.dbg.declare has larger fragment size than alloca size ",
-                &DII);
-      }
-    }
-  }
 }
 
 void Verifier::visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI) {

@@ -30,7 +30,7 @@ define void @store_into_undef(ptr %P) {
 
 define void @store_into_null(ptr %P) {
 ; CHECK-LABEL: @store_into_null(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i32 poison, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 124, ptr null

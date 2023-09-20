@@ -190,16 +190,16 @@ transform.sequence failures(propagate) {
 // -----
 
 // CHECK-LABEL:   func.func @scalable_and_fixed_length_tile
-// CHECK:           %[[STEP_0:.*]] = arith.constant 4 : index
-// CHECK:           %[[STEP_1:.*]] = arith.constant 4 : index
 // CHECK:           %[[C4:.*]] = arith.constant 4 : index
 // CHECK:           %[[VS:.*]] = vector.vscale
 // CHECK:           %[[STEP_2:.*]] = arith.muli %[[C4]], %[[VS]] : index
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[C128:.*]] = arith.constant 128 : index
+// CHECK:           %[[STEP_0:.*]] = arith.constant 4 : index
 // CHECK:           scf.for %[[VAL_11:.*]] = %[[C0]] to %[[C128]] step %[[STEP_0]]
 // CHECK:             %[[C0_1:.*]] = arith.constant 0 : index
 // CHECK:             %[[C128_1:.*]] = arith.constant 128 : index
+// CHECK:             %[[STEP_1:.*]] = arith.constant 4 : index
 // CHECK:             scf.for %[[VAL_16:.*]] = %[[C0_1]] to %[[C128_1]] step %[[STEP_1]]
 // CHECK:               %[[C0_2:.*]] = arith.constant 0 : index
 // CHECK:               %[[C128_2:.*]] = arith.constant 128 : index

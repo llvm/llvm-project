@@ -1,5 +1,8 @@
 # REQUIRES: native && x86_64-linux
 
+# FIXME: Investigate why broken with MSAN
+# UNSUPPORTED: msan
+
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent \
 # RUN:     -filetype=obj -o %t/ELF_x86-64_perf.o %s

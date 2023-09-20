@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 include "RISCV.td"
+include "RISCVCombine.td"
 
 def simm12Plus1 : ImmLeaf<XLenVT, [{
     return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;

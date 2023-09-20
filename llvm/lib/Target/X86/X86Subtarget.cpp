@@ -95,12 +95,17 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
       case CodeModel::Large:
         return X86II::MO_GOTOFF;
 
-      // Medium is a hybrid: RIP-rel for code, GOTOFF for DSO local data.
+      // Medium is a hybrid: RIP-rel for code and non-large data, GOTOFF for
+      // remaining DSO local data.
       case CodeModel::Medium:
         // Constant pool and jump table handling pass a nullptr to this
         // function so we need to use isa_and_nonnull.
         if (isa_and_nonnull<Function>(GV))
           return X86II::MO_NO_FLAG; // All code is RIP-relative
+        if (auto *GVar = dyn_cast_or_null<GlobalVariable>(GV)) {
+          if (!TM.isLargeData(GVar))
+            return X86II::MO_NO_FLAG;
+        }
         return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
       }
       llvm_unreachable("invalid code model");

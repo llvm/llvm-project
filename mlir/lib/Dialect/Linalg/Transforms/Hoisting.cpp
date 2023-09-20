@@ -219,8 +219,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
             // Replace all uses of the `transferRead` with the corresponding
             // basic block argument.
             transferRead.getVector().replaceUsesWithIf(
-                newForOp.getLoopBody().getArguments().back(),
-                [&](OpOperand &use) {
+                newForOp.getBody()->getArguments().back(), [&](OpOperand &use) {
                   Operation *user = use.getOwner();
                   return newForOp->isProperAncestor(user);
                 });
