@@ -202,6 +202,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/reserved-identifier>` check, so that it does not
   warn on macros starting with underscore and lowercase letter.
 
+- Improved :doc:`bugprone-undefined-memory-manipulation
+  <clang-tidy/checks/bugprone/undefined-memory-manipulation>` check to support
+  fixed-size arrays of non-trivial types.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   to ignore ``static`` variables declared within the scope of
