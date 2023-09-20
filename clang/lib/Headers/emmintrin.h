@@ -3984,7 +3984,7 @@ static __inline__ void __DEFAULT_FN_ATTRS _mm_stream_si128(void *__p,
 static __inline__ void
     __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
     _mm_stream_si32(void *__p, int __a) {
-  __builtin_ia32_movnti(__p, __a);
+  __builtin_ia32_movnti((int *)__p, __a);
 }
 
 #ifdef __x86_64__
@@ -4004,7 +4004,7 @@ static __inline__ void
 static __inline__ void
     __attribute__((__always_inline__, __nodebug__, __target__("sse2")))
     _mm_stream_si64(void *__p, long long __a) {
-  __builtin_ia32_movnti64(__p, __a);
+  __builtin_ia32_movnti64((long long *)__p, __a);
 }
 #endif
 
