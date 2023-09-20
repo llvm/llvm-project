@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvalues | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -stop-after=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s
 ;
 ; In the C below, 'baz' is re-assigned with a value that gets salvaged, making
 ; it's dbg.value base itself on 'bar', but with a complex expression.

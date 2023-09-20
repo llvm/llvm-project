@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues %s -o - | FileCheck %s
+# RUN: llc -experimental-debug-variable-locations=true -run-pass=livedebugvalues %s -o - | FileCheck %s
 #
 # This test tests tracking variables value transferring from one register to another.
 # This example is altered additionally in order to test transferring from one float register

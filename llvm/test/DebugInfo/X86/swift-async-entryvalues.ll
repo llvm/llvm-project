@@ -1,4 +1,4 @@
-; RUN: llc -stop-after=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
+; RUN: llc -experimental-debug-variable-locations=true -stop-after=livedebugvalues -verify-machineinstrs -march=x86-64 -o - %s | FileCheck %s
 ;
 ; CHECK: DBG_VALUE $r14, 0, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8, DW_OP_deref)
 ; CHECK: DBG_VALUE $r14, 0, {{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16)
