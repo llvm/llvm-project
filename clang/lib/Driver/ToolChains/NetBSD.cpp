@@ -360,7 +360,7 @@ NetBSD::NetBSD(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     // what all logic is needed to emulate the '=' prefix here.
     switch (Triple.getArch()) {
     case llvm::Triple::x86:
-      getFilePaths().push_back("=/usr/lib/i386");
+      getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/i386"));
       break;
     case llvm::Triple::arm:
     case llvm::Triple::armeb:
@@ -369,35 +369,35 @@ NetBSD::NetBSD(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       switch (Triple.getEnvironment()) {
       case llvm::Triple::EABI:
       case llvm::Triple::GNUEABI:
-        getFilePaths().push_back("=/usr/lib/eabi");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/eabi"));
         break;
       case llvm::Triple::EABIHF:
       case llvm::Triple::GNUEABIHF:
-        getFilePaths().push_back("=/usr/lib/eabihf");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/eabihf"));
         break;
       default:
-        getFilePaths().push_back("=/usr/lib/oabi");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/oabi"));
         break;
       }
       break;
     case llvm::Triple::mips64:
     case llvm::Triple::mips64el:
       if (tools::mips::hasMipsAbiArg(Args, "o32"))
-        getFilePaths().push_back("=/usr/lib/o32");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/o32"));
       else if (tools::mips::hasMipsAbiArg(Args, "64"))
-        getFilePaths().push_back("=/usr/lib/64");
+        getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/64"));
       break;
     case llvm::Triple::ppc:
-      getFilePaths().push_back("=/usr/lib/powerpc");
+      getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/powerpc"));
       break;
     case llvm::Triple::sparc:
-      getFilePaths().push_back("=/usr/lib/sparc");
+      getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib/sparc"));
       break;
     default:
       break;
     }
 
-    getFilePaths().push_back("=/usr/lib");
+    getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));
   }
 }
 
@@ -467,11 +467,11 @@ void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   const std::string Candidates[] = {
     // directory relative to build tree
-    getDriver().Dir + "/../include/c++/v1",
+    concat(getDriver().Dir, "/../include/c++/v1"),
     // system install with full upstream path
-    getDriver().SysRoot + "/usr/include/c++/v1",
+    concat(getDriver().SysRoot, "/usr/include/c++/v1"),
     // system install from src
-    getDriver().SysRoot + "/usr/include/c++",
+    concat(getDriver().SysRoot, "/usr/include/c++"),
   };
 
   for (const auto &IncludePath : Candidates) {
@@ -486,7 +486,7 @@ void NetBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 
 void NetBSD::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(getDriver().SysRoot + "/usr/include/g++", "", "",
+  addLibStdCXXIncludePaths(concat(getDriver().SysRoot, "/usr/include/g++"), "", "",
                            DriverArgs, CC1Args);
 }
 
