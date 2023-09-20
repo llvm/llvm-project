@@ -57,8 +57,7 @@ protected:
 
 public:
   ImplCachedBitsValue() = default;
-  ImplCachedBitsValue(ValuePointerType Pointer)
-      : Pointer(Pointer, false) {}
+  ImplCachedBitsValue(ValuePointerType Pointer) : Pointer(Pointer, false) {}
   ImplCachedBitsValue(ValuePointerType Pointer, const KnownBits &Known)
       : Pointer(Pointer, true), Known(Known) {}
 
@@ -71,7 +70,9 @@ public:
       : Pointer(static_cast<ValuePointerType>(Value), true), Known(Known) {}
 
   [[nodiscard]] ValuePointerType getValue() { return Pointer.getPointer(); }
-  [[nodiscard]] ValuePointerType getValue() const { return Pointer.getPointer(); }
+  [[nodiscard]] ValuePointerType getValue() const {
+    return Pointer.getPointer();
+  }
 
   [[nodiscard]] const KnownBits &getKnownBits(const SimplifyQuery &Q) const {
     if (!hasKnownBits())
