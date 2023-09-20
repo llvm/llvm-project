@@ -2046,6 +2046,13 @@ public:
         "Target didn't implement TargetInstrInfo::buildOutlinedFrame!");
   }
 
+  virtual void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator Iter,
+                                  DebugLoc &DL) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::buildClearRegister!");
+  }
+
   /// Insert a call to an outlined function into the program.
   /// Returns an iterator to the spot where we inserted the call. This must be
   /// implemented by the target.
