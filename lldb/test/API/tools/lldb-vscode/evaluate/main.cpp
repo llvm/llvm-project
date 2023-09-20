@@ -18,6 +18,7 @@ struct my_struct {
 int main(int argc, char const *argv[]) {
   my_struct struct1 = {15};
   my_struct *struct2 = new my_struct{16};
+  my_struct *struct3 = nullptr;
   int var1 = 20;
   int var2 = 21;
   int var3 = static_int; // breakpoint 1
@@ -43,6 +44,6 @@ int main(int argc, char const *argv[]) {
   my_bool_vec.push_back(true);
   my_bool_vec.push_back(false); // breakpoint 6
   my_bool_vec.push_back(true); // breakpoint 7
-  
+
   return 0;
 }
