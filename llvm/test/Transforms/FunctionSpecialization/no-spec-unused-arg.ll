@@ -17,4 +17,4 @@ define i32 @g1() {
 ; to be a constant without the need for function specialisation and
 ; the second parameter is unused.
 
-;  CHECK-NOT: @f.
+;  CHECK-NOT: @f.specialized.

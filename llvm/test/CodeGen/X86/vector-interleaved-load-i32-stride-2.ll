@@ -4,14 +4,14 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-SLOW,FALLBACK2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-FAST,FALLBACK3
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1,AVX2,AVX2-ONLY,AVX2-FAST-PERLANE,FALLBACK4
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-SLOW,AVX512F-ONLY-SLOW,FALLBACK5
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-FAST,AVX512F-ONLY-FAST,FALLBACK6
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-SLOW,AVX512DQ-SLOW,FALLBACK7
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512F-FAST,AVX512DQ-FAST,FALLBACK8
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-SLOW,AVX512BW-ONLY-SLOW,FALLBACK9
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-FAST,AVX512BW-ONLY-FAST,FALLBACK10
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-SLOW,AVX512DQBW-SLOW,FALLBACK11
-; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512BW-FAST,AVX512DQBW-FAST,FALLBACK12
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-SLOW,AVX512F-SLOW,AVX512F-ONLY-SLOW,FALLBACK5
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-FAST,AVX512F-FAST,AVX512F-ONLY-FAST,FALLBACK6
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-SLOW,AVX512F-SLOW,AVX512DQ-SLOW,FALLBACK7
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512F,AVX512-FAST,AVX512F-FAST,AVX512DQ-FAST,FALLBACK8
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-SLOW,AVX512BW-SLOW,AVX512BW-ONLY-SLOW,FALLBACK9
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-FAST,AVX512BW-FAST,AVX512BW-ONLY-FAST,FALLBACK10
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-SLOW,AVX512BW-SLOW,AVX512DQBW-SLOW,FALLBACK11
+; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512vl,+avx512dq,+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX512,AVX512BW,AVX512-FAST,AVX512BW-FAST,AVX512DQBW-FAST,FALLBACK12
 
 ; These patterns are produced by LoopVectorizer for interleaved loads.
 
@@ -124,49 +124,27 @@ define void @load_i32_stride2_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 ; AVX2-ONLY-NEXT:    vzeroupper
 ; AVX2-ONLY-NEXT:    retq
 ;
-; AVX512F-SLOW-LABEL: load_i32_stride2_vf8:
-; AVX512F-SLOW:       # %bb.0:
-; AVX512F-SLOW-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512F-SLOW-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512F-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,3],mem[1,3],ymm1[5,7],mem[5,7]
-; AVX512F-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,1,3]
-; AVX512F-SLOW-NEXT:    vpmovqd %zmm0, (%rsi)
-; AVX512F-SLOW-NEXT:    vmovaps %ymm1, (%rdx)
-; AVX512F-SLOW-NEXT:    vzeroupper
-; AVX512F-SLOW-NEXT:    retq
+; AVX512-SLOW-LABEL: load_i32_stride2_vf8:
+; AVX512-SLOW:       # %bb.0:
+; AVX512-SLOW-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-SLOW-NEXT:    vmovaps (%rdi), %ymm1
+; AVX512-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,3],mem[1,3],ymm1[5,7],mem[5,7]
+; AVX512-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; AVX512-SLOW-NEXT:    vpmovqd %zmm0, (%rsi)
+; AVX512-SLOW-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512-SLOW-NEXT:    vzeroupper
+; AVX512-SLOW-NEXT:    retq
 ;
-; AVX512F-FAST-LABEL: load_i32_stride2_vf8:
-; AVX512F-FAST:       # %bb.0:
-; AVX512F-FAST-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512F-FAST-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512F-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15]
-; AVX512F-FAST-NEXT:    vpermi2d 32(%rdi), %ymm1, %ymm2
-; AVX512F-FAST-NEXT:    vpmovqd %zmm0, (%rsi)
-; AVX512F-FAST-NEXT:    vmovdqa %ymm2, (%rdx)
-; AVX512F-FAST-NEXT:    vzeroupper
-; AVX512F-FAST-NEXT:    retq
-;
-; AVX512BW-SLOW-LABEL: load_i32_stride2_vf8:
-; AVX512BW-SLOW:       # %bb.0:
-; AVX512BW-SLOW-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BW-SLOW-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512BW-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,3],mem[1,3],ymm1[5,7],mem[5,7]
-; AVX512BW-SLOW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[0,2,1,3]
-; AVX512BW-SLOW-NEXT:    vpmovqd %zmm0, (%rsi)
-; AVX512BW-SLOW-NEXT:    vmovaps %ymm1, (%rdx)
-; AVX512BW-SLOW-NEXT:    vzeroupper
-; AVX512BW-SLOW-NEXT:    retq
-;
-; AVX512BW-FAST-LABEL: load_i32_stride2_vf8:
-; AVX512BW-FAST:       # %bb.0:
-; AVX512BW-FAST-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512BW-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15]
-; AVX512BW-FAST-NEXT:    vpermi2d 32(%rdi), %ymm1, %ymm2
-; AVX512BW-FAST-NEXT:    vpmovqd %zmm0, (%rsi)
-; AVX512BW-FAST-NEXT:    vmovdqa %ymm2, (%rdx)
-; AVX512BW-FAST-NEXT:    vzeroupper
-; AVX512BW-FAST-NEXT:    retq
+; AVX512-FAST-LABEL: load_i32_stride2_vf8:
+; AVX512-FAST:       # %bb.0:
+; AVX512-FAST-NEXT:    vmovdqa64 (%rdi), %zmm0
+; AVX512-FAST-NEXT:    vmovdqa (%rdi), %ymm1
+; AVX512-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15]
+; AVX512-FAST-NEXT:    vpermi2d 32(%rdi), %ymm1, %ymm2
+; AVX512-FAST-NEXT:    vpmovqd %zmm0, (%rsi)
+; AVX512-FAST-NEXT:    vmovdqa %ymm2, (%rdx)
+; AVX512-FAST-NEXT:    vzeroupper
+; AVX512-FAST-NEXT:    retq
   %wide.vec = load <16 x i32>, ptr %in.vec, align 64
   %strided.vec0 = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %strided.vec1 = shufflevector <16 x i32> %wide.vec, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -761,15 +739,19 @@ define void @load_i32_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; AVX2-FAST-PERLANE: {{.*}}
 ; AVX2-SLOW: {{.*}}
 ; AVX512BW: {{.*}}
+; AVX512BW-FAST: {{.*}}
 ; AVX512BW-ONLY-FAST: {{.*}}
 ; AVX512BW-ONLY-SLOW: {{.*}}
+; AVX512BW-SLOW: {{.*}}
 ; AVX512DQ-FAST: {{.*}}
 ; AVX512DQ-SLOW: {{.*}}
 ; AVX512DQBW-FAST: {{.*}}
 ; AVX512DQBW-SLOW: {{.*}}
 ; AVX512F: {{.*}}
+; AVX512F-FAST: {{.*}}
 ; AVX512F-ONLY-FAST: {{.*}}
 ; AVX512F-ONLY-SLOW: {{.*}}
+; AVX512F-SLOW: {{.*}}
 ; FALLBACK0: {{.*}}
 ; FALLBACK1: {{.*}}
 ; FALLBACK10: {{.*}}

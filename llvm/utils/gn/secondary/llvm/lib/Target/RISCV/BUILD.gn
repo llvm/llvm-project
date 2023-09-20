@@ -61,8 +61,8 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenCompressInstEmitter",
     ":RISCVGenDAGISel",
     ":RISCVGenGlobalISel",
-    ":RISCVGenO0PreLegalizeGICombiner",
     ":RISCVGenMCPseudoLowering",
+    ":RISCVGenO0PreLegalizeGICombiner",
     ":RISCVGenPreLegalizeGICombiner",
     ":RISCVGenRegisterBank",
 
@@ -92,6 +92,7 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
     "RISCVCodeGenPrepare.cpp",
+    "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",

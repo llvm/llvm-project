@@ -2,7 +2,7 @@
 
 ; Check that we don't crash and specialise on a function call with byval attribute.
 
-; CHECK-NOT: wombat.{{[0-9]+}}
+; CHECK-NOT: wombat.specialized.{{[0-9]+}}
 
 declare ptr @quux()
 declare ptr @eggs()

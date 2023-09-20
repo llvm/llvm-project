@@ -116,6 +116,8 @@ private:
 
   void clearArguments();
 
+  void deleteBodyImpl(bool ShouldDrop);
+
   /// Function ctor - If the (optional) Module argument is specified, the
   /// function is automatically inserted into the end of the function list for
   /// the module.
@@ -667,7 +669,7 @@ public:
   /// the linkage to external.
   ///
   void deleteBody() {
-    dropAllReferences();
+    deleteBodyImpl(/*ShouldDrop=*/false);
     setLinkage(ExternalLinkage);
   }
 
@@ -882,7 +884,9 @@ public:
   /// function, dropping all references deletes the entire body of the function,
   /// including any contained basic blocks.
   ///
-  void dropAllReferences();
+  void dropAllReferences() {
+    deleteBodyImpl(/*ShouldDrop=*/true);
+  }
 
   /// hasAddressTaken - returns true if there are any uses of this function
   /// other than direct calls or invokes to it, or blockaddress expressions.

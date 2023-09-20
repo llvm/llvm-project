@@ -5320,13 +5320,18 @@ LogicalResult ConstantMaskOp::verify() {
   // Verify that each array attr element is in bounds of corresponding vector
   // result dimension size.
   auto resultShape = resultType.getShape();
+  auto resultScalableDims = resultType.getScalableDims();
   SmallVector<int64_t, 4> maskDimSizes;
-  for (const auto &it : llvm::enumerate(getMaskDimSizes())) {
-    int64_t attrValue = llvm::cast<IntegerAttr>(it.value()).getInt();
-    if (attrValue < 0 || attrValue > resultShape[it.index()])
+  for (const auto [index, intAttr] : llvm::enumerate(getMaskDimSizes())) {
+    int64_t maskDimSize = llvm::cast<IntegerAttr>(intAttr).getInt();
+    if (maskDimSize < 0 || maskDimSize > resultShape[index])
       return emitOpError(
           "array attr of size out of bounds of vector result dimension size");
-    maskDimSizes.push_back(attrValue);
+    if (resultScalableDims[index] && maskDimSize != 0 &&
+        maskDimSize != resultShape[index])
+      return emitOpError(
+          "only supports 'none set' or 'all set' scalable dimensions");
+    maskDimSizes.push_back(maskDimSize);
   }
   // Verify that if one mask dim size is zero, they all should be zero (because
   // the mask region is a conjunction of each mask dimension interval).
@@ -5335,14 +5340,6 @@ LogicalResult ConstantMaskOp::verify() {
   if (anyZeros && !allZeros)
     return emitOpError("expected all mask dim sizes to be zeros, "
                        "as a result of conjunction with zero mask dim");
-  // Verify that if the mask type is scalable, dimensions should be zero because
-  // constant scalable masks can only be defined for the "none set" or "all set"
-  // cases, and there is no VLA way to define an "all set" case for
-  // `vector.constant_mask`. In the future, a convention could be established
-  // to decide if a specific dimension value could be considered as "all set".
-  if (resultType.isScalable() &&
-      llvm::cast<IntegerAttr>(getMaskDimSizes()[0]).getInt() != 0)
-    return emitOpError("expected mask dim sizes for scalable masks to be 0");
   return success();
 }
 

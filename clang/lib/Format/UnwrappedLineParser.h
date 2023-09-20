@@ -125,8 +125,6 @@ private:
   void parseFile();
   bool precededByCommentOrPPDirective() const;
   bool parseLevel(const FormatToken *OpeningBrace = nullptr,
-                  bool CanContainBracedList = true,
-                  TokenType NextLBracesType = TT_Unknown,
                   IfStmtKind *IfKind = nullptr,
                   FormatToken **IfLeftBrace = nullptr);
   bool mightFitOnOneLine(UnwrappedLine &Line,
@@ -134,11 +132,8 @@ private:
   FormatToken *parseBlock(bool MustBeDeclaration = false,
                           unsigned AddLevels = 1u, bool MunchSemi = true,
                           bool KeepBraces = true, IfStmtKind *IfKind = nullptr,
-                          bool UnindentWhitesmithsBraces = false,
-                          bool CanContainBracedList = true,
-                          TokenType NextLBracesType = TT_Unknown);
-  void parseChildBlock(bool CanContainBracedList = true,
-                       TokenType NextLBracesType = TT_Unknown);
+                          bool UnindentWhitesmithsBraces = false);
+  void parseChildBlock();
   void parsePPDirective();
   void parsePPDefine();
   void parsePPIf(bool IfDef);
@@ -147,8 +142,7 @@ private:
   void parsePPPragma();
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
-  void parseStructuralElement(bool IsTopLevel = false,
-                              TokenType NextLBracesType = TT_Unknown,
+  void parseStructuralElement(const FormatToken *OpeningBrace = nullptr,
                               IfStmtKind *IfKind = nullptr,
                               FormatToken **IfLeftBrace = nullptr,
                               bool *HasDoWhile = nullptr,

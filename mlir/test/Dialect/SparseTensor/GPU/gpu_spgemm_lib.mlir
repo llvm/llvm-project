@@ -5,7 +5,7 @@
 
 // CHECK-LABEL: func.func @matmulCSR(
 // CHECK-SAME:      %[[VAL_0:.*0]]: tensor<8x8xf32, #{{.*}}>,
-// CHECK-SAME:      %[[VAL_1:.*1]]: tensor<8x8xf32, #{{.*}}>
+// CHECK-SAME:      %[[VAL_1:.*1]]: tensor<8x8xf32, #{{.*}}>) -> tensor<8x8xf32, #{{.*}}> {
 // CHECK:           %[[VAL_2:.*]] = arith.constant 8 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 9 : index
@@ -72,12 +72,24 @@
 // CHECK:           %[[VAL_88:.*]] = gpu.memcpy async {{\[}}%[[VAL_87]]] %[[VAL_81]], %[[VAL_49]] : memref<?xindex>, memref<?xindex>
 // CHECK:           %[[VAL_89:.*]] = gpu.memcpy async {{\[}}%[[VAL_88]]] %[[VAL_82]], %[[VAL_75]] : memref<?xindex>, memref<?xindex>
 // CHECK:           %[[VAL_90:.*]] = gpu.memcpy async {{\[}}%[[VAL_89]]] %[[VAL_83]], %[[VAL_77]] : memref<?xf32>, memref<?xf32>
-// CHECK:           gpu.wait {{\[}}%[[VAL_90]]]
-// CHECK:           %[[VAL_91:.*]] = bufferization.to_tensor %[[VAL_83]] : memref<?xf32>
-// CHECK:           %[[VAL_92:.*]] = bufferization.to_tensor %[[VAL_81]] : memref<?xindex>
-// CHECK:           %[[VAL_93:.*]] = bufferization.to_tensor %[[VAL_82]] : memref<?xindex>
-// CHECK:           %[[VAL_94:.*]] = sparse_tensor.pack %[[VAL_91]], %[[VAL_92]], %[[VAL_93]] : tensor<?xf32>, tensor<?xindex>, tensor<?xindex> to tensor<8x8xf32, #{{.*}}>
-// CHECK:           return %[[VAL_94]] : tensor<8x8xf32, #{{.*}}>
+// CHECK:           %[[VAL_91:.*]] = gpu.dealloc async {{.*}} : memref<?xindex>
+// CHECK:           %[[VAL_92:.*]] = gpu.dealloc async {{.*}} : memref<?xindex>
+// CHECK:           %[[VAL_93:.*]] = gpu.dealloc async {{.*}} : memref<?xf32>
+// CHECK:           %[[VAL_94:.*]] = gpu.dealloc async {{.*}} : memref<?xindex>
+// CHECK:           %[[VAL_95:.*]] = gpu.dealloc async {{.*}} : memref<?xindex>
+// CHECK:           %[[VAL_96:.*]] = gpu.dealloc async {{.*}} : memref<?xf32>
+// CHECK:           %[[VAL_97:.*]] = gpu.dealloc async {{.*}} : memref<?xindex>
+// CHECK:           %[[VAL_98:.*]] = gpu.dealloc async {{.*}} : memref<?xindex>
+// CHECK:           %[[VAL_99:.*]] = gpu.dealloc async {{.*}} : memref<?xf32>
+// CHECK:           %[[VAL_a0:.*]] = gpu.dealloc async {{.*}} : memref<?xi8>
+// CHECK:           %[[VAL_a1:.*]] = gpu.dealloc async {{.*}} : memref<?xi8>
+// CHECK:           gpu.wait [%[[VAL_a1]]]
+// CHECK:           %[[VAL_a2:.*]] = bufferization.to_tensor %[[VAL_83]] : memref<?xf32>
+// CHECK:           %[[VAL_a3:.*]] = bufferization.to_tensor %[[VAL_81]] : memref<?xindex>
+// CHECK:           %[[VAL_a4:.*]] = bufferization.to_tensor %[[VAL_82]] : memref<?xindex>
+// CHECK:           %[[VAL_a5:.*]] = sparse_tensor.pack %[[VAL_a2]], %[[VAL_a3]], %[[VAL_a4]] : tensor<?xf32>, tensor<?xindex>, tensor<?xindex> to tensor<8x8xf32, #{{.*}}>
+// CHECK:           return %[[VAL_a5]] : tensor<8x8xf32, #{{.*}}>
+// CHECK:         }
 func.func @matmulCSR(%A: tensor<8x8xf32, #CSR>,
                      %B: tensor<8x8xf32, #CSR>) -> tensor<8x8xf32, #CSR> {
   %init = bufferization.alloc_tensor() : tensor<8x8xf32, #CSR>

@@ -152,8 +152,9 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   std::optional<Value> inductionVar = candidateLoop.getSingleInductionVar();
   std::optional<OpFoldResult> lowerBound = candidateLoop.getSingleLowerBound();
   std::optional<OpFoldResult> singleStep = candidateLoop.getSingleStep();
-  if (!inductionVar || !lowerBound || !singleStep) {
-    LLVM_DEBUG(DBGS() << "Skip alloc: no single iv, lb or step\n");
+  if (!inductionVar || !lowerBound || !singleStep ||
+      !llvm::hasSingleElement(candidateLoop.getLoopRegions())) {
+    LLVM_DEBUG(DBGS() << "Skip alloc: no single iv, lb, step or region\n");
     return failure();
   }
 
@@ -184,7 +185,8 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
 
   // 3. Within the loop, build the modular leading index (i.e. each loop
   // iteration %iv accesses slice ((%iv - %lb) / %step) % %mb_factor).
-  rewriter.setInsertionPointToStart(&candidateLoop.getLoopBody().front());
+  rewriter.setInsertionPointToStart(
+      &candidateLoop.getLoopRegions().front()->front());
   Value ivVal = *inductionVar;
   Value lbVal = getValueOrCreateConstantIndexOp(rewriter, loc, *lowerBound);
   Value stepVal = getValueOrCreateConstantIndexOp(rewriter, loc, *singleStep);

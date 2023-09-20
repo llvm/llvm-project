@@ -182,7 +182,7 @@ private:
   /// Each row of the Matrix represents a single division dividend. The
   /// `i^th` row represents the dividend of the variable at `divOffset + i`
   /// in the constraint system (and the `i^th` local variable).
-  Matrix dividends;
+  IntMatrix dividends;
 
   /// Denominators of each division. If a denominator of a division is `0`, the
   /// division variable is considered to not have a division representation.

@@ -1475,8 +1475,16 @@ bool IsObjectPointer(const Symbol *original) {
 
 bool IsAllocatableOrObjectPointer(const Symbol *original) {
   if (original) {
-    const Symbol &symbol{GetAssociationRoot(*original)};
-    return IsAllocatable(symbol) || (IsPointer(symbol) && !IsProcedure(symbol));
+    const Symbol &ultimate{original->GetUltimate()};
+    if (const auto *assoc{ultimate.detailsIf<AssocEntityDetails>()}) {
+      // Only SELECT RANK construct entities can be ALLOCATABLE/POINTER.
+      return (assoc->rank() || assoc->IsAssumedSize() ||
+                 assoc->IsAssumedRank()) &&
+          IsAllocatableOrObjectPointer(UnwrapWholeSymbolDataRef(assoc->expr()));
+    } else {
+      return IsAllocatable(ultimate) ||
+          (IsPointer(ultimate) && !IsProcedure(ultimate));
+    }
   } else {
     return false;
   }
