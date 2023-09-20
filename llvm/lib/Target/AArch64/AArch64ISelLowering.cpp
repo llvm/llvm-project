@@ -20241,8 +20241,9 @@ static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
     return SDValue();
   unsigned ShiftValue = SrlOp1->getZExtValue();
 
-  if (ShiftValue > ResVT.getScalarSizeInBits())
-    return SDValue();
+  uint64_t EltSize = ResVT.getScalarSizeInBits();
+  if (ShiftValue > EltSize)
+    ShiftValue = EltSize;
 
   SDValue Add = Srl->getOperand(0);
   if (Add->getOpcode() != ISD::ADD || !Add->hasOneUse())

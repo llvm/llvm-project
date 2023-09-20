@@ -100,6 +100,23 @@ define void @neg_add_lshr_rshrnb_h_0(ptr %ptr, ptr %dst, i64 %index){
   ret void
 }
 
+define void @neg_zero_shift(ptr %ptr, ptr %dst, i64 %index){
+; CHECK-LABEL: neg_zero_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    add z0.s, z0.s, #1 // =0x1
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1, x2, lsl #1]
+; CHECK-NEXT:    ret
+  %load = load <vscale x 4 x i32>, ptr %ptr, align 2
+  %1 = add <vscale x 4 x i32> %load, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
+  %2 = lshr <vscale x 4 x i32> %1, trunc (<vscale x 4 x i64> shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 0, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer) to <vscale x 4 x i32>)
+  %3 = trunc <vscale x 4 x i32> %2 to <vscale x 4 x i16>
+  %4 = getelementptr inbounds i16, ptr %dst, i64 %index
+  store <vscale x 4 x i16> %3, ptr %4, align 1
+  ret void
+}
+
 define void @wide_add_shift_add_rshrnb_b(ptr %dest, i64 %index, <vscale x 16 x i16> %arg1){
 ; CHECK-LABEL: wide_add_shift_add_rshrnb_b:
 ; CHECK:       // %bb.0:
