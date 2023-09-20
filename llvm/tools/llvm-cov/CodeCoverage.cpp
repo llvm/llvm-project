@@ -105,11 +105,6 @@ private:
                             const MemoryBuffer &File,
                             CoverageData &CoverageInfo);
 
-  /// Create source views for the MCDC records.
-  void attachMCDCSubViews(SourceCoverageView &View, StringRef SourceName,
-                          ArrayRef<MCDCRecord> MCDCRecords,
-                          const MemoryBuffer &File, CoverageData &CoverageInfo);
-
   /// Create the source view of a particular function.
   std::unique_ptr<SourceCoverageView>
   createFunctionView(const FunctionRecord &Function,
@@ -357,36 +352,6 @@ void CodeCoverageTool::attachBranchSubViews(SourceCoverageView &View,
   }
 }
 
-void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
-                                          StringRef SourceName,
-                                          ArrayRef<MCDCRecord> MCDCRecords,
-                                          const MemoryBuffer &File,
-                                          CoverageData &CoverageInfo) {
-  if (!ViewOpts.ShowMCDC)
-    return;
-
-  const auto *NextRecord = MCDCRecords.begin();
-  const auto *EndRecord = MCDCRecords.end();
-
-  // Group and process MCDC records that have the same line number into the
-  // same subview.
-  while (NextRecord != EndRecord) {
-    std::vector<MCDCRecord> ViewMCDCRecords;
-    unsigned CurrentLine = NextRecord->getDecisionRegion().LineEnd;
-
-    while (NextRecord != EndRecord &&
-           CurrentLine == NextRecord->getDecisionRegion().LineEnd) {
-      ViewMCDCRecords.push_back(*NextRecord++);
-    }
-
-    if (!ViewMCDCRecords.empty()) {
-      auto SubView = SourceCoverageView::create(SourceName, File, ViewOpts,
-                                                std::move(CoverageInfo));
-      View.addMCDCRecord(CurrentLine, ViewMCDCRecords, std::move(SubView));
-    }
-  }
-}
-
 std::unique_ptr<SourceCoverageView>
 CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
                                      const CoverageMapping &Coverage) {
@@ -399,15 +364,12 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
 
   auto Branches = FunctionCoverage.getBranches();
   auto Expansions = FunctionCoverage.getExpansions();
-  auto MCDCRecords = FunctionCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(DC.demangle(Function.Name),
                                          SourceBuffer.get(), ViewOpts,
                                          std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
   attachBranchSubViews(*View, DC.demangle(Function.Name), Branches,
                        SourceBuffer.get(), FunctionCoverage);
-  attachMCDCSubViews(*View, DC.demangle(Function.Name), MCDCRecords,
-                     SourceBuffer.get(), FunctionCoverage);
 
   return View;
 }
@@ -424,14 +386,11 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
 
   auto Branches = FileCoverage.getBranches();
   auto Expansions = FileCoverage.getExpansions();
-  auto MCDCRecords = FileCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
                                          ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
   attachBranchSubViews(*View, SourceFile, Branches, SourceBuffer.get(),
                        FileCoverage);
-  attachMCDCSubViews(*View, SourceFile, MCDCRecords, SourceBuffer.get(),
-                     FileCoverage);
   if (!ViewOpts.ShowFunctionInstantiations)
     return View;
 
@@ -449,14 +408,11 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
         auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
         auto SubViewExpansions = SubViewCoverage.getExpansions();
         auto SubViewBranches = SubViewCoverage.getBranches();
-        auto SubViewMCDCRecords = SubViewCoverage.getMCDCRecords();
         SubView = SourceCoverageView::create(
             Funcname, SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
         attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
         attachBranchSubViews(*SubView, SourceFile, SubViewBranches,
                              SourceBuffer.get(), SubViewCoverage);
-        attachMCDCSubViews(*SubView, SourceFile, SubViewMCDCRecords,
-                           SourceBuffer.get(), SubViewCoverage);
       }
 
       unsigned FileID = Function->CountedRegions.front().FileID;
@@ -796,10 +752,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::desc("Show branch condition statistics in summary table"),
       cl::init(true));
 
-  cl::opt<bool> MCDCSummary("show-mcdc-summary", cl::Optional,
-                            cl::desc("Show MCDC statistics in summary table"),
-                            cl::init(false));
-
   cl::opt<bool> InstantiationSummary(
       "show-instantiation-summary", cl::Optional,
       cl::desc("Show instantiation statistics in summary table"));
@@ -971,7 +923,6 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       ::exit(0);
     }
 
-    ViewOpts.ShowMCDCSummary = MCDCSummary;
     ViewOpts.ShowBranchSummary = BranchSummary;
     ViewOpts.ShowRegionSummary = RegionSummary;
     ViewOpts.ShowInstantiationSummary = InstantiationSummary;
@@ -1016,11 +967,6 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
                  clEnumValN(CoverageViewOptions::BranchOutputType::Percent,
                             "percent", "Show True/False percent")),
       cl::init(CoverageViewOptions::BranchOutputType::Off));
-
-  cl::opt<bool> ShowMCDC(
-      "show-mcdc", cl::Optional,
-      cl::desc("Show the MCDC Coverage for each applicable boolean expression"),
-      cl::cat(ViewCategory));
 
   cl::opt<bool> ShowBestLineRegionsCounts(
       "show-line-counts-or-regions", cl::Optional,
@@ -1117,7 +1063,6 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowExpandedRegions = ShowExpansions;
   ViewOpts.ShowBranchCounts =
       ShowBranches == CoverageViewOptions::BranchOutputType::Count;
-  ViewOpts.ShowMCDC = ShowMCDC;
   ViewOpts.ShowBranchPercents =
       ShowBranches == CoverageViewOptions::BranchOutputType::Percent;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;

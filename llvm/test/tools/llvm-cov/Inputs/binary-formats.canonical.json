@@ -1,11 +1,9 @@
-CHECK: {
-  "data": CHECK - SAME: [
-    {
+CHECK: {"data":
+CHECK-SAME: [{
 CHECK-SAME:  "files":[
 CHECK-SAME:    {"branches":[],
 CHECK-SAME:     "expansions":[],
 CHECK-SAME:     "filename":"/tmp/binary-formats.c",
-CHECK-SAME:     "mcdc_records":[],
 CHECK-SAME:     "segments":
 CHECK-SAME:        4,40,100,true,true,false
 CHECK-SAME:        4,42,0,false,false,false
@@ -13,13 +11,11 @@ CHECK-SAME:     "summary":{"branches":{"count":0,"covered":0,"notcovered":0,"per
 CHECK-SAME:                "functions":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:                "instantiations":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:                "lines":{"count":1,"covered":1,"percent":100},
-CHECK-SAME:                "mcdc":{"count":0,"covered":0,"notcovered":0,"percent":0},
 CHECK-SAME:                "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
 CHECK-SAME:  ],
 CHECK-SAME:  "functions":[
 CHECK-SAME:    {"branches":[],
-CHECK-SAME:     "count":100,"filenames":["/tmp/binary-formats.c"],
-CHECK-SAME:     "mcdc_records":[],"name":"main",
+CHECK-SAME:     "count":100,"filenames":["/tmp/binary-formats.c"],"name":"main",
 CHECK-SAME:     "regions":
 CHECK-SAME:        4,40,4,42,100,0,0,0
 CHECK-SAME:    }
@@ -29,7 +25,6 @@ CHECK-SAME:    {"branches":{"count":0,"covered":0,"notcovered":0,"percent":0},
 CHECK-SAME:     "functions":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:     "instantiations":{"count":1,"covered":1,"percent":100},
 CHECK-SAME:     "lines":{"count":1,"covered":1,"percent":100},
-CHECk-SAME:     "mcdc":{"count":0,"covered":0,"notcovered":0,"percent":0},
 CHECK-SAME:     "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
 CHECK-SAME: ],
 CHECK-SAME: "type":"llvm.coverage.json.export"
