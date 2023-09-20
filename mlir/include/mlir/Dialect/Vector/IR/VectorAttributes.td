@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOR_ATTRIBUTES
 #define MLIR_DIALECT_VECTOR_IR_VECTOR_ATTRIBUTES
 
-include "Vector.td"
+include "mlir/Dialect/Vector/IR/Vector.td"
 include "mlir/IR/EnumAttr.td"
 
 // The "kind" of combining function for contractions and reductions.

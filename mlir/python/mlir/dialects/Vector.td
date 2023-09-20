@@ -1,4 +1,4 @@
-//===-- VectorOps.td - Entry point for VectorOps bind ------*- tablegen -*-===//
+//===-- Vector.td - Entry point for Vector bindings --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef PYTHON_BINDINGS_VECTOR_OPS
-#define PYTHON_BINDINGS_VECTOR_OPS
+#ifndef PYTHON_BINDINGS_VECTOR
+#define PYTHON_BINDINGS_VECTOR
 
-include "mlir/Dialect/Vector/IR/VectorOps.td"
+include "mlir/Dialect/Vector/IR/Vector.td"
 
-#endif
+#endif // PYTHON_BINDINGS_VECTOR
