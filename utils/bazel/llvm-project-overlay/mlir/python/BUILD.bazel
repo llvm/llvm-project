@@ -1233,6 +1233,25 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "SparseTensorTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=sparse_tensor_transform",
+            ],
+            "mlir/dialects/_sparse_tensor_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/SparseTensorTransformOps.td",
+    deps = [
+        "//mlir:SparseTensorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "TensorTransformOpsPyGen",
     tbl_outs = [
         (
@@ -1309,6 +1328,7 @@ filegroup(
         ":LoopTransformOpsPyGen",
         ":MemRefTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
+        ":SparseTensorTransformOpsPyGen",
         ":StructureTransformEnumPyGen",
         ":StructuredTransformOpsPyGen",
         ":TensorTransformOpsPyGen",
