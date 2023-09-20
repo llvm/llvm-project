@@ -430,8 +430,16 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
 
   HWAddressSanitizer HWASan(M, Options.CompileKernel, Options.Recover, SSI);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M)
+  for (Function &F : M) {
     HWASan.sanitizeFunction(F, FAM);
+    // After sanitizing F - which may split blocks via insertShadowTagCheck -
+    // some cached analyses are invalid. This matters because
+    // sanitizeFunction(F', FAM) may indirectly call the global stack safety
+    // analysis, hence we need to make sure the analyses of F are up to date.
+    PreservedAnalyses PA = PreservedAnalyses::all();
+    PA.abandon<DominatorTreeAnalysis>();
+    FAM.invalidate(F, PA);
+  }
 
   PreservedAnalyses PA = PreservedAnalyses::none();
   // GlobalsAA is considered stateless and does not get invalidated unless
