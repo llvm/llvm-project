@@ -1,10 +1,10 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK:     %[[#Int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1 {{$}}
+; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1{{$}}
 ; CHECK-DAG: %[[#MemSem_Relaxed:]] = OpConstant %[[#Int]] 0
 ; CHECK-DAG: %[[#MemSem_Acquire:]] = OpConstant %[[#Int]] 2
-; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4 {{$}}
+; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4{{$}}
 ; CHECK-DAG: %[[#MemSem_AcquireRelease:]] = OpConstant %[[#Int]] 8
 ; CHECK-DAG: %[[#MemSem_SequentiallyConsistent:]] = OpConstant %[[#Int]] 16
 ; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
