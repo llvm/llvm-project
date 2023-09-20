@@ -140,7 +140,7 @@ private:
 ///         return Error(std::move(M));
 ///     });
 ///   // Note - The error passed to handleErrors will be marked as checked. If
-///   // there is no matched handler, a new error with the same playload is
+///   // there is no matched handler, a new error with the same payload is
 ///   // created and returned.
 ///   // The handlers take the error checked by handleErrors as an argument,
 ///   // which can be used to retrieve more information. If a new error is
