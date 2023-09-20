@@ -373,7 +373,7 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
       "description of short granule tags\n");
 }
 
-static uptr GetTopPc(StackTrace *stack) {
+static uptr GetTopPc(const StackTrace *stack) {
   return stack->size ? StackTrace::GetPreviousInstructionPc(stack->trace[0])
                      : 0;
 }
@@ -417,12 +417,12 @@ class BaseReport {
   void PrintAddressDescription() const;
   void PrintHeapOrGlobalCandidate() const;
 
-  ScopedReport scoped_report;
-  StackTrace *stack = nullptr;
-  uptr tagged_addr = 0;
-  uptr access_size = 0;
-  uptr untagged_addr = 0;
-  tag_t ptr_tag = 0;
+  const ScopedReport scoped_report;
+  const StackTrace *stack = nullptr;
+  const uptr tagged_addr = 0;
+  const uptr access_size = 0;
+  const uptr untagged_addr = 0;
+  const tag_t ptr_tag = 0;
 
   uptr stack_allocations_count = 0;
   SavedStackAllocations stack_allocations[16];
@@ -753,7 +753,7 @@ class TailOverwrittenReport : public BaseReport {
   ~TailOverwrittenReport();
 
  private:
-  uptr orig_size;
+  const uptr orig_size;
   const u8 *expected;
 };
 
