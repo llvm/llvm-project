@@ -20,7 +20,7 @@
 #   * pip install sphinx-markdown-tables
 #===------------------------------------------------------------------------===#
 
-set -ex
+set -e
 
 builddir=docs-build
 srcdir=$(readlink -f $(dirname "$(readlink -f "$0")")/../..)
@@ -34,6 +34,7 @@ usage() {
   echo "                documentation from that source."
   echo " -srcdir  <dir> Path to llvm source directory with CMakeLists.txt"
   echo "                (optional) default: $srcdir"
+  echo " -no-doxygen    Don't build Doxygen docs"
 }
 
 package_doxygen() {
@@ -56,6 +57,9 @@ while [ $# -gt 0 ]; do
     -srcdir )
       shift
       custom_srcdir=$1
+      ;;
+    -no-doxygen )
+      no_doxygen="yes"
       ;;
     * )
       echo "unknown option: $1"
@@ -89,28 +93,25 @@ if [ -n "$release" ]; then
   srcdir="./llvm-project/llvm"
 fi
 
+docs_targets="docs-clang-html docs-clang-tools-html docs-flang-html docs-lld-html docs-llvm-html docs-polly-html"
+
+if [ "$no_doxygen" != "yes" ]; then
+  echo "Doxygen: enabled"
+  docs_targets="$docs_target doxygen-clang doxygen-clang-tools doxygen-flang doxygen-llvm doxygen-mlir doxygen-polly"
+  doxygen_flag=" -DLLVM_ENABLE_DOXYGEN=ON -DLLVM_DOXYGEN_SVG=ON"
+else
+   echo "Doxygen: disabled"
+fi
+
 cmake -G Ninja $srcdir -B $builddir \
                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;polly;flang" \
                -DCMAKE_BUILD_TYPE=Release \
-               -DLLVM_ENABLE_DOXYGEN=ON \
                -DLLVM_ENABLE_SPHINX=ON \
                -DLLVM_BUILD_DOCS=ON \
-               -DLLVM_DOXYGEN_SVG=ON \
-               -DSPHINX_WARNINGS_AS_ERRORS=OFF
+               -DSPHINX_WARNINGS_AS_ERRORS=OFF \
+               $doxygen_flag
 
-ninja -C $builddir \
-               docs-clang-html \
-               docs-clang-tools-html \
-               docs-flang-html \
-               docs-lld-html \
-               docs-llvm-html \
-               docs-polly-html \
-               doxygen-clang \
-               doxygen-clang-tools \
-               doxygen-flang \
-               doxygen-llvm \
-               doxygen-mlir \
-               doxygen-polly
+ninja -C $builddir $docs_targets
 
 cmake -G Ninja $srcdir/../runtimes -B $builddir/runtimes-doc \
                -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
@@ -120,10 +121,12 @@ cmake -G Ninja $srcdir/../runtimes -B $builddir/runtimes-doc \
 ninja -C $builddir/runtimes-doc \
                docs-libcxx-html \
 
-package_doxygen llvm .
-package_doxygen clang tools/clang
-package_doxygen clang-tools-extra tools/clang/tools/extra
-package_doxygen flang tools/flang
+if [ "$no_doxygen" != "yes" ]; then
+  package_doxygen llvm .
+  package_doxygen clang tools/clang
+  package_doxygen clang-tools-extra tools/clang/tools/extra
+  package_doxygen flang tools/flang
+fi
 
 html_dir=$builddir/html-export/
 
