@@ -2121,9 +2121,9 @@ _mm_storer_ps(float *__p, __m128 __a)
 /// \param __a
 ///    A 64-bit integer containing the value to be stored.
 static __inline__ void __DEFAULT_FN_ATTRS_MMX
-_mm_stream_pi(__m64 *__p, __m64 __a)
+_mm_stream_pi(void *__p, __m64 __a)
 {
-  __builtin_ia32_movntq(__p, __a);
+  __builtin_ia32_movntq((__m64 *)__p, __a);
 }
 
 /// Moves packed float values from a 128-bit vector of [4 x float] to a
