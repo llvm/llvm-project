@@ -5803,6 +5803,10 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     // The stale call instruction will be replaced with a new call instruction
     // for runtime call with a wrapper function.
 
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+
     // Create the wrapper function.
     SmallVector<Type *> WrapperArgTys{Builder.getPtrTy(), Builder.getPtrTy()};
     for (auto &Arg : OutlinedFn.args())
@@ -5830,9 +5834,6 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
 
     // Call to the runtime function for teams in the current function.
-    assert(OutlinedFn.getNumUses() == 1 &&
-           "there must be a single user for the outlined function");
-    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
     assert(StaleCI && "Error while outlining - no CallInst user found for the "
                       "outlined function.");
     Builder.SetInsertPoint(StaleCI);
