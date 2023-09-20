@@ -368,6 +368,12 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_user_sgpr_flat_scratch_init", KD,
                 kernel_code_properties,
                 amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_FLAT_SCRATCH_INIT);
+  if (hasKernargPreload(STI)) {
+    PRINT_FIELD(OS, ".amdhsa_user_sgpr_kernarg_preload_length ", KD,
+                kernarg_preload, amdhsa::KERNARG_PRELOAD_SPEC_LENGTH);
+    PRINT_FIELD(OS, ".amdhsa_user_sgpr_kernarg_preload_offset ", KD,
+                kernarg_preload, amdhsa::KERNARG_PRELOAD_SPEC_OFFSET);
+  }
   PRINT_FIELD(OS, ".amdhsa_user_sgpr_private_segment_size", KD,
               kernel_code_properties,
               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
@@ -906,6 +912,7 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc1);
   Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc2);
   Streamer.emitInt16(KernelDescriptor.kernel_code_properties);
-  for (uint8_t Res : KernelDescriptor.reserved2)
+  Streamer.emitInt16(KernelDescriptor.kernarg_preload);
+  for (uint8_t Res : KernelDescriptor.reserved3)
     Streamer.emitInt8(Res);
 }
