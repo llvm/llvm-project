@@ -1110,5 +1110,149 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   UseNewDbgInfoFormat = false;
 }
 
+// Similar to the above, what if we splice into an empty block with debug-info,
+// with debug-info at the start of the moving range, that we intend to be
+// transferred. The dbg.value of %a should remain at the start, but come ahead
+// of the i16 0 dbg.value.
+TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      br label %exit
+
+    exit:
+      call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 1, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  Function &F = *M->getFunction("f");
+  BasicBlock &Entry = F.getEntryBlock();
+  BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
+
+  // Begin by forcing entry block to have dangling DPValue.
+  Entry.getTerminator()->eraseFromParent();
+  ASSERT_NE(Entry.getTrailingDPValues(), nullptr);
+  EXPECT_TRUE(Entry.empty());
+
+  // Now transfer the entire contents of the exit block into the entry. This
+  // includes both dbg.values.
+  Entry.splice(Entry.end(), &Exit, Exit.begin(), Exit.end());
+
+  // We should now have two dbg.values on the first instruction, and they
+  // should be in the correct order of %a, then 0.
+  Instruction *BInst = &*Entry.begin();
+  ASSERT_TRUE(BInst->hasDbgValues());
+  EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 2u);
+  SmallVector<DPValue *, 2> DPValues;
+  for (DPValue &DPV : BInst->getDbgValueRange())
+    DPValues.push_back(&DPV);
+
+  EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
+  Value *SecondDPVValue = DPValues[1]->getVariableLocationOp(0);
+  ASSERT_TRUE(isa<ConstantInt>(SecondDPVValue));
+  EXPECT_EQ(cast<ConstantInt>(SecondDPVValue)->getZExtValue(), 0ull);
+
+  // No trailing DPValues in the entry block now.
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+
+  UseNewDbgInfoFormat = false;
+}
+
+// Similar test again, but this time: splice the contents of exit into entry,
+// with the intention of leaving the first dbg.value (i16 0) behind.
+TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      br label %exit
+
+    exit:
+      call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
+      %b = add i16 %a, 1, !dbg !11
+      call void @llvm.dbg.value(metadata i16 1, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 0, !dbg !11
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+    attributes #0 = { nounwind readnone speculatable willreturn }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  Function &F = *M->getFunction("f");
+  BasicBlock &Entry = F.getEntryBlock();
+  BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
+
+  // Begin by forcing entry block to have dangling DPValue.
+  Entry.getTerminator()->eraseFromParent();
+  ASSERT_NE(Entry.getTrailingDPValues(), nullptr);
+  EXPECT_TRUE(Entry.empty());
+
+  // Now transfer into the entry block -- fetching the first instruction with
+  // begin and then calling getIterator clears the "head" bit, meaning that the
+  // range to move will not include any leading DPValues.
+  Entry.splice(Entry.end(), &Exit, Exit.begin()->getIterator(), Exit.end());
+
+  // We should now have one dbg.values on the first instruction, %a.
+  Instruction *BInst = &*Entry.begin();
+  ASSERT_TRUE(BInst->hasDbgValues());
+  EXPECT_EQ(BInst->DbgMarker->StoredDPValues.size(), 1u);
+  SmallVector<DPValue *, 2> DPValues;
+  for (DPValue &DPV : BInst->getDbgValueRange())
+    DPValues.push_back(&DPV);
+
+  EXPECT_EQ(DPValues[0]->getVariableLocationOp(0), F.getArg(0));
+  // No trailing DPValues in the entry block now.
+  EXPECT_EQ(Entry.getTrailingDPValues(), nullptr);
+
+  // We should have nothing left in the exit block...
+  EXPECT_TRUE(Exit.empty());
+  // ... except for some dangling DPValues.
+  EXPECT_NE(Exit.getTrailingDPValues(), nullptr);
+  EXPECT_FALSE(Exit.getTrailingDPValues()->empty());
+  Exit.deleteTrailingDPValues();
+
+  UseNewDbgInfoFormat = false;
+}
 } // End anonymous namespace.
 #endif // EXPERIMENTAL_DEBUGINFO_ITERATORS
