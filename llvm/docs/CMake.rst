@@ -777,12 +777,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   ``LLVM_USE_SANITIZER`` contains ``Undefined``. This can be used to override
   the default set of UBSan flags.
 
-**LLVM_USE_CRT_{target}**:STRING
-  On Windows, tells which version of the C runtime library (CRT) should be used.
-  For example, -DLLVM_USE_CRT_RELEASE=MT would statically link the CRT into the
-  LLVM tools and library. This is deprecated; use ``CMAKE_MSVC_RUNTIME_LIBRARY``
-  instead.
-
 **LLVM_USE_INTEL_JITEVENTS**:BOOL
   Enable building support for Intel JIT Events API. Defaults to OFF.
 
