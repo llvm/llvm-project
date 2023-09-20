@@ -295,7 +295,9 @@ Changes in existing checks
   warnings when a type's forward declaration precedes its definition.
   Additionally, it now provides appropriate warnings for ``struct`` and
   ``union`` in C, while also incorporating support for the
-  ``Leading_upper_snake_case`` naming convention.
+  ``Leading_upper_snake_case`` naming convention. The handling of ``typedef``
+  has been enhanced, particularly within complex types like function pointers
+  and cases where style checks were omitted when functions started with macros.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
