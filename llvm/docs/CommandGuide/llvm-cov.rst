@@ -222,11 +222,6 @@ OPTIONS
  Show coverage for branch conditions in terms of either count or percentage.
  The supported views are: "count", "percent".
 
-.. option:: -show-mcdc
-
- Show modified condition/decision coverage (MC/DC) for each complex condition.
- This should be used in addition to branch coverage.
-
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -430,11 +425,6 @@ OPTIONS
 .. option:: -show-branch-summary
 
  Show statistics for all branch conditions. Defaults to true.
-
-.. option:: -show-mcdc-summary
-
- Show modified condition/decision coverage (MC/DC) statistics for complex
- conditions. Defaults to false.
 
 .. option:: -show-functions
 
