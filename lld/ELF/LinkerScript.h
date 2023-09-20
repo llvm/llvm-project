@@ -346,7 +346,7 @@ public:
   void printMemoryUsage(raw_ostream &os);
 
   // Check backward location counter assignment and memory region/LMA overflows.
-  void checkDotAndMemoryRegions() const;
+  void checkFinalScriptConditions() const;
 
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;

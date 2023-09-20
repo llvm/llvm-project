@@ -1502,7 +1502,7 @@ static void checkMemoryRegion(const MemoryRegion *region,
   }
 }
 
-void LinkerScript::checkDotAndMemoryRegions() const {
+void LinkerScript::checkFinalScriptConditions() const {
   if (backwardDotErr.size())
     errorOrWarn(backwardDotErr);
   for (const OutputSection *sec : outputSections) {
