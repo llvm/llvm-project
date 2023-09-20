@@ -152,6 +152,14 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
           transferRead.getPermutationMap() != transferWrite.getPermutationMap())
         return WalkResult::advance();
 
+      // When the source of transfer_read aliases, the following dominance
+      // analysis might not be sufficient.
+      // TODO: There might be other, similar cases missing here (i.e. other
+      // Memref Ops). 
+      auto source = transferRead.getSource();
+      if (source.getDefiningOp<memref::CollapseShapeOp>())
+        return WalkResult::advance();
+
       // TODO: may want to memoize this information for performance but it
       // likely gets invalidated often.
       DominanceInfo dom(loop);
