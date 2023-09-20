@@ -33,4 +33,4 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #error "Unhandled compiler"
 #endif
 
-#endif /* LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H */
+#endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

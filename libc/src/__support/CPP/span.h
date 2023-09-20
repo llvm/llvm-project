@@ -121,4 +121,4 @@ private:
 
 } // namespace __llvm_libc::cpp
 
-#endif /* LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H */
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H
