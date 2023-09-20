@@ -71,8 +71,12 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   if (TuneCPU.empty())
     TuneCPU = CPU;
 
-  ParseSubtargetFeatures(CPU, TuneCPU, FS);
   TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
+  // If there is no TuneInfo for this CPU, we fail back to generic.
+  if (!TuneInfo)
+    TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo("generic");
+
+  ParseSubtargetFeatures(CPU, TuneCPU, FS);
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;

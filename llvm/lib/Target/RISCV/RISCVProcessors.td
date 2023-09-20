@@ -26,12 +26,14 @@ def getRISCVTuneInfo : SearchIndex {
   let Key = ["Name"];
 }
 
+class GenericTuneInfo: RISCVTuneInfo;
+
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
                           list<SubtargetFeature> f,
                           list<SubtargetFeature> tunef = [],
                           string default_march = "">
-      :  ProcessorModel<n, m, f, tunef>, RISCVTuneInfo {
+      :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
 }
 
@@ -39,17 +41,19 @@ class RISCVTuneProcessorModel<string n,
                               SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-      : ProcessorModel<n, m, f,tunef>, RISCVTuneInfo;
+      : ProcessorModel<n, m, f,tunef>;
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
-                                       [Feature32Bit]>;
+                                       [Feature32Bit]>,
+                   GenericTuneInfo;
 def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
                                        NoSchedModel,
-                                       [Feature64Bit]>;
+                                       [Feature64Bit]>,
+                   GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
-def : ProcessorModel<"generic", NoSchedModel, []>;
+def : ProcessorModel<"generic", NoSchedModel, []>, GenericTuneInfo;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
