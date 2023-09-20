@@ -148,12 +148,8 @@ function(create_libc_unittest fq_target_name)
     ${LIBC_UNITTEST_SRCS}
     ${LIBC_UNITTEST_HDRS}
   )
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(
     ${fq_build_target_name}
     PRIVATE -fpie ${LIBC_COMPILE_OPTIONS_DEFAULT}
@@ -386,12 +382,8 @@ function(add_libc_fuzzer target_name)
     ${LIBC_FUZZER_SRCS}
     ${LIBC_FUZZER_HDRS}
   )
-  target_include_directories(
-    ${fq_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
   target_link_libraries(${fq_target_name} PRIVATE 
     ${link_object_files} 
@@ -516,12 +508,8 @@ function(add_integration_test test_name)
   )
   set_target_properties(${fq_build_target_name}
       PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name}
       PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # The GPU build requires overriding the default CMake triple and architecture.
@@ -683,12 +671,8 @@ function(add_libc_hermetic_test test_name)
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       #OUTPUT_NAME ${fq_target_name}
   )
-  target_include_directories(
-    ${fq_build_target_name}
-    PRIVATE
-      ${LIBC_SOURCE_DIR}
-      ${LIBC_INCLUDE_DIR}
-  )
+  target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_build_target_name}
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
 
