@@ -27,9 +27,33 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Index, class _DifferenceType, class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept {
   _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
-  _PSTL_PRAGMA_SIMD()
+  _PSTL_OMP_MAP_TO(__first, __n);
+#  pragma omp target enter data map(to : __value)
+  _PSTL_PRAGMA_SIMD(__n)
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __first[__i] = __value;
+  _PSTL_OMP_MAP_FROM(__first, __n);
+  return __first + __n;
+}
+
+/**
+ * Specialization for std::vector where the base pointer must be extrated to map
+ * the data to and from the GPU.
+ */
+
+template <typename T, class _DifferenceType, class _Tp>
+_LIBCPP_HIDE_FROM_ABI std::__wrap_iter<T*>
+__simd_fill_n(std::__wrap_iter<T*> __first, _DifferenceType __n, const _Tp& __value) noexcept {
+  _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+  _PSTL_OMP_MAP_TO(__first, __n);
+  // For std::vector the base pointer of the data buffer needs to be extracted
+  std::pointer_traits<std::__wrap_iter<T*>> PT;
+  T* data = PT.to_address(__first);
+#  pragma omp target enter data map(to : __value)
+  _PSTL_PRAGMA_SIMD(__n)
+  for (_DifferenceType __i = 0; __i < __n; ++__i)
+    data[__i] = __value;
+  _PSTL_OMP_MAP_FROM(__first, __n);
   return __first + __n;
 }
 
