@@ -6472,11 +6472,23 @@ def : Pat<(i32 (int_aarch64_neon_uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op)))
             (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub)),
             ssub))>;
 
+def : Pat<(v4i32 (AArch64uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op))))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub))>;
+
+def : Pat<(v4i32 (AArch64uaddlv (v4i16 (AArch64uaddlp (v8i8 V64:$op))))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$op), hsub))>;
+
 def : Pat<(v4i32 (AArch64uaddlv (v8i8 V64:$Rn))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$Rn), hsub))>;
 
+def : Pat<(v4i32 (AArch64uaddlv (v4i16 V64:$Rn))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv4i16v V64:$Rn), ssub))>;
+
 def : Pat<(v4i32 (AArch64uaddlv (v16i8 V128:$Rn))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$Rn), hsub))>;
+
+def : Pat<(v4i32 (AArch64uaddlv (v8i16 V128:$Rn))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$Rn), ssub))>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.

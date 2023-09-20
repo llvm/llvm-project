@@ -300,6 +300,8 @@ def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
 
     This is usually a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
+
+    Warning: these patterns currently only work for little endian targets.
   }];
 
   let assemblyFormat = "attr-dict";

@@ -380,3 +380,24 @@ func.func @tensor.reshape() -> tensor<2x2x5xf32> {
   // CHECK: return %[[RESHAPED]]
   return %reshaped : tensor<2x2x5xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @reshape_with_non_identity_layout(
+// CHECK-SAME:    %[[INPUT:[a-zA-Z0-9]*]]: memref<2x2xf32, strided<[?, ?], offset: ?>>,
+// CHECK-SAME:    %[[LAYOUT:[a-zA-Z0-9]*]]: memref<2xi32, strided<[?], offset: ?>>)
+func.func @reshape_with_non_identity_layout(%arg0: tensor<2x2xf32>, %arg1: tensor<2xi32>) -> tensor<1x2xf32> {
+
+  // CHECK: %[[SUBVIEW:.+]] = memref.subview %[[INPUT]][1, 0] [1, 2] [1, 1] : memref<2x2xf32, strided<[?, ?], offset: ?>> to memref<2xf32, strided<[?], offset: ?>>
+  %extracted_slice = tensor.extract_slice %arg0[1, 0] [1, 2] [1, 1] : tensor<2x2xf32> to tensor<2xf32>
+
+  // To satisify the constraints of memref.reshape, the subview must be cloned into
+  // a buffer with an identity layout.
+  // CHECK: %[[CLONED:.+]] = bufferization.clone %[[SUBVIEW]] : memref<2xf32, strided<[?], offset: ?>> to memref<2xf32>
+  // CHECK: %[[RESHAPED:.+]] = memref.reshape %[[CLONED]](%[[LAYOUT]]) : (memref<2xf32>, memref<2xi32, strided<[?], offset: ?>>) -> memref<1x2xf32>
+
+  %reshape = tensor.reshape %extracted_slice(%arg1) : (tensor<2xf32>, tensor<2xi32>) -> tensor<1x2xf32>
+
+  // CHECK: return %[[RESHAPED]] : memref<1x2xf32>
+  return %reshape : tensor<1x2xf32>
+}

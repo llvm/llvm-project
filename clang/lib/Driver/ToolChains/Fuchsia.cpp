@@ -257,8 +257,8 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
     std::vector<std::string> FP;
-    for (const std::string &Path : getStdlibPaths()) {
-      SmallString<128> P(Path);
+    if (std::optional<std::string> Path = getStdlibPath()) {
+      SmallString<128> P(*Path);
       llvm::sys::path::append(P, M.gccSuffix());
       FP.push_back(std::string(P.str()));
     }

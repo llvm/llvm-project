@@ -1429,8 +1429,9 @@ recoverShapeVector(llvm::ArrayRef<std::int64_t> shapeVec, mlir::Value initVal) {
 }
 
 fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
-    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
-  fir::FortranVariableFlagsEnum flags = fir::FortranVariableFlagsEnum::None;
+    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym,
+    fir::FortranVariableFlagsEnum extraFlags) {
+  fir::FortranVariableFlagsEnum flags = extraFlags;
   const auto &attrs = sym.attrs();
   if (attrs.test(Fortran::semantics::Attr::ALLOCATABLE))
     flags = flags | fir::FortranVariableFlagsEnum::allocatable;
@@ -1578,14 +1579,16 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
 void Fortran::lower::genDeclareSymbol(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, const Fortran::semantics::Symbol &sym,
-    const fir::ExtendedValue &exv, bool force) {
+    const fir::ExtendedValue &exv, fir::FortranVariableFlagsEnum extraFlags,
+    bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       !Fortran::semantics::IsProcedure(sym) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
+                                                  extraFlags);
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes);
@@ -1632,8 +1635,9 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                           bool replace = false) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
     fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
-    Fortran::lower::genDeclareSymbol(converter, symMap, sym,
-                                     std::move(boxValue), replace);
+    Fortran::lower::genDeclareSymbol(
+        converter, symMap, sym, std::move(boxValue),
+        fir::FortranVariableFlagsEnum::None, replace);
     return;
   }
   symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,

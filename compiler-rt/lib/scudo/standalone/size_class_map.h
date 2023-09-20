@@ -289,28 +289,6 @@ typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
 static_assert(AndroidSizeClassMap::usesCompressedLSBFormat(), "");
 #endif
 
-struct SvelteSizeClassConfig {
-#if SCUDO_WORDSIZE == 64U
-  static const uptr NumBits = 4;
-  static const uptr MinSizeLog = 4;
-  static const uptr MidSizeLog = 8;
-  static const uptr MaxSizeLog = 14;
-  static const u16 MaxNumCachedHint = 13;
-  static const uptr MaxBytesCachedLog = 10;
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-#else
-  static const uptr NumBits = 4;
-  static const uptr MinSizeLog = 3;
-  static const uptr MidSizeLog = 7;
-  static const uptr MaxSizeLog = 14;
-  static const u16 MaxNumCachedHint = 14;
-  static const uptr MaxBytesCachedLog = 10;
-  static const uptr SizeDelta = Chunk::getHeaderSize();
-#endif
-};
-
-typedef FixedSizeClassMap<SvelteSizeClassConfig> SvelteSizeClassMap;
-
 struct TrustySizeClassConfig {
   static const uptr NumBits = 1;
   static const uptr MinSizeLog = 5;

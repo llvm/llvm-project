@@ -11294,25 +11294,12 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, ptr %base, <32 x i8> %idxs, 
 }
 
 define void @mscatter_unit_stride(<8 x i16> %val, ptr %base) {
-; RV32-LABEL: mscatter_unit_stride:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vse16.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: mscatter_unit_stride:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 2
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vsse16.v v8, (a0), a1
-; RV64-NEXT:    ret
-;
-; RV64ZVE32F-LABEL: mscatter_unit_stride:
-; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    li a1, 2
-; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vsse16.v v8, (a0), a1
-; RV64ZVE32F-NEXT:    ret
+; CHECK-LABEL: mscatter_unit_stride:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsse16.v v8, (a0), a1
+; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i16 0
   %allones = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
@@ -11321,31 +11308,13 @@ define void @mscatter_unit_stride(<8 x i16> %val, ptr %base) {
 }
 
 define void @mscatter_unit_stride_with_offset(<8 x i16> %val, ptr %base) {
-; RV32-LABEL: mscatter_unit_stride_with_offset:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32-NEXT:    vid.v v10
-; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vadd.vi v10, v10, 10
-; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32-NEXT:    vsoxei32.v v8, (a0), v10
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: mscatter_unit_stride_with_offset:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, a0, 10
-; RV64-NEXT:    li a1, 2
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vsse16.v v8, (a0), a1
-; RV64-NEXT:    ret
-;
-; RV64ZVE32F-LABEL: mscatter_unit_stride_with_offset:
-; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    addi a0, a0, 10
-; RV64ZVE32F-NEXT:    li a1, 2
-; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vsse16.v v8, (a0), a1
-; RV64ZVE32F-NEXT:    ret
+; CHECK-LABEL: mscatter_unit_stride_with_offset:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 10
+; CHECK-NEXT:    li a1, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsse16.v v8, (a0), a1
+; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i16 0
   %allones = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12>
@@ -11354,30 +11323,13 @@ define void @mscatter_unit_stride_with_offset(<8 x i16> %val, ptr %base) {
 }
 
 define void @mscatter_shuffle_reverse(<8 x i16> %val, ptr %base) {
-; RV32-LABEL: mscatter_shuffle_reverse:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vrsub.vi v9, v9, 7
-; RV32-NEXT:    vrgather.vv v10, v8, v9
-; RV32-NEXT:    vse16.v v10, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: mscatter_shuffle_reverse:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, a0, 14
-; RV64-NEXT:    li a1, -2
-; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vsse16.v v8, (a0), a1
-; RV64-NEXT:    ret
-;
-; RV64ZVE32F-LABEL: mscatter_shuffle_reverse:
-; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    addi a0, a0, 14
-; RV64ZVE32F-NEXT:    li a1, -2
-; RV64ZVE32F-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64ZVE32F-NEXT:    vsse16.v v8, (a0), a1
-; RV64ZVE32F-NEXT:    ret
+; CHECK-LABEL: mscatter_shuffle_reverse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, a0, 14
+; CHECK-NEXT:    li a1, -2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsse16.v v8, (a0), a1
+; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i16 0
   %allones = shufflevector <8 x i1> %head, <8 x i1> poison, <8 x i32> zeroinitializer
   %ptrs = getelementptr inbounds i16, ptr %base, <8 x i64>  <i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>

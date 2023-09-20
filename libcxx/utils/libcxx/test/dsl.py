@@ -69,8 +69,14 @@ def _memoizeExpensiveOperation(extractCacheKey):
             if cacheKey not in cache:
                 cache[cacheKey] = function(config, *args, **kwargs)
                 # Update the persistent cache so it knows about the new key
-                with open(persistentCache, "wb") as cacheFile:
+                # We write to a PID-suffixed file and rename the result to
+                # ensure that the cache is not corrupted when running the test
+                # suite with multiple shards. Since this file is in the same
+                # directory as the destination, os.replace() will be atomic.
+                unique_suffix = ".tmp." + str(os.getpid())
+                with open(persistentCache + unique_suffix, "wb") as cacheFile:
                     pickle.dump(cache, cacheFile)
+                os.replace(persistentCache + unique_suffix, persistentCache)
             return cache[cacheKey]
 
         return f

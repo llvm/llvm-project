@@ -146,6 +146,53 @@ func.func @f4(%a: vector<16xi16>) -> vector<8xi6> {
   return %1 : vector<8xi6>
 }
 
+// CHECK-LABEL: func.func @f1ext(
+//  CHECK-SAME: %[[A:[0-9a-z]*]]: vector<5xi8>) -> vector<8xi16> {
+func.func @f1ext(%a: vector<5xi8>) -> vector<8xi16> {
+  // CHECK-DAG: %[[MASK0:.*]] = arith.constant dense<[31, -32, 124, -128, -16, 62, -64, -8]> : vector<8xi8>
+  // CHECK-DAG: %[[MASK1:.*]] = arith.constant dense<[0, 3, 0, 15, 1, 0, 7, 0]> : vector<8xi8>
+  // CHECK-DAG: %[[SHR0_CST:.*]] = arith.constant dense<[0, 5, 2, 7, 4, 1, 6, 3]> : vector<8xi8>
+  // CHECK-DAG: %[[SHL1_CST:.*]] = arith.constant dense<[5, 3, 5, 1, 4, 5, 2, 5]> : vector<8xi8>
+  // CHECK: %[[V0:.*]] = vector.shuffle %[[A]], %[[A]] [0, 0, 1, 1, 2, 3, 3, 4] : vector<5xi8>, vector<5xi8>
+  // CHECK: %[[A0:.*]] = arith.andi %[[V0]], %[[MASK0]] : vector<8xi8>
+  // CHECK: %[[SHR0:.*]] = arith.shrui %[[A0]], %[[SHR0_CST]] : vector<8xi8>
+  // CHECK: %[[V1:.*]] = vector.shuffle %[[A]], %[[A]] [0, 1, 0, 2, 3, 0, 4, 0] : vector<5xi8>, vector<5xi8>
+  // CHECK: %[[A1:.*]] = arith.andi %[[V1]], %[[MASK1]] : vector<8xi8>
+  // CHECK: %[[SHL1:.*]] = arith.shli %[[A1]], %[[SHL1_CST]] : vector<8xi8>
+  // CHECK: %[[O1:.*]] = arith.ori %[[SHR0]], %[[SHL1]] : vector<8xi8>
+  // CHECK: %[[RES:.*]] = arith.extsi %[[O1]] : vector<8xi8> to vector<8xi16>
+  // return %[[RES]] : vector<8xi16>
+
+  %0 = vector.bitcast %a : vector<5xi8> to vector<8xi5>
+  %1 = arith.extsi %0 : vector<8xi5> to vector<8xi16>
+  return %1 : vector<8xi16>
+}
+
+// CHECK-LABEL: func.func @f2ext(
+//  CHECK-SAME: %[[A:[0-9a-z]*]]: vector<5xi8>) -> vector<8xi16> {
+func.func @f2ext(%a: vector<5xi8>) -> vector<8xi16> {
+  // CHECK-NOT: arith.extsi {{.*}} : vector<8xi8> to vector<8xi16>
+  //     CHECK: %[[RES:.*]] = arith.extui {{.*}} : vector<8xi8> to vector<8xi16>
+  // return %[[RES]] : vector<8xi16>
+
+  %0 = vector.bitcast %a : vector<5xi8> to vector<8xi5>
+  %1 = arith.extui %0 : vector<8xi5> to vector<8xi16>
+  return %1 : vector<8xi16>
+}
+
+// CHECK-LABEL: func.func @f3ext(
+//  CHECK-SAME: %[[A:[0-9a-z]*]]: vector<5xi8>) -> vector<8xi17> {
+func.func @f3ext(%a: vector<5xi8>) -> vector<8xi17> {
+  // CHECK: bitcast
+  // CHECK: extsi
+  // CHECK-NOT: shuffle
+  // CHECK-NOT: andi
+  // CHECK-NOT: ori
+  %0 = vector.bitcast %a : vector<5xi8> to vector<8xi5>
+  %1 = arith.extsi %0 : vector<8xi5> to vector<8xi17>
+  return %1 : vector<8xi17>
+}
+
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   %f = transform.structured.match ops{["func.func"]} in %module_op

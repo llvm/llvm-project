@@ -1,6 +1,10 @@
 #include <stdbool.h>
 #include <sys/prctl.h>
 
+// If START_SSVE is defined, this program will start in streaming SVE mode
+// (it will later enter and exit streaming mode a few times). Otherwise, it
+// will start in non-streaming SVE mode.
+
 #ifndef PR_SME_SET_VL
 #define PR_SME_SET_VL 63
 #endif

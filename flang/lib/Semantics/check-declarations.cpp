@@ -2058,7 +2058,7 @@ bool CheckHelper::CheckConflicting(const Symbol &symbol, Attr a1, Attr a2) {
 
 void CheckHelper::WarnMissingFinal(const Symbol &symbol) {
   const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!object ||
+  if (!object || object->IsAssumedRank() ||
       (!IsAutomaticallyDestroyed(symbol) &&
           symbol.owner().kind() != Scope::Kind::DerivedType)) {
     return;

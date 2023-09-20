@@ -250,17 +250,10 @@ def ForOp : SCF_Op<"for",
         "expected an index less than the number of region iter args");
       return getBody()->getArguments().drop_front(getNumInductionVars())[index];
     }
-    MutableArrayRef<OpOperand> getIterOpOperands() {
-      return
-        getOperation()->getOpOperands().drop_front(getNumControlOperands());
-    }
 
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
-    void setIterArg(unsigned iterArgNum, Value iterArgValue) {
-      getOperation()->setOperand(iterArgNum + getNumControlOperands(), iterArgValue);
-    }
 
     /// Number of induction variables, always 1 for scf::ForOp.
     unsigned getNumInductionVars() { return 1; }
