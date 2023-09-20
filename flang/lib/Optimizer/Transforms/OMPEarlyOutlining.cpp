@@ -32,7 +32,7 @@ class OMPEarlyOutliningPass
   // Given a value this function will iterate over an operators results
   // and return the relevant index for the result the value corresponds to.
   // There may be a simpler way to do this however.
-  unsigned getResultIndex(mlir::Value value, mlir::Operation *op) {
+  static unsigned getResultIndex(mlir::Value value, mlir::Operation *op) {
     for (unsigned i = 0; i < op->getNumResults(); ++i) {
       if (op->getResult(i) == value)
         return i;
@@ -40,9 +40,10 @@ class OMPEarlyOutliningPass
     return 0;
   }
 
-  bool isDeclareTargetOp(mlir::Operation *op) {
-    if (fir::AddrOfOp addressOfOp = mlir::dyn_cast<fir::AddrOfOp>(op))
-      if (fir::GlobalOp gOp = mlir::dyn_cast<fir::GlobalOp>(
+  static bool isAddressOfGlobalDeclareTarget(mlir::Value value) {
+    if (fir::AddrOfOp addressOfOp =
+            mlir::dyn_cast_if_present<fir::AddrOfOp>(value.getDefiningOp()))
+      if (fir::GlobalOp gOp = mlir::dyn_cast_if_present<fir::GlobalOp>(
               addressOfOp->getParentOfType<mlir::ModuleOp>().lookupSymbol(
                   addressOfOp.getSymbol())))
         if (auto declareTargetGlobal =
@@ -59,14 +60,14 @@ class OMPEarlyOutliningPass
   // NOTE: Results in duplication of some values that would otherwise be
   // a single SSA value shared between operations, this is tidied up on
   // lowering to some extent.
-  mlir::Operation *
+  static mlir::Operation *
   cloneArgAndChildren(mlir::OpBuilder &builder, mlir::Operation *op,
                       llvm::SetVector<mlir::Value> &inputs,
                       mlir::Block::BlockArgListType &newInputs) {
     mlir::IRMapping valueMap;
-    for (auto opValue : op->getOperands()) {
+    for (mlir::Value opValue : op->getOperands()) {
       if (opValue.getDefiningOp()) {
-        auto resIdx = getResultIndex(opValue, opValue.getDefiningOp());
+        unsigned resIdx = getResultIndex(opValue, opValue.getDefiningOp());
         valueMap.map(opValue,
                      cloneArgAndChildren(builder, opValue.getDefiningOp(),
                                          inputs, newInputs)
@@ -82,11 +83,12 @@ class OMPEarlyOutliningPass
     return builder.clone(*op, valueMap);
   }
 
-  void cloneMapOpVariables(mlir::OpBuilder &builder, mlir::IRMapping &valueMap,
-                           mlir::IRMapping &mapInfoMap,
-                           llvm::SetVector<mlir::Value> &inputs,
-                           mlir::Block::BlockArgListType &newInputs,
-                           mlir::Value varPtr) {
+  static void cloneMapOpVariables(mlir::OpBuilder &builder,
+                                  mlir::IRMapping &valueMap,
+                                  mlir::IRMapping &mapInfoMap,
+                                  llvm::SetVector<mlir::Value> &inputs,
+                                  mlir::Block::BlockArgListType &newInputs,
+                                  mlir::Value varPtr) {
     if (fir::BoxAddrOp boxAddrOp =
             mlir::dyn_cast_if_present<fir::BoxAddrOp>(varPtr.getDefiningOp())) {
       mlir::Value newV =
@@ -97,7 +99,7 @@ class OMPEarlyOutliningPass
       return;
     }
 
-    if (varPtr.getDefiningOp() && isDeclareTargetOp(varPtr.getDefiningOp())) {
+    if (isAddressOfGlobalDeclareTarget(varPtr)) {
       fir::AddrOfOp addrOp =
           mlir::dyn_cast<fir::AddrOfOp>(varPtr.getDefiningOp());
       mlir::Value newV = builder.clone(*addrOp)->getResult(0);
@@ -129,18 +131,17 @@ class OMPEarlyOutliningPass
     // filter out declareTarget and map entries which are specially handled
     // at the moment, so we do not wish these to end up as function arguments
     // which would just be more noise in the IR.
-    for (auto value : inputs)
-      if (value.getDefiningOp())
-        if (mlir::isa<mlir::omp::MapInfoOp>(value.getDefiningOp()) ||
-            isDeclareTargetOp(value.getDefiningOp()))
-          inputs.remove(value);
+    for (mlir::Value value : inputs)
+      if (mlir::isa_and_nonnull<mlir::omp::MapInfoOp>(value.getDefiningOp()) ||
+          isAddressOfGlobalDeclareTarget(value))
+        inputs.remove(value);
 
     // Create new function and initialize
     mlir::FunctionType funcType = builder.getFunctionType(
         mlir::TypeRange(inputs.getArrayRef()), mlir::TypeRange());
     std::string parentName(parentFunc.getName());
     std::string funcName = getOutlinedFnName(parentName, count);
-    auto loc = targetOp.getLoc();
+    mlir::Location loc = targetOp.getLoc();
     mlir::func::FuncOp newFunc =
         mlir::func::FuncOp::create(loc, funcName, funcType);
     mlir::Block *entryBlock = newFunc.addEntryBlock();
@@ -175,11 +176,11 @@ class OMPEarlyOutliningPass
     // however, cloning across the minimum for the moment to avoid
     // optimisations breaking segments of the lowering seems prudent as this
     // was the original intent of the pass.
-    for (auto oper : targetOp.getOperation()->getOperands()) {
+    for (mlir::Value oper : targetOp->getOperands()) {
       if (auto mapEntry =
               mlir::dyn_cast<mlir::omp::MapInfoOp>(oper.getDefiningOp())) {
         mlir::IRMapping mapInfoMap;
-        for (auto bound : mapEntry.getBounds()) {
+        for (mlir::Value bound : mapEntry.getBounds()) {
           if (auto mapEntryBound = mlir::dyn_cast<mlir::omp::DataBoundsOp>(
                   bound.getDefiningOp())) {
             mapInfoMap.map(bound, cloneArgAndChildren(builder, mapEntryBound,
