@@ -276,6 +276,7 @@ struct TransposeOpToArmSMELowering
     for (auto attr : transposeOp.getTransp())
       transp.push_back(cast<IntegerAttr>(attr).getInt());
 
+    // Bail unless this is a true 2-D matrix transpose.
     if (transp[0] != 1 && transp[1] != 0)
       return failure();
 
