@@ -201,6 +201,8 @@ def m_riscv_Features_Group : OptionGroup<"<riscv features group>">,
                              Group<m_Group>, DocName<"RISC-V">;
 def m_ve_Features_Group : OptionGroup<"<ve features group>">,
                           Group<m_Group>, DocName<"VE">;
+def m_loongarch_Features_Group : OptionGroup<"<loongarch features group>">,
+                                 Group<m_Group>, DocName<"LoongArch">;
 
 def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
@@ -4910,6 +4912,14 @@ def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;
+def mlsx : Flag<["-"], "mlsx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable Loongson SIMD Extension (LSX).">;
+def mno_lsx : Flag<["-"], "mno-lsx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable Loongson SIMD Extension (LSX).">;
+def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
+def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;

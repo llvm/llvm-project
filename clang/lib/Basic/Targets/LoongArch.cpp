@@ -208,6 +208,11 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
     TuneCPU = ArchName;
   Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
 
+  if (HasFeatureLSX)
+    Builder.defineMacro("__loongarch_sx", Twine(1));
+  if (HasFeatureLASX)
+    Builder.defineMacro("__loongarch_asx", Twine(1));
+
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
     Builder.defineMacro("__loongarch_lp64");
@@ -257,6 +262,8 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
       .Case("loongarch64", Is64Bit)
       .Case("32bit", !Is64Bit)
       .Case("64bit", Is64Bit)
+      .Case("lsx", HasFeatureLSX)
+      .Case("lasx", HasFeatureLASX)
       .Default(false);
 }
 
@@ -274,7 +281,10 @@ bool LoongArchTargetInfo::handleTargetFeatures(
       if (Feature == "+d") {
         HasFeatureD = true;
       }
-    }
+    } else if (Feature == "+lsx")
+      HasFeatureLSX = true;
+    else if (Feature == "+lasx")
+      HasFeatureLASX = true;
   }
   return true;
 }

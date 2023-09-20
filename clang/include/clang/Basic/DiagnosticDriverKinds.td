@@ -756,6 +756,12 @@ def warn_drv_loongarch_conflicting_implied_val : Warning<
   InGroup<OptionIgnored>;
 def err_drv_loongarch_invalid_mfpu_EQ : Error<
   "invalid argument '%0' to -mfpu=; must be one of: 64, 32, none, 0 (alias for none)">;
+def err_drv_loongarch_wrong_fpu_width_for_lsx : Error<
+  "wrong fpu width; LSX depends on 64-bit FPU.">;
+def err_drv_loongarch_wrong_fpu_width_for_lasx : Error<
+  "wrong fpu width; LASX depends on 64-bit FPU.">;
+def err_drv_loongarch_invalid_simd_option_combination : Error<
+  "invalid option combination; LASX depends on LSX.">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
