@@ -3427,14 +3427,12 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     return DAG.getNode(PPCISD::TLSLD_AIX, dl, PtrVT, VariableOffset);
   }
 
-  // The Local-Exec, Initial-Exec, Local-Dynamic, and General-Dynamic TLS models
-  // are currently supported access models. If Local- or Initial-exec or
-  // local-dynamic is not possible or specified, all GlobalTLSAddress nodes are
-  // lowered using the general-dynamic model. We need to generate two TOC
-  // entries, one for the variable offset, one for the region handle. The global
-  // address for the TOC entry of the region handle is created with the
-  // MO_TLSGDM_FLAG flag and the global address for the TOC entry of the
-  // variable offset is created with MO_TLSGD_FLAG.
+  // If Local- or Initial-exec or Local-dynamic is not possible or specified,
+  // all GlobalTLSAddress nodes are lowered using the general-dynamic model. We
+  // need to generate two TOC entries, one for the variable offset, one for the
+  // region handle. The global address for the TOC entry of the region handle is
+  // created with the MO_TLSGDM_FLAG flag and the global address for the TOC
+  // entry of the variable offset is created with MO_TLSGD_FLAG.
   SDValue VariableOffsetTGA =
       DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, PPCII::MO_TLSGD_FLAG);
   SDValue RegionHandleTGA =

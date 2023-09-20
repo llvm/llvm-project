@@ -671,17 +671,17 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
          "GETtls[ld]ADDR[32] must read GPR3");
 
   if (Subtarget->isAIXABI()) {
-    // On AIX, for TLSGD the variable offset should already be in R4 and the
-    // region handle should already be in R3, need to generate an absolute
-    // branch to .__tls_get_addr. For TLSLD the module handle should already be
-    // in R3, need to generate branch to .__tls_get_mod.
+    // For TLSGD, the variable offset should already be in R4 and the region
+    // handle should already be in R3, generate absolute branch to
+    // .__tls_get_addr. For TLSLD, the module handle should already be in R3,
+    // generate branch to .__tls_get_mod.
     Register VarOffsetReg = Subtarget->isPPC64() ? PPC::X4 : PPC::R4;
     (void)VarOffsetReg;
-    assert(MI->getOpcode() == PPC::GETtlsMOD32AIX ||
-           MI->getOpcode() == PPC::GETtlsMOD64AIX ||
-           (MI->getOperand(2).isReg() &&
-            MI->getOperand(2).getReg() == VarOffsetReg) &&
-               "GETtls[ld]ADDR[32] must read GPR4");
+    assert((MI->getOpcode() == PPC::GETtlsMOD32AIX ||
+            MI->getOpcode() == PPC::GETtlsMOD64AIX ||
+            (MI->getOperand(2).isReg() &&
+             MI->getOperand(2).getReg() == VarOffsetReg)) &&
+           "GETtls[ld]ADDR[32] must read GPR4");
     EmitAIXTlsCallHelper(MI);
     return;
   }
