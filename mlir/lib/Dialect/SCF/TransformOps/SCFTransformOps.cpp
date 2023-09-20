@@ -9,6 +9,8 @@
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
@@ -17,8 +19,11 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OpDefinition.h"
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -47,6 +52,7 @@ void transform::ApplySCFStructuralConversionPatternsOp::
 //===----------------------------------------------------------------------===//
 // GetParentForOp
 //===----------------------------------------------------------------------===//
+
 DiagnosedSilenceableFailure
 transform::GetParentForOp::apply(transform::TransformRewriter &rewriter,
                                  transform::TransformResults &results,
@@ -73,6 +79,72 @@ transform::GetParentForOp::apply(transform::TransformRewriter &rewriter,
     parents.insert(loop);
   }
   results.set(cast<OpResult>(getResult()), parents.getArrayRef());
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ForallToForOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
+                                transform::TransformResults &results,
+                                transform::TransformState &state) {
+  auto payload = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(payload))
+    return emitSilenceableError() << "expected a single payload op";
+
+  auto target = dyn_cast<scf::ForallOp>(*payload.begin());
+  if (!target) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "expected the payload to be scf.forall";
+    diag.attachNote((*payload.begin())->getLoc()) << "payload op";
+    return diag;
+  }
+
+  rewriter.setInsertionPoint(target);
+
+  if (!target.getOutputs().empty()) {
+    return emitSilenceableError()
+           << "unsupported shared outputs (didn't bufferize?)";
+  }
+
+  SmallVector<OpFoldResult> lbs = target.getMixedLowerBound();
+  SmallVector<OpFoldResult> ubs = target.getMixedUpperBound();
+  SmallVector<OpFoldResult> steps = target.getMixedStep();
+
+  if (getNumResults() != lbs.size()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "op expects as many results (" << getNumResults()
+        << ") as payload has induction variables (" << lbs.size() << ")";
+    diag.attachNote(target.getLoc()) << "payload op";
+    return diag;
+  }
+
+  auto loc = target.getLoc();
+  SmallVector<Value> ivs;
+  for (auto &&[lb, ub, step] : llvm::zip(lbs, ubs, steps)) {
+    Value lbValue = getValueOrCreateConstantIndexOp(rewriter, loc, lb);
+    Value ubValue = getValueOrCreateConstantIndexOp(rewriter, loc, ub);
+    Value stepValue = getValueOrCreateConstantIndexOp(rewriter, loc, step);
+    auto loop = rewriter.create<scf::ForOp>(
+        loc, lbValue, ubValue, stepValue, ValueRange(),
+        [](OpBuilder &, Location, Value, ValueRange) {});
+    ivs.push_back(loop.getInductionVar());
+    rewriter.setInsertionPointToStart(loop.getBody());
+    rewriter.create<scf::YieldOp>(loc);
+    rewriter.setInsertionPointToStart(loop.getBody());
+  }
+  rewriter.eraseOp(target.getBody()->getTerminator());
+  rewriter.inlineBlockBefore(target.getBody(), &*rewriter.getInsertionPoint(),
+                             ivs);
+  rewriter.eraseOp(target);
+
+  for (auto &&[i, iv] : llvm::enumerate(ivs)) {
+    results.set(cast<OpResult>(getTransformed()[i]),
+                {iv.getParentBlock()->getParentOp()});
+  }
   return DiagnosedSilenceableFailure::success();
 }
 
