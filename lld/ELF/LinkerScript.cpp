@@ -122,11 +122,6 @@ uint64_t ExprValue::getSecAddr() const {
 }
 
 uint64_t ExprValue::getSectionOffset() const {
-  // If the alignment is trivial, we don't have to compute the full
-  // value to know the offset. This allows this function to succeed in
-  // cases where the output section is not yet known.
-  if (alignment == 1 && !sec)
-    return val;
   return getValue() - getSecAddr();
 }
 

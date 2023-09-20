@@ -48,7 +48,7 @@ module {
                         %argb: tensor<?xbf16, #SparseVector>) -> tensor<?xbf16, #DenseVector> {
     %c = arith.constant 0 : index
     %d = tensor.dim %arga, %c : tensor<?xbf16, #SparseVector>
-    %xv = bufferization.alloc_tensor (%d) : tensor<?xbf16, #DenseVector>
+    %xv = tensor.empty (%d) : tensor<?xbf16, #DenseVector>
     %0 = linalg.generic #trait_vec_op
        ins(%arga, %argb: tensor<?xbf16, #SparseVector>, tensor<?xbf16, #SparseVector>)
         outs(%xv: tensor<?xbf16, #DenseVector>) {

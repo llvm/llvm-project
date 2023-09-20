@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: ppc
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %t/a.s -o %t/a.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %p/Inputs/shared.s -o %t/b.o

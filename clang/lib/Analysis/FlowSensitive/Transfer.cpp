@@ -531,6 +531,13 @@ public:
       auto *LocDst =
           cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
+      // The assignment operators are different from the type of the destination
+      // in this model (i.e. in one of their base classes). This must be very rare
+      // and we just bail.
+      if (Method->getThisObjectType().getCanonicalType().getUnqualifiedType() !=
+          LocDst->getType().getCanonicalType().getUnqualifiedType())
+        return;
+
       if (LocSrc != nullptr && LocDst != nullptr) {
         copyRecord(*LocSrc, *LocDst, Env);
         Env.setStorageLocation(*S, *LocDst);

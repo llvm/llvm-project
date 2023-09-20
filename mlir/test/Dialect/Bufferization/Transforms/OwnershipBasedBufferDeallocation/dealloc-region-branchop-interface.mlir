@@ -2,6 +2,8 @@
 // RUN:  --buffer-deallocation-simplification -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -allow-unregistered-dialect -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true -split-input-file %s > /dev/null
 
+// RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file --verify-diagnostics > /dev/null
+
 // Test Case: Nested regions - This test defines a BufferBasedOp inside the
 // region of a RegionBufferBasedOp.
 // BufferDeallocation expected behavior: The AllocOp for the BufferBasedOp

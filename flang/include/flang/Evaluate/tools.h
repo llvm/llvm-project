@@ -233,6 +233,29 @@ auto UnwrapConvertedExpr(B &x) -> common::Constify<A, B> * {
   return nullptr;
 }
 
+// UnwrapProcedureRef() returns a pointer to a ProcedureRef when the whole
+// expression is a reference to a procedure.
+template <typename A> inline const ProcedureRef *UnwrapProcedureRef(const A &) {
+  return nullptr;
+}
+
+inline const ProcedureRef *UnwrapProcedureRef(const ProcedureRef &proc) {
+  // Reference to subroutine or to a function that returns
+  // an object pointer or procedure pointer
+  return &proc;
+}
+
+template <typename T>
+inline const ProcedureRef *UnwrapProcedureRef(const FunctionRef<T> &func) {
+  return &func; // reference to a function returning a non-pointer
+}
+
+template <typename T>
+inline const ProcedureRef *UnwrapProcedureRef(const Expr<T> &expr) {
+  return common::visit(
+      [](const auto &x) { return UnwrapProcedureRef(x); }, expr.u);
+}
+
 // When an expression is a "bare" LEN= derived type parameter inquiry,
 // possibly wrapped in integer kind conversions &/or parentheses, return
 // a pointer to the Symbol with TypeParamDetails.
@@ -884,10 +907,6 @@ template <typename A> const Symbol *GetLastSymbol(const A &x) {
   }
 }
 
-// If a function reference constitutes an entire expression, return a pointer
-// to its PrcedureRef.
-const ProcedureRef *GetProcedureRef(const Expr<SomeType> &);
-
 // For everyday variables: if GetLastSymbol() succeeds on the argument, return
 // its set of attributes, otherwise the empty set.  Also works on variables that
 // are pointer results of functions.
@@ -902,7 +921,7 @@ template <typename A> semantics::Attrs GetAttrs(const A &x) {
 template <>
 inline semantics::Attrs GetAttrs<Expr<SomeType>>(const Expr<SomeType> &x) {
   if (IsVariable(x)) {
-    if (const auto *procRef{GetProcedureRef(x)}) {
+    if (const auto *procRef{UnwrapProcedureRef(x)}) {
       if (const Symbol * interface{procRef->proc().GetInterfaceSymbol()}) {
         if (const auto *details{
                 interface->detailsIf<semantics::SubprogramDetails>()}) {
@@ -953,24 +972,25 @@ std::optional<BaseObject> GetBaseObject(const std::optional<A> &x) {
 
 // Like IsAllocatableOrPointer, but accepts pointer function results as being
 // pointers too.
-bool IsAllocatableOrPointerObject(const Expr<SomeType> &, FoldingContext &);
+bool IsAllocatableOrPointerObject(const Expr<SomeType> &);
 
 bool IsAllocatableDesignator(const Expr<SomeType> &);
 
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
+bool IsPointer(const Expr<SomeType> &);
 bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
 bool IsNullObjectPointer(const Expr<SomeType> &);
 bool IsNullProcedurePointer(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
-bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
+bool IsObjectPointer(const Expr<SomeType> &);
 
 // Can Expr be passed as absent to an optional dummy argument.
 // See 15.5.2.12 point 1 for more details.
-bool MayBePassedAsAbsentOptional(const Expr<SomeType> &, FoldingContext &);
+bool MayBePassedAsAbsentOptional(const Expr<SomeType> &);
 
 // Extracts the chain of symbols from a designator, which has perhaps been
 // wrapped in an Expr<>, removing all of the (co)subscripts.  The

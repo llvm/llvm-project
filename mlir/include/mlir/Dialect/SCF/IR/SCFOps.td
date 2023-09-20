@@ -250,20 +250,10 @@ def ForOp : SCF_Op<"for",
         "expected an index less than the number of region iter args");
       return getBody()->getArguments().drop_front(getNumInductionVars())[index];
     }
-    Operation::operand_range getIterOperands() {
-      return getOperands().drop_front(getNumControlOperands());
-    }
-    MutableArrayRef<OpOperand> getIterOpOperands() {
-      return
-        getOperation()->getOpOperands().drop_front(getNumControlOperands());
-    }
 
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
-    void setIterArg(unsigned iterArgNum, Value iterArgValue) {
-      getOperation()->setOperand(iterArgNum + getNumControlOperands(), iterArgValue);
-    }
 
     /// Number of induction variables, always 1 for scf::ForOp.
     unsigned getNumInductionVars() { return 1; }
@@ -273,14 +263,6 @@ def ForOp : SCF_Op<"for",
     }
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
-    /// Does the operation hold operands for loop-carried values
-    bool hasIterOperands() {
-      return getOperation()->getNumOperands() > getNumControlOperands();
-    }
-    /// Get Number of loop-carried values
-    unsigned getNumIterOperands() {
-      return getOperation()->getNumOperands() - getNumControlOperands();
-    }
     /// Get the iter arg number for an operand. If it isnt an iter arg
     /// operand return std::nullopt.
     std::optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {

@@ -296,6 +296,8 @@ libc_support_library(
         "src/__support/CPP/type_traits/enable_if.h",
         "src/__support/CPP/type_traits/false_type.h",
         "src/__support/CPP/type_traits/integral_constant.h",
+        "src/__support/CPP/type_traits/invoke.h",
+        "src/__support/CPP/type_traits/invoke_result.h",
         "src/__support/CPP/type_traits/is_arithmetic.h",
         "src/__support/CPP/type_traits/is_array.h",
         "src/__support/CPP/type_traits/is_base_of.h",
@@ -334,6 +336,7 @@ libc_support_library(
         "src/__support/CPP/type_traits/type_identity.h",
         "src/__support/CPP/type_traits/void_t.h",
         "src/__support/CPP/utility/declval.h",
+        "src/__support/CPP/utility/forward.h",
     ],
     deps = [
         ":__support_macros_attributes",

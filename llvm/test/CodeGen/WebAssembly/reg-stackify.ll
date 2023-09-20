@@ -471,7 +471,8 @@ define i32 @commute_to_fix_ordering(i32 %arg) {
 ; CHECK-LABEL: multiple_defs:
 ; CHECK:        f64.add         $push[[NUM0:[0-9]+]]=, ${{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT:   local.tee       $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
-; CHECK-NEXT:   f64.select      ${{[0-9]+}}=, $pop{{[0-9]+}}, $pop[[NUM1]], ${{[0-9]+}}{{$}}
+; CHECK-NEXT:   f64.select      $push{{[0-9]+}}=, $pop{{[0-9]+}}, $pop[[NUM1]], ${{[0-9]+}}{{$}}
+; CHECK:        $[[NUM2]]=,
 ; NOREGS-LABEL: multiple_defs:
 ; NOREGS:        f64.add
 ; NOREGS:        local.tee

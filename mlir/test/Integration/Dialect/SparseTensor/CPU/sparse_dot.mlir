@@ -64,7 +64,7 @@ module {
     //
     // CHECK: 53
     //
-    %t = bufferization.alloc_tensor() : tensor<f32>
+    %t = tensor.empty() : tensor<f32>
     %z = arith.constant 0.0 : f32
     %x = tensor.insert %z into %t[] : tensor<f32>
     %0 = call @sparse_dot(%s1, %s2, %x) : (tensor<1024xf32, #SparseVector>,

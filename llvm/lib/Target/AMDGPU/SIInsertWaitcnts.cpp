@@ -2598,7 +2598,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
 
   OptNone = MF.getFunction().hasOptNone() ||
-            MF.getTarget().getOptLevel() == CodeGenOpt::None;
+            MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   HardwareLimits Limits = {};
   if (ST->hasExtendedWaitCounts()) {

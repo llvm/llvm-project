@@ -2,6 +2,8 @@
 // RUN:  -buffer-deallocation-simplification -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -verify-diagnostics -ownership-based-buffer-deallocation=private-function-dynamic-ownership=true -split-input-file %s > /dev/null
 
+// RUN: mlir-opt %s -buffer-deallocation-pipeline --split-input-file > /dev/null
+
 // Test Case:
 //    bb0
 //   /   \

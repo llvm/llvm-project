@@ -145,6 +145,119 @@ TEST(LlvmLibcTypeTraitsTest, integral_constant) {
   EXPECT_EQ((integral_constant<int, 4>::value), 4);
 }
 
+namespace invoke_detail {
+
+enum State { INIT = 0, A_APPLY_CALLED, B_APPLY_CALLED };
+
+struct A {
+  State state = INIT;
+  virtual ~A() {}
+  virtual void apply() { state = A_APPLY_CALLED; }
+};
+
+struct B : public A {
+  virtual ~B() {}
+  virtual void apply() { state = B_APPLY_CALLED; }
+};
+
+void free_function() {}
+int free_function_return_5() { return 5; }
+int free_function_passtrough(int value) { return value; }
+
+struct Delegate {
+  int (*ptr)(int) = &free_function_passtrough;
+};
+
+template <int tag> struct Tag {
+  static constexpr int value = tag;
+};
+
+struct Functor {
+  auto operator()() & { return Tag<0>(); }
+  auto operator()() const & { return Tag<1>(); }
+  auto operator()() && { return Tag<2>(); }
+  auto operator()() const && { return Tag<3>(); }
+
+  const Tag<0> &operator()(const Tag<0> &a) { return a; }
+  const Tag<0> &&operator()(const Tag<0> &&a) { return cpp::move(a); }
+  Tag<1> operator()(Tag<1> a) { return a; }
+};
+
+} // namespace invoke_detail
+
+TEST(LlvmLibcTypeTraitsTest, invoke) {
+  using namespace invoke_detail;
+  { // member function call
+    A a;
+    EXPECT_EQ(a.state, INIT);
+    invoke(&A::apply, a);
+    EXPECT_EQ(a.state, A_APPLY_CALLED);
+  }
+  { // overriden member function call
+    B b;
+    EXPECT_EQ(b.state, INIT);
+    invoke(&A::apply, b);
+    EXPECT_EQ(b.state, B_APPLY_CALLED);
+  }
+  { // free function
+    invoke(&free_function);
+    EXPECT_EQ(invoke(&free_function_return_5), 5);
+    EXPECT_EQ(invoke(&free_function_passtrough, 1), 1);
+  }
+  { // pointer member function call
+    Delegate d;
+    EXPECT_EQ(invoke(&Delegate::ptr, d, 2), 2);
+  }
+  { // Functor with several ref qualifier
+    Functor f;
+    const Functor cf;
+    EXPECT_EQ(invoke(f).value, 0);
+    EXPECT_EQ(invoke(cf).value, 1);
+    EXPECT_EQ(invoke(move(f)).value, 2);
+    EXPECT_EQ(invoke(move(cf)).value, 3);
+  }
+  { // lambda
+    EXPECT_EQ(invoke([]() -> int { return 2; }), 2);
+    EXPECT_EQ(invoke([](int value) -> int { return value; }, 1), 1);
+
+    const auto lambda = [](int) { return 0; };
+    EXPECT_EQ(invoke(lambda, 1), 0);
+  }
+}
+
+TEST(LlvmLibcTypeTraitsTest, invoke_result) {
+  using namespace invoke_detail;
+  EXPECT_TRUE((is_same_v<invoke_result_t<void (A::*)(), A>, void>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<void (A::*)(), B>, void>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<void (*)()>, void>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<int (*)()>, int>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<int (*)(int), int>, int>));
+  EXPECT_TRUE((
+      is_same_v<invoke_result_t<int (*Delegate::*)(int), Delegate, int>, int>));
+  // Functor with several ref qualifiers
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor &>, Tag<0>>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor const &>, Tag<1>>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor &&>, Tag<2>>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor const &&>, Tag<3>>));
+  // Functor with several arg qualifiers
+  EXPECT_TRUE(
+      (is_same_v<invoke_result_t<Functor &&, Tag<0> &>, const Tag<0> &>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor, Tag<0>>, const Tag<0> &&>));
+  EXPECT_TRUE((is_same_v<invoke_result_t<Functor, Tag<1>>, Tag<1>>));
+  {
+    auto lambda = []() {};
+    EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda)>, void>));
+  }
+  {
+    auto lambda = []() { return 0; };
+    EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda)>, int>));
+  }
+  {
+    auto lambda = [](int) -> double { return 0; };
+    EXPECT_TRUE((is_same_v<invoke_result_t<decltype(lambda), int>, double>));
+  }
+}
+
 using IntegralAndFloatingTypes =
     testing::TypeList<bool, char, short, int, long, long long, unsigned char,
                       unsigned short, unsigned int, unsigned long,

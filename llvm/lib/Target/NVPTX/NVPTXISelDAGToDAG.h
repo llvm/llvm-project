@@ -43,8 +43,7 @@ public:
 
   NVPTXDAGToDAGISel() = delete;
 
-  explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
-                             CodeGenOpt::Level   OptLevel);
+  explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm, CodeGenOptLevel OptLevel);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   const NVPTXSubtarget *Subtarget = nullptr;

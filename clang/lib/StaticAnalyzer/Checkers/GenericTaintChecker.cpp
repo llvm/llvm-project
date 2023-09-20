@@ -695,9 +695,10 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{{"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{{"strndupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"wcslen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{{"strnlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+
+      // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
+      // See the details here: https://github.com/llvm/llvm-project/pull/66086
+
       {{{"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
       {{{"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},

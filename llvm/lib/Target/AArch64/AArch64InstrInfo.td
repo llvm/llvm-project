@@ -3684,12 +3684,12 @@ multiclass VecROStoreLane0Pat<ROAddrMode ro, SDPatternOperator storeop,
                               SubRegIndex SubRegIdx,
                               Instruction STRW, Instruction STRX> {
 
-  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), (i64 0))),
                      (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
             (STRW (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
-  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), (i64 0))),
                      (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
             (STRX (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
@@ -3823,7 +3823,7 @@ multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop
                             ValueType SubRegTy,
                             SubRegIndex SubRegIdx, Operand IndexType,
                             Instruction STR> {
-  def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), (i64 0))),
                      (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
             (STR (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                  GPR64sp:$Rn, IndexType:$offset)>;
@@ -6472,11 +6472,23 @@ def : Pat<(i32 (int_aarch64_neon_uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op)))
             (v8i16 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub)),
             ssub))>;
 
+def : Pat<(v4i32 (AArch64uaddlv (v8i16 (AArch64uaddlp (v16i8 V128:$op))))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$op), hsub))>;
+
+def : Pat<(v4i32 (AArch64uaddlv (v4i16 (AArch64uaddlp (v8i8 V64:$op))))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$op), hsub))>;
+
 def : Pat<(v4i32 (AArch64uaddlv (v8i8 V64:$Rn))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i8v V64:$Rn), hsub))>;
 
+def : Pat<(v4i32 (AArch64uaddlv (v4i16 V64:$Rn))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv4i16v V64:$Rn), ssub))>;
+
 def : Pat<(v4i32 (AArch64uaddlv (v16i8 V128:$Rn))),
           (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv16i8v V128:$Rn), hsub))>;
+
+def : Pat<(v4i32 (AArch64uaddlv (v8i16 V128:$Rn))),
+          (v4i32 (SUBREG_TO_REG (i64 0), (UADDLVv8i16v V128:$Rn), ssub))>;
 
 // Patterns for across-vector intrinsics, that have a node equivalent, that
 // returns a vector (with only the low lane defined) instead of a scalar.

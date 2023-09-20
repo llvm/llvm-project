@@ -795,8 +795,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Custom);
-  setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, Custom);
+  if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, LibCall);
+  } else {
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, Expand);
+    setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, Expand);
+  }
   setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_LOAD_AND, MVT::i64, Custom);
 
@@ -5330,7 +5335,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_uaddlv: {
     EVT OpVT = Op.getOperand(1).getValueType();
     EVT ResVT = Op.getValueType();
-    if (ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8)) {
+    if (ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8 ||
+                              OpVT == MVT::v8i16 || OpVT == MVT::v4i16)) {
       // In order to avoid insert_subvector, used v4i32 than v2i32.
       SDValue UADDLV =
           DAG.getNode(AArch64ISD::UADDLV, dl, MVT::v4i32, Op.getOperand(1));
@@ -5353,8 +5359,9 @@ bool AArch64TargetLowering::shouldExtendGSIndex(EVT VT, EVT &EltTy) const {
   return false;
 }
 
-bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(EVT IndexVT,
+bool AArch64TargetLowering::shouldRemoveExtendFromGSIndex(SDValue Extend,
                                                           EVT DataVT) const {
+  const EVT IndexVT = Extend.getOperand(0).getValueType();
   // SVE only supports implicit extension of 32-bit indices.
   if (!Subtarget->hasSVE() || IndexVT.getVectorElementType() != MVT::i32)
     return false;
@@ -6112,8 +6119,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
     return LowerVECREDUCE(Op, DAG);
-  case ISD::ATOMIC_LOAD_SUB:
-    return LowerATOMIC_LOAD_SUB(Op, DAG);
   case ISD::ATOMIC_LOAD_AND:
     return LowerATOMIC_LOAD_AND(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
@@ -13747,23 +13752,6 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
   }
 }
 
-SDValue AArch64TargetLowering::LowerATOMIC_LOAD_SUB(SDValue Op,
-                                                    SelectionDAG &DAG) const {
-  auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-  if (!Subtarget.hasLSE() && !Subtarget.outlineAtomics())
-    return SDValue();
-
-  // LSE has an atomic load-add instruction, but not a load-sub.
-  SDLoc dl(Op);
-  MVT VT = Op.getSimpleValueType();
-  SDValue RHS = Op.getOperand(2);
-  AtomicSDNode *AN = cast<AtomicSDNode>(Op.getNode());
-  RHS = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), RHS);
-  return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, dl, AN->getMemoryVT(),
-                       Op.getOperand(0), Op.getOperand(1), RHS,
-                       AN->getMemOperand());
-}
-
 SDValue AArch64TargetLowering::LowerATOMIC_LOAD_AND(SDValue Op,
                                                     SelectionDAG &DAG) const {
   auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
@@ -15707,8 +15695,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
 }
 
 bool AArch64TargetLowering::generateFMAsInMachineCombiner(
-    EVT VT, CodeGenOpt::Level OptLevel) const {
-  return (OptLevel >= CodeGenOpt::Aggressive) && !VT.isScalableVector() &&
+    EVT VT, CodeGenOptLevel OptLevel) const {
+  return (OptLevel >= CodeGenOptLevel::Aggressive) && !VT.isScalableVector() &&
          !useSVEForFixedLengthVectorVT(VT);
 }
 
@@ -15969,7 +15957,7 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
     return performVecReduceAddCombineWithUADDLP(N, DAG);
 
   SDValue Op0 = N->getOperand(0);
-  if (N->getValueType(0) != MVT::i32 ||
+  if (N->getValueType(0) != MVT::i32 || Op0.getValueType().isScalableVT() ||
       Op0.getValueType().getVectorElementType() != MVT::i32)
     return SDValue();
 
@@ -22286,6 +22274,7 @@ static SDValue performSelectCombine(SDNode *N,
 static SDValue performDUPCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
   // 128bit vector version.
   if (VT.is64BitVector() && DCI.isAfterLegalizeDAG()) {
@@ -22293,14 +22282,32 @@ static SDValue performDUPCombine(SDNode *N,
     SmallVector<SDValue> Ops(N->ops());
     if (SDNode *LN = DCI.DAG.getNodeIfExists(N->getOpcode(),
                                              DCI.DAG.getVTList(LVT), Ops)) {
-      SDLoc DL(N);
       return DCI.DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(LN, 0),
                              DCI.DAG.getConstant(0, DL, MVT::i64));
     }
   }
 
-  if (N->getOpcode() == AArch64ISD::DUP)
+  if (N->getOpcode() == AArch64ISD::DUP) {
+    if (DCI.isAfterLegalizeDAG()) {
+      // If scalar dup's operand is extract_vector_elt, try to combine them into
+      // duplane. For example,
+      //
+      //    t21: i32 = extract_vector_elt t19, Constant:i64<0>
+      //  t18: v4i32 = AArch64ISD::DUP t21
+      //  ==>
+      //  t22: v4i32 = AArch64ISD::DUPLANE32 t19, Constant:i64<0>
+      SDValue EXTRACT_VEC_ELT = N->getOperand(0);
+      if (EXTRACT_VEC_ELT.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        if (VT == EXTRACT_VEC_ELT.getOperand(0).getValueType()) {
+          unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
+          return DCI.DAG.getNode(Opcode, DL, VT, EXTRACT_VEC_ELT.getOperand(0),
+                                 EXTRACT_VEC_ELT.getOperand(1));
+        }
+      }
+    }
+
     return performPostLD1Combine(N, DCI, false);
+  }
 
   return SDValue();
 }
@@ -24427,7 +24434,7 @@ AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
   // stack and close enough to the spill slot, this can lead to a situation
   // where the monitor always gets cleared and the atomic operation can never
   // succeed. So at -O0 lower this operation to a CAS loop.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+  if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return AtomicExpansionKind::CmpXChg;
 
   // Using CAS for an atomic load has a better chance of succeeding under high
@@ -24479,7 +24486,7 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // where the monitor always gets cleared and the atomic operation can never
   // succeed. So at -O0 lower this operation to a CAS loop. Also worthwhile if
   // we have a single CAS instruction that can replace the loop.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None ||
+  if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None ||
       Subtarget->hasLSE())
     return AtomicExpansionKind::CmpXChg;
 
@@ -24497,7 +24504,7 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
   // on the stack and close enough to the spill slot, this can lead to a
   // situation where the monitor always gets cleared and the atomic operation
   // can never succeed. So at -O0 we need a late-expanded pseudo-inst instead.
-  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+  if (getTargetMachine().getOptLevel() == CodeGenOptLevel::None)
     return AtomicExpansionKind::None;
 
   // 128-bit atomic cmpxchg is weird; AtomicExpand doesn't know how to expand

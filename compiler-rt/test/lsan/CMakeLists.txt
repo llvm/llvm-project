@@ -42,11 +42,9 @@ foreach(arch ${LSAN_TEST_ARCH})
 endforeach()
 
 set(LSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
-if(NOT COMPILER_RT_STANDALONE_BUILD)
-  list(APPEND LSAN_TEST_DEPS lsan)
-  append_list_if(COMPILER_RT_HAS_ASAN asan LSAN_TEST_DEPS)
-  append_list_if(COMPILER_RT_HAS_HWASAN hwasan LSAN_TEST_DEPS)
-endif()
+list(APPEND LSAN_TEST_DEPS lsan)
+append_list_if(COMPILER_RT_HAS_ASAN asan LSAN_TEST_DEPS)
+append_list_if(COMPILER_RT_HAS_HWASAN hwasan LSAN_TEST_DEPS)
 add_lit_testsuite(check-lsan "Running the LeakSanitizer tests"
   ${LSAN_TESTSUITES}
   DEPENDS ${LSAN_TEST_DEPS})

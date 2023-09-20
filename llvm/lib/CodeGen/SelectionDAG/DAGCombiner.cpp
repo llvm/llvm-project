@@ -149,7 +149,7 @@ namespace {
     const TargetLowering &TLI;
     const SelectionDAGTargetInfo *STI;
     CombineLevel Level = BeforeLegalizeTypes;
-    CodeGenOpt::Level OptLevel;
+    CodeGenOptLevel OptLevel;
     bool LegalDAG = false;
     bool LegalOperations = false;
     bool LegalTypes = false;
@@ -242,7 +242,7 @@ namespace {
     SDValue visit(SDNode *N);
 
   public:
-    DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOpt::Level OL)
+    DAGCombiner(SelectionDAG &D, AliasAnalysis *AA, CodeGenOptLevel OL)
         : DAG(D), TLI(D.getTargetLoweringInfo()),
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL), AA(AA) {
       ForCodeSize = DAG.shouldOptForSize();
@@ -429,6 +429,8 @@ namespace {
     SDValue visitUADDO_CARRY(SDNode *N);
     SDValue visitSADDO_CARRY(SDNode *N);
     SDValue visitUADDO_CARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
+                                 SDNode *N);
+    SDValue visitSADDO_CARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                  SDNode *N);
     SDValue visitSUBE(SDNode *N);
     SDValue visitUSUBO_CARRY(SDNode *N);
@@ -2153,7 +2155,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
   }
 
   // Don't simplify token factors if optnone.
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
   // Don't simplify the token factor if the node itself has too many operands.
@@ -3305,7 +3307,12 @@ SDValue DAGCombiner::visitADDO(SDNode *N) {
     return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
                      DAG.getConstant(0, DL, CarryVT));
 
-  if (!IsSigned) {
+  if (IsSigned) {
+    // fold (saddo (xor a, -1), 1) -> (ssub 0, a).
+    if (isBitwiseNot(N0) && isOneOrOneSplat(N1))
+      return DAG.getNode(ISD::SSUBO, DL, N->getVTList(),
+                         DAG.getConstant(0, DL, VT), N0.getOperand(0));
+  } else {
     // fold (uaddo (xor a, -1), 1) -> (usub 0, a) and flip carry.
     if (isBitwiseNot(N0) && isOneOrOneSplat(N1)) {
       SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
@@ -3637,6 +3644,18 @@ SDValue DAGCombiner::visitUADDO_CARRYLike(SDValue N0, SDValue N1,
   return SDValue();
 }
 
+SDValue DAGCombiner::visitSADDO_CARRYLike(SDValue N0, SDValue N1,
+                                          SDValue CarryIn, SDNode *N) {
+  // fold (saddo_carry (xor a, -1), b, c) -> (ssubo_carry b, a, !c)
+  if (isBitwiseNot(N0)) {
+    if (SDValue NotC = extractBooleanFlip(CarryIn, DAG, TLI, true))
+      return DAG.getNode(ISD::SSUBO_CARRY, SDLoc(N), N->getVTList(), N1,
+                         N0.getOperand(0), NotC);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -3655,6 +3674,12 @@ SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
         TLI.isOperationLegalOrCustom(ISD::SADDO, N->getValueType(0)))
       return DAG.getNode(ISD::SADDO, DL, N->getVTList(), N0, N1);
   }
+
+  if (SDValue Combined = visitSADDO_CARRYLike(N0, N1, CarryIn, N))
+    return Combined;
+
+  if (SDValue Combined = visitSADDO_CARRYLike(N1, N0, CarryIn, N))
+    return Combined;
 
   return SDValue();
 }
@@ -8789,7 +8814,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   // TODO: If there is evidence that running this later would help, this
   //       limitation could be removed. Legality checks may need to be added
   //       for the created store and optional bswap/rotate.
-  if (LegalOperations || OptLevel == CodeGenOpt::None)
+  if (LegalOperations || OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
   // We only handle merging simple stores of 1-4 bytes.
@@ -11680,10 +11705,9 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's always safe to look through zero extends.
   if (Index.getOpcode() == ISD::ZERO_EXTEND) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
+    if (TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
       IndexType = ISD::UNSIGNED_SCALED;
-      Index = Op;
+      Index = Index.getOperand(0);
       return true;
     }
     if (ISD::isIndexTypeSigned(IndexType)) {
@@ -11694,12 +11718,10 @@ bool refineIndexType(SDValue &Index, ISD::MemIndexType &IndexType, EVT DataVT,
 
   // It's only safe to look through sign extends when Index is signed.
   if (Index.getOpcode() == ISD::SIGN_EXTEND &&
-      ISD::isIndexTypeSigned(IndexType)) {
-    SDValue Op = Index.getOperand(0);
-    if (TLI.shouldRemoveExtendFromGSIndex(Op.getValueType(), DataVT)) {
-      Index = Op;
-      return true;
-    }
+      ISD::isIndexTypeSigned(IndexType) &&
+      TLI.shouldRemoveExtendFromGSIndex(Index, DataVT)) {
+    Index = Index.getOperand(0);
+    return true;
   }
 
   return false;
@@ -18178,7 +18200,7 @@ StoreSDNode *DAGCombiner::getUniqueStoreFeeding(LoadSDNode *LD,
 }
 
 SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
-  if (OptLevel == CodeGenOpt::None || !LD->isSimple())
+  if (OptLevel == CodeGenOptLevel::None || !LD->isSimple())
     return SDValue();
   SDValue Chain = LD->getOperand(0);
   int64_t Offset;
@@ -18378,7 +18400,8 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
     return V;
 
   // Try to infer better alignment information than the load already has.
-  if (OptLevel != CodeGenOpt::None && LD->isUnindexed() && !LD->isAtomic()) {
+  if (OptLevel != CodeGenOptLevel::None && LD->isUnindexed() &&
+      !LD->isAtomic()) {
     if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
       if (*Alignment > LD->getAlign() &&
           isAligned(*Alignment, LD->getSrcValueOffset())) {
@@ -20401,7 +20424,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 }
 
 bool DAGCombiner::mergeConsecutiveStores(StoreSDNode *St) {
-  if (OptLevel == CodeGenOpt::None || !EnableStoreMerging)
+  if (OptLevel == CodeGenOptLevel::None || !EnableStoreMerging)
     return false;
 
   // TODO: Extend this function to merge stores of scalable vectors.
@@ -20680,7 +20703,8 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     return Chain;
 
   // Try to infer better alignment information than the store already has.
-  if (OptLevel != CodeGenOpt::None && ST->isUnindexed() && !ST->isAtomic()) {
+  if (OptLevel != CodeGenOptLevel::None && ST->isUnindexed() &&
+      !ST->isAtomic()) {
     if (MaybeAlign Alignment = DAG.InferPtrAlign(Ptr)) {
       if (*Alignment > ST->getAlign() &&
           isAligned(*Alignment, ST->getSrcValueOffset())) {
@@ -20796,7 +20820,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
   if (StoreSDNode *ST1 = dyn_cast<StoreSDNode>(Chain)) {
     if (ST->isUnindexed() && ST->isSimple() &&
         ST1->isUnindexed() && ST1->isSimple()) {
-      if (OptLevel != CodeGenOpt::None && ST1->getBasePtr() == Ptr &&
+      if (OptLevel != CodeGenOptLevel::None && ST1->getBasePtr() == Ptr &&
           ST1->getValue() == Value && ST->getMemoryVT() == ST1->getMemoryVT() &&
           ST->getAddressSpace() == ST1->getAddressSpace()) {
         // If this is a store followed by a store with the same value to the
@@ -20804,7 +20828,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         return Chain;
       }
 
-      if (OptLevel != CodeGenOpt::None && ST1->hasOneUse() &&
+      if (OptLevel != CodeGenOptLevel::None && ST1->hasOneUse() &&
           !ST1->getBasePtr().isUndef() &&
           ST->getAddressSpace() == ST1->getAddressSpace()) {
         // If we consider two stores and one smaller in size is a scalable
@@ -20967,7 +20991,7 @@ SDValue DAGCombiner::visitLIFETIME_END(SDNode *N) {
 ///   }
 ///
 SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
   // Can't change the number of memory accesses for a volatile store or break
@@ -27540,7 +27564,7 @@ void DAGCombiner::GatherAllAliases(SDNode *N, SDValue OriginalChain,
 /// Walk up chain skipping non-aliasing memory nodes, looking for a better chain
 /// (aliasing node.)
 SDValue DAGCombiner::FindBetterChain(SDNode *N, SDValue OldChain) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return OldChain;
 
   // Ops for replacing token factor.
@@ -27697,7 +27721,7 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
 }
 
 bool DAGCombiner::findBetterNeighborChains(StoreSDNode *St) {
-  if (OptLevel == CodeGenOpt::None)
+  if (OptLevel == CodeGenOptLevel::None)
     return false;
 
   const BaseIndexOffset BasePtr = BaseIndexOffset::match(St, DAG);
@@ -27725,7 +27749,7 @@ bool DAGCombiner::findBetterNeighborChains(StoreSDNode *St) {
 
 /// This is the entry point for the file.
 void SelectionDAG::Combine(CombineLevel Level, AliasAnalysis *AA,
-                           CodeGenOpt::Level OptLevel) {
+                           CodeGenOptLevel OptLevel) {
   /// This is the main entry point to this class.
   DAGCombiner(*this, AA, OptLevel).Run(Level);
 }

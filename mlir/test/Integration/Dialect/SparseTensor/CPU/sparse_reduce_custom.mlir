@@ -59,7 +59,7 @@ module {
     %maxf = arith.constant 1.0e999 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSR>
     %d1 = tensor.dim %argb, %c1 : tensor<?x?xf64, #CSR>
-    %xm = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #CSR>
+    %xm = tensor.empty(%d0, %d1) : tensor<?x?xf64, #CSR>
     %0 = linalg.generic #trait_matmul
        ins(%arga, %argb: tensor<?x?xf64, #CSR>, tensor<?x?xf64, #CSR>)
         outs(%xm: tensor<?x?xf64, #CSR>) {
@@ -90,7 +90,7 @@ module {
     %maxf = arith.constant 1.0e999 : f64
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #CSR>
     %d1 = tensor.dim %argb, %c1 : tensor<?x?xf64, #CSC>
-    %xm = bufferization.alloc_tensor(%d0, %d1) : tensor<?x?xf64, #CSR>
+    %xm = tensor.empty(%d0, %d1) : tensor<?x?xf64, #CSR>
     %0 = linalg.generic #trait_matmul
        ins(%arga, %argb: tensor<?x?xf64, #CSR>, tensor<?x?xf64, #CSC>)
         outs(%xm: tensor<?x?xf64, #CSR>) {

@@ -2108,8 +2108,8 @@ public:
   /// Returns the target-specific default value for tail duplication.
   /// This value will be used if the tail-dup-placement-threshold argument is
   /// not provided.
-  virtual unsigned getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
-    return OptLevel >= CodeGenOpt::Aggressive ? 4 : 2;
+  virtual unsigned getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
+    return OptLevel >= CodeGenOptLevel::Aggressive ? 4 : 2;
   }
 
   /// Returns the callee operand from the given \p MI.

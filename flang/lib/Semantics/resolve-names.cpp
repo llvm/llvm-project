@@ -1131,7 +1131,8 @@ private:
   bool OkToAddComponent(const parser::Name &, const Symbol * = nullptr);
   ParamValue GetParamValue(
       const parser::TypeParamValue &, common::TypeParamAttr attr);
-  void CheckCommonBlockDerivedType(const SourceName &, const Symbol &);
+  void CheckCommonBlockDerivedType(
+      const SourceName &, const Symbol &, UnorderedSymbolSet &);
   Attrs HandleSaveName(const SourceName &, Attrs);
   void AddSaveName(std::set<SourceName> &, const SourceName &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
@@ -5225,9 +5226,10 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   Walk(componentDefs);
   if (derivedTypeInfo_.sequence) {
     details.set_sequence(true);
-    if (componentDefs.empty()) { // C740
+    if (componentDefs.empty()) {
+      // F'2023 C745 - not enforced by any compiler
       Say(stmt.source,
-          "A sequence type must have at least one component"_err_en_US);
+          "A sequence type should have at least one component"_warn_en_US);
     }
     if (!details.paramNames().empty()) { // C740
       Say(stmt.source,
@@ -6096,7 +6098,8 @@ void DeclarationVisitor::CheckCommonBlocks() {
               "Derived type '%s' in COMMON block must have the BIND or"
               " SEQUENCE attribute"_err_en_US);
         }
-        CheckCommonBlockDerivedType(name, typeSymbol);
+        UnorderedSymbolSet typeSet;
+        CheckCommonBlockDerivedType(name, typeSymbol, typeSet);
       }
     }
   }
@@ -6120,8 +6123,12 @@ bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
 }
 
 // Check if this derived type can be in a COMMON block.
-void DeclarationVisitor::CheckCommonBlockDerivedType(
-    const SourceName &name, const Symbol &typeSymbol) {
+void DeclarationVisitor::CheckCommonBlockDerivedType(const SourceName &name,
+    const Symbol &typeSymbol, UnorderedSymbolSet &typeSet) {
+  if (auto iter{typeSet.find(SymbolRef{typeSymbol})}; iter != typeSet.end()) {
+    return;
+  }
+  typeSet.emplace(typeSymbol);
   if (const auto *scope{typeSymbol.scope()}) {
     for (const auto &pair : *scope) {
       const Symbol &component{*pair.second};
@@ -6144,13 +6151,7 @@ void DeclarationVisitor::CheckCommonBlockDerivedType(
         if (const auto *type{details->type()}) {
           if (const auto *derived{type->AsDerived()}) {
             const Symbol &derivedTypeSymbol{derived->typeSymbol()};
-            // Don't call this member function recursively if the derived type
-            // symbol is the same symbol that is already being processed.
-            // This can happen when a component is a pointer of the same type
-            // as its parent component, for instance.
-            if (derivedTypeSymbol != typeSymbol) {
-              CheckCommonBlockDerivedType(name, derivedTypeSymbol);
-            }
+            CheckCommonBlockDerivedType(name, derivedTypeSymbol, typeSet);
           }
         }
       }

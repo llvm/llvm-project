@@ -27,11 +27,11 @@
 // TODO: support sparse_tensor.unpack on libgen path.
 
 #SortedCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ]
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
 }>
 
 #SortedCOOI32 = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed_nu", "singleton" ],
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton),
   posWidth = 32,
   crdWidth = 32
 }>
@@ -43,7 +43,7 @@
 }>
 
 #BCOO = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense", "compressed_hi_nu", "singleton" ]
+  map = (d0, d1, d2) -> (d0 : dense, d1 : compressed(nonunique, high), d2 : singleton)
 }>
 
 module {

@@ -272,48 +272,45 @@ public:
     Max = ZT,
   };
 
-  // These are helper methods for dealing with flags in the INLINEASM SDNode
-  // in the backend.
+  // This class is intentionally packed into a 32b value as it is used as a
+  // MVT::i32 ConstantSDNode SDValue for SelectionDAG and as immediate operands
+  // on INLINEASM and INLINEASM_BR MachineInstr's.
   //
   // The encoding of Flag is currently:
-  //   Bits 2-0 - A Kind::* value indicating the kind of the operand.
-  //   Bits 15-3 - The number of SDNode operands associated with this inline
-  //               assembly operand.
+  //   Bits 2-0 - A Kind::* value indicating the kind of the operand. (KindField)
+  //   Bits 15-3 - The number of SDNode operands associated with
+  //               this inline assembly operand. (NumOperands)
+  //   Bit 31 - determines if this is a matched operand. (IsMatched)
   //   If bit 31 is set:
-  //     Bit 30-16 - The operand number that this operand must match.
-  //                 When bits 2-0 are Kind::Mem, the Constraint_* value must be
-  //                 obtained from the flags for this operand number.
+  //     Bits 30-16 - The operand number that this operand must match. (MatchedOperandNo)
   //   Else if bits 2-0 are Kind::Mem:
-  //     Bit 30-16 - A Constraint_* value indicating the original constraint
-  //                 code.
+  //     Bits 30-16 - A ConstraintCode:: value indicating the original constraint code. (MemConstraintCode)
   //   Else:
-  //     Bit 30-16 - The register class ID to use for the operand.
+  //     Bits 30-16 - The register class ID to use for the operand. (RegClass)
   //
-  //  Bits 30-16 are called "Data" for lack of a better name. The getter is
-  //  intentionally private; the public methods that rely on that private method
-  //  should be used to check invariants first before accessing Data.
+  //   As such, MatchedOperandNo, MemConstraintCode, and RegClass are views of
+  //   the same slice of bits, but are mutually exclusive depending on the
+  //   fields IsMatched then KindField.
   class Flag {
     uint32_t Storage;
     using KindField = Bitfield::Element<Kind, 0, 3, Kind::Func>;
     using NumOperands = Bitfield::Element<unsigned, 3, 13>;
-    using Data = Bitfield::Element<unsigned, 16, 15>;
+    using MatchedOperandNo = Bitfield::Element<unsigned, 16, 15>;
+    using MemConstraintCode = Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
+    using RegClass = Bitfield::Element<unsigned, 16, 15>;
     using IsMatched = Bitfield::Element<bool, 31, 1>;
 
-    unsigned getData() const { return Bitfield::get<Data>(Storage); }
+
+    unsigned getMatchedOperandNo() const { return Bitfield::get<MatchedOperandNo>(Storage); }
+    unsigned getRegClass() const { return Bitfield::get<RegClass>(Storage); }
     bool isMatched() const { return Bitfield::get<IsMatched>(Storage); }
-    void setKind(Kind K) { Bitfield::set<KindField>(Storage, K); }
-    void setNumOperands(unsigned N) { Bitfield::set<NumOperands>(Storage, N); }
-    void setData(unsigned D) { Bitfield::set<Data>(Storage, D); }
-    void setIsMatched(bool B) { Bitfield::set<IsMatched>(Storage, B); }
 
   public:
     Flag() : Storage(0) {}
     explicit Flag(uint32_t F) : Storage(F) {}
-    Flag(enum Kind K, unsigned NumOps) {
-      setKind(K);
-      setNumOperands(NumOps);
-      setData(0);
-      setIsMatched(false);
+    Flag(enum Kind K, unsigned NumOps) : Storage(0) {
+      Bitfield::set<KindField>(Storage, K);
+      Bitfield::set<NumOperands>(Storage, NumOps);
     }
     operator uint32_t() { return Storage; }
     Kind getKind() const { return Bitfield::get<KindField>(Storage); }
@@ -356,7 +353,7 @@ public:
     bool isUseOperandTiedToDef(unsigned &Idx) const {
       if (!isMatched())
         return false;
-      Idx = getData();
+      Idx = getMatchedOperandNo();
       return true;
     }
 
@@ -367,28 +364,24 @@ public:
         return false;
       // setRegClass() uses 0 to mean no register class, and otherwise stores
       // RC + 1.
-      if (!getData())
+      if (!getRegClass())
         return false;
-      RC = getData() - 1;
+      RC = getRegClass() - 1;
       return true;
     }
 
     ConstraintCode getMemoryConstraintID() const {
       assert((isMemKind() || isFuncKind()) &&
              "Not expected mem or function flag!");
-      uint32_t D = getData();
-      assert(D <= static_cast<uint32_t>(ConstraintCode::Max) &&
-             D >= static_cast<uint32_t>(ConstraintCode::Unknown) &&
-             "unexpected value for memory constraint");
-      return static_cast<ConstraintCode>(D);
+      return Bitfield::get<MemConstraintCode>(Storage);
     }
 
     /// setMatchingOp - Augment an existing flag with information indicating
     /// that this input operand is tied to a previous output operand.
-    void setMatchingOp(unsigned MatchedOperandNo) {
-      assert(getData() == 0 && "Matching operand already set");
-      setData(MatchedOperandNo);
-      setIsMatched(true);
+    void setMatchingOp(unsigned OperandNo) {
+      assert(getMatchedOperandNo() == 0 && "Matching operand already set");
+      Bitfield::set<MatchedOperandNo>(Storage, OperandNo);
+      Bitfield::set<IsMatched>(Storage, true);
     }
 
     /// setRegClass - Augment an existing flag with the required register class
@@ -397,25 +390,23 @@ public:
     void setRegClass(unsigned RC) {
       assert(!isImmKind() && "Immediates cannot have a register class");
       assert(!isMemKind() && "Memory operand cannot have a register class");
-      assert(getData() == 0 && "Register class already set");
+      assert(getRegClass() == 0 && "Register class already set");
       // Store RC + 1, reserve the value 0 to mean 'no register class'.
-      setData(RC + 1);
+      Bitfield::set<RegClass>(Storage, RC + 1);
     }
 
     /// setMemConstraint - Augment an existing flag with the constraint code for
     /// a memory constraint.
     void setMemConstraint(ConstraintCode C) {
-      assert((isMemKind() || isFuncKind()) &&
-             "Flag is not a memory or function constraint!");
-      assert(getData() == 0 && "Mem constraint already set");
-      setData(static_cast<uint32_t>(C));
+      assert(getMemoryConstraintID() == ConstraintCode::Unknown && "Mem constraint already set");
+      Bitfield::set<MemConstraintCode>(Storage, C);
     }
     /// clearMemConstraint - Similar to setMemConstraint(0), but without the
     /// assertion checking that the constraint has not been set previously.
     void clearMemConstraint() {
       assert((isMemKind() || isFuncKind()) &&
              "Flag is not a memory or function constraint!");
-      setData(0);
+      Bitfield::set<MemConstraintCode>(Storage, ConstraintCode::Unknown);
     }
   };
 

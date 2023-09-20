@@ -1789,6 +1789,10 @@ module std_private_system_error_system_error    [system] { header "__system_erro
 
 module std_private_thread_formatter            [system] { header "__thread/formatter.h" }
 module std_private_thread_id                   [system] { header "__thread/id.h" }
+module std_private_thread_jthread              [system] {
+  header "__thread/jthread.h"
+  export *
+}
 module std_private_thread_poll_with_backoff    [system] { header "__thread/poll_with_backoff.h" }
 module std_private_thread_this_thread          [system] { header "__thread/this_thread.h" }
 module std_private_thread_thread               [system] {

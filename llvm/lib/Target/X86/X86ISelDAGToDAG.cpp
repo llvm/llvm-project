@@ -173,7 +173,7 @@ namespace {
 
     X86DAGToDAGISel() = delete;
 
-    explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
+    explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOptLevel OptLevel)
         : SelectionDAGISel(ID, tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
@@ -624,7 +624,8 @@ bool X86DAGToDAGISel::isMaskZeroExtended(SDNode *N) const {
 
 bool
 X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
-  if (OptLevel == CodeGenOpt::None) return false;
+  if (OptLevel == CodeGenOptLevel::None)
+    return false;
 
   if (!N.hasOneUse())
     return false;
@@ -1242,7 +1243,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     }
     }
 
-    if (OptLevel != CodeGenOpt::None &&
+    if (OptLevel != CodeGenOptLevel::None &&
         // Only do this when the target can fold the load into the call or
         // jmp.
         !Subtarget->useIndirectThunkCalls() &&
@@ -1481,7 +1482,7 @@ bool X86DAGToDAGISel::tryOptimizeRem8Extend(SDNode *N) {
 
 void X86DAGToDAGISel::PostprocessISelDAG() {
   // Skip peepholes at -O0.
-  if (TM.getOptLevel() == CodeGenOpt::None)
+  if (TM.getOptLevel() == CodeGenOptLevel::None)
     return;
 
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
@@ -6351,6 +6352,6 @@ bool X86DAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// This pass converts a legalized DAG into a X86-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createX86ISelDag(X86TargetMachine &TM,
-                                     CodeGenOpt::Level OptLevel) {
+                                     CodeGenOptLevel OptLevel) {
   return new X86DAGToDAGISel(TM, OptLevel);
 }

@@ -150,13 +150,13 @@ def : Pat<(fcopysign FPR32:$fj, FPR64:$fk),
 def : Pat<(fcanonicalize FPR64:$fj), (FMAX_D $fj, $fj)>;
 let Predicates = [IsLA32] in {
 def : Pat<(is_fpclass FPR64:$fj, (i32 timm:$mask)),
-          (SLTU R0, (AND (MOVFR2GR_S_64 (FCLASS_D FPR64:$fj)),
-                         (to_fclass_mask timm:$mask)))>;
+          (SLTU R0, (ANDI (MOVFR2GR_S_64 (FCLASS_D FPR64:$fj)),
+                          (to_fclass_mask timm:$mask)))>;
 } // Predicates = [IsLA32]
 let Predicates = [IsLA64] in {
 def : Pat<(is_fpclass FPR64:$fj, (i32 timm:$mask)),
-          (SLTU R0, (AND (MOVFR2GR_D (FCLASS_D FPR64:$fj)),
-                         (to_fclass_mask timm:$mask)))>;
+          (SLTU R0, (ANDI (MOVFR2GR_D (FCLASS_D FPR64:$fj)),
+                          (to_fclass_mask timm:$mask)))>;
 } // Predicates = [IsLA64]
 
 /// Setcc
