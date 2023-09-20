@@ -229,8 +229,8 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
     // FIXME: We should probably delay the addition of diagnostic information
     // until we know the entire expression is false.
     if (BO.isOr() && IsRHSSatisfied) {
-      auto EffectiveDetailEnd =
-          Satisfaction.Details.begin() + EffectiveDetailEndIndex;
+      auto EffectiveDetailEnd = Satisfaction.Details.begin();
+      std::advance(EffectiveDetailEnd, EffectiveDetailEndIndex);
       Satisfaction.Details.erase(EffectiveDetailEnd,
                                  Satisfaction.Details.end());
     }
