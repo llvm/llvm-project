@@ -663,6 +663,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::BRCOND:
     SelectBRCOND(N);
     return;
+  case ISD::FP_EXTEND:
+    SelectFP_EXTEND(N);
+    return;
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
   case AMDGPUISD::CVT_PKNORM_I16_F32:
   case AMDGPUISD::CVT_PKNORM_U16_F32:
@@ -2301,6 +2304,22 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   CurDAG->SelectNodeTo(N, BrOp, MVT::Other,
                        N->getOperand(2), // Basic Block
                        VCC.getValue(0));
+}
+
+void AMDGPUDAGToDAGISel::SelectFP_EXTEND(SDNode *N) {
+  if (Subtarget->hasSALUFloatInsts() && N->getValueType(0) == MVT::f32 &&
+      !N->isDivergent()) {
+    SDValue Src = N->getOperand(0);
+    if (Src.getValueType() == MVT::f16) {
+      if (isExtractHiElt(Src, Src)) {
+        CurDAG->SelectNodeTo(N, AMDGPU::S_CVT_HI_F32_F16, N->getVTList(),
+                             {Src});
+        return;
+      }
+    }
+  }
+
+  SelectCode(N);
 }
 
 void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
