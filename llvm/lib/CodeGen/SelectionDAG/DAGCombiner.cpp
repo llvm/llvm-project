@@ -16352,7 +16352,7 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue ConstOp, Pow2Op;
 
-  int Mantissa = -1;
+  std::optional<int> Mantissa;
   auto GetConstAndPow2Ops = [&](unsigned ConstOpIdx) {
     if (ConstOpIdx == 1 && N->getOpcode() == ISD::FDIV)
       return false;
@@ -16366,36 +16366,43 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
     Pow2Op = Pow2Op.getOperand(0);
 
-    // TODO(1): We may be able to include undefs.
-    // TODO(2): We could also handle non-splat vector types.
-    ConstantFPSDNode *CFP =
-        isConstOrConstSplatFP(ConstOp, /*AllowUndefs*/ false);
-    if (CFP == nullptr)
-      return false;
-    const APFloat &APF = CFP->getValueAPF();
-
-    // Make sure we have normal/ieee constant.
-    if (!APF.isNormal() || !APF.isIEEE())
-      return false;
-
     // `Log2(Pow2Op) < Pow2Op.getScalarSizeInBits()`.
     // TODO: We could use knownbits to make this bound more precise.
     int MaxExpChange = Pow2Op.getValueType().getScalarSizeInBits();
 
-    // Make sure the floats exponent is within the bounds that this transform
-    // produces bitwise equals value.
-    int CurExp = ilogb(APF);
-    // FMul by pow2 will only increase exponent.
-    int MinExp = N->getOpcode() == ISD::FMUL ? CurExp : (CurExp - MaxExpChange);
-    // FDiv by pow2 will only decrease exponent.
-    int MaxExp = N->getOpcode() == ISD::FDIV ? CurExp : (CurExp + MaxExpChange);
-    if (MinExp <= APFloat::semanticsMinExponent(APF.getSemantics()) ||
-        MaxExp >= APFloat::semanticsMaxExponent(APF.getSemantics()))
-      return false;
+    auto IsFPConstValid = [N, MaxExpChange, &Mantissa](ConstantFPSDNode *CFP) {
+      if (CFP == nullptr)
+        return false;
 
-    // Finally make sure we actually know the mantissa for the float type.
-    Mantissa = APFloat::semanticsPrecision(APF.getSemantics()) - 1;
-    return Mantissa > 0;
+      const APFloat &APF = CFP->getValueAPF();
+
+      // Make sure we have normal/ieee constant.
+      if (!APF.isNormal() || !APF.isIEEE())
+        return false;
+
+      // Make sure the floats exponent is within the bounds that this transform
+      // produces bitwise equals value.
+      int CurExp = ilogb(APF);
+      // FMul by pow2 will only increase exponent.
+      int MinExp =
+          N->getOpcode() == ISD::FMUL ? CurExp : (CurExp - MaxExpChange);
+      // FDiv by pow2 will only decrease exponent.
+      int MaxExp =
+          N->getOpcode() == ISD::FDIV ? CurExp : (CurExp + MaxExpChange);
+      if (MinExp <= APFloat::semanticsMinExponent(APF.getSemantics()) ||
+          MaxExp >= APFloat::semanticsMaxExponent(APF.getSemantics()))
+        return false;
+
+      // Finally make sure we actually know the mantissa for the float type.
+      int ThisMantissa = APFloat::semanticsPrecision(APF.getSemantics()) - 1;
+      if (!Mantissa)
+        Mantissa = ThisMantissa;
+
+      return *Mantissa == ThisMantissa && ThisMantissa > 0;
+    };
+
+    // TODO: We may be able to include undefs.
+    return ISD::matchUnaryFpPredicate(ConstOp, IsFPConstValid);
   };
 
   if (!GetConstAndPow2Ops(0) && !GetConstAndPow2Ops(1))
@@ -16420,7 +16427,7 @@ SDValue DAGCombiner::combineFMulOrFDivWithIntPow2(SDNode *N) {
 
   // Perform actual transform.
   SDValue MantissaShiftCnt =
-      DAG.getConstant(Mantissa, DL, getShiftAmountTy(NewIntVT));
+      DAG.getConstant(*Mantissa, DL, getShiftAmountTy(NewIntVT));
   // TODO: Sometimes Log2 is of form `(X + C)`. `(X + C) << C1` should fold to
   // `(X << C1) + (C << C1)`, but that isn't always the case because of the
   // cast. We could implement that by handle here to handle the casts.
