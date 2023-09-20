@@ -92,48 +92,62 @@ StringRef StripGNUInstallLibDir(StringRef Path) {
 }
 
 std::string getComgrInstallPathFromExecutable() {
-  std::string ROCMPath = "";
 
 #if !defined(_WIN32) && !defined(_WIN64)
-  std::ifstream ProcMaps;
-  ProcMaps.open("/proc/self/maps", std::ifstream::in);
-  if (!ProcMaps.is_open() || !ProcMaps.good()) {
-    return ROCMPath;
-  }
+  FILE *ProcMaps = fopen("/proc/self/maps", "r");
+  if (ProcMaps == NULL)
+    return "";
 
-  std::string Line;
+  char *Line = NULL;
+  size_t len = 0;
   uintptr_t Address = reinterpret_cast<uintptr_t>(getROCMPath);
-  while (std::getline(ProcMaps, Line)) {
+
+  // TODO: switch POSIX getline() to C++-based getline() once Pytorch resolves
+  // build issues with libstdc++ ABI
+  while (getline(&Line, &len, ProcMaps) != -1) {
     llvm::SmallVector<StringRef, 6> Tokens;
     StringRef(Line).split(Tokens, ' ', -1 /* MaxSplit */,
                           false /* KeepEmpty */);
 
     unsigned long long LowAddress, HighAddress;
     if (llvm::consumeUnsignedInteger(Tokens[0], 16 /* Radix */, LowAddress)) {
-      return ROCMPath;
+      fclose(ProcMaps);
+      free(Line);
+      return "";
     }
 
     if (!Tokens[0].consume_front("-")) {
-      return ROCMPath;
+      fclose(ProcMaps);
+      free(Line);
+      return "";
     }
 
     if (llvm::consumeUnsignedInteger(Tokens[0], 16 /* Radix */, HighAddress)) {
-      return ROCMPath;
+      fclose(ProcMaps);
+      free(Line);
+      return "";
     }
 
     if ((Address >= LowAddress && Address <= HighAddress)) {
       StringRef Path = Tokens[5].ltrim();
       /* Not a mapped file or File path empty */
       if (Tokens[4] == "0" || Path == "") {
-        return ROCMPath;
+        fclose(ProcMaps);
+        free(Line);
+        return "";
       }
 
+      fclose(ProcMaps);
+      free(Line);
       return StripGNUInstallLibDir(Path).str();
     }
   }
+
+  fclose(ProcMaps);
+  free(Line);
 #endif
 
-  return ROCMPath;
+  return "";
 }
 
 class InstallationDetector {

@@ -59,6 +59,8 @@ lld::elf::link in Comgr's linkWithLLD()
 - Added -x assembler option to assembly compilation. Before, if an assembly file
 did not end with a .s file extension, it was not handled properly by the Comgr
 ASSEMBLE\_SOURCE\_TO\_RELOCATABLE action.
+- Switched getline() from C++ to C-style to avoid issues with stdlibc++ and
+pytorch
 
 
 New APIs
