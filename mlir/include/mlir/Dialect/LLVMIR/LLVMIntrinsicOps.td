@@ -654,27 +654,14 @@ class LLVM_VecReductionI<string mnem>
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VecReductionAccBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
-                           [Pure, SameOperandsAndResultElementType]>,
+    : LLVM_OneResultIntrOp</*mnem=*/"vector.reduce." # mnem, 
+                           /*overloadedResults=*/[], 
+                           /*overloadedOperands=*/[1],
+                           /*traits=*/[Pure, SameOperandsAndResultElementType],
+                           /*equiresFastmath=*/1>,
       Arguments<(ins element:$start_value,
                      LLVM_VectorOf<element>:$input,
-                     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags)> {
-  let llvmBuilder = [{
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-        module,
-        llvm::Intrinsic::vector_reduce_}] # mnem # [{,
-        { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
-                           ", ") # [{
-        });
-    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    $res = builder.CreateCall(fn, operands);
-  }];
-  let mlirBuilder = [{
-    $res = $_builder.create<$_qualCppClassName>($_location,
-      $_resultType, $start_value, $input, inst->getFastMathFlags());
-  }];
-}
+                     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags)>;
 
 class LLVM_VecReductionAccF<string mnem>
     : LLVM_VecReductionAccBase<mnem, AnyFloat>;
