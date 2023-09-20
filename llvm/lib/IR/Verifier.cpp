@@ -370,7 +370,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   SmallPtrSet<const DILifetime *, 32> DefinedDebugLifetimes;
 
   TBAAVerifier TBAAVerifyHelper;
-  ConvergenceVerifier CV;
+  ConvergenceVerifier ConvergenceVerifyHelper;
 
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
 
@@ -417,15 +417,15 @@ public:
     auto FailureCB = [this](const Twine &Message) {
       this->CheckFailed(Message);
     };
-    CV.initialize(OS, FailureCB, F);
+    ConvergenceVerifyHelper.initialize(OS, FailureCB, F);
 
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
     visit(const_cast<Function &>(F));
     verifySiblingFuncletUnwinds();
 
-    if (CV.sawTokens())
-      CV.verify(DT);
+    if (ConvergenceVerifyHelper.sawTokens())
+      ConvergenceVerifyHelper.verify(DT);
 
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
@@ -2943,6 +2943,7 @@ void Verifier::visitFunction(const Function &F) {
 //
 void Verifier::visitBasicBlock(BasicBlock &BB) {
   InstsInThisBlock.clear();
+  ConvergenceVerifyHelper.visit(BB);
 
   // Ensure that basic blocks have terminators!
   Check(BB.getTerminator(), "Basic Block does not have terminator!", &BB);
@@ -3644,7 +3645,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (Call.isInlineAsm())
     verifyInlineAsmCall(Call);
 
-  CV.visit(Call);
+  ConvergenceVerifyHelper.visit(Call);
 
   visitInstruction(Call);
 }

@@ -1934,15 +1934,13 @@ template <class Emitter>
 const RecordType *ByteCodeExprGen<Emitter>::getRecordTy(QualType Ty) {
   if (const PointerType *PT = dyn_cast<PointerType>(Ty))
     return PT->getPointeeType()->getAs<RecordType>();
-  else
-    return Ty->getAs<RecordType>();
+  return Ty->getAs<RecordType>();
 }
 
 template <class Emitter>
 Record *ByteCodeExprGen<Emitter>::getRecord(QualType Ty) {
-  if (auto *RecordTy = getRecordTy(Ty)) {
+  if (const auto *RecordTy = getRecordTy(Ty))
     return getRecord(RecordTy->getDecl());
-  }
   return nullptr;
 }
 

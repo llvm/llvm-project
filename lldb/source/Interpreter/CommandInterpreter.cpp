@@ -2471,7 +2471,7 @@ PlatformSP CommandInterpreter::GetPlatform(bool prefer_target_platform) {
   return platform_sp;
 }
 
-bool CommandInterpreter::DidProcessStopAbnormally() {
+bool CommandInterpreter::DidProcessStopAbnormally() const {
   auto exe_ctx = GetExecutionContext();
   TargetSP target_sp = exe_ctx.GetTargetSP();
   if (!target_sp)
@@ -2976,22 +2976,10 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                            m_alias_dict);
 }
 
-ExecutionContext CommandInterpreter::GetExecutionContext() {
-  ExecutionContext exe_ctx;
-  if (!m_overriden_exe_contexts.empty()) {
-    // During the course of a command, the target may have replaced the process 
-    // coming in with another.  I fix that here:
-    exe_ctx = m_overriden_exe_contexts.top();
-    // Don't use HasProcessScope, that returns false if there is a process but
-    // it's no longer valid, which is one of the cases we want to catch here.
-    if (exe_ctx.HasTargetScope() && exe_ctx.GetProcessPtr()) {
-      ProcessSP actual_proc_sp = exe_ctx.GetTargetSP()->GetProcessSP();
-      if (actual_proc_sp != exe_ctx.GetProcessSP())
-        m_overriden_exe_contexts.top().SetContext(actual_proc_sp);
-    }
-    return m_overriden_exe_contexts.top();
-  }
-  return m_debugger.GetSelectedExecutionContext();
+ExecutionContext CommandInterpreter::GetExecutionContext() const {
+  return !m_overriden_exe_contexts.empty()
+             ? m_overriden_exe_contexts.top()
+             : m_debugger.GetSelectedExecutionContext();
 }
 
 void CommandInterpreter::OverrideExecutionContext(
@@ -3184,16 +3172,11 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
 }
 
 bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
-  // InterruptCommand returns true if this is the first time
-  // we initiate an interrupt for this command.  So we give the
-  // command a chance to handle the interrupt on the first
-  // interrupt, but if that didn't do anything, a second
-  // interrupt will do more work to halt the process/interpreter.
-  if (InterruptCommand()) 
-    return true;
-
   ExecutionContext exe_ctx(GetExecutionContext());
   Process *process = exe_ctx.GetProcessPtr();
+
+  if (InterruptCommand())
+    return true;
 
   if (process) {
     StateType state = process->GetState();
