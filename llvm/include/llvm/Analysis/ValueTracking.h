@@ -91,12 +91,6 @@ KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            const DominatorTree *DT = nullptr,
                            bool UseInstrInfo = true);
 
-void computeKnownBits(const Value *V, const APInt &DemandedElts,
-                      KnownBits &Known, unsigned Depth, const SimplifyQuery &Q);
-
-void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
-                      const SimplifyQuery &Q);
-
 KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
                            unsigned Depth, const SimplifyQuery &Q);
 

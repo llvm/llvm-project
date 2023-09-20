@@ -145,8 +145,12 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                       DemandedElts, DemandedLHS, DemandedRHS);
 }
 
-void llvm::computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
-                            const SimplifyQuery &Q) {
+static void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                             KnownBits &Known, unsigned Depth,
+                             const SimplifyQuery &Q);
+
+static void computeKnownBits(const Value *V, KnownBits &Known, unsigned Depth,
+                             const SimplifyQuery &Q) {
   // Since the number of lanes in a scalable vector is unknown at compile time,
   // we track one bit which is implicitly broadcast to all lanes.  This means
   // that all lanes in a scalable vector are considered demanded.
@@ -179,7 +183,7 @@ KnownBits llvm::computeKnownBits(const Value *V, const DataLayout &DL,
                                  unsigned Depth, AssumptionCache *AC,
                                  const Instruction *CxtI,
                                  const DominatorTree *DT, bool UseInstrInfo) {
-  return ::computeKnownBits(
+  return computeKnownBits(
       V, Depth, SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
 
@@ -187,7 +191,7 @@ KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
                                  const DataLayout &DL, unsigned Depth,
                                  AssumptionCache *AC, const Instruction *CxtI,
                                  const DominatorTree *DT, bool UseInstrInfo) {
-  return ::computeKnownBits(
+  return computeKnownBits(
       V, DemandedElts, Depth,
       SimplifyQuery(DL, DT, AC, safeCxtI(V, CxtI), UseInstrInfo));
 }
@@ -1780,7 +1784,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
                                  unsigned Depth, const SimplifyQuery &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
-  computeKnownBits(V, DemandedElts, Known, Depth, Q);
+  ::computeKnownBits(V, DemandedElts, Known, Depth, Q);
   return Known;
 }
 
@@ -1789,7 +1793,7 @@ KnownBits llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
 KnownBits llvm::computeKnownBits(const Value *V, unsigned Depth,
                                  const SimplifyQuery &Q) {
   KnownBits Known(getBitWidth(V->getType(), Q.DL));
-  computeKnownBits(V, Known, Depth, Q);
+  ::computeKnownBits(V, Known, Depth, Q);
   return Known;
 }
 
@@ -1808,9 +1812,9 @@ KnownBits llvm::computeKnownBits(const Value *V, unsigned Depth,
 /// where V is a vector, known zero, and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the demanded elements in the vector specified by DemandedElts.
-void llvm::computeKnownBits(const Value *V, const APInt &DemandedElts,
-                            KnownBits &Known, unsigned Depth,
-                            const SimplifyQuery &Q) {
+void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                      KnownBits &Known, unsigned Depth,
+                      const SimplifyQuery &Q) {
   if (!DemandedElts) {
     // No demanded elts, better to assume we don't know anything.
     Known.resetAll();
