@@ -920,6 +920,8 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
   }
   std::copy(Requirements.begin(), Requirements.end(),
             E->getTrailingObjects<concepts::Requirement *>());
+  E->LParenLoc = Record.readSourceLocation();
+  E->RParenLoc = Record.readSourceLocation();
   E->RBraceLoc = Record.readSourceLocation();
 }
 
