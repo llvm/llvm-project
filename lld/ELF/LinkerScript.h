@@ -378,6 +378,10 @@ public:
 
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;
+
+  // If assignAddress() at any point caused the location counter to move
+  // backwards, this will point to the section where this occured.
+  OutputSection *lastSectionWithBackwardsCounter = nullptr;
 };
 
 LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;

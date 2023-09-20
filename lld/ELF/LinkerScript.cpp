@@ -170,8 +170,7 @@ void LinkerScript::expandOutputSection(uint64_t size) {
 void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
   uint64_t val = e().getValue();
   if (val < dot && inSec)
-    error(loc + ": unable to move location counter backward for: " +
-          state->outSec->name);
+    lastSectionWithBackwardsCounter = state->outSec;
 
   // Update to location counter means update to section size.
   if (inSec)
@@ -1327,6 +1326,7 @@ LinkerScript::AddressState::AddressState() {
 // Returns a symbol that has changed its section or value, or nullptr if no
 // symbol has changed.
 const Defined *LinkerScript::assignAddresses() {
+  lastSectionWithBackwardsCounter = nullptr;
   if (script->hasSectionsCommand) {
     // With a linker script, assignment of addresses to headers is covered by
     // allocateHeaders().

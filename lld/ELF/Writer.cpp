@@ -1697,6 +1697,13 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       }
     }
   }
+
+  if (script->lastSectionWithBackwardsCounter) {
+    error(script->lastSectionWithBackwardsCounter->location +
+          ": unable to move location counter backward for: " +
+          script->lastSectionWithBackwardsCounter->name);
+  }
+
   if (!config->relocatable && config->emachine == EM_RISCV)
     riscvFinalizeRelax(pass);
 
