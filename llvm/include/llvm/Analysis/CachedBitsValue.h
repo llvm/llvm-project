@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_CACHEDBITSVALUE_H
 #define LLVM_ANALYSIS_CACHEDBITSVALUE_H
 
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
 #include <type_traits>
@@ -45,48 +46,54 @@ protected:
   constexpr static bool ValuePointerConvertible =
       std::is_convertible_v<T, ValuePointerType>;
 
-  ValuePointerType Pointer;
-  mutable std::optional<KnownBits> Known;
+  // Store the presence of the KnownBits information in one of the bits of
+  // Pointer.
+  // true  -> present
+  // false -> absent
+  mutable PointerIntPair<ValuePointerType, 1, bool> Pointer;
+  mutable KnownBits Known;
 
   void calculateKnownBits(unsigned Depth, const SimplifyQuery &Q) const {
-    Known = computeKnownBits(Pointer, Depth, Q);
+    Known = computeKnownBits(Pointer.getPointer(), Depth, Q);
+    Pointer.setInt(true);
   }
 
   void calculateKnownBits(const APInt &DemandedElts, unsigned Depth,
                           const SimplifyQuery &Q) const {
-    Known = computeKnownBits(Pointer, DemandedElts, Depth, Q);
+    Known = computeKnownBits(Pointer.getPointer(), DemandedElts, Depth, Q);
+    Pointer.setInt(false);
   }
 
 public:
   ImplCachedBitsValue() = default;
   ImplCachedBitsValue(ValuePointerType Pointer)
-      : Pointer(Pointer), Known(std::nullopt) {}
+      : Pointer(Pointer, false) {}
   ImplCachedBitsValue(ValuePointerType Pointer, const KnownBits &Known)
-      : Pointer(Pointer), Known(Known) {}
+      : Pointer(Pointer, true), Known(Known) {}
 
   template <typename T, std::enable_if_t<ValuePointerConvertible<T>, int> = 0>
   ImplCachedBitsValue(const T &Value)
-      : Pointer(static_cast<ValuePointerType>(Value)), Known(std::nullopt) {}
+      : Pointer(static_cast<ValuePointerType>(Value), false) {}
 
   template <typename T, std::enable_if_t<ValuePointerConvertible<T>, int> = 0>
   ImplCachedBitsValue(const T &Value, const KnownBits &Known)
-      : Pointer(static_cast<ValuePointerType>(Value)), Known(Known) {}
+      : Pointer(static_cast<ValuePointerType>(Value), true), Known(Known) {}
 
-  [[nodiscard]] ValuePointerType getValue() { return Pointer; }
-  [[nodiscard]] ValuePointerType getValue() const { return Pointer; }
+  [[nodiscard]] ValuePointerType getValue() { return Pointer.getPointer(); }
+  [[nodiscard]] ValuePointerType getValue() const { return Pointer.getPointer(); }
 
   [[nodiscard]] const KnownBits &getKnownBits(unsigned Depth,
                                               const SimplifyQuery &Q) const {
     if (!hasKnownBits())
       calculateKnownBits(Depth, Q);
-    return Known.value();
+    return Known;
   }
 
   [[nodiscard]] KnownBits &getKnownBits(unsigned Depth,
                                         const SimplifyQuery &Q) {
     if (!hasKnownBits())
       calculateKnownBits(Depth, Q);
-    return Known.value();
+    return Known;
   }
 
   [[nodiscard]] const KnownBits &getKnownBits(const APInt &DemandedElts,
@@ -94,7 +101,7 @@ public:
                                               const SimplifyQuery &Q) const {
     if (!hasKnownBits())
       calculateKnownBits(DemandedElts, Depth, Q);
-    return Known.value();
+    return Known;
   }
 
   [[nodiscard]] KnownBits &getKnownBits(const APInt &DemandedElts,
@@ -102,18 +109,18 @@ public:
                                         const SimplifyQuery &Q) {
     if (!hasKnownBits())
       calculateKnownBits(DemandedElts, Depth, Q);
-    return Known.value();
+    return Known;
   }
 
-  [[nodiscard]] bool hasKnownBits() const { return Known.has_value(); }
+  [[nodiscard]] bool hasKnownBits() const { return Pointer.getInt(); }
 
-  operator ValuePointerType() { return Pointer; }
-  ValuePointerType operator->() { return Pointer; }
-  ValueReferenceType operator*() { return *Pointer; }
+  operator ValuePointerType() { return Pointer.getPointer(); }
+  ValuePointerType operator->() { return Pointer.getPointer(); }
+  ValueReferenceType operator*() { return *Pointer.getPointer(); }
 
-  operator ValuePointerType() const { return Pointer; }
-  ValuePointerType operator->() const { return Pointer; }
-  ValueReferenceType operator*() const { return *Pointer; }
+  operator ValuePointerType() const { return Pointer.getPointer(); }
+  ValuePointerType operator->() const { return Pointer.getPointer(); }
+  ValueReferenceType operator*() const { return *Pointer.getPointer(); }
 };
 } // namespace detail
 
@@ -151,7 +158,7 @@ public:
 
   [[nodiscard]] CachedBitsConstValue toConst() const {
     if (hasKnownBits())
-      return CachedBitsConstValue(getValue(), Known.value());
+      return CachedBitsConstValue(getValue(), Known);
     else
       return CachedBitsConstValue(getValue());
   }
