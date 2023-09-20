@@ -18,7 +18,7 @@ class RISCVTuneInfo {
   bits<16> CacheLineSize = 0;
   bits<16> PrefetchDistance = 0;
   bits<16> MinPrefetchStride = 1;
-  bits<16> MaxPrefetchIterationsAhead = 65535;
+  bits<32> MaxPrefetchIterationsAhead = -1;
 }
 
 def RISCVTuneInfoTable : GenericTable {

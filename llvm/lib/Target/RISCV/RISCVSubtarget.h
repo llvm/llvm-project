@@ -43,7 +43,7 @@ struct RISCVTuneInfo {
   uint16_t CacheLineSize;
   uint16_t PrefetchDistance;
   uint16_t MinPrefetchStride;
-  uint16_t MaxPrefetchIterationsAhead;
+  unsigned MaxPrefetchIterationsAhead;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
