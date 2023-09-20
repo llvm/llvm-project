@@ -7,7 +7,7 @@
 #include <float.h>
 #include <stdio.h>
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 
 /* Returns: convert a tu_int to a fp_t, rounding toward even. */
 
@@ -39,7 +39,7 @@ char assumption_3[sizeof(fp_t) * CHAR_BIT == 128] = {0};
 #endif
 
 int main() {
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
   if (test__floatuntitf(0, 0.0))
     return 1;
 

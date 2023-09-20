@@ -1006,9 +1006,9 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 
   // Append everything except the terminator into the fused operation.
   rewriter.setInsertionPointToStart(fusedLoop.getBody());
-  for (Operation &op : target.getLoopBody().begin()->without_terminator())
+  for (Operation &op : target.getBody()->without_terminator())
     rewriter.clone(op, fusedMapping);
-  for (Operation &op : source.getLoopBody().begin()->without_terminator())
+  for (Operation &op : source.getBody()->without_terminator())
     rewriter.clone(op, fusedMapping);
 
   // Fuse the old terminator in_parallel ops into the new one.

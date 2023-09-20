@@ -2047,6 +2047,8 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
   return 0;
 }
 
+unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) { return 16; }
+
 bool isSI(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureSouthernIslands);
 }
@@ -2141,6 +2143,10 @@ bool hasMAIInsts(const MCSubtargetInfo &STI) {
 
 bool hasVOPD(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureVOPD);
+}
+
+unsigned hasKernargPreload(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureKernargPreload);
 }
 
 int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,

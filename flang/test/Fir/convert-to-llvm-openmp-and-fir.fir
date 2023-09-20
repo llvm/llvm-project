@@ -220,35 +220,119 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // -----
 
 func.func @_QPomp_target_data() {
+  %c1024 = arith.constant 1024 : index
   %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_dataEa"}
+  %c1024_0 = arith.constant 1024 : index
   %1 = fir.alloca !fir.array<1024xi32> {bindc_name = "b", uniq_name = "_QFomp_target_dataEb"}
+  %c1024_1 = arith.constant 1024 : index
   %2 = fir.alloca !fir.array<1024xi32> {bindc_name = "c", uniq_name = "_QFomp_target_dataEc"}
+  %c1024_2 = arith.constant 1024 : index
   %3 = fir.alloca !fir.array<1024xi32> {bindc_name = "d", uniq_name = "_QFomp_target_dataEd"}
-  omp.target_enter_data   map((to -> %0 : !fir.ref<!fir.array<1024xi32>>), (to -> %1 : !fir.ref<!fir.array<1024xi32>>), (always, alloc -> %2 : !fir.ref<!fir.array<1024xi32>>))
-  omp.target_exit_data   map((from -> %0 : !fir.ref<!fir.array<1024xi32>>), (from -> %1 : !fir.ref<!fir.array<1024xi32>>), (release -> %2 : !fir.ref<!fir.array<1024xi32>>), (always, delete -> %3 : !fir.ref<!fir.array<1024xi32>>))
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %4 = arith.subi %c1024, %c1 : index
+  %5 = omp.bounds   lower_bound(%c0 : index) upper_bound(%4 : index) extent(%c1024 : index) stride(%c1 : index) start_idx(%c1 : index)
+  %6 = omp.map_info var_ptr(%0 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(to) capture(ByRef) bounds(%5) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+  %c1_3 = arith.constant 1 : index
+  %c0_4 = arith.constant 0 : index
+  %7 = arith.subi %c1024_0, %c1_3 : index
+  %8 = omp.bounds   lower_bound(%c0_4 : index) upper_bound(%7 : index) extent(%c1024_0 : index) stride(%c1_3 : index) start_idx(%c1_3 : index)
+  %9 = omp.map_info var_ptr(%1 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(to) capture(ByRef) bounds(%8) -> !fir.ref<!fir.array<1024xi32>> {name = "b"}
+  %c1_5 = arith.constant 1 : index
+  %c0_6 = arith.constant 0 : index
+  %10 = arith.subi %c1024_1, %c1_5 : index
+  %11 = omp.bounds   lower_bound(%c0_6 : index) upper_bound(%10 : index) extent(%c1024_1 : index) stride(%c1_5 : index) start_idx(%c1_5 : index)
+  %12 = omp.map_info var_ptr(%2 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(always, exit_release_or_enter_alloc) capture(ByRef) bounds(%11) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
+  omp.target_enter_data   map_entries(%6, %9, %12 : !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
+  %c1_7 = arith.constant 1 : index
+  %c0_8 = arith.constant 0 : index
+  %13 = arith.subi %c1024, %c1_7 : index
+  %14 = omp.bounds   lower_bound(%c0_8 : index) upper_bound(%13 : index) extent(%c1024 : index) stride(%c1_7 : index) start_idx(%c1_7 : index)
+  %15 = omp.map_info var_ptr(%0 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(from) capture(ByRef) bounds(%14) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+  %c1_9 = arith.constant 1 : index
+  %c0_10 = arith.constant 0 : index
+  %16 = arith.subi %c1024_0, %c1_9 : index
+  %17 = omp.bounds   lower_bound(%c0_10 : index) upper_bound(%16 : index) extent(%c1024_0 : index) stride(%c1_9 : index) start_idx(%c1_9 : index)
+  %18 = omp.map_info var_ptr(%1 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(from) capture(ByRef) bounds(%17) -> !fir.ref<!fir.array<1024xi32>> {name = "b"}
+  %c1_11 = arith.constant 1 : index
+  %c0_12 = arith.constant 0 : index
+  %19 = arith.subi %c1024_1, %c1_11 : index
+  %20 = omp.bounds   lower_bound(%c0_12 : index) upper_bound(%19 : index) extent(%c1024_1 : index) stride(%c1_11 : index) start_idx(%c1_11 : index)
+  %21 = omp.map_info var_ptr(%2 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
+  %c1_13 = arith.constant 1 : index
+  %c0_14 = arith.constant 0 : index
+  %22 = arith.subi %c1024_2, %c1_13 : index
+  %23 = omp.bounds   lower_bound(%c0_14 : index) upper_bound(%22 : index) extent(%c1024_2 : index) stride(%c1_13 : index) start_idx(%c1_13 : index)
+  %24 = omp.map_info var_ptr(%3 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(always, delete) capture(ByRef) bounds(%23) -> !fir.ref<!fir.array<1024xi32>> {name = "d"}
+  omp.target_exit_data   map_entries(%15, %18, %21, %24 : !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
   return
 }
 
-// CHECK-LABEL:   llvm.func @_QPomp_target_data() {
-// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x !llvm.array<1024 x i32> {bindc_name = "b", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEb"} : (i64) -> !llvm.ptr<array<1024 x i32>>
-// CHECK:           %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_5:.*]] = llvm.alloca %[[VAL_4]] x !llvm.array<1024 x i32> {bindc_name = "c", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEc"} : (i64) -> !llvm.ptr<array<1024 x i32>>
-// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[VAL_7:.*]] = llvm.alloca %[[VAL_6]] x !llvm.array<1024 x i32> {bindc_name = "d", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEd"} : (i64) -> !llvm.ptr<array<1024 x i32>>
-// CHECK:           omp.target_enter_data   map((to -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (to -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (always, alloc -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>))
-// CHECK:           omp.target_exit_data   map((from -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>), (from -> %[[VAL_3]] : !llvm.ptr<array<1024 x i32>>), (release -> %[[VAL_5]] : !llvm.ptr<array<1024 x i32>>), (always, delete -> %[[VAL_7]] : !llvm.ptr<array<1024 x i32>>))
-// CHECK:           llvm.return
-// CHECK:         }
+ // CHECK-LABEL:  llvm.func @_QPomp_target_data() {
+ // CHECK:    %0 = llvm.mlir.constant(1024 : index) : i64
+ // CHECK:    %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
+ // CHECK:    %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+ // CHECK:    %3 = llvm.mlir.constant(1024 : index) : i64
+ // CHECK:    %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
+ // CHECK:    %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x !llvm.array<1024 x i32> {bindc_name = "b", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEb"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+ // CHECK:    %6 = llvm.mlir.constant(1024 : index) : i64
+ // CHECK:    %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
+ // CHECK:    %[[VAL_5:.*]] = llvm.alloca %[[VAL_4]] x !llvm.array<1024 x i32> {bindc_name = "c", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEc"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+ // CHECK:    %9 = llvm.mlir.constant(1024 : index) : i64
+ // CHECK:    %[[VAL_6:.*]] = llvm.mlir.constant(1 : i64) : i64
+ // CHECK:    %[[VAL_7:.*]] = llvm.alloca %[[VAL_6]] x !llvm.array<1024 x i32> {bindc_name = "d", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_dataEd"} : (i64) -> !llvm.ptr<array<1024 x i32>>
+ // CHECK:    %12 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %13 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %14 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %15 = omp.bounds   lower_bound(%13 : i64) upper_bound(%14 : i64) extent(%0 : i64) stride(%12 : i64) start_idx(%12 : i64)
+ // CHECK:    %16 = omp.map_info var_ptr(%[[VAL_1]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(to) capture(ByRef) bounds(%15) -> !llvm.ptr<array<1024 x i32>> {name = "a"}
+ // CHECK:    %17 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %18 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %19 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %20 = omp.bounds   lower_bound(%18 : i64) upper_bound(%19 : i64) extent(%3 : i64) stride(%17 : i64) start_idx(%17 : i64)
+ // CHECK:    %21 = omp.map_info var_ptr(%[[VAL_3]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(to) capture(ByRef) bounds(%20) -> !llvm.ptr<array<1024 x i32>> {name = "b"}
+ // CHECK:    %22 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %23 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %24 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %25 = omp.bounds   lower_bound(%23 : i64) upper_bound(%24 : i64) extent(%6 : i64) stride(%22 : i64) start_idx(%22 : i64)
+ // CHECK:    %26 = omp.map_info var_ptr(%[[VAL_5]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(always, exit_release_or_enter_alloc) capture(ByRef) bounds(%25) -> !llvm.ptr<array<1024 x i32>> {name = "c"}
+ // CHECK:    omp.target_enter_data   map_entries(%16, %21, %26 : !llvm.ptr<array<1024 x i32>>, !llvm.ptr<array<1024 x i32>>, !llvm.ptr<array<1024 x i32>>)
+ // CHECK:    %27 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %28 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %29 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %30 = omp.bounds   lower_bound(%28 : i64) upper_bound(%29 : i64) extent(%0 : i64) stride(%27 : i64) start_idx(%27 : i64)
+ // CHECK:    %31 = omp.map_info var_ptr(%[[VAL_1]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(from) capture(ByRef) bounds(%30) -> !llvm.ptr<array<1024 x i32>> {name = "a"}
+ // CHECK:    %32 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %33 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %34 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %35 = omp.bounds   lower_bound(%33 : i64) upper_bound(%34 : i64) extent(%3 : i64) stride(%32 : i64) start_idx(%32 : i64)
+ // CHECK:    %36 = omp.map_info var_ptr(%[[VAL_3]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(from) capture(ByRef) bounds(%35) -> !llvm.ptr<array<1024 x i32>> {name = "b"}
+ // CHECK:    %37 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %38 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %39 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %40 = omp.bounds   lower_bound(%38 : i64) upper_bound(%39 : i64) extent(%6 : i64) stride(%37 : i64) start_idx(%37 : i64)
+ // CHECK:    %41 = omp.map_info var_ptr(%[[VAL_5]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%40) -> !llvm.ptr<array<1024 x i32>> {name = "c"}
+ // CHECK:    %42 = llvm.mlir.constant(1 : index) : i64
+ // CHECK:    %43 = llvm.mlir.constant(0 : index) : i64
+ // CHECK:    %44 = llvm.mlir.constant(1023 : index) : i64
+ // CHECK:    %45 = omp.bounds   lower_bound(%43 : i64) upper_bound(%44 : i64) extent(%9 : i64) stride(%42 : i64) start_idx(%42 : i64)
+ // CHECK:    %46 = omp.map_info var_ptr(%[[VAL_7]] : !llvm.ptr<array<1024 x i32>>)   map_clauses(always, delete) capture(ByRef) bounds(%45) -> !llvm.ptr<array<1024 x i32>> {name = "d"}
+ // CHECK:    omp.target_exit_data   map_entries(%31, %36, %41, %46 : !llvm.ptr<array<1024 x i32>>, !llvm.ptr<array<1024 x i32>>, !llvm.ptr<array<1024 x i32>>, !llvm.ptr<array<1024 x i32>>)
+ // CHECK:    llvm.return
+ // CHECK: }
 
 // -----
 
 func.func @_QPopenmp_target_data_region() {
   %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFopenmp_target_data_regionEa"}
   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFopenmp_target_data_regionEi"}
-  omp.target_data   map((tofrom -> %0 : !fir.ref<!fir.array<1024xi32>>)) {
+  %c1024 = arith.constant 1024 : index
+  %c3 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c2 = arith.subi %c1024, %c3 : index
+  %bound = omp.bounds   lower_bound(%c0 : index) upper_bound(%c2 : index) extent(%c1024 : index) stride(%c3 : index) start_idx(%c3 : index)
+  %entry = omp.map_info var_ptr(%0 : !fir.ref<!fir.array<1024xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%bound) -> !fir.ref<!fir.array<1024xi32>> {name = "a"}
+  omp.target_data   map_entries(%entry : !fir.ref<!fir.array<1024xi32>>) {
     %c1_i32 = arith.constant 1 : i32
     %2 = fir.convert %c1_i32 : (i32) -> index
     %c1024_i32 = arith.constant 1024 : i32
@@ -281,7 +365,13 @@ func.func @_QPopenmp_target_data_region() {
 // CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<1024 x i32> {bindc_name = "a", in_type = !fir.array<1024xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEa"} : (i64) -> !llvm.ptr<array<1024 x i32>>
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_3:.*]] = llvm.alloca %[[VAL_2]] x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_data_regionEi"} : (i64) -> !llvm.ptr<i32>
-// CHECK:           omp.target_data   map((tofrom -> %[[VAL_1]] : !llvm.ptr<array<1024 x i32>>)) {
+// CHECK:           %[[VAL_MAX:.*]] = llvm.mlir.constant(1024 : index) : i64
+// CHECK:           %[[VAL_ONE:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[VAL_ZERO:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:           %[[VAL_UPPER:.*]] = llvm.mlir.constant(1023 : index) : i64
+// CHECK:           %[[VAL_BOUNDS:.*]] = omp.bounds   lower_bound(%[[VAL_ZERO]] : i64) upper_bound(%[[VAL_UPPER]] : i64) extent(%[[VAL_MAX]] : i64) stride(%[[VAL_ONE]] : i64) start_idx(%[[VAL_ONE]] : i64)
+// CHECK:           %[[VAL_MAP:.*]] = omp.map_info var_ptr(%[[VAL_1]] : !llvm.ptr<array<1024 x i32>>)  map_clauses(tofrom) capture(ByRef) bounds(%[[VAL_BOUNDS]]) -> !llvm.ptr<array<1024 x i32>> {name = "a"}
+// CHECK:           omp.target_data   map_entries(%[[VAL_MAP]] : !llvm.ptr<array<1024 x i32>>) {
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:             %[[VAL_5:.*]] = llvm.sext %[[VAL_4]] : i32 to i64
 // CHECK:             %[[VAL_6:.*]] = llvm.mlir.constant(1024 : i32) : i32
@@ -335,25 +425,37 @@ func.func @_QPomp_target_data_empty() {
 // -----
 
 func.func @_QPomp_target() {
+  %c512 = arith.constant 512 : index
   %0 = fir.alloca !fir.array<512xi32> {bindc_name = "a", uniq_name = "_QFomp_targetEa"}
   %c64_i32 = arith.constant 64 : i32
-  omp.target   thread_limit(%c64_i32 : i32) map((tofrom -> %0 : !fir.ref<!fir.array<512xi32>>)) {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %1 = arith.subi %c512, %c1 : index
+  %2 = omp.bounds   lower_bound(%c0 : index) upper_bound(%1 : index) extent(%c512 : index) stride(%c1 : index) start_idx(%c1 : index)
+  %3 = omp.map_info var_ptr(%0 : !fir.ref<!fir.array<512xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%2) -> !fir.ref<!fir.array<512xi32>> {name = "a"}
+  omp.target   thread_limit(%c64_i32 : i32) map_entries(%3 : !fir.ref<!fir.array<512xi32>>) {
     %c10_i32 = arith.constant 10 : i32
     %c1_i64 = arith.constant 1 : i64
     %c1_i64_0 = arith.constant 1 : i64
-    %1 = arith.subi %c1_i64, %c1_i64_0 : i64
-    %2 = fir.coordinate_of %0, %1 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
-    fir.store %c10_i32 to %2 : !fir.ref<i32>
+    %4 = arith.subi %c1_i64, %c1_i64_0 : i64
+    %5 = fir.coordinate_of %0, %4 : (!fir.ref<!fir.array<512xi32>>, i64) -> !fir.ref<i32>
+    fir.store %c10_i32 to %5 : !fir.ref<i32>
     omp.terminator
   }
   return
 }
 
 // CHECK-LABEL:   llvm.func @_QPomp_target() {
+// CHECK:           %[[EXTENT:.*]] = llvm.mlir.constant(512 : index) : i64
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.array<512 x i32> {bindc_name = "a", in_type = !fir.array<512xi32>, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_targetEa"} : (i64) -> !llvm.ptr<array<512 x i32>>
 // CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map((tofrom -> %[[VAL_1]] : !llvm.ptr<array<512 x i32>>)) {
+// CHECK:           %[[STRIDE:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[LOWER:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:           %[[UPPER:.*]] = llvm.mlir.constant(511 : index) : i64
+// CHECK:           %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[LOWER]] : i64) upper_bound(%[[UPPER]] : i64) extent(%[[EXTENT]] : i64) stride(%[[STRIDE]] : i64) start_idx(%[[STRIDE]] : i64)
+// CHECK:           %[[MAP:.*]] = omp.map_info var_ptr(%2 : !llvm.ptr<array<512 x i32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr<array<512 x i32>> {name = "a"}
+// CHECK:           omp.target   thread_limit(%[[VAL_2]] : i32) map_entries(%[[MAP]] : !llvm.ptr<array<512 x i32>>) {
 // CHECK:             %[[VAL_3:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             %[[VAL_4:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:             %[[VAL_5:.*]] = llvm.mlir.constant(1 : i64) : i64
