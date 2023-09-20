@@ -2270,7 +2270,15 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     if (State.Stack.back().IsInsideObjCArrayLiteral)
       return nullptr;
 
+    // The "DPI" (or "DPI-C") in SystemVerilog direct programming interface
+    // imports cannot be split, e.g.
+    // `import "DPI" function foo();`
+    // FIXME: We should see if this is an import statement instead of hardcoding
+    // "DPI"/"DPI-C".
     StringRef Text = Current.TokenText;
+    if (Style.isVerilog() && (Text == "\"DPI\"" || Text == "\"DPI-C\""))
+      return nullptr;
+
     // We need this to address the case where there is an unbreakable tail only
     // if certain other formatting decisions have been taken. The
     // UnbreakableTailLength of Current is an overapproximation in that case and
