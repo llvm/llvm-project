@@ -1,14 +1,28 @@
 // RUN: mlir-opt %s -test-sink-vector-broadcast -split-input-file | FileCheck %s
 
-// CHECK-LABEL:   func.func @broadcast_scalar(
+// CHECK-LABEL:   func.func @broadcast_scalar_with_bcast(
 // CHECK-SAME:     %[[ARG_0:.*]]: index, %[[ARG_1:.*]]: index) -> vector<1x4xindex> {
 // CHECK:           %[[ADD:.*]] = arith.addi %[[ARG_0]], %[[ARG_1]] : index
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
 // CHECK:           return %[[BCAST]] : vector<1x4xindex>
-// CHECK:         }
 
-func.func @broadcast_scalar( %arg1: index, %arg2: index) -> vector<1x4xindex> {
+func.func @broadcast_scalar_with_bcast( %arg1: index, %arg2: index) -> vector<1x4xindex> {
   %0 = vector.broadcast %arg1 : index to vector<1x4xindex>
+  %1 = vector.broadcast %arg2 : index to vector<1x4xindex>
+  %2 = arith.addi %0, %1 : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_with_bcast_and_splat(
+// CHECK-SAME:      %[[ARG1:.*]]: index,
+// CHECK-SAME:      %[[ARG2:.*]]: index) -> vector<1x4xindex> {
+// CHECK:           %[[ADD:.*]] = arith.addi %[[ARG1]], %[[ARG2]] : index
+// CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
+// CHECK:           return %[[BCAST]] : vector<1x4xindex>
+func.func @broadcast_scalar_with_bcast_and_splat( %arg1: index, %arg2: index) -> vector<1x4xindex> {
+  %0 = vector.splat %arg1 : vector<1x4xindex>
   %1 = vector.broadcast %arg2 : index to vector<1x4xindex>
   %2 = arith.addi %0, %1 : vector<1x4xindex>
   return %2 : vector<1x4xindex>
@@ -22,7 +36,6 @@ func.func @broadcast_scalar( %arg1: index, %arg2: index) -> vector<1x4xindex> {
 // CHECK:           %[[ADDF:.*]] = arith.addf %[[ARG_0]], %[[ARG_1]] : vector<4xf32>
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADDF]] : vector<4xf32> to vector<3x4xf32>
 // CHECK:           return %[[BCAST]] : vector<3x4xf32>
-// CHECK:         }
 
 func.func @broadcast_vector( %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> vector<3x4xf32> {
   %arg1_bcast = vector.broadcast %arg1 : vector<4xf32> to vector<3x4xf32>
@@ -30,6 +43,23 @@ func.func @broadcast_vector( %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> vect
   %2 = arith.addf %arg1_bcast, %arg2_bcast : vector<3x4xf32>
   return %2 : vector<3x4xf32>
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_scalar_and_vec(
+// CHECK-SAME:       %[[ARG1:.*]]: index,
+// CHECK-SAME:       %[[ARG2:.*]]: vector<4xindex>) -> vector<1x4xindex> {
+// CHECK:            %[[SPLAT:.*]] = vector.splat %[[ARG1]] : vector<1x4xindex>
+// CHECK:            %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : vector<4xindex> to vector<1x4xindex>
+// CHECK:            %[[ADD:.*]] = arith.addi %[[SPLAT]], %[[BCAST]] : vector<1x4xindex>
+// CHECK:            return %[[ADD]] : vector<1x4xindex>
+func.func @broadcast_scalar_and_vec( %arg1: index, %arg2: vector<4xindex>) -> vector<1x4xindex> {
+  %0 = vector.splat %arg1 : vector<1x4xindex>
+  %1 = vector.broadcast %arg2 : vector<4xindex> to vector<1x4xindex>
+  %2 = arith.addi %0, %1 : vector<1x4xindex>
+  return %2 : vector<1x4xindex>
+}
+
 // -----
 
 // CHECK-LABEL:   func.func @broadcast_vector_and_scalar(
@@ -38,7 +68,6 @@ func.func @broadcast_vector( %arg1: vector<4xf32>, %arg2: vector<4xf32>) -> vect
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ARG_0]] : i32 to vector<4xi32>
 // CHECK:           %[[ADD:.*]] = arith.addi %[[BCAST]], %[[ARG_1]] : vector<4xi32>
 // CHECK:           return %[[ADD]] : vector<4xi32>
-// CHECK:         }
 
 func.func @broadcast_vector_and_scalar( %arg1: i32, %arg2: vector<4xi32>) -> vector<4xi32> {
   %arg1_bcast = vector.broadcast %arg1 : i32 to vector<4xi32>
