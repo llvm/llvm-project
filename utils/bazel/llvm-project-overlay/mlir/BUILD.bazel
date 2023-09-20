@@ -11738,6 +11738,7 @@ cc_library(
         ":AffineDialect",
         ":AffineTransforms",
         ":AffineUtils",
+        ":AllocationOpInterface",
         ":ArithDialect",
         ":ArithTransforms",
         ":ArithUtils",
