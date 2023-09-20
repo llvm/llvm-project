@@ -1002,17 +1002,17 @@ declare void @call(i1)
 define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-LABEL: usubo_ult_sub_dominates_i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    andi a7, a5, 1
-; RV32-NEXT:    beqz a7, .LBB31_5
+; RV32-NEXT:    andi a6, a5, 1
+; RV32-NEXT:    beqz a6, .LBB31_5
 ; RV32-NEXT:  # %bb.1: # %t
-; RV32-NEXT:    mv a6, a0
+; RV32-NEXT:    mv a7, a0
 ; RV32-NEXT:    sltu a0, a0, a2
 ; RV32-NEXT:    sub t0, a1, a3
 ; RV32-NEXT:    sub t0, t0, a0
-; RV32-NEXT:    sub a2, a6, a2
+; RV32-NEXT:    sub a2, a7, a2
 ; RV32-NEXT:    sw a2, 0(a4)
 ; RV32-NEXT:    sw t0, 4(a4)
-; RV32-NEXT:    beqz a7, .LBB31_5
+; RV32-NEXT:    beqz a6, .LBB31_5
 ; RV32-NEXT:  # %bb.2: # %end
 ; RV32-NEXT:    beq a1, a3, .LBB31_4
 ; RV32-NEXT:  # %bb.3: # %end

@@ -2577,7 +2577,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
       arguments[0]) {
     if (Expr<SomeType> * mold{arguments[0]->UnwrapExpr()}) {
       bool isProcPtrTarget{IsProcedurePointerTarget(*mold)};
-      if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold, context)) {
+      if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
         if (isProcPtrTarget) {
@@ -2747,7 +2747,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
     CheckForCoindexedObject(context, arguments[0], "c_loc", "x");
     const auto *expr{arguments[0].value().UnwrapExpr()};
     if (expr &&
-        !(IsObjectPointer(*expr, context) ||
+        !(IsObjectPointer(*expr) ||
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
       context.messages().Say(arguments[0]->sourceLocation(),
           "C_LOC() argument must be a data pointer or target"_err_en_US);
@@ -3094,7 +3094,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
       for (const auto &arg : arguments) {
         if (const auto *expr{arg->UnwrapExpr()}) {
           optionalCount +=
-              Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, context);
+              Fortran::evaluate::MayBePassedAsAbsentOptional(*expr);
         }
       }
       if (arguments.size() - optionalCount > 1) {

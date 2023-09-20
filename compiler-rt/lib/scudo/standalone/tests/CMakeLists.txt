@@ -15,6 +15,7 @@ set(SCUDO_UNITTEST_CFLAGS
   -DGTEST_HAS_RTTI=0
   -g
   # Extra flags for the C++ tests
+  -Wconversion
   # TODO(kostyak): find a way to make -fsized-deallocation work
   -Wno-mismatched-new-delete)
 

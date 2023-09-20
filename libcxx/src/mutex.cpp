@@ -205,39 +205,39 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
                  void (*func)(void*))
 {
 #if defined(_LIBCPP_HAS_NO_THREADS)
-    if (flag == 0)
+    if (flag == once_flag::_Unset)
     {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-            flag = 1;
+            flag = once_flag::_Pending;
             func(arg);
-            flag = ~once_flag::_State_type(0);
+            flag = once_flag::_Complete;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         }
         catch (...)
         {
-            flag = 0;
+            flag = once_flag::_Unset;
             throw;
         }
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
     }
 #else // !_LIBCPP_HAS_NO_THREADS
     __libcpp_mutex_lock(&mut);
-    while (flag == 1)
+    while (flag == once_flag::_Pending)
         __libcpp_condvar_wait(&cv, &mut);
-    if (flag == 0)
+    if (flag == once_flag::_Unset)
     {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
         try
         {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-            __libcpp_relaxed_store(&flag, once_flag::_State_type(1));
+            __libcpp_relaxed_store(&flag, once_flag::_Pending);
             __libcpp_mutex_unlock(&mut);
             func(arg);
             __libcpp_mutex_lock(&mut);
-            __libcpp_atomic_store(&flag, ~once_flag::_State_type(0),
+            __libcpp_atomic_store(&flag, once_flag::_Complete,
                                   _AO_Release);
             __libcpp_mutex_unlock(&mut);
             __libcpp_condvar_broadcast(&cv);
@@ -246,7 +246,7 @@ void __call_once(volatile once_flag::_State_type& flag, void* arg,
         catch (...)
         {
             __libcpp_mutex_lock(&mut);
-            __libcpp_relaxed_store(&flag, once_flag::_State_type(0));
+            __libcpp_relaxed_store(&flag, once_flag::_Unset);
             __libcpp_mutex_unlock(&mut);
             __libcpp_condvar_broadcast(&cv);
             throw;

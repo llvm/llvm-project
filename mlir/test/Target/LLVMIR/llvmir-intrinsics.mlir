@@ -690,8 +690,9 @@ llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
 
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
+  %none = llvm.mlir.none : !llvm.token
   // CHECK: call i1 @llvm.coro.end
-  %0 = llvm.intr.coro.end %arg0, %arg1 : (!llvm.ptr, i1) -> i1
+  %0 = llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> i1
   llvm.return
 }
 
@@ -1043,7 +1044,7 @@ llvm.func @ssa_copy(%arg: f32) -> f32 {
 // CHECK-DAG: declare i32 @llvm.coro.size.i32()
 // CHECK-DAG: declare token @llvm.coro.save(ptr)
 // CHECK-DAG: declare i8 @llvm.coro.suspend(token, i1)
-// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1)
+// CHECK-DAG: declare i1 @llvm.coro.end(ptr, i1, token)
 // CHECK-DAG: declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 // CHECK-DAG: declare void @llvm.coro.resume(ptr)
 // CHECK-DAG: declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)

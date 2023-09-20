@@ -172,6 +172,7 @@ set(BENCHMARK_TESTS
     algorithms/pop_heap.bench.cpp
     algorithms/pstl.stable_sort.bench.cpp
     algorithms/push_heap.bench.cpp
+    algorithms/ranges_ends_with.bench.cpp
     algorithms/ranges_make_heap.bench.cpp
     algorithms/ranges_make_heap_then_sort_heap.bench.cpp
     algorithms/ranges_pop_heap.bench.cpp

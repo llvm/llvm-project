@@ -210,7 +210,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
         list(APPEND packager_images
              --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
        endif()
-      list(APPEND gpu_target_names ${gpu_target_name})
+      list(APPEND gpu_target_objects ${input_file})
     endforeach()
 
     # After building the target for the desired GPUs we must package the output
@@ -222,7 +222,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     add_custom_command(OUTPUT ${packaged_output_name}
                        COMMAND ${LIBC_CLANG_OFFLOAD_PACKAGER}
                                ${packager_images} -o ${packaged_output_name}
-                       DEPENDS ${gpu_target_names} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
+                       DEPENDS ${gpu_target_objects} ${add_gpu_obj_src} ${ADD_GPU_OBJ_HDRS}
                        COMMENT "Packaging LLVM offloading binary")
     add_custom_target(${packaged_target_name} DEPENDS ${packaged_output_name})
     list(APPEND packaged_gpu_names ${packaged_target_name})
@@ -242,7 +242,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}"
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/stubs/
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename}
-    DEPENDS ${gpu_target_names} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
+    DEPENDS ${gpu_target_objects} ${ADD_GPU_OBJ_SRCS} ${ADD_GPU_OBJ_HDRS}
   )
   set(stub_target_name ${fq_target_name}.__stub__)
   add_custom_target(${stub_target_name} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stubs/${stub_filename})

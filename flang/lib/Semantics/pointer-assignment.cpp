@@ -10,6 +10,7 @@
 #include "definable.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/restorer.h"
+#include "flang/Common/template.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
@@ -397,16 +398,8 @@ bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureRef &ref) {
-  if (auto chars{Procedure::Characterize(ref, foldingContext_)}) {
-    if (chars->functionResult) {
-      if (const auto *proc{chars->functionResult->IsProcedurePointer()}) {
-        return Check(ref.proc().GetName(), true, proc);
-      }
-    }
-    return Check(ref.proc().GetName(), true, &*chars);
-  } else {
-    return Check(ref.proc().GetName(), true, nullptr);
-  }
+  auto chars{Procedure::Characterize(ref, foldingContext_)};
+  return Check(ref.proc().GetName(), true, common::GetPtrFromOptional(chars));
 }
 
 // The target can be unlimited polymorphic if the pointer is, or if it is

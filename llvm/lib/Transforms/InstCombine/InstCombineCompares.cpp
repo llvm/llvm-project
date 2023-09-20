@@ -5054,14 +5054,10 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
   case ICmpInst::ICMP_UGT:
   case ICmpInst::ICMP_SGE:
   case ICmpInst::ICMP_UGE: {
-    auto FoldIntoConstant = [&](bool Value) {
-      return replaceInstUsesWith(
-          I, Constant::getIntegerValue(
-                 I.getType(), APInt(1U, static_cast<uint64_t>(Value))));
-    };
     auto FoldIntoCmpYZ = [&]() -> Instruction * {
       if (CmpYZ.has_value())
-        return FoldIntoConstant(*CmpYZ);
+        return replaceInstUsesWith(I,
+                                   ConstantInt::getBool(I.getType(), *CmpYZ));
       return ICmpInst::Create(Instruction::ICmp, Pred, Y, Z);
     };
 
@@ -5073,7 +5069,7 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
         // min(X, Y) <= Z   X <= Z  true
         // max(X, Y) > Z    X > Z   true
         // max(X, Y) >= Z   X >= Z  true
-        return FoldIntoConstant(true);
+        return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
       } else {
         //      Expr        Fact    Result
         // max(X, Y) < Z    X < Z   Y < Z
@@ -5096,7 +5092,7 @@ InstCombinerImpl::foldICmpWithMinMaxImpl(Instruction &I,
         // max(X, Y) <= Z   X > Z   false
         // min(X, Y) > Z    X <= Z  false
         // min(X, Y) >= Z   X < Z   false
-        return FoldIntoConstant(false);
+        return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
       }
     }
     break;

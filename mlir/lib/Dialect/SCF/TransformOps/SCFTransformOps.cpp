@@ -32,6 +32,18 @@ void transform::ApplyForLoopCanonicalizationPatternsOp::populatePatterns(
   scf::populateSCFForLoopCanonicalizationPatterns(patterns);
 }
 
+void transform::ApplySCFStructuralConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  scf::populateSCFStructuralTypeConversions(typeConverter, patterns);
+}
+
+void transform::ApplySCFStructuralConversionPatternsOp::
+    populateConversionTargetRules(const TypeConverter &typeConverter,
+                                  ConversionTarget &conversionTarget) {
+  scf::populateSCFStructuralTypeConversionTarget(typeConverter,
+                                                 conversionTarget);
+}
+
 //===----------------------------------------------------------------------===//
 // GetParentForOp
 //===----------------------------------------------------------------------===//

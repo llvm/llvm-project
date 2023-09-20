@@ -850,7 +850,7 @@ private:
 
       // Attach (a part of) ChainPred after the last node of ChainSucc.
       for (JumpT *Jump : ChainSucc->Nodes.back()->OutJumps) {
-        const NodeT *DstBlock = Jump->Source;
+        const NodeT *DstBlock = Jump->Target;
         if (DstBlock->CurChain != ChainPred)
           continue;
         size_t Offset = DstBlock->CurIndex;

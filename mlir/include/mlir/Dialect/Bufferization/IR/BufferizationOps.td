@@ -12,6 +12,8 @@
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
+include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -215,7 +217,11 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 def Bufferization_MaterializeInDestinationOp
     : Bufferization_Op<"materialize_in_destination",
         [BufferizableOpInterface, SameOperandsAndResultType,
-         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+         DestinationStyleOpInterface,
+         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
+         DeclareOpInterfaceMethods<SubsetInsertionOpInterface,
+            ["getSourceOperand", "getValuesNeededToBuildSubsetExtraction",
+             "buildSubsetExtraction", "isEquivalentSubset"]>]> {
   let summary = "copy a tensor";
 
   let description = [{
@@ -248,11 +254,18 @@ def Bufferization_MaterializeInDestinationOp
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
+    bool bufferizesToElementwiseAccess(const AnalysisState &state,
+                                       ArrayRef<OpOperand *> opOperands);
+
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
     RankedTensorType getType() {
       return ::llvm::cast<RankedTensorType>(getResult().getType());
+    }
+
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      return {1, 2};  // `dest` operand
     }
   }];
 

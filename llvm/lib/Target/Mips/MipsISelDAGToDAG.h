@@ -34,7 +34,7 @@ public:
 
   MipsDAGToDAGISel() = delete;
 
-  explicit MipsDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+  explicit MipsDAGToDAGISel(MipsTargetMachine &TM, CodeGenOptLevel OL)
       : SelectionDAGISel(ID, TM, OL), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;

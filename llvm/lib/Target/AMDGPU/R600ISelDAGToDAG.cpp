@@ -30,7 +30,7 @@ class R600DAGToDAGISel : public AMDGPUDAGToDAGISel {
 public:
   R600DAGToDAGISel() = delete;
 
-  explicit R600DAGToDAGISel(TargetMachine &TM, CodeGenOpt::Level OptLevel)
+  explicit R600DAGToDAGISel(TargetMachine &TM, CodeGenOptLevel OptLevel)
       : AMDGPUDAGToDAGISel(TM, OptLevel) {}
 
   void Select(SDNode *N) override;
@@ -183,6 +183,6 @@ bool R600DAGToDAGISel::SelectADDRVTX_READ(SDValue Addr, SDValue &Base,
 /// This pass converts a legalized DAG into a R600-specific
 // DAG, ready for instruction scheduling.
 FunctionPass *llvm::createR600ISelDag(TargetMachine &TM,
-                                      CodeGenOpt::Level OptLevel) {
+                                      CodeGenOptLevel OptLevel) {
   return new R600DAGToDAGISel(TM, OptLevel);
 }

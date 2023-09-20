@@ -620,10 +620,17 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       case 2:
       case 4:
       case 8:
-        s->Printf(wantsuppercase ? "0x%*.*" PRIX64 : "0x%*.*" PRIx64,
-                  (int)(2 * item_byte_size), (int)(2 * item_byte_size),
-                  DE.GetMaxU64Bitfield(&offset, item_byte_size, item_bit_size,
-                                       item_bit_offset));
+        if (Target::GetGlobalProperties()
+                .ShowHexVariableValuesWithLeadingZeroes()) {
+          s->Printf(wantsuppercase ? "0x%*.*" PRIX64 : "0x%*.*" PRIx64,
+                    (int)(2 * item_byte_size), (int)(2 * item_byte_size),
+                    DE.GetMaxU64Bitfield(&offset, item_byte_size, item_bit_size,
+                                         item_bit_offset));
+        } else {
+          s->Printf(wantsuppercase ? "0x%" PRIX64 : "0x%" PRIx64,
+                    DE.GetMaxU64Bitfield(&offset, item_byte_size, item_bit_size,
+                                         item_bit_offset));
+        }
         break;
       default: {
         assert(item_bit_size == 0 && item_bit_offset == 0);

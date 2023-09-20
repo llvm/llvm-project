@@ -3,7 +3,7 @@ import sys
 
 
 class TestingConfig(object):
-    """ "
+    """
     TestingConfig - Information on the tests inside a suite.
     """
 

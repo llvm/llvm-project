@@ -31,7 +31,7 @@
 // RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #DCSR = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait = {
@@ -66,7 +66,7 @@ module {
 
   func.func @cmp_lhs_sparse(%arga: tensor<4x4xf64, #DCSR>,
                             %argb: tensor<4x4xf64>) -> tensor<4x4xi8, #DCSR> {
-    %argx = bufferization.alloc_tensor() : tensor<4x4xi8, #DCSR>
+    %argx = tensor.empty() : tensor<4x4xi8, #DCSR>
     %0 = linalg.generic #trait
        ins(%arga, %argb: tensor<4x4xf64, #DCSR>, tensor<4x4xf64>)
       outs(%argx: tensor<4x4xi8, #DCSR>) {
@@ -80,7 +80,7 @@ module {
 
   func.func @cmp_all_sparse(%arga: tensor<4x4xf64, #DCSR>,
                             %argb: tensor<4x4xf64, #DCSR>) -> tensor<4x4xi8, #DCSR> {
-    %argx = bufferization.alloc_tensor() : tensor<4x4xi8, #DCSR>
+    %argx = tensor.empty() : tensor<4x4xi8, #DCSR>
     %0 = linalg.generic #trait
        ins(%arga, %argb: tensor<4x4xf64, #DCSR>, tensor<4x4xf64, #DCSR>)
       outs(%argx: tensor<4x4xi8, #DCSR>) {

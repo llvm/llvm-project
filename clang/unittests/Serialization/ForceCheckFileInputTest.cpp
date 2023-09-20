@@ -75,6 +75,7 @@ export int aa = 43;
     std::shared_ptr<CompilerInvocation> Invocation =
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
+    Invocation->getFrontendOpts().DisableFree = false;
 
     auto Buf = CIOpts.VFS->getBufferForFile("a.cppm");
     EXPECT_TRUE(Buf);
@@ -113,6 +114,7 @@ export int aa = 43;
     std::shared_ptr<CompilerInvocation> Invocation =
         createInvocation(Args, CIOpts);
     EXPECT_TRUE(Invocation);
+    Invocation->getFrontendOpts().DisableFree = false;
 
     CompilerInstance Clang;
 

@@ -276,16 +276,6 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
   return MaxPushPopReg;
 }
 
-static uint64_t adjSPInPushPop(MachineBasicBlock::iterator MBBI,
-                               unsigned RequiredStack, unsigned FreePushStack,
-                               bool IsPop) {
-  if (FreePushStack > RequiredStack)
-    RequiredStack = 0;
-  unsigned Spimm = std::min(RequiredStack, 48u);
-  MBBI->getOperand(1).setImm(Spimm);
-  return alignTo(RequiredStack - Spimm, 16);
-}
-
 // Return true if the specified function should have a dedicated frame
 // pointer register.  This is true if frame pointer elimination is
 // disabled, if it needs dynamic stack realignment, if the function has
@@ -539,10 +529,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (RVFI->isPushable(MF) && FirstFrameSetup->getOpcode() == RISCV::CM_PUSH) {
     // Use available stack adjustment in push instruction to allocate additional
     // stack space.
-    unsigned PushStack = RVFI->getRVPushRegs() * (STI.getXLen() / 8);
-    unsigned SpImmBase = RVFI->getRVPushStackSize();
-    StackSize = adjSPInPushPop(FirstFrameSetup, StackSize,
-                               (SpImmBase - PushStack), true);
+    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    FirstFrameSetup->getOperand(1).setImm(Spimm);
+    StackSize -= Spimm;
   }
 
   if (StackSize != 0) {
@@ -777,9 +766,9 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       MBBI->getOpcode() == RISCV::CM_POP) {
     // Use available stack adjustment in pop instruction to deallocate stack
     // space.
-    unsigned PushStack = RVFI->getRVPushRegs() * (STI.getXLen() / 8);
-    unsigned SpImmBase = RVFI->getRVPushStackSize();
-    StackSize = adjSPInPushPop(MBBI, StackSize, (SpImmBase - PushStack), true);
+    uint64_t Spimm = std::min(StackSize, (uint64_t)48);
+    MBBI->getOperand(1).setImm(Spimm);
+    StackSize -= Spimm;
   }
 
   // Deallocate stack

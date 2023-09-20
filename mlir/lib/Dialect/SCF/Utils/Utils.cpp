@@ -46,8 +46,8 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(builder);
   builder.setInsertionPoint(loop);
-  auto operands = llvm::to_vector(loop.getIterOperands());
-  operands.append(newIterOperands.begin(), newIterOperands.end());
+  auto operands = llvm::to_vector(loop.getInitArgs());
+  llvm::append_range(operands, newIterOperands);
   scf::ForOp newLoop = builder.create<scf::ForOp>(
       loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
       operands, [](OpBuilder &, Location, Value, ValueRange) {});
@@ -515,7 +515,7 @@ LogicalResult mlir::loopUnrollByFactor(
       std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
-                               epilogueForOp.getNumIterOperands(), results);
+                               epilogueForOp.getInitArgs().size(), results);
     (void)epilogueForOp.promoteIfSingleIteration(rewriter);
   }
 
