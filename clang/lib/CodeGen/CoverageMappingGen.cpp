@@ -1629,12 +1629,6 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     case CounterMappingRegion::BranchRegion:
       OS << "Branch,";
       break;
-    case CounterMappingRegion::MCDCDecisionRegion:
-      OS << "MCDCDecisionRegion,";
-      break;
-    case CounterMappingRegion::MCDCBranchRegion:
-      OS << "MCDCBranchRegion,";
-      break;
     }
 
     OS << "File " << R.FileID << ", " << R.LineStart << ":" << R.ColumnStart
