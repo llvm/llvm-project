@@ -401,7 +401,6 @@ private:
   SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
-  SDValue PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FIX(SDNode *N);
   SDValue PromoteIntOp_ExpOp(SDNode *N);
   SDValue PromoteIntOp_VECREDUCE(SDNode *N);

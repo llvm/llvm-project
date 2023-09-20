@@ -7089,9 +7089,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     auto Flags = rw == 0 ? MachineMemOperand::MOLoad :MachineMemOperand::MOStore;
     Ops[0] = DAG.getRoot();
     Ops[1] = getValue(I.getArgOperand(0));
-    Ops[2] = getValue(I.getArgOperand(1));
-    Ops[3] = getValue(I.getArgOperand(2));
-    Ops[4] = getValue(I.getArgOperand(3));
+    Ops[2] = DAG.getTargetConstant(*cast<ConstantInt>(I.getArgOperand(1)), sdl,
+                                   MVT::i32);
+    Ops[3] = DAG.getTargetConstant(*cast<ConstantInt>(I.getArgOperand(2)), sdl,
+                                   MVT::i32);
+    Ops[4] = DAG.getTargetConstant(*cast<ConstantInt>(I.getArgOperand(3)), sdl,
+                                   MVT::i32);
     SDValue Result = DAG.getMemIntrinsicNode(
         ISD::PREFETCH, sdl, DAG.getVTList(MVT::Other), Ops,
         EVT::getIntegerVT(*Context, 8), MachinePointerInfo(I.getArgOperand(0)),

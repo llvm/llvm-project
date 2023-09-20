@@ -1068,17 +1068,17 @@ def SIMM24bitPtr : ImmLeaf <iPTR,
 
 multiclass SMPrefetchPat<string type, int cache_type> {
   def : GCNPat <
-    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), imm, imm, (i32 cache_type)),
+    (smrd_prefetch (SMRDImm i64:$sbase, i32:$offset), timm, timm, (i32 cache_type)),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, $offset, (i32 SGPR_NULL), (i8 0))
   >;
 
   def : GCNPat <
-    (smrd_prefetch (i64 SReg_64:$sbase), imm, imm, (i32 cache_type)),
+    (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, (i32 cache_type)),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0))
   >;
 
   def : GCNPat <
-    (prefetch SIMM24bitPtr:$offset, imm, imm, (i32 cache_type)),
+    (prefetch SIMM24bitPtr:$offset, timm, timm, (i32 cache_type)),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type#"_PC_REL") (as_i32timm $offset), (i32 SGPR_NULL), (i8 0))
   > {
     let AddedComplexity = 10;
