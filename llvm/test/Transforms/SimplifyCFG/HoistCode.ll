@@ -19,21 +19,9 @@ F:              ; preds = %0
 
 define void @foo_switch(i64 %C, ptr %P) {
 ; CHECK-LABEL: @foo_switch(
-; CHECK-NEXT:    switch i64 [[C:%.*]], label [[BB0:%.*]] [
-; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       bb0:
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    store i32 7, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       bb2:
-; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
   switch i64 %C, label %bb0 [
   i64 1, label %bb1
