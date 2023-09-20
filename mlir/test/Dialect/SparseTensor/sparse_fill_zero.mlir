@@ -121,7 +121,7 @@
 // CHECK:         }
 func.func @fill_zero_after_alloc(%arg0: tensor<100x200xf64, #DCSR>,
                                  %arg1: tensor<200x300xf64, #DCSR>) -> tensor<100x300xf64, #DCSR> {
-  %0 = bufferization.alloc_tensor() : tensor<100x300xf64, #DCSR>
+  %0 = tensor.empty() : tensor<100x300xf64, #DCSR>
   %cst = arith.constant 0.000000e+00 : f64
   %1 = linalg.fill ins(%cst : f64)
                    outs(%0 : tensor<100x300xf64, #DCSR>) -> tensor<100x300xf64, #DCSR>

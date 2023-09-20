@@ -144,7 +144,7 @@
 // CHECK:           return %[[VAL_77]]#0, %[[VAL_77]]#1, %[[VAL_77]]#2, %[[VAL_77]]#3 : memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 func.func @matmul(%A: tensor<4x8xf64, #CSR>,
                   %B: tensor<8x4xf64, #CSR>) -> tensor<4x4xf64, #CSR> {
-  %C = bufferization.alloc_tensor() : tensor<4x4xf64, #CSR>
+  %C = tensor.empty() : tensor<4x4xf64, #CSR>
   %D = linalg.matmul
     ins(%A, %B: tensor<4x8xf64, #CSR>, tensor<8x4xf64, #CSR>)
        outs(%C: tensor<4x4xf64, #CSR>) -> tensor<4x4xf64, #CSR>

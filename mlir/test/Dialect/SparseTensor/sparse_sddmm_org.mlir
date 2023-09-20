@@ -29,7 +29,7 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant false
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant true
-// CHECK:           %[[VAL_8:.*]] = bufferization.alloc_tensor() : tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
+// CHECK:           %[[VAL_8:.*]] = tensor.empty() : tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>>
 // CHECK:           %[[VAL_9:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
 // CHECK:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : memref<8x8xf64>
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed" ] }>> to memref<?xindex>
@@ -90,7 +90,7 @@ func.func @sparse_sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
         linalg.yield %q : f64
   } -> tensor<8x8xf64>
   // Sample the result with elements-wise multiplication with sparse matrix.
-  %3 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
+  %3 = tensor.empty() : tensor<8x8xf64, #SM>
   %4 = linalg.generic #trait_scale
     ins(%2, %args : tensor<8x8xf64>, tensor<8x8xf64, #SM>)
     outs(%3 : tensor<8x8xf64, #SM>) {
