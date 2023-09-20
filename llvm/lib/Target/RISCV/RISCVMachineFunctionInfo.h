@@ -110,7 +110,8 @@ public:
   bool useSaveRestoreLibCalls(const MachineFunction &MF) const {
     // We cannot use fixed locations for the callee saved spill slots if the
     // function uses a varargs save area, or is an interrupt handler.
-    return MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&
+    return !isPushable(MF) &&
+           MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&
            VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall() &&
            !MF.getFunction().hasFnAttribute("interrupt");
   }
@@ -131,8 +132,7 @@ public:
     // We cannot use fixed locations for the callee saved spill slots if the
     // function uses a varargs save area.
     // TODO: Use a seperate placement for vararg registers to enable Zcmp.
-    return !useSaveRestoreLibCalls(MF) &&
-           MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
+    return MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
            !MF.getTarget().Options.DisableFramePointerElim(MF) &&
            VarArgsSaveSize == 0;
   }
