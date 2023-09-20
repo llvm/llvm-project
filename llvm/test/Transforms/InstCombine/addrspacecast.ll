@@ -173,7 +173,7 @@ end:
 
 define void @constant_fold_null() #0 {
 ; CHECK-LABEL: @constant_fold_null(
-; CHECK-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), align 4294967296
+; CHECK-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), align 4
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(3) null to ptr addrspace(4)

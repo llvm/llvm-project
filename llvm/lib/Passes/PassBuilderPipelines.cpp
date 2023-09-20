@@ -276,7 +276,7 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
     cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
 
 cl::opt<bool> EnableInferAlignmentPass(
-    "enable-infer-alignment-pass", cl::init(false), cl::Hidden, cl::ZeroOrMore,
+    "enable-infer-alignment-pass", cl::init(true), cl::Hidden, cl::ZeroOrMore,
     cl::desc("Enable the InferAlignment pass, disabling alignment inference in "
              "InstCombine"));
 
