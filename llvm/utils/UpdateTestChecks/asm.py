@@ -206,7 +206,7 @@ ASM_FUNCTION_WASM_RE = re.compile(
 # for this function. Then we match that when the variable is assigned with
 # OpFunction and match its body.
 ASM_FUNCTION_SPIRV_RE = re.compile(
-    r'OpName (?P<var>%[0-9]+) "(?P<func>[^"]+)".*(?P<body>(?P=var) = OpFunction.+?OpFunctionEnd)',
+    r'OpName (?P<var>%[0-9]+) "(?P<func>[^"]+)(?P<func_name_separator>)".*(?P<body>(?P=var) = OpFunction.+?OpFunctionEnd)',
     flags=(re.M | re.S),
 )
 
