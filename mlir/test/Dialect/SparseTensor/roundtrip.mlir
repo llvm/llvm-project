@@ -612,79 +612,29 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 
 // -----
 
-// CHECK-LABEL: func @sparse_sort_1d0v(
-//  CHECK-SAME: %[[A:.*]]: index,
-//  CHECK-SAME: %[[B:.*]]: memref<?xindex>)
-//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] : memref<?xindex>
-//       CHECK: return %[[B]]
-func.func @sparse_sort_1d0v(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 : memref<?xindex>
-  return %arg1 : memref<?xindex>
-}
-
-// -----
-
-// CHECK-LABEL: func @sparse_sort_1d2v(
-//  CHECK-SAME: %[[A:.*]]: index,
-//  CHECK-SAME: %[[B:.*]]: memref<20xindex>,
-//  CHECK-SAME: %[[C:.*]]: memref<10xindex>,
-//  CHECK-SAME: %[[D:.*]]: memref<?xf32>)
-//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] jointly %[[C]], %[[D]] : memref<20xindex> jointly memref<10xindex>, memref<?xf32>
-//       CHECK: return %[[B]], %[[C]], %[[D]]
-func.func @sparse_sort_1d2v(%arg0: index, %arg1: memref<20xindex>, %arg2: memref<10xindex>, %arg3: memref<?xf32>) -> (memref<20xindex>, memref<10xindex>, memref<?xf32>) {
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 jointly %arg2, %arg3 : memref<20xindex> jointly memref<10xindex>, memref<?xf32>
-  return %arg1, %arg2, %arg3 : memref<20xindex>, memref<10xindex>, memref<?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @sparse_sort_2d1v(
-//  CHECK-SAME: %[[A:.*]]: index,
-//  CHECK-SAME: %[[B:.*]]: memref<10xi8>,
-//  CHECK-SAME: %[[C:.*]]: memref<20xi8>,
-//  CHECK-SAME: %[[D:.*]]: memref<10xf64>)
-//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]], %[[C]] jointly %[[D]] : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
-//       CHECK: return %[[B]], %[[C]], %[[D]]
-func.func @sparse_sort_2d1v(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<20xi8>, %arg3: memref<10xf64>) -> (memref<10xi8>, memref<20xi8>, memref<10xf64>) {
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
-  return %arg1, %arg2, %arg3 : memref<10xi8>, memref<20xi8>, memref<10xf64>
-}
-
-// -----
-
-// CHECK-LABEL: func @sparse_sort_stable(
-//  CHECK-SAME: %[[A:.*]]: index,
-//  CHECK-SAME: %[[B:.*]]: memref<10xi8>,
-//  CHECK-SAME: %[[C:.*]]: memref<20xi8>,
-//  CHECK-SAME: %[[D:.*]]: memref<10xf64>)
-//       CHECK: sparse_tensor.sort insertion_sort_stable %[[A]], %[[B]], %[[C]] jointly %[[D]] : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
-//       CHECK: return %[[B]], %[[C]], %[[D]]
-func.func @sparse_sort_stable(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<20xi8>, %arg3: memref<10xf64>) -> (memref<10xi8>, memref<20xi8>, memref<10xf64>) {
-  sparse_tensor.sort insertion_sort_stable %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
-  return %arg1, %arg2, %arg3 : memref<10xi8>, memref<20xi8>, memref<10xf64>
-}
-
-// -----
+#ID_MAP = affine_map<(i,j) -> (i,j)>
 
 // CHECK-LABEL: func @sparse_sort_coo(
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xindex>)
-//       CHECK: sparse_tensor.sort_coo hybrid_quick_sort %[[A]], %[[B]] {nx = 2 : index, ny = 1 : index} : memref<?xindex>
+//       CHECK: sparse_tensor.sort_coo hybrid_quick_sort %[[A]], %[[B]] {ny = 1 : index, perm_map = #{{.*}}} : memref<?xindex>
 //       CHECK: return %[[B]]
 func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
-  sparse_tensor.sort_coo hybrid_quick_sort %arg0, %arg1 {nx = 2 : index, ny = 1 : index}: memref<?xindex>
+  sparse_tensor.sort_coo hybrid_quick_sort %arg0, %arg1 {perm_map = #ID_MAP, ny = 1 : index}: memref<?xindex>
   return %arg1 : memref<?xindex>
 }
 
 // -----
+
+#ID_MAP = affine_map<(i,j) -> (i,j)>
 
 // CHECK-LABEL: func @sparse_sort_coo_stable(
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xi64>,
 //  CHECK-SAME: %[[C:.*]]: memref<?xf32>)
-//       CHECK: sparse_tensor.sort_coo insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] {nx = 2 : index, ny = 1 : index}
+//       CHECK: sparse_tensor.sort_coo insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] {ny = 1 : index, perm_map = #{{.*}}}
 //       CHECK: return %[[B]], %[[C]]
 func.func @sparse_sort_coo_stable(%arg0: index, %arg1: memref<?xi64>, %arg2: memref<?xf32>) -> (memref<?xi64>, memref<?xf32>) {
-  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1 jointly %arg2 {nx = 2 : index, ny = 1 : index}: memref<?xi64> jointly memref<?xf32>
+  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1 jointly %arg2 {perm_map = #ID_MAP, ny = 1 : index}: memref<?xi64> jointly memref<?xf32>
   return %arg1, %arg2 : memref<?xi64>, memref<?xf32>
 }

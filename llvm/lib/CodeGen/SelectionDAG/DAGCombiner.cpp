@@ -10286,7 +10286,7 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // If truncate is free for the target sext(shl) is likely to result in better
   // code.
   if (N0.getOpcode() == ISD::SHL && N1C) {
-    // Get the two constanst of the shifts, CN0 = m, CN = n.
+    // Get the two constants of the shifts, CN0 = m, CN = n.
     const ConstantSDNode *N01C = isConstOrConstSplat(N0.getOperand(1));
     if (N01C) {
       LLVMContext &Ctx = *DAG.getContext();
