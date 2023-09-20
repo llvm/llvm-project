@@ -16,6 +16,7 @@
 
 #include <concepts>
 #include <memory>
+#include <ranges>
 #include <tuple>
 #include <utility>
 
@@ -132,19 +133,48 @@ constexpr bool test() {
   }
 #endif
   {
-    ConvertibleToPair ctp {};
-    auto ret = test_uses_allocator_construction_args<std::pair<int, int>>(a, ctp);
+    ConvertibleToPair ctp{};
+    auto ret              = test_uses_allocator_construction_args<std::pair<int, int>>(a, ctp);
     std::pair<int, int> v = std::get<0>(ret);
     assert(std::get<0>(v) == 1);
     assert(std::get<1>(v) == 2);
   }
   {
-    ConvertibleToPair ctp {};
-    auto ret = test_uses_allocator_construction_args<std::pair<int, int>>(a, std::move(ctp));
+    ConvertibleToPair ctp{};
+    auto ret              = test_uses_allocator_construction_args<std::pair<int, int>>(a, std::move(ctp));
     std::pair<int, int> v = std::get<0>(ret);
     assert(std::get<0>(v) == 1);
     assert(std::get<1>(v) == 2);
   }
+#if TEST_STD_VER >= 23
+  // LWG 3821
+  // uses_allocator_construction_args should have overload for pair-like
+  {
+    // pair-like with explicit ctr should work
+    struct Foo {
+      int i = 5;
+    };
+    struct Bar {
+      int i;
+      constexpr explicit Bar(Foo foo) : i(foo.i) {}
+    };
+
+    std::tuple<Foo, Foo> pair_like;
+    auto ret  = test_uses_allocator_construction_args<std::pair<Bar, Bar>>(a, pair_like);
+    auto pair = std::make_from_tuple<std::pair<Bar, Bar>>(std::move(ret));
+    assert(pair.first.i == 5);
+    assert(pair.second.i == 5);
+  }
+  {
+    // subrange should work
+    int i = 5;
+    std::ranges::subrange<int*, int*> r{&i, &i};
+    auto ret  = std::__uses_allocator_construction_args<std::pair<int*, int*>>(a, r);
+    auto pair = std::make_from_tuple<std::pair<int*, int*>>(std::move(ret));
+    assert(pair.first == &i);
+    assert(pair.second == &i);
+  }
+#endif
 
   return true;
 }
