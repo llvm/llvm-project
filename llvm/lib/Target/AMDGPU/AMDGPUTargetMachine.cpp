@@ -965,7 +965,7 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 }
 
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
-  if (isPassEnabled(EnableLoopPrefetch, CodeGenOpt::Aggressive))
+  if (isPassEnabled(EnableLoopPrefetch, CodeGenOptLevel::Aggressive))
     addPass(createLoopDataPrefetchPass());
   addPass(createSeparateConstOffsetFromGEPPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
