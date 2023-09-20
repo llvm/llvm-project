@@ -267,10 +267,12 @@ namespace clang {
       for (auto &LM : LinkModules) {
         assert(LM.Module && "LinkModule does not actually have a module");
         if (LM.PropagateAttrs)
-          for (Function &F : *LM.Module) {
+          for (Function &F : llvm::make_early_inc_range(*LM.Module)) {
             // Skip intrinsics. Keep consistent with how intrinsics are created
             // in LLVM IR.
             if (F.isIntrinsic())
+              continue;
+            if (CodeGen::dropFunctionWithIncompatibleAttributes(F, TargetOpts))
               continue;
             CodeGen::mergeDefaultFunctionDefinitionAttributes(
                 F, CodeGenOpts, LangOpts, TargetOpts, LM.Internalize);

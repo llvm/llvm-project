@@ -375,6 +375,18 @@ public:
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
 };
 
+/// If a "target-feature" from \p F is enabled/disabled but the opposite value
+/// is set in \p TargetOpts features, then discard \p \F. This function is
+/// applied over incoming function when linking builtins with
+/// -mlink-builtin-bitcode
+///
+/// This is used when linking CUDA's libdevice or AMD's device_libs, where
+/// precompiled bitcode is linked into the user's module.
+/// Some of the functions being linked may use some features available only on
+/// some GPUs
+bool dropFunctionWithIncompatibleAttributes(llvm::Function &F,
+                                            const TargetOptions &TargetOpts);
+
 /// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
 /// though we had emitted it ourselves. We remove any attributes on F that
 /// conflict with the attributes we add here.
