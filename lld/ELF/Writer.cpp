@@ -2187,7 +2187,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   for (OutputSection *sec : outputSections)
     sec->finalize();
 
-  script->checkMemoryRegions();
+  script->checkDotAndMemoryRegions();
 
   if (config->emachine == EM_ARM && !config->isLE && config->armBe8) {
     addArmInputSectionMappingSymbols();
