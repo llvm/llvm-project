@@ -469,7 +469,7 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
                  std::function<void(const CFGElement &,
                                     const TypeErasedDataflowAnalysisState &)>
                      PostVisitCFG = nullptr) {
-  AC.Log.enterBlock(Block);
+  AC.Log.enterBlock(Block, PostVisitCFG != nullptr);
   auto State = computeBlockInputState(Block, AC);
   AC.Log.recordState(State);
   int ElementIdx = 1;
