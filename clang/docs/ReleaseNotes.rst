@@ -50,13 +50,15 @@ C++ Specific Potentially Breaking Changes
   account the possibility that functions could be overloaded on their template
   parameter lists or requires-clauses. This causes mangled names to change for
   function templates in the following cases:
-    - When the function has any constraints, whether from constrained template
+
+  - When the function has any constraints, whether from constrained template
       parameters or requires-clauses.
-    - When the template parameter list includes a deduced type -- either
+  - When the template parameter list includes a deduced type -- either
       ``auto``, ``decltype(auto)``, or a deduced class template specialization
       type.
-    - When a template template parameter is given a template template argument
+  - When a template template parameter is given a template template argument
       that has a different template parameter list.
+
   This fixes a number of issues where valid programs would be rejected due to
   mangling collisions, or would in some cases be silently miscompiled. Clang
   will use the old manglings if ``-fclang-abi-compat=17`` or lower is
