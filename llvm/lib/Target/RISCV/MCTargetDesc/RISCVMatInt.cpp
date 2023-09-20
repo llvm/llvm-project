@@ -9,6 +9,8 @@
 #include "RISCVMatInt.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
@@ -257,10 +259,25 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   assert(ActiveFeatures[RISCV::Feature64Bit] &&
          "Expected RV32 to only need 2 instructions");
 
+  // If the lower 13 bits are something like 0x17ff, try to turn it into 0x1800
+  // and use a final addi to correct it back to 0x17ff. This will create a
+  // sequence ending in 2 addis.
+  if ((Val & 0xfff) != 0 && (Val & 0x1800) == 0x1000) {
+    int64_t Imm12 = -(0x800 - (Val & 0xfff));
+    int64_t AdjustedVal = Val - Imm12;
+    RISCVMatInt::InstSeq TmpSeq;
+    generateInstSeqImpl(AdjustedVal, ActiveFeatures, TmpSeq);
+
+    // Keep the new sequence if it is an improvement.
+    if ((TmpSeq.size() + 1) < Res.size()) {
+      TmpSeq.emplace_back(RISCV::ADDI, Imm12);
+      Res = TmpSeq;
+    }
+  }
+
   // If the constant is positive we might be able to generate a shifted constant
   // with no leading zeros and use a final SRLI to restore them.
-  if (Val > 0) {
-    assert(Res.size() > 2 && "Expected longer sequence");
+  if (Val > 0 && Res.size() > 2) {
     generateInstSeqLeadingZeros(Val, ActiveFeatures, Res);
   }
 
