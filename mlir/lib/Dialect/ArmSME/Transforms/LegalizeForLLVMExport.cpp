@@ -207,49 +207,56 @@ struct LoadTileSliceToArmSMELowering
     arm_sme::TileSliceLayout layout = loadTileSliceOp.getLayout();
 
     // Create 'arm_sme.intr.ld1*.(horiz|vert)' intrinsic to load ZA tile slice.
-    switch (tileElementWidth) {
-    default:
-      llvm_unreachable("unexpected element type!");
-    case 8:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+    if (layout == arm_sme::TileSliceLayout::Horizontal) {
+      switch (tileElementWidth) {
+      default:
+        llvm_unreachable("unexpected element type!");
+      case 8:
         rewriter.create<arm_sme::aarch64_sme_ld1b_horiz>(
             loc, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.create<arm_sme::aarch64_sme_ld1b_vert>(loc, allActiveMask, ptr,
-                                                        tileI32, tileSliceI32);
-      break;
-    case 16:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 16:
         rewriter.create<arm_sme::aarch64_sme_ld1h_horiz>(
             loc, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.create<arm_sme::aarch64_sme_ld1h_vert>(loc, allActiveMask, ptr,
-                                                        tileI32, tileSliceI32);
-      break;
-    case 32:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 32:
         rewriter.create<arm_sme::aarch64_sme_ld1w_horiz>(
             loc, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.create<arm_sme::aarch64_sme_ld1w_vert>(loc, allActiveMask, ptr,
-                                                        tileI32, tileSliceI32);
-      break;
-    case 64:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 64:
         rewriter.create<arm_sme::aarch64_sme_ld1d_horiz>(
             loc, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.create<arm_sme::aarch64_sme_ld1d_vert>(loc, allActiveMask, ptr,
-                                                        tileI32, tileSliceI32);
-      break;
-    case 128:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 128:
         rewriter.create<arm_sme::aarch64_sme_ld1q_horiz>(
             loc, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
+        break;
+      }
+    } else {
+      switch (tileElementWidth) {
+      default:
+        llvm_unreachable("unexpected element type!");
+      case 8:
+        rewriter.create<arm_sme::aarch64_sme_ld1b_vert>(loc, allActiveMask, ptr,
+                                                        tileI32, tileSliceI32);
+        break;
+      case 16:
+        rewriter.create<arm_sme::aarch64_sme_ld1h_vert>(loc, allActiveMask, ptr,
+                                                        tileI32, tileSliceI32);
+        break;
+      case 32:
+        rewriter.create<arm_sme::aarch64_sme_ld1w_vert>(loc, allActiveMask, ptr,
+                                                        tileI32, tileSliceI32);
+        break;
+      case 64:
+        rewriter.create<arm_sme::aarch64_sme_ld1d_vert>(loc, allActiveMask, ptr,
+                                                        tileI32, tileSliceI32);
+        break;
+      case 128:
         rewriter.create<arm_sme::aarch64_sme_ld1q_vert>(loc, allActiveMask, ptr,
                                                         tileI32, tileSliceI32);
-      break;
+        break;
+      }
     }
 
     // The load intrinsics have no result, replace 'arm_sme.tile_load' with
@@ -304,49 +311,56 @@ struct StoreTileSliceToArmSMELowering
     Value tileI32 = castTileIDToI32(tile, loc, rewriter);
     arm_sme::TileSliceLayout layout = storeTileSliceOp.getLayout();
 
-    switch (tileElementWidth) {
-    default:
-      llvm_unreachable("unexpected element type!");
-    case 8:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+    if (layout == arm_sme::TileSliceLayout::Horizontal) {
+      switch (tileElementWidth) {
+      default:
+        llvm_unreachable("unexpected element type!");
+      case 8:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1b_horiz>(
             storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1b_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      break;
-    case 16:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 16:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1h_horiz>(
             storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1h_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      break;
-    case 32:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 32:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1w_horiz>(
             storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1w_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      break;
-    case 64:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 64:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_horiz>(
             storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
-        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      break;
-    case 128:
-      if (layout == arm_sme::TileSliceLayout::Horizontal)
+        break;
+      case 128:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1q_horiz>(
             storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      else
+        break;
+      }
+    } else {
+      switch (tileElementWidth) {
+      default:
+        llvm_unreachable("unexpected element type!");
+      case 8:
+        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1b_vert>(
+            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+        break;
+      case 16:
+        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1h_vert>(
+            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+        break;
+      case 32:
+        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1w_vert>(
+            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+        break;
+      case 64:
+        rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_vert>(
+            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+        break;
+      case 128:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1q_vert>(
             storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
-      break;
+        break;
+      }
     }
 
     return success();
