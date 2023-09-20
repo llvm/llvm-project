@@ -211,10 +211,10 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Get the terminator operation of this block. This function asserts that
-  /// the block has a valid terminator operation.
+  /// the block might have a valid terminator operation.
   Operation *getTerminator();
 
-  /// Check whether this block has a terminator.
+  /// Check whether this block might have a terminator.
   bool mightHaveTerminator();
 
   //===--------------------------------------------------------------------===//
