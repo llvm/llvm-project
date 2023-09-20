@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SDNodeDbgValue.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -51,7 +50,6 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
