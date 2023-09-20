@@ -56,11 +56,27 @@ struct InParallelOpInterface
   }
 };
 
+struct ReduceReturnOpInterface
+    : public BufferDeallocationOpInterface::ExternalModel<
+          ReduceReturnOpInterface, scf::ReduceReturnOp> {
+  FailureOr<Operation *> process(Operation *op, DeallocationState &state,
+                                 const DeallocationOptions &options) const {
+    auto reduceReturnOp = cast<scf::ReduceReturnOp>(op);
+    if (isa<BaseMemRefType>(reduceReturnOp.getOperand().getType()))
+      return op->emitError("only supported when operand is not a MemRef");
+
+    SmallVector<Value> updatedOperandOwnership;
+    return deallocation_impl::insertDeallocOpForReturnLike(
+        state, op, {}, updatedOperandOwnership);
+  }
+};
+
 } // namespace
 
 void mlir::scf::registerBufferDeallocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, SCFDialect *dialect) {
     InParallelOp::attachInterface<InParallelOpInterface>(*ctx);
+    ReduceReturnOp::attachInterface<ReduceReturnOpInterface>(*ctx);
   });
 }
