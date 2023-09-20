@@ -46,6 +46,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -202,6 +203,8 @@ static int PrintSupportedExtensions(std::string TargetStr) {
     llvm::riscvExtensionsHelp();
   else if (MachineTriple.isAArch64())
     llvm::AArch64::PrintSupportedExtensions();
+  else if (MachineTriple.isARM())
+    llvm::ARM::PrintSupportedExtensions();
   else {
     // The option was already checked in Driver::HandleImmediateArgs,
     // so we do not expect to get here if we are not a supported architecture.

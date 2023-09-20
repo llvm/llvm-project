@@ -158,34 +158,29 @@ declare void @consume(ptr addrspace(1) %obj)
 define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-LABEL: test_cross_bb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movq %rdi, (%rsp)
+; CHECK-NEXT:    .cfi_offset %rbx, -16
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp8:
-; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %left
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:    movq (%rsp), %rdi
 ; CHECK-NEXT:    callq consume@PLT
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    jmp .LBB8_3
 ; CHECK-NEXT:  .LBB8_2: # %right
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:  .LBB8_3: # %right
-; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:

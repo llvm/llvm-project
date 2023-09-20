@@ -2452,8 +2452,11 @@ private:
   /// vector) and sets \p CurrentOrder to the identity permutation; otherwise
   /// returns false, setting \p CurrentOrder to either an empty vector or a
   /// non-identity permutation that allows to reuse extract instructions.
+  /// \param ResizeAllowed indicates whether it is allowed to handle subvector
+  /// extract order.
   bool canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                       SmallVectorImpl<unsigned> &CurrentOrder) const;
+                       SmallVectorImpl<unsigned> &CurrentOrder,
+                       bool ResizeAllowed = false) const;
 
   /// Vectorize a single entry in the tree.
   Value *vectorizeTree(TreeEntry *E);
@@ -2913,8 +2916,11 @@ private:
         const TreeEntry *TE = getTreeEntry(V);
         assert((!TE || TE == Last || doesNotNeedToBeScheduled(V)) &&
                "Scalar already in tree!");
-        if (TE)
+        if (TE) {
+          if (TE != Last)
+            MultiNodeScalars.insert(V);
           continue;
+        }
         ScalarToTreeEntry[V] = Last;
       }
       // Update the scheduler bundle to point to this TreeEntry.
@@ -2972,6 +2978,9 @@ private:
 
   /// Maps a specific scalar to its tree entry.
   SmallDenseMap<Value *, TreeEntry *> ScalarToTreeEntry;
+
+  /// List of scalars, used in several vectorize nodes.
+  SmallDenseSet<Value *> MultiNodeScalars;
 
   /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
@@ -4249,7 +4258,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
       // Check that gather of extractelements can be represented as
       // just a shuffle of a single vector.
       OrdersType CurrentOrder;
-      bool Reuse = canReuseExtract(TE.Scalars, TE.getMainOp(), CurrentOrder);
+      bool Reuse = canReuseExtract(TE.Scalars, TE.getMainOp(), CurrentOrder,
+                                   /*ResizeAllowed=*/true);
       if (Reuse || !CurrentOrder.empty()) {
         if (!CurrentOrder.empty())
           fixupOrderingIndices(CurrentOrder);
@@ -4955,6 +4965,8 @@ void BoUpSLP::buildExternalUses(
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
       Value *Scalar = Entry->Scalars[Lane];
+      if (!isa<Instruction>(Scalar))
+        continue;
       int FoundLane = Entry->findLaneForValue(Scalar);
 
       // Check if the scalar is externally used as an extra arg.
@@ -5799,18 +5811,21 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   if (TreeEntry *E = getTreeEntry(S.OpValue)) {
     LLVM_DEBUG(dbgs() << "SLP: \tChecking bundle: " << *S.OpValue << ".\n");
     if (!E->isSame(VL)) {
-      LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
-      if (TryToFindDuplicates(S))
-        newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndicies);
+      if (!doesNotNeedToBeScheduled(S.OpValue)) {
+        LLVM_DEBUG(dbgs() << "SLP: Gathering due to partial overlap.\n");
+        if (TryToFindDuplicates(S))
+          newTreeEntry(VL, std::nullopt /*not vectorized*/, S, UserTreeIdx,
+                       ReuseShuffleIndicies);
+        return;
+      }
+    } else {
+      // Record the reuse of the tree node.  FIXME, currently this is only used
+      // to properly draw the graph rather than for the actual vectorization.
+      E->UserTreeIndices.push_back(UserTreeIdx);
+      LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.OpValue
+                        << ".\n");
       return;
     }
-    // Record the reuse of the tree node.  FIXME, currently this is only used to
-    // properly draw the graph rather than for the actual vectorization.
-    E->UserTreeIndices.push_back(UserTreeIdx);
-    LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.OpValue
-                      << ".\n");
-    return;
   }
 
   // Check that none of the instructions in the bundle are already in the tree.
@@ -6376,7 +6391,8 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
 }
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
-                              SmallVectorImpl<unsigned> &CurrentOrder) const {
+                              SmallVectorImpl<unsigned> &CurrentOrder,
+                              bool ResizeAllowed) const {
   const auto *It = find_if(VL, [](Value *V) {
     return isa<ExtractElementInst, ExtractValueInst>(V);
   });
@@ -6409,46 +6425,55 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
     NElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   }
 
-  if (NElts != VL.size())
+  unsigned E = VL.size();
+  if (!ResizeAllowed && NElts != E)
     return false;
+  SmallVector<int> Indices(E, PoisonMaskElem);
+  unsigned MinIdx = NElts, MaxIdx = 0;
+  for (auto [I, V] : enumerate(VL)) {
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      continue;
+    if (Inst->getOperand(0) != Vec)
+      return false;
+    if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
+      if (isa<UndefValue>(EE->getIndexOperand()))
+        continue;
+    std::optional<unsigned> Idx = getExtractIndex(Inst);
+    if (!Idx)
+      return false;
+    const unsigned ExtIdx = *Idx;
+    if (ExtIdx >= NElts)
+      continue;
+    Indices[I] = ExtIdx;
+    if (MinIdx > ExtIdx)
+      MinIdx = ExtIdx;
+    if (MaxIdx < ExtIdx)
+      MaxIdx = ExtIdx;
+  }
+  if (MaxIdx - MinIdx + 1 > E)
+    return false;
+  if (MaxIdx + 1 <= E)
+    MinIdx = 0;
 
   // Check that all of the indices extract from the correct offset.
   bool ShouldKeepOrder = true;
-  unsigned E = VL.size();
   // Assign to all items the initial value E + 1 so we can check if the extract
   // instruction index was used already.
   // Also, later we can check that all the indices are used and we have a
   // consecutive access in the extract instructions, by checking that no
   // element of CurrentOrder still has value E + 1.
   CurrentOrder.assign(E, E);
-  unsigned I = 0;
-  for (; I < E; ++I) {
-    auto *Inst = dyn_cast<Instruction>(VL[I]);
-    if (!Inst)
+  for (unsigned I = 0; I < E; ++I) {
+    if (Indices[I] == PoisonMaskElem)
       continue;
-    if (Inst->getOperand(0) != Vec)
-      break;
-    if (auto *EE = dyn_cast<ExtractElementInst>(Inst))
-      if (isa<UndefValue>(EE->getIndexOperand()))
-        continue;
-    std::optional<unsigned> Idx = getExtractIndex(Inst);
-    if (!Idx)
-      break;
-    const unsigned ExtIdx = *Idx;
-    if (ExtIdx != I) {
-      if (ExtIdx >= E || CurrentOrder[ExtIdx] != E)
-        break;
-      ShouldKeepOrder = false;
-      CurrentOrder[ExtIdx] = I;
-    } else {
-      if (CurrentOrder[I] != E)
-        break;
-      CurrentOrder[I] = I;
+    const unsigned ExtIdx = Indices[I] - MinIdx;
+    if (CurrentOrder[ExtIdx] != E) {
+      CurrentOrder.clear();
+      return false;
     }
-  }
-  if (I < E) {
-    CurrentOrder.clear();
-    return false;
+    ShouldKeepOrder &= ExtIdx == I;
+    CurrentOrder[ExtIdx] = I;
   }
   if (ShouldKeepOrder)
     CurrentOrder.clear();
@@ -8923,6 +8948,12 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
             TE->UserTreeIndices.front().EdgeIdx <
                 TEPtr->UserTreeIndices.front().EdgeIdx)
           continue;
+        // If the user instruction is used for some reason in different
+        // vectorized nodes - make it depend on index.
+        if (TE->UserTreeIndices.front().UserTE !=
+                TEPtr->UserTreeIndices.front().UserTE &&
+            TE->Idx > TEPtr->Idx)
+          continue;
       }
       // Check if the user node of the TE comes after user node of EntryPtr,
       // otherwise EntryPtr depends on TE.
@@ -9434,10 +9465,12 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root) {
     GatherShuffleExtractSeq.insert(InsElt);
     CSEBlocks.insert(InsElt->getParent());
     // Add to our 'need-to-extract' list.
-    if (TreeEntry *Entry = getTreeEntry(V)) {
-      // Find which lane we need to extract.
-      unsigned FoundLane = Entry->findLaneForValue(V);
-      ExternalUses.emplace_back(V, InsElt, FoundLane);
+    if (isa<Instruction>(V)) {
+      if (TreeEntry *Entry = getTreeEntry(V)) {
+        // Find which lane we need to extract.
+        unsigned FoundLane = Entry->findLaneForValue(V);
+        ExternalUses.emplace_back(V, InsElt, FoundLane);
+      }
     }
     return Vec;
   };
@@ -9819,17 +9852,32 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
       S = getSameOpcode(*It, *TLI);
   }
   if (S.getOpcode()) {
-    if (TreeEntry *VE = getTreeEntry(S.OpValue);
-        VE && VE->isSame(VL) &&
-        (any_of(VE->UserTreeIndices,
-                [E, NodeIdx](const EdgeInfo &EI) {
-                  return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
-                }) ||
-         any_of(VectorizableTree,
-                [E, NodeIdx, VE](const std::unique_ptr<TreeEntry> &TE) {
-                  return TE->isOperandGatherNode({E, NodeIdx}) &&
-                         VE->isSame(TE->Scalars);
-                }))) {
+    auto CheckSameVE = [&](const TreeEntry *VE) {
+      return VE->isSame(VL) &&
+             (any_of(VE->UserTreeIndices,
+                     [E, NodeIdx](const EdgeInfo &EI) {
+                       return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
+                     }) ||
+              any_of(VectorizableTree,
+                     [E, NodeIdx, VE](const std::unique_ptr<TreeEntry> &TE) {
+                       return TE->isOperandGatherNode({E, NodeIdx}) &&
+                              VE->isSame(TE->Scalars);
+                     }));
+    };
+    TreeEntry *VE = getTreeEntry(S.OpValue);
+    bool IsSameVE = VE && CheckSameVE(VE);
+    if (!IsSameVE && MultiNodeScalars.contains(S.OpValue)) {
+      auto *I =
+          find_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->State != TreeEntry::NeedToGather && TE.get() != VE &&
+                   CheckSameVE(TE.get());
+          });
+      if (I != VectorizableTree.end()) {
+        VE = I->get();
+        IsSameVE = true;
+      }
+    }
+    if (IsSameVE) {
       auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
         ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
         ShuffleBuilder.add(V, Mask);
@@ -10697,10 +10745,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         // The pointer operand uses an in-tree scalar so we add the new
         // LoadInst to ExternalUses list to make sure that an extract will
         // be generated in the future.
-        if (TreeEntry *Entry = getTreeEntry(PO)) {
-          // Find which lane we need to extract.
-          unsigned FoundLane = Entry->findLaneForValue(PO);
-          ExternalUses.emplace_back(PO, NewLI, FoundLane);
+        if (isa<Instruction>(PO)) {
+          if (TreeEntry *Entry = getTreeEntry(PO)) {
+            // Find which lane we need to extract.
+            unsigned FoundLane = Entry->findLaneForValue(PO);
+            ExternalUses.emplace_back(PO, NewLI, FoundLane);
+          }
         }
       } else {
         assert((E->State == TreeEntry::ScatterVectorize ||
@@ -10740,10 +10790,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // The pointer operand uses an in-tree scalar, so add the new StoreInst to
       // ExternalUses to make sure that an extract will be generated in the
       // future.
-      if (TreeEntry *Entry = getTreeEntry(Ptr)) {
-        // Find which lane we need to extract.
-        unsigned FoundLane = Entry->findLaneForValue(Ptr);
-        ExternalUses.push_back(ExternalUser(Ptr, ST, FoundLane));
+      if (isa<Instruction>(Ptr)) {
+        if (TreeEntry *Entry = getTreeEntry(Ptr)) {
+          // Find which lane we need to extract.
+          unsigned FoundLane = Entry->findLaneForValue(Ptr);
+          ExternalUses.push_back(ExternalUser(Ptr, ST, FoundLane));
+        }
       }
 
       Value *V = propagateMetadata(ST, E->Scalars);
@@ -10852,7 +10904,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // The scalar argument uses an in-tree scalar so we add the new vectorized
       // call to ExternalUses list to make sure that an extract will be
       // generated in the future.
-      if (ScalarArg) {
+      if (isa_and_present<Instruction>(ScalarArg)) {
         if (TreeEntry *Entry = getTreeEntry(ScalarArg)) {
           // Find which lane we need to extract.
           unsigned FoundLane = Entry->findLaneForValue(ScalarArg);
@@ -14015,31 +14067,33 @@ public:
       // RedOp2 = select i1 ?, i1 RHS, i1 false
 
       // Then, we must freeze LHS in the new op.
-      auto &&FixBoolLogicalOps =
-          [&Builder, VectorizedTree](Value *&LHS, Value *&RHS,
-                                     Instruction *RedOp1, Instruction *RedOp2) {
-            if (!isBoolLogicOp(RedOp1))
-              return;
-            if (LHS == VectorizedTree || getRdxOperand(RedOp1, 0) == LHS ||
-                isGuaranteedNotToBePoison(LHS))
-              return;
-            if (!isBoolLogicOp(RedOp2))
-              return;
-            if (RHS == VectorizedTree || getRdxOperand(RedOp2, 0) == RHS ||
-                isGuaranteedNotToBePoison(RHS)) {
-              std::swap(LHS, RHS);
-              return;
-            }
-            LHS = Builder.CreateFreeze(LHS);
-          };
+      auto FixBoolLogicalOps = [&, VectorizedTree](Value *&LHS, Value *&RHS,
+                                                   Instruction *RedOp1,
+                                                   Instruction *RedOp2,
+                                                   bool InitStep) {
+        if (!isBoolLogicOp(RedOp1))
+          return;
+        if ((!InitStep && LHS == VectorizedTree) ||
+            getRdxOperand(RedOp1, 0) == LHS || isGuaranteedNotToBePoison(LHS))
+          return;
+        if (!isBoolLogicOp(RedOp2))
+          return;
+        if ((!InitStep && RHS == VectorizedTree) ||
+            getRdxOperand(RedOp2, 0) == RHS || isGuaranteedNotToBePoison(RHS)) {
+          std::swap(LHS, RHS);
+          return;
+        }
+        if (LHS != VectorizedTree)
+          LHS = Builder.CreateFreeze(LHS);
+      };
       // Finish the reduction.
       // Need to add extra arguments and not vectorized possible reduction
       // values.
       // Try to avoid dependencies between the scalar remainders after
       // reductions.
-      auto &&FinalGen =
-          [this, &Builder, &TrackedVals, &FixBoolLogicalOps](
-              ArrayRef<std::pair<Instruction *, Value *>> InstVals) {
+      auto FinalGen =
+          [&](ArrayRef<std::pair<Instruction *, Value *>> InstVals,
+              bool InitStep) {
             unsigned Sz = InstVals.size();
             SmallVector<std::pair<Instruction *, Value *>> ExtraReds(Sz / 2 +
                                                                      Sz % 2);
@@ -14060,7 +14114,7 @@ public:
               // sequential, safe, scalar boolean logic operations, the
               // reduction operand must be frozen.
               FixBoolLogicalOps(StableRdxVal1, StableRdxVal2, InstVals[I].first,
-                                RedOp);
+                                RedOp, InitStep);
               Value *ExtraRed = createOp(Builder, RdxKind, StableRdxVal1,
                                          StableRdxVal2, "op.rdx", ReductionOps);
               ExtraReds[I / 2] = std::make_pair(InstVals[I].first, ExtraRed);
@@ -14090,11 +14144,13 @@ public:
           ExtraReductions.emplace_back(I, Pair.first);
       }
       // Iterate through all not-vectorized reduction values/extra arguments.
+      bool InitStep = true;
       while (ExtraReductions.size() > 1) {
         VectorizedTree = ExtraReductions.front().second;
         SmallVector<std::pair<Instruction *, Value *>> NewReds =
-            FinalGen(ExtraReductions);
+            FinalGen(ExtraReductions, InitStep);
         ExtraReductions.swap(NewReds);
+        InitStep = false;
       }
       VectorizedTree = ExtraReductions.front().second;
 

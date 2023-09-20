@@ -1,8 +1,8 @@
-; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-NOT: OpCapability Matrix
 ; CHECK-SPIRV-NOT: OpCapability Shader
-; CHECK-SPIRV:     OpCapability Float16Buffer
+; CHECK-SPIRV:     OpCapability Kernel
 
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SC0:]] SpecId 0
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SC1:]] SpecId 1

@@ -87,12 +87,15 @@ static ABIArgInfo getDirectX86Hva(llvm::Type* T = nullptr) {
 /// Similar to llvm::CCState, but for Clang.
 struct CCState {
   CCState(CGFunctionInfo &FI)
-      : IsPreassigned(FI.arg_size()), CC(FI.getCallingConvention()) {}
+      : IsPreassigned(FI.arg_size()), CC(FI.getCallingConvention()),
+	Required(FI.getRequiredArgs()), IsDelegateCall(FI.isDelegateCall()) {}
 
   llvm::SmallBitVector IsPreassigned;
   unsigned CC = CallingConv::CC_C;
   unsigned FreeRegs = 0;
   unsigned FreeSSERegs = 0;
+  RequiredArgs Required;
+  bool IsDelegateCall = false;
 };
 
 /// X86_32ABIInfo - The X86-32 ABI information.
@@ -141,7 +144,7 @@ class X86_32ABIInfo : public ABIInfo {
   Class classify(QualType Ty) const;
   ABIArgInfo classifyReturnType(QualType RetTy, CCState &State) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State,
-                                  bool isDelegateCall) const;
+                                  unsigned ArgIndex) const;
 
   /// Updates the number of available free registers, returns
   /// true if any registers were allocated.
@@ -739,7 +742,7 @@ void X86_32ABIInfo::runVectorCallFirstPass(CGFunctionInfo &FI, CCState &State) c
 }
 
 ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
-                                               bool isDelegateCall) const {
+                                               unsigned ArgIndex) const {
   // FIXME: Set alignment on indirect arguments.
   bool IsFastCall = State.CC == llvm::CallingConv::X86_FastCall;
   bool IsRegCall = State.CC == llvm::CallingConv::X86_RegCall;
@@ -754,7 +757,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
     if (RAA == CGCXXABI::RAA_Indirect) {
       return getIndirectResult(Ty, false, State);
-    } else if (isDelegateCall) {
+    } else if (State.IsDelegateCall) {
       // Avoid having different alignments on delegate call args by always
       // setting the alignment to 4, which is what we do for inallocas.
       ABIArgInfo Res = getIndirectResult(Ty, false, State);
@@ -812,11 +815,12 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
     }
     llvm::IntegerType *PaddingType = NeedsPadding ? Int32 : nullptr;
 
-    // Pass over-aligned aggregates on Windows indirectly. This behavior was
-    // added in MSVC 2015. Use the required alignment from the record layout,
-    // since that may be less than the regular type alignment, and types with
-    // required alignment of less than 4 bytes are not passed indirectly.
-    if (IsWin32StructABI) {
+    // Pass over-aligned aggregates to non-variadic functions on Windows
+    // indirectly. This behavior was added in MSVC 2015. Use the required
+    // alignment from the record layout, since that may be less than the
+    // regular type alignment, and types with required alignment of less than 4
+    // bytes are not passed indirectly.
+    if (IsWin32StructABI && State.Required.isRequiredArg(ArgIndex)) {
       unsigned AlignInBits = 0;
       if (RT) {
         const ASTRecordLayout &Layout =
@@ -942,13 +946,13 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
   bool UsedInAlloca = false;
   MutableArrayRef<CGFunctionInfoArgInfo> Args = FI.arguments();
-  for (int I = 0, E = Args.size(); I < E; ++I) {
+  for (unsigned I = 0, E = Args.size(); I < E; ++I) {
     // Skip arguments that have already been assigned.
     if (State.IsPreassigned.test(I))
       continue;
 
     Args[I].info =
-        classifyArgumentType(Args[I].type, State, FI.isDelegateCall());
+        classifyArgumentType(Args[I].type, State, I);
     UsedInAlloca |= (Args[I].info.getKind() == ABIArgInfo::InAlloca);
   }
 

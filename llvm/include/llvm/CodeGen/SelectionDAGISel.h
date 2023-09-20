@@ -51,7 +51,7 @@ public:
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
-  CodeGenOpt::Level OptLevel;
+  CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
   bool FastISelFailed;
@@ -62,7 +62,7 @@ public:
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
   explicit SelectionDAGISel(char &ID, TargetMachine &tm,
-                            CodeGenOpt::Level OL = CodeGenOpt::Default);
+                            CodeGenOptLevel OL = CodeGenOptLevel::Default);
   ~SelectionDAGISel() override;
 
   const TargetLowering *getTargetLowering() const { return TLI; }
@@ -89,9 +89,10 @@ public:
   /// not match or is not implemented, return true.  The resultant operands
   /// (which will appear in the machine instruction) should be added to the
   /// OutOps vector.
-  virtual bool SelectInlineAsmMemoryOperand(const SDValue &Op,
-                                            unsigned ConstraintID,
-                                            std::vector<SDValue> &OutOps) {
+  virtual bool
+  SelectInlineAsmMemoryOperand(const SDValue &Op,
+                               InlineAsm::ConstraintCode ConstraintID,
+                               std::vector<SDValue> &OutOps) {
     return true;
   }
 
@@ -104,7 +105,7 @@ public:
   /// FIXME: This is a static member function because the MSP430/X86
   /// targets, which uses it during isel.  This could become a proper member.
   static bool IsLegalToFold(SDValue N, SDNode *U, SDNode *Root,
-                            CodeGenOpt::Level OptLevel,
+                            CodeGenOptLevel OptLevel,
                             bool IgnoreChains = false);
 
   static void InvalidateNodeId(SDNode *N);

@@ -1,11 +1,9 @@
-// REQUIRES: host-supports-nvptx
-
 // Tests memref bare pointer lowering convention both host side and kernel-side;
 // this works for only statically shaped memrefs.
 // Similar to the wmma-matmul-f32 but but with the memref bare pointer lowering convention.
 // This test also uses gpu.memcpy operations (instead of gpu.host_register).
 // RUN: mlir-opt %s \
-// RUN: | mlir-opt -test-lower-to-nvvm="host-bare-ptr-calling-convention=1 kernel-bare-ptr-calling-convention=1 cubin-chip=sm_70" \
+// RUN: | mlir-opt -test-lower-to-nvvm="host-bare-ptr-calling-convention=1 kernel-bare-ptr-calling-convention=1 cubin-chip=sm_70 cubin-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --entry-point-result=void \

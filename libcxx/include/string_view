@@ -776,7 +776,35 @@ template <ranges::contiguous_range _Range>
 #endif
 
 // [string.view.comparison]
+
+#if _LIBCPP_STD_VER >= 20
+
+template<class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI constexpr
+bool operator==(basic_string_view<_CharT, _Traits> __lhs,
+                type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
+    if (__lhs.size() != __rhs.size()) return false;
+    return __lhs.compare(__rhs) == 0;
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
+    basic_string_view<_CharT, _Traits> __lhs, type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
+    if constexpr (requires { typename _Traits::comparison_category; }) {
+        // [string.view]/4
+        static_assert(
+            __comparison_category<typename _Traits::comparison_category>,
+            "return type is not a comparison category type");
+        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
+    } else {
+        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
+    }
+}
+
+#else
+
 // operator ==
+
 template<class _CharT, class _Traits>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(basic_string_view<_CharT, _Traits> __lhs,
@@ -797,8 +825,6 @@ bool operator==(basic_string_view<_CharT, _Traits> __lhs,
     return __lhs.compare(__rhs) == 0;
 }
 
-#if _LIBCPP_STD_VER < 20
-// This overload is automatically generated in C++20.
 template<class _CharT, class _Traits, int = 2>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
 bool operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
@@ -807,41 +833,6 @@ bool operator==(__type_identity_t<basic_string_view<_CharT, _Traits> > __lhs,
     if (__lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
-#endif // _LIBCPP_STD_VER >= 20
-
-// operator <=>
-
-#if _LIBCPP_STD_VER >= 20
-
-template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-operator<=>(basic_string_view<_CharT, _Traits> __lhs, basic_string_view<_CharT, _Traits> __rhs) noexcept {
-    if constexpr (requires { typename _Traits::comparison_category; }) {
-        // [string.view]/4
-        static_assert(
-            __comparison_category<typename _Traits::comparison_category>,
-            "return type is not a comparison category type");
-        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
-    } else {
-        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
-    }
-}
-
-template <class _CharT, class _Traits, int = 1>
-_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
-    basic_string_view<_CharT, _Traits> __lhs, type_identity_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
-    if constexpr (requires { typename _Traits::comparison_category; }) {
-        // [string.view]/4
-        static_assert(
-            __comparison_category<typename _Traits::comparison_category>,
-            "return type is not a comparison category type");
-        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
-    } else {
-        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
-    }
-}
-
-#else //  _LIBCPP_STD_VER >= 20
 
 // operator !=
 template<class _CharT, class _Traits>

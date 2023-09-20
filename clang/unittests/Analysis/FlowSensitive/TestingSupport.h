@@ -240,12 +240,15 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     };
   }
 
-  for (const ast_matchers::BoundNodes &BN :
-       ast_matchers::match(ast_matchers::functionDecl(
-                               ast_matchers::hasBody(ast_matchers::stmt()),
-                               AI.TargetFuncMatcher)
-                               .bind("target"),
-                           Context)) {
+  SmallVector<ast_matchers::BoundNodes, 1> MatchResult = ast_matchers::match(
+      ast_matchers::functionDecl(ast_matchers::hasBody(ast_matchers::stmt()),
+                                 AI.TargetFuncMatcher)
+          .bind("target"),
+      Context);
+  if (MatchResult.empty())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "didn't find any matching target functions");
+  for (const ast_matchers::BoundNodes &BN : MatchResult) {
     // Get the AST node of the target function.
     const FunctionDecl *Target = BN.getNodeAs<FunctionDecl>("target");
     if (Target == nullptr)

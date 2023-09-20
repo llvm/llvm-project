@@ -118,9 +118,19 @@ using __llvm_libc::app;
 
 // TODO: Would be nice to use the aux entry structure from elf.h when available.
 struct AuxEntry {
-  uint64_t type;
-  uint64_t value;
+  __llvm_libc::AuxEntryType type;
+  __llvm_libc::AuxEntryType value;
 };
+
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                     \
+    defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_RISCV64)
+typedef Elf64_Phdr PgrHdrTableType;
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
+typedef Elf32_Phdr PgrHdrTableType;
+#else
+#error "Program header table type is not defined for the target platform."
+#endif
 
 __attribute__((noinline)) static void do_start() {
   LIBC_INLINE_ASM(".option push\n\t"
@@ -135,8 +145,8 @@ __attribute__((noinline)) static void do_start() {
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
   // value. We step over it (the "+ 1" below) to get to the env values.
-  uint64_t *env_ptr = app.args->argv + app.args->argc + 1;
-  uint64_t *env_end_marker = env_ptr;
+  __llvm_libc::ArgVEntryType *env_ptr = app.args->argv + app.args->argc + 1;
+  __llvm_libc::ArgVEntryType *env_end_marker = env_ptr;
   app.envPtr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
@@ -146,13 +156,13 @@ __attribute__((noinline)) static void do_start() {
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
-  Elf64_Phdr *programHdrTable = nullptr;
+  PgrHdrTableType *programHdrTable = nullptr;
   uintptr_t programHdrCount;
   for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
        aux_entry->type != AT_NULL; ++aux_entry) {
     switch (aux_entry->type) {
     case AT_PHDR:
-      programHdrTable = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
+      programHdrTable = reinterpret_cast<PgrHdrTableType *>(aux_entry->value);
       break;
     case AT_PHNUM:
       programHdrCount = aux_entry->value;
@@ -167,7 +177,7 @@ __attribute__((noinline)) static void do_start() {
 
   app.tls.size = 0;
   for (uintptr_t i = 0; i < programHdrCount; ++i) {
-    Elf64_Phdr *phdr = programHdrTable + i;
+    PgrHdrTableType *phdr = programHdrTable + i;
     if (phdr->p_type != PT_TLS)
       continue;
     // TODO: p_vaddr value has to be adjusted for static-pie executables.

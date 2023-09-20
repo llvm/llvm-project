@@ -9,6 +9,10 @@
 // RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix RISCV %}
 // RISCV: All available -march extensions for RISC-V
 
+// RUN: %if arm-registered-target %{ %clang --target=arm-linux-gnu \
+// RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix ARM %}
+// ARM: All available -march extensions for ARM
+
 // RUN: %if x86-registered-target %{ not %clang --target=x86_64-linux-gnu \
 // RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix X86 %}
 // X86: error: option '--print-supported-extensions' cannot be specified on this target

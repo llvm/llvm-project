@@ -8,6 +8,7 @@
 #include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/Core/BinaryData.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
@@ -93,6 +94,18 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   Error modifyPassConfig(jitlink::LinkGraph &G,
                          jitlink::PassConfiguration &Config) override {
     Config.PrePrunePasses.push_back(markSectionsLive);
+    Config.PostAllocationPasses.push_back([this](auto &G) {
+      MapSections([&G](const BinarySection &Section, uint64_t Address) {
+        reassignSectionAddress(G, Section, Address);
+      });
+      return Error::success();
+    });
+
+    if (G.getTargetTriple().isRISCV()) {
+      Config.PostAllocationPasses.push_back(
+          jitlink::createRelaxationPass_ELF_riscv());
+    }
+
     return Error::success();
   }
 
@@ -137,10 +150,6 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
   }
 
   Error notifyResolved(jitlink::LinkGraph &G) override {
-    MapSections([&G](const BinarySection &Section, uint64_t Address) {
-      reassignSectionAddress(G, Section, Address);
-    });
-
     for (auto *Symbol : G.defined_symbols()) {
       SymbolInfo Info{Symbol->getAddress().getValue(), Symbol->getSize()};
       Linker.Symtab.insert({Symbol->getName().str(), Info});

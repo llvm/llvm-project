@@ -56,12 +56,10 @@ BreakpointResolverName::BreakpointResolverName(
   }
 }
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
-                                               std::vector<std::string> names,
-                                               FunctionNameType name_type_mask,
-                                               LanguageType language,
-                                               lldb::addr_t offset,
-                                               bool skip_prologue)
+BreakpointResolverName::BreakpointResolverName(
+    const BreakpointSP &bkpt, const std::vector<std::string> &names,
+    FunctionNameType name_type_mask, LanguageType language, lldb::addr_t offset,
+    bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
       m_match_type(Breakpoint::Exact), m_language(language),
       m_skip_prologue(skip_prologue) {

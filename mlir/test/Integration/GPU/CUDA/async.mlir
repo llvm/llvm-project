@@ -1,9 +1,7 @@
-// REQUIRES: host-supports-nvptx
-
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -gpu-kernel-outlining \
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm),nvvm-attach-target)' \
-// RUN: | mlir-opt -gpu-async-region -gpu-to-llvm -gpu-module-to-binary \
+// RUN: | mlir-opt -gpu-async-region -gpu-to-llvm -gpu-module-to-binary="format=%gpu_compilation_format" \
 // RUN: | mlir-opt -async-to-async-runtime -async-runtime-ref-counting \
 // RUN: | mlir-opt -convert-async-to-llvm -convert-func-to-llvm \
 // RUN: | mlir-cpu-runner \

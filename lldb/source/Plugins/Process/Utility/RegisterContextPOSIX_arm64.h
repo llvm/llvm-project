@@ -54,6 +54,7 @@ protected:
   size_t GetFPUSize() { return sizeof(RegisterInfoPOSIX_arm64::FPU); }
 
   bool IsSVE(unsigned reg) const;
+  bool IsSME(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsTLS(unsigned reg) const;
 

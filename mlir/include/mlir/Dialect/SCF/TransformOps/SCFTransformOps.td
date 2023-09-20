@@ -27,7 +27,46 @@ def ApplyForLoopCanonicalizationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplySCFStructuralConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.scf.structural_conversions",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+      ["populateConversionTargetRules"]>]> {
+  let description = [{
+    Collects patterns for performing structural conversions of SCF operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
+
+def ForallToForOp : Op<Transform_Dialect, "loop.forall_to_for",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let summary = "Converts scf.forall into a nest of scf.for operations";
+  let description = [{
+    Converts the `scf.forall` operation pointed to by the given handle into a
+    set of nested `scf.for` operations. Each new operation corresponds to one
+    induction variable of the original "multifor" loop.
+
+    The operand handle must be associated with exactly one payload operation.
+
+    Loops with shared outputs are currently not supported.
+
+    #### Return Modes
+
+    Consumes the operand handle. Produces a silenceable failure if the operand
+    is not associated with a single `scf.forall` payload operation.
+    Returns as many handles as the given `forall` op has induction variables
+    that are associated with the generated `scf.for` loops.
+    Produces a silenceable failure if another number of resulting handles is
+    requested.
+  }];
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs Variadic<TransformHandleTypeInterface>:$transformed);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
 
 def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
     [NavigationTransformOpTrait, MemoryEffectsOpInterface,
@@ -273,8 +312,8 @@ def TakeAssumedBranchOp : Op<Transform_Dialect, "scf.take_assumed_branch", [
   TransformOpInterface, TransformEachOpTrait]> {
   let description = [{
     Given an scf.if conditional, inject user-defined information that it is
-    always safe to execute only the if or else branch. 
-    
+    always safe to execute only the if or else branch.
+
     This is achieved by just replacing the scf.if by the content of one of its
     branches.
 

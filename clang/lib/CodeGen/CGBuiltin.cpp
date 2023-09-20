@@ -2312,8 +2312,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   const unsigned BuiltinIDIfNoAsmLabel =
       FD->hasAttr<AsmLabelAttr>() ? 0 : BuiltinID;
 
-  bool ErrnoOverriden = false;
-  // True if math-errno is overriden via the
+  std::optional<bool> ErrnoOverriden;
+  // ErrnoOverriden is true if math-errno is overriden via the
   // '#pragma float_control(precise, on)'. This pragma disables fast-math,
   // which implies math-errno.
   if (E->hasStoredFPFeatures()) {
@@ -2329,8 +2329,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // using the '#pragma float_control(precise, off)', and
   // attribute opt-none hasn't been seen.
   bool ErrnoOverridenToFalseWithOpt =
-      !ErrnoOverriden && !OptNone &&
-      CGM.getCodeGenOpts().OptimizationLevel != 0;
+       ErrnoOverriden.has_value() && !ErrnoOverriden.value() && !OptNone &&
+       CGM.getCodeGenOpts().OptimizationLevel != 0;
 
   // There are LLVM math intrinsics/instructions corresponding to math library
   // functions except the LLVM op will never set errno while the math library
@@ -2339,6 +2339,30 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // LLVM counterparts if the call is marked 'const' (known to never set errno).
   // In case FP exceptions are enabled, the experimental versions of the
   // intrinsics model those.
+  bool ConstAlways =
+      getContext().BuiltinInfo.isConst(BuiltinID);
+
+  // There's a special case with the fma builtins where they are always const
+  // if the target environment is GNU or the target is OS is Windows and we're
+  // targeting the MSVCRT.dll environment.
+  // FIXME: This list can be become outdated. Need to find a way to get it some
+  // other way.
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BIfma:
+  case Builtin::BIfmaf:
+  case Builtin::BIfmal: {
+    auto &Trip = CGM.getTriple();
+    if (Trip.isGNUEnvironment() || Trip.isOSMSVCRT())
+      ConstAlways = true;
+    break;
+  }
+  default:
+    break;
+  }
+
   bool ConstWithoutErrnoAndExceptions =
       getContext().BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
   bool ConstWithoutExceptions =
@@ -2362,14 +2386,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   bool ConstWithoutErrnoOrExceptions =
       ConstWithoutErrnoAndExceptions || ConstWithoutExceptions;
   bool GenerateIntrinsics =
-      FD->hasAttr<ConstAttr>() && !ErrnoOverriden && !OptNone;
+      (ConstAlways && !OptNone) ||
+      (!getLangOpts().MathErrno &&
+       !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
   if (!GenerateIntrinsics) {
     GenerateIntrinsics =
         ConstWithoutErrnoOrExceptions && !ConstWithoutErrnoAndExceptions;
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions &&
-          (!getLangOpts().MathErrno && !ErrnoOverriden && !OptNone);
+          (!getLangOpts().MathErrno &&
+           !(ErrnoOverriden.has_value() && ErrnoOverriden.value()) && !OptNone);
     if (!GenerateIntrinsics)
       GenerateIntrinsics =
           ConstWithoutErrnoOrExceptions && ErrnoOverridenToFalseWithOpt;
@@ -9585,29 +9612,29 @@ Value *CodeGenFunction::EmitTileslice(Value *Offset, Value *Base) {
 Value *CodeGenFunction::EmitSMELd1St1(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  Ops[3] = EmitSVEPredicateCast(
-      Ops[3], getSVEVectorForElementType(SVEBuiltinMemEltTy(TypeFlags)));
+  Ops[2] = EmitSVEPredicateCast(
+      Ops[2], getSVEVectorForElementType(SVEBuiltinMemEltTy(TypeFlags)));
 
   SmallVector<Value *> NewOps;
-  NewOps.push_back(Ops[3]);
+  NewOps.push_back(Ops[2]);
 
-  llvm::Value *BasePtr = Ops[4];
+  llvm::Value *BasePtr = Ops[3];
 
   // If the intrinsic contains the vnum parameter, multiply it with the vector
   // size in bytes.
-  if (Ops.size() == 6) {
+  if (Ops.size() == 5) {
     Function *StreamingVectorLength =
         CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
     llvm::Value *StreamingVectorLengthCall =
         Builder.CreateCall(StreamingVectorLength);
     llvm::Value *Mulvl =
-        Builder.CreateMul(StreamingVectorLengthCall, Ops[5], "mulvl");
+        Builder.CreateMul(StreamingVectorLengthCall, Ops[4], "mulvl");
     // The type of the ptr parameter is void *, so use Int8Ty here.
-    BasePtr = Builder.CreateGEP(Int8Ty, Ops[4], Mulvl);
+    BasePtr = Builder.CreateGEP(Int8Ty, Ops[3], Mulvl);
   }
   NewOps.push_back(BasePtr);
   NewOps.push_back(Ops[0]);
-  NewOps.push_back(EmitTileslice(Ops[2], Ops[1]));
+  NewOps.push_back(Ops[1]);
   Function *F = CGM.getIntrinsic(IntID);
   return Builder.CreateCall(F, NewOps);
 }
@@ -17188,9 +17215,14 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   auto Cov = CGF.getTarget().getTargetOpts().CodeObjectVersion;
 
   if (Cov == clang::TargetOptions::COV_None) {
-    auto *ABIVersionC = CGF.CGM.GetOrCreateLLVMGlobal(
-        "llvm.amdgcn.abi.version", CGF.Int32Ty, LangAS::Default, nullptr,
-        CodeGen::NotForDefinition);
+    StringRef Name = "llvm.amdgcn.abi.version";
+    auto *ABIVersionC = CGF.CGM.getModule().getNamedGlobal(Name);
+    if (!ABIVersionC)
+      ABIVersionC = new llvm::GlobalVariable(
+          CGF.CGM.getModule(), CGF.Int32Ty, false,
+          llvm::GlobalValue::ExternalLinkage, nullptr, Name, nullptr,
+          llvm::GlobalVariable::NotThreadLocal,
+          CGF.CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant));
 
     // This load will be eliminated by the IPSCCP because it is constant
     // weak_odr without externally_initialized. Either changing it to weak or
@@ -17387,13 +17419,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_log_clampf:
     return emitUnaryBuiltin(*this, E, Intrinsic::amdgcn_log_clamp);
   case AMDGPU::BI__builtin_amdgcn_ldexp:
-  case AMDGPU::BI__builtin_amdgcn_ldexpf:
-  case AMDGPU::BI__builtin_amdgcn_ldexph: {
+  case AMDGPU::BI__builtin_amdgcn_ldexpf: {
     llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
     llvm::Function *F =
         CGM.getIntrinsic(Intrinsic::ldexp, {Src0->getType(), Src1->getType()});
     return Builder.CreateCall(F, {Src0, Src1});
+  }
+  case AMDGPU::BI__builtin_amdgcn_ldexph: {
+    // The raw instruction has a different behavior for out of bounds exponent
+    // values (implicit truncation instead of saturate to short_min/short_max).
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F =
+        CGM.getIntrinsic(Intrinsic::ldexp, {Src0->getType(), Int16Ty});
+    return Builder.CreateCall(F, {Src0, Builder.CreateTrunc(Src1, Int16Ty)});
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_mant:
   case AMDGPU::BI__builtin_amdgcn_frexp_mantf:

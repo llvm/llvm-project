@@ -651,6 +651,11 @@ public:
     return false;
   }
 
+  /// Return true if ctpop instruction is fast.
+  virtual bool isCtpopFast(EVT VT) const {
+    return isOperationLegal(ISD::CTPOP, VT);
+  }
+
   /// Return the maximum number of "x & (x - 1)" operations that can be done
   /// instead of deferring to a custom CTPOP.
   virtual unsigned getCustomCtpopCost(EVT VT, ISD::CondCode Cond) const {
@@ -803,6 +808,24 @@ public:
     // So by default, let's assume everyone prefers the fold
     // iff 'X' is not a constant.
     return !XC;
+  }
+
+  // Return true if its desirable to perform the following transform:
+  // (fmul C, (uitofp Pow2))
+  //     -> (bitcast_to_FP (add (bitcast_to_INT C), Log2(Pow2) << mantissa))
+  // (fdiv C, (uitofp Pow2))
+  //     -> (bitcast_to_FP (sub (bitcast_to_INT C), Log2(Pow2) << mantissa))
+  //
+  // This is only queried after we have verified the transform will be bitwise
+  // equals.
+  //
+  // SDNode *N      : The FDiv/FMul node we want to transform.
+  // SDValue FPConst: The Float constant operand in `N`.
+  // SDValue IntPow2: The Integer power of 2 operand in `N`.
+  virtual bool optimizeFMulOrFDivAsShiftAddBitcast(SDNode *N, SDValue FPConst,
+                                                   SDValue IntPow2) const {
+    // Default to avoiding fdiv which is often very expensive.
+    return N->getOpcode() == ISD::FDIV;
   }
 
   /// These two forms are equivalent:
@@ -1460,9 +1483,9 @@ public:
   /// extending
   virtual bool shouldExtendGSIndex(EVT VT, EVT &EltTy) const { return false; }
 
-  // Returns true if VT is a legal index type for masked gathers/scatters
-  // on this target
-  virtual bool shouldRemoveExtendFromGSIndex(EVT IndexVT, EVT DataVT) const {
+  // Returns true if Extend can be folded into the index of a masked gathers/scatters
+  // on this target.
+  virtual bool shouldRemoveExtendFromGSIndex(SDValue Extend, EVT DataVT) const {
     return false;
   }
 
@@ -3130,7 +3153,7 @@ public:
   // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
   // than FMUL and ADD is delegated to the machine combiner.
   virtual bool generateFMAsInMachineCombiner(EVT VT,
-                                             CodeGenOpt::Level OptLevel) const {
+                                             CodeGenOptLevel OptLevel) const {
     return false;
   }
 
@@ -4833,16 +4856,17 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const;
 
-  virtual unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const {
+  virtual InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const {
     if (ConstraintCode == "m")
-      return InlineAsm::Constraint_m;
+      return InlineAsm::ConstraintCode::m;
     if (ConstraintCode == "o")
-      return InlineAsm::Constraint_o;
+      return InlineAsm::ConstraintCode::o;
     if (ConstraintCode == "X")
-      return InlineAsm::Constraint_X;
+      return InlineAsm::ConstraintCode::X;
     if (ConstraintCode == "p")
-      return InlineAsm::Constraint_p;
-    return InlineAsm::Constraint_Unknown;
+      return InlineAsm::ConstraintCode::p;
+    return InlineAsm::ConstraintCode::Unknown;
   }
 
   /// Try to replace an X constraint, which matches anything, with another that

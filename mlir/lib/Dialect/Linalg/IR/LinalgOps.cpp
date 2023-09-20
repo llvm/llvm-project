@@ -2549,9 +2549,9 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   dims.erase(dims.begin() + reductionDim);
   // Step 1: Compute max along dim.
   Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
-  Value neutralForMaxF =
-      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc,
-                              /*useOnlyFiniteValue=*/true);
+  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maximumf,
+                                                 elementType, b, loc,
+                                                 /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();

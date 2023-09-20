@@ -48,8 +48,8 @@ enum {
 #include "TraceIntelPTPropertiesEnum.inc"
 };
 
-ConstString TraceIntelPT::PluginProperties::GetSettingName() {
-  return ConstString(TraceIntelPT::GetPluginNameStatic());
+llvm::StringRef TraceIntelPT::PluginProperties::GetSettingName() {
+  return TraceIntelPT::GetPluginNameStatic();
 }
 
 TraceIntelPT::PluginProperties::PluginProperties() : Properties() {

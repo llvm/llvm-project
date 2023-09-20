@@ -16,14 +16,6 @@
 using namespace mlir;
 using namespace presburger;
 
-static IntegerRelation parseRelationFromSet(StringRef set, unsigned numDomain) {
-  IntegerRelation rel = parseIntegerPolyhedron(set);
-
-  rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
-
-  return rel;
-}
-
 TEST(IntegerRelationTest, getDomainAndRangeSet) {
   IntegerRelation rel = parseRelationFromSet(
       "(x, xr)[N] : (xr - x - 10 == 0, xr >= 0, N - xr >= 0)", 1);
