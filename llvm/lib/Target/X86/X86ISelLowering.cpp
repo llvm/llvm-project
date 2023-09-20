@@ -37317,7 +37317,8 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       (MaskVT.is128BitVector() && Subtarget.hasSSE2()) ||
       (MaskVT.is256BitVector() && 32 <= EltSizeInBits && Subtarget.hasAVX()) ||
       (MaskVT.is256BitVector() && Subtarget.hasAVX2()) ||
-      (MaskVT.is512BitVector() && Subtarget.hasAVX512())) {
+      (MaskVT.is512BitVector() && Subtarget.hasAVX512() &&
+       (32 <= EltSizeInBits || Subtarget.hasBWI()))) {
     if (matchShuffleWithUNPCK(MaskVT, V1, V2, Shuffle, IsUnary, Mask, DL, DAG,
                               Subtarget)) {
       SrcVT = DstVT = MaskVT;
@@ -55005,6 +55006,15 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
                          getZeroVector(OpVT, Subtarget, DAG, dl),
                          SubVectorOps[0], DAG.getIntPtrConstant(0, dl));
+
+    // Attempt to recursively combine to a shuffle.
+    if (all_of(SubVectorOps, [](SDValue SubOp) {
+          return isTargetShuffle(SubOp.getOpcode());
+        })) {
+      SDValue Op(N, 0);
+      if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
+        return Res;
+    }
   }
 
   // If this is a broadcast insert into an upper undef, use a larger broadcast.
