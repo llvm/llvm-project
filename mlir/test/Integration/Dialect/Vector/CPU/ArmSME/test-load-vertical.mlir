@@ -71,6 +71,7 @@ func.func @entry() {
   // to memory and reload to print.
   vector.store %0, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
 
+  // 1. ORIGINAL HORIZONTAL LAYOUT
   // Dump "mem1". The smallest SVL is 128-bits so the tile will be at least
   // 4x4xi32.
   //
@@ -87,6 +88,7 @@ func.func @entry() {
   }
   func.call @printTileEnd() : () -> ()
 
+  // 2. VERTICAL LAYOUT
   // Dump "mem2". The smallest SVL is 128-bits so the tile will be at least
   // 4x4xi32.
   //
