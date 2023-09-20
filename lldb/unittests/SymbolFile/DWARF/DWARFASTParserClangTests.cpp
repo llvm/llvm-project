@@ -462,3 +462,96 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
     }
   }
 }
+
+TEST_F(DWARFASTParserClangTests, EnsureNestedTypesOfTypeAreParsed) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_str:
+    - Info
+    - B
+    - C
+    - Mask
+    - Enum
+  debug_abbrev:
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x3
+          Tag:             DW_TAG_union_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x4
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x5
+          Tag:             DW_TAG_enumeration_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x6
+          Tag:             DW_TAG_enumerator
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp  
+  debug_info:
+    - Version:         5
+      AddrSize:        8
+      UnitType:        DW_UT_compile
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0x21
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x0
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0x5
+        - AbbrCode:        0x4
+          Values:
+            - Value:           0x7
+        - AbbrCode:        0x5
+          Values:
+            - Value:           0x9
+        - AbbrCode:        0x6
+          Values:
+            - Value:           0xE
+)";
+
+  YAMLModuleTester t(yamldata);
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  EXPECT_TRUE(false);
+}
