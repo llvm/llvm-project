@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_THREADS_PTHREAD_SELF_H
-#define LLVM_LIBC_SRC_THREADS_PTHREAD_SELF_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H
 
 #include <pthread.h>
 
@@ -17,4 +17,4 @@ pthread_t pthread_self();
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_THREADS_PTHREAD_SELF_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H

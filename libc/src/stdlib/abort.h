@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_ABORT_H
-#define LLVM_LIBC_SRC_ABORT_H
+#ifndef LLVM_LIBC_SRC_STDLIB_ABORT_H
+#define LLVM_LIBC_SRC_STDLIB_ABORT_H
 
 namespace __llvm_libc {
 
@@ -15,4 +15,4 @@ namespace __llvm_libc {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_ABORT_H
+#endif // LLVM_LIBC_SRC_STDLIB_ABORT_H

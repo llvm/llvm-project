@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DYADIC_FLOAT_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DYADIC_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 
 #include "FPBits.h"
 #include "FloatProperties.h"
@@ -308,4 +308,4 @@ constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a, int32_t pow_2) {
 
 } // namespace __llvm_libc::fputil
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DYADIC_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
