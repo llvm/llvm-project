@@ -17,6 +17,39 @@ F:              ; preds = %0
   ret void
 }
 
+define void @foo_switch(i64 %C, ptr %P) {
+; CHECK-LABEL: @foo_switch(
+; CHECK-NEXT:    switch i64 [[C:%.*]], label [[BB0:%.*]] [
+; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       bb0:
+; CHECK-NEXT:    store i32 7, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 7, ptr [[P]], align 4
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+  switch i64 %C, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  ]
+bb0:              ; preds = %0
+  store i32 7, ptr %P
+  ret void
+bb1:              ; preds = %0
+  store i32 7, ptr %P
+  ret void
+bb2:              ; preds = %0
+  store i32 7, ptr %P
+  ret void
+}
+
 define float @PR39535min(float %x) {
 ; CHECK-LABEL: @PR39535min(
 ; CHECK-NEXT:  entry:
@@ -36,5 +69,40 @@ cond.false:
 
 cond.end:
   %cond = phi fast float [ 0.0, %cond.true ], [ %x, %cond.false ]
+  ret float %cond
+}
+
+define float @PR39535min_switch(i64 %i, float %x) {
+; CHECK-LABEL: @PR39535min_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i64 [[I:%.*]], label [[END:%.*]] [
+; CHECK-NEXT:    i64 1, label [[BB1:%.*]]
+; CHECK-NEXT:    i64 2, label [[BB2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[COND:%.*]] = phi fast float [ [[X:%.*]], [[BB1]] ], [ [[X]], [[BB2]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret float [[COND]]
+;
+entry:
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  ]
+
+bb0:
+  br label %end
+
+bb1:
+  br label %end
+
+bb2:
+  br label %end
+
+end:
+  %cond = phi fast float [ 0.0, %bb0 ], [ %x, %bb1 ], [ %x, %bb2 ]
   ret float %cond
 }
