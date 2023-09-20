@@ -4927,6 +4927,7 @@ cc_library(
         ":ArithDialect",
         ":AsmParser",
         ":AsyncDialect",
+        ":BufferizationDialect",
         ":ControlFlowDialect",
         ":DLTIDialect",
         ":DialectUtils",
