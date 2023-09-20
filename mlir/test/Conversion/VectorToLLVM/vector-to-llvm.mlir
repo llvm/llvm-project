@@ -1819,31 +1819,31 @@ func.func @genbool_1d() -> vector<8xi1> {
 
 // -----
 
-func.func @genbool_1d_scalable_pfalse() -> vector<[8]xi1> {
+func.func @genbool_1d_scalable_all_false() -> vector<[8]xi1> {
   %0 = vector.constant_mask [0] : vector<[8]xi1>
   return %0 : vector<[8]xi1>
 }
-// CHECK-LABEL: func @genbool_1d_scalable_pfalse
+// CHECK-LABEL: func @genbool_1d_scalable_all_false
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<false> : vector<[8]xi1>
 // CHECK: return %[[VAL_0]] : vector<[8]xi1>
 
 // -----
 
-func.func @genbool_1d_scalable_ptrue() -> vector<[8]xi1> {
+func.func @genbool_1d_scalable_all_true() -> vector<[8]xi1> {
   %0 = vector.constant_mask [8] : vector<[8]xi1>
   return %0 : vector<[8]xi1>
 }
-// CHECK-LABEL: func @genbool_1d_scalable_ptrue
+// CHECK-LABEL: func @genbool_1d_scalable_all_true
 // CHECK: %[[VAL_0:.*]] = arith.constant dense<true> : vector<[8]xi1>
 // CHECK: return %[[VAL_0]] : vector<[8]xi1>
 
 // -----
 
-func.func @genbool_2d_scalable() -> vector<4x[4]xi1> {
+func.func @genbool_2d_trailing_scalable() -> vector<4x[4]xi1> {
   %0 = vector.constant_mask [2, 4] : vector<4x[4]xi1>
   return %0 : vector<4x[4]xi1>
 }
-// CHECK-LABEL:   func.func @genbool_2d_scalable() -> vector<4x[4]xi1> {
+// CHECK-LABEL:   func.func @genbool_2d_trailing_scalable
 // CHECK:           %[[VAL_0:.*]] = arith.constant dense<true> : vector<[4]xi1>
 // CHECK:           %[[VAL_1:.*]] = arith.constant dense<false> : vector<4x[4]xi1>
 // CHECK:           %[[VAL_2:.*]] = builtin.unrealized_conversion_cast %[[VAL_1]] : vector<4x[4]xi1> to !llvm.array<4 x vector<[4]xi1>>
@@ -1851,7 +1851,6 @@ func.func @genbool_2d_scalable() -> vector<4x[4]xi1> {
 // CHECK:           %[[VAL_4:.*]] = llvm.insertvalue %[[VAL_0]], %[[VAL_3]][1] : !llvm.array<4 x vector<[4]xi1>>
 // CHECK:           %[[VAL_5:.*]] = builtin.unrealized_conversion_cast %[[VAL_4]] : !llvm.array<4 x vector<[4]xi1>> to vector<4x[4]xi1>
 // CHECK:           return %[[VAL_5]] : vector<4x[4]xi1>
-// CHECK:         }
 
 // -----
 
@@ -1861,10 +1860,9 @@ func.func @cannot_genbool_2d_leading_scalable() -> vector<[4]x4xi1> {
   %0 = vector.constant_mask [4, 2] : vector<[4]x4xi1>
   return %0 : vector<[4]x4xi1>
 }
-// CHECK-LABEL:   func.func @cannot_genbool_2d_leading_scalable() -> vector<[4]x4xi1> {
+// CHECK-LABEL:   func.func @cannot_genbool_2d_leading_scalable
 // CHECK:           %[[VAL_0:.*]] = vector.constant_mask [4, 2] : vector<[4]x4xi1>
 // CHECK:           return %[[VAL_0]] : vector<[4]x4xi1>
-// CHECK:         }
 
 // -----
 

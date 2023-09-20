@@ -124,13 +124,15 @@ public:
     if (rank == 1) {
       if (trueDimSize == 0 || trueDimSize == dstType.getDimSize(0)) {
         // Use constant splat for 'all set' or 'none set' dims.
-        // This produces correct code for scalable dimensions.
+        // This produces correct code for scalable dimensions (it will lower to
+        // a constant splat).
         rewriter.replaceOpWithNewOp<arith::ConstantOp>(
             op, DenseElementsAttr::get(dstType, trueDimSize != 0));
       } else {
         // Express constant 1-D case in explicit vector form:
         //   [T,..,T,F,..,F].
-        SmallVector<bool> values(dstType.getDimSize(0));
+        // Note: The verifier would reject this case for scalable vectors.
+        SmallVector<bool> values(dstType.getDimSize(0), false);
         for (int64_t d = 0; d < trueDimSize; d++)
           values[d] = true;
         rewriter.replaceOpWithNewOp<arith::ConstantOp>(
