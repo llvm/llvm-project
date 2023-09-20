@@ -151,7 +151,6 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
-  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
   if(NOT ADD_GPU_OBJ_CXX_STANDARD)
     set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -189,13 +188,10 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       )
 
       target_compile_options(${gpu_target_name} PRIVATE ${compile_options})
-      target_include_directories(${gpu_target_name} PRIVATE ${include_dirs})
+      target_include_directories(${gpu_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+      target_include_directories(${gpu_target_name} PRIVATE ${LIBC_SOURCE_DIR})
       target_compile_definitions(${gpu_target_name} PRIVATE LIBC_COPT_PUBLIC_PACKAGING)
-      set_target_properties(
-        ${gpu_target_name}
-        PROPERTIES
-          CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD}
-      )
+      set_target_properties(${gpu_target_name} PROPERTIES CXX_STANDARD ${ADD_GPU_OBJ_CXX_STANDARD})
       if(ADD_GPU_OBJ_DEPENDS)
         add_dependencies(${gpu_target_name} ${ADD_GPU_OBJ_DEPENDS})
       endif()
@@ -261,7 +257,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     target_compile_options(${fq_target_name} PRIVATE
                            "SHELL:-Xclang -fembed-offload-object=${packaged_gpu_binary}")
   endforeach()
-  target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+  target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   add_dependencies(${fq_target_name}
                    ${full_deps_list} ${packaged_gpu_names} ${stub_target_name})
 
@@ -285,7 +282,8 @@ function(_build_gpu_objects fq_target_name internal_target_name)
       get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
       target_compile_options(${internal_target_name} PRIVATE ${nvptx_options})
     endif()
-    target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     if(full_deps_list)
       add_dependencies(${internal_target_name} ${full_deps_list})
     endif()
@@ -369,12 +367,8 @@ function(create_object_library fq_target_name)
       ${ADD_OBJECT_SRCS}
       ${ADD_OBJECT_HDRS}
     )
-    target_include_directories(
-      ${fq_target_name}
-      PRIVATE
-        ${LIBC_SOURCE_DIR}
-        ${LIBC_INCLUDE_DIR}
-    )
+    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     target_compile_options(${fq_target_name} PRIVATE ${compile_options})
   endif()
 
@@ -633,7 +627,6 @@ function(create_entrypoint_object fq_target_name)
     "${ADD_ENTRYPOINT_OBJ_FLAGS}"
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
-  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
@@ -670,7 +663,8 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
     target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
-    target_include_directories(${internal_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     add_dependencies(${internal_target_name} ${full_deps_list})
     target_link_libraries(${internal_target_name} ${full_deps_list})
 
@@ -684,7 +678,8 @@ function(create_entrypoint_object fq_target_name)
       ${ADD_ENTRYPOINT_OBJ_HDRS}
     )
     target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
-    target_include_directories(${fq_target_name} PRIVATE ${include_dirs})
+    target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
+    target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
     add_dependencies(${fq_target_name} ${full_deps_list})
     target_link_libraries(${fq_target_name} ${full_deps_list})
   endif()
