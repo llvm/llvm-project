@@ -10,9 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef VECTOR_OPS
-#define VECTOR_OPS
+#ifndef MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
+#define MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
 
+include "mlir/Dialect/Vector/IR/Vector.td"
+include "mlir/Dialect/Vector/IR/VectorAttributes.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
 include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
 include "mlir/IR/EnumAttr.td"
@@ -22,69 +26,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-
-def Vector_Dialect : Dialect {
-  let name = "vector";
-  let cppNamespace = "::mlir::vector";
-
-  let useDefaultAttributePrinterParser = 1;
-  let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithDialect"];
-}
-
-// Base class for Vector dialect ops.
-class Vector_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Vector_Dialect, mnemonic, traits>;
-
-// The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : I32BitEnumAttrCaseBit<"ADD", 0, "add">;
-def COMBINING_KIND_MUL : I32BitEnumAttrCaseBit<"MUL", 1, "mul">;
-def COMBINING_KIND_MINUI : I32BitEnumAttrCaseBit<"MINUI", 2, "minui">;
-def COMBINING_KIND_MINSI : I32BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
-def COMBINING_KIND_MINF : I32BitEnumAttrCaseBit<"MINF", 4, "minf">;
-def COMBINING_KIND_MAXUI : I32BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
-def COMBINING_KIND_MAXSI : I32BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
-def COMBINING_KIND_MAXF : I32BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
-def COMBINING_KIND_AND : I32BitEnumAttrCaseBit<"AND", 8, "and">;
-def COMBINING_KIND_OR  : I32BitEnumAttrCaseBit<"OR", 9, "or">;
-def COMBINING_KIND_XOR : I32BitEnumAttrCaseBit<"XOR", 10, "xor">;
-def COMBINING_KIND_MINIMUMF : I32BitEnumAttrCaseBit<"MINIMUMF", 11, "minimumf">;
-def COMBINING_KIND_MAXIMUMF : I32BitEnumAttrCaseBit<"MAXIMUMF", 12, "maximumf">;
-
-def CombiningKind : I32BitEnumAttr<
-    "CombiningKind",
-    "Kind of combining function for contractions and reductions",
-    [COMBINING_KIND_ADD, COMBINING_KIND_MUL, COMBINING_KIND_MINUI,
-     COMBINING_KIND_MINSI, COMBINING_KIND_MINF, COMBINING_KIND_MAXUI,
-     COMBINING_KIND_MAXSI, COMBINING_KIND_MAXF, COMBINING_KIND_AND,
-     COMBINING_KIND_OR, COMBINING_KIND_XOR,
-     COMBINING_KIND_MAXIMUMF, COMBINING_KIND_MINIMUMF]> {
-  let cppNamespace = "::mlir::vector";
-  let genSpecializedAttr = 0;
-}
-
-/// An attribute that specifies the combining function for `vector.contract`,
-/// and `vector.reduction`.
-def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def Vector_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
-  I32EnumAttrCase<"parallel", 0>,
-  I32EnumAttrCase<"reduction", 1>
-]> {
-    let genSpecializedAttr = 0;
-    let cppNamespace = "::mlir::vector";
-}
-
-def Vector_IteratorTypeEnum
-    : EnumAttr<Vector_Dialect, Vector_IteratorType, "iterator_type"> {
-    let assemblyFormat = "`<` $value `>`";
-}
-
-def Vector_IteratorTypeArrayAttr
-    : TypedArrayAttrBase<Vector_IteratorTypeEnum,
-                         "Iterator type should be an enum.">;
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -274,12 +215,16 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface,
-                               ["getShapeForUnroll"]>]>,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                AnyVectorOfAnyRank:$vector,
-               Optional<AnyType>:$acc)>,
+               Optional<AnyType>:$acc,
+               DefaultValuedAttr<
+                 Arith_FastMathAttr,
+                 "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs AnyType:$dest)> {
   let summary = "reduction operation";
   let description = [{
@@ -309,9 +254,13 @@ def Vector_ReductionOp :
   }];
   let builders = [
     // Builder that infers the type of `dest`.
-    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc)>,
+    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc,
+                    CArg<"::mlir::arith::FastMathFlags",
+                         "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>,
     // Builder that infers the type of `dest` and has no accumulator.
-    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector)>
+    OpBuilder<(ins "CombiningKind":$kind, "Value":$vector,
+                    CArg<"::mlir::arith::FastMathFlags",
+                         "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
 
   // TODO: Migrate to assemblyFormat once `AllTypesMatch` supports optional
@@ -2469,22 +2418,6 @@ def Vector_TransposeOp :
   let hasVerifier = 1;
 }
 
-def PrintPunctuation : I32EnumAttr<"PrintPunctuation",
-                                  "Punctuation for separating vectors or vector elements", [
-  I32EnumAttrCase<"NoPunctuation", 0, "no_punctuation">,
-  I32EnumAttrCase<"NewLine", 1, "newline">,
-  I32EnumAttrCase<"Comma", 2, "comma">,
-  I32EnumAttrCase<"Open", 3, "open">,
-  I32EnumAttrCase<"Close", 4, "close">
-]> {
-  let cppNamespace = "::mlir::vector";
-  let genSpecializedAttr = 0;
-}
-
-def Vector_PrintPunctuation : EnumAttr<Vector_Dialect, PrintPunctuation, "punctuation"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 def Vector_PrintOp :
   Vector_Op<"print", []>,
   Arguments<(ins Optional<Type<Or<[
@@ -2939,4 +2872,4 @@ def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
   }];
 }
 
-#endif // VECTOR_OPS
+#endif // MLIR_DIALECT_VECTOR_IR_VECTOR_OPS
