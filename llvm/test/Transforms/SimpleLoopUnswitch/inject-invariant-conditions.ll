@@ -465,7 +465,7 @@ define i32 @test_02_inverse(ptr noundef %p, i32 noundef %n, i32 noundef %limit, 
 ; CHECK-NEXT:    br i1 [[BOUND_CHECK]], label [[GUARDED:%.*]], label [[COMMON_RET]], !prof [[PROF1]]
 ; CHECK:       guarded:
 ; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp uge i32 [[EL]], [[X]]
-; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[COMMON_RET]], !llvm.invariant.condition.injection.disabled !0
+; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[COMMON_RET]], label [[BACKEDGE]], !llvm.invariant.condition.injection.disabled !0
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[ARR_PTR:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[EL]]
 ; CHECK-NEXT:    store i32 [[IV]], ptr [[ARR_PTR]], align 4
