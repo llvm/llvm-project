@@ -27,9 +27,6 @@ class Instruction;
 class DominatorTree;
 struct SimplifyQuery;
 
-KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
-                           unsigned Depth, const SimplifyQuery &Q);
-
 KnownBits computeKnownBits(const Value *V, unsigned Depth,
                            const SimplifyQuery &Q);
 
@@ -56,12 +53,6 @@ protected:
   void calculateKnownBits(unsigned Depth, const SimplifyQuery &Q) const {
     Known = computeKnownBits(Pointer.getPointer(), Depth, Q);
     Pointer.setInt(true);
-  }
-
-  void calculateKnownBits(const APInt &DemandedElts, unsigned Depth,
-                          const SimplifyQuery &Q) const {
-    Known = computeKnownBits(Pointer.getPointer(), DemandedElts, Depth, Q);
-    Pointer.setInt(false);
   }
 
 public:
@@ -93,22 +84,6 @@ public:
                                         const SimplifyQuery &Q) {
     if (!hasKnownBits())
       calculateKnownBits(Depth, Q);
-    return Known;
-  }
-
-  [[nodiscard]] const KnownBits &getKnownBits(const APInt &DemandedElts,
-                                              unsigned Depth,
-                                              const SimplifyQuery &Q) const {
-    if (!hasKnownBits())
-      calculateKnownBits(DemandedElts, Depth, Q);
-    return Known;
-  }
-
-  [[nodiscard]] KnownBits &getKnownBits(const APInt &DemandedElts,
-                                        unsigned Depth,
-                                        const SimplifyQuery &Q) {
-    if (!hasKnownBits())
-      calculateKnownBits(DemandedElts, Depth, Q);
     return Known;
   }
 
