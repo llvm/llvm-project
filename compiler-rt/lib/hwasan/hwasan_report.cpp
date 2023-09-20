@@ -586,6 +586,13 @@ void BaseReport::PrintAddressDescription() const {
         untagged_addr - heap.begin, d.Default());
   }
 
+  auto announce_by_id = [](u32 thread_id) {
+    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+      if (thread_id == t->unique_id())
+        t->Announce();
+    });
+  };
+
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
   for (uptr i = 0; i < stack_allocations_count; ++i) {
@@ -598,11 +605,7 @@ void BaseReport::PrintAddressDescription() const {
     Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
            allocations.thread_id());
     Printf("%s", d.Default());
-    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-      if (allocations.thread_id() == t->unique_id())
-        t->Announce();
-    });
-
+    announce_by_id(allocations.thread_id());
     PrintStackAllocations(allocations.get(), ptr_tag, untagged_addr);
     num_descriptions_printed++;
   }
