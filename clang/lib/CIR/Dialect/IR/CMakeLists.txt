@@ -18,4 +18,5 @@ add_clang_library(MLIRCIR
   MLIRLoopLikeInterface
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
+  clangAST
   )
