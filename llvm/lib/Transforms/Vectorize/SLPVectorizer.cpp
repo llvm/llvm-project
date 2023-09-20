@@ -2916,8 +2916,11 @@ private:
         const TreeEntry *TE = getTreeEntry(V);
         assert((!TE || TE == Last || doesNotNeedToBeScheduled(V)) &&
                "Scalar already in tree!");
-        if (TE)
+        if (TE) {
+          if (TE != Last)
+            MultiNodeScalars.insert(V);
           continue;
+        }
         ScalarToTreeEntry[V] = Last;
       }
       // Update the scheduler bundle to point to this TreeEntry.
@@ -2975,6 +2978,9 @@ private:
 
   /// Maps a specific scalar to its tree entry.
   SmallDenseMap<Value *, TreeEntry *> ScalarToTreeEntry;
+
+  /// List of scalars, used in several vectorize nodes.
+  SmallDenseSet<Value *> MultiNodeScalars;
 
   /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
@@ -9843,17 +9849,32 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
       S = getSameOpcode(*It, *TLI);
   }
   if (S.getOpcode()) {
-    if (TreeEntry *VE = getTreeEntry(S.OpValue);
-        VE && VE->isSame(VL) &&
-        (any_of(VE->UserTreeIndices,
-                [E, NodeIdx](const EdgeInfo &EI) {
-                  return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
-                }) ||
-         any_of(VectorizableTree,
-                [E, NodeIdx, VE](const std::unique_ptr<TreeEntry> &TE) {
-                  return TE->isOperandGatherNode({E, NodeIdx}) &&
-                         VE->isSame(TE->Scalars);
-                }))) {
+    auto CheckSameVE = [&](const TreeEntry *VE) {
+      return VE->isSame(VL) &&
+             (any_of(VE->UserTreeIndices,
+                     [E, NodeIdx](const EdgeInfo &EI) {
+                       return EI.UserTE == E && EI.EdgeIdx == NodeIdx;
+                     }) ||
+              any_of(VectorizableTree,
+                     [E, NodeIdx, VE](const std::unique_ptr<TreeEntry> &TE) {
+                       return TE->isOperandGatherNode({E, NodeIdx}) &&
+                              VE->isSame(TE->Scalars);
+                     }));
+    };
+    TreeEntry *VE = getTreeEntry(S.OpValue);
+    bool IsSameVE = VE && CheckSameVE(VE);
+    if (!IsSameVE && MultiNodeScalars.contains(S.OpValue)) {
+      auto *I =
+          find_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+            return TE->State != TreeEntry::NeedToGather && TE.get() != VE &&
+                   CheckSameVE(TE.get());
+          });
+      if (I != VectorizableTree.end()) {
+        VE = I->get();
+        IsSameVE = true;
+      }
+    }
+    if (IsSameVE) {
       auto FinalShuffle = [&](Value *V, ArrayRef<int> Mask) {
         ShuffleInstructionBuilder ShuffleBuilder(Builder, *this);
         ShuffleBuilder.add(V, Mask);
