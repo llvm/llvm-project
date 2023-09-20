@@ -19,7 +19,6 @@
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
-#include <__cxxabi_config.h>
 #include <algorithm>
 #include <cassert>
 #include <cctype>
