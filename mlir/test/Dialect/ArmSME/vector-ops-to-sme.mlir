@@ -245,8 +245,8 @@ func.func @transpose_i8(%arg0: vector<[16]x[16]xi8>) {
 
 // CHECK-LABEL: @transpose_i16
 // CHECK: arith.constant 8
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xi16>, vector<[8]x[8]xi16>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xi16>, vector<[8]x[8]xi16>
 func.func @transpose_i16(%arg0: vector<[8]x[8]xi16>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[8]x[8]xi16> to vector<[8]x[8]xi16>
   "prevent.dce"(%0) : (vector<[8]x[8]xi16>) -> ()
@@ -257,8 +257,8 @@ func.func @transpose_i16(%arg0: vector<[8]x[8]xi16>) {
 
 // CHECK-LABEL: @transpose_i32
 // CHECK: arith.constant 4
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xi32>, vector<[4]x[4]xi32>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xi32>, vector<[4]x[4]xi32>
 func.func @transpose_i32(%arg0: vector<[4]x[4]xi32>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[4]x[4]xi32> to vector<[4]x[4]xi32>
   "prevent.dce"(%0) : (vector<[4]x[4]xi32>) -> ()
@@ -269,8 +269,8 @@ func.func @transpose_i32(%arg0: vector<[4]x[4]xi32>) {
 
 // CHECK-LABEL: @transpose_i64
 // CHECK: arith.constant 2
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xi64>, vector<[2]x[2]xi64>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xi64>, vector<[2]x[2]xi64>
 func.func @transpose_i64(%arg0: vector<[2]x[2]xi64>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[2]x[2]xi64> to vector<[2]x[2]xi64>
   "prevent.dce"(%0) : (vector<[2]x[2]xi64>) -> ()
@@ -282,8 +282,8 @@ func.func @transpose_i64(%arg0: vector<[2]x[2]xi64>) {
 // CHECK-LABEL: @transpose_i128
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = memref.alloca(%[[VSCALE]], %[[VSCALE]]) : memref<?x?xi128>
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xi128>, vector<[1]x[1]xi128>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xi128>, vector<[1]x[1]xi128>
 func.func @transpose_i128(%arg0: vector<[1]x[1]xi128>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[1]x[1]xi128> to vector<[1]x[1]xi128>
   "prevent.dce"(%0) : (vector<[1]x[1]xi128>) -> ()
@@ -294,8 +294,8 @@ func.func @transpose_i128(%arg0: vector<[1]x[1]xi128>) {
 
 // CHECK-LABEL: @transpose_f16
 // CHECK: arith.constant 8
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xf16>, vector<[8]x[8]xf16>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xf16>, vector<[8]x[8]xf16>
 func.func @transpose_f16(%arg0: vector<[8]x[8]xf16>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[8]x[8]xf16> to vector<[8]x[8]xf16>
   "prevent.dce"(%0) : (vector<[8]x[8]xf16>) -> ()
@@ -306,8 +306,8 @@ func.func @transpose_f16(%arg0: vector<[8]x[8]xf16>) {
 
 // CHECK-LABEL: @transpose_bf16
 // CHECK: arith.constant 8
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xbf16>, vector<[8]x[8]xbf16>
 func.func @transpose_bf16(%arg0: vector<[8]x[8]xbf16>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[8]x[8]xbf16> to vector<[8]x[8]xbf16>
   "prevent.dce"(%0) : (vector<[8]x[8]xbf16>) -> ()
@@ -318,8 +318,8 @@ func.func @transpose_bf16(%arg0: vector<[8]x[8]xbf16>) {
 
 // CHECK-LABEL: @transpose_f32
 // CHECK: arith.constant 4
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xf32>, vector<[4]x[4]xf32>
 func.func @transpose_f32(%arg0: vector<[4]x[4]xf32>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[4]x[4]xf32> to vector<[4]x[4]xf32>
   "prevent.dce"(%0) : (vector<[4]x[4]xf32>) -> ()
@@ -330,8 +330,8 @@ func.func @transpose_f32(%arg0: vector<[4]x[4]xf32>) {
 
 // CHECK-LABEL: @transpose_f64
 // CHECK: arith.constant 2
-// CHECK: arm_sme.tile_store
-// CHECK: arm_sme.tile_load
+// CHECK: arm_sme.tile_store {{.*}}, <hor>, {{.*}} : memref<?x?xf64>, vector<[2]x[2]xf64>
+// CHECK: arm_sme.tile_load <ver>, {{.*}} : memref<?x?xf64>, vector<[2]x[2]xf64>
 func.func @transpose_f64(%arg0: vector<[2]x[2]xf64>) {
   %0 = vector.transpose %arg0, [1, 0] : vector<[2]x[2]xf64> to vector<[2]x[2]xf64>
   "prevent.dce"(%0) : (vector<[2]x[2]xf64>) -> ()
