@@ -503,7 +503,7 @@ std::optional<unsigned> VPIntrinsic::getMemoryDataParamPos(Intrinsic::ID VPID) {
   return std::nullopt;
 }
 
-bool VPIntrinsic::isVPIntrinsic(Intrinsic::ID ID) {
+constexpr bool isVPIntrinsic(Intrinsic::ID ID) {
   switch (ID) {
   default:
     break;
@@ -515,9 +515,13 @@ bool VPIntrinsic::isVPIntrinsic(Intrinsic::ID ID) {
   return false;
 }
 
+bool VPIntrinsic::isVPIntrinsic(Intrinsic::ID ID) {
+  return ::isVPIntrinsic(ID);
+}
+
 // Equivalent non-predicated opcode
-std::optional<unsigned>
-VPIntrinsic::getFunctionalOpcodeForVP(Intrinsic::ID ID) {
+constexpr static std::optional<unsigned>
+getFunctionalOpcodeForVP(Intrinsic::ID ID) {
   switch (ID) {
   default:
     break;
@@ -529,9 +533,14 @@ VPIntrinsic::getFunctionalOpcodeForVP(Intrinsic::ID ID) {
   return std::nullopt;
 }
 
-// Equivalent non-predicated intrinsic
-std::optional<Intrinsic::ID>
-VPIntrinsic::getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
+std::optional<unsigned>
+VPIntrinsic::getFunctionalOpcodeForVP(Intrinsic::ID ID) {
+  return ::getFunctionalOpcodeForVP(ID);
+}
+
+// Equivalent non-predicated intrinsic ID
+constexpr static std::optional<Intrinsic::ID>
+getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
   switch (ID) {
   default:
     break;
@@ -542,6 +551,31 @@ VPIntrinsic::getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
   }
   return std::nullopt;
 }
+
+std::optional<Intrinsic::ID>
+VPIntrinsic::getFunctionalIntrinsicIDForVP(Intrinsic::ID ID) {
+  return ::getFunctionalIntrinsicIDForVP(ID);
+}
+
+constexpr static bool doesVPHaveNoFunctionalEquivalent(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    break;
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
+#define VP_PROPERTY_NO_FUNCTIONAL return true;
+#define END_REGISTER_VP_INTRINSIC(VPID) break;
+#include "llvm/IR/VPIntrinsics.def"
+  }
+  return false;
+}
+
+// All VP intrinsics should have an equivalent non-VP opcode or intrinsic
+// defined, or be marked that they don't have one.
+#define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...)                                 \
+  static_assert(doesVPHaveNoFunctionalEquivalent(Intrinsic::VPID) ||           \
+                getFunctionalOpcodeForVP(Intrinsic::VPID) ||                   \
+                getFunctionalIntrinsicIDForVP(Intrinsic::VPID));
+#include "llvm/IR/VPIntrinsics.def"
 
 // Equivalent non-predicated constrained intrinsic
 std::optional<Intrinsic::ID>

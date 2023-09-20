@@ -174,7 +174,7 @@ static lto::Config createConfig() {
   }
 
   if (config->ltoEmitAsm) {
-    c.CGFileType = CGFT_AssemblyFile;
+    c.CGFileType = CodeGenFileType::AssemblyFile;
     c.Options.MCOptions.AsmVerbose = true;
   }
 

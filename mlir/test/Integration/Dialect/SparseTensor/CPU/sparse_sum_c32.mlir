@@ -37,7 +37,7 @@
 !Filename = !llvm.ptr<i8>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ]
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed)
 }>
 
 #trait_sum_reduce = {
@@ -83,7 +83,7 @@ module {
     // Setup memory for a single reduction scalar,
     // initialized to zero.
     // TODO: tensor.from_elements does not support complex.
-    %alloc = bufferization.alloc_tensor() : tensor<complex<f64>>
+    %alloc = tensor.empty() : tensor<complex<f64>>
     %x = tensor.insert %d0 into %alloc[] : tensor<complex<f64>>
 
     // Read the sparse matrix from file, construct sparse storage.

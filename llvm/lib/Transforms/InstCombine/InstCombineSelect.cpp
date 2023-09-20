@@ -2616,20 +2616,33 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   if (!TrueIfSigned)
     std::swap(TrueVal, FalseVal);
 
-  // We are matching a quite specific pattern here:
+  auto FoldToBitwiseAnd = [&](Value *Remainder) -> Instruction * {
+    Value *Add = Builder.CreateAdd(
+        Remainder, Constant::getAllOnesValue(RemRes->getType()));
+    return BinaryOperator::CreateAnd(Op, Add);
+  };
+
+  // Match the general case:
   // %rem = srem i32 %x, %n
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (!(match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
-        match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
-        IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
-        FalseVal == RemRes))
-    return nullptr;
+  if (match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
+      match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
+      IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(Remainder);
 
-  Value *Add = Builder.CreateAdd(Remainder,
-                                 Constant::getAllOnesValue(RemRes->getType()));
-  return BinaryOperator::CreateAnd(Op, Add);
+  // Match the case where the one arm has been replaced by constant 1:
+  // %rem = srem i32 %n, 2
+  // %cnd = icmp slt i32 %rem, 0
+  // %sel = select i1 %cnd, i32 1, i32 %rem
+  if (match(TrueVal, m_One()) &&
+      match(RemRes, m_SRem(m_Value(Op), m_SpecificInt(2))) &&
+      FalseVal == RemRes)
+    return FoldToBitwiseAnd(ConstantInt::get(RemRes->getType(), 2));
+
+  return nullptr;
 }
 
 static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
@@ -3086,28 +3099,29 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
                                 m_c_LogicalOr(m_Deferred(A), m_Deferred(B)))))
     return BinaryOperator::CreateXor(A, B);
 
-  // select (~a | c), a, b -> and a, (or c, freeze(b))
-  if (match(CondVal, m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))) &&
-      CondVal->hasOneUse()) {
-    FalseVal = Builder.CreateFreeze(FalseVal);
-    return BinaryOperator::CreateAnd(TrueVal, Builder.CreateOr(C, FalseVal));
+  // select (~a | c), a, b -> select a, (select c, true, b), false
+  if (match(CondVal,
+            m_OneUse(m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))))) {
+    Value *OrV = Builder.CreateSelect(C, One, FalseVal);
+    return SelectInst::Create(TrueVal, OrV, Zero);
   }
-  // select (~c & b), a, b -> and b, (or freeze(a), c)
-  if (match(CondVal, m_c_And(m_Not(m_Value(C)), m_Specific(FalseVal))) &&
-      CondVal->hasOneUse()) {
-    TrueVal = Builder.CreateFreeze(TrueVal);
-    return BinaryOperator::CreateAnd(FalseVal, Builder.CreateOr(C, TrueVal));
+  // select (c & b), a, b -> select b, (select ~c, true, a), false
+  if (match(CondVal, m_OneUse(m_c_And(m_Value(C), m_Specific(FalseVal)))) &&
+      isFreeToInvert(C, C->hasOneUse())) {
+    Value *NotC = Builder.CreateNot(C);
+    Value *OrV = Builder.CreateSelect(NotC, One, TrueVal);
+    return SelectInst::Create(FalseVal, OrV, Zero);
   }
   // select (a | c), a, b -> select a, true, (select ~c, b, false)
-  if (match(CondVal, m_c_Or(m_Specific(TrueVal), m_Value(C))) &&
-      CondVal->hasOneUse() && isFreeToInvert(C, C->hasOneUse())) {
+  if (match(CondVal, m_OneUse(m_c_Or(m_Specific(TrueVal), m_Value(C)))) &&
+      isFreeToInvert(C, C->hasOneUse())) {
     Value *NotC = Builder.CreateNot(C);
     Value *AndV = Builder.CreateSelect(NotC, FalseVal, Zero);
     return SelectInst::Create(TrueVal, One, AndV);
   }
   // select (c & ~b), a, b -> select b, true, (select c, a, false)
-  if (match(CondVal, m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))) &&
-      CondVal->hasOneUse()) {
+  if (match(CondVal,
+            m_OneUse(m_c_And(m_Value(C), m_Not(m_Specific(FalseVal)))))) {
     Value *AndV = Builder.CreateSelect(C, TrueVal, Zero);
     return SelectInst::Create(FalseVal, One, AndV);
   }

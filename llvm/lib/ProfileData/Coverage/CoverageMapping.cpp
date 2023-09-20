@@ -361,7 +361,7 @@ Error CoverageMapping::loadFromFile(
 
   SmallVector<object::BuildIDRef> BinaryIDs;
   auto CoverageReadersOrErr = BinaryCoverageReader::create(
-      CovMappingBufRef, Arch, Buffers, CompilationDir,
+      CovMappingBufRef, ProfileReader, Arch, Buffers, CompilationDir,
       FoundBinaryIDs ? &BinaryIDs : nullptr);
   if (Error E = CoverageReadersOrErr.takeError()) {
     E = handleMaybeNoDataFoundError(std::move(E));

@@ -174,7 +174,7 @@ static cl::opt<bool>
     OptLevelO3("O3", cl::desc("Optimization level 3. Similar to clang -O3. "
                               "Same as -passes='default<O3>'"));
 
-static cl::opt<unsigned> CodeGenOptLevel(
+static cl::opt<unsigned> CodeGenOptLevelCL(
     "codegen-opt-level",
     cl::desc("Override optimization level for codegen hooks, legacy PM only"));
 
@@ -282,8 +282,8 @@ static cl::list<std::string>
 // CodeGen-related helper functions.
 //
 
-static CodeGenOpt::Level GetCodeGenOptLevel() {
-  return static_cast<CodeGenOpt::Level>(unsigned(CodeGenOptLevel));
+static CodeGenOptLevel GetCodeGenOptLevel() {
+  return static_cast<CodeGenOptLevel>(unsigned(CodeGenOptLevelCL));
 }
 
 // Returns the TargetMachine instance or zero if no triple is provided.

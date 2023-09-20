@@ -88,8 +88,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
-  void emitDirectiveOptionArch();
-  bool isSameAttribute();
+  bool emitDirectiveOptionArch();
 
 private:
   void emitAttributes();
@@ -252,7 +251,7 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-void RISCVAsmPrinter::emitDirectiveOptionArch() {
+bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
@@ -268,28 +267,26 @@ void RISCVAsmPrinter::emitDirectiveOptionArch() {
                                                 : RISCVOptionArchArgType::Minus;
     NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
   }
-  if (!NeedEmitStdOptionArgs.empty())
+  if (!NeedEmitStdOptionArgs.empty()) {
+    RTS.emitDirectiveOptionPush();
     RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
-}
+    return true;
+  }
 
-bool RISCVAsmPrinter::isSameAttribute() {
-  const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
-  return MCSTI.getFeatureBits() == STI->getFeatureBits();
+  return false;
 }
 
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
   RISCVTargetStreamer &RTS =
       static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
-  if (!isSameAttribute()) {
-    RTS.emitDirectiveOptionPush();
-    emitDirectiveOptionArch();
-  }
+
+  bool EmittedOptionArch = emitDirectiveOptionArch();
 
   SetupMachineFunction(MF);
   emitFunctionBody();
 
-  if (!isSameAttribute())
+  if (EmittedOptionArch)
     RTS.emitDirectiveOptionPop();
   return false;
 }

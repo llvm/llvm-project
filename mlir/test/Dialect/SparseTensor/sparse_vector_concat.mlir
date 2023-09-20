@@ -5,13 +5,11 @@
 }>
 
 #MAT_C_C_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "compressed" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed)
 }>
 
 #MAT_C_D_P = #sparse_tensor.encoding<{
-  lvlTypes = [ "compressed", "dense" ],
-  dimToLvl = affine_map<(i,j) -> (j,i)>
+  map = (d0, d1) -> (d1 : compressed, d0 : dense)
 }>
 
 //

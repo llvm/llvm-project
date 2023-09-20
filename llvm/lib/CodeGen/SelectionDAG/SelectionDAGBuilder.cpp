@@ -1822,7 +1822,7 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
     // If this is not a fall-through branch or optimizations are switched off,
     // emit the branch.
     if (TargetMBB != NextBlock(FuncInfo.MBB) ||
-        TM.getOptLevel() == CodeGenOpt::None)
+        TM.getOptLevel() == CodeGenOptLevel::None)
       DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
                               getControlRoot(), DAG.getBasicBlock(TargetMBB)));
     return;
@@ -2478,7 +2478,8 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
 
     // If this is not a fall-through branch or optimizations are switched off,
     // emit the branch.
-    if (Succ0MBB != NextBlock(BrMBB) || TM.getOptLevel() == CodeGenOpt::None) {
+    if (Succ0MBB != NextBlock(BrMBB) ||
+        TM.getOptLevel() == CodeGenOptLevel::None) {
       auto Br = DAG.getNode(ISD::BR, getCurSDLoc(), MVT::Other,
                             getControlRoot(), DAG.getBasicBlock(Succ0MBB));
       setValue(&I, Br);
@@ -7107,7 +7108,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::lifetime_end: {
     bool IsStart = (Intrinsic == Intrinsic::lifetime_start);
     // Stack coloring is not enabled in O0, discard region information.
-    if (TM.getOptLevel() == CodeGenOpt::None)
+    if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
     const int64_t ObjectSize =
@@ -11293,7 +11294,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     }
   }
 
-  if (TM.getOptLevel() != CodeGenOpt::None) {
+  if (TM.getOptLevel() != CodeGenOptLevel::None) {
     // Here, we order cases by probability so the most likely case will be
     // checked first. However, two clusters can have the same probability in
     // which case their relative ordering is non-deterministic. So we use Low
@@ -11651,7 +11652,7 @@ MachineBasicBlock *SelectionDAGBuilder::peelDominantCaseCluster(
   MachineBasicBlock *SwitchMBB = FuncInfo.MBB;
   // Don't perform if there is only one cluster or optimizing for size.
   if (SwitchPeelThreshold > 100 || !FuncInfo.BPI || Clusters.size() < 2 ||
-      TM.getOptLevel() == CodeGenOpt::None ||
+      TM.getOptLevel() == CodeGenOptLevel::None ||
       SwitchMBB->getParent()->getFunction().hasMinSize())
     return SwitchMBB;
 
@@ -11773,7 +11774,7 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     SwitchWorkListItem W = WorkList.pop_back_val();
     unsigned NumClusters = W.LastCluster - W.FirstCluster + 1;
 
-    if (NumClusters > 3 && TM.getOptLevel() != CodeGenOpt::None &&
+    if (NumClusters > 3 && TM.getOptLevel() != CodeGenOptLevel::None &&
         !DefaultMBB->getParent()->getFunction().hasMinSize()) {
       // For optimized builds, lower large range as a balanced binary tree.
       splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB);

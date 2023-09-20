@@ -288,6 +288,15 @@ static void insertIfFunction(const Decl &D,
     Funcs.insert(FD);
 }
 
+static MemberExpr *getMemberForAccessor(const CXXMemberCallExpr &C) {
+  auto *Body = dyn_cast_or_null<CompoundStmt>(C.getMethodDecl()->getBody());
+  if (!Body || Body->size() != 1)
+    return nullptr;
+  if (auto *RS = dyn_cast<ReturnStmt>(*Body->body_begin()))
+    return dyn_cast<MemberExpr>(RS->getRetValue()->IgnoreParenImpCasts());
+  return nullptr;
+}
+
 static void
 getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
@@ -324,6 +333,12 @@ getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
   } else if (auto *E = dyn_cast<DeclRefExpr>(&S)) {
     insertIfGlobal(*E->getDecl(), Vars);
     insertIfFunction(*E->getDecl(), Funcs);
+  } else if (const auto *C = dyn_cast<CXXMemberCallExpr>(&S)) {
+    // If this is a method that returns a member variable but does nothing else,
+    // model the field of the return value.
+    if (MemberExpr *E = getMemberForAccessor(*C))
+      if (const auto *FD = dyn_cast<FieldDecl>(E->getMemberDecl()))
+        Fields.insert(FD);
   } else if (auto *E = dyn_cast<MemberExpr>(&S)) {
     // FIXME: should we be using `E->getFoundDecl()`?
     const ValueDecl *VD = E->getMemberDecl();

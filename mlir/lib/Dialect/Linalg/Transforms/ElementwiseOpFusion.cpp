@@ -949,7 +949,7 @@ struct FoldReshapeWithGenericOpByExpansion
           reshapeOp, "failed preconditions of fusion with producer generic op");
     }
 
-    if (!controlFoldingReshapes(&reshapeOp->getOpOperand(0))) {
+    if (!controlFoldingReshapes(&reshapeOp.getSrcMutable()[0])) {
       return rewriter.notifyMatchFailure(reshapeOp,
                                          "fusion blocked by control function");
     }

@@ -36,7 +36,7 @@ FunctionPass *createAArch64CompressJumpTablesPass();
 FunctionPass *createAArch64ConditionalCompares();
 FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
-                                 CodeGenOpt::Level OptLevel);
+                                   CodeGenOptLevel OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
 FunctionPass *createAArch64ExpandPseudoPass();
 FunctionPass *createAArch64SLSHardeningPass();

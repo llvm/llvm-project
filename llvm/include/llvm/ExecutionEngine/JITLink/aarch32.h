@@ -59,7 +59,13 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// interworking stub.
   Arm_Jump24,
 
-  LastArmRelocation = Arm_Jump24,
+  /// Write immediate value to the lower halfword of the destination register
+  Arm_MovwAbsNC,
+
+  /// Write immediate value to the top halfword of the destination register
+  Arm_MovtAbs,
+
+  LastArmRelocation = Arm_MovtAbs,
 
   ///
   /// Relocations of class Thumb16 and Thumb32 (covers Thumb instruction subset)
@@ -172,6 +178,17 @@ template <> struct FixupInfo<Arm_Call> : public FixupInfo<Arm_Jump24> {
   static constexpr uint32_t OpcodeMask = 0x0e000000;
   static constexpr uint32_t BitH = 0x01000000;
   static constexpr uint32_t BitBlx = 0x10000000;
+};
+
+template <> struct FixupInfo<Arm_MovtAbs> {
+  static constexpr uint32_t Opcode = 0x03400000;
+  static constexpr uint32_t OpcodeMask = 0x0ff00000;
+  static constexpr uint32_t ImmMask = 0x000f0fff;
+  static constexpr uint32_t RegMask = 0x0000f000;
+};
+
+template <> struct FixupInfo<Arm_MovwAbsNC> : public FixupInfo<Arm_MovtAbs> {
+  static constexpr uint32_t Opcode = 0x03000000;
 };
 
 template <> struct FixupInfo<Thumb_Jump24> {

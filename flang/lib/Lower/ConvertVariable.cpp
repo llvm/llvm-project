@@ -251,7 +251,7 @@ mlir::Value Fortran::lower::genInitialDataTarget(
   // type. The return box is correctly created as a fir.box<fir.ptr<T>> where
   // T is extracted from the MOLD argument.
   if (const Fortran::evaluate::ProcedureRef *procRef =
-          Fortran::evaluate::GetProcedureRef(initialTarget)) {
+          Fortran::evaluate::UnwrapProcedureRef(initialTarget)) {
     const Fortran::evaluate::SpecificIntrinsic *intrinsic =
         procRef->proc().GetSpecificIntrinsic();
     if (intrinsic && intrinsic->name == "null") {
@@ -324,7 +324,7 @@ static mlir::Value genDefaultInitializerValue(
     if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
       continue;
     mlir::Value componentValue;
-    llvm::StringRef name = toStringRef(component.name());
+    std::string name = converter.getRecordTypeFieldName(component);
     mlir::Type componentTy = recTy.getType(name);
     assert(componentTy && "component not found in type");
     if (const auto *object{

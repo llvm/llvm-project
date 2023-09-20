@@ -213,7 +213,7 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   TM.reset(TheTarget->createTargetMachine(
       TargetTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
       Options, codegen::getExplicitRelocModel(),
-      codegen::getExplicitCodeModel(), CodeGenOpt::Default));
+      codegen::getExplicitCodeModel(), CodeGenOptLevel::Default));
   assert(TM && "Could not allocate target machine!");
 
   // Check that pass pipeline is specified and correct

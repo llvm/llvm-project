@@ -30,7 +30,7 @@ public:
   AArch64TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT, bool IsLittleEndian);
 
   ~AArch64TargetMachine() override;
@@ -80,8 +80,8 @@ public:
   AArch64leTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
                          std::optional<Reloc::Model> RM,
-                         std::optional<CodeModel::Model> CM,
-                         CodeGenOpt::Level OL, bool JIT);
+                         std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                         bool JIT);
 };
 
 // AArch64 big endian target machine.
@@ -93,8 +93,8 @@ public:
   AArch64beTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
                          std::optional<Reloc::Model> RM,
-                         std::optional<CodeModel::Model> CM,
-                         CodeGenOpt::Level OL, bool JIT);
+                         std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
+                         bool JIT);
 };
 
 } // end namespace llvm

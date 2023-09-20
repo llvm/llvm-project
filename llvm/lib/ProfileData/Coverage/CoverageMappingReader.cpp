@@ -25,6 +25,7 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
@@ -1021,8 +1022,23 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
   return Sections;
 }
 
+static Error getProfileNamesFromDebugInfo(StringRef FileName,
+                                          InstrProfSymtab &ProfileNames) {
+  std::unique_ptr<InstrProfCorrelator> Correlator;
+  if (auto E = InstrProfCorrelator::get(FileName).moveInto(Correlator))
+    return E;
+  if (auto E = Correlator->correlateCovUnusedFuncNames(0))
+    return E;
+  if (auto E = ProfileNames.create(
+          StringRef(Correlator->getCovUnusedFuncNamesPointer(),
+                    Correlator->getCovUnusedFuncNamesSize())))
+    return E;
+  return Error::success();
+}
+
 static Expected<std::unique_ptr<BinaryCoverageReader>>
-loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
+loadBinaryFormat(std::unique_ptr<Binary> Bin,
+                 IndexedInstrProfReader &ProfileReader, StringRef Arch,
                  StringRef CompilationDir = "",
                  object::BuildIDRef *BinaryID = nullptr) {
   std::unique_ptr<ObjectFile> OF;
@@ -1052,11 +1068,24 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   // Look for the sections that we are interested in.
   auto ObjFormat = OF->getTripleObjectFormat();
+  InstrProfSymtab ProfileNames = ProfileReader.getSymtab();
   auto NamesSection =
       lookupSections(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
-                                                 /*AddSegmentInfo=*/false));
-  if (auto E = NamesSection.takeError())
-    return std::move(E);
+                                                  /*AddSegmentInfo=*/false));
+  if (auto E = NamesSection.takeError()) {
+    if (OF->hasDebugInfo()) {
+      if (auto E =
+              getProfileNamesFromDebugInfo(OF->getFileName(), ProfileNames))
+        return make_error<CoverageMapError>(coveragemap_error::malformed);
+    }
+    consumeError(std::move(E));
+  } else {
+    std::vector<SectionRef> NamesSectionRefs = *NamesSection;
+    if (NamesSectionRefs.size() != 1)
+      return make_error<CoverageMapError>(coveragemap_error::malformed);
+    if (Error E = ProfileNames.create(NamesSectionRefs.back()))
+      return std::move(E);
+  }
   auto CoverageSection =
       lookupSections(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
                                                   /*AddSegmentInfo=*/false));
@@ -1070,15 +1099,6 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
   if (!CoverageMappingOrErr)
     return CoverageMappingOrErr.takeError();
   StringRef CoverageMapping = CoverageMappingOrErr.get();
-
-  InstrProfSymtab ProfileNames;
-  std::vector<SectionRef> NamesSectionRefs = *NamesSection;
-  if (NamesSectionRefs.size() != 1)
-    return make_error<CoverageMapError>(
-        coveragemap_error::malformed,
-        "the size of coverage mapping section is not one");
-  if (Error E = ProfileNames.create(NamesSectionRefs.back()))
-    return std::move(E);
 
   // Look for the coverage records section (Version4 only).
   auto CoverageRecordsSections =
@@ -1149,7 +1169,8 @@ static bool isArchSpecifierInvalidOrMissing(Binary *Bin, StringRef Arch) {
 
 Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
-    MemoryBufferRef ObjectBuffer, StringRef Arch,
+    MemoryBufferRef ObjectBuffer, IndexedInstrProfReader &ProfileReader,
+    StringRef Arch,
     SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
     StringRef CompilationDir, SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
@@ -1195,8 +1216,8 @@ BinaryCoverageReader::create(
       }
 
       return BinaryCoverageReader::create(
-          ArchiveOrErr.get()->getMemoryBufferRef(), Arch, ObjectFileBuffers,
-          CompilationDir, BinaryIDs);
+          ArchiveOrErr.get()->getMemoryBufferRef(), ProfileReader, Arch,
+          ObjectFileBuffers, CompilationDir, BinaryIDs);
     }
   }
 
@@ -1209,8 +1230,8 @@ BinaryCoverageReader::create(
         return ChildBufOrErr.takeError();
 
       auto ChildReadersOrErr = BinaryCoverageReader::create(
-          ChildBufOrErr.get(), Arch, ObjectFileBuffers, CompilationDir,
-          BinaryIDs);
+          ChildBufOrErr.get(), ProfileReader, Arch, ObjectFileBuffers,
+          CompilationDir, BinaryIDs);
       if (!ChildReadersOrErr)
         return ChildReadersOrErr.takeError();
       for (auto &Reader : ChildReadersOrErr.get())
@@ -1230,8 +1251,9 @@ BinaryCoverageReader::create(
   }
 
   object::BuildIDRef BinaryID;
-  auto ReaderOrErr = loadBinaryFormat(std::move(Bin), Arch, CompilationDir,
-                                      BinaryIDs ? &BinaryID : nullptr);
+  auto ReaderOrErr =
+      loadBinaryFormat(std::move(Bin), ProfileReader, Arch, CompilationDir,
+                       BinaryIDs ? &BinaryID : nullptr);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   Readers.push_back(std::move(ReaderOrErr.get()));

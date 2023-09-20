@@ -30,7 +30,7 @@ public:
   RISCVDAGToDAGISel() = delete;
 
   explicit RISCVDAGToDAGISel(RISCVTargetMachine &TargetMachine,
-                             CodeGenOpt::Level OptLevel)
+                             CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TargetMachine, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {

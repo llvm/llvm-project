@@ -674,6 +674,9 @@ def err_cc1_round_trip_mismatch : Error<
 def err_cc1_unbounded_vscale_min : Error<
   "minimum vscale must be an unsigned integer greater than 0">;
 
+def err_drv_using_omit_rtti_component_without_no_rtti : Error<
+  "-fexperimental-omit-vtable-rtti call only be used with -fno-rtti">;
+
 def err_drv_ssp_missing_offset_argument : Error<
   "'%0' is used without '-mstack-protector-guard-offset', and there is no default">;
 

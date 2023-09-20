@@ -95,7 +95,7 @@ namespace {
 
     MSP430DAGToDAGISel() = delete;
 
-    MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOpt::Level OptLevel)
+    MSP430DAGToDAGISel(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel)
         : SelectionDAGISel(ID, TM, OptLevel) {}
 
   private:
@@ -129,10 +129,9 @@ INITIALIZE_PASS(MSP430DAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 /// MSP430-specific DAG, ready for instruction scheduling.
 ///
 FunctionPass *llvm::createMSP430ISelDag(MSP430TargetMachine &TM,
-                                        CodeGenOpt::Level OptLevel) {
-  return new MSP430DAGToDAGISel(TM, OptLevel);
+                                        CodeGenOptLevel OptLevel) {
+    return new MSP430DAGToDAGISel(TM, OptLevel);
 }
-
 
 /// MatchWrapper - Try to match MSP430ISD::Wrapper node into an addressing mode.
 /// These wrap things that will resolve down into a symbol reference.  If no

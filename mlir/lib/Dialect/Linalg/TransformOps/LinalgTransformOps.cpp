@@ -389,7 +389,7 @@ transform::EliminateLinalgOpAnchoredEmptyTensorsOp::apply(
     transform::TransformRewriter &rewriter, TransformResults &transformResults,
     TransformState &state) {
   bufferization::OneShotBufferizationOptions options;
-  options.allowReturnAllocs = true;
+  options.allowReturnAllocsFromLoops = true;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
     bufferization::OneShotAnalysisState state(target, options);

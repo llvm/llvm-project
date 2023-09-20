@@ -1891,6 +1891,18 @@ transform.sequence failures(propagate) {
   test_print_number_of_associated_payload_ir_ops %4 : !transform.any_op
 }
 
+
+// -----
+
+// expected-note @below {{target op}}
+module {
+  transform.sequence  failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    // expected-error @below{{could not find a parent op that matches all requirements}}
+    %3 = get_parent_op %arg0 {op_name = "builtin.module"} : (!transform.any_op) -> !transform.any_op
+  }
+}
+
 // -----
 
 func.func @cast(%arg0: f32) -> f64 {

@@ -349,6 +349,8 @@ struct Procedure {
       const ProcedureDesignator &, FoldingContext &);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
+  static std::optional<Procedure> Characterize(
+      const Expr<SomeType> &, FoldingContext &);
   // Characterizes the procedure being referenced, deducing dummy argument
   // types from actual arguments in the case of an implicit interface.
   static std::optional<Procedure> FromActuals(

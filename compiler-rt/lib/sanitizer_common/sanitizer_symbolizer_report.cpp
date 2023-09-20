@@ -32,7 +32,7 @@ void ReportErrorSummary(const char *error_type, const AddressInfo &info,
                         const char *alt_tool_name) {
   if (!common_flags()->print_summary) return;
   InternalScopedString buff;
-  buff.append("%s ", error_type);
+  buff.AppendF("%s ", error_type);
   RenderFrame(&buff, "%L %F", 0, info.address, &info,
               common_flags()->symbolize_vs_style,
               common_flags()->strip_path_prefix);
@@ -148,22 +148,22 @@ static void MaybeReportNonExecRegion(uptr pc) {
 static void PrintMemoryByte(InternalScopedString *str, const char *before,
                             u8 byte) {
   SanitizerCommonDecorator d;
-  str->append("%s%s%x%x%s ", before, d.MemoryByte(), byte >> 4, byte & 15,
-              d.Default());
+  str->AppendF("%s%s%x%x%s ", before, d.MemoryByte(), byte >> 4, byte & 15,
+               d.Default());
 }
 
 static void MaybeDumpInstructionBytes(uptr pc) {
   if (!common_flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
     return;
   InternalScopedString str;
-  str.append("First 16 instruction bytes at pc: ");
+  str.AppendF("First 16 instruction bytes at pc: ");
   if (IsAccessibleMemoryRange(pc, 16)) {
     for (int i = 0; i < 16; ++i) {
       PrintMemoryByte(&str, "", ((u8 *)pc)[i]);
     }
-    str.append("\n");
+    str.AppendF("\n");
   } else {
-    str.append("unaccessible\n");
+    str.AppendF("unaccessible\n");
   }
   Report("%s", str.data());
 }

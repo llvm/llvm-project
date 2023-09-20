@@ -90,6 +90,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__availability>
 #include <__config>
 #include <__thread/formatter.h>
+#include <__thread/jthread.h>
 #include <__thread/this_thread.h>
 #include <__thread/thread.h>
 #include <__threading_support>

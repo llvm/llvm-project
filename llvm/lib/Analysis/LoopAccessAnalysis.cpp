@@ -2505,12 +2505,24 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
   LLVM_DEBUG(dbgs() << "LAA: unsafe dependent memory operations in loop\n");
 
   // Emit remark for first unsafe dependence
+  bool HasForcedDistribution = false;
+  std::optional<const MDOperand *> Value =
+      findStringMetadataForLoop(TheLoop, "llvm.loop.distribute.enable");
+  if (Value) {
+    const MDOperand *Op = *Value;
+    assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+    HasForcedDistribution = mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+  }
+
+  const std::string Info =
+      HasForcedDistribution
+          ? "unsafe dependent memory operations in loop."
+          : "unsafe dependent memory operations in loop. Use "
+            "#pragma loop distribute(enable) to allow loop distribution "
+            "to attempt to isolate the offending operations into a separate "
+            "loop";
   OptimizationRemarkAnalysis &R =
-      recordAnalysis("UnsafeDep", Dep.getDestination(*this))
-      << "unsafe dependent memory operations in loop. Use "
-         "#pragma loop distribute(enable) to allow loop distribution "
-         "to attempt to isolate the offending operations into a separate "
-         "loop";
+      recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:

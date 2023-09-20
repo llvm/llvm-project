@@ -826,16 +826,25 @@ bool IsFunction(const Expr<SomeType> &expr) {
   return designator && designator->GetType().has_value();
 }
 
+bool IsPointer(const Expr<SomeType> &expr) {
+  return IsObjectPointer(expr) || IsProcedurePointer(expr);
+}
+
 bool IsProcedurePointer(const Expr<SomeType> &expr) {
-  return common::visit(common::visitors{
-                           [](const NullPointer &) { return true; },
-                           [](const ProcedureRef &) { return false; },
-                           [&](const auto &) {
-                             const Symbol *last{GetLastSymbol(expr)};
-                             return last && IsProcedurePointer(*last);
-                           },
-                       },
-      expr.u);
+  if (IsNullProcedurePointer(expr)) {
+    return true;
+  } else if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
+    if (const Symbol * proc{funcRef->proc().GetSymbol()}) {
+      const Symbol *result{FindFunctionResult(*proc)};
+      return result && IsProcedurePointer(*result);
+    } else {
+      return false;
+    }
+  } else if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
+    return IsProcedurePointer(proc->GetSymbol());
+  } else {
+    return false;
+  }
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
@@ -851,23 +860,7 @@ bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
       expr.u);
 }
 
-template <typename A> inline const ProcedureRef *UnwrapProcedureRef(const A &) {
-  return nullptr;
-}
-
-template <typename T>
-inline const ProcedureRef *UnwrapProcedureRef(const FunctionRef<T> &func) {
-  return &func;
-}
-
-template <typename T>
-inline const ProcedureRef *UnwrapProcedureRef(const Expr<T> &expr) {
-  return common::visit(
-      [](const auto &x) { return UnwrapProcedureRef(x); }, expr.u);
-}
-
-// IsObjectPointer()
-bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
+bool IsObjectPointer(const Expr<SomeType> &expr) {
   if (IsNullObjectPointer(expr)) {
     return true;
   } else if (IsProcedurePointerTarget(expr)) {
@@ -879,10 +872,6 @@ bool IsObjectPointer(const Expr<SomeType> &expr, FoldingContext &context) {
   } else {
     return false;
   }
-}
-
-const ProcedureRef *GetProcedureRef(const Expr<SomeType> &expr) {
-  return UnwrapProcedureRef(expr);
 }
 
 // IsNullPointer() & variations
@@ -958,7 +947,7 @@ bool IsBareNullPointer(const Expr<SomeType> *expr) {
 // GetSymbolVector()
 auto GetSymbolVectorHelper::operator()(const Symbol &x) const -> Result {
   if (const auto *details{x.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (IsVariable(details->expr()) && !GetProcedureRef(*details->expr())) {
+    if (IsVariable(details->expr()) && !UnwrapProcedureRef(*details->expr())) {
       // associate(x => variable that is not a pointer returned by a function)
       return (*this)(details->expr());
     }
@@ -1241,12 +1230,11 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
   return std::nullopt;
 }
 
-bool IsAllocatableOrPointerObject(
-    const Expr<SomeType> &expr, FoldingContext &context) {
+bool IsAllocatableOrPointerObject(const Expr<SomeType> &expr) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
   return (sym &&
              semantics::IsAllocatableOrObjectPointer(&sym->GetUltimate())) ||
-      evaluate::IsObjectPointer(expr, context);
+      evaluate::IsObjectPointer(expr);
 }
 
 bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
@@ -1258,15 +1246,14 @@ bool IsAllocatableDesignator(const Expr<SomeType> &expr) {
   return false;
 }
 
-bool MayBePassedAsAbsentOptional(
-    const Expr<SomeType> &expr, FoldingContext &context) {
+bool MayBePassedAsAbsentOptional(const Expr<SomeType> &expr) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
   // 15.5.2.12 1. is pretty clear that an unallocated allocatable/pointer actual
   // may be passed to a non-allocatable/non-pointer optional dummy. Note that
   // other compilers (like nag, nvfortran, ifort, gfortran and xlf) seems to
   // ignore this point in intrinsic contexts (e.g CMPLX argument).
   return (sym && semantics::IsOptional(*sym)) ||
-      IsAllocatableOrPointerObject(expr, context);
+      IsAllocatableOrPointerObject(expr);
 }
 
 std::optional<Expr<SomeType>> HollerithToBOZ(FoldingContext &context,

@@ -3684,12 +3684,12 @@ multiclass VecROStoreLane0Pat<ROAddrMode ro, SDPatternOperator storeop,
                               SubRegIndex SubRegIdx,
                               Instruction STRW, Instruction STRX> {
 
-  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), (i64 0))),
                      (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
             (STRW (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
-  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VecTy VecListOne128:$Vt), (i64 0))),
                      (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
             (STRX (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                   GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
@@ -3823,7 +3823,7 @@ multiclass VecStoreLane0Pat<ComplexPattern UIAddrMode, SDPatternOperator storeop
                             ValueType SubRegTy,
                             SubRegIndex SubRegIdx, Operand IndexType,
                             Instruction STR> {
-  def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), 0)),
+  def : Pat<(storeop (STy (vector_extract (VTy VecListOne128:$Vt), (i64 0))),
                      (UIAddrMode GPR64sp:$Rn, IndexType:$offset)),
             (STR (SubRegTy (EXTRACT_SUBREG VecListOne128:$Vt, SubRegIdx)),
                  GPR64sp:$Rn, IndexType:$offset)>;

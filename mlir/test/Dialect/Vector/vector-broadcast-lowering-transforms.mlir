@@ -162,6 +162,17 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
   return %0 : vector<4x3x2xf32>
 }
 
+// CHECK-LABEL:   func.func @broadcast_scalable_duplication
+// CHECK-SAME:      %[[ARG0:.*]]: vector<[32]xf32>)
+// CHECK:           %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x[32]xf32>
+// CHECK:           %[[RES:.*]] = vector.insert %[[ARG0]], %[[CST]] [0] : vector<[32]xf32> into vector<1x[32]xf32>
+// CHECK:           return %[[RES]] : vector<1x[32]xf32>
+
+func.func @broadcast_scalable_duplication(%arg0: vector<[32]xf32>) -> vector<1x[32]xf32> {
+  %res = vector.broadcast %arg0 : vector<[32]xf32> to vector<1x[32]xf32>
+  return %res : vector<1x[32]xf32>
+}
+
 transform.sequence failures(propagate) {
 ^bb1(%module_op: !transform.any_op):
   %f = transform.structured.match ops{["func.func"]} in %module_op 

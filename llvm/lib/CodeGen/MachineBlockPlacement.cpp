@@ -3376,7 +3376,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
   // For aggressive optimization, we can adjust some thresholds to be less
   // conservative.
-  if (PassConfig->getOptLevel() >= CodeGenOpt::Aggressive) {
+  if (PassConfig->getOptLevel() >= CodeGenOptLevel::Aggressive) {
     // At O3 we should be more willing to copy blocks for tail duplication. This
     // increases size pressure, so we only do it at O3
     // Do this unless only the regular threshold is explicitly set.
@@ -3388,7 +3388,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   // If there's no threshold provided through options, query the target
   // information for a threshold instead.
   if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
-      (PassConfig->getOptLevel() < CodeGenOpt::Aggressive ||
+      (PassConfig->getOptLevel() < CodeGenOptLevel::Aggressive ||
        TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
     TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
 

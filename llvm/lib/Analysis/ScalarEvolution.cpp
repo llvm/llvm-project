@@ -3269,18 +3269,28 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       SmallVector<const SCEV *, 4> NewOps;
       NewOps.reserve(AddRec->getNumOperands());
       const SCEV *Scale = getMulExpr(LIOps, SCEV::FlagAnyWrap, Depth + 1);
-      for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i)
+
+      // If both the mul and addrec are nuw, we can preserve nuw.
+      // If both the mul and addrec are nsw, we can only preserve nsw if either
+      // a) they are also nuw, or
+      // b) all multiplications of addrec operands with scale are nsw.
+      SCEV::NoWrapFlags Flags =
+          AddRec->getNoWrapFlags(ComputeFlags({Scale, AddRec}));
+
+      for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
         NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
                                     SCEV::FlagAnyWrap, Depth + 1));
 
-      // Build the new addrec. Propagate the NUW and NSW flags if both the
-      // outer mul and the inner addrec are guaranteed to have no overflow.
-      //
-      // No self-wrap cannot be guaranteed after changing the step size, but
-      // will be inferred if either NUW or NSW is true.
-      SCEV::NoWrapFlags Flags = ComputeFlags({Scale, AddRec});
-      const SCEV *NewRec = getAddRecExpr(
-          NewOps, AddRec->getLoop(), AddRec->getNoWrapFlags(Flags));
+        if (hasFlags(Flags, SCEV::FlagNSW) && !hasFlags(Flags, SCEV::FlagNUW)) {
+          ConstantRange NSWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+              Instruction::Mul, getSignedRange(Scale),
+              OverflowingBinaryOperator::NoSignedWrap);
+          if (!NSWRegion.contains(getSignedRange(AddRec->getOperand(i))))
+            Flags = clearFlags(Flags, SCEV::FlagNSW);
+        }
+      }
+
+      const SCEV *NewRec = getAddRecExpr(NewOps, AddRec->getLoop(), Flags);
 
       // If all of the other operands were loop invariant, we are done.
       if (Ops.size() == 1) return NewRec;

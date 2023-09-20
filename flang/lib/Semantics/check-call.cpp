@@ -462,7 +462,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
           : nullptr};
   int actualRank{actualType.Rank()};
-  bool actualIsPointer{evaluate::IsObjectPointer(actual, foldingContext)};
+  bool actualIsPointer{evaluate::IsObjectPointer(actual)};
   if (dummy.type.attrs().test(
           characteristics::TypeAndShape::Attr::AssumedShape)) {
     // 15.5.2.4(16)
@@ -992,7 +992,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
         // 15.5.2.9(5) -- dummy procedure POINTER
         // Interface compatibility has already been checked above
         messages.Say(
-            "Actual argument associated with procedure pointer %s must be a POINTER unless INTENT(IN)"_err_en_US,
+            "Actual argument associated with procedure pointer %s must be a pointer unless INTENT(IN)"_err_en_US,
             dummyName);
       }
     }
@@ -1243,12 +1243,9 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
   if (const auto &pointerArg{arguments[0]}) {
     if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
-      const Symbol *pointerSymbol{GetLastSymbol(*pointerExpr)};
-      if (pointerSymbol && !IsPointer(pointerSymbol->GetUltimate())) {
-        evaluate::AttachDeclaration(
-            context.messages().Say(pointerArg->sourceLocation(),
-                "POINTER= argument of ASSOCIATED() must be a POINTER"_err_en_US),
-            *pointerSymbol);
+      if (!IsPointer(*pointerExpr)) {
+        context.messages().Say(pointerArg->sourceLocation(),
+            "POINTER= argument of ASSOCIATED() must be a pointer"_err_en_US);
         return;
       }
       if (const auto &targetArg{arguments[1]}) {
@@ -1261,7 +1258,7 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             !evaluate::IsProcedurePointer(*pointerExpr)) {
           context.messages().Say(pointerArg->sourceLocation(),
               "POINTER= argument of ASSOCIATED() should be a pointer"_port_en_US);
-        } else if (scope) {
+        } else if (scope && !evaluate::UnwrapProcedureRef(*pointerExpr)) {
           if (auto whyNot{WhyNotDefinable(pointerArg->sourceLocation().value_or(
                                               context.messages().at()),
                   *scope,
@@ -1273,59 +1270,37 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             }
           }
         }
-        if (const auto *targetExpr{targetArg->UnwrapExpr()};
-            targetExpr && pointerSymbol) {
-          if (IsProcedure(*pointerSymbol)) {
+        if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
+          if (IsProcedurePointer(*pointerExpr) &&
+              !IsBareNullPointer(pointerExpr)) { // POINTER= is a procedure
             if (auto pointerProc{characteristics::Procedure::Characterize(
-                    *pointerSymbol, context)}) {
-              // Characterize the target procedure
-              std::optional<characteristics::Procedure> targetProc;
-              const auto *targetProcDesignator{
-                  evaluate::UnwrapExpr<evaluate::ProcedureDesignator>(
-                      *targetExpr)};
-              bool isCall{false};
-              std::string targetName;
-              if (IsProcedure(*targetExpr) ||
-                  IsNullProcedurePointer(*targetExpr)) {
-                if (const auto *targetProcRef{
-                        std::get_if<evaluate::ProcedureRef>(&targetExpr->u)}) {
-                  // target is a function call returning a procedure pointer
-                  targetProc = characteristics::Procedure::Characterize(
-                      *targetProcRef, context);
-                  isCall = true;
-                  targetName = targetProcRef->proc().GetName() + "()";
-                } else if (targetProcDesignator) {
-                  targetProc = characteristics::Procedure::Characterize(
-                      *targetProcDesignator, context);
-                  targetName = targetProcDesignator->GetName();
-                } else if (const Symbol * targSym{GetLastSymbol(*targetExpr)}) {
-                  targetProc = characteristics::Procedure::Characterize(
-                      *targSym, context);
-                  targetName = targSym->name().ToString();
-                }
-              }
-              if (targetProc) {
-                std::string whyNot;
-                const evaluate::SpecificIntrinsic *specificIntrinsic{
-                    targetProcDesignator
-                        ? targetProcDesignator->GetSpecificIntrinsic()
-                        : nullptr};
-                if (std::optional<parser::MessageFixedText> msg{
-                        CheckProcCompatibility(isCall, pointerProc,
-                            &*targetProc, specificIntrinsic, whyNot)}) {
-                  msg->set_severity(parser::Severity::Warning);
-                  evaluate::AttachDeclaration(
-                      context.messages().Say(std::move(*msg),
-                          "pointer '" + pointerSymbol->name().ToString() + "'",
-                          targetName, whyNot),
-                      *pointerSymbol);
+                    *pointerExpr, context)}) {
+              if (IsBareNullPointer(targetExpr)) {
+              } else if (IsProcedurePointerTarget(*targetExpr)) {
+                if (auto targetProc{characteristics::Procedure::Characterize(
+                        *targetExpr, context)}) {
+                  bool isCall{!!UnwrapProcedureRef(*targetExpr)};
+                  std::string whyNot;
+                  const auto *targetProcDesignator{
+                      evaluate::UnwrapExpr<evaluate::ProcedureDesignator>(
+                          *targetExpr)};
+                  const evaluate::SpecificIntrinsic *specificIntrinsic{
+                      targetProcDesignator
+                          ? targetProcDesignator->GetSpecificIntrinsic()
+                          : nullptr};
+                  if (std::optional<parser::MessageFixedText> msg{
+                          CheckProcCompatibility(isCall, pointerProc,
+                              &*targetProc, specificIntrinsic, whyNot)}) {
+                    msg->set_severity(parser::Severity::Warning);
+                    context.messages().Say(std::move(*msg),
+                        "pointer '" + pointerExpr->AsFortran() + "'",
+                        targetExpr->AsFortran(), whyNot);
+                  }
                 }
               } else if (!IsNullProcedurePointer(*targetExpr)) {
-                evaluate::AttachDeclaration(
-                    context.messages().Say(
-                        "POINTER= argument '%s' is a procedure pointer but the TARGET= argument '%s' is not a procedure or procedure pointer"_err_en_US,
-                        pointerSymbol->name(), targetExpr->AsFortran()),
-                    *pointerSymbol);
+                context.messages().Say(
+                    "POINTER= argument '%s' is a procedure pointer but the TARGET= argument '%s' is not a procedure or procedure pointer"_err_en_US,
+                    pointerExpr->AsFortran(), targetExpr->AsFortran());
               }
             }
           } else if (IsVariable(*targetExpr) || IsNullPointer(*targetExpr)) {
@@ -1353,11 +1328,9 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
               }
             }
           } else {
-            evaluate::AttachDeclaration(
-                context.messages().Say(
-                    "POINTER= argument '%s' is an object pointer but the TARGET= argument '%s' is not a variable"_err_en_US,
-                    pointerSymbol->name(), targetExpr->AsFortran()),
-                *pointerSymbol);
+            context.messages().Say(
+                "POINTER= argument '%s' is an object pointer but the TARGET= argument '%s' is not a variable"_err_en_US,
+                pointerExpr->AsFortran(), targetExpr->AsFortran());
           }
         }
       }
@@ -1368,7 +1341,7 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   }
   if (!ok) {
     context.messages().Say(
-        "Arguments of ASSOCIATED() must be a POINTER and an optional valid target"_err_en_US);
+        "Arguments of ASSOCIATED() must be a pointer and an optional valid target"_err_en_US);
   }
 }
 

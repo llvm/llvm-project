@@ -292,6 +292,19 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.rewrite_narrow_types",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector narrow rewrite operations should be applied.
+
+    This is usually a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplySplitTransferFullPartialPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.split_transfer_full_partial",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

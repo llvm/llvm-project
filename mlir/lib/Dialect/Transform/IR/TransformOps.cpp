@@ -1233,7 +1233,7 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
   DenseSet<Operation *> resultSet;
   for (Operation *target : state.getPayloadOps(getTarget())) {
     Operation *parent = target->getParentOp();
-    do {
+    while (parent) {
       bool checkIsolatedFromAbove =
           !getIsolatedFromAbove() ||
           parent->hasTrait<OpTrait::IsIsolatedFromAbove>();
@@ -1241,7 +1241,8 @@ transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
                          parent->getName().getStringRef() == *getOpName();
       if (checkIsolatedFromAbove && checkOpName)
         break;
-    } while ((parent = parent->getParentOp()));
+      parent = parent->getParentOp();
+    }
     if (!parent) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()

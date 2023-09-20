@@ -369,8 +369,6 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
 
 } // end namespace llvm
 
-namespace {
-
 // Returns true if the function must be unreachable based on ValueInfo.
 //
 // In particular, identifies a function as unreachable in the following
@@ -378,7 +376,7 @@ namespace {
 //   1) All summaries are live.
 //   2) All function summaries indicate it's unreachable
 //   3) There is no non-function with the same GUID (which is rare)
-bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
+static bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
   if ((!TheFnVI) || TheFnVI.getSummaryList().empty()) {
     // Returns false if ValueInfo is absent, or the summary list is empty
     // (e.g., function declarations).
@@ -403,6 +401,7 @@ bool mustBeUnreachableFunction(ValueInfo TheFnVI) {
   return true;
 }
 
+namespace {
 // A virtual call site. VTable is the loaded virtual table pointer, and CS is
 // the indirect virtual call.
 struct VirtualCallSite {
@@ -776,10 +775,9 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-namespace llvm {
 // Enable whole program visibility if enabled by client (e.g. linker) or
 // internal option, and not force disabled.
-bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
+bool llvm::hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
   return (WholeProgramVisibilityEnabledInLTO || WholeProgramVisibility) &&
          !DisableWholeProgramVisibility;
 }
@@ -787,7 +785,7 @@ bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definitions to linkage unit visibility in
 /// Module IR (for regular or hybrid LTO).
-void updateVCallVisibilityInModule(
+void llvm::updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
@@ -805,8 +803,8 @@ void updateVCallVisibilityInModule(
   }
 }
 
-void updatePublicTypeTestCalls(Module &M,
-                               bool WholeProgramVisibilityEnabledInLTO) {
+void llvm::updatePublicTypeTestCalls(Module &M,
+                                     bool WholeProgramVisibilityEnabledInLTO) {
   Function *PublicTypeTestFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::public_type_test));
   if (!PublicTypeTestFunc)
@@ -835,7 +833,7 @@ void updatePublicTypeTestCalls(Module &M,
 /// If whole program visibility asserted, then upgrade all public vcall
 /// visibility metadata on vtable definition summaries to linkage unit
 /// visibility in Module summary index (for ThinLTO).
-void updateVCallVisibilityInIndex(
+void llvm::updateVCallVisibilityInIndex(
     ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
@@ -855,13 +853,13 @@ void updateVCallVisibilityInIndex(
   }
 }
 
-void runWholeProgramDevirtOnIndex(
+void llvm::runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap) {
   DevirtIndex(Summary, ExportedGUIDs, LocalWPDTargetsMap).run();
 }
 
-void updateIndexWPDForExports(
+void llvm::updateIndexWPDForExports(
     ModuleSummaryIndex &Summary,
     function_ref<bool(StringRef, ValueInfo)> isExported,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap) {
@@ -886,8 +884,6 @@ void updateIndexWPDForExports(
     }
   }
 }
-
-} // end namespace llvm
 
 static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
   // Check that summary index contains regular LTO module when performing

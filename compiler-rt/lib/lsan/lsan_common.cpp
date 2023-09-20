@@ -950,8 +950,8 @@ void LeakReport::PrintSummary() {
     allocations += leaks_[i].hit_count;
   }
   InternalScopedString summary;
-  summary.append("%zu byte(s) leaked in %zu allocation(s).", bytes,
-                 allocations);
+  summary.AppendF("%zu byte(s) leaked in %zu allocation(s).", bytes,
+                  allocations);
   ReportErrorSummary(summary.data());
 }
 

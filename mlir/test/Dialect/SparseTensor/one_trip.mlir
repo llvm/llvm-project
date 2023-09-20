@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -sparsification -cse | FileCheck %s
 
 #Dense = #sparse_tensor.encoding<{
-  lvlTypes = [ "dense" , "dense" ]
+  map = (d0, d1) -> (d0 : dense, d1 : dense)
 }>
 
 #trait_scale = {

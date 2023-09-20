@@ -4168,8 +4168,8 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
   // (ctpop x) u< 2 -> (x & x-1) == 0
   // (ctpop x) u> 1 -> (x & x-1) != 0
   if (Cond == ISD::SETULT || Cond == ISD::SETUGT) {
-    // Keep the CTPOP if it is a legal vector op.
-    if (CTVT.isVector() && TLI.isOperationLegal(ISD::CTPOP, CTVT))
+    // Keep the CTPOP if it is a cheap vector op.
+    if (CTVT.isVector() && TLI.isCtpopFast(CTVT))
       return SDValue();
 
     unsigned CostLimit = TLI.getCustomCtpopCost(CTVT, Cond);
@@ -4194,8 +4194,8 @@ static SDValue simplifySetCCWithCTPOP(const TargetLowering &TLI, EVT VT,
   // (ctpop x) == 1 --> (x != 0) && ((x & x-1) == 0)
   // (ctpop x) != 1 --> (x == 0) || ((x & x-1) != 0)
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && C1 == 1) {
-    // Keep the CTPOP if it is legal.
-    if (TLI.isOperationLegal(ISD::CTPOP, CTVT))
+    // Keep the CTPOP if it is cheap.
+    if (TLI.isCtpopFast(CTVT))
       return SDValue();
 
     SDValue Zero = DAG.getConstant(0, dl, CTVT);

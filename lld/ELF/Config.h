@@ -341,7 +341,7 @@ struct Config {
   uint64_t zStackSize;
   unsigned ltoPartitions;
   unsigned ltoo;
-  llvm::CodeGenOpt::Level ltoCgo;
+  llvm::CodeGenOptLevel ltoCgo;
   unsigned optimize;
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;

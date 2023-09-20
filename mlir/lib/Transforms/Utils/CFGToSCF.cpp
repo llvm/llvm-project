@@ -277,7 +277,8 @@ public:
       if (index >= result->second &&
           index < result->second + edge.getSuccessor()->getNumArguments()) {
         // Original block arguments to the entry block.
-        newSuccOperands[index] = successorOperands[index - result->second];
+        newSuccOperands[index] =
+            successorOperands[index - result->second].get();
         continue;
       }
 
