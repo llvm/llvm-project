@@ -275,10 +275,7 @@ cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
     cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
 
-cl::opt<bool> EnableInferAlignmentPass(
-    "enable-infer-alignment-pass", cl::init(true), cl::Hidden, cl::ZeroOrMore,
-    cl::desc("Enable the InferAlignment pass, disabling alignment inference in "
-             "InstCombine"));
+extern cl::opt<bool> EnableInferAlignmentPass;
 
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
