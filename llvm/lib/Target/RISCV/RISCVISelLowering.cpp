@@ -49,6 +49,7 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-lower"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+STATISTIC(NumADDIsMerged, "Number of ADDIs merged.");
 
 static cl::opt<unsigned> ExtensionMaxWebSize(
     DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
@@ -2278,6 +2279,81 @@ bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   }
 }
 
+static bool tryToFoldInstIntoUse(MachineInstr &UseMI, MachineInstr &MI) {
+
+  if (MI.getOpcode() != RISCV::ADDI)
+    return false;
+  if (!(MI.getOperand(0).isReg() && MI.getOperand(1).isReg()))
+    return false;
+
+  switch (UseMI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::LB:
+  case RISCV::LH:
+  case RISCV::LW:
+  case RISCV::LD:
+  case RISCV::LBU:
+  case RISCV::LHU:
+  case RISCV::SB:
+  case RISCV::SH:
+  case RISCV::SW:
+  case RISCV::SD:
+    break;
+  }
+  MachineOperand &OriginalBaseMO = UseMI.getOperand(1);
+  if (!OriginalBaseMO.isReg())
+    return false;
+  if (OriginalBaseMO.getReg() != MI.getOperand(0).getReg())
+    return false;
+
+  MachineOperand &OriginalOffsetMO = UseMI.getOperand(2);
+  MachineOperand &ADDIOffsetMO = MI.getOperand(2);
+  if (!(OriginalOffsetMO.isImm() && ADDIOffsetMO.isImm()))
+    return false;
+
+  int64_t OriginalOffset = OriginalOffsetMO.getImm();
+  int64_t ADDIOffset = ADDIOffsetMO.getImm();
+  int64_t TotalOffset = OriginalOffset + ADDIOffset;
+  if (!isInt<12>(TotalOffset))
+    return false;
+
+  OriginalOffsetMO.setImm(TotalOffset);
+  OriginalBaseMO.setReg(MI.getOperand(1).getReg());
+  NumADDIsMerged++;
+  return true;
+}
+
+void RISCVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  TargetLoweringBase::finalizeLowering(MF);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  SmallVector<MachineInstr *, 8> ToErase;
+  for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E; ++I) {
+    MachineBasicBlock *MBB = &*I;
+    for (MachineBasicBlock::iterator MBBI = MBB->begin(), MBBE = MBB->end();
+         MBBI != MBBE;) {
+      MachineInstr &MI = *MBBI++;
+      if (MI.getOpcode() != RISCV::ADDI)
+        continue;
+      if (!MI.getOperand(0).isReg())
+        continue;
+      SmallVector<MachineInstr *, 4> Users;
+      for (MachineInstr &UseMI :
+           MRI.use_instructions(MI.getOperand(0).getReg()))
+        Users.push_back(&UseMI);
+      bool AllUsesWereFolded = true;
+      for (MachineInstr *UseMI : Users)
+        AllUsesWereFolded &= tryToFoldInstIntoUse(*UseMI, MI);
+      if (AllUsesWereFolded)
+        ToErase.push_back(&MI);
+    }
+  }
+  for (MachineInstr *MI : ToErase)
+    MI->eraseFromParent();
+
+  return;
+}
 
 unsigned RISCVTargetLowering::combineRepeatedFPDivisors() const {
   return NumRepeatedDivisors;

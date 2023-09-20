@@ -951,6 +951,8 @@ private:
     return false;
   };
 
+  void finalizeLowering(MachineFunction &MF) const override;
+
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.
   unsigned combineRepeatedFPDivisors() const override;
