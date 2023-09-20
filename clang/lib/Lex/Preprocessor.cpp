@@ -77,7 +77,7 @@ LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
 Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
-                           DiagnosticsEngine &diags, LangOptions &opts,
+                           DiagnosticsEngine &diags, const LangOptions &opts,
                            SourceManager &SM, HeaderSearch &Headers,
                            ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
