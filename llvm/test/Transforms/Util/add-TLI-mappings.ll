@@ -2,9 +2,8 @@
 ; RUN: opt -vector-library=MASSV -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,MASSV
 ; RUN: opt -vector-library=LIBMVEC-X86 -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,LIBMVEC-X86
 ; RUN: opt -vector-library=Accelerate -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=COMMON,ACCELERATE
-
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+; RUN: opt -vector-library=sleefgnuabi -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=SLEEFGNUABI
+; RUN: opt -vector-library=ArmPL -passes=inject-tli-mappings -S < %s | FileCheck %s  --check-prefixes=ARMPL
 
 ; COMMON-LABEL: @llvm.compiler.used = appending global
 ; SVML-SAME:        [6 x ptr] [
@@ -30,8 +29,12 @@ define double @sin_f64(double %in) {
 ; MASSV:        call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
 ; ACCELERATE:   call double @sin(double %{{.*}})
 ; LIBMVEC-X86:  call double @sin(double %{{.*}}) #[[SIN:[0-9]+]]
+; SLEEFGNUABI:  call double @sin(double %{{.*}})
+; ARMPL:        call double @sin(double %{{.*}})
 ; No mapping of "sin" to a vector function for Accelerate.
-; ACCELERATE-NOT: _ZGV_LLVM_{{.*}}_sin({{.*}})
+; ACCELERATE-NOT:  _ZGV_LLVM_{{.*}}_sin({{.*}})
+; SLEEFGNUABI-NOT: _ZGV_LLVM_{{.*}}_sin({{.*}})
+; ARMPL-NOT:       _ZGV_LLVM_{{.*}}_sin({{.*}})
   %call = tail call double @sin(double %in)
   ret double %call
 }
@@ -41,12 +44,16 @@ declare double @sin(double) #0
 define float @call_llvm.log10.f32(float %in) {
 ; COMMON-LABEL: @call_llvm.log10.f32(
 ; SVML:         call float @llvm.log10.f32(float %{{.*}})
-; LIBMVEC-X86:      call float @llvm.log10.f32(float %{{.*}})
+; LIBMVEC-X86:  call float @llvm.log10.f32(float %{{.*}})
 ; MASSV:        call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
 ; ACCELERATE:   call float @llvm.log10.f32(float %{{.*}}) #[[LOG10:[0-9]+]]
+; SLEEFGNUABI:  call float @llvm.log10.f32(float %{{.*}})
+; ARMPL:        call float @llvm.log10.f32(float %{{.*}})
 ; No mapping of "llvm.log10.f32" to a vector function for SVML.
-; SVML-NOT:     _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
+; SVML-NOT:        _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
 ; LIBMVEC-X86-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
+; SLEEFGNUABI-NOT: _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
+; ARMPL-NOT:       _ZGV_LLVM_{{.*}}_llvm.log10.f32({{.*}})
   %call = tail call float @llvm.log10.f32(float %in)
   ret float %call
 }
