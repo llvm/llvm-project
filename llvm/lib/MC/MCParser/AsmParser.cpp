@@ -3392,6 +3392,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   bool HasFillExpr = false;
   int64_t FillExpr = 0;
   int64_t MaxBytesToFill = 0;
+  SMLoc FillExprLoc;
 
   auto parseAlign = [&]() -> bool {
     if (parseAbsoluteExpression(Alignment))
@@ -3402,7 +3403,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
       //  .align 3,,4
       if (getTok().isNot(AsmToken::Comma)) {
         HasFillExpr = true;
-        if (parseAbsoluteExpression(FillExpr))
+        if (parseTokenLoc(FillExprLoc) || parseAbsoluteExpression(FillExpr))
           return true;
       }
       if (parseOptionalToken(AsmToken::Comma))
@@ -3448,6 +3449,17 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
     if (!isUInt<32>(Alignment)) {
       ReturnVal |= Error(AlignmentLoc, "alignment must be smaller than 2**32");
       Alignment = 1u << 31;
+    }
+  }
+
+  if (HasFillExpr) {
+    MCSection *Sec = getStreamer().getCurrentSectionOnly();
+    if (Sec && Sec->isVirtualSection()) {
+      ReturnVal |=
+          Warning(FillExprLoc, "ignoring non-zero fill value in " +
+                                   Sec->getVirtualSectionKind() + " section '" +
+                                   Sec->getName() + "'");
+      FillExpr = 0;
     }
   }
 
