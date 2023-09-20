@@ -215,7 +215,7 @@ public:
   Operation *getTerminator();
 
   /// Check whether this block has a terminator.
-  bool hasTerminator();
+  bool mightHaveTerminator();
 
   //===--------------------------------------------------------------------===//
   // Predecessors and successors.
