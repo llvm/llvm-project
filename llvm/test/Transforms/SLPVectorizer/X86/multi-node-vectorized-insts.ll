@@ -75,3 +75,36 @@ define void @test1(double %0, <4 x double> %v) {
   %13 = fcmp olt double %12, 0.000000e+00
   br label %2
 }
+
+define void @test2(double %0) {
+; CHECK-LABEL: define void @test2(
+; CHECK-SAME: double [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[TMP4:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub double 1.000000e+00, [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub <2 x double> <double 3.000000e+00, double 2.000000e+00>, [[TMP3]]
+; CHECK-NEXT:    br label [[DOTBACKEDGE:%.*]]
+; CHECK:       .backedge:
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp olt <2 x double> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    br label [[TMP4]]
+;
+  br label %2
+
+2:
+  %3 = fsub double 1.000000e+00, %0
+  %4 = fsub double 2.000000e+00, %0
+  %5 = fsub double 3.000000e+00, %0
+  br label %.backedge
+
+.backedge:
+  %6 = fmul double %4, %3
+  %7 = fcmp olt double %6, 0.000000e+00
+  %8 = fmul double %5, %5
+  %9 = fcmp olt double %8, 0.000000e+00
+  br label %2
+}
+
