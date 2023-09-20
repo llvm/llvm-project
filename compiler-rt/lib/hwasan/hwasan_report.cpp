@@ -474,8 +474,7 @@ BaseReport::OverflowCandidate BaseReport::FindBufferOverflowCandidate() const {
   result.is_close = candidate_distance <= kCloseCandidateDistance;
 
   result.after = candidate_tag_ptr == left;
-  result.untagged_addr =
-      ShadowToMem(reinterpret_cast<uptr>(candidate_tag_ptr));
+  result.untagged_addr = ShadowToMem(reinterpret_cast<uptr>(candidate_tag_ptr));
   HwasanChunkView chunk = FindHeapChunkByAddress(result.untagged_addr);
   if (chunk.IsAllocated()) {
     result.heap.is_allocated = true;
@@ -600,7 +599,8 @@ void BaseReport::PrintAddressDescription() const {
     num_descriptions_printed++;
   }
 
-  if (!stack_allocations_count && candidate.untagged_addr && candidate.is_close) {
+  if (!stack_allocations_count && candidate.untagged_addr &&
+      candidate.is_close) {
     PrintHeapOrGlobalCandidate();
     num_descriptions_printed++;
   }
