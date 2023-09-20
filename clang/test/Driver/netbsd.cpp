@@ -264,3 +264,14 @@
 // DRIVER-PASS-INCLUDES:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
 // DRIVER-PASS-INCLUDES:      "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // DRIVER-PASS-INCLUDES:      "-internal-externc-isystem" "{{.*}}/usr/include"
+
+// Test NetBSD with libstdc++ when the sysroot path ends with `/`.
+// RUN: %clangxx -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-netbsd \
+// RUN:     -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/basic_netbsd_tree/ \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH %s
+// CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH: "-cc1"
+// CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
+// CHECK-BASIC-LIBSTDCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/g++"
