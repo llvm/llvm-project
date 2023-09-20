@@ -234,6 +234,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FEXP2,
                                G_FLOG,
                                G_FLOG2,
+                               G_FLOG10,
                                G_FABS,
                                G_FMINNUM,
                                G_FMAXNUM,
@@ -259,8 +260,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       allFloatScalarsAndVectors, allIntScalarsAndVectors);
 
   if (ST.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
-    getActionDefinitionsBuilder(G_FLOG10).legalFor(allFloatScalarsAndVectors);
-
     getActionDefinitionsBuilder(
         {G_CTTZ, G_CTTZ_ZERO_UNDEF, G_CTLZ, G_CTLZ_ZERO_UNDEF})
         .legalForCartesianProduct(allIntScalarsAndVectors,

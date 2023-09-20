@@ -234,7 +234,7 @@ public:
   Register getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII);
   Register buildConstantFP(APFloat Val, MachineIRBuilder &MIRBuilder,
-                           SPIRVType *SpvType = nullptr);
+                           SPIRVType *SpvType = nullptr, bool EmitIR = true);
   Register getOrCreateConsIntVector(uint64_t Val, MachineInstr &I,
                                     SPIRVType *SpvType,
                                     const SPIRVInstrInfo &TII);

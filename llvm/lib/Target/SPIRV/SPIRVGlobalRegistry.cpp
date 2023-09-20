@@ -242,7 +242,7 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
 
 Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
                                               MachineIRBuilder &MIRBuilder,
-                                              SPIRVType *SpvType) {
+                                              SPIRVType *SpvType, bool EmitIR) {
   auto &MF = MIRBuilder.getMF();
   const Type *LLVMFPTy;
   if (SpvType) {
@@ -260,8 +260,18 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
     MF.getRegInfo().setRegClass(Res, &SPIRV::IDRegClass);
     assignTypeToVReg(LLVMFPTy, Res, MIRBuilder);
     DT.add(ConstFP, &MF, Res);
-    MIRBuilder.buildFConstant(Res, *ConstFP);
+    if (EmitIR) {
+      MIRBuilder.buildFConstant(Res, *ConstFP);
+    } else {
+      MachineInstrBuilder MIB;
+      assert(SpvType);
+      MIB = MIRBuilder.buildInstr(SPIRV::OpConstantF)
+                .addDef(Res)
+                .addUse(getSPIRVTypeID(SpvType));
+      addNumImm(ConstFP->getValueAPF().bitcastToAPInt(), MIB);
+    }
   }
+
   return Res;
 }
 
