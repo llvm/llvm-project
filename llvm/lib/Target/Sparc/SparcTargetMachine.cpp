@@ -107,9 +107,7 @@ SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveSparcCodeModel(
                             CM, getEffectiveRelocModel(RM), is64bit, JIT),
                         OL),
-      TLOF(std::make_unique<SparcELFTargetObjectFile>()),
-      Subtarget(TT, std::string(CPU), std::string(FS), *this, is64bit),
-      is64Bit(is64bit) {
+      TLOF(std::make_unique<SparcELFTargetObjectFile>()), is64Bit(is64bit) {
   initAsmInfo();
 }
 
@@ -189,18 +187,9 @@ void SparcPassConfig::addPreEmitPass(){
     addPass(&BranchRelaxationPassID);
 
   addPass(createSparcDelaySlotFillerPass());
-
-  if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())
-  {
-    addPass(new InsertNOPLoad());
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->detectRoundChange()) {
-    addPass(new DetectRoundChange());
-  }
-  if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT())
-  {
-    addPass(new FixAllFDIVSQRT());
-  }
+  addPass(new InsertNOPLoad());
+  addPass(new DetectRoundChange());
+  addPass(new FixAllFDIVSQRT());
 }
 
 void SparcV8TargetMachine::anchor() { }
