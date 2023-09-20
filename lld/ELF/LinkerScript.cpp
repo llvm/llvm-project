@@ -175,7 +175,7 @@ void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
   if (val < dot && inSec) {
     backwardDotErr =
         (loc + ": unable to move location counter (0x" + Twine::utohexstr(dot) +
-         ") backward (0x" + Twine::utohexstr(val) + ") for section '" +
+         ") backward to 0x" + Twine::utohexstr(val) + " for section '" +
          state->outSec->name + "'")
             .str();
   }
