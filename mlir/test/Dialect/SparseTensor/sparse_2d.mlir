@@ -1058,7 +1058,7 @@ func.func @cmp_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #T
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_5:.*]] = bufferization.alloc_tensor() : tensor<2x3xf64, #{{.*}}>>
+// CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty() : tensor<2x3xf64, #{{.*}}>>
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 1 : index} : tensor<2x3xf64, #{{.*}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<2x3xf64, #{{.*}}>> to memref<?xindex>
 // CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<2x3xf64, #{{.*}}>> to memref<?xf64>
@@ -1142,7 +1142,7 @@ func.func @cmp_ss_ss(%arga: tensor<32x16xf32, #Tss>, %argb: tensor<32x16xf32, #T
 // CHECK:         }
 func.func @sub_ss_batched(%0: tensor<2x3xf64, #BatchedVector>, %1: tensor<2x3xf64, #BatchedVector>)
                            -> tensor<2x3xf64, #BatchedVector> {
-  %2 = bufferization.alloc_tensor() : tensor<2x3xf64, #BatchedVector>
+  %2 = tensor.empty() : tensor<2x3xf64, #BatchedVector>
   %3 = linalg.generic #trait2
        ins(%0, %1 : tensor<2x3xf64, #BatchedVector>, tensor<2x3xf64, #BatchedVector>)
        outs(%2 : tensor<2x3xf64, #BatchedVector>) {

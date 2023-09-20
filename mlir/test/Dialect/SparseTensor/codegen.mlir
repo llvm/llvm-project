@@ -329,7 +329,7 @@ func.func @sparse_dealloc_csr(%arg0: tensor<?x?xf64, #CSR>) {
 //       CHECK:     %[[A26:.*]] = sparse_tensor.storage_specifier.set %[[A18]]  pos_mem_sz at 1 with %[[A25]] : !sparse_tensor.storage_specifier
 //       CHECK:     return %[[A23]], %[[A6]], %[[A8]], %[[A26]] : memref<?xindex>, memref<?xindex>, memref<?xf64>, !sparse_tensor.storage_specifier
 func.func @sparse_alloc_csc(%arg0: index) -> tensor<10x?xf64, #CSC> {
-  %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSC>
+  %0 = tensor.empty(%arg0) : tensor<10x?xf64, #CSC>
   %1 = sparse_tensor.load %0 : tensor<10x?xf64, #CSC>
   return %1 : tensor<10x?xf64, #CSC>
 }
@@ -351,22 +351,9 @@ func.func @sparse_alloc_csc(%arg0: index) -> tensor<10x?xf64, #CSC> {
 //       CHECK:     %[[A16:.*]] = sparse_tensor.storage_specifier.set %[[A10]]  val_mem_sz with %[[A14]] : !sparse_tensor.storage_specifier
 //       CHECK:     return %[[A15]], %[[A16]] : memref<?xf64>, !sparse_tensor.storage_specifier
 func.func @sparse_alloc_3d() -> tensor<10x20x30xf64, #Dense3D> {
-  %0 = bufferization.alloc_tensor() : tensor<10x20x30xf64, #Dense3D>
+  %0 = tensor.empty() : tensor<10x20x30xf64, #Dense3D>
   %1 = sparse_tensor.load %0 : tensor<10x20x30xf64, #Dense3D>
   return %1 : tensor<10x20x30xf64, #Dense3D>
-}
-
-// CHECK-LABEL: func.func @sparse_alloc_coo_with_size_hint(
-// CHECK-SAME:  %[[HINT:.*]]: index)
-// CHECK:       %[[C2:.*]] = arith.constant 2 : index
-// CHECK:       %[[M2:.*]] = arith.muli %[[HINT]], %c2 : index
-// CHECK:       %[[A1:.*]] = memref.alloc() : memref<2xindex>
-// CHECK:       %[[A2:.*]] = memref.alloc(%[[M2]]) : memref<?xindex>
-// CHECK:       %[[A3:.*]] = memref.alloc(%[[HINT]]) : memref<?xf64>
-func.func @sparse_alloc_coo_with_size_hint(%arg0: index) -> tensor<10x20xf64, #Coo> {
-  %0 = bufferization.alloc_tensor()  size_hint=%arg0 : tensor<10x20xf64, #Coo>
-  %1 = sparse_tensor.load %0 : tensor<10x20xf64, #Coo>
-  return %1 : tensor<10x20xf64, #Coo>
 }
 
 // CHECK-LABEL: func.func @sparse_expansion1()
@@ -378,7 +365,7 @@ func.func @sparse_alloc_coo_with_size_hint(%arg0: index) -> tensor<10x20xf64, #C
 //   CHECK-DAG: linalg.fill ins(%{{.*}}  : i1) outs(%[[B]] : memref<8xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion1() -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSR>
+  %0 = tensor.empty() : tensor<4x8xf64, #CSR>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<4x8xf64, #CSR> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -393,7 +380,7 @@ func.func @sparse_expansion1() -> memref<?xindex> {
 //   CHECK-DAG: linalg.fill ins(%{{.*}}  : i1) outs(%[[B]] : memref<4xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion2() -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor() : tensor<4x8xf64, #CSC>
+  %0 = tensor.empty() : tensor<4x8xf64, #CSC>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<4x8xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
@@ -409,7 +396,7 @@ func.func @sparse_expansion2() -> memref<?xindex> {
 //       CHECK: linalg.fill ins(%{{.*}} : i1) outs(%[[B]] : memref<?xi1>)
 //       CHECK: return %[[D]] : memref<?xindex>
 func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
-  %0 = bufferization.alloc_tensor(%arg0, %arg1) : tensor<?x?xf64, #CSC>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf64, #CSC>
   %values, %filled, %added, %count = sparse_tensor.expand %0
     : tensor<?x?xf64, #CSC> to memref<?xf64>, memref<?xi1>, memref<?xindex>
   return %added : memref<?xindex>
