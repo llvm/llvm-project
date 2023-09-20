@@ -238,6 +238,12 @@ image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+image_atomic_pk_add_f16 v0, v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+image_atomic_pk_add_bf16 v4, [v4, v5, v6], s[8:15] dmask:0x1 dim:SQ_RSRC_IMG_3D
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 image_gather4_b_cl_o v[252:255], v[1:8], s[8:15], s[12:15] dmask:0x1
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 

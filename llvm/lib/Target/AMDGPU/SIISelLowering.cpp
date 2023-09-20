@@ -7095,17 +7095,17 @@ static SDValue padEltsToUndef(SelectionDAG &DAG, const SDLoc &DL, EVT CastVT,
 // Re-construct the required return value for a image load intrinsic.
 // This is more complicated due to the optional use TexFailCtrl which means the required
 // return type is an aggregate
-static SDValue constructRetValue(SelectionDAG &DAG,
-                                 MachineSDNode *Result,
-                                 ArrayRef<EVT> ResultTypes,
-                                 bool IsTexFail, bool Unpacked, bool IsD16,
-                                 int DMaskPop, int NumVDataDwords,
+static SDValue constructRetValue(SelectionDAG &DAG, MachineSDNode *Result,
+                                 ArrayRef<EVT> ResultTypes, bool IsTexFail,
+                                 bool Unpacked, bool IsD16, int DMaskPop,
+                                 int NumVDataDwords, bool IsAtomicPacked16Bit,
                                  const SDLoc &DL) {
   // Determine the required return type. This is the same regardless of IsTexFail flag
   EVT ReqRetVT = ResultTypes[0];
   int ReqRetNumElts = ReqRetVT.isVector() ? ReqRetVT.getVectorNumElements() : 1;
-  int NumDataDwords = (!IsD16 || (IsD16 && Unpacked)) ?
-    ReqRetNumElts : (ReqRetNumElts + 1) / 2;
+  int NumDataDwords = ((IsD16 && !Unpacked) || IsAtomicPacked16Bit)
+                          ? (ReqRetNumElts + 1) / 2
+                          : ReqRetNumElts;
 
   int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
     DMaskPop : (DMaskPop + 1) / 2;
@@ -7130,7 +7130,7 @@ static SDValue constructRetValue(SelectionDAG &DAG,
     }
   }
 
-  if (DataDwordVT.isVector())
+  if (DataDwordVT.isVector() && !IsAtomicPacked16Bit)
     Data = padEltsToUndef(DAG, DL, DataDwordVT, Data,
                           NumDataDwords - MaskPopDwords);
 
@@ -7237,6 +7237,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   SDValue VData;
   int NumVDataDwords;
   bool AdjustRetType = false;
+  bool IsAtomicPacked16Bit = false;
 
   // Offset of intrinsic arguments
   const unsigned ArgOffset = WithChain ? 2 : 1;
@@ -7247,7 +7248,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   if (BaseOpcode->Atomic) {
     VData = Op.getOperand(2);
 
-    bool Is64Bit = VData.getValueType() == MVT::i64;
+    IsAtomicPacked16Bit =
+        (Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
+         Intr->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16);
+
+    bool Is64Bit = VData.getValueSizeInBits() == 64;
     if (BaseOpcode->AtomicX2) {
       SDValue VData2 = Op.getOperand(3);
       VData = DAG.getBuildVector(Is64Bit ? MVT::v2i64 : MVT::v2i32, DL,
@@ -7576,10 +7581,9 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   }
   if (BaseOpcode->Store)
     return SDValue(NewNode, 0);
-  return constructRetValue(DAG, NewNode,
-                           OrigResultTypes, IsTexFail,
-                           Subtarget->hasUnpackedD16VMem(), IsD16,
-                           DMaskLanes, NumVDataDwords, DL);
+  return constructRetValue(DAG, NewNode, OrigResultTypes, IsTexFail,
+                           Subtarget->hasUnpackedD16VMem(), IsD16, DMaskLanes,
+                           NumVDataDwords, IsAtomicPacked16Bit, DL);
 }
 
 SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
