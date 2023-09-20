@@ -975,7 +975,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
-    if (expr != R_PC && expr != R_ARM_PCA) {
+    if (expr != R_PC) {
       error(msg);
       return;
     }
