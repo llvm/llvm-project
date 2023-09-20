@@ -50,8 +50,8 @@ protected:
   mutable PointerIntPair<ValuePointerType, 1, bool> Pointer;
   mutable KnownBits Known;
 
-  void calculateKnownBits(unsigned Depth, const SimplifyQuery &Q) const {
-    Known = computeKnownBits(Pointer.getPointer(), Depth, Q);
+  void calculateKnownBits(const SimplifyQuery &Q) const {
+    Known = computeKnownBits(Pointer.getPointer(), 0, Q);
     Pointer.setInt(true);
   }
 
@@ -73,17 +73,15 @@ public:
   [[nodiscard]] ValuePointerType getValue() { return Pointer.getPointer(); }
   [[nodiscard]] ValuePointerType getValue() const { return Pointer.getPointer(); }
 
-  [[nodiscard]] const KnownBits &getKnownBits(unsigned Depth,
-                                              const SimplifyQuery &Q) const {
+  [[nodiscard]] const KnownBits &getKnownBits(const SimplifyQuery &Q) const {
     if (!hasKnownBits())
-      calculateKnownBits(Depth, Q);
+      calculateKnownBits(Q);
     return Known;
   }
 
-  [[nodiscard]] KnownBits &getKnownBits(unsigned Depth,
-                                        const SimplifyQuery &Q) {
+  [[nodiscard]] KnownBits &getKnownBits(const SimplifyQuery &Q) {
     if (!hasKnownBits())
-      calculateKnownBits(Depth, Q);
+      calculateKnownBits(Q);
     return Known;
   }
 

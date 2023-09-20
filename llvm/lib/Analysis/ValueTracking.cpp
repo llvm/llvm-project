@@ -247,8 +247,8 @@ bool llvm::haveNoCommonBitsSet(const CachedBitsConstValue &LHSCache,
   }
 
   return KnownBits::haveNoCommonBitsSet(
-      LHSCache.getKnownBits(0, SQ),
-      RHSCache.getKnownBits(0, SQ));
+      LHSCache.getKnownBits(SQ),
+      RHSCache.getKnownBits(SQ));
 }
 
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
@@ -6251,7 +6251,7 @@ static OverflowResult mapOverflowResult(ConstantRange::OverflowResult OR) {
 static ConstantRange computeConstantRangeIncludingKnownBits(
     const CachedBitsConstValue &V, bool ForSigned, const SimplifyQuery &SQ) {
   ConstantRange CR1 = ConstantRange::fromKnownBits(
-      V.getKnownBits(0, SQ),
+      V.getKnownBits(SQ),
       ForSigned);
   ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ.IIQ.UseInstrInfo);
   ConstantRange::PreferredRangeType RangeType =
