@@ -2,9 +2,8 @@
 ; RUN: llvm-lto -O0 -relocation-model=static -o %t.o %t.bc
 ; RUN: llvm-objdump -d -r %t.o | FileCheck %s
 
-; Confirm that we do generate one too many indirections accessing the stack guard
-; variable, when the relocation model is static and the PIC level is not 0..
-; This is preparation for the fix.
+; Confirm that we do not generate one too many indirections accessing the stack guard
+; variable, when the relocation model is static and the PIC level is not 0.
 ;
 target triple = "armv4t-unknown-unknown"
 
@@ -20,8 +19,7 @@ entry:
 ; CHECK:      <foo>:
 ; CHECK:      [[#%x,CURPC:]]:{{.*}} ldr r[[REG1:[0-9]+]], [pc, #0x[[#%x,OFFSET:]]]
 ; CHECK-NEXT: ldr r[[REG2:[0-9]+]], [r[[REG1]]]
-; CHECK-NEXT: ldr r[[REG3:[0-9]+]], [r[[REG2]]]
-; CHECK-NEXT: str r[[REG3]],
+; CHECK-NEXT: str r[[REG2]],
 ; CHECK:      [[#CURPC + OFFSET + 8]]:{{.*}}.word
 ; CHECK-NEXT: R_ARM_ABS32 __stack_chk_guard
 
