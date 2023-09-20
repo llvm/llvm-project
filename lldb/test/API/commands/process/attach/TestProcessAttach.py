@@ -5,6 +5,7 @@ Test process attach.
 
 import os
 import threading
+import time
 import lldb
 import shutil
 from lldbsuite.test.decorators import *
@@ -74,7 +75,8 @@ class ProcessAttachTestCase(TestBase):
         popen = self.spawnSubprocess(exe)
 
         os.chdir(newdir)
-        self.addTearDownHook(lambda: os.chdir(testdir))
+        sourcedir = self.getSourceDir()
+        self.addTearDownHook(lambda: os.chdir(sourcedir))
         self.runCmd("process attach -p " + str(popen.pid))
 
         target = self.dbg.GetSelectedTarget()
@@ -178,6 +180,25 @@ class ProcessAttachTestCase(TestBase):
         self.dbg.DispatchInputInterrupt()
         self.dbg.DispatchInputInterrupt()
 
+        # cycle waiting for the process state to change before trying
+        # to read the command output.  I don't want to spin forever.
+        counter = 0
+        got_exit = False
+        while counter < 20:
+            if target.process.state == lldb.eStateExited:
+                got_exit = True
+                break
+            counter += 1
+            time.sleep(1)
+
+        self.assertTrue(got_exit, "The process never switched to eStateExited")
+        # Even if the state has flipped, we still need to wait for the
+        # command to complete to see the result.  We don't have a way to
+        # synchronize on "command completed" right now, but sleeping just
+        # a bit should be enough, all that's left is passing this error
+        # result to the command, and printing it to the debugger output.
+        time.sleep(1)
+
         self.out_filehandle.flush()
         reader = open(self.stdout_path, "r")
         results = reader.readlines()
@@ -186,7 +207,7 @@ class ProcessAttachTestCase(TestBase):
             if "Cancelled async attach" in line:
                 found_result = True
                 break
+        if not found_result:
+            print(f"Results: {results}")
+
         self.assertTrue(found_result, "Found async error in results")
-        # We shouldn't still have a process in the "attaching" state:
-        state = self.dbg.GetSelectedTarget().process.state
-        self.assertState(state, lldb.eStateExited, "Process not exited after attach cancellation")

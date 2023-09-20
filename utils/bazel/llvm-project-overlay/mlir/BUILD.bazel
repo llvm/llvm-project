@@ -2591,6 +2591,9 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":AffineUtils",
+        ":ArithDialect",
+        ":ArithUtils",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":LoopLikeInterface",
@@ -4262,6 +4265,8 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":VectorInterfaces",
+        ":VectorAttributesIncGen",
+        ":VectorDialectIncGen",
         ":VectorOpsIncGen",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4927,6 +4932,7 @@ cc_library(
         ":ArithDialect",
         ":AsmParser",
         ":AsyncDialect",
+        ":BufferizationDialect",
         ":ControlFlowDialect",
         ":DLTIDialect",
         ":DialectUtils",
@@ -8001,6 +8007,7 @@ cc_library(
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
         "//llvm:TransformUtils",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -10194,7 +10201,11 @@ td_library(
 
 td_library(
     name = "VectorOpsTdFiles",
-    srcs = ["include/mlir/Dialect/Vector/IR/VectorOps.td"],
+    srcs = [
+        "include/mlir/Dialect/Vector/IR/Vector.td",
+        "include/mlir/Dialect/Vector/IR/VectorAttributes.td",
+        "include/mlir/Dialect/Vector/IR/VectorOps.td",
+    ],
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
@@ -10258,6 +10269,36 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "VectorDialectIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=vector",
+            ],
+            "include/mlir/Dialect/Vector/IR/VectorDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=vector",
+            ],
+            "include/mlir/Dialect/Vector/IR/VectorDialect.cpp.inc",
+        ),
+        (
+            ["-gen-op-doc"],
+            "g3doc/Dialects/Vector/Vector.md",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Vector/IR/Vector.td",
+    deps = [
+        ":ArithOpsTdFiles", 
+        ":VectorOpsTdFiles"
+    ],
+)
+
+gentbl_cc_library(
     name = "VectorOpsIncGen",
     tbl_outs = [
         (
@@ -10268,44 +10309,41 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir/Dialect/Vector/IR/VectorOps.cpp.inc",
         ),
-        (
-            [
-                "-gen-dialect-decls",
-                "-dialect=vector",
-            ],
-            "include/mlir/Dialect/Vector/IR/VectorOpsDialect.h.inc",
-        ),
-        (
-            [
-                "-gen-dialect-defs",
-                "-dialect=vector",
-            ],
-            "include/mlir/Dialect/Vector/IR/VectorOpsDialect.cpp.inc",
-        ),
-        (
-            ["-gen-enum-decls"],
-            "include/mlir/Dialect/Vector/IR/VectorOpsEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "include/mlir/Dialect/Vector/IR/VectorOpsEnums.cpp.inc",
-        ),
-        (
-            ["-gen-attrdef-decls"],
-            "include/mlir/Dialect/Vector/IR/VectorOpsAttrDefs.h.inc",
-        ),
-        (
-            ["-gen-attrdef-defs"],
-            "include/mlir/Dialect/Vector/IR/VectorOpsAttrDefs.cpp.inc",
-        ),
-        (
-            ["-gen-op-doc"],
-            "g3doc/Dialects/Vector/VectorOps.md",
-        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/VectorOps.td",
-    deps = [":VectorOpsTdFiles"],
+    deps = [
+        ":ArithOpsTdFiles", 
+        ":VectorOpsTdFiles"
+    ],
+)
+
+gentbl_cc_library(
+    name = "VectorAttributesIncGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Vector/IR/VectorEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Vector/IR/VectorEnums.cpp.inc",
+        ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Vector/IR/VectorAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Vector/IR/VectorAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Vector/IR/VectorAttributes.td",
+    deps = [
+        ":ArithOpsTdFiles", 
+        ":VectorOpsTdFiles"
+    ],
 )
 
 gentbl_cc_library(
@@ -10367,6 +10405,7 @@ cc_library(
     deps = [
         ":AMXDialect",
         ":AMXTransforms",
+        ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ArithUtils",
         ":ArmNeonDialect",
@@ -11737,6 +11776,7 @@ cc_library(
         ":AffineDialect",
         ":AffineTransforms",
         ":AffineUtils",
+        ":AllocationOpInterface",
         ":ArithDialect",
         ":ArithTransforms",
         ":ArithUtils",

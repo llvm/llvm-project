@@ -33,7 +33,7 @@ in a few ways. The 2 main ones are:
 
   * Functions and methods are ``UpperCamelCase``.
 
-  * Static, global and member variables have ``s_``, ``g_`` and ``_m``
+  * Static, global and member variables have ``s_``, ``g_`` and ``m_``
     prefixes respectively.
 
 * `Use of asserts <https://llvm.org/docs/CodingStandards.html#assert-liberally>`_:
