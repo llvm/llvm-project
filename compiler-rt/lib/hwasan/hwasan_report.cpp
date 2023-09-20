@@ -391,7 +391,7 @@ class BaseReport {
       return;
 
     CopyHeapChunk();
-    CopyStackAllocations();
+    CopyAllocations();
     candidate = FindBufferOverflowCandidate();
   }
 
@@ -411,7 +411,7 @@ class BaseReport {
   };
 
   void CopyHeapChunk();
-  void CopyStackAllocations();
+  void CopyAllocations();
   OverflowCandidate FindBufferOverflowCandidate() const;
   void PrintAddressDescription() const;
   void PrintHeapOrGlobalCandidate() const;
@@ -434,6 +434,15 @@ class BaseReport {
   } heap;
 
   OverflowCandidate candidate;
+
+  uptr heap_allocations_count = 0;
+  struct {
+    HeapAllocationRecord har = {};
+    uptr ring_index = 0;
+    uptr num_matching_addrs = 0;
+    uptr num_matching_addrs_4b = 0;
+    u32 free_thread_id = 0;
+  } heap_allocations[256];
 };
 
 void BaseReport::CopyHeapChunk() {
@@ -446,11 +455,27 @@ void BaseReport::CopyHeapChunk() {
   }
 }
 
-void BaseReport::CopyStackAllocations() {
+void BaseReport::CopyAllocations() {
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
     if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
         t->AddrIsInStack(untagged_addr)) {
       stack_allocations[stack_allocations_count++].CopyFrom(t);
+    }
+
+    if (heap_allocations_count < ARRAY_SIZE(heap_allocations)) {
+      // Scan all threads' ring buffers to find if it's a heap-use-after-free.
+      HeapAllocationRecord har;
+      uptr ring_index, num_matching_addrs, num_matching_addrs_4b;
+      if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
+                             &ring_index, &num_matching_addrs,
+                             &num_matching_addrs_4b)) {
+        auto &ha = heap_allocations[heap_allocations_count++];
+        ha.har = har;
+        ha.ring_index = ring_index;
+        ha.num_matching_addrs = num_matching_addrs;
+        ha.num_matching_addrs_4b = num_matching_addrs_4b;
+        ha.free_thread_id = t->unique_id();
+      }
     }
   });
 }
@@ -616,42 +641,39 @@ void BaseReport::PrintAddressDescription() const {
     num_descriptions_printed++;
   }
 
-  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-    // Scan all threads' ring buffers to find if it's a heap-use-after-free.
-    HeapAllocationRecord har;
-    uptr ring_index, num_matching_addrs, num_matching_addrs_4b;
-    if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
-                           &ring_index, &num_matching_addrs,
-                           &num_matching_addrs_4b)) {
-      Printf("%s", d.Error());
-      Printf("\nCause: use-after-free\n");
-      Printf("%s", d.Location());
-      Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
-             untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
-             har.requested_size, UntagAddr(har.tagged_addr),
-             UntagAddr(har.tagged_addr) + har.requested_size);
-      Printf("%s", d.Allocation());
-      Printf("freed by thread T%u here:\n", t->unique_id());
-      Printf("%s", d.Default());
-      GetStackTraceFromId(har.free_context_id).Print();
+  for (uptr i = 0; i < heap_allocations_count; ++i) {
+    const auto &ha = heap_allocations[i];
+    const HeapAllocationRecord har = ha.har;
 
-      Printf("%s", d.Allocation());
-      Printf("previously allocated by thread T%u here:\n", har.alloc_thread_id);
-      Printf("%s", d.Default());
-      GetStackTraceFromId(har.alloc_context_id).Print();
+    Printf("%s", d.Error());
+    Printf("\nCause: use-after-free\n");
+    Printf("%s", d.Location());
+    Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
+           untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
+           har.requested_size, UntagAddr(har.tagged_addr),
+           UntagAddr(har.tagged_addr) + har.requested_size);
+    Printf("%s", d.Allocation());
+    Printf("freed by thread T%u here:\n", ha.free_thread_id);
+    Printf("%s", d.Default());
+    GetStackTraceFromId(har.free_context_id).Print();
 
-      // Print a developer note: the index of this heap object
-      // in the thread's deallocation ring buffer.
-      Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ring_index + 1,
-             flags()->heap_history_size);
-      Printf("hwasan_dev_note_num_matching_addrs: %zd\n", num_matching_addrs);
-      Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
-             num_matching_addrs_4b);
+    Printf("%s", d.Allocation());
+    Printf("previously allocated by thread T%u here:\n", har.alloc_thread_id);
+    Printf("%s", d.Default());
+    GetStackTraceFromId(har.alloc_context_id).Print();
 
-      t->Announce();
-      num_descriptions_printed++;
-    }
-  });
+    // Print a developer note: the index of this heap object
+    // in the thread's deallocation ring buffer.
+    Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ha.ring_index + 1,
+           flags()->heap_history_size);
+    Printf("hwasan_dev_note_num_matching_addrs: %zd\n", ha.num_matching_addrs);
+    Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
+           ha.num_matching_addrs_4b);
+
+    announce_by_id(ha.free_thread_id);
+    // TODO: announce_by_id(har.alloc_thread_id);
+    num_descriptions_printed++;
+  }
 
   if (candidate.untagged_addr && num_descriptions_printed == 0) {
     PrintHeapOrGlobalCandidate();
