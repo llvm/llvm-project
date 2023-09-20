@@ -1522,10 +1522,8 @@ convertToDeviceClauseKind(mlir::omp::DeclareTargetDeviceType deviceClause) {
   case mlir::omp::DeclareTargetDeviceType::any:
     return llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseAny;
     break;
-  default:
-    return llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseNone;
-    break;
   }
+  llvm_unreachable("unhandled device clause");
 }
 
 static llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind
@@ -1538,10 +1536,8 @@ convertToCaptureClauseKind(
   case mlir::omp::DeclareTargetCaptureClause::link:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
     break;
-  default:
-    return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryNone;
-    break;
   }
+  llvm_unreachable("unhandled capture clause");
 }
 
 static llvm::SmallString<64>
