@@ -447,7 +447,7 @@ public:
 
   Debugger &GetDebugger() { return m_debugger; }
 
-  ExecutionContext GetExecutionContext();
+  ExecutionContext GetExecutionContext() const;
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);
 
@@ -661,7 +661,7 @@ protected:
 
   void GetProcessOutput();
 
-  bool DidProcessStopAbnormally();
+  bool DidProcessStopAbnormally() const;
 
   void SetSynchronous(bool value);
 
