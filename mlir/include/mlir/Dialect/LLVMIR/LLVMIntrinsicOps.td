@@ -656,8 +656,9 @@ class LLVM_VecReductionI<string mnem>
 class LLVM_VecReductionAccBase<string mnem, Type element>
     : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
                            [Pure, SameOperandsAndResultElementType]>,
-      Arguments<(ins element:$start_value, LLVM_VectorOf<element>:$input,
-                 DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {
+      Arguments<(ins element:$start_value,
+                     LLVM_VectorOf<element>:$input,
+                     DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags)> {
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
@@ -667,17 +668,11 @@ class LLVM_VecReductionAccBase<string mnem, Type element>
                            ", ") # [{
         });
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-    llvm::FastMathFlags origFM = builder.getFastMathFlags();
-    llvm::FastMathFlags tempFM = origFM;
-    tempFM.setAllowReassoc($reassoc);
-    builder.setFastMathFlags(tempFM);  // set fastmath flag
     $res = builder.CreateCall(fn, operands);
-    builder.setFastMathFlags(origFM);  // restore fastmath flag
   }];
   let mlirBuilder = [{
-    bool allowReassoc = inst->getFastMathFlags().allowReassoc();
     $res = $_builder.create<$_qualCppClassName>($_location,
-      $_resultType, $start_value, $input, allowReassoc);
+      $_resultType, $start_value, $input, inst->getFastMathFlags());
   }];
 }
 
