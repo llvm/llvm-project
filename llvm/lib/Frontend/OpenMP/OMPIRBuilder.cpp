@@ -5803,28 +5803,18 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     // The stale call instruction will be replaced with a new call instruction
     // for runtime call with a wrapper function.
 
-    assert(OutlinedFn.getNumUses() == 1 &&
-           "there must be a single user for the outlined function");
-    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
-    assert(StaleCI && "Error while outlining - no CallInst user found for the "
-                      "outlined function.");
-    OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
-
     // Create the wrapper function.
-    Builder.SetInsertPoint(StaleCI);
     SmallVector<Type *> WrapperArgTys{Builder.getPtrTy(), Builder.getPtrTy()};
-    for (auto &Arg : OutlinedFn.args()) {
+    for (auto &Arg : OutlinedFn.args())
       WrapperArgTys.push_back(Arg.getType());
-    }
     FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
         (Twine(OutlinedFn.getName()) + ".teams").str(),
         FunctionType::get(Builder.getVoidTy(), WrapperArgTys, false));
     Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
     WrapperFunc->getArg(0)->setName("global_tid");
     WrapperFunc->getArg(1)->setName("bound_tid");
-    if (WrapperFunc->arg_size() > 2) {
+    if (WrapperFunc->arg_size() > 2)
       WrapperFunc->getArg(2)->setName("data");
-    }
 
     // Emit the body of the wrapper function - just a call to outlined function
     // and return statement.
@@ -5832,29 +5822,27 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
         BasicBlock::Create(M.getContext(), "entrybb", WrapperFunc);
     Builder.SetInsertPoint(WrapperEntryBB);
     SmallVector<Value *> Args;
-    for (size_t ArgIndex = 2; ArgIndex < WrapperFunc->arg_size(); ArgIndex++) {
+    for (size_t ArgIndex = 2; ArgIndex < WrapperFunc->arg_size(); ArgIndex++)
       Args.push_back(WrapperFunc->getArg(ArgIndex));
-    }
     Builder.CreateCall(&OutlinedFn, Args);
     Builder.CreateRetVoid();
 
+    OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
+
     // Call to the runtime function for teams in the current function.
+    assert(OutlinedFn.getNumUses() == 1 &&
+           "there must be a single user for the outlined function");
+    CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    assert(StaleCI && "Error while outlining - no CallInst user found for the "
+                      "outlined function.");
     Builder.SetInsertPoint(StaleCI);
     Args = {Ident, Builder.getInt32(StaleCI->arg_size()), WrapperFunc};
-    for (Use &Arg : StaleCI->args()) {
+    for (Use &Arg : StaleCI->args())
       Args.push_back(Arg);
-    }
     Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
     StaleCI->eraseFromParent();
-
-    // Inlining the outlined teams function in the wrapper. This wrapper is the
-    // argument for the runtime call.
-    assert(OutlinedFn.getNumUses() == 1 &&
-           "More than one use for the outlined function found. Expected only "
-           "one use.");
-    OutlinedFn.addFnAttr(Attribute::AlwaysInline);
   };
 
   addOutlineInfo(std::move(OI));
