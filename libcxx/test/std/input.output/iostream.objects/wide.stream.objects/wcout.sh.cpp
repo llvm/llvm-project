@@ -12,10 +12,10 @@
 
 // XFAIL: no-wide-characters
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: ../check-stdout.sh
 // RUN: %{build}
-// RUN: %{exec} bash check-stdout.sh "%t.exe" "1234"
+// RUN: %{exec} %t.exe > %t.actual
+// RUN: echo -n 1234 > %t.expected
+// RUN: diff %t.expected %t.actual
 
 #include <iostream>
 
