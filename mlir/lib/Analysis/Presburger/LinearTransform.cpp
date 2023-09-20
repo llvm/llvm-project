@@ -12,11 +12,11 @@
 using namespace mlir;
 using namespace presburger;
 
-LinearTransform::LinearTransform(Matrix<MPInt> &&oMatrix) : matrix(oMatrix) {}
-LinearTransform::LinearTransform(const Matrix<MPInt> &oMatrix) : matrix(oMatrix) {}
+LinearTransform::LinearTransform(IntMatrix &&oMatrix) : matrix(oMatrix) {}
+LinearTransform::LinearTransform(const IntMatrix &oMatrix) : matrix(oMatrix) {}
 
 std::pair<unsigned, LinearTransform>
-LinearTransform::makeTransformToColumnEchelon(const Matrix<MPInt> &m) {
+LinearTransform::makeTransformToColumnEchelon(const IntMatrix &m) {
   // Compute the hermite normal form of m. This, is by definition, is in column
   // echelon form.
   auto [h, u] = m.computeHermiteNormalForm();

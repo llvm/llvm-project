@@ -27,9 +27,9 @@
 namespace mlir {
 namespace presburger {
 
-inline Matrix<MPInt> makeIntMatrix(unsigned numRow, unsigned numColumns,
+inline IntMatrix makeIntMatrix(unsigned numRow, unsigned numColumns,
                          ArrayRef<SmallVector<int, 8>> matrix) {
-  Matrix<MPInt> results(numRow, numColumns);
+  IntMatrix results(numRow, numColumns);
   assert(matrix.size() == numRow);
   for (unsigned i = 0; i < numRow; ++i) {
     assert(matrix[i].size() == numColumns &&

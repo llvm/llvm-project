@@ -223,14 +223,6 @@ template <typename T> void Matrix<T>::negateRow(unsigned row) {
     at(row, column) = -at(row, column);
 }
 
-template <> MPInt Matrix<MPInt>::normalizeRow(unsigned row, unsigned cols) {
-  return normalizeRange(getRow(row).slice(0, cols));
-}
-
-template <> MPInt Matrix<MPInt>::normalizeRow(unsigned row) {
-  return normalizeRow(row, getNumColumns());
-}
-
 template <typename T> SmallVector<T, 8> Matrix<T>::preMultiplyWithRow(ArrayRef<T> rowVec) const {
   assert(rowVec.size() == getNumRows() && "Invalid row vector dimension!");
 
@@ -267,12 +259,53 @@ static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row, unsigned sou
   otherMatrix.addToColumn(sourceCol, targetCol, ratio);
 }
 
-template <> std::pair<Matrix<MPInt>, Matrix<MPInt>> Matrix<MPInt>::computeHermiteNormalForm() const {
+template <typename T> void Matrix<T>::print(raw_ostream &os) const {
+  for (unsigned row = 0; row < nRows; ++row) {
+    for (unsigned column = 0; column < nColumns; ++column)
+      os << at(row, column) << ' ';
+    os << '\n';
+  }
+}
+
+template <typename T> void Matrix<T>::dump() const { print(llvm::errs()); }
+
+template <typename T> bool Matrix<T>::hasConsistentState() const {
+  if (data.size() != nRows * nReservedColumns)
+    return false;
+  if (nColumns > nReservedColumns)
+    return false;
+#ifdef EXPENSIVE_CHECKS
+  for (unsigned r = 0; r < nRows; ++r)
+    for (unsigned c = nColumns; c < nReservedColumns; ++c)
+      if (data[r * nReservedColumns + c] != 0)
+        return false;
+#endif
+  return true;
+}
+
+namespace mlir
+{
+namespace presburger
+{
+template class Matrix<MPInt>;
+template class Matrix<Fraction>;
+}
+}
+
+IntMatrix IntMatrix::identity(unsigned dimension) {
+  IntMatrix matrix(dimension, dimension);
+  for (unsigned i = 0; i < dimension; ++i)
+    matrix(i, i) = 1;
+  return matrix;
+}
+
+
+std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
   // We start with u as an identity matrix and perform operations on h until h
   // is in hermite normal form. We apply the same sequence of operations on u to
   // obtain a transform that takes h to hermite normal form.
-  Matrix<MPInt> h = *this;
-  Matrix<MPInt> u = Matrix<MPInt>::identity(h.getNumColumns());
+  IntMatrix h = *this;
+  IntMatrix u = IntMatrix::identity(h.getNumColumns());
 
   unsigned echelonCol = 0;
   // Invariant: in all rows above row, all columns from echelonCol onwards
@@ -353,35 +386,10 @@ template <> std::pair<Matrix<MPInt>, Matrix<MPInt>> Matrix<MPInt>::computeHermit
   return {h, u};
 }
 
-template <typename T> void Matrix<T>::print(raw_ostream &os) const {
-  for (unsigned row = 0; row < nRows; ++row) {
-    for (unsigned column = 0; column < nColumns; ++column)
-      os << at(row, column) << ' ';
-    os << '\n';
-  }
+MPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
+  return normalizeRange(getRow(row).slice(0, cols));
 }
 
-template <typename T> void Matrix<T>::dump() const { print(llvm::errs()); }
-
-template <typename T> bool Matrix<T>::hasConsistentState() const {
-  if (data.size() != nRows * nReservedColumns)
-    return false;
-  if (nColumns > nReservedColumns)
-    return false;
-#ifdef EXPENSIVE_CHECKS
-  for (unsigned r = 0; r < nRows; ++r)
-    for (unsigned c = nColumns; c < nReservedColumns; ++c)
-      if (data[r * nReservedColumns + c] != 0)
-        return false;
-#endif
-  return true;
-}
-
-namespace mlir
-{
-namespace presburger
-{
-template class Matrix<MPInt>;
-template class Matrix<Fraction>;
-}
+MPInt IntMatrix::normalizeRow(unsigned row) {
+  return normalizeRow(row, getNumColumns());
 }
