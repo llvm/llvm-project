@@ -3434,7 +3434,7 @@ void mlir::python::populateIRCore(py::module &m) {
             if (state) {
               valueState = state.value().get().get();
               // Don't allow setting using local scope and state at same time.
-              if (useLocalScope)
+              if (useLocalScope.has_value())
                 throw py::value_error(
                     "setting AsmState and local scope together not supported");
             } else {
