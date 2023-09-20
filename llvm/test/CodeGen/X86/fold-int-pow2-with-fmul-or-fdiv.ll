@@ -1104,58 +1104,15 @@ define <4 x float> @fmul_pow_shl_cnt_vec_preserve_fma(<4 x i32> %cnt, <4 x float
 define <2 x double> @fmul_pow_shl_cnt_vec_non_splat_todo(<2 x i64> %cnt) nounwind {
 ; CHECK-SSE-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [2,2]
-; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-SSE-NEXT:    psllq %xmm0, %xmm2
-; CHECK-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; CHECK-SSE-NEXT:    psllq %xmm0, %xmm1
-; CHECK-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; CHECK-SSE-NEXT:    movapd {{.*#+}} xmm0 = [4294967295,4294967295]
-; CHECK-SSE-NEXT:    andpd %xmm1, %xmm0
-; CHECK-SSE-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    psrlq $32, %xmm1
-; CHECK-SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    addpd %xmm0, %xmm1
-; CHECK-SSE-NEXT:    mulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    movapd %xmm1, %xmm0
+; CHECK-SSE-NEXT:    psllq $52, %xmm0
+; CHECK-SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
-; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
-; CHECK-AVX2-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
-; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; CHECK-AVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; CHECK-AVX2-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    retq
-;
-; CHECK-NO-FASTFMA-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
-; CHECK-NO-FASTFMA:       # %bb.0:
-; CHECK-NO-FASTFMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
-; CHECK-NO-FASTFMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-NO-FASTFMA-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; CHECK-NO-FASTFMA-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; CHECK-NO-FASTFMA-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-NO-FASTFMA-NEXT:    retq
-;
-; CHECK-FMA-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
-; CHECK-FMA:       # %bb.0:
-; CHECK-FMA-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [2,2]
-; CHECK-FMA-NEXT:    vpsllvq %xmm0, %xmm1, %xmm0
-; CHECK-FMA-NEXT:    vcvtuqq2pd %xmm0, %xmm0
-; CHECK-FMA-NEXT:    vmulpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; CHECK-FMA-NEXT:    retq
+; CHECK-AVX-LABEL: fmul_pow_shl_cnt_vec_non_splat_todo:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    vpsllq $52, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    retq
   %shl = shl nsw nuw <2 x i64> <i64 2, i64 2>, %cnt
   %conv = uitofp <2 x i64> %shl to <2 x double>
   %mul = fmul <2 x double> <double 15.000000e+00, double 14.000000e+00>, %conv

@@ -344,12 +344,13 @@ bool ISD::isFreezeUndef(const SDNode *N) {
   return N->getOpcode() == ISD::FREEZE && N->getOperand(0).isUndef();
 }
 
-bool ISD::matchUnaryPredicate(SDValue Op,
-                              std::function<bool(ConstantSDNode *)> Match,
-                              bool AllowUndefs) {
+template <typename ConstNodeType>
+bool ISD::matchUnaryPredicateImpl(SDValue Op,
+                                  std::function<bool(ConstNodeType *)> Match,
+                                  bool AllowUndefs) {
   // FIXME: Add support for scalar UNDEF cases?
-  if (auto *Cst = dyn_cast<ConstantSDNode>(Op))
-    return Match(Cst);
+  if (auto *C = dyn_cast<ConstNodeType>(Op))
+    return Match(C);
 
   // FIXME: Add support for vector UNDEF cases?
   if (ISD::BUILD_VECTOR != Op.getOpcode() &&
@@ -364,12 +365,17 @@ bool ISD::matchUnaryPredicate(SDValue Op,
       continue;
     }
 
-    auto *Cst = dyn_cast<ConstantSDNode>(Op.getOperand(i));
+    auto *Cst = dyn_cast<ConstNodeType>(Op.getOperand(i));
     if (!Cst || Cst->getValueType(0) != SVT || !Match(Cst))
       return false;
   }
   return true;
 }
+// Build used template types.
+template bool ISD::matchUnaryPredicateImpl<ConstantSDNode>(
+    SDValue, std::function<bool(ConstantSDNode *)>, bool);
+template bool ISD::matchUnaryPredicateImpl<ConstantFPSDNode>(
+    SDValue, std::function<bool(ConstantFPSDNode *)>, bool);
 
 bool ISD::matchBinaryPredicate(
     SDValue LHS, SDValue RHS,
