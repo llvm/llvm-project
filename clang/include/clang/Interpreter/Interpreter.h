@@ -40,7 +40,7 @@ class IncrementalExecutor;
 class IncrementalParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
-class IncrementalCompilerBuilder {
+class REPL_EXTERNAL_VISIBILITY IncrementalCompilerBuilder {
 public:
   IncrementalCompilerBuilder() {}
 
@@ -73,7 +73,7 @@ private:
 };
 
 /// Provides top-level interfaces for incremental compilation and execution.
-class Interpreter {
+class REPL_EXTERNAL_VISIBILITY Interpreter {
   std::unique_ptr<llvm::orc::ThreadSafeContext> TSCtx;
   std::unique_ptr<IncrementalParser> IncrParser;
   std::unique_ptr<IncrementalExecutor> IncrExecutor;
