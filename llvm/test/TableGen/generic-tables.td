@@ -25,33 +25,34 @@ include "llvm/TableGen/SearchableTable.td"
 // CHECK-LABEL: GET_ATable_IMPL
 // CHECK: constexpr AEntry ATable[] = {
 // CHECK-NOT:   { "aaa"
-// CHECK:       { "baz"
-// CHECK:       { "foo"
-// CHECK:       { "foobar"
-// CHECK:       { "bar"
+// CHECK:       { "baz", 0x2, 0x6, 0x0 },
+// CHECK:       { "foo", 0x4, 0x4, 0x0 },
+// CHECK:       { "foobar", 0x4, 0x5, 0x0 },
+// CHECK:       { "bar", 0x5, 0x3, 0x0 },
 // CHECK: };
 
 // CHECK: const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
 // CHECK:   return &*Idx;
 // CHECK: }
 
-class AEntry<string str, int val1, int val2> {
+class AEntry<string str, int val1, int val2, bits<64> val3> {
   string Str = str;
   bits<8> Val1 = val1;
   bits<10> Val2 = val2;
+  bits<64> Val3 = val3;
   bit IsNeeded = 1;
 }
 
-def : AEntry<"aaa", 0, 0> { let IsNeeded = 0; }
-def : AEntry<"bar",    5, 3>;
-def : AEntry<"baz",    2, 6>;
-def : AEntry<"foo",    4, 4>;
-def : AEntry<"foobar", 4, 5>;
+def : AEntry<"aaa", 0, 0, 0> { let IsNeeded = 0; }
+def : AEntry<"bar",    5, 3, 0x100000000>;
+def : AEntry<"baz",    2, 6, 0xFFFFFFFF00000000>;
+def : AEntry<"foo",    4, 4, 0b0000000000000000000000000000000100000000000000000000000000000000>;
+def : AEntry<"foobar", 4, 5, 4294967296>;
 
 def ATable : GenericTable {
   let FilterClass = "AEntry";
   let FilterClassField = "IsNeeded";
-  let Fields = ["Str", "Val1", "Val2"];
+  let Fields = ["Str", "Val1", "Val2", "Val3"];
 
   let PrimaryKey = ["Val1", "Val2"];
   let PrimaryKeyName = "lookupATableByValues";
