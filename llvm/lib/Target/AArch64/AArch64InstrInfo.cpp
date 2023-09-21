@@ -3622,6 +3622,39 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (AArch64::PNRRegClass.contains(DestReg) &&
+      AArch64::PPRRegClass.contains(SrcReg)) {
+    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+           "Unexpected predicate-as-counter register.");
+    // Copy from pX to pnX is a no-op
+    if ((DestReg.id() - AArch64::PN0) == (SrcReg.id() - AArch64::P0))
+      return;
+    MCRegister PPRDestReg = (DestReg - AArch64::PN0) + AArch64::P0;
+    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
+        .addReg(SrcReg)
+        .addReg(SrcReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addDef(DestReg, RegState::Implicit);
+    return;
+  }
+
+  if (AArch64::PPRRegClass.contains(DestReg) &&
+      AArch64::PNRRegClass.contains(SrcReg)) {
+    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+           "Unexpected predicate-as-counter register.");
+    // Copy from pnX to pX is a no-op
+    if ((DestReg.id() - AArch64::P0) == (SrcReg.id() - AArch64::PN0))
+      return;
+    MCRegister PNRDestReg = (DestReg - AArch64::P0) + AArch64::PN0;
+    MCRegister PPRSrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
+    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
+        .addReg(PPRSrcReg)
+        .addReg(PPRSrcReg)
+        .addReg(PPRSrcReg, getKillRegState(KillSrc))
+        .addDef(PNRDestReg, RegState::Implicit);
+    return;
+  }
+
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
@@ -3915,6 +3948,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                               MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
   unsigned Opc = 0;
   bool Offset = true;
+  MCRegister PNRReg = MCRegister::NoRegister;
   unsigned StackID = TargetStackID::Default;
   switch (TRI->getSpillSize(*RC)) {
   case 1:
@@ -3927,6 +3961,12 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVEorSME() &&
              "Unexpected register store without SVE store instructions");
+      Opc = AArch64::STR_PXI;
+      StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
+      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+             "Unexpected register store without SVE2p1 or SME2");
+      SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4035,6 +4075,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   if (Offset)
     MI.addImm(0);
+  if (PNRReg.isValid())
+    MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
 }
 
@@ -4079,6 +4121,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   unsigned Opc = 0;
   bool Offset = true;
   unsigned StackID = TargetStackID::Default;
+  MCRegister PNRReg = MCRegister::NoRegister;
   switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
@@ -4090,6 +4133,13 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVEorSME() &&
              "Unexpected register load without SVE load instructions");
+      Opc = AArch64::LDR_PXI;
+      StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
+      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+             "Unexpected register load without SVE2p1 or SME2");
+      PNRReg = DestReg;
+      DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::LDR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4198,6 +4248,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                      .addFrameIndex(FI);
   if (Offset)
     MI.addImm(0);
+  if (PNRReg.isValid())
+    MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
 }
 
