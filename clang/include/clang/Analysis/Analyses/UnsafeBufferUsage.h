@@ -31,7 +31,10 @@ public:
   /// together in one step.
   ///
   /// `Var` must be a variable that needs fix (so it must be in a group).
-  virtual VarGrpRef getGroupOfVar(const VarDecl *Var) const =0;
+  /// `HasParm` is an optional argument that will be set to true if the set of
+  /// variables, where `Var` is in, contains parameters.
+  virtual VarGrpRef getGroupOfVar(const VarDecl *Var,
+                                  bool *HasParm = nullptr) const =0;
 };
 
 /// The interface that lets the caller handle unsafe buffer usage analysis
@@ -62,11 +65,14 @@ public:
                                      bool IsRelatedToDecl) = 0;
 
   /// Invoked when a fix is suggested against a variable. This function groups
-  /// all variables that must be fixed together (i.e their types must be changed to the
-  /// same target type to prevent type mismatches) into a single fixit.
+  /// all variables that must be fixed together (i.e their types must be changed
+  /// to the same target type to prevent type mismatches) into a single fixit.
+  ///
+  /// `D` is the declaration of the callable under analysis that owns `Variable`
+  /// and all of its group mates.
   virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
                                          const VariableGroupsManager &VarGrpMgr,
-                                         FixItList &&Fixes) = 0;
+                                         FixItList &&Fixes, const Decl *D) = 0;
 
 #ifndef NDEBUG
 public:

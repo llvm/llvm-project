@@ -29,8 +29,7 @@ void twoParms(int *p, int * q) {
   int tmp;
   tmp = p[5] + q[5];
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void twoParms(int *p, int * q) {return twoParms(std::span<int>(p, <# size #>), q);}\n"
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:2-[[@LINE-2]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void twoParms(int *p, int * q) {return twoParms(p, std::span<int>(q, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void twoParms(int *p, int * q) {return twoParms(std::span<int>(p, <# size #>), std::span<int>(q, <# size #>));}\n"
 
 void ptrToConst(const int * x) {
   // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:17-[[@LINE-1]]:30}:"std::span<int const> x"
@@ -100,22 +99,33 @@ namespace {
     // namned
   } NAMED_S;
 
+
   // FIXME: `decltype(ANON_S)` represents an unnamed type but it can
   // be referred as "`decltype(ANON_S)`", so the analysis should
   // fix-it.
-  void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,
-                         decltype(NAMED_S) ** rr) {
-    // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:26-[[@LINE-2]]:41}:"std::span<decltype(C)> p"
-    // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-3]]:65-[[@LINE-3]]:86}:"std::span<decltype(NAMED_S)> r"
-    // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-3]]:26-[[@LINE-3]]:49}:"std::span<decltype(NAMED_S) *> rr"
+  // As parameter `q` cannot be fixed, fixes to parameters are all being given up.
+  void decltypeSpecifierAnon(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,
+                             decltype(NAMED_S) ** rr) {
+    // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:30-[[@LINE-2]]:45}:"std::span<decltype(C)> p"
+    // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:47-[[@LINE-3]]:67}:"std::span<decltype(ANON_S)> q"
+    // CHECK: fix-it:{{.*}}:{[[@LINE-4]]:69-[[@LINE-4]]:90}:"std::span<decltype(NAMED_S)> r"
+    // CHECK: fix-it:{{.*}}:{[[@LINE-4]]:30-[[@LINE-4]]:53}:"std::span<decltype(NAMED_S) *> rr"
     if (++p) {}
     if (++q) {}
     if (++r) {}
     if (++rr) {}
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(std::span<decltype(C)>(p, <# size #>), q, r, rr);}\n
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:4-[[@LINE-2]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(p, q, std::span<decltype(NAMED_S)>(r, <# size #>), rr);}\n"
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-3]]:4-[[@LINE-3]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(p, q, r, std::span<decltype(NAMED_S) *>(rr, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifierAnon(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n decltype(NAMED_S) ** rr) {return decltypeSpecifierAnon(std::span<decltype(C)>(p, <# size #>), std::span<decltype(ANON_S)>(q, <# size #>), std::span<decltype(NAMED_S)>(r, <# size #>), std::span<decltype(NAMED_S) *>(rr, <# size #>));}\n
+
+  void decltypeSpecifier(decltype(C) * p, decltype(NAMED_S) * r, decltype(NAMED_S) ** rr) {
+    // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:26-[[@LINE-1]]:41}:"std::span<decltype(C)> p"
+    // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:43-[[@LINE-2]]:64}:"std::span<decltype(NAMED_S)> r"
+    // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-3]]:66-[[@LINE-3]]:89}:"std::span<decltype(NAMED_S) *> rr"
+    if (++p) {}
+    if (++r) {}
+    if (++rr) {}
+  }
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(NAMED_S) * r, decltype(NAMED_S) ** rr) {return decltypeSpecifier(std::span<decltype(C)>(p, <# size #>), std::span<decltype(NAMED_S)>(r, <# size #>), std::span<decltype(NAMED_S) *>(rr, <# size #>));}\n
 
 #define MACRO_TYPE(T) long T
 
@@ -125,8 +135,7 @@ namespace {
     int tmp = p[5];
     tmp = q[5];
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(std::span<unsigned MACRO_TYPE(int)>(p, <# size #>), q);}\n"
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:4-[[@LINE-2]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(p, std::span<unsigned MACRO_TYPE(long)>(q, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(std::span<unsigned MACRO_TYPE(int)>(p, <# size #>), std::span<unsigned MACRO_TYPE(long)>(q, <# size #>));}\n"
 }
 
 // The followings test various declarators:
