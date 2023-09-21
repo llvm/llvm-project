@@ -21,7 +21,6 @@
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBWatchpoint.h"
-#include "lldb/API/SBWatchpointOptions.h"
 
 namespace lldb_private {
 namespace python {
@@ -829,13 +828,8 @@ public:
 
   lldb::SBWatchpoint FindWatchpointByID(lldb::watch_id_t watch_id);
 
-  LLDB_DEPRECATED("WatchAddress deprecated, use WatchpointCreateByAddress")
   lldb::SBWatchpoint WatchAddress(lldb::addr_t addr, size_t size, bool read,
-                                  bool modify, SBError &error);
-
-  lldb::SBWatchpoint
-  WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
-                            lldb::SBWatchpointOptions options, SBError &error);
+                                  bool write, SBError &error);
 
   bool EnableAllWatchpoints();
 
