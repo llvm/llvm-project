@@ -1153,11 +1153,20 @@ class RegOrF16_Lo128_Deferred <string RegisterClass,
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
+def SSrc_b16 : RegOrB16 <"SReg_32", "OPERAND_REG_IMM">;
+def SSrc_f16 : RegOrF16 <"SReg_32", "OPERAND_REG_IMM">;
 def SSrc_b32 : RegOrB32 <"SReg_32", "OPERAND_REG_IMM">;
 def SSrc_f32 : RegOrF32 <"SReg_32", "OPERAND_REG_IMM">;
 def SSrc_b64 : RegOrB64 <"SReg_64", "OPERAND_REG_IMM">;
 
 def SSrcOrLds_b32 : RegOrB32 <"SRegOrLds_32", "OPERAND_REG_IMM">;
+
+//===----------------------------------------------------------------------===//
+//  SSrc_32_Deferred Operands with an SGPR or a 32-bit immediate for use with
+//  FMAMK/FMAAK
+//===----------------------------------------------------------------------===//
+
+def SSrc_f32_Deferred : RegOrF32_Deferred<"SReg_32", "OPERAND_REG_IMM">;
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
