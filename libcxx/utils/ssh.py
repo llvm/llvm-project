@@ -53,7 +53,7 @@ def main():
 
     def runCommand(command, *args_, **kwargs):
         if args.verbose:
-            print(f"$ {' '.join(command)}")
+            print(f"$ {' '.join(command)}", file=sys.stderr)
         return subprocess.run(command, *args_, **kwargs)
 
     # Create a temporary directory where the test will be run.
