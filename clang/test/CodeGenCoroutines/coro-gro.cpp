@@ -105,5 +105,4 @@ invoker g() {
   // CHECK: call void @_ZN7invoker15invoker_promise17get_return_objectEv({{.*}} %[[AggRes]]
   co_return;
 }
-
 // CHECK: ![[OutFrameMetadata]] = !{}
