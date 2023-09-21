@@ -43,3 +43,103 @@ exit.2:
 }
 
 declare void @llvm.assume(i1)
+
+define i1 @simplify_based_on_switch(i32 %x) {
+; CHECK-LABEL: @simplify_based_on_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT_1:%.*]] [
+; CHECK-NEXT:    i32 6, label [[EXIT_2:%.*]]
+; CHECK-NEXT:    i32 10, label [[EXIT_3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[X]], 7
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[X]], 6
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[X]], 7
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i32 [[X]], 6
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[T_1]], [[F_1]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+; CHECK:       exit.3:
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 11
+; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i32 [[X]], 10
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[T_2]], [[F_2]]
+; CHECK-NEXT:    ret i1 [[RES_3]]
+;
+entry:
+  switch i32 %x, label %exit.1 [
+  i32 6, label %exit.2
+  i32 10, label %exit.3
+  ]
+
+exit.1:
+  %c.1 = icmp ult i32 %x, 7
+  %c.2 = icmp ult i32 %x, 6
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %t.1 = icmp ult i32 %x, 7
+  %f.1 = icmp ult i32 %x, 6
+  %res.2 = xor i1 %t.1, %f.1
+  ret i1 %res.2
+
+exit.3:
+  %t.2 = icmp ult i32 %x, 11
+  %f.2 = icmp ult i32 %x, 10
+  %res.3 = xor i1 %t.2, %f.2
+  ret i1 %res.3
+}
+
+define i1 @simplify_based_on_switch_successor_branches(i32 %x) {
+; CHECK-LABEL: @simplify_based_on_switch_successor_branches(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[EXIT_1:%.*]] [
+; CHECK-NEXT:    i32 6, label [[EXIT_2:%.*]]
+; CHECK-NEXT:    i32 10, label [[EXIT_3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[X]], 7
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[X]], 6
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+; CHECK:       exit.2:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[X]], 7
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ult i32 [[X]], 6
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[T_1]], [[F_1]]
+; CHECK-NEXT:    call void @use(i1 [[RES_2]])
+; CHECK-NEXT:    br label [[EXIT_3]]
+; CHECK:       exit.3:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[X]], 11
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i32 [[X]], 10
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    ret i1 [[RES_3]]
+;
+entry:
+  switch i32 %x, label %exit.1 [
+  i32 6, label %exit.2
+  i32 10, label %exit.3
+  ]
+
+exit.1:
+  %c.1 = icmp ult i32 %x, 7
+  %c.2 = icmp ult i32 %x, 6
+  %res.1 = xor i1 %c.1, %c.2
+  ret i1 %res.1
+
+exit.2:
+  %t.1 = icmp ult i32 %x, 7
+  %f.1 = icmp ult i32 %x, 6
+  %res.2 = xor i1 %t.1, %f.1
+  call void @use(i1 %res.2)
+  br label %exit.3
+
+exit.3:
+  %c.3 = icmp ult i32 %x, 11
+  %c.4 = icmp ult i32 %x, 10
+  %res.3 = xor i1 %c.3, %c.4
+  ret i1 %res.3
+}
+
+declare void @use(i1)
