@@ -953,12 +953,10 @@ const MainFileMacros &PreamblePatch::mainFileMacros() const {
   return PatchedMacros;
 }
 
-const FileEntry *PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
-                                              const SourceManager &SM) {
+OptionalFileEntryRef PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
+                                                  const SourceManager &SM) {
   auto PatchFilePath = getPatchName(MainFilePath);
-  if (auto File = SM.getFileManager().getFile(PatchFilePath))
-    return *File;
-  return nullptr;
+  return SM.getFileManager().getOptionalFileRef(PatchFilePath);
 }
 } // namespace clangd
 } // namespace clang
