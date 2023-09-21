@@ -930,8 +930,9 @@ protected:
   ///
   /// Derived classes may override `findReplacementOp` to specify custom
   /// replacement rules.
-  virtual FailureOr<Operation *> findReplacementOp(Operation *op,
-                                                   ValueRange newValues) const;
+  virtual DiagnosedSilenceableFailure
+  findReplacementOp(Operation *&result, Operation *op,
+                    ValueRange newValues) const;
 
   /// Notify the listener that the pattern failed to match the given operation,
   /// and provide a callback to populate a diagnostic with the reason why the
@@ -945,7 +946,7 @@ protected:
   /// custom error handling.
   virtual void
   notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
-                                   ArrayRef<Operation *> aliveUsers) {}
+                                   DiagnosedSilenceableFailure &&diag) {}
 
   /// Return the single op that defines all given values (if any).
   static Operation *getCommonDefiningOp(ValueRange values);
@@ -987,7 +988,7 @@ public:
 protected:
   void
   notifyPayloadReplacementNotFound(Operation *op, ValueRange values,
-                                   ArrayRef<Operation *> aliveUsers) override;
+                                   DiagnosedSilenceableFailure &&diag) override;
 
 private:
   /// The error state of this listener. "Success" indicates that no error
