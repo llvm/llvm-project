@@ -18,32 +18,32 @@ const static StringRef RequiredNamespaceStart = "__llvm_libc";
 const static StringRef RequiredNamespaceMacroName = "LIBC_NAMESPACE";
 
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      decl(hasParent(translationUnitDecl()), unless(linkageSpecDecl()))
-          .bind("child_of_translation_unit"),
-      this);
+  Finder->addMatcher(decl(isExpansionInMainFile(),
+                          hasDeclContext(translationUnitDecl()),
+                          unless(linkageSpecDecl()))
+                         .bind("child_of_translation_unit"),
+                     this);
 }
 
 void ImplementationInNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl =
       Result.Nodes.getNodeAs<Decl>("child_of_translation_unit");
-  if (!Result.SourceManager->isInMainFile(MatchedDecl->getLocation()))
-    return;
 
   if (const auto *NS = dyn_cast<NamespaceDecl>(MatchedDecl)) {
     if (!Result.SourceManager->isMacroBodyExpansion(NS->getLocation()))
       diag(NS->getLocation(),
            "the outermost namespace should be the '%0' macro")
           << RequiredNamespaceMacroName;
-    else if (!NS->getName().starts_with(RequiredNamespaceStart))
+    else if (NS->isAnonymousNamespace() ||
+             NS->getName().starts_with(RequiredNamespaceStart) == false)
       diag(NS->getLocation(), "the outermost namespace should start with '%0'")
           << RequiredNamespaceStart;
     return;
   }
   diag(MatchedDecl->getLocation(),
-       "declaration must be declared within a namespace starting with '%0'")
-      << RequiredNamespaceStart;
+       "declaration must be declared within the '%0' namespace")
+      << RequiredNamespaceMacroName;
 }
 
 } // namespace clang::tidy::llvm_libc
