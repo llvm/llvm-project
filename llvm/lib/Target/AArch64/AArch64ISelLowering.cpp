@@ -131,6 +131,10 @@ EnableCombineMGatherIntrinsics("aarch64-enable-mgather-combine", cl::Hidden,
                                          "gather intrinsics"),
                                 cl::init(true));
 
+static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
+                                    cl::desc("Combine ext and trunc to TBL"),
+                                    cl::init(true));
+
 // All of the XOR, OR and CMP use ALU ports, and data dependency will become the
 // bottleneck after this transform on high end CPU. So this max leaf node
 // limitation is guard cmp+ccmp will be profitable.
@@ -14791,7 +14795,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     Instruction *I, Loop *L, const TargetTransformInfo &TTI) const {
   // shuffle_vector instructions are serialized when targeting SVE,
   // see LowerSPLAT_VECTOR. This peephole is not beneficial.
-  if (Subtarget->useSVEForFixedLengthVectors())
+  if (!EnableExtToTBL || Subtarget->useSVEForFixedLengthVectors())
     return false;
 
   // Try to optimize conversions using tbl. This requires materializing constant

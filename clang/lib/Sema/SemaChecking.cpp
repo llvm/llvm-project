@@ -11470,7 +11470,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         Hints.push_back(
             FixItHint::CreateInsertion(E->getBeginLoc(), CastFix.str()));
 
-        SourceLocation After = S.getLocForEndOfToken(E->getEndLoc());
+        // We don't use getLocForEndOfToken because it returns invalid source
+        // locations for macro expansions (by design).
+        SourceLocation EndLoc = S.SourceMgr.getSpellingLoc(E->getEndLoc());
+        SourceLocation After = EndLoc.getLocWithOffset(
+            Lexer::MeasureTokenLength(EndLoc, S.SourceMgr, S.LangOpts));
         Hints.push_back(FixItHint::CreateInsertion(After, ")"));
       }
 

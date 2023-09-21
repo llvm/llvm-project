@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FILE_LINUX_LSEEKIMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FILE_LINUX_LSEEKIMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
@@ -47,4 +47,4 @@ LIBC_INLINE ErrorOr<off_t> lseekimpl(int fd, off_t offset, int whence) {
 } // namespace internal
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FILE_LINUX_LSEEKIMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FILE_LINUX_LSEEKIMPL_H

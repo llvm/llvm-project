@@ -3430,19 +3430,35 @@ void mlir::python::populateIRCore(py::module &m) {
           kValueDunderStrDocstring)
       .def(
           "get_name",
-          [](PyValue &self, bool useLocalScope) {
+          [](PyValue &self, std::optional<bool> useLocalScope,
+             std::optional<std::reference_wrapper<PyAsmState>> state) {
             PyPrintAccumulator printAccum;
-            MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
-            if (useLocalScope)
-              mlirOpPrintingFlagsUseLocalScope(flags);
-            MlirAsmState state = mlirAsmStateCreateForValue(self.get(), flags);
-            mlirValuePrintAsOperand(self.get(), state, printAccum.getCallback(),
+            MlirOpPrintingFlags flags;
+            MlirAsmState valueState;
+            // Use state if provided, else create a new state.
+            if (state) {
+              valueState = state.value().get().get();
+              // Don't allow setting using local scope and state at same time.
+              if (useLocalScope.has_value())
+                throw py::value_error(
+                    "setting AsmState and local scope together not supported");
+            } else {
+              flags = mlirOpPrintingFlagsCreate();
+              if (useLocalScope.value_or(false))
+                mlirOpPrintingFlagsUseLocalScope(flags);
+              valueState = mlirAsmStateCreateForValue(self.get(), flags);
+            }
+            mlirValuePrintAsOperand(self.get(), valueState, printAccum.getCallback(),
                                     printAccum.getUserData());
-            mlirOpPrintingFlagsDestroy(flags);
-            mlirAsmStateDestroy(state);
+            // Release state if allocated locally.
+            if (!state) {
+              mlirOpPrintingFlagsDestroy(flags);
+              mlirAsmStateDestroy(valueState);
+            }
             return printAccum.join();
           },
-          py::arg("use_local_scope") = false, kGetNameAsOperand)
+          py::arg("use_local_scope") = std::nullopt,
+          py::arg("state") = std::nullopt, kGetNameAsOperand)
       .def_property_readonly(
           "type", [](PyValue &self) { return mlirValueGetType(self.get()); })
       .def(
@@ -3460,6 +3476,10 @@ void mlir::python::populateIRCore(py::module &m) {
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
   PyOpOperand::bind(m);
+
+  py::class_<PyAsmState>(m, "AsmState", py::module_local())
+      .def(py::init<PyValue &, bool>(), py::arg("value"),
+           py::arg("use_local_scope") = false);
 
   //----------------------------------------------------------------------------
   // Mapping of SymbolTable.

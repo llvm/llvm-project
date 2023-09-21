@@ -1997,20 +1997,12 @@ bool IndVarSimplify::run(Loop *L) {
                                        TTI, PreHeader->getTerminator()))
         continue;
 
-      // Check preconditions for proper SCEVExpander operation. SCEV does not
-      // express SCEVExpander's dependencies, such as LoopSimplify. Instead
-      // any pass that uses the SCEVExpander must do it. This does not work
-      // well for loop passes because SCEVExpander makes assumptions about
-      // all loops, while LoopPassManager only forces the current loop to be
-      // simplified.
-      //
-      // FIXME: SCEV expansion has no way to bail out, so the caller must
-      // explicitly check any assumptions made by SCEV. Brittle.
-      const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(ExitCount);
-      if (!AR || AR->getLoop()->getLoopPreheader())
-        Changed |= linearFunctionTestReplace(L, ExitingBB,
-                                             ExitCount, IndVar,
-                                             Rewriter);
+      if (!Rewriter.isSafeToExpand(ExitCount))
+        continue;
+
+      Changed |= linearFunctionTestReplace(L, ExitingBB,
+                                           ExitCount, IndVar,
+                                           Rewriter);
     }
   }
   // Clear the rewriter cache, because values that are in the rewriter's cache

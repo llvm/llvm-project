@@ -878,93 +878,47 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       .addImm(CC);
 }
 
-/// Returns true if a MOVi32imm or MOVi64imm can be expanded to an  ORRxx.
-static bool canBeExpandedToORR(const MachineInstr &MI, unsigned BitSize) {
-  uint64_t Imm = MI.getOperand(1).getImm();
-  uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
-  uint64_t Encoding;
-  return AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding);
+// Return true if Imm can be loaded into a register by a "cheap" sequence of
+// instructions. For now, "cheap" means at most two instructions.
+static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
+  if (BitSize == 32)
+    return true;
+
+  assert(BitSize == 64 && "Only bit sizes of 32 or 64 allowed");
+  uint64_t Imm = static_cast<uint64_t>(MI.getOperand(1).getImm());
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> Is;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, Is);
+
+  return Is.size() <= 2;
 }
 
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
-  if (!Subtarget.hasCustomCheapAsMoveHandling())
-    return MI.isAsCheapAsAMove();
-
-  const unsigned Opcode = MI.getOpcode();
-
-  // Firstly, check cases gated by features.
-
-  if (Subtarget.hasZeroCycleZeroingFP()) {
-    if (Opcode == AArch64::FMOVH0 ||
-        Opcode == AArch64::FMOVS0 ||
-        Opcode == AArch64::FMOVD0)
-      return true;
-  }
-
-  if (Subtarget.hasZeroCycleZeroingGP()) {
-    if (Opcode == TargetOpcode::COPY &&
-        (MI.getOperand(1).getReg() == AArch64::WZR ||
-         MI.getOperand(1).getReg() == AArch64::XZR))
-      return true;
-  }
-
-  // Secondly, check cases specific to sub-targets.
-
   if (Subtarget.hasExynosCheapAsMoveHandling()) {
     if (isExynosCheapAsMove(MI))
       return true;
-
     return MI.isAsCheapAsAMove();
   }
 
-  // Finally, check generic cases.
-
-  switch (Opcode) {
+  switch (MI.getOpcode()) {
   default:
-    return false;
+    return MI.isAsCheapAsAMove();
 
-  // add/sub on register without shift
-  case AArch64::ADDWri:
-  case AArch64::ADDXri:
-  case AArch64::SUBWri:
-  case AArch64::SUBXri:
-    return (MI.getOperand(3).getImm() == 0);
-
-  // logical ops on immediate
-  case AArch64::ANDWri:
-  case AArch64::ANDXri:
-  case AArch64::EORWri:
-  case AArch64::EORXri:
-  case AArch64::ORRWri:
-  case AArch64::ORRXri:
-    return true;
-
-  // logical ops on register without shift
-  case AArch64::ANDWrr:
-  case AArch64::ANDXrr:
-  case AArch64::BICWrr:
-  case AArch64::BICXrr:
-  case AArch64::EONWrr:
-  case AArch64::EONXrr:
-  case AArch64::EORWrr:
-  case AArch64::EORXrr:
-  case AArch64::ORNWrr:
-  case AArch64::ORNXrr:
-  case AArch64::ORRWrr:
-  case AArch64::ORRXrr:
-    return true;
+  case AArch64::ADDWrs:
+  case AArch64::ADDXrs:
+  case AArch64::SUBWrs:
+  case AArch64::SUBXrs:
+    return Subtarget.hasALULSLFast() && MI.getOperand(3).getImm() <= 4;
 
   // If MOVi32imm or MOVi64imm can be expanded into ORRWri or
-  // ORRXri, it is as cheap as MOV
+  // ORRXri, it is as cheap as MOV.
+  // Likewise if it can be expanded to MOVZ/MOVN/MOVK.
   case AArch64::MOVi32imm:
-    return canBeExpandedToORR(MI, 32);
+    return isCheapImmediate(MI, 32);
   case AArch64::MOVi64imm:
-    return canBeExpandedToORR(MI, 64);
+    return isCheapImmediate(MI, 64);
   }
-
-  llvm_unreachable("Unknown opcode to check as cheap as a move!");
 }
 
 bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) {
@@ -3668,6 +3622,39 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (AArch64::PNRRegClass.contains(DestReg) &&
+      AArch64::PPRRegClass.contains(SrcReg)) {
+    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+           "Unexpected predicate-as-counter register.");
+    // Copy from pX to pnX is a no-op
+    if ((DestReg.id() - AArch64::PN0) == (SrcReg.id() - AArch64::P0))
+      return;
+    MCRegister PPRDestReg = (DestReg - AArch64::PN0) + AArch64::P0;
+    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
+        .addReg(SrcReg)
+        .addReg(SrcReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addDef(DestReg, RegState::Implicit);
+    return;
+  }
+
+  if (AArch64::PPRRegClass.contains(DestReg) &&
+      AArch64::PNRRegClass.contains(SrcReg)) {
+    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+           "Unexpected predicate-as-counter register.");
+    // Copy from pnX to pX is a no-op
+    if ((DestReg.id() - AArch64::P0) == (SrcReg.id() - AArch64::PN0))
+      return;
+    MCRegister PNRDestReg = (DestReg - AArch64::P0) + AArch64::PN0;
+    MCRegister PPRSrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
+    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
+        .addReg(PPRSrcReg)
+        .addReg(PPRSrcReg)
+        .addReg(PPRSrcReg, getKillRegState(KillSrc))
+        .addDef(PNRDestReg, RegState::Implicit);
+    return;
+  }
+
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
@@ -3961,6 +3948,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                               MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
   unsigned Opc = 0;
   bool Offset = true;
+  MCRegister PNRReg = MCRegister::NoRegister;
   unsigned StackID = TargetStackID::Default;
   switch (TRI->getSpillSize(*RC)) {
   case 1:
@@ -3973,6 +3961,12 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVEorSME() &&
              "Unexpected register store without SVE store instructions");
+      Opc = AArch64::STR_PXI;
+      StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
+      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+             "Unexpected register store without SVE2p1 or SME2");
+      SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4081,6 +4075,8 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   if (Offset)
     MI.addImm(0);
+  if (PNRReg.isValid())
+    MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
 }
 
@@ -4125,6 +4121,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   unsigned Opc = 0;
   bool Offset = true;
   unsigned StackID = TargetStackID::Default;
+  MCRegister PNRReg = MCRegister::NoRegister;
   switch (TRI->getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
@@ -4136,6 +4133,13 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVEorSME() &&
              "Unexpected register load without SVE load instructions");
+      Opc = AArch64::LDR_PXI;
+      StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
+      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+             "Unexpected register load without SVE2p1 or SME2");
+      PNRReg = DestReg;
+      DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::LDR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
@@ -4244,6 +4248,8 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                      .addFrameIndex(FI);
   if (Offset)
     MI.addImm(0);
+  if (PNRReg.isValid())
+    MI.addDef(PNRReg, RegState::Implicit);
   MI.addMemOperand(MMO);
 }
 

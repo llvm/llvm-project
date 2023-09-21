@@ -146,20 +146,20 @@ end subroutine
 !FIRDialect-DAG: omp.parallel   {
 !FIRDialect-DAG:  [[TMP203:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "x5", pinned, uniq_name = "{{.*}}Ex5"}
 
-!FIRDialect-DAG: fir.if %7 {
+!FIRDialect-DAG: fir.if %{{.*}} {
 
-!FIRDialect-DAG:   fir.store %13 to [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG:   fir.store %{{.*}} to [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 !FIRDialect-DAG: } else {
 
-!FIRDialect-DAG:   fir.store %13 to [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG:   fir.store %{{.*}} to [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 !FIRDialect-DAG: }
 !FIRDialect-DAG: fir.call @_QFprivate_clause_real_call_allocatablePhelper_private_clause_real_call_allocatable([[TMP203]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> ()
-!FIRDialect-DAG: %8 = fir.load [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG: %{{.*}} = fir.load [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 
-!FIRDialect-DAG: fir.if %11 {
-!FIRDialect-DAG:   %12 = fir.load [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG: fir.if %{{.*}} {
+!FIRDialect-DAG:   %{{.*}} = fir.load [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 
-!FIRDialect-DAG:     fir.store %15 to [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG:     fir.store %{{.*}} to [[TMP203]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 !FIRDialect-DAG:   }
 !FIRDialect-DAG:   omp.terminator
 !FIRDialect-DAG:   }
@@ -353,9 +353,9 @@ end subroutine
 subroutine simd_loop_1
   integer :: i
   real, allocatable :: r;
-  ! IRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
-  ! IRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! IRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
+  ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! FIRDialect:     fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 
   ! FIRDialect:     %[[LB:.*]] = arith.constant 1 : i32
   ! FIRDialect:     %[[UB:.*]] = arith.constant 9 : i32

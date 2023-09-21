@@ -25,7 +25,7 @@ class UnalignedWatchpointTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     # debugserver on AArch64 has this feature.
-    @skipIf(archs=no_match(["x86_64", "arm64", "arm64e", "aarch64"]))
+    @skipIf(archs=no_match(["arm64", "arm64e", "aarch64"]))
     @skipUnlessDarwin
     # debugserver only started returning an exception address within
     # a range lldb expects in https://reviews.llvm.org/D147820 2023-04-12.
@@ -40,6 +40,8 @@ class UnalignedWatchpointTestCase(TestBase):
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", self.main_source_file
         )
+
+        thread.StepOver()
 
         frame = thread.GetFrameAtIndex(0)
 
