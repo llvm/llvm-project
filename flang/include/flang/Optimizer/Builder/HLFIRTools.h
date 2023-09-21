@@ -411,6 +411,13 @@ hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::ElementalAddrOp elementalAddrOp);
 
+/// Return true, if \p elemental must produce a temporary array,
+/// for example, for the purpose of finalization. Note that such
+/// ElementalOp's must be optimized with caution. For example,
+/// completely inlining such ElementalOp into another one
+/// would be incorrect.
+bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
