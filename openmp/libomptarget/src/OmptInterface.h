@@ -160,10 +160,11 @@ public:
                                                   size_t Size, void *Code);
 
   /// Top-level function for starting trace before kernel dispatch
-  void startTargetSubmitTrace(unsigned int NumTeams = 1);
+  void startTargetSubmitTrace(int64_t DeviceId, unsigned int NumTeams = 1);
 
   /// Top-level function for stopping trace after kernel dispatch
-  ompt_record_ompt_t *stopTargetSubmitTrace(unsigned int NumTeams = 1);
+  ompt_record_ompt_t *stopTargetSubmitTrace(int64_t DeviceId,
+                                            unsigned int NumTeams = 1);
 
   // Target region tracing
 

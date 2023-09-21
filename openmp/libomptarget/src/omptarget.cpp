@@ -1710,7 +1710,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     // ToDo: mhalk Do we need a check for TracingActive here?
     InterfaceRAII TargetSubmitTraceRAII(
         RegionInterface.getTraceGenerators<ompt_callback_target_submit>(),
-        NumTeams);
+        DeviceId, NumTeams);
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),

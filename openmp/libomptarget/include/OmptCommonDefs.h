@@ -95,10 +95,11 @@
 
 typedef ompt_set_result_t (*libomptarget_ompt_set_trace_ompt_t)(
     ompt_device_t *Device, unsigned int Enable, unsigned int EventTy);
-typedef int (*libomptarget_ompt_start_trace_t)(ompt_callback_buffer_request_t,
+typedef int (*libomptarget_ompt_start_trace_t)(int,
+                                               ompt_callback_buffer_request_t,
                                                ompt_callback_buffer_complete_t);
-typedef int (*libomptarget_ompt_flush_trace_t)(ompt_device_t *);
-typedef int (*libomptarget_ompt_stop_trace_t)(ompt_device_t *);
+typedef int (*libomptarget_ompt_flush_trace_t)(int);
+typedef int (*libomptarget_ompt_stop_trace_t)(int);
 typedef int (*libomptarget_ompt_advance_buffer_cursor_t)(
     ompt_device_t *, ompt_buffer_t *, size_t, ompt_buffer_cursor_t,
     ompt_buffer_cursor_t *);

@@ -130,7 +130,7 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
                  ompt_callback_buffer_complete_t Complete) {
   DP("Executing ompt_start_trace\n");
 
-  // TODO handle device
+  int DeviceId = getDeviceId(Device);
   {
     // Protect the function pointer
     std::unique_lock<std::mutex> Lock(ompt_start_trace_mutex);
@@ -140,7 +140,6 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
       // Enable asynchronous memory copy profiling
       setOmptAsyncCopyProfile(/*Enable=*/true);
       // Enable queue dispatch profiling
-      int DeviceId = getDeviceId(Device);
       if (DeviceId >= 0)
         setGlobalOmptKernelProfile(DeviceId, /*Enable=*/1);
       else
@@ -153,8 +152,7 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
         "libomptarget_ompt_start_trace", &ompt_start_trace_fn);
     assert(ompt_start_trace_fn && "libomptarget_ompt_start_trace loaded");
   }
-
-  return ompt_start_trace_fn(Request, Complete);
+  return ompt_start_trace_fn(DeviceId, Request, Complete);
 }
 
 OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *Device) {
@@ -164,8 +162,8 @@ OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *Device) {
   std::unique_lock<std::mutex> Lock(ompt_flush_trace_mutex);
   ensureFuncPtrLoaded<libomptarget_ompt_flush_trace_t>(
       "libomptarget_ompt_flush_trace", &ompt_flush_trace_fn);
-  assert(ompt_start_trace_fn && "libomptarget_ompt_flush_trace loaded");
-  return ompt_flush_trace_fn(Device);
+  assert(ompt_flush_trace_fn && "libomptarget_ompt_flush_trace loaded");
+  return ompt_flush_trace_fn(getDeviceId(Device));
 }
 
 OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *Device) {
@@ -189,8 +187,7 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *Device) {
         "libomptarget_ompt_stop_trace", &ompt_stop_trace_fn);
     assert(ompt_stop_trace_fn && "libomptarget_ompt_stop_trace loaded");
   }
-
-  return ompt_stop_trace_fn(Device);
+  return ompt_stop_trace_fn(getDeviceId(Device));
 }
 
 OMPT_API_ROUTINE ompt_record_ompt_t *

@@ -45,44 +45,84 @@ OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 std::mutex llvm::omp::target::ompt::TraceAccessMutex;
 std::mutex llvm::omp::target::ompt::TraceControlMutex;
 std::mutex llvm::omp::target::ompt::TraceHashThreadMutex;
+std::mutex llvm::omp::target::ompt::BufferManagementFnMutex;
+
+std::unordered_map<int /*DeviceId*/, std::pair<ompt_callback_buffer_request_t,
+                                               ompt_callback_buffer_complete_t>>
+    llvm::omp::target::ompt::BufferManagementFns;
 
 thread_local uint32_t llvm::omp::target::ompt::TraceRecordNumGrantedTeams = 0;
 thread_local uint64_t llvm::omp::target::ompt::TraceRecordStartTime = 0;
 thread_local uint64_t llvm::omp::target::ompt::TraceRecordStopTime = 0;
+thread_local uint64_t llvm::omp::target::ompt::ThreadId =
+    std::numeric_limits<uint64_t>::max();
 
 std::atomic<uint64_t> llvm::omp::target::ompt::TracingTypesEnabled{0};
 
 bool llvm::omp::target::ompt::TracingActive = false;
 
 ompt_callback_buffer_request_t
-    llvm::omp::target::ompt::ompt_callback_buffer_request_fn = nullptr;
-ompt_callback_buffer_complete_t
-    llvm::omp::target::ompt::ompt_callback_buffer_complete_fn = nullptr;
-
-void llvm::omp::target::ompt::setBufferRequestFn(
-    ompt_callback_buffer_request_t Callback) {
-  ompt_callback_buffer_request_fn = Callback;
+llvm::omp::target::ompt::getBufferRequestFn(int DeviceId) {
+  std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
+  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
+  if (BufferMgrItr == BufferManagementFns.end()) {
+    return nullptr;
+  }
+  return BufferMgrItr->second.first;
 }
 
-void llvm::omp::target::ompt::setBufferCompleteFn(
-    ompt_callback_buffer_complete_t Callback) {
-  ompt_callback_buffer_complete_fn = Callback;
+ompt_callback_buffer_complete_t
+llvm::omp::target::ompt::getBufferCompleteFn(int DeviceId) {
+  std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
+  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
+  if (BufferMgrItr == BufferManagementFns.end()) {
+    return nullptr;
+  }
+  return BufferMgrItr->second.second;
+}
+
+void llvm::omp::target::ompt::setBufferManagementFns(
+    int DeviceId, ompt_callback_buffer_request_t ReqFn,
+    ompt_callback_buffer_complete_t CmpltFn) {
+  std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
+  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
+  if (BufferMgrItr != BufferManagementFns.end()) {
+    REPORT("Buffer request and complete functions already exist for device %d, "
+           "ignoring ...\n",
+           DeviceId);
+    return;
+  }
+  BufferManagementFns[DeviceId] = std::make_pair(ReqFn, CmpltFn);
+}
+
+void llvm::omp::target::ompt::removeBufferManagementFns(int DeviceId) {
+  std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
+  auto BufferMgrItr = BufferManagementFns.find(DeviceId);
+  if (BufferMgrItr == BufferManagementFns.end()) {
+    REPORT("Buffer request and complete functions don't exist for device %d, "
+           "ignoring ...\n",
+           DeviceId);
+    return;
+  }
+  BufferManagementFns.erase(BufferMgrItr);
+}
+
+bool llvm::omp::target::ompt::isAllDeviceTracingStopped() {
+  std::unique_lock<std::mutex> Lock(BufferManagementFnMutex);
+  return BufferManagementFns.empty();
 }
 
 void llvm::omp::target::ompt::ompt_callback_buffer_request(
     int DeviceId, ompt_buffer_t **BufferPtr, size_t *Bytes) {
-  if (ompt_callback_buffer_request_fn) {
-    ompt_callback_buffer_request_fn(DeviceId, BufferPtr, Bytes);
-  }
+  if (auto Fn = getBufferRequestFn(DeviceId))
+    Fn(DeviceId, BufferPtr, Bytes);
 }
 
 void llvm::omp::target::ompt::ompt_callback_buffer_complete(
     int DeviceId, ompt_buffer_t *Buffer, size_t Bytes,
     ompt_buffer_cursor_t BeginCursor, int BufferOwned) {
-  if (ompt_callback_buffer_complete_fn) {
-    ompt_callback_buffer_complete_fn(DeviceId, Buffer, Bytes, BeginCursor,
-                                     BufferOwned);
-  }
+  if (auto Fn = getBufferCompleteFn(DeviceId))
+    Fn(DeviceId, Buffer, Bytes, BeginCursor, BufferOwned);
 }
 
 void llvm::omp::target::ompt::setTracingState(bool State) {
@@ -163,6 +203,16 @@ ompt_set_result_t llvm::omp::target::ompt::setTraceEventTy(
   }
 }
 
+uint64_t llvm::omp::target::ompt::getThreadId() {
+  // Grab the value from thread local storage, if valid.
+  if (ThreadId != std::numeric_limits<uint64_t>::max())
+    return ThreadId;
+  // Otherwise set it, protecting the hash with a lock.
+  std::unique_lock<std::mutex> Lock(TraceHashThreadMutex);
+  ThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
+  return ThreadId;
+}
+
 void Interface::setTraceRecordCommon(ompt_record_ompt_t *DataPtr,
                                      ompt_callbacks_t CallbackType) {
   DataPtr->type = CallbackType;
@@ -172,11 +222,7 @@ void Interface::setTraceRecordCommon(ompt_record_ompt_t *DataPtr,
   else
     DataPtr->time = TraceRecordStartTime;
 
-  {
-    std::unique_lock<std::mutex> Lock(TraceHashThreadMutex);
-    DataPtr->thread_id =
-        std::hash<std::thread::id>()(std::this_thread::get_id());
-  }
+  DataPtr->thread_id = getThreadId();
   DataPtr->target_id = TargetData.value;
 }
 
@@ -231,7 +277,11 @@ ompt_record_ompt_t *Interface::stopTargetDataAllocTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op);
+          ompt_callback_target_data_op, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
   setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
@@ -256,7 +306,11 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op);
+          ompt_callback_target_data_op, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
   setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
@@ -284,7 +338,11 @@ ompt_record_ompt_t *Interface::stopTargetDataSubmitTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op);
+          ompt_callback_target_data_op, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
   setTraceRecordTargetDataOp(&DataPtr->record.target_data_op,
@@ -313,7 +371,11 @@ ompt_record_ompt_t *Interface::stopTargetDataRetrieveTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_data_op);
+          ompt_callback_target_data_op, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_data_op);
   setTraceRecordTargetDataOp(
@@ -327,15 +389,21 @@ ompt_record_ompt_t *Interface::stopTargetDataRetrieveTrace(int64_t DeviceId,
   return DataPtr;
 }
 
-void Interface::startTargetSubmitTrace(unsigned int NumTeams) {}
+void Interface::startTargetSubmitTrace(int64_t DeviceId,
+                                       unsigned int NumTeams) {}
 
-ompt_record_ompt_t *Interface::stopTargetSubmitTrace(unsigned int NumTeams) {
+ompt_record_ompt_t *Interface::stopTargetSubmitTrace(int64_t DeviceId,
+                                                     unsigned int NumTeams) {
   if (isTracingTypeDisabled(ompt_callback_target_submit))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target_submit);
+          ompt_callback_target_submit, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target_submit);
   setTraceRecordTargetKernel(&DataPtr->record.target_kernel, NumTeams);
@@ -353,7 +421,11 @@ ompt_record_ompt_t *Interface::startTargetDataEnterTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId,
@@ -372,7 +444,11 @@ ompt_record_ompt_t *Interface::stopTargetDataEnterTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId,
@@ -391,7 +467,11 @@ ompt_record_ompt_t *Interface::startTargetDataExitTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId, ompt_target_exit_data,
@@ -410,7 +490,11 @@ ompt_record_ompt_t *Interface::stopTargetDataExitTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId, ompt_target_exit_data,
@@ -429,7 +513,11 @@ ompt_record_ompt_t *Interface::startTargetUpdateTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId, ompt_target_update,
@@ -448,7 +536,11 @@ ompt_record_ompt_t *Interface::stopTargetUpdateTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId, ompt_target_update,
@@ -467,7 +559,11 @@ ompt_record_ompt_t *Interface::startTargetTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId, ompt_target,
@@ -486,7 +582,11 @@ ompt_record_ompt_t *Interface::stopTargetTrace(int64_t DeviceId,
 
   ompt_record_ompt_t *DataPtr =
       (ompt_record_ompt_t *)TraceRecordManager.assignCursor(
-          ompt_callback_target);
+          ompt_callback_target, DeviceId);
+
+  // This event will not be traced
+  if (DataPtr == nullptr)
+    return nullptr;
 
   setTraceRecordCommon(DataPtr, ompt_callback_target);
   setTraceRecordTarget(&DataPtr->record.target, DeviceId, ompt_target,
@@ -510,13 +610,14 @@ ompt_set_result_t libomptarget_ompt_set_trace_ompt(ompt_device_t *Device,
 }
 
 // Device-independent entry point for ompt_start_trace
-int libomptarget_ompt_start_trace(ompt_callback_buffer_request_t Request,
+int libomptarget_ompt_start_trace(int DeviceId,
+                                  ompt_callback_buffer_request_t Request,
                                   ompt_callback_buffer_complete_t Complete) {
   std::unique_lock<std::mutex> Lock(TraceControlMutex);
-  // Set buffer related functions
-  llvm::omp::target::ompt::setBufferRequestFn(Request);
-  llvm::omp::target::ompt::setBufferCompleteFn(Complete);
   if (Request && Complete) {
+    // Set buffer related functions
+    llvm::omp::target::ompt::setBufferManagementFns(DeviceId, Request,
+                                                    Complete);
     llvm::omp::target::ompt::setTracingState(/*Enabled=*/true);
     TraceRecordManager.startHelperThreads();
     // Success
@@ -527,18 +628,30 @@ int libomptarget_ompt_start_trace(ompt_callback_buffer_request_t Request,
 }
 
 // Device-independent entry point for ompt_flush_trace
-int libomptarget_ompt_flush_trace(ompt_device_t *Device) {
+int libomptarget_ompt_flush_trace(int DeviceId) {
   std::unique_lock<std::mutex> Lock(TraceControlMutex);
-  return TraceRecordManager.flushAllBuffers(Device);
+  return TraceRecordManager.flushAllBuffers(DeviceId);
 }
 
 // Device independent entry point for ompt_stop_trace
-int libomptarget_ompt_stop_trace(ompt_device_t *Device) {
+int libomptarget_ompt_stop_trace(int DeviceId) {
   std::unique_lock<std::mutex> Lock(TraceControlMutex);
-  int Status = TraceRecordManager.flushAllBuffers(Device);
-  // TODO shutdown should perhaps return a status
-  TraceRecordManager.shutdownHelperThreads();
-  llvm::omp::target::ompt::setTracingState(/*Enabled=*/false);
+
+  // Schedule flushing of trace records for this device
+  int Status = TraceRecordManager.flushAllBuffers(DeviceId);
+
+  // De-register this device so that no more traces are collected
+  // or delivered for this device until an ompt_start_trace is
+  // invoked for this device.
+  removeBufferManagementFns(DeviceId);
+
+  // If no device is being traced, shut down the helper threads. A
+  // subsequent ompt_start_trace will start up the helper threads.
+  if (isAllDeviceTracingStopped()) {
+    // TODO shutdown should perhaps return a status
+    TraceRecordManager.shutdownHelperThreads();
+    llvm::omp::target::ompt::setTracingState(/*Enabled=*/false);
+  }
   return Status;
 }
 

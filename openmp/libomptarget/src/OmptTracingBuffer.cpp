@@ -30,13 +30,13 @@ static std::atomic<uint64_t> buf_id{0};
 // Unique id in buffer flush order
 static std::atomic<uint64_t> flush_id{0};
 
+thread_local OmptTracingBufferMgr::BufPtr
+    OmptTracingBufferMgr::ArrayOfBufPtr[MAX_NUM_DEVICES];
+
 static uint64_t get_and_inc_buf_id() { return buf_id++; }
 
 static uint64_t get_and_inc_flush_id() { return flush_id++; }
 static uint64_t get_flush_id() { return flush_id; }
-
-// Thread-specific pointer to the buffer allocated last by this thread.
-static thread_local OmptTracingBufferMgr::BufPtr BufPtrTL = nullptr;
 
 /*
  * Used by OpenMP threads for assigning space for a trace record. If
@@ -49,7 +49,12 @@ static thread_local OmptTracingBufferMgr::BufPtr BufPtrTL = nullptr;
  * for updating shared metadata. The common path of allocating a trace
  * record from an existing buffer proceeds without locking.
  */
-void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
+void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t Type,
+                                         int64_t DeviceId) {
+  // The caller should handle nullptr by not tracing for this event.
+  if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1)
+    return nullptr;
+
   size_t RecSize = getTRSize();
 
   // If the buffer fills up, it will be scheduled for flushing with the
@@ -59,28 +64,32 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
 
   // Thread local buffer pointer should be non-null once an allocation
   // has been done by this thread.
-  if (BufPtrTL != nullptr) {
-    void *OldCursor = BufPtrTL->Cursor.load(std::memory_order_acquire);
+  BufPtr DeviceBuf = getDeviceSpecificBuffer(DeviceId);
+  if (DeviceBuf != nullptr) {
+    assert(DeviceBuf->DeviceId == DeviceId && "Unexpected device id in buffer");
+    void *OldCursor = DeviceBuf->Cursor.load(std::memory_order_acquire);
     // Try to assign a trace record from the last allocated buffer
-    if (RecSize <= BufPtrTL->RemainingBytes) {
-      assert((char *)BufPtrTL->Start + BufPtrTL->TotalBytes -
-                 BufPtrTL->RemainingBytes ==
+    if (RecSize <= DeviceBuf->RemainingBytes) {
+      assert((char *)DeviceBuf->Start + DeviceBuf->TotalBytes -
+                 DeviceBuf->RemainingBytes ==
              (char *)OldCursor + RecSize);
-      BufPtrTL->RemainingBytes -= RecSize;
+      DeviceBuf->RemainingBytes -= RecSize;
 
       // Note the trace record status must be initialized before setting
       // the cursor, ensuring that a helper thread always sees an initialized
       // trace record status.
       void *NewCursor = (char *)OldCursor + RecSize;
       initTraceRecordMetaData(NewCursor);
-      BufPtrTL->Cursor.store(NewCursor, std::memory_order_release);
+      DeviceBuf->Cursor.store(NewCursor, std::memory_order_release);
 
-      DP("Assigned %lu bytes at %p in existing buffer %p\n", RecSize, NewCursor,
-         BufPtrTL->Start);
+      DP("Thread %lu: Assigned %lu bytes at %p in existing buffer %p for "
+         "device %ld\n",
+         llvm::omp::target::ompt::getThreadId(), RecSize, NewCursor,
+         DeviceBuf->Start, DeviceId);
       return NewCursor;
     } else {
       ToBeFlushedCursor = OldCursor;
-      ToBeFlushedBuf = BufPtrTL;
+      ToBeFlushedBuf = DeviceBuf;
 
       // Mark that no space is present for any more trace records.
       // The following is atomic but there is no logical order between when
@@ -88,28 +97,29 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
       // because the helper thread uses this info to decide whether a buffer
       // can be scheduled for removal. In the worst case, the buffer will be
       // removed late.
-      BufPtrTL->isFull.store(true, std::memory_order_release);
+      DeviceBuf->isFull.store(true, std::memory_order_release);
     }
   }
   void *NewBuffer = nullptr;
   size_t TotalBytes = 0;
   // TODO Move the buffer allocation to a helper thread
-  llvm::omp::target::ompt::ompt_callback_buffer_request(
-      0 /* TODO device_num */, &NewBuffer, &TotalBytes);
+  llvm::omp::target::ompt::ompt_callback_buffer_request(DeviceId, &NewBuffer,
+                                                        &TotalBytes);
 
-  // TODO Instead of asserting, turn OFF tracing
-  assert(TotalBytes >= RecSize && "Buffer is too small");
-  assert(NewBuffer != nullptr && "Buffer request function failed");
+  // The caller should handle nullptr by not tracing for this event.
+  if (NewBuffer == nullptr || TotalBytes < RecSize)
+    return nullptr;
 
   uint64_t NewBufId = get_and_inc_buf_id();
   auto new_buf = std::make_shared<Buffer>(
-      NewBufId, /*Start=*/NewBuffer, /*Cursor=*/NewBuffer, TotalBytes,
+      NewBufId, DeviceId, /*Start=*/NewBuffer, TotalBytes,
       /*RemainingBytes=*/TotalBytes - RecSize,
+      /*Cursor=*/NewBuffer,
       /*isFull=*/false);
 
   // Initialize trace record status before publishing it to helper threads.
   initTraceRecordMetaData(new_buf->Cursor.load(std::memory_order_acquire));
-  BufPtrTL = new_buf;
+  setDeviceSpecificBuffer(DeviceId, new_buf);
 
   // Make this trace record visible to helper threads by adding to shared
   // metadata.
@@ -122,8 +132,10 @@ void *OmptTracingBufferMgr::assignCursor(ompt_callbacks_t type) {
   if (ToBeFlushedCursor)
     setComplete(ToBeFlushedCursor, ToBeFlushedBuf);
 
-  DP("Assigned %lu bytes at %p in new buffer with id %lu\n", RecSize, NewBuffer,
-     NewBufId);
+  DP("Thread %lu: Assigned %lu bytes at %p in new buffer with id %lu for "
+     "device %ld\n",
+     llvm::omp::target::ompt::getThreadId(), RecSize, NewBuffer, NewBufId,
+     DeviceId);
 
   return NewBuffer;
 }
@@ -329,7 +341,8 @@ void OmptTracingBufferMgr::flushBuffer(FlushInfo flush_info) {
                "Begin/last cursors mutually inconsistent");
       } else {
         // End the current interval
-        dispatchCallback(flush_info.FlushBuf->Start, first_cursor, last_cursor);
+        dispatchCallback(flush_info.FlushBuf->DeviceId,
+                         flush_info.FlushBuf->Start, first_cursor, last_cursor);
         first_cursor = last_cursor = nullptr;
       }
     } else {
@@ -343,12 +356,14 @@ void OmptTracingBufferMgr::flushBuffer(FlushInfo flush_info) {
   }
   if (first_cursor != nullptr) {
     assert(last_cursor != nullptr);
-    dispatchCallback(flush_info.FlushBuf->Start, first_cursor, last_cursor);
+    dispatchCallback(flush_info.FlushBuf->DeviceId, flush_info.FlushBuf->Start,
+                     first_cursor, last_cursor);
   }
 }
 
 // Given a range of trace records, dispatch a buffer-completion callback
-void OmptTracingBufferMgr::dispatchCallback(void *buffer, void *first_cursor,
+void OmptTracingBufferMgr::dispatchCallback(int64_t DeviceId, void *buffer,
+                                            void *first_cursor,
                                             void *last_cursor) {
   assert(first_cursor != nullptr && last_cursor != nullptr &&
          "Callback with nullptr");
@@ -362,7 +377,7 @@ void OmptTracingBufferMgr::dispatchCallback(void *buffer, void *first_cursor,
     DP("Dispatch callback w/ range (inclusive) to be flushed: %p -> %p\n",
        first_cursor, last_cursor);
     llvm::omp::target::ompt::ompt_callback_buffer_complete(
-        0 /* TODO device num */, buffer,
+        DeviceId, buffer,
         /* bytes returned in this callback */
         (char *)getNextTR(last_cursor) - (char *)first_cursor,
         (ompt_buffer_cursor_t)first_cursor, false /* buffer_owned */);
@@ -382,13 +397,35 @@ void OmptTracingBufferMgr::dispatchBufferOwnedCallback(
   if (llvm::omp::target::ompt::TracingActive) {
     DP("Dispatch callback with buffer %p owned\n", flush_info.FlushBuf->Start);
     llvm::omp::target::ompt::ompt_callback_buffer_complete(
-        0, flush_info.FlushBuf->Start, 0, (ompt_buffer_cursor_t)0,
-        true /* buffer owned */);
+        flush_info.FlushBuf->DeviceId, flush_info.FlushBuf->Start, 0,
+        (ompt_buffer_cursor_t)0, true /* buffer owned */);
   }
 }
 
 void OmptTracingBufferMgr::initTraceRecordMetaData(void *Rec) {
   setTRStatus(Rec, TR_init);
+}
+
+OmptTracingBufferMgr::BufPtr
+OmptTracingBufferMgr::getDeviceSpecificBuffer(int64_t DeviceId) {
+  if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1) {
+    REPORT("getDeviceSpecificBuffer: Device id %ld invalid or exceeds "
+           "supported max: %d\n",
+           DeviceId, MAX_NUM_DEVICES - 1);
+    return nullptr;
+  }
+  return ArrayOfBufPtr[DeviceId];
+}
+
+void OmptTracingBufferMgr::setDeviceSpecificBuffer(int64_t DeviceId,
+                                                   BufPtr Buf) {
+  if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1) {
+    REPORT("setDeviceSpecificBuffer: Device id %ld invalid or exceeds "
+           "supported max: %d\n",
+           DeviceId, MAX_NUM_DEVICES - 1);
+    return;
+  }
+  ArrayOfBufPtr[DeviceId] = Buf;
 }
 
 void OmptTracingBufferMgr::setTRStatus(void *Rec, TRStatus Status) {
@@ -536,7 +573,10 @@ uint64_t OmptTracingBufferMgr::addNewFlushEntry(BufPtr buf, void *cursor) {
  * Called by ompt_flush_trace and ompt_stop_trace. Traverse the
  * existing buffers in creation order and flush all the ready TRs
  */
-int OmptTracingBufferMgr::flushAllBuffers(ompt_device_t *Device) {
+int OmptTracingBufferMgr::flushAllBuffers(int DeviceId) {
+  if (DeviceId < 0 || DeviceId > MAX_NUM_DEVICES - 1)
+    return 0; // failed to flush
+
   if (!areHelperThreadsAvailable())
     return 0; // failed to flush
 
@@ -562,9 +602,16 @@ int OmptTracingBufferMgr::flushAllBuffers(ompt_device_t *Device) {
       ++curr_buf_id;
       continue;
     }
+    BufPtr curr_buf = buf_itr->second;
+
+    // If the device-id does not match, skip it.
+    if (curr_buf->DeviceId != DeviceId) {
+      ++curr_buf_id;
+      continue;
+    }
+
     // If this buffer is in the flush-map, skip it. It is either in
     // process by another thread or will be processed
-    BufPtr curr_buf = buf_itr->second;
     std::unique_lock<std::mutex> flush_lock(FlushMutex);
     auto flush_itr = FlushBufPtr2IdMap.find(curr_buf);
     if (flush_itr != FlushBufPtr2IdMap.end()) {
@@ -601,6 +648,8 @@ void OmptTracingBufferMgr::waitForFlushCompletion() {
 }
 
 void OmptTracingBufferMgr::init() {
+  for (int i = 0; i < MAX_NUM_DEVICES; ++i)
+    ArrayOfBufPtr[i] = nullptr;
   ThreadFlushTracker = 0;
   ThreadShutdownTracker = 0;
   done_tracing = false; // TODO make it a class member

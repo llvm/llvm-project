@@ -29,6 +29,10 @@
 
 #include <omp-tools.h>
 
+// Maximum number of devices supported in device tracing. No device tracing
+// will be performed for any device-id larger than 1023.
+#define MAX_NUM_DEVICES 1024
+
 // TODO Start with 1 helper thread and add dynamically if required
 // Number of helper threads must not execeed 32 since the
 // thread-wait-tracker is 32 bits in length.
@@ -78,14 +82,15 @@ public:
    * the allocated buffer is thread-specific from the allocation/population
    * standpoint. But it may be manipulated by helper threads.
    *
-   * Id, Start, and TotalBytes are not changed once set.
+   * Id, DeviceId, Start, and TotalBytes are not changed once set.
    * RemainingBytes could be written multiple times but only by the same
-   * thread. But Cursor and isFull can be read/written more than
-   * once by an OpenMP worker thread and helper threads. Hence, accesses of
+   * thread. But Cursor and isFull may be read/written by an OpenMP worker
+   * thread and read by helper threads. Hence, accesses of
    * this 2nd set of locations need to be atomic or synchronized.
    */
   struct Buffer {
     uint64_t Id;           // Unique identifier of the buffer
+    int64_t DeviceId;      // Device for which this buffer is allocated
     void *Start;           // Start of allocated space for trace records
     size_t TotalBytes;     // Total number of bytes in the allocated space
     size_t RemainingBytes; // Total number of unused bytes
@@ -93,10 +98,10 @@ public:
     std::atomic<void *> Cursor; // Address of the last trace record carved out
     std::atomic<bool> isFull;   // true if no more trace records can be
                               // accomodated, otherwise false
-    Buffer(uint64_t id, void *st, void *cr, size_t bytes, size_t rem,
-           bool is_full)
-        : Id(id), Start(st), TotalBytes(bytes), RemainingBytes(rem), Cursor(cr),
-          isFull(is_full) {}
+    Buffer(uint64_t BufId, int64_t DevId, void *S, size_t Bytes, size_t Rem,
+           void *C, bool F)
+        : Id(BufId), DeviceId(DevId), Start(S), TotalBytes(Bytes),
+          RemainingBytes(Rem), Cursor(C), isFull(F) {}
     Buffer() = delete;
     Buffer(const Buffer &) = delete;
     Buffer &operator=(const Buffer &) = delete;
@@ -123,6 +128,12 @@ private:
     ompt_record_ompt_t TR;
     std::atomic<TRStatus> TRState;
   };
+
+  // Thread-specific array of pointers to a buffer. The buffer pointed to
+  // is the last one allocated by this thread for a given device. The ith
+  // element points to the buffer for the ith device. At most MAX_NUM_DEVICES
+  // devices are supported.
+  static thread_local BufPtr ArrayOfBufPtr[MAX_NUM_DEVICES];
 
   /*
    * A buffer is flushed when it fills up or when the tool invokes
@@ -220,7 +231,8 @@ private:
   void flushBuffer(FlushInfo);
 
   // Dispatch a buffer-completion callback with a range of trace records
-  void dispatchCallback(void *buffer, void *first_cursor, void *last_cursor);
+  void dispatchCallback(int64_t DeviceId, void *buffer, void *first_cursor,
+                        void *last_cursor);
 
   // Add a last cursor
   void addLastCursor(void *cursor) {
@@ -237,6 +249,10 @@ private:
 
   // Given a trace record pointer, initialize its metadata
   void initTraceRecordMetaData(void *Rec);
+
+  // Given a device-id, get/set a pointer to the last allocated buffer metadata.
+  BufPtr getDeviceSpecificBuffer(int64_t DevId);
+  void setDeviceSpecificBuffer(int64_t DevId, BufPtr Buf);
 
   // Reserve a candidate buffer for flushing, preventing other helper threads
   // from accessing it
@@ -343,6 +359,8 @@ private:
 public:
   OmptTracingBufferMgr();
   ~OmptTracingBufferMgr();
+  OmptTracingBufferMgr(const OmptTracingBufferMgr &) = delete;
+  OmptTracingBufferMgr &operator=(const OmptTracingBufferMgr &) = delete;
 
   // The caller must not hold the flush lock
   void startHelperThreads();
@@ -350,8 +368,9 @@ public:
   // The caller must not hold the flush lock
   void shutdownHelperThreads();
 
-  // Assign a cursor for a new trace record
-  void *assignCursor(ompt_callbacks_t type);
+  // Assign a cursor for a new trace record. This will assign a trace record
+  // for the provided device-id, allocating a new buffer if required.
+  void *assignCursor(ompt_callbacks_t Type, int64_t DeviceId);
 
   // Get the size of a trace record
   size_t getTRSize() { return sizeof(TraceRecord); }
@@ -370,8 +389,8 @@ public:
     return LastCursors.find(Cursor) != LastCursors.end();
   }
 
-  // Called for flushing outstanding buffers
-  int flushAllBuffers(ompt_device_t *);
+  // Called for flushing outstanding buffers for the provided device-id.
+  int flushAllBuffers(int DeviceId);
 };
 
 #endif // OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H
