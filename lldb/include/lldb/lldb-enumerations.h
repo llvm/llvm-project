@@ -431,21 +431,6 @@ FLAGS_ENUM(WatchpointEventType){
     eWatchpointEventTypeThreadChanged = (1u << 11),
     eWatchpointEventTypeTypeChanged = (1u << 12)};
 
-enum WatchpointWriteType {
-  /// Don't stop when the watched memory region is written to.
-  eWatchpointWriteTypeDisabled,
-  /// Stop on any write access to the memory region, even if
-  /// the value doesn't change.  On some architectures, a write
-  /// near the memory region may be falsely reported as a match,
-  /// and notify this spurious stop as a watchpoint trap.
-  eWatchpointWriteTypeAlways,
-  /// Stop on a write to the memory region that changes its value.
-  /// This is most likely the behavior a user expects, and is the
-  /// behavior in gdb.  lldb can silently ignore writes near the
-  /// watched memory region that are reported as accesses to lldb.
-  eWatchpointWriteTypeOnModify
-};
-
 /// Programming language type.
 ///
 /// These enumerations use the same language enumerations as the DWARF
