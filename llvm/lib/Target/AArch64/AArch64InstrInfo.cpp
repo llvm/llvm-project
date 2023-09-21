@@ -904,6 +904,13 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.isAsCheapAsAMove();
+
+  case AArch64::ADDWrs:
+  case AArch64::ADDXrs:
+  case AArch64::SUBWrs:
+  case AArch64::SUBXrs:
+    return Subtarget.hasALULSLFast() && MI.getOperand(3).getImm() <= 4;
+
   // If MOVi32imm or MOVi64imm can be expanded into ORRWri or
   // ORRXri, it is as cheap as MOV.
   // Likewise if it can be expanded to MOVZ/MOVN/MOVK.
