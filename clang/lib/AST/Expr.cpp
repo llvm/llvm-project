@@ -804,7 +804,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     PrintingPolicy Policy(LO);
     PrettyCallbacks PrettyCB(LO);
     Policy.Callbacks = &PrettyCB;
-    Policy.IncludeKeyword = LO.MicrosoftExt;
+    Policy.U = LO.MicrosoftExt;
     std::string Proto;
     llvm::raw_string_ostream POut(Proto);
 
