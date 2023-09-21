@@ -85,7 +85,7 @@ def main():
         # Do any necessary codesigning of test-executables found in the command line.
         if args.codesign_identity:
             for exe in filter(isTestExe, commandLine):
-                codesign = ["xcrun", "codesign", "-f", "-s", args.codesign_identity, exe]
+                codesign = ["codesign", "-f", "-s", args.codesign_identity, exe]
                 runCommand(codesign, env={}, check=True)
 
         # tar up the execution directory (which contains everything that's needed
