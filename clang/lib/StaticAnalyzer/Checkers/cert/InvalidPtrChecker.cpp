@@ -135,6 +135,7 @@ void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
               &BR.getBugType() != InvalidPtrBugType)
             return;
           Out << '\'' << FunctionName << "' " << Message;
+          BR.markNotInteresting(Region);
         });
     return C.addTransition(State, Pred, Note);
   };
