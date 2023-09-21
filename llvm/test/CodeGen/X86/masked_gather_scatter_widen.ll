@@ -657,8 +657,7 @@ define <17 x float> @test_mgather_v17f32(ptr %base, <17 x i32> %index)
 ;
 ; WIDEN_AVX2-LABEL: test_mgather_v17f32:
 ; WIDEN_AVX2:       # %bb.0:
-; WIDEN_AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = [0,2,4,6,0,2,4,6]
-; WIDEN_AVX2-NEXT:    # ymm0 = mem[0,1,0,1]
+; WIDEN_AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [0,2,4,6,4,6,6,7]
 ; WIDEN_AVX2-NEXT:    vpermd {{[0-9]+}}(%rsp), %ymm0, %ymm1
 ; WIDEN_AVX2-NEXT:    movq %rdi, %rax
 ; WIDEN_AVX2-NEXT:    vpermd {{[0-9]+}}(%rsp), %ymm0, %ymm2
