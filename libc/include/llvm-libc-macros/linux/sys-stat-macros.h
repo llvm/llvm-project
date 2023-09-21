@@ -40,14 +40,4 @@
 #define S_IWGRP 00020
 #define S_IXGRP 00010
 
-#define S_IRWXU 00700
-#define S_IRUSR 00400
-#define S_IWUSR 00200
-#define S_IXUSR 00100
-
-#define S_IRWXG 00070
-#define S_IRGRP 00040
-#define S_IWGRP 00020
-#define S_IXGRP 00010
-
 #endif // __LLVM_LIBC_MACROS_LINUX_SYS_STAT_MACROS_H
