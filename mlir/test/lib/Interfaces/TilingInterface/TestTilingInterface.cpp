@@ -186,6 +186,51 @@ private:
   TransformationFilter filter;
 };
 
+/// Pattern for testing `tileUsingSCFForallOp` (that tiles operations using
+/// the `TilingInterface` with `scf.forall` ops for iterating over the tiles)
+/// while using a `filter` to avoid recursive application.
+struct TestTileUsingSCFForallOp
+    : public OpInterfaceRewritePattern<TilingInterface> {
+  TestTileUsingSCFForallOp(MLIRContext *context, scf::SCFTilingOptions options,
+                           TransformationFilter filter = TransformationFilter(),
+                           PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<TilingInterface>(context, benefit),
+        options(std::move(options)), filter(std::move(filter)) {}
+
+  /// Construct a generic pattern applied to `opName`.
+  TestTileUsingSCFForallOp(StringRef opName, MLIRContext *context,
+                           scf::SCFTilingOptions options,
+                           TransformationFilter filter = TransformationFilter(),
+                           PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<TilingInterface>(context, benefit),
+        options(std::move(options)), filter(std::move(filter)) {}
+
+  LogicalResult matchAndRewrite(TilingInterface op,
+                                PatternRewriter &rewriter) const override {
+    if (failed(filter.checkAndNotify(rewriter, op)))
+      return failure();
+
+    FailureOr<scf::SCFTilingResult> tilingResult =
+        scf::tileUsingSCFForallOp(rewriter, op, options);
+    if (failed(tilingResult))
+      return rewriter.notifyMatchFailure(op, "failed to tile operation");
+
+    if (op->getNumResults()) {
+      rewriter.replaceOp(op, tilingResult->replacements);
+    } else {
+      rewriter.eraseOp(op);
+    }
+
+    for (auto *tiledOp : tilingResult->tiledOps)
+      filter.replaceTransformationFilter(rewriter, tiledOp);
+    return success();
+  }
+
+private:
+  scf::SCFTilingOptions options;
+  TransformationFilter filter;
+};
+
 /// Pattern for testing `TileConsumerAndFuseProducersUsingSCFForOp` pattern
 /// (that tiles and fuses operations using the `TilingInterface` with `scf.for`
 /// ops for iterating over the tiles) while using a `filter` to avoid recursive
@@ -415,6 +460,12 @@ struct TestTilingInterfacePass
           "Test tiling using TilingInterface with scf.for operations"),
       llvm::cl::init(false)};
 
+  Option<bool> testTilingForAll{
+      *this, "tile-using-scf-forall",
+      llvm::cl::desc(
+          "Test tiling using TilingInterface with scf.forall operations"),
+      llvm::cl::init(false)};
+
   Option<bool> testTileConsumerFuseAndYieldProducer{
       *this, "tile-consumer-fuse-and-yield-producer-using-scf-for",
       llvm::cl::desc(
@@ -453,6 +504,20 @@ static void addPatternForTiling(MLIRContext *context,
   TransformationFilter filter(StringAttr::get(context, filterName),
                               StringAttr::get(context, "tiled"));
   patterns.add<TestTileUsingSCFForOp>(context, tilingOptions, filter);
+}
+
+static void addPatternForTilingUsingForall(MLIRContext *context,
+                                           RewritePatternSet &patterns,
+                                           StringRef filterName,
+                                           ArrayRef<int64_t> tileSizes,
+                                           ArrayRef<int64_t> interchange = {}) {
+  scf::SCFTilingOptions tilingOptions;
+  SmallVector<OpFoldResult> tileSizesOfr =
+      getAsIndexOpFoldResult(context, tileSizes);
+  tilingOptions.setTileSizes(tileSizesOfr).setInterchange(interchange);
+  TransformationFilter filter(StringAttr::get(context, filterName),
+                              StringAttr::get(context, "tiled"));
+  patterns.add<TestTileUsingSCFForallOp>(context, tilingOptions, filter);
 }
 
 static void addPatternForTileFuseAndYield(MLIRContext *context,
@@ -512,6 +577,10 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     addPatternForTiling(context, patterns, "pad_outer_tiling", {2, 3});
     // 10. Tiling M and N dims of `linalg.copy` on memrefs.
     addPatternForTiling(context, patterns, "simple_copy_memref", {10, 20});
+    return;
+  }
+  if (testTilingForAll) {
+    addPatternForTilingUsingForall(context, patterns, "simple_gemm", {10, 20});
     return;
   }
   if (testTileConsumerAndFuseProducer) {
