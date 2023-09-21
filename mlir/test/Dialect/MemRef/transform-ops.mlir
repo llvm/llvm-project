@@ -23,16 +23,9 @@ func.func @func(%lb: index, %ub: index) {
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   %alloca = transform.structured.match ops{["memref.alloca"]} in %arg0
-      : (!transform.any_op) -> !transform.any_op
-  %module = transform.structured.match ops{["builtin.module"]} in %arg0
-      : (!transform.any_op) -> !transform.any_op
-  %alloca_typed = transform.cast %alloca
-      : !transform.any_op to !transform.op<"memref.alloca">
-  %module_typed = transform.cast %module
-      : !transform.any_op to !transform.op<"builtin.module">
-  %get_global, %global =
-      transform.memref.alloca_to_global %alloca_typed in %module_typed
-        : (!transform.op<"builtin.module">, !transform.op<"memref.alloca">)
+      : (!transform.any_op) -> !transform.op<"memref.alloca">
+  %get_global, %global = transform.memref.alloca_to_global %alloca
+        : (!transform.op<"memref.alloca">)
           -> (!transform.any_op, !transform.any_op)
 }
 

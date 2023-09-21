@@ -139,26 +139,6 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<memref::GlobalOp> globalOps;
   SmallVector<memref::GetGlobalOp> getGlobalOps;
 
-  // Get containing symbol table op.
-  auto symbolTableOps = state.getPayloadOps(getSymbolTable());
-  if (!llvm::hasSingleElement(symbolTableOps)) {
-    return emitDefiniteFailure()
-           << Twine("expected exactly one 'symbolTable' payload, but found ") +
-                  std::to_string(llvm::range_size(symbolTableOps));
-  }
-  Operation *symbolTableOp = *symbolTableOps.begin();
-  if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>()) {
-    return emitDefiniteFailure() << Twine(
-               "expected 'symbolTable' payload to have 'SymbolTable' trait");
-  }
-  SymbolTable symbolTable(symbolTableOp);
-
-  {
-    size_t numAllocaOps = llvm::range_size(allocaOps);
-    globalOps.reserve(numAllocaOps);
-    getGlobalOps.reserve(numAllocaOps);
-  }
-
   // Transform `memref.alloca`s.
   for (auto *op : allocaOps) {
     auto alloca = cast<memref::AllocaOp>(op);
@@ -167,14 +147,15 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
 
     memref::GlobalOp globalOp;
     {
+      // Find nearest symbol table.
+      Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
+      assert(symbolTableOp && "expected alloca payload to be in symbol table");
+      SymbolTable symbolTable(symbolTableOp);
+
       // Insert a `memref.global` into the symbol table.
-      if (symbolTable.getOp() != SymbolTable::getNearestSymbolTable(op)) {
-        return emitDefiniteFailure() << "expected 'alloca' payload to be "
-                                        "inside 'symbolTable' payload";
-      }
       Type resultType = alloca.getResult().getType();
-      // TODO: Add a better builder for this.
       OpBuilder builder(rewriter.getContext());
+      // TODO: Add a better builder for this.
       globalOp = builder.create<memref::GlobalOp>(
           loc, StringAttr::get(ctx, "alloca"), StringAttr::get(ctx, "private"),
           TypeAttr::get(resultType), Attribute{}, UnitAttr{}, IntegerAttr{});
@@ -200,7 +181,6 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getSymbolTable(), effects);
   producesHandle(getGlobal(), effects);
   producesHandle(getGetGlobal(), effects);
   consumesHandle(getAlloca(), effects);
