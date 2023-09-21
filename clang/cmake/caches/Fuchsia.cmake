@@ -70,10 +70,6 @@ foreach(variable ${_FUCHSIA_BOOTSTRAP_PASSTHROUGH})
   endif()
 endforeach()
 
-if(WIN32)
-  set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
-endif()
-
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
 set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")

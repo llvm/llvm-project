@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
-#define LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
+#define LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 
 #ifdef LIBC_COPT_USE_C_ASSERT
 
@@ -83,4 +83,4 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 
 #endif // LIBC_COPT_USE_C_ASSERT
 
-#endif // LLVM_LIBC_SRC_SUPPORT_LIBC_ASSERT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H

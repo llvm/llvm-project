@@ -784,7 +784,6 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   case CovMapVersion::Version4:
   case CovMapVersion::Version5:
   case CovMapVersion::Version6:
-  case CovMapVersion::Version7:
     // Decompress the name data.
     if (Error E = P.create(P.getNameData()))
       return std::move(E);
@@ -803,9 +802,6 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     else if (Version == CovMapVersion::Version6)
       return std::make_unique<VersionedCovMapFuncRecordReader<
           CovMapVersion::Version6, IntPtrT, Endian>>(P, R, D, F);
-    else if (Version == CovMapVersion::Version7)
-      return std::make_unique<VersionedCovMapFuncRecordReader<
-          CovMapVersion::Version7, IntPtrT, Endian>>(P, R, D, F);
   }
   llvm_unreachable("Unsupported version");
 }

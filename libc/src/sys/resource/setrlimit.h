@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_STAT_SETRLIMIT_H
-#define LLVM_LIBC_SRC_SYS_STAT_SETRLIMIT_H
+#ifndef LLVM_LIBC_SRC_SYS_RESOURCE_SETRLIMIT_H
+#define LLVM_LIBC_SRC_SYS_RESOURCE_SETRLIMIT_H
 
 #include <sys/resource.h>
 
@@ -17,4 +17,4 @@ int setrlimit(int resource, const struct rlimit *lim);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SYS_STAT_SETRLIMIT_H
+#endif // LLVM_LIBC_SRC_SYS_RESOURCE_SETRLIMIT_H

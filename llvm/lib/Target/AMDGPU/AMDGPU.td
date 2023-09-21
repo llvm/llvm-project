@@ -773,6 +773,12 @@ def FeatureForceStoreSC0SC1 : SubtargetFeature<"force-store-sc0-sc1",
   "Has SC0 and SC1 on stores"
 >;
 
+def FeatureSALUFloatInsts : SubtargetFeature<"salu-float",
+  "HasSALUFloatInsts",
+  "true",
+  "Has SALU floating point instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1364,11 +1370,12 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureSALUFloatInsts])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [FeatureSALUFloatInsts,
+     FeatureGFX11FullVGPRs])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1868,6 +1875,9 @@ def HasUnalignedAccessMode : Predicate<"Subtarget->hasUnalignedAccessMode()">,
 def HasMADIntraFwdBug : Predicate<"Subtarget->hasMADIntraFwdBug()">;
 
 def HasNotMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
+
+def HasSALUFloatInsts : Predicate<"Subtarget->hasSALUFloatInsts()">,
+  AssemblerPredicate<(all_of FeatureSALUFloatInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 

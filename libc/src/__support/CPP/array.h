@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ARRAY_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_ARRAY_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H
 
 #include "src/__support/macros/attributes.h"
 #include <stddef.h> // For size_t.
@@ -52,4 +52,4 @@ template <class T, size_t N> struct array {
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_ARRAY_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_ARRAY_H

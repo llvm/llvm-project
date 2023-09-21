@@ -102,41 +102,48 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
   let description = [{
     Interface to generate inline assembly with PTX for basic operations. 
 
-    Interface is used in `convert-nvvm-to-llvm` pass that lowers Ops supports this interface to inline assembly Op. Interface has several methods and they are used for this lowering. 
+    Interface is used in `convert-nvvm-to-llvm` pass that lowers Ops supports 
+    this interface to inline assembly Op. Interface has several methods and 
+    they are used for this lowering. 
 
     `getPtx` method returns PTX code. 
 
-    `hasSideEffect` is used to set whether the op has any side effect on the memory.
+    `hasSideEffect` is used to set whether the op has any side effect on the 
+    memory.
 
-    `hasIntrinsic` returns whether the operation has intrinsic support in LLVM. This is useful for the Ops that don't have intrinsic support for each case.
+    `hasIntrinsic` returns whether the operation has intrinsic support in LLVM. 
+    This is useful for the Ops that don't have intrinsic support for each case.
 
-    `getAsmValues` returns arguments to pass PTX code. The order of arguments is started from the results and they are used as write, followed by the operands and attributes.
+    `getAsmValues` returns arguments to pass PTX code. The order of arguments 
+    is started from the results and they are used as write, followed by the 
+    operands and attributes.
 
     Example:
-    
     If we have following Op definition that returns PTX code by `getPtx`. 
     
     ```tablegen
-    def NVVM_MBarrierArriveExpectTxOp : NVVM_Op<\"mbarrier.arrive.expect_tx\",
-                        [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-      Results<(outs LLVM_Type:$res)>, Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
-      ...
-      let extraClassDefinition = [{
-        std::string $cppClass::getPtx() { return std::string(\"mbarrier.arrive.expect_tx.b64 %0, [%1], %2;\"); }
-      }\];
-    }
+      def NVVM_MyOp : NVVM_Op<"myop",
+          [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
+        Results<(outs LLVM_Type:$res)>,
+        Arguments<(ins LLVM_i64ptr_any:$op1, I32:$op2)> {
+        ...
+        let extraClassDefinition = [{
+          std::string $cppClass::getPtx() { 
+            return std::string("my.ptx.code %0, %1, %2;"); 
+          }
+      } ];
     ```
 
     The NVVM Op will look like below:
     ```mlir
-      %0 = nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr, i32 -> i32
+      %0 = my.ptx.code %1, %2 : !llvm.ptr, i32 -> i32
     ```
 
-    The `convert-nvvm-to-llvm` Pass returns the PTX code below. The order of 
-    arguments are kept the same. The read/write modifiers are set based on the
-    input and result types.
+    The `convert-nvvm-to-llvm` Pass generates the PTX code below. The order of 
+    arguments are kept the same. The read and write modifiers are set based on
+    the input and result types.
     ```mlir
-      %0 = llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.b64 %0, [%1], %2;", "=r,l,r" %arg0, %arg1 : (!llvm.ptr, i32) -> i32
+      %0 = llvm.inline_asm has_side_effects asm_dialect = att "my.ptx.code %0, %1, %2;", "=r,l,r" %arg0, %arg1 : (!llvm.ptr, i32) -> i32
     ```
 
   }];
