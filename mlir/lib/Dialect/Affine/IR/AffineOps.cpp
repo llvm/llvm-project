@@ -2375,10 +2375,6 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<AffineForEmptyLoopFolder>(context);
 }
 
-/// Return operands used when entering the region at 'index'. These operands
-/// correspond to the loop iterator operands, i.e., those excluding the
-/// induction variable. AffineForOp only has one region, so zero is the only
-/// valid value for `index`.
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   assert((point.isParent() || point == getRegion()) && "invalid region point");
 
@@ -2387,11 +2383,6 @@ OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   return getInits();
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
 void AffineForOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   assert((point.isParent() || point == getRegion()) && "expected loop region");

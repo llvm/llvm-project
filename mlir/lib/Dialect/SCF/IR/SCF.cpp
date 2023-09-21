@@ -260,11 +260,6 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SingleBlockExecuteInliner, MultiBlockExecuteInliner>(context);
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
 void ExecuteRegionOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is the ExecuteRegionOp, branch into the body.
@@ -543,18 +538,10 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
   return dyn_cast_or_null<ForOp>(containingOp);
 }
 
-/// Return operands used when entering the region at 'index'. These operands
-/// correspond to the loop iterator operands, i.e., those excluding the
-/// induction variable.
 OperandRange ForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   return getInitArgs();
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
 void ForOp::getSuccessorRegions(RegionBranchPoint point,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body or
@@ -1999,11 +1986,6 @@ void IfOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs());
 }
 
-/// Given the region at `index`, or the parent operation if `index` is None,
-/// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
 void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
@@ -3162,13 +3144,6 @@ void WhileOp::build(::mlir::OpBuilder &odsBuilder,
     afterBuilder(odsBuilder, odsState.location, afterBlock->getArguments());
 }
 
-OperandRange WhileOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBefore() &&
-         "WhileOp is expected to branch only to the first region");
-
-  return getInits();
-}
-
 ConditionOp WhileOp::getConditionOp() {
   return cast<ConditionOp>(getBeforeBody()->getTerminator());
 }
@@ -3187,6 +3162,12 @@ Block::BlockArgListType WhileOp::getAfterArguments() {
 
 Block::BlockArgListType WhileOp::getRegionIterArgs() {
   return getBeforeArguments();
+}
+
+OperandRange WhileOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(point == getBefore() &&
+         "WhileOp is expected to branch only to the first region");
+  return getInits();
 }
 
 void WhileOp::getSuccessorRegions(RegionBranchPoint point,
