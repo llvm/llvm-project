@@ -430,15 +430,6 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
       } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
         lowerValueProfileInst(IPVP);
         MadeChange = true;
-      } else if (auto *IPMP = dyn_cast<InstrProfMCDCBitmapParameters>(&Instr)) {
-        IPMP->eraseFromParent();
-        MadeChange = true;
-      } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(&Instr)) {
-        lowerMCDCTestVectorBitmapUpdate(IPBU);
-        MadeChange = true;
-      } else if (auto *IPTU = dyn_cast<InstrProfMCDCCondBitmapUpdate>(&Instr)) {
-        lowerMCDCCondBitmapUpdate(IPTU);
-        MadeChange = true;
       }
     }
   }
@@ -553,33 +544,19 @@ bool InstrProfiling::run(
   // the instrumented function. This is counting the number of instrumented
   // target value sites to enter it as field in the profile data variable.
   for (Function &F : M) {
-    InstrProfCntrInstBase *FirstProfInst = nullptr;
-    InstrProfMCDCBitmapParameters *FirstProfMCDCParams = nullptr;
-    for (BasicBlock &BB : F) {
-      for (auto I = BB.begin(), E = BB.end(); I != E; I++) {
+    InstrProfInstBase *FirstProfInst = nullptr;
+    for (BasicBlock &BB : F)
+      for (auto I = BB.begin(), E = BB.end(); I != E; I++)
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
           computeNumValueSiteCounts(Ind);
-        else {
-          if (FirstProfInst == nullptr &&
-              (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I)))
-            FirstProfInst = dyn_cast<InstrProfCntrInstBase>(I);
-          if (FirstProfMCDCParams == nullptr)
-            FirstProfMCDCParams = dyn_cast<InstrProfMCDCBitmapParameters>(I);
-        }
-      }
-    }
+        else if (FirstProfInst == nullptr &&
+                 (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I)))
+          FirstProfInst = dyn_cast<InstrProfInstBase>(I);
 
-    // If the MCDCBitmapParameters intrinsic was seen, create the bitmaps.
-    if (FirstProfMCDCParams != nullptr) {
-      static_cast<void>(getOrCreateRegionBitmaps(FirstProfMCDCParams));
-    }
-
-    // Use a profile intrinsic to create the region counters and data variable.
-    // Also create the data variable based on the MCDCParams.
-    if (FirstProfInst != nullptr) {
+    // Value profiling intrinsic lowering requires per-function profile data
+    // variable to be created first.
+    if (FirstProfInst != nullptr)
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
-      createDataVariable(FirstProfInst, FirstProfMCDCParams);
-    }
   }
 
   for (Function &F : M)
@@ -693,7 +670,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
-Value *InstrProfiling::getCounterAddress(InstrProfCntrInstBase *I) {
+Value *InstrProfiling::getCounterAddress(InstrProfInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
 
@@ -731,25 +708,6 @@ Value *InstrProfiling::getCounterAddress(InstrProfCntrInstBase *I) {
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
-}
-
-Value *InstrProfiling::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
-  auto *Bitmaps = getOrCreateRegionBitmaps(I);
-  IRBuilder<> Builder(I);
-
-  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
-      Bitmaps->getValueType(), Bitmaps, 0, I->getBitmapIndex()->getZExtValue());
-
-  if (isRuntimeCounterRelocationEnabled()) {
-    LLVMContext &Ctx = M->getContext();
-    Ctx.diagnose(DiagnosticInfoPGOProfile(
-        M->getName().data(),
-        Twine("Runtime counter relocation is presently not supported for MC/DC "
-              "bitmaps."),
-        DS_Warning));
-  }
-
-  return Addr;
 }
 
 void InstrProfiling::lowerCover(InstrProfCoverInst *CoverInstruction) {
@@ -837,86 +795,6 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
   }
 
   CoverageNamesVar->eraseFromParent();
-}
-
-void InstrProfiling::lowerMCDCTestVectorBitmapUpdate(
-    InstrProfMCDCTVBitmapUpdate *Update) {
-  IRBuilder<> Builder(Update);
-  auto *Int8Ty = Type::getInt8Ty(M->getContext());
-  auto *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
-  auto *Int32Ty = Type::getInt32Ty(M->getContext());
-  auto *Int64Ty = Type::getInt64Ty(M->getContext());
-  auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
-  auto *BitmapAddr = getBitmapAddress(Update);
-
-  // Load Temp Val.
-  //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
-
-  // Calculate byte offset using div8.
-  //  %1 = lshr i32 %mcdc.temp, 3
-  auto *BitmapByteOffset = Builder.CreateLShr(Temp, 0x3);
-
-  // Add byte offset to section base byte address.
-  //  %2 = zext i32 %1 to i64
-  //  %3 = add i64 ptrtoint (ptr @__profbm_test to i64), %2
-  auto *BitmapByteAddr =
-      Builder.CreateAdd(Builder.CreatePtrToInt(BitmapAddr, Int64Ty),
-                        Builder.CreateZExtOrBitCast(BitmapByteOffset, Int64Ty));
-
-  // Convert to a pointer.
-  //  %4 = inttoptr i32 %3 to ptr
-  BitmapByteAddr = Builder.CreateIntToPtr(BitmapByteAddr, Int8PtrTy);
-
-  // Calculate bit offset into bitmap byte by using div8 remainder (AND ~8)
-  //  %5 = and i32 %mcdc.temp, 7
-  //  %6 = trunc i32 %5 to i8
-  auto *BitToSet = Builder.CreateTrunc(Builder.CreateAnd(Temp, 0x7), Int8Ty);
-
-  // Shift bit offset left to form a bitmap.
-  //  %7 = shl i8 1, %6
-  auto *ShiftedVal = Builder.CreateShl(Builder.getInt8(0x1), BitToSet);
-
-  // Load profile bitmap byte.
-  //  %mcdc.bits = load i8, ptr %4, align 1
-  auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
-
-  // Perform logical OR of profile bitmap byte and shifted bit offset.
-  //  %8 = or i8 %mcdc.bits, %7
-  auto *Result = Builder.CreateOr(Bitmap, ShiftedVal);
-
-  // Store the updated profile bitmap byte.
-  //  store i8 %8, ptr %3, align 1
-  Builder.CreateStore(Result, BitmapByteAddr);
-  Update->eraseFromParent();
-}
-
-void InstrProfiling::lowerMCDCCondBitmapUpdate(
-    InstrProfMCDCCondBitmapUpdate *Update) {
-  IRBuilder<> Builder(Update);
-  auto *Int32Ty = Type::getInt32Ty(M->getContext());
-  auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
-
-  // Load the MCDC temporary value from the stack.
-  //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
-
-  // Zero-extend the evaluated condition boolean value (0 or 1) by 32bits.
-  //  %1 = zext i1 %tobool to i32
-  auto *CondV_32 = Builder.CreateZExt(Update->getCondBool(), Int32Ty);
-
-  // Shift the boolean value left (by the condition's ID) to form a bitmap.
-  //  %2 = shl i32 %1, <Update->getCondID()>
-  auto *ShiftedVal = Builder.CreateShl(CondV_32, Update->getCondID());
-
-  // Perform logical OR of the bitmap against the loaded MCDC temporary value.
-  //  %3 = or i32 %mcdc.temp, %2
-  auto *Result = Builder.CreateOr(Temp, ShiftedVal);
-
-  // Store the updated temporary value back to the stack.
-  //  store i32 %3, ptr %mcdc.addr, align 4
-  Builder.CreateStore(Result, MCDCCondBitmapAddr);
-  Update->eraseFromParent();
 }
 
 /// Get the name of a profiling variable for a particular function.
@@ -1074,31 +952,37 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   return true;
 }
 
-void InstrProfiling::maybeSetComdat(GlobalVariable *GV, Function *Fn,
-                                    StringRef VarName) {
-  bool DataReferencedByCode = profDataReferencedByCode(*M);
-  bool NeedComdat = needsComdatForCounter(*Fn, *M);
-  bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
-
-  if (!UseComdat)
-    return;
-
-  StringRef GroupName =
-      TT.isOSBinFormatCOFF() && DataReferencedByCode ? GV->getName() : VarName;
-  Comdat *C = M->getOrInsertComdat(GroupName);
-  if (!NeedComdat)
-    C->setSelectionKind(Comdat::NoDeduplicate);
-  GV->setComdat(C);
-  // COFF doesn't allow the comdat group leader to have private linkage, so
-  // upgrade private linkage to internal linkage to produce a symbol table
-  // entry.
-  if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
-    GV->setLinkage(GlobalValue::InternalLinkage);
+GlobalVariable *
+InstrProfiling::createRegionCounters(InstrProfInstBase *Inc, StringRef Name,
+                                     GlobalValue::LinkageTypes Linkage) {
+  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  auto &Ctx = M->getContext();
+  GlobalVariable *GV;
+  if (isa<InstrProfCoverInst>(Inc)) {
+    auto *CounterTy = Type::getInt8Ty(Ctx);
+    auto *CounterArrTy = ArrayType::get(CounterTy, NumCounters);
+    // TODO: `Constant::getAllOnesValue()` does not yet accept an array type.
+    std::vector<Constant *> InitialValues(NumCounters,
+                                          Constant::getAllOnesValue(CounterTy));
+    GV = new GlobalVariable(*M, CounterArrTy, false, Linkage,
+                            ConstantArray::get(CounterArrTy, InitialValues),
+                            Name);
+    GV->setAlignment(Align(1));
+  } else {
+    auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
+    GV = new GlobalVariable(*M, CounterTy, false, Linkage,
+                            Constant::getNullValue(CounterTy), Name);
+    GV->setAlignment(Align(8));
+  }
+  return GV;
 }
 
-GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
-                                                    InstrProfSectKind IPSK) {
+GlobalVariable *
+InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
+  auto &PD = ProfileDataMap[NamePtr];
+  if (PD.RegionCounters)
+    return PD.RegionCounters;
 
   // Match the linkage and visibility of the name global.
   Function *Fn = Inc->getParent()->getParent();
@@ -1137,100 +1021,42 @@ GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
   // nodeduplicate COMDAT which is lowered to a zero-flag section group. This
   // allows -z start-stop-gc to discard the entire group when the function is
   // discarded.
+  bool DataReferencedByCode = profDataReferencedByCode(*M);
+  bool NeedComdat = needsComdatForCounter(*Fn, *M);
   bool Renamed;
-  GlobalVariable *Ptr;
-  StringRef VarPrefix;
-  std::string VarName;
-  if (IPSK == IPSK_cnts) {
-    VarPrefix = getInstrProfCountersVarPrefix();
-    VarName = getVarName(Inc, VarPrefix, Renamed);
-    InstrProfCntrInstBase *CntrIncrement = dyn_cast<InstrProfCntrInstBase>(Inc);
-    Ptr = createRegionCounters(CntrIncrement, VarName, Linkage);
-  } else if (IPSK == IPSK_bitmap) {
-    VarPrefix = getInstrProfBitmapVarPrefix();
-    VarName = getVarName(Inc, VarPrefix, Renamed);
-    InstrProfMCDCBitmapInstBase *BitmapUpdate =
-        dyn_cast<InstrProfMCDCBitmapInstBase>(Inc);
-    Ptr = createRegionBitmaps(BitmapUpdate, VarName, Linkage);
-  } else {
-    llvm_unreachable("Profile Section must be for Counters or Bitmaps");
-  }
+  std::string CntsVarName =
+      getVarName(Inc, getInstrProfCountersVarPrefix(), Renamed);
+  std::string DataVarName =
+      getVarName(Inc, getInstrProfDataVarPrefix(), Renamed);
+  auto MaybeSetComdat = [&](GlobalVariable *GV) {
+    bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
+    if (UseComdat) {
+      StringRef GroupName = TT.isOSBinFormatCOFF() && DataReferencedByCode
+                                ? GV->getName()
+                                : CntsVarName;
+      Comdat *C = M->getOrInsertComdat(GroupName);
+      if (!NeedComdat)
+        C->setSelectionKind(Comdat::NoDeduplicate);
+      GV->setComdat(C);
+      // COFF doesn't allow the comdat group leader to have private linkage, so
+      // upgrade private linkage to internal linkage to produce a symbol table
+      // entry.
+      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
+        GV->setLinkage(GlobalValue::InternalLinkage);
+    }
+  };
 
-  Ptr->setVisibility(Visibility);
-  // Put the counters and bitmaps in their own sections so linkers can
-  // remove unneeded sections.
-  Ptr->setSection(getInstrProfSectionName(IPSK, TT.getObjectFormat()));
-  Ptr->setLinkage(Linkage);
-  maybeSetComdat(Ptr, Fn, VarName);
-  return Ptr;
-}
-
-GlobalVariable *
-InstrProfiling::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
-                                    StringRef Name,
-                                    GlobalValue::LinkageTypes Linkage) {
-  uint64_t NumBytes = Inc->getNumBitmapBytes()->getZExtValue();
-  auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M->getContext()), NumBytes);
-  auto GV = new GlobalVariable(*M, BitmapTy, false, Linkage,
-                               Constant::getNullValue(BitmapTy), Name);
-  GV->setAlignment(Align(1));
-  return GV;
-}
-
-GlobalVariable *
-InstrProfiling::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
-  GlobalVariable *NamePtr = Inc->getName();
-  auto &PD = ProfileDataMap[NamePtr];
-  if (PD.RegionBitmaps)
-    return PD.RegionBitmaps;
-
-  // If RegionBitmaps doesn't already exist, create it by first setting up
-  // the corresponding profile section.
-  auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
-  PD.RegionBitmaps = BitmapPtr;
-  return PD.RegionBitmaps;
-}
-
-GlobalVariable *
-InstrProfiling::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
-                                     GlobalValue::LinkageTypes Linkage) {
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
-  auto &Ctx = M->getContext();
-  GlobalVariable *GV;
-  if (isa<InstrProfCoverInst>(Inc)) {
-    auto *CounterTy = Type::getInt8Ty(Ctx);
-    auto *CounterArrTy = ArrayType::get(CounterTy, NumCounters);
-    // TODO: `Constant::getAllOnesValue()` does not yet accept an array type.
-    std::vector<Constant *> InitialValues(NumCounters,
-                                          Constant::getAllOnesValue(CounterTy));
-    GV = new GlobalVariable(*M, CounterArrTy, false, Linkage,
-                            ConstantArray::get(CounterArrTy, InitialValues),
-                            Name);
-    GV->setAlignment(Align(1));
-  } else {
-    auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
-    GV = new GlobalVariable(*M, CounterTy, false, Linkage,
-                            Constant::getNullValue(CounterTy), Name);
-    GV->setAlignment(Align(8));
-  }
-  return GV;
-}
+  LLVMContext &Ctx = M->getContext();
 
-GlobalVariable *
-InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
-  GlobalVariable *NamePtr = Inc->getName();
-  auto &PD = ProfileDataMap[NamePtr];
-  if (PD.RegionCounters)
-    return PD.RegionCounters;
-
-  // If RegionCounters doesn't already exist, create it by first setting up
-  // the corresponding profile section.
-  auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
+  auto *CounterPtr = createRegionCounters(Inc, CntsVarName, Linkage);
+  CounterPtr->setVisibility(Visibility);
+  CounterPtr->setSection(
+      getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
+  CounterPtr->setLinkage(Linkage);
+  MaybeSetComdat(CounterPtr);
   PD.RegionCounters = CounterPtr;
-
   if (DebugInfoCorrelate) {
-    LLVMContext &Ctx = M->getContext();
-    Function *Fn = Inc->getParent()->getParent();
     if (auto *SP = Fn->getSubprogram()) {
       DIBuilder DB(*M, true, SP->getUnit());
       Metadata *FunctionNameAnnotation[] = {
@@ -1259,49 +1085,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
       CounterPtr->addDebugInfo(DICounter);
       DB.finalize();
     }
-
-    // Mark the counter variable as used so that it isn't optimized out.
-    CompilerUsedVars.push_back(PD.RegionCounters);
   }
-
-  return PD.RegionCounters;
-}
-
-void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
-                                        InstrProfMCDCBitmapParameters *Params) {
-  // When debug information is correlated to profile data, a data variable
-  // is not needed.
-  if (DebugInfoCorrelate)
-    return;
-
-  GlobalVariable *NamePtr = Inc->getName();
-  auto &PD = ProfileDataMap[NamePtr];
-
-  LLVMContext &Ctx = M->getContext();
-
-  Function *Fn = Inc->getParent()->getParent();
-  GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
-  GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
-
-  // Due to the limitation of binder as of 2021/09/28, the duplicate weak
-  // symbols in the same csect won't be discarded. When there are duplicate weak
-  // symbols, we can NOT guarantee that the relocations get resolved to the
-  // intended weak symbol, so we can not ensure the correctness of the relative
-  // CounterPtr, so we have to use private linkage for counter and data symbols.
-  if (TT.isOSBinFormatXCOFF()) {
-    Linkage = GlobalValue::PrivateLinkage;
-    Visibility = GlobalValue::DefaultVisibility;
-  }
-
-  bool DataReferencedByCode = profDataReferencedByCode(*M);
-  bool NeedComdat = needsComdatForCounter(*Fn, *M);
-  bool Renamed;
-
-  // The Data Variable section is anchored to profile counters.
-  std::string CntsVarName =
-      getVarName(Inc, getInstrProfCountersVarPrefix(), Renamed);
-  std::string DataVarName =
-      getVarName(Inc, getInstrProfDataVarPrefix(), Renamed);
 
   auto *Int8PtrTy = Type::getInt8PtrTy(Ctx);
   // Allocate statically the array of pointers to value profile nodes for
@@ -1320,17 +1104,16 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
     ValuesVar->setSection(
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
-    maybeSetComdat(ValuesVar, Fn, CntsVarName);
+    MaybeSetComdat(ValuesVar);
     ValuesPtrExpr =
         ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
   }
 
-  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
-  auto *CounterPtr = PD.RegionCounters;
-
-  uint64_t NumBitmapBytes = 0;
-  if (Params != nullptr)
-    NumBitmapBytes = Params->getNumBitmapBytes()->getZExtValue();
+  if (DebugInfoCorrelate) {
+    // Mark the counter variable as used so that it isn't optimized out.
+    CompilerUsedVars.push_back(PD.RegionCounters);
+    return PD.RegionCounters;
+  }
 
   // Create data variable.
   auto *IntPtrTy = M->getDataLayout().getIntPtrType(M->getContext());
@@ -1373,16 +1156,6 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
       ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
                            ConstantExpr::getPtrToInt(Data, IntPtrTy));
 
-  // Bitmaps are relative to the same data variable as profile counters.
-  GlobalVariable *BitmapPtr = PD.RegionBitmaps;
-  Constant *RelativeBitmapPtr = ConstantInt::get(IntPtrTy, 0);
-
-  if (BitmapPtr != nullptr) {
-    RelativeBitmapPtr =
-        ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
-                             ConstantExpr::getPtrToInt(Data, IntPtrTy));
-  }
-
   Constant *DataVals[] = {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -1392,7 +1165,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
-  maybeSetComdat(Data, Fn, CntsVarName);
+  MaybeSetComdat(Data);
 
   PD.DataVar = Data;
 
@@ -1404,6 +1177,8 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
   NamePtr->setLinkage(GlobalValue::PrivateLinkage);
   // Collect the referenced names to be used by emitNameData.
   ReferencedNames.push_back(NamePtr);
+
+  return PD.RegionCounters;
 }
 
 void InstrProfiling::emitVNodes() {
