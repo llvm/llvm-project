@@ -1330,8 +1330,8 @@ def Vector_TransferReadOp :
     // MaskableOpInterface methods.
     bool supportsPassthru() { return true; }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {0, 0};  // empty range (no init operands)
+    MutableOperandRange getDpsInitsMutable() {
+      return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
     }
   }];
 
@@ -1494,9 +1494,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
-      return {1, 2};  // `source` operand
-    }
+    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
   }];
 
   let hasFolder = 1;
