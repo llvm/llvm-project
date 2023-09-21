@@ -5701,13 +5701,19 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
   return ConstraintOperands;
 }
 
-/// Return an integer indicating how general CT is.
-static unsigned getConstraintGenerality(TargetLowering::ConstraintType CT) {
+/// Return a number indicating our preference for chosing a type of constraint
+/// over another, for the purpose of sorting them. Immediates are almost always
+/// preferrable (when they can be emitted).
+/// FIXME: We should prefer registers over memory but doing so may lead to
+/// unrecoverable register exhaustion later.
+/// https://github.com/llvm/llvm-project/issues/20571
+static unsigned getConstraintPiority(TargetLowering::ConstraintType CT) {
   switch (CT) {
-  case TargetLowering::C_Immediate:
-  case TargetLowering::C_Other:
   case TargetLowering::C_Unknown:
     return 0;
+  case TargetLowering::C_Immediate:
+  case TargetLowering::C_Other:
+    return 4;
   case TargetLowering::C_Register:
     return 1;
   case TargetLowering::C_RegisterClass:
@@ -5812,18 +5818,13 @@ TargetLowering::ConstraintWeight
 ///  2) Otherwise, pick the most general constraint present.  This prefers
 ///     'm' over 'r', for example.
 ///
-static void ChooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
-                             const TargetLowering &TLI,
-                             SDValue Op, SelectionDAG *DAG) {
-  assert(OpInfo.Codes.size() > 1 && "Doesn't have multiple constraint options");
-  unsigned BestIdx = 0;
-  TargetLowering::ConstraintType BestType = TargetLowering::C_Unknown;
-  int BestGenerality = -1;
+TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
+    TargetLowering::AsmOperandInfo &OpInfo) const {
+  ConstraintGroup Ret;
 
-  // Loop over the options, keeping track of the most general one.
-  for (unsigned i = 0, e = OpInfo.Codes.size(); i != e; ++i) {
-    TargetLowering::ConstraintType CType =
-      TLI.getConstraintType(OpInfo.Codes[i]);
+  Ret.reserve(OpInfo.Codes.size());
+  for (StringRef Code : OpInfo.Codes) {
+    TargetLowering::ConstraintType CType = getConstraintType(Code);
 
     // Indirect 'other' or 'immediate' constraints are not allowed.
     if (OpInfo.isIndirect && !(CType == TargetLowering::C_Memory ||
@@ -5831,40 +5832,36 @@ static void ChooseConstraint(TargetLowering::AsmOperandInfo &OpInfo,
                                CType == TargetLowering::C_RegisterClass))
       continue;
 
-    // If this is an 'other' or 'immediate' constraint, see if the operand is
-    // valid for it. For example, on X86 we might have an 'rI' constraint. If
-    // the operand is an integer in the range [0..31] we want to use I (saving a
-    // load of a register), otherwise we must use 'r'.
-    if ((CType == TargetLowering::C_Other ||
-         CType == TargetLowering::C_Immediate) && Op.getNode()) {
-      assert(OpInfo.Codes[i].size() == 1 &&
-             "Unhandled multi-letter 'other' constraint");
-      std::vector<SDValue> ResultOps;
-      TLI.LowerAsmOperandForConstraint(Op, OpInfo.Codes[i],
-                                       ResultOps, *DAG);
-      if (!ResultOps.empty()) {
-        BestType = CType;
-        BestIdx = i;
-        break;
-      }
-    }
-
     // Things with matching constraints can only be registers, per gcc
     // documentation.  This mainly affects "g" constraints.
     if (CType == TargetLowering::C_Memory && OpInfo.hasMatchingInput())
       continue;
 
-    // This constraint letter is more general than the previous one, use it.
-    int Generality = getConstraintGenerality(CType);
-    if (Generality > BestGenerality) {
-      BestType = CType;
-      BestIdx = i;
-      BestGenerality = Generality;
-    }
+    Ret.emplace_back(Code, CType);
   }
 
-  OpInfo.ConstraintCode = OpInfo.Codes[BestIdx];
-  OpInfo.ConstraintType = BestType;
+  std::sort(Ret.begin(), Ret.end(), [](ConstraintPair a, ConstraintPair b) {
+    return getConstraintPiority(a.second) > getConstraintPiority(b.second);
+  });
+
+  return Ret;
+}
+
+// If we have an immediate, see if we can lower it. Return true if we can, or
+// don't have an immediate, false otherwise.
+static bool lowerImmediateIfPossible(TargetLowering::ConstraintPair &P,
+                                     SDValue Op, SelectionDAG *DAG,
+                                     const TargetLowering &TLI) {
+
+  if (P.second != TargetLowering::C_Other &&
+      P.second != TargetLowering::C_Immediate)
+    return true;
+  if (!Op.getNode())
+    return false;
+
+  std::vector<SDValue> ResultOps;
+  TLI.LowerAsmOperandForConstraint(Op, P.first, ResultOps, *DAG);
+  return !ResultOps.empty();
 }
 
 /// Determines the constraint code and constraint type to use for the specific
@@ -5879,7 +5876,19 @@ void TargetLowering::ComputeConstraintToUse(AsmOperandInfo &OpInfo,
     OpInfo.ConstraintCode = OpInfo.Codes[0];
     OpInfo.ConstraintType = getConstraintType(OpInfo.ConstraintCode);
   } else {
-    ChooseConstraint(OpInfo, *this, Op, DAG);
+    ConstraintGroup G = getConstraintPreferences(OpInfo);
+    if (G.empty())
+      return;
+
+    unsigned BestIdx = 0;
+    while (!lowerImmediateIfPossible(G[BestIdx], Op, DAG, *this)) {
+      if (BestIdx + 1 > G.size() - 1)
+        return;
+      ++BestIdx;
+    }
+
+    OpInfo.ConstraintCode = G[BestIdx].first;
+    OpInfo.ConstraintType = G[BestIdx].second;
   }
 
   // 'X' matches anything.
