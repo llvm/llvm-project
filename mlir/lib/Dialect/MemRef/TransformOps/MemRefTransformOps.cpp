@@ -130,25 +130,6 @@ void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
 // AllocaToGlobalOp
 //===----------------------------------------------------------------------===//
 
-namespace {
-static llvm::SmallString<64> getUniqueSymbol(llvm::StringRef prefix,
-                                             ModuleOp module) {
-  llvm::SmallString<64> candidateNameStorage;
-  StringRef candidateName(prefix);
-  int uniqueNumber = 0;
-  while (true) {
-    if (!module.lookupSymbol(candidateName)) {
-      break;
-    }
-    candidateNameStorage.clear();
-    candidateName = (prefix + Twine("_") + Twine(uniqueNumber))
-                        .toStringRef(candidateNameStorage);
-    uniqueNumber++;
-  }
-  return candidateName;
-}
-} // namespace
-
 DiagnosedSilenceableFailure
 transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
                                          transform::TransformResults &results,
@@ -158,14 +139,25 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
   SmallVector<memref::GlobalOp> globalOps;
   SmallVector<memref::GetGlobalOp> getGlobalOps;
 
-  // Get `builtin.module`.
-  auto moduleOps = state.getPayloadOps(getModule());
-  if (!llvm::hasSingleElement(moduleOps)) {
+  // Get containing symbol table op.
+  auto symbolTableOps = state.getPayloadOps(getSymbolTable());
+  if (!llvm::hasSingleElement(symbolTableOps)) {
     return emitDefiniteFailure()
-           << Twine("expected exactly one 'module' payload, but found ") +
-                  std::to_string(llvm::range_size(moduleOps));
+           << Twine("expected exactly one 'symbolTable' payload, but found ") +
+                  std::to_string(llvm::range_size(symbolTableOps));
   }
-  ModuleOp module = cast<ModuleOp>(*moduleOps.begin());
+  Operation *symbolTableOp = *symbolTableOps.begin();
+  if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>()) {
+    return emitDefiniteFailure() << Twine(
+               "expected 'symbolTable' payload to have 'SymbolTable' trait");
+  }
+  SymbolTable symbolTable(symbolTableOp);
+
+  {
+    size_t numAllocaOps = llvm::range_size(allocaOps);
+    globalOps.reserve(numAllocaOps);
+    getGlobalOps.reserve(numAllocaOps);
+  }
 
   // Transform `memref.alloca`s.
   for (auto *op : allocaOps) {
@@ -175,19 +167,18 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
 
     memref::GlobalOp globalOp;
     {
-      // Insert a `memref.global` at the beginning of the module.
-      if (module != alloca->getParentOfType<ModuleOp>()) {
-        return emitDefiniteFailure()
-               << "expected 'alloca' payload to be inside 'module' payload";
+      // Insert a `memref.global` into the symbol table.
+      if (symbolTable.getOp() != SymbolTable::getNearestSymbolTable(op)) {
+        return emitDefiniteFailure() << "expected 'alloca' payload to be "
+                                        "inside 'symbolTable' payload";
       }
-      IRRewriter::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(&module.getBodyRegion().front());
       Type resultType = alloca.getResult().getType();
-      llvm::SmallString<64> symName = getUniqueSymbol("alloca", module);
-      // XXX: Add a better builder for this.
-      globalOp = rewriter.create<memref::GlobalOp>(
-          loc, StringAttr::get(ctx, symName), StringAttr::get(ctx, "private"),
+      // TODO: Add a better builder for this.
+      OpBuilder builder(rewriter.getContext());
+      globalOp = builder.create<memref::GlobalOp>(
+          loc, StringAttr::get(ctx, "alloca"), StringAttr::get(ctx, "private"),
           TypeAttr::get(resultType), Attribute{}, UnitAttr{}, IntegerAttr{});
+      symbolTable.insert(globalOp);
     }
 
     // Replace the `memref.alloca` with a `memref.get_global` accessing the
@@ -209,7 +200,7 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::MemRefAllocaToGlobalOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getModule(), effects);
+  onlyReadsHandle(getSymbolTable(), effects);
   producesHandle(getGlobal(), effects);
   producesHandle(getGetGlobal(), effects);
   consumesHandle(getAlloca(), effects);

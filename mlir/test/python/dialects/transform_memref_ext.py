@@ -21,15 +21,11 @@ def testMemRefAllocaToAllocOpCompact():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("memref.alloc"),
+        transform.OperationType.get("builtin.module"),
+        [transform.OperationType.get("memref.alloca")],
     )
     with InsertionPoint(sequence.body):
-        module = transform.CastOp(
-            transform.OperationType.get("builtin.module"), sequence.bodyTarget
-        )
-        alloca = transform.CastOp(
-            transform.OperationType.get("memref.alloca"), sequence.bodyTarget
-        )
+        module, alloca = sequence.body.arguments
         memref.MemRefAllocaToGlobalOp(module, alloca)
         transform.YieldOp()
     # CHECK-LABEL: TEST: testMemRefAllocaToAllocOpCompact
@@ -43,15 +39,11 @@ def testMemRefAllocaToAllocOpTyped():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,
         [],
-        transform.OperationType.get("memref.alloc"),
+        transform.OperationType.get("builtin.module"),
+        [transform.OperationType.get("memref.alloca")],
     )
     with InsertionPoint(sequence.body):
-        module = transform.CastOp(
-            transform.OperationType.get("builtin.module"), sequence.bodyTarget
-        )
-        alloca = transform.CastOp(
-            transform.OperationType.get("memref.alloca"), sequence.bodyTarget
-        )
+        module, alloca = sequence.body.arguments
         memref.MemRefAllocaToGlobalOp(
             transform.OperationType.get("memref.get_global"),
             transform.OperationType.get("memref.global"),

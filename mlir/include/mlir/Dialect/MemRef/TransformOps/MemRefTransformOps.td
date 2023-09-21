@@ -153,9 +153,10 @@ def MemRefAllocaToGlobalOp :
       DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let description = [{
     Inserts a new `memref.global` for each provided `memref.alloca` into the
-    provided module and replaces it with a `memref.get_global`. This is useful,
-    for example, for allocations that should reside in the shared memory of
-    a GPU, which have to be declared as globals.
+    provided symbol table (e.g., a `builtin.module`) and replaces it with a
+    `memref.get_global`. This is useful, for example, for allocations that
+    should reside in the shared memory of a GPU, which have to be declared as
+    globals.
 
     #### Example
 
@@ -194,19 +195,20 @@ def MemRefAllocaToGlobalOp :
 
     #### Return modes
 
-    Emits a definite failure if not exactly one `module` payload op was provided
-    or any of the `alloca` payload ops is not inside that module, and succeeds
-    otherwise. The returned handles refer to the `memref.get_global` and
-    `memref.global` ops that were inserted by the transformation.
+    Emits a definite failure if not exactly one symbol table payload op was
+    provided or any of the `alloca` payload ops is not inside that symbol table
+    op, and succeeds otherwise. The returned handles refer to the
+    `memref.get_global` and `memref.global` ops that were inserted by the
+    transformation.
   }];
 
-  let arguments = (ins Transform_ConcreteOpType<"builtin.module">:$module,
+  let arguments = (ins TransformHandleTypeInterface:$symbolTable,
                    Transform_MemRefAllocaOp:$alloca);
-  let results = (outs TransformHandleTypeInterface:$get_global,
+  let results = (outs TransformHandleTypeInterface:$getGlobal,
                   TransformHandleTypeInterface:$global);
 
   let assemblyFormat = [{
-    $alloca `in` $module attr-dict `:` functional-type(operands, results)
+    $alloca `in` $symbolTable attr-dict `:` functional-type(operands, results)
   }];
 }
 
