@@ -995,7 +995,7 @@ func.func @constant_mask_with_zero_mask_dim_size() {
 // -----
 
 func.func @constant_mask_scalable_non_zero_dim_size() {
-  // expected-error@+1 {{expected mask dim sizes for scalable masks to be 0}}
+  // expected-error@+1 {{only supports 'none set' or 'all set' scalable dimensions}}
   %0 = vector.constant_mask [2] : vector<[8]xi1>
 }
 

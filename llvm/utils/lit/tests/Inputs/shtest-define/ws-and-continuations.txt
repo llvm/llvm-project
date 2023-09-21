@@ -3,33 +3,33 @@
 #
 # DEFINE: %{empty}=
 # RUN: echo "'%{empty}'"
-# CHECK:''
+# CHECK:# | ''
 #
 # REDEFINE: %{empty}=
 # RUN: echo "'%{empty}'"
-# CHECK:''
+# CHECK:# | ''
 
 # A value consisting only of whitespace is trimmed to the empty string.
 #
 #               v~~ intentional whitespace
 # DEFINE: %{ws}=   
 # RUN: echo "'%{ws}'"
-# CHECK:''
+# CHECK:# | ''
 #
 #                 v intentional whitespace
 # REDEFINE: %{ws}= 
 # RUN: echo "'%{ws}'"
-# CHECK:''
+# CHECK:# | ''
 
 # Whitespace is not required around the name or value.
 #
 # DEFINE:%{no-whitespace}=abc
 # RUN: echo "'%{no-whitespace}'"
-# CHECK:'abc'
+# CHECK:# | 'abc'
 #
 # REDEFINE:%{no-whitespace}=HelloWorld
 # RUN: echo "'%{no-whitespace}'"
-# CHECK:'HelloWorld'
+# CHECK:# | 'HelloWorld'
 
 # Whitespace is not required between substitutions in a value.
 #
@@ -37,11 +37,11 @@
 # DEFINE: %{adjacent1} = bar
 # DEFINE: %{has-adjacent-substs} = %{adjacent0}%{adjacent1}
 # RUN: echo "'%{has-adjacent-substs}'"
-# CHECK:'foobar'
+# CHECK:# | 'foobar'
 #
 # REDEFINE: %{has-adjacent-substs} = %{adjacent0}%{adjacent1}%{adjacent0}
 # RUN: echo "'%{has-adjacent-substs}'"
-# CHECK:'foobarfoo'
+# CHECK:# | 'foobarfoo'
 
 # Exact whitespace is preserved within the value, but whitespace enclosing the
 # name or value is discarded.  ('%{' and '}' are part of the name, and
@@ -50,11 +50,11 @@
 #                                       v~~ intentional whitespace
 # DEFINE:   %{whitespace}  =  abc    def   
 # RUN: echo "'%{whitespace}'"
-# CHECK:'abc    def'
+# CHECK:# | 'abc    def'
 #                                      v intentional whitespace
 # REDEFINE: %{whitespace} = Hello World 
 # RUN: echo "'%{whitespace}'"
-# CHECK:'Hello World'
+# CHECK:# | 'Hello World'
 
 # Line continuations in the value are permitted and collapse whitespace.
 #
@@ -66,12 +66,12 @@
 # DEFINE:  pqr 
 #             ^ intentional whitespace
 # RUN: echo "'%{continue}'"
-# CHECK:'abc def ghi jkl mno pqr'
+# CHECK:# | 'abc def ghi jkl mno pqr'
 #
 # REDEFINE: %{continue} =  abc  \
 # REDEFINE: def
 # RUN: echo "'%{continue}'"
-# CHECK:'abc def'
+# CHECK:# | 'abc def'
 
 # Whitespace at the end of the line after a '\' is ignored, and it's treated as
 # a line continuation.  Otherwise, the behavior would be hard to understand
@@ -83,7 +83,7 @@
 #                                   ^ intentional whitespace
 # DEFINE: baz
 # RUN: echo "'%{ws-after-continue}'"
-# CHECK:'foo bar baz'
+# CHECK:# | 'foo bar baz'
 #
 #                                     v intentional whitespace
 # REDEFINE: %{ws-after-continue}=foo \ 
@@ -91,7 +91,7 @@
 #                                     ^~~~~~~~~~~~ intentional whitespace
 # REDEFINE: baz
 # RUN: echo "'%{ws-after-continue}'"
-# CHECK:'foo bar baz'
+# CHECK:# | 'foo bar baz'
 
 # A line continuation is recognized anywhere.  It should be used only where
 # whitespace is permitted because it reduces to a single space.
@@ -107,7 +107,7 @@
 # DEFINE:\
 # DEFINE:a
 # RUN: echo "'%{blank-lines}'"
-# CHECK:'a'
+# CHECK:# | 'a'
 #
 # REDEFINE:                  \
 # REDEFINE: %{blank-lines}   \
@@ -120,7 +120,7 @@
 # REDEFINE:                  \
 # REDEFINE:      c
 # RUN: echo "'%{blank-lines}'"
-# CHECK:'a b c'
+# CHECK:# | 'a b c'
 
 # The fourth DEFINE line is deceptive because it looks like a new substitution,
 # but it's actually a continuation of the previous value.
@@ -130,6 +130,6 @@
 # DEFINE: %{deceptive-continue}=echo \
 # DEFINE: %{name}=%{value}
 # RUN: %{deceptive-continue}
-# CHECK:x=3
+# CHECK:# | x=3
 
 # CHECK:{{ *}}Passed: 1

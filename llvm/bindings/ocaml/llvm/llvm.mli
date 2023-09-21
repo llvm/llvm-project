@@ -2034,7 +2034,7 @@ val build_switch : llvalue -> llbasicblock -> int -> llbuilder -> llvalue
 
 (** [build_malloc ty name b] creates an [malloc]
     instruction at the position specified by the instruction builder [b].
-    See the method [llvm::CallInst::CreateMalloc]. *)
+    See the method [llvm::IRBuilderBase::CreateMalloc]. *)
 val build_malloc : lltype -> string -> llbuilder -> llvalue
 
 (** [build_array_malloc ty val name b] creates an [array malloc]

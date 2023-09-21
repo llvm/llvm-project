@@ -5,8 +5,8 @@
 ; Please note that the use of the hardwareloop intrinsic is arbitrary; it's
 ; just an easy to use intrinsic that has NoDuplicate.
 
-; CHECK-NOT: @foo.1(
-; CHECK-NOT: @foo.2(
+; CHECK-NOT: @foo.specialized.1(
+; CHECK-NOT: @foo.specialized.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 

@@ -4823,17 +4823,6 @@ SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
                      Mask);
 }
 
-static std::optional<SMEAttrs> getCalleeAttrsFromExternalFunction(SDValue V) {
-  if (auto *ES = dyn_cast<ExternalSymbolSDNode>(V)) {
-    StringRef S(ES->getSymbol());
-    if (S == "__arm_sme_state" || S == "__arm_tpidr2_save")
-      return SMEAttrs(SMEAttrs::SM_Compatible | SMEAttrs::ZA_Preserved);
-    if (S == "__arm_tpidr2_restore")
-      return SMEAttrs(SMEAttrs::SM_Compatible | SMEAttrs::ZA_Shared);
-  }
-  return std::nullopt;
-}
-
 SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                    SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -5335,7 +5324,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_neon_uaddlv: {
     EVT OpVT = Op.getOperand(1).getValueType();
     EVT ResVT = Op.getValueType();
-    if (ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8)) {
+    if (ResVT == MVT::i32 && (OpVT == MVT::v8i8 || OpVT == MVT::v16i8 ||
+                              OpVT == MVT::v8i16 || OpVT == MVT::v4i16)) {
       // In order to avoid insert_subvector, used v4i32 than v2i32.
       SDValue UADDLV =
           DAG.getNode(AArch64ISD::UADDLV, dl, MVT::v4i32, Op.getOperand(1));
@@ -7374,28 +7364,31 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   SMEAttrs CalleeAttrs, CallerAttrs(MF.getFunction());
   if (CLI.CB)
     CalleeAttrs = SMEAttrs(*CLI.CB);
-  else if (std::optional<SMEAttrs> Attrs =
-               getCalleeAttrsFromExternalFunction(CLI.Callee))
-    CalleeAttrs = *Attrs;
+  else if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
+    CalleeAttrs = SMEAttrs(ES->getSymbol());
 
   bool RequiresLazySave = CallerAttrs.requiresLazySave(CalleeAttrs);
-
-  MachineFrameInfo &MFI = MF.getFrameInfo();
   if (RequiresLazySave) {
-    // Set up a lazy save mechanism by storing the runtime live slices
-    // (worst-case N*N) to the TPIDR2 stack object.
-    SDValue N = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
-                            DAG.getConstant(1, DL, MVT::i32));
-    SDValue NN = DAG.getNode(ISD::MUL, DL, MVT::i64, N, N);
-    unsigned TPIDR2Obj = FuncInfo->getLazySaveTPIDR2Obj();
+    SDValue NumZaSaveSlices;
+    if (!CalleeAttrs.preservesZA()) {
+      // Set up a lazy save mechanism by storing the runtime live slices
+      // (worst-case SVL*SVL) to the TPIDR2 stack object.
+      SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                DAG.getConstant(1, DL, MVT::i32));
+      NumZaSaveSlices = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+    } else if (CalleeAttrs.preservesZA()) {
+      NumZaSaveSlices = DAG.getConstant(0, DL, MVT::i64);
+    }
 
+    unsigned TPIDR2Obj = FuncInfo->getLazySaveTPIDR2Obj();
     MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, TPIDR2Obj);
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(TPIDR2Obj,
         DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-    SDValue BufferPtrAddr =
+    SDValue NumZaSaveSlicesAddr =
         DAG.getNode(ISD::ADD, DL, TPIDR2ObjAddr.getValueType(), TPIDR2ObjAddr,
                     DAG.getConstant(8, DL, TPIDR2ObjAddr.getValueType()));
-    Chain = DAG.getTruncStore(Chain, DL, NN, BufferPtrAddr, MPI, MVT::i16);
+    Chain = DAG.getTruncStore(Chain, DL, NumZaSaveSlices, NumZaSaveSlicesAddr,
+                              MPI, MVT::i16);
     Chain = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
         DAG.getConstant(Intrinsic::aarch64_sme_set_tpidr2, DL, MVT::i32),
@@ -7502,6 +7495,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
       Type *Ty = EVT(VA.getValVT()).getTypeForEVT(*DAG.getContext());
       Align Alignment = DAG.getDataLayout().getPrefTypeAlign(Ty);
+      MachineFrameInfo &MFI = MF.getFrameInfo();
       int FI = MFI.CreateStackObject(StoreSize, Alignment, false);
       if (isScalable)
         MFI.setStackID(FI, TargetStackID::ScalableVector);
@@ -7818,35 +7812,34 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   if (RequiresLazySave) {
-    // Unconditionally resume ZA.
-    Result = DAG.getNode(
-        AArch64ISD::SMSTART, DL, MVT::Other, Result,
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
-        DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
+    if (!CalleeAttrs.preservesZA()) {
+      // Unconditionally resume ZA.
+      Result = DAG.getNode(
+          AArch64ISD::SMSTART, DL, MVT::Other, Result,
+          DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32),
+          DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64));
 
-    // Conditionally restore the lazy save using a pseudo node.
-    unsigned FI = FuncInfo->getLazySaveTPIDR2Obj();
-    SDValue RegMask = DAG.getRegisterMask(
-        TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
-    SDValue RestoreRoutine = DAG.getTargetExternalSymbol(
-        "__arm_tpidr2_restore", getPointerTy(DAG.getDataLayout()));
-    SDValue TPIDR2_EL0 = DAG.getNode(
-        ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Result,
-        DAG.getConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
+      // Conditionally restore the lazy save using a pseudo node.
+      unsigned FI = FuncInfo->getLazySaveTPIDR2Obj();
+      SDValue RegMask = DAG.getRegisterMask(
+          TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+      SDValue RestoreRoutine = DAG.getTargetExternalSymbol(
+          "__arm_tpidr2_restore", getPointerTy(DAG.getDataLayout()));
+      SDValue TPIDR2_EL0 = DAG.getNode(
+          ISD::INTRINSIC_W_CHAIN, DL, MVT::i64, Result,
+          DAG.getConstant(Intrinsic::aarch64_sme_get_tpidr2, DL, MVT::i32));
 
-    // Copy the address of the TPIDR2 block into X0 before 'calling' the
-    // RESTORE_ZA pseudo.
-    SDValue Glue;
-    SDValue TPIDR2Block = DAG.getFrameIndex(
-        FI, DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
-    Result = DAG.getCopyToReg(Result, DL, AArch64::X0, TPIDR2Block, Glue);
-    Result = DAG.getNode(AArch64ISD::RESTORE_ZA, DL, MVT::Other,
-                         {Result, TPIDR2_EL0,
-                          DAG.getRegister(AArch64::X0, MVT::i64),
-                          RestoreRoutine,
-                          RegMask,
-                          Result.getValue(1)});
-
+      // Copy the address of the TPIDR2 block into X0 before 'calling' the
+      // RESTORE_ZA pseudo.
+      SDValue Glue;
+      SDValue TPIDR2Block = DAG.getFrameIndex(
+          FI, DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
+      Result = DAG.getCopyToReg(Result, DL, AArch64::X0, TPIDR2Block, Glue);
+      Result = DAG.getNode(AArch64ISD::RESTORE_ZA, DL, MVT::Other,
+                           {Result, TPIDR2_EL0,
+                            DAG.getRegister(AArch64::X0, MVT::i64),
+                            RestoreRoutine, RegMask, Result.getValue(1)});
+    }
     // Finally reset the TPIDR2_EL0 register to 0.
     Result = DAG.getNode(
         ISD::INTRINSIC_VOID, DL, MVT::Other, Result,
@@ -22273,6 +22266,7 @@ static SDValue performSelectCombine(SDNode *N,
 static SDValue performDUPCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
   // 128bit vector version.
   if (VT.is64BitVector() && DCI.isAfterLegalizeDAG()) {
@@ -22280,14 +22274,32 @@ static SDValue performDUPCombine(SDNode *N,
     SmallVector<SDValue> Ops(N->ops());
     if (SDNode *LN = DCI.DAG.getNodeIfExists(N->getOpcode(),
                                              DCI.DAG.getVTList(LVT), Ops)) {
-      SDLoc DL(N);
       return DCI.DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(LN, 0),
                              DCI.DAG.getConstant(0, DL, MVT::i64));
     }
   }
 
-  if (N->getOpcode() == AArch64ISD::DUP)
+  if (N->getOpcode() == AArch64ISD::DUP) {
+    if (DCI.isAfterLegalizeDAG()) {
+      // If scalar dup's operand is extract_vector_elt, try to combine them into
+      // duplane. For example,
+      //
+      //    t21: i32 = extract_vector_elt t19, Constant:i64<0>
+      //  t18: v4i32 = AArch64ISD::DUP t21
+      //  ==>
+      //  t22: v4i32 = AArch64ISD::DUPLANE32 t19, Constant:i64<0>
+      SDValue EXTRACT_VEC_ELT = N->getOperand(0);
+      if (EXTRACT_VEC_ELT.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        if (VT == EXTRACT_VEC_ELT.getOperand(0).getValueType()) {
+          unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
+          return DCI.DAG.getNode(Opcode, DL, VT, EXTRACT_VEC_ELT.getOperand(0),
+                                 EXTRACT_VEC_ELT.getOperand(1));
+        }
+      }
+    }
+
     return performPostLD1Combine(N, DCI, false);
+  }
 
   return SDValue();
 }

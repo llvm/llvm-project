@@ -10,169 +10,169 @@
 
 void basic() {
   int *ptr;
-// CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> ptr"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:11}:"std::span<int> ptr"
   *(ptr+5)=1;
-// CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:5}:""
-// CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:9}:"["
-// CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:11}:"]"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:5}:""
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:9}:"["
+// CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:11}:"]"
 }
 
 // The weird preceding semicolon ensures that we preserve that range intact.
 void char_ranges() {
   int *p;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:9}:"std::span<int> p"
 
   ;* ( p + 5 ) = 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:8}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:12}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:15}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:8}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:9-[[@LINE-2]]:12}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:15}:"]"
 
   ;*   (p+5)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
 
   ;*(   p+5)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
 
   ;*(   p+5)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
 
   ;*( p   +5)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:7}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:12}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:14}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:7}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:8-[[@LINE-2]]:12}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:14}:"]"
 
   ;*(p+   5)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
 
   ;*(p+ 5   )= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:9}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:14}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:9}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:14}:"]"
 
   ;*(p+ 5)   = 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:9}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:11}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:9}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:10-[[@LINE-3]]:11}:"]"
 
   ;   *(p+5)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:12-[[@LINE-3]]:13}:"]"
 
   ;*(p+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:8}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:15}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:8}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:15}:"]"
 
   ;*   (p+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
 
   ;*(   p+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
 
   ;*(   p+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
 
   ;*(p   +123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
 
   ;*(p+   123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:11}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:11}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:"]"
 
   ;*(p+123456   )= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:8}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:18}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:8}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:18}:"]"
 
   ;*(p+123456)   = 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:8}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:15}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:8}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:14-[[@LINE-3]]:15}:"]"
 
   int *ptrrrrrr;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int> ptrrrrrr"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:16}:"std::span<int> ptrrrrrr"
 
   ;* ( ptrrrrrr + 123456 )= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:8}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:19}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:25-[[@LINE-3]]:27}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:8}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:16-[[@LINE-2]]:19}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:25-[[@LINE-3]]:27}:"]"
 
   ;*   (ptrrrrrr+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:18}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:18}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
 
   ;*(   ptrrrrrr+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:18}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:18}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
 
   ;*(   ptrrrrrr+123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:18}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:9}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:17-[[@LINE-2]]:18}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
 
   ;*(ptrrrrrr   +123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:18}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:18}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
 
   ;*(ptrrrrrr+   123456)= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:18}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:18}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:24-[[@LINE-3]]:25}:"]"
 
   ;*(ptrrrrrr+123456   )= 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:15}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:25}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:15}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:25}:"]"
 
   ;*(ptrrrrrr+123456)   = 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:15}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:6}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:14-[[@LINE-2]]:15}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:21-[[@LINE-3]]:22}:"]"
 }
 
 void base_on_rhs() {
   int* ptr;
   *(10 + ptr) = 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:5}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:10}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:14}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:5}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:7-[[@LINE-2]]:10}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:13-[[@LINE-3]]:14}:"]"
 }
 
 void many_parens() {
   int* ptr;
   *(( (10 + ptr)) ) = 1;
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:13}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:20}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:8}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:10-[[@LINE-2]]:13}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:16-[[@LINE-3]]:20}:"]"
 }
 
 void lvaue_to_rvalue() {
   int * ptr;
   int tmp = *(ptr + 10);
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:15}:""
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:21}:"["
-  // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:24}:"]"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:13-[[@LINE-1]]:15}:""
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:21}:"["
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:23-[[@LINE-3]]:24}:"]"
 }
 
 // Fixits emitted for the cases below would be incorrect.

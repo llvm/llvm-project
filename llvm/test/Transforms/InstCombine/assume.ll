@@ -7,12 +7,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @llvm.assume(i1) #1
 
-; Check that the alignment has been upgraded and that the assume has not
-; been removed:
+; Check that the assume has not been removed:
 
 define i32 @foo1(ptr %a) #0 {
 ; DEFAULT-LABEL: @foo1(
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 32
+; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
 ; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
@@ -20,7 +19,7 @@ define i32 @foo1(ptr %a) #0 {
 ; DEFAULT-NEXT:    ret i32 [[T0]]
 ;
 ; BUNDLES-LABEL: @foo1(
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 32
+; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; BUNDLES-NEXT:    ret i32 [[T0]]
 ;
@@ -40,12 +39,12 @@ define i32 @foo2(ptr %a) #0 {
 ; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
 ; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 ; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 32
+; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; DEFAULT-NEXT:    ret i32 [[T0]]
 ;
 ; BUNDLES-LABEL: @foo2(
 ; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 32
+; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 4
 ; BUNDLES-NEXT:    ret i32 [[T0]]
 ;
   %ptrint = ptrtoint ptr %a to i64
@@ -266,7 +265,7 @@ define i32 @bundle2(ptr %P) {
 
 define i1 @nonnull1(ptr %a) {
 ; CHECK-LABEL: @nonnull1(
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8, !nonnull [[META6:![0-9]+]], !noundef [[META6]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8, !nonnull !6, !noundef !6
 ; CHECK-NEXT:    tail call void @escape(ptr nonnull [[LOAD]])
 ; CHECK-NEXT:    ret i1 false
 ;

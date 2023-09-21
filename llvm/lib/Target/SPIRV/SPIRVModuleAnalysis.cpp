@@ -587,6 +587,9 @@ void RequirementHandler::initAvailableCapabilitiesForOpenCL(
 void RequirementHandler::initAvailableCapabilitiesForVulkan(
     const SPIRVSubtarget &ST) {
   addAvailableCaps({Capability::Shader, Capability::Linkage});
+
+  // Provided by Vulkan version 1.0.
+  addAvailableCaps({Capability::Int16, Capability::Int64, Capability::Float64});
 }
 
 } // namespace SPIRV

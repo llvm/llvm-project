@@ -46,6 +46,26 @@ C/C++ Language Potentially Breaking Changes
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
+- The name mangling rules for function templates has been changed to take into
+  account the possibility that functions could be overloaded on their template
+  parameter lists or requires-clauses. This causes mangled names to change for
+  function templates in the following cases:
+
+  - When the function has any constraints, whether from constrained template
+      parameters or requires-clauses.
+  - When the template parameter list includes a deduced type -- either
+      ``auto``, ``decltype(auto)``, or a deduced class template specialization
+      type.
+  - When a template template parameter is given a template template argument
+      that has a different template parameter list.
+
+  This fixes a number of issues where valid programs would be rejected due to
+  mangling collisions, or would in some cases be silently miscompiled. Clang
+  will use the old manglings if ``-fclang-abi-compat=17`` or lower is
+  specified.
+  (`#48216 <https://github.com/llvm/llvm-project/issues/48216>`_),
+  (`#49884 <https://github.com/llvm/llvm-project/issues/49884>`_), and
+  (`#61273 <https://github.com/llvm/llvm-project/issues/61273>`_)
 
 ABI Changes in This Version
 ---------------------------
@@ -224,8 +244,12 @@ Bug Fixes in This Version
   (`#65156 <https://github.com/llvm/llvm-project/issues/65156>`_)
 - Clang no longer considers the loss of ``__unaligned`` qualifier from objects as
   an invalid conversion during method function overload resolution.
+- Fix lack of comparison of declRefExpr in ASTStructuralEquivalence
+  (`#66047 <https://github.com/llvm/llvm-project/issues/66047>`_)
 - Fix parser crash when dealing with ill-formed objective C++ header code. Fixes
   (`#64836 <https://github.com/llvm/llvm-project/issues/64836>`_)
+- Clang now allows an ``_Atomic`` qualified integer in a switch statement. Fixes
+  (`#65557 <https://github.com/llvm/llvm-project/issues/65557>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -287,6 +311,9 @@ Bug Fixes to C++ Support
   a non-template inner-class between the function and the class template.
   (`#65810 <https://github.com/llvm/llvm-project/issues/65810>`_)
 
+- Fix a crash when calling a non-constant immediate function
+  in the initializer of a static data member.
+  (`#65985 <https://github.com/llvm/llvm-project/issues/65985>_`).
 - Clang now properly converts static lambda call operator to function
   pointers on win32.
   (`#62594 <https://github.com/llvm/llvm-project/issues/62594>`_)
@@ -304,6 +331,9 @@ Bug Fixes to C++ Support
 - Fix crash for a lambda attribute with a statement expression
   that contains a `return`.
   (`#48527 <https://github.com/llvm/llvm-project/issues/48527>`_)
+
+- Clang now no longer asserts when an UnresolvedLookupExpr is used as an
+  expression requirement. (`#66612 https://github.com/llvm/llvm-project/issues/66612`)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -449,6 +479,13 @@ Static Analyzer
 - Added a new checker ``core.BitwiseShift`` which reports situations where
   bitwise shift operators produce undefined behavior (because some operand is
   negative or too large).
+
+- The ``alpha.security.taint.TaintPropagation`` checker no longer propagates
+  taint on ``strlen`` and ``strnlen`` calls, unless these are marked
+  explicitly propagators in the user-provided taint configuration file.
+  This removal empirically reduces the number of false positive reports.
+  Read the PR for the details.
+  (`#66086 <https://github.com/llvm/llvm-project/pull/66086>`_)
 
 .. _release-notes-sanitizers:
 

@@ -25,6 +25,7 @@
 #include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -319,131 +320,66 @@ static uptr GetGlobalSizeFromDescriptor(uptr ptr) {
   return 0;
 }
 
-static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
-                                      tag_t *left, tag_t *right) {
-  Decorator d;
-  uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
-  HwasanChunkView chunk = FindHeapChunkByAddress(mem);
-  if (chunk.IsAllocated()) {
-    uptr offset;
-    const char *whence;
-    if (untagged_addr < chunk.End() && untagged_addr >= chunk.Beg()) {
-      offset = untagged_addr - chunk.Beg();
-      whence = "inside";
-    } else if (candidate == left) {
-      offset = untagged_addr - chunk.End();
-      whence = "after";
-    } else {
-      offset = chunk.Beg() - untagged_addr;
-      whence = "before";
-    }
-    Printf("%s", d.Error());
-    Printf("\nCause: heap-buffer-overflow\n");
-    Printf("%s", d.Default());
-    Printf("%s", d.Location());
-    Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
-           untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
-           chunk.End());
-    Printf("%s", d.Allocation());
-    Printf("allocated by thread T%u here:\n", chunk.GetAllocThreadId());
-    Printf("%s", d.Default());
-    GetStackTraceFromId(chunk.GetAllocStackId()).Print();
-    return;
-  }
-  // Check whether the address points into a loaded library. If so, this is
-  // most likely a global variable.
-  const char *module_name;
-  uptr module_address;
-  Symbolizer *sym = Symbolizer::GetOrInit();
-  if (sym->GetModuleNameAndOffsetForPC(mem, &module_name, &module_address)) {
-    Printf("%s", d.Error());
-    Printf("\nCause: global-overflow\n");
-    Printf("%s", d.Default());
-    DataInfo info;
-    Printf("%s", d.Location());
-    if (sym->SymbolizeData(mem, &info) && info.start) {
-      Printf(
-          "%p is located %zd bytes %s a %zd-byte global variable "
-          "%s [%p,%p) in %s\n",
-          untagged_addr,
-          candidate == left ? untagged_addr - (info.start + info.size)
-                            : info.start - untagged_addr,
-          candidate == left ? "after" : "before", info.size, info.name,
-          info.start, info.start + info.size, module_name);
-    } else {
-      uptr size = GetGlobalSizeFromDescriptor(mem);
-      if (size == 0)
-        // We couldn't find the size of the global from the descriptors.
-        Printf(
-            "%p is located %s a global variable in "
-            "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate == left ? "after" : "before", mem,
-            module_name, module_address);
-      else
-        Printf(
-            "%p is located %s a %zd-byte global variable in "
-            "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate == left ? "after" : "before", size, mem,
-            module_name, module_address);
-    }
-    Printf("%s", d.Default());
-  }
-}
-
 void ReportStats() {}
 
-static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
-                                   void (*print_tag)(InternalScopedString &s,
-                                                     tag_t *tag)) {
+template <typename PrintTag>
+static void PrintTagInfoAroundAddr(uptr addr, uptr num_rows,
+                                   InternalScopedString &s,
+                                   PrintTag print_tag) {
   const uptr row_len = 16;  // better be power of two.
-  tag_t *center_row_beg = reinterpret_cast<tag_t *>(
-      RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
-  tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
-  tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  InternalScopedString s;
-  for (tag_t *row = beg_row; row < end_row; row += row_len) {
+  uptr center_row_beg = RoundDownTo(addr, row_len);
+  uptr beg_row = center_row_beg - row_len * (num_rows / 2);
+  uptr end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
+  for (uptr row = beg_row; row < end_row; row += row_len) {
     s.Append(row == center_row_beg ? "=>" : "  ");
-    s.AppendF("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
+    s.AppendF("%p:", (void *)ShadowToMem(row));
     for (uptr i = 0; i < row_len; i++) {
-      s.Append(row + i == tag_ptr ? "[" : " ");
-      print_tag(s, &row[i]);
-      s.Append(row + i == tag_ptr ? "]" : " ");
+      s.Append(row + i == addr ? "[" : " ");
+      print_tag(s, row + i);
+      s.Append(row + i == addr ? "]" : " ");
     }
     s.AppendF("\n");
   }
-  Printf("%s", s.data());
 }
 
-static void PrintTagsAroundAddr(tag_t *tag_ptr) {
-  Printf(
+template <typename GetTag, typename GetShortTag>
+static void PrintTagsAroundAddr(uptr addr, GetTag get_tag,
+                                GetShortTag get_short_tag) {
+  InternalScopedString s;
+  addr = MemToShadow(addr);
+  s.AppendF(
       "Memory tags around the buggy address (one tag corresponds to %zd "
       "bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(tag_ptr, 17, [](InternalScopedString &s, tag_t *tag) {
-    s.AppendF("%02x", *tag);
-  });
+  PrintTagInfoAroundAddr(addr, 17, s,
+                         [&](InternalScopedString &s, uptr tag_addr) {
+                           tag_t tag = get_tag(tag_addr);
+                           s.AppendF("%02x", tag);
+                         });
 
-  Printf(
+  s.AppendF(
       "Tags for short granules around the buggy address (one tag corresponds "
       "to %zd bytes):\n",
       kShadowAlignment);
-  PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
-    if (*tag >= 1 && *tag <= kShadowAlignment) {
-      uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
-      s.AppendF("%02x",
-                *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
-    } else {
-      s.AppendF("..");
-    }
-  });
-  Printf(
+  PrintTagInfoAroundAddr(addr, 3, s,
+                         [&](InternalScopedString &s, uptr tag_addr) {
+                           tag_t tag = get_tag(tag_addr);
+                           if (tag >= 1 && tag <= kShadowAlignment) {
+                             tag_t short_tag = get_short_tag(tag_addr);
+                             s.AppendF("%02x", short_tag);
+                           } else {
+                             s.AppendF("..");
+                           }
+                         });
+  s.AppendF(
       "See "
       "https://clang.llvm.org/docs/"
       "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
       "description of short granule tags\n");
+  Printf("%s", s.data());
 }
 
-static uptr GetTopPc(StackTrace *stack) {
+static uptr GetTopPc(const StackTrace *stack) {
   return stack->size ? StackTrace::GetPreviousInstructionPc(stack->trace[0])
                      : 0;
 }
@@ -457,46 +393,273 @@ class BaseReport {
         tagged_addr(tagged_addr),
         access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
-        ptr_tag(GetTagFromPointer(tagged_addr)) {
-    if (MemIsShadow(untagged_addr))
-      return;
-
-    HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
-    heap.begin = chunk.Beg();
-    if (heap.begin) {
-      heap.size = chunk.ActualSize();
-      heap.from_small_heap = chunk.FromSmallHeap();
-      heap.is_allocated = chunk.IsAllocated();
-    }
-
-    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-      if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
-          t->AddrIsInStack(untagged_addr)) {
-        stack_allocations[stack_allocations_count++].CopyFrom(t);
-      }
-    });
-  }
+        ptr_tag(GetTagFromPointer(tagged_addr)),
+        heap(CopyHeapChunk()),
+        allocations(CopyAllocations()),
+        candidate(FindBufferOverflowCandidate()),
+        shadow(CopyShadow()) {}
 
  protected:
-  void PrintAddressDescription() const;
+  struct OverflowCandidate {
+    uptr untagged_addr = 0;
+    bool after = false;
+    bool is_close = false;
 
-  ScopedReport scoped_report;
-  StackTrace *stack = nullptr;
-  uptr tagged_addr = 0;
-  uptr access_size = 0;
-  uptr untagged_addr = 0;
-  tag_t ptr_tag = 0;
+    struct {
+      uptr begin = 0;
+      uptr end = 0;
+      u32 thread_id = 0;
+      u32 stack_id = 0;
+      bool is_allocated = false;
+    } heap;
+  };
 
-  uptr stack_allocations_count = 0;
-  SavedStackAllocations stack_allocations[16];
+  struct HeapAllocation {
+    HeapAllocationRecord har = {};
+    uptr ring_index = 0;
+    uptr num_matching_addrs = 0;
+    uptr num_matching_addrs_4b = 0;
+    u32 free_thread_id = 0;
+  };
 
-  struct {
+  struct Allocations {
+    ArrayRef<SavedStackAllocations> stack;
+    ArrayRef<HeapAllocation> heap;
+  };
+
+  struct HeapChunk {
     uptr begin = 0;
     uptr size = 0;
+    u32 stack_id = 0;
     bool from_small_heap = false;
     bool is_allocated = false;
-  } heap;
+  };
+
+  struct Shadow {
+    uptr addr = 0;
+    tag_t tags[512] = {};
+    tag_t short_tags[ARRAY_SIZE(tags)] = {};
+  };
+
+  Shadow CopyShadow() const;
+  tag_t GetTagCopy(uptr addr) const;
+  tag_t GetShortTagCopy(uptr addr) const;
+  HeapChunk CopyHeapChunk() const;
+  Allocations CopyAllocations();
+  OverflowCandidate FindBufferOverflowCandidate() const;
+  void PrintAddressDescription() const;
+  void PrintHeapOrGlobalCandidate() const;
+
+  SavedStackAllocations stack_allocations_storage[16];
+  HeapAllocation heap_allocations_storage[256];
+
+  const ScopedReport scoped_report;
+  const StackTrace *stack = nullptr;
+  const uptr tagged_addr = 0;
+  const uptr access_size = 0;
+  const uptr untagged_addr = 0;
+  const tag_t ptr_tag = 0;
+
+  const HeapChunk heap;
+  const Allocations allocations;
+  const OverflowCandidate candidate;
+
+  const Shadow shadow;
 };
+
+BaseReport::Shadow BaseReport::CopyShadow() const {
+  Shadow result;
+  if (!MemIsApp(untagged_addr))
+    return result;
+
+  result.addr = MemToShadow(untagged_addr) - ARRAY_SIZE(result.tags) / 2;
+  for (uptr i = 0; i < ARRAY_SIZE(result.tags); ++i) {
+    uptr tag_addr = result.addr + i;
+    if (!MemIsShadow(tag_addr))
+      continue;
+    result.tags[i] = *reinterpret_cast<tag_t *>(tag_addr);
+    uptr granule_addr = ShadowToMem(tag_addr);
+    if (1 <= result.tags[i] && result.tags[i] <= kShadowAlignment &&
+        IsAccessibleMemoryRange(granule_addr, kShadowAlignment)) {
+      result.short_tags[i] =
+          *reinterpret_cast<tag_t *>(granule_addr + kShadowAlignment - 1);
+    }
+  }
+  return result;
+}
+
+tag_t BaseReport::GetTagCopy(uptr addr) const {
+  CHECK_GE(addr, shadow.addr);
+  uptr idx = addr - shadow.addr;
+  CHECK_LT(idx, ARRAY_SIZE(shadow.tags));
+  return shadow.tags[idx];
+}
+
+tag_t BaseReport::GetShortTagCopy(uptr addr) const {
+  CHECK_GE(addr, shadow.addr);
+  uptr idx = addr - shadow.addr;
+  CHECK_LT(idx, ARRAY_SIZE(shadow.short_tags));
+  return shadow.short_tags[idx];
+}
+
+BaseReport::HeapChunk BaseReport::CopyHeapChunk() const {
+  HeapChunk result = {};
+  if (MemIsShadow(untagged_addr))
+    return result;
+  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
+  result.begin = chunk.Beg();
+  if (result.begin) {
+    result.size = chunk.ActualSize();
+    result.from_small_heap = chunk.FromSmallHeap();
+    result.is_allocated = chunk.IsAllocated();
+    result.stack_id = chunk.GetAllocStackId();
+  }
+  return result;
+}
+
+BaseReport::Allocations BaseReport::CopyAllocations() {
+  if (MemIsShadow(untagged_addr))
+    return {};
+  uptr stack_allocations_count = 0;
+  uptr heap_allocations_count = 0;
+  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+    if (stack_allocations_count < ARRAY_SIZE(stack_allocations_storage) &&
+        t->AddrIsInStack(untagged_addr)) {
+      stack_allocations_storage[stack_allocations_count++].CopyFrom(t);
+    }
+
+    if (heap_allocations_count < ARRAY_SIZE(heap_allocations_storage)) {
+      // Scan all threads' ring buffers to find if it's a heap-use-after-free.
+      HeapAllocationRecord har;
+      uptr ring_index, num_matching_addrs, num_matching_addrs_4b;
+      if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
+                             &ring_index, &num_matching_addrs,
+                             &num_matching_addrs_4b)) {
+        auto &ha = heap_allocations_storage[heap_allocations_count++];
+        ha.har = har;
+        ha.ring_index = ring_index;
+        ha.num_matching_addrs = num_matching_addrs;
+        ha.num_matching_addrs_4b = num_matching_addrs_4b;
+        ha.free_thread_id = t->unique_id();
+      }
+    }
+  });
+
+  return {{stack_allocations_storage, stack_allocations_count},
+          {heap_allocations_storage, heap_allocations_count}};
+}
+
+BaseReport::OverflowCandidate BaseReport::FindBufferOverflowCandidate() const {
+  OverflowCandidate result = {};
+  if (MemIsShadow(untagged_addr))
+    return result;
+  // Check if this looks like a heap buffer overflow by scanning
+  // the shadow left and right and looking for the first adjacent
+  // object with a different memory tag. If that tag matches ptr_tag,
+  // check the allocator if it has a live chunk there.
+  tag_t *tag_ptr = reinterpret_cast<tag_t *>(MemToShadow(untagged_addr));
+  tag_t *candidate_tag_ptr = nullptr, *left = tag_ptr, *right = tag_ptr;
+  uptr candidate_distance = 0;
+  for (; candidate_distance < 1000; candidate_distance++) {
+    if (MemIsShadow(reinterpret_cast<uptr>(left)) && TagsEqual(ptr_tag, left)) {
+      candidate_tag_ptr = left;
+      break;
+    }
+    --left;
+    if (MemIsShadow(reinterpret_cast<uptr>(right)) &&
+        TagsEqual(ptr_tag, right)) {
+      candidate_tag_ptr = right;
+      break;
+    }
+    ++right;
+  }
+
+  constexpr auto kCloseCandidateDistance = 1;
+  result.is_close = candidate_distance <= kCloseCandidateDistance;
+
+  result.after = candidate_tag_ptr == left;
+  result.untagged_addr = ShadowToMem(reinterpret_cast<uptr>(candidate_tag_ptr));
+  HwasanChunkView chunk = FindHeapChunkByAddress(result.untagged_addr);
+  if (chunk.IsAllocated()) {
+    result.heap.is_allocated = true;
+    result.heap.begin = chunk.Beg();
+    result.heap.end = chunk.End();
+    result.heap.thread_id = chunk.GetAllocThreadId();
+    result.heap.stack_id = chunk.GetAllocStackId();
+  }
+  return result;
+}
+
+void BaseReport::PrintHeapOrGlobalCandidate() const {
+  Decorator d;
+  if (candidate.heap.is_allocated) {
+    uptr offset;
+    const char *whence;
+    if (candidate.heap.begin <= untagged_addr &&
+        untagged_addr < candidate.heap.end) {
+      offset = untagged_addr - candidate.heap.begin;
+      whence = "inside";
+    } else if (candidate.after) {
+      offset = untagged_addr - candidate.heap.end;
+      whence = "after";
+    } else {
+      offset = candidate.heap.begin - untagged_addr;
+      whence = "before";
+    }
+    Printf("%s", d.Error());
+    Printf("\nCause: heap-buffer-overflow\n");
+    Printf("%s", d.Default());
+    Printf("%s", d.Location());
+    Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
+           untagged_addr, offset, whence,
+           candidate.heap.end - candidate.heap.begin, candidate.heap.begin,
+           candidate.heap.end);
+    Printf("%s", d.Allocation());
+    Printf("allocated by thread T%u here:\n", candidate.heap.thread_id);
+    Printf("%s", d.Default());
+    GetStackTraceFromId(candidate.heap.stack_id).Print();
+    return;
+  }
+  // Check whether the address points into a loaded library. If so, this is
+  // most likely a global variable.
+  const char *module_name;
+  uptr module_address;
+  Symbolizer *sym = Symbolizer::GetOrInit();
+  if (sym->GetModuleNameAndOffsetForPC(candidate.untagged_addr, &module_name,
+                                       &module_address)) {
+    Printf("%s", d.Error());
+    Printf("\nCause: global-overflow\n");
+    Printf("%s", d.Default());
+    DataInfo info;
+    Printf("%s", d.Location());
+    if (sym->SymbolizeData(candidate.untagged_addr, &info) && info.start) {
+      Printf(
+          "%p is located %zd bytes %s a %zd-byte global variable "
+          "%s [%p,%p) in %s\n",
+          untagged_addr,
+          candidate.after ? untagged_addr - (info.start + info.size)
+                          : info.start - untagged_addr,
+          candidate.after ? "after" : "before", info.size, info.name,
+          info.start, info.start + info.size, module_name);
+    } else {
+      uptr size = GetGlobalSizeFromDescriptor(candidate.untagged_addr);
+      if (size == 0)
+        // We couldn't find the size of the global from the descriptors.
+        Printf(
+            "%p is located %s a global variable in "
+            "\n    #0 0x%x (%s+0x%x)\n",
+            untagged_addr, candidate.after ? "after" : "before",
+            candidate.untagged_addr, module_name, module_address);
+      else
+        Printf(
+            "%p is located %s a %zd-byte global variable in "
+            "\n    #0 0x%x (%s+0x%x)\n",
+            untagged_addr, candidate.after ? "after" : "before", size,
+            candidate.untagged_addr, module_name, module_address);
+    }
+    Printf("%s", d.Default());
+  }
+}
 
 void BaseReport::PrintAddressDescription() const {
   Decorator d;
@@ -519,95 +682,70 @@ void BaseReport::PrintAddressDescription() const {
         untagged_addr - heap.begin, d.Default());
   }
 
+  auto announce_by_id = [](u32 thread_id) {
+    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
+      if (thread_id == t->unique_id())
+        t->Announce();
+    });
+  };
+
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
-  for (uptr i = 0; i < stack_allocations_count; ++i) {
-    auto &allocations = stack_allocations[i];
+  for (const auto &sa : allocations.stack) {
     // TODO(fmayer): figure out how to distinguish use-after-return and
     // stack-buffer-overflow.
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
     Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
-           allocations.thread_id());
+           sa.thread_id());
     Printf("%s", d.Default());
-    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-      if (allocations.thread_id() == t->unique_id())
-        t->Announce();
-    });
-
-    PrintStackAllocations(allocations.get(), ptr_tag, untagged_addr);
+    announce_by_id(sa.thread_id());
+    PrintStackAllocations(sa.get(), ptr_tag, untagged_addr);
     num_descriptions_printed++;
   }
 
-  // Check if this looks like a heap buffer overflow by scanning
-  // the shadow left and right and looking for the first adjacent
-  // object with a different memory tag. If that tag matches ptr_tag,
-  // check the allocator if it has a live chunk there.
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
-  tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
-  uptr candidate_distance = 0;
-  for (; candidate_distance < 1000; candidate_distance++) {
-    if (MemIsShadow(reinterpret_cast<uptr>(left)) && TagsEqual(ptr_tag, left)) {
-      candidate = left;
-      break;
-    }
-    --left;
-    if (MemIsShadow(reinterpret_cast<uptr>(right)) &&
-        TagsEqual(ptr_tag, right)) {
-      candidate = right;
-      break;
-    }
-    ++right;
-  }
-
-  constexpr auto kCloseCandidateDistance = 1;
-
-  if (!stack_allocations_count && candidate &&
-      candidate_distance <= kCloseCandidateDistance) {
-    ShowHeapOrGlobalCandidate(untagged_addr, candidate, left, right);
+  if (allocations.stack.empty() && candidate.untagged_addr &&
+      candidate.is_close) {
+    PrintHeapOrGlobalCandidate();
     num_descriptions_printed++;
   }
 
-  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-    // Scan all threads' ring buffers to find if it's a heap-use-after-free.
-    HeapAllocationRecord har;
-    uptr ring_index, num_matching_addrs, num_matching_addrs_4b;
-    if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
-                           &ring_index, &num_matching_addrs,
-                           &num_matching_addrs_4b)) {
-      Printf("%s", d.Error());
-      Printf("\nCause: use-after-free\n");
-      Printf("%s", d.Location());
-      Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
-             untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
-             har.requested_size, UntagAddr(har.tagged_addr),
-             UntagAddr(har.tagged_addr) + har.requested_size);
-      Printf("%s", d.Allocation());
-      Printf("freed by thread T%u here:\n", t->unique_id());
-      Printf("%s", d.Default());
-      GetStackTraceFromId(har.free_context_id).Print();
+  for (const auto &ha : allocations.heap) {
+    const HeapAllocationRecord har = ha.har;
 
-      Printf("%s", d.Allocation());
-      Printf("previously allocated by thread T%u here:\n", har.alloc_thread_id);
-      Printf("%s", d.Default());
-      GetStackTraceFromId(har.alloc_context_id).Print();
+    Printf("%s", d.Error());
+    Printf("\nCause: use-after-free\n");
+    Printf("%s", d.Location());
+    Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
+           untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
+           har.requested_size, UntagAddr(har.tagged_addr),
+           UntagAddr(har.tagged_addr) + har.requested_size);
+    Printf("%s", d.Allocation());
+    Printf("freed by thread T%u here:\n", ha.free_thread_id);
+    Printf("%s", d.Default());
+    GetStackTraceFromId(har.free_context_id).Print();
 
-      // Print a developer note: the index of this heap object
-      // in the thread's deallocation ring buffer.
-      Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ring_index + 1,
-             flags()->heap_history_size);
-      Printf("hwasan_dev_note_num_matching_addrs: %zd\n", num_matching_addrs);
-      Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
-             num_matching_addrs_4b);
+    Printf("%s", d.Allocation());
+    Printf("previously allocated by thread T%u here:\n", har.alloc_thread_id);
+    Printf("%s", d.Default());
+    GetStackTraceFromId(har.alloc_context_id).Print();
 
-      t->Announce();
-      num_descriptions_printed++;
-    }
-  });
+    // Print a developer note: the index of this heap object
+    // in the thread's deallocation ring buffer.
+    Printf("hwasan_dev_note_heap_rb_distance: %zd %zd\n", ha.ring_index + 1,
+           flags()->heap_history_size);
+    Printf("hwasan_dev_note_num_matching_addrs: %zd\n", ha.num_matching_addrs);
+    Printf("hwasan_dev_note_num_matching_addrs_4b: %zd\n",
+           ha.num_matching_addrs_4b);
 
-  if (candidate && num_descriptions_printed == 0) {
-    ShowHeapOrGlobalCandidate(untagged_addr, candidate, left, right);
+    announce_by_id(ha.free_thread_id);
+    // TODO: announce_by_id(har.alloc_thread_id);
+    num_descriptions_printed++;
+  }
+
+  if (candidate.untagged_addr && num_descriptions_printed == 0) {
+    PrintHeapOrGlobalCandidate();
     num_descriptions_printed++;
   }
 
@@ -636,15 +774,6 @@ class InvalidFreeReport : public BaseReport {
 };
 
 InvalidFreeReport::~InvalidFreeReport() {
-  tag_t *tag_ptr = nullptr;
-  tag_t mem_tag = 0;
-  if (MemIsApp(untagged_addr)) {
-    tag_ptr = reinterpret_cast<tag_t *>(MemToShadow(untagged_addr));
-    if (MemIsShadow(reinterpret_cast<uptr>(tag_ptr)))
-      mem_tag = *tag_ptr;
-    else
-      tag_ptr = nullptr;
-  }
   Decorator d;
   Printf("%s", d.Error());
   uptr pc = GetTopPc(stack);
@@ -658,16 +787,21 @@ InvalidFreeReport::~InvalidFreeReport() {
            SanitizerToolName, bug_type, untagged_addr, pc);
   }
   Printf("%s", d.Access());
-  if (tag_ptr)
-    Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag, mem_tag);
+  if (shadow.addr) {
+    Printf("tags: %02x/%02x (ptr/mem)\n", ptr_tag,
+           GetTagCopy(MemToShadow(untagged_addr)));
+  }
   Printf("%s", d.Default());
 
   stack->Print();
 
   PrintAddressDescription();
 
-  if (tag_ptr)
-    PrintTagsAroundAddr(tag_ptr);
+  if (shadow.addr) {
+    PrintTagsAroundAddr(
+        untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
+        [&](uptr addr) { return GetShortTagCopy(addr); });
+  }
 
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
@@ -679,24 +813,28 @@ class TailOverwrittenReport : public BaseReport {
                                  uptr orig_size, const u8 *expected)
       : BaseReport(stack, flags()->halt_on_error, tagged_addr, 0),
         orig_size(orig_size),
-        expected(expected) {}
+        tail_size(kShadowAlignment - (orig_size % kShadowAlignment)) {
+    CHECK_GT(tail_size, 0U);
+    CHECK_LT(tail_size, kShadowAlignment);
+    internal_memcpy(tail_copy,
+                    reinterpret_cast<u8 *>(untagged_addr + orig_size),
+                    tail_size);
+    internal_memcpy(actual_expected, expected, tail_size);
+    // Short granule is stashed in the last byte of the magic string. To avoid
+    // confusion, make the expected magic string contain the short granule tag.
+    if (orig_size % kShadowAlignment != 0)
+      actual_expected[tail_size - 1] = ptr_tag;
+  }
   ~TailOverwrittenReport();
 
  private:
-  uptr orig_size;
-  const u8 *expected;
+  const uptr orig_size = 0;
+  const uptr tail_size = 0;
+  u8 actual_expected[kShadowAlignment] = {};
+  u8 tail_copy[kShadowAlignment] = {};
 };
 
 TailOverwrittenReport::~TailOverwrittenReport() {
-  uptr tail_size = kShadowAlignment - (orig_size % kShadowAlignment);
-  u8 actual_expected[kShadowAlignment];
-  internal_memcpy(actual_expected, expected, tail_size);
-  // Short granule is stashed in the last byte of the magic string. To avoid
-  // confusion, make the expected magic string contain the short granule tag.
-  if (orig_size % kShadowAlignment != 0) {
-    actual_expected[tail_size - 1] = ptr_tag;
-  }
-
   Decorator d;
   Printf("%s", d.Error());
   const char *bug_type = "allocation-tail-overwritten";
@@ -710,18 +848,15 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   Printf("deallocated here:\n");
   Printf("%s", d.Default());
   stack->Print();
-  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
-  if (chunk.Beg()) {
+  if (heap.begin) {
     Printf("%s", d.Allocation());
     Printf("allocated here:\n");
     Printf("%s", d.Default());
-    GetStackTraceFromId(chunk.GetAllocStackId()).Print();
+    GetStackTraceFromId(heap.stack_id).Print();
   }
 
   InternalScopedString s;
-  CHECK_GT(tail_size, 0U);
-  CHECK_LT(tail_size, kShadowAlignment);
-  u8 *tail = reinterpret_cast<u8*>(untagged_addr + orig_size);
+  u8 *tail = tail_copy;
   s.AppendF("Tail contains: ");
   for (uptr i = 0; i < kShadowAlignment - tail_size; i++) s.AppendF(".. ");
   for (uptr i = 0; i < tail_size; i++) s.AppendF("%02x ", tail[i]);
@@ -748,8 +883,9 @@ TailOverwrittenReport::~TailOverwrittenReport() {
   Printf("%s", s.data());
   GetCurrentThread()->Announce();
 
-  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
-  PrintTagsAroundAddr(tag_ptr);
+  PrintTagsAroundAddr(
+      untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
+      [&](uptr addr) { return GetShortTagCopy(addr); });
 
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
@@ -826,7 +962,9 @@ TagMismatchReport::~TagMismatchReport() {
   PrintAddressDescription();
   t->Announce();
 
-  PrintTagsAroundAddr(tag_ptr);
+  PrintTagsAroundAddr(
+      untagged_addr + offset, [&](uptr addr) { return GetTagCopy(addr); },
+      [&](uptr addr) { return GetShortTagCopy(addr); });
 
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
