@@ -914,7 +914,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         !TPR.Flags.IsHostPointer && DataSize != 0) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
          DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-      TIMESCOPE_WITH_NAME_AND_IDENT("DevToHost", Loc);
+        std::string MessageDataSize = "DevToHost "+std::to_string(DataSize)+"B";
+        TIMESCOPE_WITH_NAME_AND_IDENT(MessageDataSize, Loc);      
       // Wait for any previous transfer if an event is present.
       if (void *Event = TPR.getEntry()->getEvent()) {
         if (Device.waitEvent(Event, AsyncInfo) != OFFLOAD_SUCCESS) {
