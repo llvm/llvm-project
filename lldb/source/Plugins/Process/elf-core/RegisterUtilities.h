@@ -119,10 +119,6 @@ constexpr RegsetDesc AARCH64_SVE_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_SVE},
 };
 
-constexpr RegsetDesc AARCH64_SSVE_Desc[] = {
-    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_SSVE},
-};
-
 constexpr RegsetDesc AARCH64_ZA_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_ZA},
 };
