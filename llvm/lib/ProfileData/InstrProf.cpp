@@ -501,7 +501,7 @@ Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");
 
-  uint8_t Header[16], *P = Header;
+  uint8_t Header[20], *P = Header;
   std::string UncompressedNameStrings =
       join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
 
