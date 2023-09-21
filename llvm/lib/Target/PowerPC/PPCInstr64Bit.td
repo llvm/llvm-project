@@ -1563,7 +1563,7 @@ def GETtlsADDR64AIX :
                     "GETtlsADDR64AIX",
                     [(set i64:$rD,
                       (PPCgetTlsAddr i64:$offset, i64:$handle))]>, isPPC64;
-// On AIX, the call to __tls_get_mod need one input in X3 for the module handle.
+// On AIX, the call to .__tls_get_mod need one input in X3 for the module handle.
 def GETtlsMOD64AIX :
   PPCEmitTimePseudo<(outs g8rc:$rD),(ins g8rc:$handle),
                     "GETtlsMOD64AIX",
