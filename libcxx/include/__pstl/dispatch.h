@@ -61,6 +61,21 @@ template <template <class, class> class _Algorithm, class _BackendConfiguration,
 using __dispatch _LIBCPP_NODEBUG =
     typename __find_first_implemented<_Algorithm, _BackendConfiguration, _ExecutionPolicy>::type;
 
+template <class _BackendConfiguration, class _Backend>
+struct __backends_after_impl;
+
+template <class _Backend, class... _RemainingBackends>
+struct __backends_after_impl<__backend_configuration<_Backend, _RemainingBackends...>, _Backend> {
+  using type = __backend_configuration<_RemainingBackends...>;
+};
+
+template <class _B1, class... _Bn, class _Backend>
+struct __backends_after_impl<__backend_configuration<_B1, _Bn...>, _Backend>
+    : __backends_after_impl<__backend_configuration<_Bn...>, _Backend> {};
+
+template <class _BackendConfiguration, class _Backend>
+using __backends_after = typename __backends_after_impl<_BackendConfiguration, _Backend>::type;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 

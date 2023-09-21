@@ -64,6 +64,24 @@ def main():
         if "TEMP" in os.environ:
             env["TEMP"] = os.environ.get("TEMP")
 
+    # Forwarding offload specific environment variables.
+    for GPU_OPTION in [
+        "CUDA_VISIBLE_DEVICES",
+        "ROCR_VISIBLE_DEVICES",
+        "LIBOMPTARGET_INFO",
+        "LIBOMPTARGET_DEBUG",
+    ]:
+        if GPU_OPTION in os.environ:
+            env[GPU_OPTION] = os.environ[GPU_OPTION]
+
+    # If ROCM_PATH is set, forward it and put the ROCM libraries onto the LD_LIBRARY_PATH too.
+    if "ROCM_PATH" in os.environ:
+        env["ROCM_PATH"] = os.environ["ROCM_PATH"]
+        if not "LD_LIBRARY_PATH" in env:
+            env["LD_LIBRARY_PATH"] = env["ROCM_PATH"] + "/lib"
+        else:
+            env["LD_LIBRARY_PATH"] += os.pathsep + env["ROCM_PATH"] + "/lib"
+
     # Run the command line with the given environment in the execution directory.
     return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)
 

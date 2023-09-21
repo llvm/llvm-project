@@ -370,6 +370,7 @@ macros = {
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
+    "_LIBCPP_PSTL_BACKEND_OPENMP": "libcpp-pstl-backend-openmp",
 }
 for macro, feature in macros.items():
     DEFAULT_FEATURES.append(
@@ -378,6 +379,23 @@ for macro, feature in macros.items():
             when=lambda cfg, m=macro: m in compilerMacros(cfg),
         )
     )
+
+DEFAULT_FEATURES.append(
+    Feature(
+        name="libcpp-pstl-backend-openmp",
+        when=lambda cfg: "_LIBCPP_PSTL_BACKEND_OPENMP" in compilerMacros(cfg),
+        actions=[
+            # Do not add -fopenmp-targets for all tests as it includes other libraries
+            # and that can mess things up. OpenMP tests will add the flag themselves.
+            # However, add everything else needed for OpenMP and offloading:
+            AddFlagIfSupported("-fopenmp"),
+            # The linker needs to find the correct version of libomptarget and make sure
+            # it is used by the binary even in the test environment.
+            AddLinkFlag("-L%{binary-dir}/../../../lib"),
+            AddLinkFlag("-Wl,-rpath,%{binary-dir}/../../../lib"),
+        ],
+    )
+)
 
 true_false_macros = {
     "_LIBCPP_HAS_THREAD_API_EXTERNAL": "libcpp-has-thread-api-external",

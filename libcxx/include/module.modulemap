@@ -2165,6 +2165,11 @@ module std [system] {
         export std.pstl.cpu_algos
         export std_core.utility_core.empty
       }
+      module openmp {
+        header "__pstl/backends/openmp.h"
+        export std.pstl.cpu_algos
+        export std_core.utility_core.empty
+      }
     }
     module cpu_algos {
       module any_of {
