@@ -444,9 +444,12 @@ private:
 
 
   struct StoreInfo {
-    GStore *St;
-    GPtrAdd *Ptr;
-    int64_t Offset;
+    GStore *St = nullptr;
+    // The G_PTR_ADD that's used by the store. We keep this to cache the
+    // MachineInstr def.
+    GPtrAdd *Ptr = nullptr;
+    // The signed offset to the Ptr instruction.
+    int64_t Offset = 0;
     LLT StoredType;
   };
   bool tryOptimizeConsecStores(SmallVectorImpl<StoreInfo> &Stores,
@@ -596,6 +599,9 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
   // the latter store is using a load result that appears after the
   // the prior store. In this situation if we factor out the offset then
   // we increase code size for no benefit.
+  //   G_STORE %v1:_(s64), %base:_(p0) :: (store (s64))
+  //   %v2:_(s64) = G_LOAD %ldptr:_(p0) :: (load (s64))
+  //   G_STORE %v2:_(s64), %base:_(p0) :: (store (s64))
   SmallVector<Register> LoadValsSinceLastStore;
 
   auto storeIsValid = [&](StoreInfo &Last, StoreInfo New) {
@@ -608,7 +614,7 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
 
     // Check if this store is using a load result that appears after the
     // last store. If so, bail out.
-    if (llvm::any_of(LoadValsSinceLastStore, [&](Register LoadVal) {
+    if (any_of(LoadValsSinceLastStore, [&](Register LoadVal) {
           return New.St->getValueReg() == LoadVal;
         }))
       return false;
@@ -637,33 +643,29 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
     return New.Offset - Stores[0].Offset <= MaxLegalOffset;
   };
 
+  auto resetState = [&]() {
+    Stores.clear();
+    LoadValsSinceLastStore.clear();
+  };
+
   for (auto &MBB : MF) {
     // We're looking inside a single BB at a time since the memset pattern
     // should only be in a single block.
-
-    Stores.clear();
-    LoadValsSinceLastStore.clear();
-
-    auto resetState = [&]() {
-      Stores.clear();
-      LoadValsSinceLastStore.clear();
-    };
-
+    resetState();
     for (auto &MI : MBB) {
       if (auto *St = dyn_cast<GStore>(&MI)) {
         Register PtrBaseReg;
         APInt Offset;
         LLT StoredValTy = MRI.getType(St->getValueReg());
         unsigned ValSize = StoredValTy.getSizeInBits();
-        if (ValSize != St->getMMO().getSizeInBits())
-          continue; // Don't handle truncating stores.
-        if (ValSize < 32)
-          continue; // Can only STP 32b or larger.
+        if (ValSize < 32 || ValSize != St->getMMO().getSizeInBits())
+          continue;
 
+        Register PtrReg = St->getPointerReg();
         if (mi_match(
-                St->getPointerReg(), MRI,
+                PtrReg, MRI,
                 m_OneNonDBGUse(m_GPtrAdd(m_Reg(PtrBaseReg), m_ICst(Offset))))) {
-          GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(St->getPointerReg()));
+          GPtrAdd *PtrAdd = cast<GPtrAdd>(MRI.getVRegDef(PtrReg));
           StoreInfo New = {St, PtrAdd, Offset.getSExtValue(), StoredValTy};
 
           if (Stores.empty()) {
@@ -671,7 +673,7 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
             continue;
           }
 
-          // Check if this store is consecutive to the last one.
+          // Check if this store is a valid continuation of the sequence.
           auto &Last = Stores.back();
           if (storeIsValid(Last, New)) {
             Stores.push_back(New);
