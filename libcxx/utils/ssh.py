@@ -39,6 +39,8 @@ def scp(args, src, dst):
         cmd.extend(shlex.split(args.extra_scp_args))
     return cmd + [src, "{}:{}".format(args.host, dst)]
 
+def runCommand(command, *args, **kwargs):
+    return subprocess.run(command, *args, **kwargs)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -49,19 +51,25 @@ def main():
     parser.add_argument("--extra-scp-args", type=str, required=False)
     parser.add_argument("--codesign_identity", type=str, required=False, default=None)
     parser.add_argument("--env", type=str, nargs="*", required=False, default=[])
-    parser.add_argument(
-        "--prepend_env", type=str, nargs="*", required=False, default=[]
-    )
+    parser.add_argument("--prepend_env", type=str, nargs="*", required=False, default=[])
+    parser.add_argument("-v", "--verbose", action='store_true')
     parser.add_argument("command", nargs=argparse.ONE_OR_MORE)
     args = parser.parse_args()
     commandLine = args.command
 
+    def runCommand(command, *args_, **kwargs):
+        if args.verbose:
+            print(f"$ {' '.join(command)}")
+        return subprocess.run(command, *args_, **kwargs)
+
     # Create a temporary directory where the test will be run.
     # That is effectively the value of %T on the remote host.
-    tmp = subprocess.check_output(
+    tmp = runCommand(
         ssh(args, "mktemp -d {}/libcxx.XXXXXXXXXX".format(args.tempdir)),
         universal_newlines=True,
-    ).strip()
+        check=True,
+        capture_output=True
+    ).stdout.strip()
 
     # HACK:
     # If an argument is a file that ends in `.tmp.exe`, assume it is the name
@@ -77,10 +85,8 @@ def main():
         # Do any necessary codesigning of test-executables found in the command line.
         if args.codesign_identity:
             for exe in filter(isTestExe, commandLine):
-                subprocess.check_call(
-                    ["xcrun", "codesign", "-f", "-s", args.codesign_identity, exe],
-                    env={},
-                )
+                codesign = ["xcrun", "codesign", "-f", "-s", args.codesign_identity, exe]
+                runCommand(codesign, env={}, check=True)
 
         # tar up the execution directory (which contains everything that's needed
         # to run the test), and copy the tarball over to the remote host.
@@ -93,7 +99,7 @@ def main():
             # the temporary file while still open doesn't work on Windows.
             tmpTar.close()
             remoteTarball = pathOnRemote(tmpTar.name)
-            subprocess.check_call(scp(args, tmpTar.name, remoteTarball))
+            runCommand(scp(args, tmpTar.name, remoteTarball), check=True)
         finally:
             # Make sure we close the file in case an exception happens before
             # we've closed it above -- otherwise close() is idempotent.
@@ -130,12 +136,12 @@ def main():
         remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.
-        rc = subprocess.call(ssh(args, " && ".join(remoteCommands)))
+        rc = runCommand(ssh(args, " && ".join(remoteCommands))).returncode
         return rc
 
     finally:
         # Make sure the temporary directory is removed when we're done.
-        subprocess.check_call(ssh(args, "rm -r {}".format(tmp)))
+        runCommand(ssh(args, "rm -r {}".format(tmp)), check=True)
 
 
 if __name__ == "__main__":
