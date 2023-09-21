@@ -3823,7 +3823,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
       SelectInst *Sel = nullptr;
       for (User *U : VecLoopExitInst->users()) {
         if (isa<SelectInst>(U)) {
-          assert(!Sel && "Reduction exit feeding two selects");
+          assert((!Sel || U == Sel) &&
+                 "Reduction exit feeding two different selects");
           Sel = cast<SelectInst>(U);
         } else
           assert(isa<PHINode>(U) && "Reduction exit must feed Phi's or select");
