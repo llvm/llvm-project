@@ -339,20 +339,20 @@ llvm.func @arm_sme_vector_to_tile_vert(%tileslice : i32,
 
 
 llvm.func @arm_sme_tile_slice_to_vector_horiz(%tileslice : i32,
-                                              %nxv16i1 : vector<[16]xi1>,
-                                              %nxv8i1 : vector<[8]xi1>,
-                                              %nxv4i1 : vector<[4]xi1>,
-                                              %nxv2i1 : vector<[2]xi1>,
-                                              %nxv1i1 : vector<[1]xi1>,
-                                              %nxv16i8 : vector<[16]xi8>,
-                                              %nxv8i16 : vector<[8]xi16>,
-                                              %nxv4i32 : vector<[4]xi32>,
-                                              %nxv2i64 : vector<[2]xi64>,
-                                              %nxv1i128 : vector<[1]xi128>,
-                                              %nxv8f16 : vector<[8]xf16>,
-                                              %nxv8bf16 : vector<[8]xbf16>,
-                                              %nxv4f32 : vector<[4]xf32>,
-                                              %nxv2f64 : vector<[2]xf64>) {
+                                              %nxv16i1   : vector<[16]xi1>,
+                                              %nxv8i1    : vector<[8]xi1>,
+                                              %nxv4i1    : vector<[4]xi1>,
+                                              %nxv2i1    : vector<[2]xi1>,
+                                              %nxv1i1    : vector<[1]xi1>,
+                                              %nxv16i8   : vector<[16]xi8>,
+                                              %nxv8i16   : vector<[8]xi16>,
+                                              %nxv4i32   : vector<[4]xi32>,
+                                              %nxv2i64   : vector<[2]xi64>,
+                                              %nxv1i128  : vector<[1]xi128>,
+                                              %nxv8f16   : vector<[8]xf16>,
+                                              %nxv8bf16  : vector<[8]xbf16>,
+                                              %nxv4f32   : vector<[4]xf32>,
+                                              %nxv2f64   : vector<[2]xf64>) {
   %tile = llvm.mlir.constant(0 : index) : i32
   // CHECK: call <vscale x 16 x i8> @llvm.aarch64.sme.read.horiz.nxv16i8
   %res0 = "arm_sme.intr.read.horiz"(%nxv16i8, %nxv16i1, %tile, %tileslice)
@@ -387,20 +387,20 @@ llvm.func @arm_sme_tile_slice_to_vector_horiz(%tileslice : i32,
 // -----
 
 llvm.func @arm_sme_tile_slice_to_vector_vert(%tileslice : i32,
-                                              %nxv16i1 : vector<[16]xi1>,
-                                              %nxv8i1 : vector<[8]xi1>,
-                                              %nxv4i1 : vector<[4]xi1>,
-                                              %nxv2i1 : vector<[2]xi1>,
-                                              %nxv1i1 : vector<[1]xi1>,
-                                              %nxv16i8 : vector<[16]xi8>,
-                                              %nxv8i16 : vector<[8]xi16>,
-                                              %nxv4i32 : vector<[4]xi32>,
-                                              %nxv2i64 : vector<[2]xi64>,
+                                              %nxv16i1  : vector<[16]xi1>,
+                                              %nxv8i1   : vector<[8]xi1>,
+                                              %nxv4i1   : vector<[4]xi1>,
+                                              %nxv2i1   : vector<[2]xi1>,
+                                              %nxv1i1   : vector<[1]xi1>,
+                                              %nxv16i8  : vector<[16]xi8>,
+                                              %nxv8i16  : vector<[8]xi16>,
+                                              %nxv4i32  : vector<[4]xi32>,
+                                              %nxv2i64  : vector<[2]xi64>,
                                               %nxv1i128 : vector<[1]xi128>,
-                                              %nxv8f16 : vector<[8]xf16>,
+                                              %nxv8f16  : vector<[8]xf16>,
                                               %nxv8bf16 : vector<[8]xbf16>,
-                                              %nxv4f32 : vector<[4]xf32>,
-                                              %nxv2f64 : vector<[2]xf64>) {
+                                              %nxv4f32  : vector<[4]xf32>,
+                                              %nxv2f64  : vector<[2]xf64>) {
   %tile = llvm.mlir.constant(0 : index) : i32
   // CHECK: call <vscale x 16 x i8> @llvm.aarch64.sme.read.vert.nxv16i8
   %res0 = "arm_sme.intr.read.vert"(%nxv16i8, %nxv16i1, %tile, %tileslice)
