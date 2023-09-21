@@ -300,7 +300,8 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
       if (!Reg)
         continue;
       if (MO.isUse()) {
-        if (Reg.isPhysical() && MRI && MRI->isConstantPhysReg(Reg))
+        if (Reg.isPhysical() &&
+            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
           continue;
         if (PI->modifiesRegister(Reg, TRI))
           return true;
@@ -1250,24 +1251,16 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (MBB == SuccToSinkTo)
     return nullptr;
 
-  if (!SuccToSinkTo)
-    return nullptr;
-
   // It's not safe to sink instructions to EH landing pad. Control flow into
   // landing pad is implicitly defined.
-  if (SuccToSinkTo->isEHPad())
+  if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
   // It ought to be okay to sink instructions into an INLINEASM_BR target, but
   // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
   // the source block (which this code does not yet do). So for now, forbid
   // doing so.
-  if (SuccToSinkTo->isInlineAsmBrIndirectTarget())
-    return nullptr;
-
-  MachineBasicBlock::const_iterator InsertPos =
-      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
-  if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI))
+  if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
     return nullptr;
 
   return SuccToSinkTo;
