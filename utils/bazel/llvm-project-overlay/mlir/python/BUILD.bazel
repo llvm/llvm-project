@@ -1392,6 +1392,7 @@ filegroup(
     name = "VectorOpsPyFiles",
     srcs = [
         "mlir/dialects/vector.py",
+        ":VectorAttributesPyGen",
         ":VectorOpsPyGen",
     ],
 )
