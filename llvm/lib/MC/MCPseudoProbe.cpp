@@ -209,9 +209,13 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
 
 void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
   MCContext &Ctx = MCOS->getContext();
-  for (auto &ProbeSec : MCProbeDivisions) {
-    const auto *FuncSym = ProbeSec.first;
-    const auto &Root = ProbeSec.second;
+  SmallVector<std::pair<MCSymbol *, MCPseudoProbeInlineTree *>> Vec;
+  Vec.reserve(MCProbeDivisions.size());
+  for (auto &ProbeSec : MCProbeDivisions)
+    Vec.emplace_back(ProbeSec.first, &ProbeSec.second);
+  llvm::sort(Vec, [](auto A, auto B) { return A.second->Guid < B.second->Guid; });
+  for (auto [FuncSym, RootPtr] : Vec) {
+    const auto &Root = *RootPtr;
     if (auto *S = Ctx.getObjectFileInfo()->getPseudoProbeSection(
             FuncSym->getSection())) {
       // Switch to the .pseudoprobe section or a comdat group.
