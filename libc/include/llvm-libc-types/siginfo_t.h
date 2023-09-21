@@ -83,6 +83,8 @@ typedef struct {
   } _sifields;
 } siginfo_t;
 
+#undef SI_MAX_SIZE
+
 #define si_pid _sifields._kill.si_pid
 #define si_uid _sifields._kill.si_uid
 #define si_timerid _sifields._timer.si_tid
