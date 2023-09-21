@@ -241,6 +241,11 @@ Changes in existing checks
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
 
+- Improved :doc:`llvmlibc-implementation-in-namespace
+  <clang-tidy/checks/llvmlibc/implementation-in-namespace>` to support
+  customizable namespace. This further allows for testing the libc when the
+  system-libc is also LLVM's libc.
+
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence.
