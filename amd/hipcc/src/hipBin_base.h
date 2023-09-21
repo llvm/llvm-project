@@ -51,11 +51,10 @@ THE SOFTWARE.
 # define HIPCC_VERBOSE                  "HIPCC_VERBOSE"
 # define HCC_AMDGPU_TARGET              "HCC_AMDGPU_TARGET"
 
-# define HIP_BASE_VERSION_MAJOR     "4"
-# define HIP_BASE_VERSION_MINOR     "4"
+# define HIP_BASE_VERSION_MAJOR     "6"
+# define HIP_BASE_VERSION_MINOR     "0"
 # define HIP_BASE_VERSION_PATCH     "0"
 # define HIP_BASE_VERSION_GITHASH   "0"
-
 
 enum PlatformType {
   amd = 0,
@@ -340,12 +339,12 @@ void HipBinBase::constructRoccmPath() {
   else if (envVariables_.roccmPathEnv_.empty()) {
     const string& hipPath = getHipPath();
     fs::path roccm_path(hipPath);
-    roccm_path = roccm_path.parent_path();
     fs::path rocm_agent_enumerator_file(roccm_path);
     rocm_agent_enumerator_file /= "bin/rocm_agent_enumerator";
     if (!fs::exists(rocm_agent_enumerator_file)) {
       roccm_path = "/opt/rocm";
     }
+    variables_.roccmPathEnv_ = roccm_path.string();
   } else {
     variables_.roccmPathEnv_ = envVariables_.roccmPathEnv_;}
 }
@@ -373,7 +372,7 @@ void HipBinBase::readHipVersion() {
                       hipVersionMap, "HIP_VERSION_GITHASH",
                       HIP_BASE_VERSION_GITHASH);
   hipVersion = hip_version_major + "." + hip_version_minor +
-               "." + hip_version_patch + "-" + hip_version_githash;
+               "." + hip_version_patch  + "-" + hip_version_githash;
   hipVersion_ = hipVersion;
 }
 

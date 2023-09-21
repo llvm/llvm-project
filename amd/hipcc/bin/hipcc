@@ -29,7 +29,7 @@ use File::Spec::Functions 'catfile';
 
 # TODO: By default select perl script until change incorporated in HIP build script.
 my $USE_PERL_SCRIPT = $ENV{'HIP_USE_PERL_SCRIPTS'};
-$USE_PERL_SCRIPT //= 1;  # use defined-or assignment operator.  Use env var, but if not defined default to 1.
+$USE_PERL_SCRIPT //= 0;  # use defined-or assignment operator.  Use env var, but if not defined default to 1.
 
 my $isWindows =  ($^O eq 'MSWin32' or $^O eq 'msys');
 # escapes args with quotes SWDEV-341955

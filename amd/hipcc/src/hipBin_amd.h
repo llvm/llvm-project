@@ -85,6 +85,11 @@ HipBinAmd::HipBinAmd() {
   platformInfo.runtime = rocclr;
   platformInfo.compiler = clang;
   platformInfoAMD_ = platformInfo;
+
+  // Base class calls readEnvVariables, but we need to make sure we set rocm_path and hip_path, so that we can set hipClangPath
+  constructHipPath();
+  constructRoccmPath();
+  constructCompilerPath();
 }
 
 // returns the Rocclr Home path
@@ -203,11 +208,9 @@ void HipBinAmd::constructCompilerPath() {
       complierPath = getRoccmPath();
       hipClangPath = complierPath;
     }
-    if (fs::exists("llvm/bin/clang++")) {
-      hipClangPath /= "llvm/bin";
-    } else {
-      hipClangPath /= "bin";
-    }
+
+    hipClangPath /= "llvm/bin";
+
     complierPath = hipClangPath.string();
   } else {
     complierPath = envVariables.hipClangPathEnv_;
@@ -336,14 +339,14 @@ string HipBinAmd::getDeviceLibPath() const {
 
 bool HipBinAmd::detectPlatform() {
   string out;
+  constructCompilerPath();
   const string& hipClangPath = getCompilerPath();
   fs::path cmdAmd = hipClangPath;
   cmdAmd /= "clang++";
   const EnvVariables& var = getEnvVariables();
   bool detected = false;
   if (var.hipPlatformEnv_.empty()) {
-    if (canRunCompiler(cmdAmd.string(), out) ||
-       (canRunCompiler("amdclang++", out))) {
+    if (canRunCompiler(cmdAmd.string(), out)){
       detected = true;
     }
   } else {
@@ -705,8 +708,8 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
   }  // end of ARGV Processing Loop
 
   // now construct Paths ...
-  constructRoccmPath();         // constructs Roccm Path
   constructHipPath();           // constructs HIP Path
+  constructRoccmPath();         // constructs Roccm Path
   readHipVersion();             // stores the hip version
   constructCompilerPath();
   constructRocclrHomePath();
