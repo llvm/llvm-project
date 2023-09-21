@@ -1620,9 +1620,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
     if (HasTerminator) {
+      // Even if BB, which contains only one unreachable instruction, is ignored
+      // at the beginning of the loop, we can hoist the terminator instruction.
       // If any instructions remain in the block, we cannot hoist terminators.
-      if (NumSkipped || SuccSize != SuccIterPairs.size() ||
-          !AllInstsAreIdentical)
+      if (NumSkipped || !AllInstsAreIdentical)
         return Changed;
       SmallVector<Instruction *, 8> Insts;
       for (auto &SuccIter : OtherSuccIterRange)
