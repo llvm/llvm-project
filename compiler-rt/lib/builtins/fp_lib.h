@@ -110,7 +110,6 @@ COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
 // being IEEE 128, but instead on being able to use a 128-bit floating-point
 // type, which includes __float128.
 // Right now this (incorrectly) stops the builtins from being used for x86.
-#define CRT_LDBL_128BIT
 #define CRT_HAS_TF_MODE
 #define TF_C(c) c##L
 typedef uint64_t half_rep_t;
@@ -213,7 +212,7 @@ static __inline void wideMultiply(rep_t a, rep_t b, rep_t *hi, rep_t *lo) {
 #endif
 
 #if defined(SINGLE_PRECISION) || defined(DOUBLE_PRECISION) ||                  \
-    defined(CRT_LDBL_128BIT)
+    defined(CRT_HAS_TF_MODE)
 #define typeWidth (sizeof(rep_t) * CHAR_BIT)
 #define exponentBits (typeWidth - significandBits - 1)
 #define maxExponent ((1 << exponentBits) - 1)
@@ -395,7 +394,7 @@ static __inline fp_t __compiler_rt_fmax(fp_t x, fp_t y) {
 
 #elif defined(QUAD_PRECISION)
 
-#if defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 static __inline fp_t __compiler_rt_logbl(fp_t x) {
   return __compiler_rt_logbX(x);
 }
@@ -417,7 +416,7 @@ static __inline long double __compiler_rt_scalbnl(long double x, int y) {
 static __inline long double __compiler_rt_fmaxl(long double x, long double y) {
   return crt_fmaxl(x, y);
 }
-#endif // CRT_LDBL_128BIT
+#endif // CRT_HAS_TF_MODE
 
 #endif // *_PRECISION
 
