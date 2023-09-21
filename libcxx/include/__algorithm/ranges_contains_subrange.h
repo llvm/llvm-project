@@ -129,7 +129,7 @@ struct __fn {
         __proj1,
         __proj2,
         __offset);
-    }
+  }
 };
 } // namespace __contains_subrange
 
