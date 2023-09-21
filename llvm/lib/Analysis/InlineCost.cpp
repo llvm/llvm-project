@@ -787,7 +787,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         return false;
     } else {
       // Otherwise, require instrumentation profile.
-      if (!PSI->hasInstrumentationProfile())
+      if (!(PSI->hasInstrumentationProfile() || PSI->hasSampleProfile()))
         return false;
     }
 
