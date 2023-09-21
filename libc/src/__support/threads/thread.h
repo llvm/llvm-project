@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
-#define LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
@@ -249,4 +249,4 @@ void call_atexit_callbacks(ThreadAttributes *attrib);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_THREADS_THREAD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H

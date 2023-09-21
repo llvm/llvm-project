@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H
 
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
@@ -21,4 +21,4 @@ LIBC_INLINE_VAR constexpr bool is_void_v = is_void<T>::value;
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H
