@@ -678,33 +678,32 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_addk_co_i32 s32, 0x300
 ; GFX12-NEXT:    s_and_b32 s33, s33, 0xffffff00
 ; GFX12-NEXT:    s_addk_co_i32 s32, 0xfd00
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    global_load_b128 v[20:23], v[0:1], off offset:64
-; GFX12-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:96
-; GFX12-NEXT:    s_wait_loadcnt 0x4
-; GFX12-NEXT:    scratch_store_b128 off, v[12:15], s33
+; GFX12-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:64
 ; GFX12-NEXT:    s_wait_loadcnt 0x3
+; GFX12-NEXT:    scratch_store_b128 off, v[12:15], s33
+; GFX12-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:16
 ; GFX12-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
-; GFX12-NEXT:    s_wait_loadcnt 0x3
+; GFX12-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:32
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:80
-; GFX12-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:128
-; GFX12-NEXT:    s_wait_loadcnt 0x4
-; GFX12-NEXT:    scratch_store_b128 off, v[20:23], s33 offset:64
+; GFX12-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:96
 ; GFX12-NEXT:    s_wait_loadcnt 0x3
-; GFX12-NEXT:    scratch_store_b128 off, v[16:19], s33 offset:96
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    scratch_store_b128 off, v[16:19], s33 offset:64
+; GFX12-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:128
+; GFX12-NEXT:    s_wait_loadcnt 0x3
 ; GFX12-NEXT:    scratch_store_b128 off, v[12:15], s33 offset:48
 ; GFX12-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:112
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    s_wait_loadcnt 0x3
 ; GFX12-NEXT:    scratch_store_b128 off, v[4:7], s33 offset:80
+; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:96
 ; GFX12-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:144
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    scratch_store_b128 off, v[12:15], s33 offset:112
-; GFX12-NEXT:    scratch_store_b128 off, v[8:11], s33 offset:128
+; GFX12-NEXT:    scratch_store_b128 off, v[16:19], s33 offset:128
 ; GFX12-NEXT:    s_clause 0x2
 ; GFX12-NEXT:    global_load_b128 v[16:19], v[0:1], off offset:160
 ; GFX12-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:176

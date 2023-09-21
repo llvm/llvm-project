@@ -24,6 +24,16 @@ transform.sequence failures(propagate) {
 
 // -----
 
+// expected-error @below {{expects to have a terminator in the body}}
+"transform.sequence"() <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 0, 0>}> ({
+^bb0(%arg0: !transform.any_op):
+  transform.apply_patterns to %arg0 {
+  } : !transform.any_op
+}) : () -> ()
+
+
+// -----
+
 // expected-error @below {{'transform.sequence' op expects trailing entry block arguments to be of type implementing TransformHandleTypeInterface, TransformValueHandleTypeInterface or TransformParamTypeInterface}}
 // expected-note @below {{argument #1 does not}}
 transform.sequence failures(propagate) {
