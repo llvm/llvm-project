@@ -1396,14 +1396,13 @@ void transform::TrackingListener::notifyOperationReplaced(
   };
 
   // Helper function to check if the handle is alive.
-  auto hasAliveUser = [&]() {
-    for (Value v : opHandles) {
-      for (Operation *user : v.getUsers())
-        if (user != transformOp && !happensBefore(user, transformOp))
-          return true;
-    }
-    return false;
-  };
+  SmallVector<Operation *> aliveUsers;
+  for (Value v : opHandles) {
+    for (Operation *user : v.getUsers())
+      if (user != transformOp && !happensBefore(user, transformOp))
+        aliveUsers.push_back(user);
+  }
+  auto hasAliveUser = [&]() { return !aliveUsers.empty(); };
 
   if (!hasAliveUser() || handleWasConsumed()) {
     // The op is tracked but the corresponding handles are dead or were
@@ -1416,7 +1415,7 @@ void transform::TrackingListener::notifyOperationReplaced(
   // If the op is tracked but no replacement op was found, send a
   // notification.
   if (failed(replacement)) {
-    notifyPayloadReplacementNotFound(op, newValues);
+    notifyPayloadReplacementNotFound(op, newValues, aliveUsers);
     (void)replacePayloadOp(op, nullptr);
     return;
   }
@@ -1444,16 +1443,20 @@ bool transform::ErrorCheckingTrackingListener::failed() const {
 }
 
 void transform::ErrorCheckingTrackingListener::notifyPayloadReplacementNotFound(
-    Operation *op, ValueRange values) {
+    Operation *op, ValueRange values, ArrayRef<Operation *> aliveUsers) {
   if (status.succeeded()) {
     status = emitSilenceableFailure(
-        getTransformOp(), "tracking listener failed to find replacement op");
+        getTransformOp(), "op was replaced but replacement was of different "
+                          "kind, invalidating alive handles");
   }
 
   status.attachNote(op->getLoc()) << "[" << errorCounter << "] replaced op";
   for (auto &&[index, value] : llvm::enumerate(values))
     status.attachNote(value.getLoc())
         << "[" << errorCounter << "] replacement value " << index;
+  for (auto &&[index, user] : llvm::enumerate(aliveUsers))
+    status.attachNote(user->getLoc())
+        << "[" << errorCounter << "] alive handle " << index;
 
   ++errorCounter;
 }
