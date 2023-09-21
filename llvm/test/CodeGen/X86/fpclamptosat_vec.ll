@@ -154,14 +154,14 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    movq %rax, %xmm2
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
-; CHECK-NEXT:    movq %rax, %xmm4
+; CHECK-NEXT:    movq %rax, %xmm3
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm0[0]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [2147483647,2147483647]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [2147483647,2147483647]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
-; CHECK-NEXT:    movdqa %xmm4, %xmm1
+; CHECK-NEXT:    movdqa %xmm3, %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pxor %xmm6, %xmm6
@@ -173,20 +173,20 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    pand %xmm5, %xmm9
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm8[1,1,3,3]
 ; CHECK-NEXT:    por %xmm9, %xmm1
-; CHECK-NEXT:    pand %xmm1, %xmm4
-; CHECK-NEXT:    pandn %xmm3, %xmm1
-; CHECK-NEXT:    por %xmm4, %xmm1
-; CHECK-NEXT:    movdqa %xmm2, %xmm4
-; CHECK-NEXT:    pxor %xmm0, %xmm4
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,1,3,3]
+; CHECK-NEXT:    pand %xmm1, %xmm3
+; CHECK-NEXT:    pandn %xmm4, %xmm1
+; CHECK-NEXT:    por %xmm3, %xmm1
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    pxor %xmm0, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd %xmm6, %xmm5
-; CHECK-NEXT:    pcmpgtd %xmm4, %xmm7
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm7[0,0,2,2]
-; CHECK-NEXT:    pand %xmm5, %xmm4
+; CHECK-NEXT:    pcmpgtd %xmm3, %xmm7
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm7[0,0,2,2]
+; CHECK-NEXT:    pand %xmm5, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
-; CHECK-NEXT:    por %xmm4, %xmm5
+; CHECK-NEXT:    por %xmm3, %xmm5
 ; CHECK-NEXT:    pand %xmm5, %xmm2
-; CHECK-NEXT:    pandn %xmm3, %xmm5
+; CHECK-NEXT:    pandn %xmm4, %xmm5
 ; CHECK-NEXT:    por %xmm2, %xmm5
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [18446744071562067968,18446744071562067968]
 ; CHECK-NEXT:    movdqa %xmm5, %xmm3
@@ -317,14 +317,14 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    movq %rax, %xmm2
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
-; CHECK-NEXT:    movq %rax, %xmm4
+; CHECK-NEXT:    movq %rax, %xmm3
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm0[0]
-; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [4294967295,4294967295]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4294967295,4294967295]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
-; CHECK-NEXT:    movdqa %xmm4, %xmm1
+; CHECK-NEXT:    movdqa %xmm3, %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pxor %xmm6, %xmm6
@@ -336,20 +336,20 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    pand %xmm5, %xmm9
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm8[1,1,3,3]
 ; CHECK-NEXT:    por %xmm9, %xmm1
-; CHECK-NEXT:    pand %xmm1, %xmm4
-; CHECK-NEXT:    pandn %xmm3, %xmm1
-; CHECK-NEXT:    por %xmm4, %xmm1
-; CHECK-NEXT:    movdqa %xmm2, %xmm4
-; CHECK-NEXT:    pxor %xmm0, %xmm4
-; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,1,3,3]
+; CHECK-NEXT:    pand %xmm1, %xmm3
+; CHECK-NEXT:    pandn %xmm4, %xmm1
+; CHECK-NEXT:    por %xmm3, %xmm1
+; CHECK-NEXT:    movdqa %xmm2, %xmm3
+; CHECK-NEXT:    pxor %xmm0, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd %xmm6, %xmm5
-; CHECK-NEXT:    pcmpgtd %xmm4, %xmm7
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm7[0,0,2,2]
-; CHECK-NEXT:    pand %xmm5, %xmm4
+; CHECK-NEXT:    pcmpgtd %xmm3, %xmm7
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm7[0,0,2,2]
+; CHECK-NEXT:    pand %xmm5, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
-; CHECK-NEXT:    por %xmm4, %xmm5
+; CHECK-NEXT:    por %xmm3, %xmm5
 ; CHECK-NEXT:    pand %xmm5, %xmm2
-; CHECK-NEXT:    pandn %xmm3, %xmm5
+; CHECK-NEXT:    pandn %xmm4, %xmm5
 ; CHECK-NEXT:    por %xmm2, %xmm5
 ; CHECK-NEXT:    movdqa %xmm5, %xmm2
 ; CHECK-NEXT:    pxor %xmm0, %xmm2
@@ -446,10 +446,9 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    pand %xmm6, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
 ; CHECK-NEXT:    por %xmm3, %xmm4
-; CHECK-NEXT:    movdqa %xmm7, %xmm3
-; CHECK-NEXT:    pand %xmm4, %xmm3
+; CHECK-NEXT:    pand %xmm4, %xmm7
 ; CHECK-NEXT:    pandn %xmm2, %xmm4
-; CHECK-NEXT:    por %xmm3, %xmm4
+; CHECK-NEXT:    por %xmm7, %xmm4
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [18446744071562067968,18446744071562067968]
 ; CHECK-NEXT:    movdqa %xmm4, %xmm3
 ; CHECK-NEXT:    pxor %xmm0, %xmm3
@@ -650,10 +649,9 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    pand %xmm6, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
 ; CHECK-NEXT:    por %xmm3, %xmm4
-; CHECK-NEXT:    movdqa %xmm7, %xmm3
-; CHECK-NEXT:    pand %xmm4, %xmm3
+; CHECK-NEXT:    pand %xmm4, %xmm7
 ; CHECK-NEXT:    pandn %xmm2, %xmm4
-; CHECK-NEXT:    por %xmm3, %xmm4
+; CHECK-NEXT:    por %xmm7, %xmm4
 ; CHECK-NEXT:    movdqa %xmm4, %xmm2
 ; CHECK-NEXT:    pxor %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3
@@ -2012,10 +2010,9 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    pand %xmm6, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
 ; CHECK-NEXT:    por %xmm3, %xmm4
-; CHECK-NEXT:    movdqa %xmm7, %xmm3
-; CHECK-NEXT:    pand %xmm4, %xmm3
+; CHECK-NEXT:    pand %xmm4, %xmm7
 ; CHECK-NEXT:    pandn %xmm2, %xmm4
-; CHECK-NEXT:    por %xmm3, %xmm4
+; CHECK-NEXT:    por %xmm7, %xmm4
 ; CHECK-NEXT:    movdqa %xmm4, %xmm2
 ; CHECK-NEXT:    pxor %xmm0, %xmm2
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
@@ -2213,10 +2210,9 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    pand %xmm6, %xmm3
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
 ; CHECK-NEXT:    por %xmm3, %xmm4
-; CHECK-NEXT:    movdqa %xmm7, %xmm3
-; CHECK-NEXT:    pand %xmm4, %xmm3
+; CHECK-NEXT:    pand %xmm4, %xmm7
 ; CHECK-NEXT:    pandn %xmm2, %xmm4
-; CHECK-NEXT:    por %xmm3, %xmm4
+; CHECK-NEXT:    por %xmm7, %xmm4
 ; CHECK-NEXT:    movdqa %xmm4, %xmm2
 ; CHECK-NEXT:    pxor %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3

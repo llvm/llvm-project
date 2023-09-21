@@ -369,32 +369,32 @@ define i64 @test_v8i64(<8 x i64> %a0) {
 ;
 ; SSE42-LABEL: test_v8i64:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm0, %xmm5
-; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
+; SSE42-NEXT:    movdqa %xmm0, %xmm4
+; SSE42-NEXT:    movdqa {{.*#+}} xmm5 = [9223372036854775808,9223372036854775808]
 ; SSE42-NEXT:    movdqa %xmm1, %xmm6
-; SSE42-NEXT:    pxor %xmm4, %xmm6
+; SSE42-NEXT:    pxor %xmm5, %xmm6
 ; SSE42-NEXT:    movdqa %xmm3, %xmm0
-; SSE42-NEXT:    pxor %xmm4, %xmm0
+; SSE42-NEXT:    pxor %xmm5, %xmm0
 ; SSE42-NEXT:    pcmpgtq %xmm6, %xmm0
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm1, %xmm3
-; SSE42-NEXT:    movdqa %xmm5, %xmm1
-; SSE42-NEXT:    pxor %xmm4, %xmm1
+; SSE42-NEXT:    movdqa %xmm4, %xmm1
+; SSE42-NEXT:    pxor %xmm5, %xmm1
 ; SSE42-NEXT:    movdqa %xmm2, %xmm0
-; SSE42-NEXT:    pxor %xmm4, %xmm0
+; SSE42-NEXT:    pxor %xmm5, %xmm0
 ; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, %xmm5, %xmm2
+; SSE42-NEXT:    blendvpd %xmm0, %xmm4, %xmm2
 ; SSE42-NEXT:    movapd %xmm2, %xmm1
-; SSE42-NEXT:    xorpd %xmm4, %xmm1
+; SSE42-NEXT:    xorpd %xmm5, %xmm1
 ; SSE42-NEXT:    movapd %xmm3, %xmm0
-; SSE42-NEXT:    xorpd %xmm4, %xmm0
+; SSE42-NEXT:    xorpd %xmm5, %xmm0
 ; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
 ; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[2,3,2,3]
 ; SSE42-NEXT:    movdqa %xmm3, %xmm0
-; SSE42-NEXT:    pxor %xmm4, %xmm0
-; SSE42-NEXT:    pxor %xmm1, %xmm4
-; SSE42-NEXT:    pcmpgtq %xmm0, %xmm4
-; SSE42-NEXT:    movdqa %xmm4, %xmm0
+; SSE42-NEXT:    pxor %xmm5, %xmm0
+; SSE42-NEXT:    pxor %xmm1, %xmm5
+; SSE42-NEXT:    pcmpgtq %xmm0, %xmm5
+; SSE42-NEXT:    movdqa %xmm5, %xmm0
 ; SSE42-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE42-NEXT:    movq %xmm1, %rax
 ; SSE42-NEXT:    retq

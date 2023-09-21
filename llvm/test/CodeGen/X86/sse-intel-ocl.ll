@@ -92,16 +92,16 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
 ; WIN32-NEXT:    subl $80, %esp
-; WIN32-NEXT:    movups 72(%ebp), %xmm6
+; WIN32-NEXT:    movups 72(%ebp), %xmm4
 ; WIN32-NEXT:    movups 8(%ebp), %xmm3
-; WIN32-NEXT:    movups 56(%ebp), %xmm7
-; WIN32-NEXT:    movups 40(%ebp), %xmm5
-; WIN32-NEXT:    movups 24(%ebp), %xmm4
+; WIN32-NEXT:    movups 56(%ebp), %xmm5
+; WIN32-NEXT:    movups 40(%ebp), %xmm6
+; WIN32-NEXT:    movups 24(%ebp), %xmm7
 ; WIN32-NEXT:    movl %esp, %eax
-; WIN32-NEXT:    addps %xmm4, %xmm0
-; WIN32-NEXT:    addps %xmm5, %xmm1
-; WIN32-NEXT:    addps %xmm7, %xmm2
-; WIN32-NEXT:    addps %xmm6, %xmm3
+; WIN32-NEXT:    addps %xmm7, %xmm0
+; WIN32-NEXT:    addps %xmm6, %xmm1
+; WIN32-NEXT:    addps %xmm5, %xmm2
+; WIN32-NEXT:    addps %xmm4, %xmm3
 ; WIN32-NEXT:    pushl %eax
 ; WIN32-NEXT:    calll _func_float16_ptr
 ; WIN32-NEXT:    addl $4, %esp
@@ -164,20 +164,20 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; NOT_WIN-LABEL: testf16_regs:
 ; NOT_WIN:       ## %bb.0:
 ; NOT_WIN-NEXT:    subq $72, %rsp
-; NOT_WIN-NEXT:    movaps %xmm7, %xmm9
-; NOT_WIN-NEXT:    movaps %xmm6, %xmm10
-; NOT_WIN-NEXT:    movaps %xmm5, %xmm11
-; NOT_WIN-NEXT:    movaps %xmm4, %xmm8
+; NOT_WIN-NEXT:    movaps %xmm7, %xmm8
+; NOT_WIN-NEXT:    movaps %xmm6, %xmm9
+; NOT_WIN-NEXT:    movaps %xmm5, %xmm10
+; NOT_WIN-NEXT:    movaps %xmm4, %xmm11
 ; NOT_WIN-NEXT:    addps %xmm4, %xmm0
 ; NOT_WIN-NEXT:    addps %xmm5, %xmm1
 ; NOT_WIN-NEXT:    addps %xmm6, %xmm2
 ; NOT_WIN-NEXT:    addps %xmm7, %xmm3
 ; NOT_WIN-NEXT:    movq %rsp, %rdi
 ; NOT_WIN-NEXT:    callq _func_float16_ptr
-; NOT_WIN-NEXT:    addps %xmm9, %xmm3
-; NOT_WIN-NEXT:    addps %xmm10, %xmm2
-; NOT_WIN-NEXT:    addps %xmm11, %xmm1
-; NOT_WIN-NEXT:    addps %xmm8, %xmm0
+; NOT_WIN-NEXT:    addps %xmm8, %xmm3
+; NOT_WIN-NEXT:    addps %xmm9, %xmm2
+; NOT_WIN-NEXT:    addps %xmm10, %xmm1
+; NOT_WIN-NEXT:    addps %xmm11, %xmm0
 ; NOT_WIN-NEXT:    addps (%rsp), %xmm0
 ; NOT_WIN-NEXT:    addps {{[0-9]+}}(%rsp), %xmm1
 ; NOT_WIN-NEXT:    addps {{[0-9]+}}(%rsp), %xmm2

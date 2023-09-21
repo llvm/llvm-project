@@ -188,30 +188,33 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_vgpr_descr(i32 %node_ptr, 
 ;
 ; GFX1013-LABEL: image_bvh_intersect_ray_vgpr_descr:
 ; GFX1013:       ; %bb.0:
+; GFX1013-NEXT:    v_mov_b32_e32 v16, v13
+; GFX1013-NEXT:    v_mov_b32_e32 v17, v14
 ; GFX1013-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1013-NEXT:  .LBB6_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1013-NEXT:    v_readfirstlane_b32 s4, v11
+; GFX1013-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1013-NEXT:    v_readfirstlane_b32 s5, v12
-; GFX1013-NEXT:    v_readfirstlane_b32 s6, v13
-; GFX1013-NEXT:    v_readfirstlane_b32 s7, v14
+; GFX1013-NEXT:    v_readfirstlane_b32 s6, v16
+; GFX1013-NEXT:    v_readfirstlane_b32 s7, v17
 ; GFX1013-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[11:12]
-; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[13:14]
+; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[16:17]
 ; GFX1013-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1013-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX1013-NEXT:    image_bvh_intersect_ray v[15:18], v[0:10], s[4:7]
+; GFX1013-NEXT:    image_bvh_intersect_ray v[12:15], v[0:10], s[4:7]
 ; GFX1013-NEXT:    ; implicit-def: $vgpr11
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10
-; GFX1013-NEXT:    ; implicit-def: $vgpr11_vgpr12_vgpr13_vgpr14
+; GFX1013-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
 ; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1013-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1013-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX1013-NEXT:  ; %bb.2:
 ; GFX1013-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)
-; GFX1013-NEXT:    v_mov_b32_e32 v0, v15
-; GFX1013-NEXT:    v_mov_b32_e32 v1, v16
-; GFX1013-NEXT:    v_mov_b32_e32 v2, v17
-; GFX1013-NEXT:    v_mov_b32_e32 v3, v18
+; GFX1013-NEXT:    v_mov_b32_e32 v0, v12
+; GFX1013-NEXT:    v_mov_b32_e32 v1, v13
+; GFX1013-NEXT:    v_mov_b32_e32 v2, v14
+; GFX1013-NEXT:    v_mov_b32_e32 v3, v15
 ; GFX1013-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: image_bvh_intersect_ray_vgpr_descr:
@@ -419,30 +422,33 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_vgpr_descr(i64 %node_ptr
 ;
 ; GFX1013-LABEL: image_bvh64_intersect_ray_vgpr_descr:
 ; GFX1013:       ; %bb.0:
+; GFX1013-NEXT:    v_mov_b32_e32 v17, v14
+; GFX1013-NEXT:    v_mov_b32_e32 v18, v15
 ; GFX1013-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1013-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
 ; GFX1013-NEXT:    v_readfirstlane_b32 s4, v12
+; GFX1013-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1013-NEXT:    v_readfirstlane_b32 s5, v13
-; GFX1013-NEXT:    v_readfirstlane_b32 s6, v14
-; GFX1013-NEXT:    v_readfirstlane_b32 s7, v15
+; GFX1013-NEXT:    v_readfirstlane_b32 s6, v17
+; GFX1013-NEXT:    v_readfirstlane_b32 s7, v18
 ; GFX1013-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[12:13]
-; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[14:15]
+; GFX1013-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[17:18]
 ; GFX1013-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX1013-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX1013-NEXT:    image_bvh64_intersect_ray v[16:19], v[0:11], s[4:7]
+; GFX1013-NEXT:    image_bvh64_intersect_ray v[13:16], v[0:11], s[4:7]
 ; GFX1013-NEXT:    ; implicit-def: $vgpr12
 ; GFX1013-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
-; GFX1013-NEXT:    ; implicit-def: $vgpr12_vgpr13_vgpr14_vgpr15
+; GFX1013-NEXT:    ; implicit-def: $vgpr15_vgpr16_vgpr17_vgpr18
 ; GFX1013-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1013-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX1013-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX1013-NEXT:  ; %bb.2:
 ; GFX1013-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)
-; GFX1013-NEXT:    v_mov_b32_e32 v0, v16
-; GFX1013-NEXT:    v_mov_b32_e32 v1, v17
-; GFX1013-NEXT:    v_mov_b32_e32 v2, v18
-; GFX1013-NEXT:    v_mov_b32_e32 v3, v19
+; GFX1013-NEXT:    v_mov_b32_e32 v0, v13
+; GFX1013-NEXT:    v_mov_b32_e32 v1, v14
+; GFX1013-NEXT:    v_mov_b32_e32 v2, v15
+; GFX1013-NEXT:    v_mov_b32_e32 v3, v16
 ; GFX1013-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: image_bvh64_intersect_ray_vgpr_descr:

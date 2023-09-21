@@ -220,18 +220,18 @@ declare i32 @__FrameHandler(...)
 define void @test5(ptr %s, i32 %n) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    mov w9, wzr
-; CHECK-NEXT:    add x8, x8, #19, lsl #12 // =77824
-; CHECK-NEXT:    add x8, x8, #2176
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    ldr x9, [x0]
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    add x9, x9, #19, lsl #12 // =77824
+; CHECK-NEXT:    add x9, x9, #2176
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: // %while_body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str w9, [x8, #4]
-; CHECK-NEXT:    add w9, w9, #1
-; CHECK-NEXT:    str w9, [x8]
-; CHECK-NEXT:    cmp w9, w1
+; CHECK-NEXT:    str w8, [x9, #4]
+; CHECK-NEXT:    add w8, w8, #1
+; CHECK-NEXT:    str w8, [x9]
+; CHECK-NEXT:    cmp w8, w1
 ; CHECK-NEXT:    b.lt .LBB4_1
 ; CHECK-NEXT:  .LBB4_2: // %while_end
 ; CHECK-NEXT:    ret

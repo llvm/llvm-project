@@ -134,7 +134,7 @@ l2:
 ; any of the v_cmp source operands.
 
 ; GCN-LABEL: check_saveexec_overwrites_vcmp_source:
-; GCN:  .LBB7_3: ; %then
+; GCN:  %bb.1: ; %then
 ; GFX1010:          v_cmp_ge_i32_e32 vcc_lo, s[[A:[0-9]+]], v{{.*}}
 ; GFX1010-NEXT:     v_mov_b32_e32 {{.*}}, s[[A]]
 ; GFX1010-NEXT:     s_and_saveexec_b32 s[[A]], vcc_lo

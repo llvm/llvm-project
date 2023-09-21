@@ -713,21 +713,21 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MMR3-NEXT:    andi16 $3, $3, 31
 ; MMR3-NEXT:    srlv $16, $5, $6
 ; MMR3-NEXT:    sllv $4, $4, $3
-; MMR3-NEXT:    srlv $17, $7, $6
-; MMR3-NEXT:    lwl $7, 0($2)
-; MMR3-NEXT:    lwr $7, 3($2)
-; MMR3-NEXT:    sll16 $3, $7, 1
+; MMR3-NEXT:    srlv $7, $7, $6
+; MMR3-NEXT:    lwl $17, 0($2)
+; MMR3-NEXT:    lwr $17, 3($2)
+; MMR3-NEXT:    sll16 $3, $17, 1
 ; MMR3-NEXT:    xori $1, $6, 31
 ; MMR3-NEXT:    sllv $3, $3, $1
-; MMR3-NEXT:    or16 $3, $17
+; MMR3-NEXT:    or16 $3, $7
 ; MMR3-NEXT:    or16 $4, $16
-; MMR3-NEXT:    lwl $8, 12($2)
-; MMR3-NEXT:    lwr $8, 15($2)
-; MMR3-NEXT:    srlv $2, $8, $6
+; MMR3-NEXT:    lwl $7, 12($2)
+; MMR3-NEXT:    lwr $7, 15($2)
+; MMR3-NEXT:    srlv $2, $7, $6
 ; MMR3-NEXT:    sll16 $5, $5, 1
 ; MMR3-NEXT:    sllv $5, $5, $1
 ; MMR3-NEXT:    or16 $5, $2
-; MMR3-NEXT:    srlv $2, $7, $6
+; MMR3-NEXT:    srlv $2, $17, $6
 ; MMR3-NEXT:    lwp $16, 32($sp)
 ; MMR3-NEXT:    addiusp 40
 ; MMR3-NEXT:    jrc $ra
