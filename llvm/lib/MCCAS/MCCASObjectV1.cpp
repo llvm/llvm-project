@@ -807,9 +807,23 @@ getLineTableLengthInfoAndVersion(DWARFDataExtractor &LineTableDataReader,
   auto Version = LineTableDataReader.getU16(OffsetPtr, &Err);
   if (Err)
     return std::move(Err);
-  if (Version >= 5)
-    return createStringError(inconvertibleErrorCode(),
-                             "DWARF 5 and above is not currently supported");
+  if (Version >= 5) {
+    // Dwarf 5 Section 6.2.4:
+    // Line Table Header Format is now changed with an address_size and
+    // segment_selector_size after the version. Parse both values from the
+    // header.
+    auto AddressSize = LineTableDataReader.getU8(OffsetPtr, &Err);
+    if (Err)
+      return std::move(Err);
+    if (AddressSize != 8)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Address size is not 8 bytes, unsupported architecture for MCCAS!");
+    LineTableDataReader.getU8(OffsetPtr, &Err);
+    if (Err)
+      return std::move(Err);
+  }
+
   Prologue.Version = Version;
   // Since we do not support 64 bit DWARF, the prologue length is 4 bytes in
   // size.
