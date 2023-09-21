@@ -706,14 +706,7 @@ public:
             return;
           }
           // deallocate allocated in createHostAssociateVarClone value
-          mlir::Value needs_dealloc =
-              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc,
-                                                           new_box);
-          builder->genIfThen(loc, needs_dealloc)
-              .genThen([&]() {
-                Fortran::lower::genDeallocateBox(*this, new_box, loc);
-              })
-              .end();
+          Fortran::lower::genDeallocateIfAllocated(*this, new_box, loc);
         },
         [&](const auto &) -> void {
           // Do nothing
