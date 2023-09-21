@@ -163,65 +163,35 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 
 static SDValue selectImmSeq(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                             RISCVMatInt::InstSeq &Seq) {
-  SDValue SrcReg = CurDAG->getRegister(RISCV::X0, VT);
+  SmallVector<SDValue> Results;
+  Results.push_back(CurDAG->getRegister(RISCV::X0, VT));
   for (const RISCVMatInt::Inst &Inst : Seq) {
-    SDValue SDImm = CurDAG->getTargetConstant(Inst.getImm(), DL, VT);
+    const unsigned Reg0Off = (unsigned)Inst.getReg0() + 1;
+    const unsigned Reg1Off = (unsigned)Inst.getReg1() + 1;
+    const SDValue SrcReg0 = Results[Results.size()-Reg0Off];
+    const SDValue SrcReg1 = Results[Results.size()-Reg1Off];
+    const SDValue SDImm = CurDAG->getTargetConstant(Inst.getImm(), DL, VT);
     SDNode *Result = nullptr;
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       Result = CurDAG->getMachineNode(Inst.getOpcode(), DL, VT, SDImm);
       break;
-    case RISCVMatInt::RegX0:
-      Result = CurDAG->getMachineNode(Inst.getOpcode(), DL, VT, SrcReg,
-                                      CurDAG->getRegister(RISCV::X0, VT));
-      break;
     case RISCVMatInt::RegReg:
-      Result = CurDAG->getMachineNode(Inst.getOpcode(), DL, VT, SrcReg, SrcReg);
+      Result = CurDAG->getMachineNode(Inst.getOpcode(), DL, VT, SrcReg0, SrcReg1);
       break;
     case RISCVMatInt::RegImm:
-      Result = CurDAG->getMachineNode(Inst.getOpcode(), DL, VT, SrcReg, SDImm);
+      Result = CurDAG->getMachineNode(Inst.getOpcode(), DL, VT, SrcReg0, SDImm);
       break;
     }
-
-    // Only the first instruction has X0 as its source.
-    SrcReg = SDValue(Result, 0);
+    Results.push_back(SDValue(Result, 0));
   }
-
-  return SrcReg;
+  return Results.back();
 }
 
 static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq =
-      RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
-
-  // See if we can create this constant as (ADD (SLLI X, 32), X) where X is at
-  // worst an LUI+ADDIW. This will require an extra register, but avoids a
-  // constant pool.
-  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
-  // low and high 32 bits are the same and bit 31 and 63 are set.
-  if (Seq.size() > 3) {
-    int64_t LoVal = SignExtend64<32>(Imm);
-    int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
-    if (LoVal == HiVal ||
-        (Subtarget.hasStdExtZba() && Lo_32(Imm) == Hi_32(Imm))) {
-      RISCVMatInt::InstSeq SeqLo =
-          RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
-      if ((SeqLo.size() + 2) < Seq.size()) {
-        SDValue Lo = selectImmSeq(CurDAG, DL, VT, SeqLo);
-
-        SDValue SLLI = SDValue(
-            CurDAG->getMachineNode(RISCV::SLLI, DL, VT, Lo,
-                                   CurDAG->getTargetConstant(32, DL, VT)),
-            0);
-        // Prefer ADD when possible.
-        unsigned AddOpc = (LoVal == HiVal) ? RISCV::ADD : RISCV::ADD_UW;
-        return SDValue(CurDAG->getMachineNode(AddOpc, DL, VT, Lo, SLLI), 0);
-      }
-    }
-  }
-
-  // Otherwise, use the original sequence.
+    RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits(), true);
   return selectImmSeq(CurDAG, DL, VT, Seq);
 }
 

@@ -738,8 +738,6 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
                             MachineInstr::MIFlag Flag) const {
-  Register SrcReg = RISCV::X0;
-
   if (!STI.is64Bit() && !isInt<32>(Val))
     report_fatal_error("Should only materialize 32-bit constants for RV32");
 
@@ -747,35 +745,37 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       RISCVMatInt::generateInstSeq(Val, STI.getFeatureBits());
   assert(!Seq.empty());
 
+  SmallVector<Register> Results;
+  Results.push_back(RISCV::X0);
   for (const RISCVMatInt::Inst &Inst : Seq) {
+    const unsigned Reg0Off = (unsigned)Inst.getReg0() + 1;
+    const unsigned Reg1Off = (unsigned)Inst.getReg1() + 1;
+    const Register SrcReg0 = Results[Results.size()-Reg0Off];
+    const Register SrcReg1 = Results[Results.size()-Reg1Off];
+    // Note: We only support sequences with a single live register here.
+    assert(SrcReg0 == RISCV::X0 || SrcReg0 == DstReg);
+    assert(SrcReg1 == RISCV::X0 || SrcReg1 == DstReg);
+
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
-    case RISCVMatInt::RegX0:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addReg(RISCV::X0)
-          .setMIFlag(Flag);
-      break;
     case RISCVMatInt::RegReg:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg0, getKillRegState(SrcReg0 != RISCV::X0))
+          .addReg(SrcReg1, getKillRegState(SrcReg1 != RISCV::X0))
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
       BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
-          .addReg(SrcReg, RegState::Kill)
+          .addReg(SrcReg0, getKillRegState(SrcReg0 != RISCV::X0))
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
     }
-
-    // Only the first instruction has X0 as its source.
-    SrcReg = DstReg;
+    Results.push_back(DstReg);
   }
 }
 

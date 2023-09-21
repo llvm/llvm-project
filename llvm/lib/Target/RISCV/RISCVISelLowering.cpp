@@ -4950,26 +4950,10 @@ static SDValue lowerConstant(SDValue Op, SelectionDAG &DAG,
     return Op;
 
   RISCVMatInt::InstSeq Seq =
-      RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
+    RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits(),
+                                 !DAG.shouldOptForSize());
   if (Seq.size() <= Subtarget.getMaxBuildIntsCost())
     return Op;
-
-  // Special case. See if we can build the constant as (ADD (SLLI X, 32), X) do
-  // that if it will avoid a constant pool.
-  // It will require an extra temporary register though.
-  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
-  // low and high 32 bits are the same and bit 31 and 63 are set.
-  if (!DAG.shouldOptForSize()) {
-    int64_t LoVal = SignExtend64<32>(Imm);
-    int64_t HiVal = SignExtend64<32>(((uint64_t)Imm - (uint64_t)LoVal) >> 32);
-    if (LoVal == HiVal ||
-        (Subtarget.hasStdExtZba() && Lo_32(Imm) == Hi_32(Imm))) {
-      RISCVMatInt::InstSeq SeqLo =
-          RISCVMatInt::generateInstSeq(LoVal, Subtarget.getFeatureBits());
-      if ((SeqLo.size() + 2) <= Subtarget.getMaxBuildIntsCost())
-        return Op;
-    }
-  }
 
   // Expand to a constant pool using the default expansion code.
   return SDValue();

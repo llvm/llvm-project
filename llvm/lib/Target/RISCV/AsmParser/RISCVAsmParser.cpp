@@ -2978,32 +2978,31 @@ void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Value, getSTI().getFeatureBits());
 
-  MCRegister SrcReg = RISCV::X0;
+  SmallVector<MCRegister> Results;
+  Results.push_back(RISCV::X0);
   for (const RISCVMatInt::Inst &Inst : Seq) {
+    const unsigned Reg0Off = (unsigned)Inst.getReg0() + 1;
+    const unsigned Reg1Off = (unsigned)Inst.getReg1() + 1;
+    const MCRegister SrcReg0 = Results[Results.size()-Reg0Off];
+    const MCRegister SrcReg1 = Results[Results.size()-Reg1Off];
+    // Note: We only support sequences with a single live register here.
+    assert(SrcReg0 == RISCV::X0 || SrcReg0 == DestReg);
+    assert(SrcReg1 == RISCV::X0 || SrcReg1 == DestReg);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
-      emitToStreamer(Out,
-                     MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addImm(Inst.getImm()));
-      break;
-    case RISCVMatInt::RegX0:
-      emitToStreamer(
-          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addReg(
-                   RISCV::X0));
+      emitToStreamer(Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg)
+                            .addImm(Inst.getImm()));
       break;
     case RISCVMatInt::RegReg:
-      emitToStreamer(
-          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addReg(
-                   SrcReg));
+      emitToStreamer(Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg)
+                            .addReg(SrcReg0).addReg(SrcReg1));
       break;
     case RISCVMatInt::RegImm:
-      emitToStreamer(
-          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addImm(
-                   Inst.getImm()));
+      emitToStreamer(Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg)
+                            .addReg(SrcReg0).addImm(Inst.getImm()));
       break;
     }
-
-    // Only the first instruction has X0 as its source.
-    SrcReg = DestReg;
+    Results.push_back(DestReg);
   }
 }
 

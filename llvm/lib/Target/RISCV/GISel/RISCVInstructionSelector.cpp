@@ -281,15 +281,20 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget->getFeatureBits());
   unsigned NumInsts = Seq.size();
-  Register SrcReg = RISCV::X0;
 
+  SmallVector<Register> Results;
+  Results.push_back(RISCV::X0);
   for (unsigned i = 0; i < NumInsts; i++) {
     Register DstReg = i < NumInsts - 1
                           ? MRI.createVirtualRegister(&RISCV::GPRRegClass)
                           : FinalReg;
     const RISCVMatInt::Inst &I = Seq[i];
-    MachineInstr *Result;
+    const unsigned Reg0Off = (unsigned)I.getReg0() + 1;
+    const unsigned Reg1Off = (unsigned)I.getReg1() + 1;
+    const Register SrcReg0 = Results[Results.size()-Reg0Off];
+    const Register SrcReg1 = Results[Results.size()-Reg1Off];
 
+    MachineInstr *Result;
     switch (I.getOpndKind()) {
     case RISCVMatInt::Imm:
       // clang-format off
@@ -298,22 +303,16 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
                    .addImm(I.getImm());
       // clang-format on
       break;
-    case RISCVMatInt::RegX0:
-      Result = MIB.buildInstr(I.getOpcode())
-                   .addDef(DstReg)
-                   .addReg(SrcReg)
-                   .addReg(RISCV::X0);
-      break;
     case RISCVMatInt::RegReg:
       Result = MIB.buildInstr(I.getOpcode())
                    .addDef(DstReg)
-                   .addReg(SrcReg)
-                   .addReg(SrcReg);
+                   .addReg(SrcReg0)
+                   .addReg(SrcReg1);
       break;
     case RISCVMatInt::RegImm:
       Result = MIB.buildInstr(I.getOpcode())
                    .addDef(DstReg)
-                   .addReg(SrcReg)
+                   .addReg(SrcReg0)
                    .addImm(I.getImm());
       break;
     }
@@ -321,7 +320,7 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
       return false;
 
-    SrcReg = DstReg;
+    Results.push_back(DstReg);
   }
 
   return true;

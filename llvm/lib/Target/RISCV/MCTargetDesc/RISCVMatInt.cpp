@@ -53,7 +53,7 @@ static void generateInstSeqImpl(int64_t Val,
   // Use BSETI for a single bit that can't be expressed by a single LUI or ADDI.
   if (ActiveFeatures[RISCV::FeatureStdExtZbs] && isPowerOf2_64(Val) &&
       (!isInt<32>(Val) || Val == 0x800)) {
-    Res.emplace_back(RISCV::BSETI, Log2_64(Val));
+    Res.emplace_back(RISCV::BSETI, Log2_64(Val), 0, 0);
     return;
   }
 
@@ -69,11 +69,11 @@ static void generateInstSeqImpl(int64_t Val,
     int64_t Lo12 = SignExtend64<12>(Val);
 
     if (Hi20)
-      Res.emplace_back(RISCV::LUI, Hi20);
+      Res.emplace_back(RISCV::LUI, Hi20, 0, 0);
 
     if (Lo12 || Hi20 == 0) {
       unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
-      Res.emplace_back(AddiOpc, Lo12);
+      Res.emplace_back(AddiOpc, Lo12, 0, 0);
     }
     return;
   }
@@ -146,11 +146,11 @@ static void generateInstSeqImpl(int64_t Val,
   // Skip shift if we were able to use LUI directly.
   if (ShiftAmount) {
     unsigned Opc = Unsigned ? RISCV::SLLI_UW : RISCV::SLLI;
-    Res.emplace_back(Opc, ShiftAmount);
+    Res.emplace_back(Opc, ShiftAmount, 0, 0);
   }
 
   if (Lo12)
-    Res.emplace_back(RISCV::ADDI, Lo12);
+    Res.emplace_back(RISCV::ADDI, Lo12, 0, 0);
 }
 
 static unsigned extractRotateInfo(int64_t Val) {
@@ -172,7 +172,8 @@ static unsigned extractRotateInfo(int64_t Val) {
 }
 
 namespace llvm::RISCVMatInt {
-InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
+InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures,
+                        bool AllowMultipleVRegs) {
   RISCVMatInt::InstSeq Res;
   generateInstSeqImpl(Val, ActiveFeatures, Res);
 
@@ -193,7 +194,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
     // Keep the new sequence if it is an improvement.
     if ((TmpSeq.size() + 1) < Res.size() || IsShiftedCompressible) {
-      TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros);
+      TmpSeq.emplace_back(RISCV::SLLI, TrailingZeros, 0, 0);
       Res = TmpSeq;
     }
   }
@@ -222,7 +223,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
     // Keep the new sequence if it is an improvement.
     if ((TmpSeq.size() + 1) < Res.size()) {
-      TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
+      TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros, 0, 0);
       Res = TmpSeq;
     }
 
@@ -233,7 +234,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
     // Keep the new sequence if it is an improvement.
     if ((TmpSeq.size() + 1) < Res.size()) {
-      TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros);
+      TmpSeq.emplace_back(RISCV::SRLI, LeadingZeros, 0, 0);
       Res = TmpSeq;
     }
 
@@ -247,7 +248,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
 
       // Keep the new sequence if it is an improvement.
       if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(RISCV::ADD_UW, 0);
+        unsigned X0Off = TmpSeq.size();
+        TmpSeq.emplace_back(RISCV::ADD_UW, 0, 0, X0Off);
         Res = TmpSeq;
       }
     }
@@ -263,7 +265,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       RISCVMatInt::InstSeq TmpSeq;
       generateInstSeqImpl(LoVal, ActiveFeatures, TmpSeq);
       if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(RISCV::PACK, 0);
+        TmpSeq.emplace_back(RISCV::PACK, 0, 0, 0);
         Res = TmpSeq;
       }
     }
@@ -290,7 +292,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       RISCVMatInt::InstSeq TmpSeq;
       generateInstSeqImpl(NewVal, ActiveFeatures, TmpSeq);
       if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(Opc, 31);
+        TmpSeq.emplace_back(Opc, 31, 0, 0);
         Res = TmpSeq;
       }
     }
@@ -314,7 +316,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     if (Opc > 0) {
       while (Hi != 0) {
         unsigned Bit = llvm::countr_zero(Hi);
-        TmpSeq.emplace_back(Opc, Bit + 32);
+        TmpSeq.emplace_back(Opc, Bit + 32, 0, 0);
         Hi &= (Hi - 1); // Clear lowest set bit.
       }
       if (TmpSeq.size() < Res.size())
@@ -342,7 +344,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     if (Div > 0) {
       generateInstSeqImpl(Val / Div, ActiveFeatures, TmpSeq);
       if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(Opc, 0);
+        TmpSeq.emplace_back(Opc, 0, 0, 0);
         Res = TmpSeq;
       }
     } else {
@@ -369,8 +371,8 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
         assert(TmpSeq.empty() && "Expected empty TmpSeq");
         generateInstSeqImpl(Hi52 / Div, ActiveFeatures, TmpSeq);
         if ((TmpSeq.size() + 2) < Res.size()) {
-          TmpSeq.emplace_back(Opc, 0);
-          TmpSeq.emplace_back(RISCV::ADDI, Lo12);
+          TmpSeq.emplace_back(Opc, 0, 0, 0);
+          TmpSeq.emplace_back(RISCV::ADDI, Lo12, 0, 0);
           Res = TmpSeq;
         }
       }
@@ -385,19 +387,42 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       RISCVMatInt::InstSeq TmpSeq;
       uint64_t NegImm12 = llvm::rotl<uint64_t>(Val, Rotate);
       assert(isInt<12>(NegImm12));
-      TmpSeq.emplace_back(RISCV::ADDI, NegImm12);
+      TmpSeq.emplace_back(RISCV::ADDI, NegImm12, 0, 0);
       TmpSeq.emplace_back(ActiveFeatures[RISCV::FeatureStdExtZbb]
                               ? RISCV::RORI
                               : RISCV::TH_SRRI,
-                          Rotate);
+                          Rotate, 0, 0);
       Res = TmpSeq;
     }
   }
+
+  // See if we can create this constant as (ADD (SLLI X, 32), X) where X is at
+  // worst an LUI+ADDIW. This will require an extra register, but avoids a
+  // constant pool.
+  // If we have Zba we can use (ADD_UW X, (SLLI X, 32)) to handle cases where
+  // low and high 32 bits are the same and bit 31 and 63 are set.
+  if (Res.size() > 3 && AllowMultipleVRegs) {
+    int64_t LoVal = SignExtend64<32>(Val);
+    int64_t HiVal = SignExtend64<32>(((uint64_t)Val - (uint64_t)LoVal) >> 32);
+    if (LoVal == HiVal ||
+        (ActiveFeatures[RISCV::FeatureStdExtZba] && Lo_32(Val) == Hi_32(Val))) {
+      RISCVMatInt::InstSeq TmpSeq =
+        RISCVMatInt::generateInstSeq(LoVal, ActiveFeatures);
+      if ((TmpSeq.size() + 2) < Res.size()) {
+        TmpSeq.emplace_back(RISCV::SLLI, 32, 0, 0);
+        unsigned AddOpc = (LoVal == HiVal) ? RISCV::ADD : RISCV::ADD_UW;
+        TmpSeq.emplace_back(AddOpc, 0, 1, 0);
+        Res = TmpSeq;
+      }
+    }
+  }
+
   return Res;
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size,
-                  const FeatureBitset &ActiveFeatures, bool CompressionCost) {
+                  const FeatureBitset &ActiveFeatures, bool CompressionCost,
+                  bool AllowMultipleVRegs) {
   bool IsRV64 = ActiveFeatures[RISCV::Feature64Bit];
   bool HasRVC = CompressionCost && (ActiveFeatures[RISCV::FeatureStdExtC] ||
                                     ActiveFeatures[RISCV::FeatureStdExtZca]);
@@ -408,7 +433,8 @@ int getIntMatCost(const APInt &Val, unsigned Size,
   int Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
-    InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), ActiveFeatures);
+    InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), ActiveFeatures,
+                                     AllowMultipleVRegs);
     Cost += getInstSeqCost(MatSeq, HasRVC);
   }
   return std::max(1, Cost);
@@ -420,8 +446,8 @@ OpndKind Inst::getOpndKind() const {
     llvm_unreachable("Unexpected opcode!");
   case RISCV::LUI:
     return RISCVMatInt::Imm;
+  case RISCV::ADD:
   case RISCV::ADD_UW:
-    return RISCVMatInt::RegX0;
   case RISCV::SH1ADD:
   case RISCV::SH2ADD:
   case RISCV::SH3ADD:
