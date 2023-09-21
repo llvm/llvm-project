@@ -18,13 +18,13 @@ const static StringRef RequiredNamespaceStart = "__llvm_libc";
 const static StringRef RequiredNamespaceMacroName = "LIBC_NAMESPACE";
 
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(decl(isExpansionInMainFile(),
-                          hasDeclContext(translationUnitDecl()),
-                          unless(linkageSpecDecl()),
-                          // anonymous namespaces generate usingDirective
-                          unless(usingDirectiveDecl(isImplicit())))
-                         .bind("child_of_translation_unit"),
-                     this);
+  Finder->addMatcher(
+      translationUnitDecl(
+          forEach(decl(isExpansionInMainFile(), unless(linkageSpecDecl()),
+                       // anonymous namespaces generate usingDirective
+                       unless(usingDirectiveDecl(isImplicit())))
+                      .bind("child_of_translation_unit"))),
+      this);
 }
 
 void ImplementationInNamespaceCheck::check(
