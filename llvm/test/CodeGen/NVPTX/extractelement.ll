@@ -6,7 +6,7 @@
 ; CHECK-DAG:        ld.param.u16    [[A:%rs[0-9+]]], [test_v2i8_param_0];
 ; CHECK-DAG:        cvt.s16.s8      [[E0:%rs[0-9+]]], [[A]];
 ; CHECK-DAG:        shr.s16         [[E1:%rs[0-9+]]], [[A]], 8;
-define i16  @test_v2i8(i16 %a) #0 {
+define i16  @test_v2i8(i16 %a) {
   %v = bitcast i16 %a to <2 x i8>
   %r0 = extractelement <2 x i8> %v, i64 0
   %r1 = extractelement <2 x i8> %v, i64 1
@@ -25,7 +25,7 @@ define i16  @test_v2i8(i16 %a) #0 {
 ; CHECK-DAG:        cvt.s8.s32      [[E2:%rs[0-9+]]], [[R2]];
 ; CHECK-DAG:        bfe.s32         [[R3:%r[0-9+]]], [[R]], 24, 8;
 ; CHECK-DAG:        cvt.s8.s32      [[E3:%rs[0-9+]]], [[R3]];
-define i16  @test_v4i8(i32 %a) #0 {
+define i16  @test_v4i8(i32 %a) {
   %v = bitcast i32 %a to <4 x i8>
   %r0 = extractelement <4 x i8> %v, i64 0
   %r1 = extractelement <4 x i8> %v, i64 1
@@ -60,7 +60,7 @@ define i16  @test_v4i8(i32 %a) #0 {
 ; CHECK-DAG:        bfe.s64         [[RD7:%rd[0-9+]]], [[R]], 56, 8;
 ; CHECK-DAG:        cvt.s8.s64      [[E7:%rs[0-9+]]], [[RD7]];
 
-define i16  @test_v8i8(i64 %a) #0 {
+define i16  @test_v8i8(i64 %a) {
   %v = bitcast i64 %a to <8 x i8>
   %r0 = extractelement <8 x i8> %v, i64 0
   %r1 = extractelement <8 x i8> %v, i64 1
@@ -87,7 +87,3 @@ define i16  @test_v8i8(i64 %a) #0 {
   %r = add i16 %r0123, %r4567
   ret i16 %r
 }
-
-
-
-!0 = !{}
