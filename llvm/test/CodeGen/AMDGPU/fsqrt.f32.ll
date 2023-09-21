@@ -4316,20 +4316,20 @@ entry:
 define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float> %in) {
 ; SDAG-IEEE-LABEL: elim_redun_check_v2:
 ; SDAG-IEEE:       ; %bb.0: ; %entry
-; SDAG-IEEE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SDAG-IEEE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
 ; SDAG-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; SDAG-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
-; SDAG-IEEE-NEXT:    s_mov_b32 s11, 0xf000
-; SDAG-IEEE-NEXT:    s_mov_b32 s10, -1
+; SDAG-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; SDAG-IEEE-NEXT:    s_mov_b32 s6, -1
 ; SDAG-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, s7, v1
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v3, s7
-; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v0
+; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, s11, v1
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v3, s11
+; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s11, v0
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[0:1]
 ; SDAG-IEEE-NEXT:    v_sqrt_f32_e32 v3, v2
-; SDAG-IEEE-NEXT:    v_mul_f32_e32 v1, s6, v1
-; SDAG-IEEE-NEXT:    s_mov_b32 s8, s4
-; SDAG-IEEE-NEXT:    s_mov_b32 s9, s5
+; SDAG-IEEE-NEXT:    v_mul_f32_e32 v1, s10, v1
+; SDAG-IEEE-NEXT:    s_mov_b32 s4, s8
+; SDAG-IEEE-NEXT:    s_mov_b32 s5, s9
 ; SDAG-IEEE-NEXT:    v_add_i32_e32 v4, vcc, -1, v3
 ; SDAG-IEEE-NEXT:    v_fma_f32 v5, -v4, v3, v2
 ; SDAG-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
@@ -4340,8 +4340,8 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v3, v4, v5, vcc
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v4, 0x37800000, v3
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v3, v3, v4, s[0:1]
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v5, s6
-; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s6, v0
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v5, s10
+; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s10, v0
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v0, v5, v1, s[0:1]
 ; SDAG-IEEE-NEXT:    v_sqrt_f32_e32 v5, v0
 ; SDAG-IEEE-NEXT:    v_mov_b32_e32 v4, 0x260
@@ -4359,7 +4359,7 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SDAG-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
+; SDAG-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SDAG-IEEE-NEXT:    s_endpgm
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_v2:
@@ -4522,20 +4522,20 @@ entry:
 define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x float> %in) {
 ; SDAG-IEEE-LABEL: elim_redun_check_v2_ult:
 ; SDAG-IEEE:       ; %bb.0: ; %entry
-; SDAG-IEEE-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SDAG-IEEE-NEXT:    s_load_dwordx4 s[8:11], s[0:1], 0x9
 ; SDAG-IEEE-NEXT:    v_mov_b32_e32 v0, 0xf800000
 ; SDAG-IEEE-NEXT:    v_mov_b32_e32 v1, 0x4f800000
-; SDAG-IEEE-NEXT:    s_mov_b32 s11, 0xf000
-; SDAG-IEEE-NEXT:    s_mov_b32 s10, -1
+; SDAG-IEEE-NEXT:    s_mov_b32 s7, 0xf000
+; SDAG-IEEE-NEXT:    s_mov_b32 s6, -1
 ; SDAG-IEEE-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, s7, v1
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v3, s7
-; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s7, v0
+; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, s11, v1
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v3, s11
+; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s11, v0
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v2, v3, v2, s[0:1]
 ; SDAG-IEEE-NEXT:    v_sqrt_f32_e32 v3, v2
-; SDAG-IEEE-NEXT:    v_mul_f32_e32 v1, s6, v1
-; SDAG-IEEE-NEXT:    s_mov_b32 s8, s4
-; SDAG-IEEE-NEXT:    s_mov_b32 s9, s5
+; SDAG-IEEE-NEXT:    v_mul_f32_e32 v1, s10, v1
+; SDAG-IEEE-NEXT:    s_mov_b32 s4, s8
+; SDAG-IEEE-NEXT:    s_mov_b32 s5, s9
 ; SDAG-IEEE-NEXT:    v_add_i32_e32 v4, vcc, -1, v3
 ; SDAG-IEEE-NEXT:    v_fma_f32 v5, -v4, v3, v2
 ; SDAG-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, 0, v5
@@ -4546,8 +4546,8 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v3, v4, v5, vcc
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v4, 0x37800000, v3
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v3, v3, v4, s[0:1]
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v5, s6
-; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s6, v0
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v5, s10
+; SDAG-IEEE-NEXT:    v_cmp_lt_f32_e64 s[0:1], s10, v0
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v0, v5, v1, s[0:1]
 ; SDAG-IEEE-NEXT:    v_sqrt_f32_e32 v5, v0
 ; SDAG-IEEE-NEXT:    v_mov_b32_e32 v4, 0x260
@@ -4565,7 +4565,7 @@ define amdgpu_kernel void @elim_redun_check_v2_ult(ptr addrspace(1) %out, <2 x f
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v4
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
-; SDAG-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
+; SDAG-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SDAG-IEEE-NEXT:    s_endpgm
 ;
 ; GISEL-IEEE-LABEL: elim_redun_check_v2_ult:
