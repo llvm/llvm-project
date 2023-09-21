@@ -276,17 +276,16 @@ public:
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
+  Value *expandCodeFor(const SCEV *SH, Type *Ty, BasicBlock::iterator I);
   Value *expandCodeFor(const SCEV *SH, Type *Ty, Instruction *I) {
-    return expandCodeForImpl(SH, Ty, I);
+    return expandCodeFor(SH, Ty, I->getIterator());
   }
 
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the SCEVExpander's current
   /// insertion point. If a type is specified, the result will be expanded to
   /// have that type, with a cast if necessary.
-  Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr) {
-    return expandCodeForImpl(SH, Ty);
-  }
+  Value *expandCodeFor(const SCEV *SH, Type *Ty = nullptr);
 
   /// Generates a code sequence that evaluates this predicate.  The inserted
   /// instructions will be at position \p Loc.  The result will be of type i1
@@ -395,23 +394,6 @@ public:
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
-
-  /// Insert code to directly compute the specified SCEV expression into the
-  /// program. The code is inserted into the SCEVExpander's current
-  /// insertion point. If a type is specified, the result will be expanded to
-  /// have that type, with a cast if necessary. If \p Root is true, this
-  /// indicates that \p SH is the top-level expression to expand passed from
-  /// an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty);
-
-  /// Insert code to directly compute the specified SCEV expression into the
-  /// program. The code is inserted into the specified block. If \p
-  /// Root is true, this indicates that \p SH is the top-level expression to
-  /// expand passed from an external client call.
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, BasicBlock::iterator I);
-  Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I) {
-    return expandCodeForImpl(SH, Ty, I->getIterator());
-  }
 
   /// Recursive helper function for isHighCostExpansion.
   bool isHighCostExpansionHelper(const SCEVOperand &WorkItem, Loop *L,
