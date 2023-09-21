@@ -845,6 +845,12 @@ def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
   "Has v_tanh_f32/f16/b16 instructions"
 >;
 
+def FeaturePrngInst : SubtargetFeature<"prng-inst",
+  "HasPrngInst",
+  "true",
+  "Has v_prng_b32 instruction"
+>;
+
 def Feature512AddressableVGPRs : SubtargetFeature<"512-addressable-vgprs",
   "Has512AddressableVGPRs",
   "true",
@@ -1540,6 +1546,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
+   FeaturePrngInst,
    FeatureSupportsSRAMECC]>;
 
 //===----------------------------------------------------------------------===//
@@ -2111,6 +2118,9 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 
 def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
   AssemblerPredicate<(all_of FeatureTanhInsts)>;
+
+def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
+  AssemblerPredicate<(all_of FeaturePrngInst)>;
 
 def Has512AddressableVGPRs : Predicate<"Subtarget->has512AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature512AddressableVGPRs)>;

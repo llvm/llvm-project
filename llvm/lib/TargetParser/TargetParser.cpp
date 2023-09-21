@@ -286,6 +286,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx12-insts"] = true;
       Features["gfx12-10-insts"] = true;
       Features["bitop3-insts"] = true;
+      Features["prng-inst"] = true;
       Features["tanh-insts"] = true;
       break;
     case GK_GFX1201:

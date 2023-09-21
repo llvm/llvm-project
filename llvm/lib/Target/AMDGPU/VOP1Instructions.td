@@ -764,6 +764,9 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
 
+let SubtargetPredicate = HasPrngInst in
+defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -1004,6 +1007,7 @@ defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12<0x00b, "v_cvt_f32_
 defm V_TANH_F32              : VOP1_Real_FULL<GFX12_10Gen, 0x01e>;
 defm V_TANH_F16_t16          : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x01f, "V_TANH_F16_t16",  "v_tanh_f16">;
 defm V_TANH_BF16_t16         : VOP1_Real_FULL_with_name<GFX12_10Gen, 0x04a, "V_TANH_BF16_t16", "v_tanh_bf16">;
+defm V_PRNG_B32              : VOP1_Real_FULL<GFX12_10Gen, 0x04b>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

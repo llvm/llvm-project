@@ -202,6 +202,7 @@ protected:
   bool Has512AddressableVGPRs = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasPrngInst = false;
 
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
@@ -1214,6 +1215,8 @@ public:
   bool hasBitOp3Insts() const { return HasBitOp3Insts; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasPrngInst() const { return HasPrngInst; }
 
   bool has512AddressableVGPRs() const { return Has512AddressableVGPRs; }
 
