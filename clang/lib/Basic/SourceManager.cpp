@@ -864,74 +864,10 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 /// This function knows that the SourceLocation is in a loaded buffer, not a
 /// local one.
 FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
-  if (SLocOffset < CurrentLoadedOffset) {
-    assert(0 && "Invalid SLocOffset or bad function choice");
-    return FileID();
-  }
-
-  // Essentially the same as the local case, but the loaded array is sorted
-  // in the other direction (decreasing order).
-  // GreaterIndex is the one where the offset is greater, which is actually a
-  // lower index!
-  unsigned GreaterIndex = 0;
-  unsigned LessIndex = LoadedSLocEntryTable.size();
-  if (LastFileIDLookup.ID < 0) {
-    // Prune the search space.
-    int LastID = LastFileIDLookup.ID;
-    if (getLoadedSLocEntryByID(LastID).getOffset() > SLocOffset)
-      GreaterIndex =
-          (-LastID - 2) + 1; // Exclude LastID, else we would have hit the cache
-    else
-      LessIndex = -LastID - 2;
-  }
-
-  // First do a linear scan from the last lookup position, if possible.
-  unsigned NumProbes;
+  int ID = ExternalSLocEntries->getSLocEntryID(SLocOffset);
   bool Invalid = false;
-  for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++GreaterIndex) {
-    // Make sure the entry is loaded!
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(GreaterIndex, &Invalid);
-    if (Invalid)
-      return FileID(); // invalid entry.
-    if (E.getOffset() <= SLocOffset) {
-      FileID Res = FileID::get(-int(GreaterIndex) - 2);
-      LastFileIDLookup = Res;
-      NumLinearScans += NumProbes + 1;
-      return Res;
-    }
-  }
-
-  // Linear scan failed. Do the binary search.
-  NumProbes = 0;
-  while (true) {
-    ++NumProbes;
-    unsigned MiddleIndex = (LessIndex - GreaterIndex) / 2 + GreaterIndex;
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(MiddleIndex, &Invalid);
-    if (Invalid)
-      return FileID(); // invalid entry.
-
-    if (E.getOffset() > SLocOffset) {
-      if (GreaterIndex == MiddleIndex) {
-        assert(0 && "binary search missed the entry");
-        return FileID();
-      }
-      GreaterIndex = MiddleIndex;
-      continue;
-    }
-
-    if (isOffsetInFileID(FileID::get(-int(MiddleIndex) - 2), SLocOffset)) {
-      FileID Res = FileID::get(-int(MiddleIndex) - 2);
-      LastFileIDLookup = Res;
-      NumBinaryProbes += NumProbes;
-      return Res;
-    }
-
-    if (LessIndex == MiddleIndex) {
-      assert(0 && "binary search missed the entry");
-      return FileID();
-    }
-    LessIndex = MiddleIndex;
-  }
+  (void)getLoadedSLocEntryByID(ID, &Invalid);
+  return Invalid ? FileID() : FileID::get(ID);
 }
 
 SourceLocation SourceManager::

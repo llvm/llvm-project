@@ -2153,6 +2153,12 @@ public:
 
   /// Read the source location entry with index ID.
   bool ReadSLocEntry(int ID) override;
+  /// Get the index ID for the loaded SourceLocation offset.
+  int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override;
+  /// Read the offset of the SLocEntry at the given index in the given module
+  /// file.
+  std::optional<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
+                                                       unsigned Index);
 
   /// Retrieve the module import location and module name for the
   /// given source manager entry ID.

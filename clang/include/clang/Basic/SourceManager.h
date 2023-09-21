@@ -533,6 +533,9 @@ public:
   /// entry from being loaded.
   virtual bool ReadSLocEntry(int ID) = 0;
 
+  /// Get the index ID for the loaded SourceLocation offset.
+  virtual int getSLocEntryID(SourceLocation::UIntTy SLocOffset) = 0;
+
   /// Retrieve the module import location and name for the given ID, if
   /// in fact it was loaded from a module (rather than, say, a precompiled
   /// header).
