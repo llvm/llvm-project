@@ -464,7 +464,7 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
             // 9.7.3.2 point 4. Deallocate allocatable results. Note that
             // finalization was done independently by calling
             // genDerivedTypeDestroy above and is not triggered by this inline
-            // dealloction.
+            // deallocation.
             fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
             stmtCtx.attachCleanup([bldr, loc, box]() {
               fir::factory::genFreememIfAllocated(*bldr, loc, box);

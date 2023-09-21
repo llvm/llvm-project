@@ -57,7 +57,7 @@ void genDeallocateBox(AbstractConverter &converter,
                       const fir::MutableBoxValue &box, mlir::Location loc,
                       mlir::Value declaredTypeDesc = {});
 
-/// Deallocate an allocatable if it allocated at the end of its lifetime.
+/// Deallocate an allocatable if it is allocated at the end of its lifetime.
 void genDeallocateIfAllocated(AbstractConverter &converter,
                               const fir::MutableBoxValue &box,
                               mlir::Location loc);
