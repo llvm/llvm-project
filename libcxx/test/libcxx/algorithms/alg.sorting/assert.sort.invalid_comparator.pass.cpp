@@ -77,10 +77,10 @@ private:
 };
 
 void check_oob_sort_read() {
-    ComparisonResults results(SORT_DATA);
+    ComparisonResults comparison_results(SORT_DATA);
     std::vector<std::unique_ptr<std::size_t>> elements;
     std::set<std::size_t*> valid_ptrs;
-    for (std::size_t i = 0; i != results.size(); ++i) {
+    for (std::size_t i = 0; i != comparison_results.size(); ++i) {
         elements.push_back(std::make_unique<std::size_t>(i));
         valid_ptrs.insert(elements.back().get());
     }
@@ -91,7 +91,7 @@ void check_oob_sort_read() {
         // because we're reading OOB.
         assert(valid_ptrs.contains(left));
         assert(valid_ptrs.contains(right));
-        return results.compare(left, right);
+        return comparison_results.compare(left, right);
     };
 
     // Check the classic sorting algorithms
@@ -197,14 +197,14 @@ void check_oob_nth_element_read() {
         std::vector<std::size_t*> copy;
         for (auto const& e : elements)
             copy.push_back(e.get());
-        TEST_LIBCPP_ASSERT_FAILURE(std::nth_element(copy.begin(), copy.end(), copy.end(), checked_predicate), "Would read out of bounds");
+        TEST_LIBCPP_ASSERT_FAILURE(std::nth_element(copy.begin(), copy.begin(), copy.end(), checked_predicate), "Would read out of bounds");
     }
 
     {
         std::vector<std::size_t*> copy;
         for (auto const& e : elements)
             copy.push_back(e.get());
-        TEST_LIBCPP_ASSERT_FAILURE(std::ranges::nth_element(copy, copy.end(), checked_predicate), "Would read out of bounds");
+        TEST_LIBCPP_ASSERT_FAILURE(std::ranges::nth_element(copy, copy.begin(), checked_predicate), "Would read out of bounds");
     }
 }
 
