@@ -72,12 +72,12 @@ struct PrintingPolicy {
         SplitTemplateClosers(!LO.CPlusPlus11), TerseOutput(false),
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
-        MSVCFormatting(false), IncludeKeyword(false), ConstantsAsWritten(false),
+        MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
-        CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true) {}
+        UseClassForTemplateArgument(false), CleanUglifiedParameters(false),
+        EntireContentsOfLargeArray(true), UseEnumerators(true) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -250,10 +250,6 @@ struct PrintingPolicy {
   /// after template arguments.
   unsigned MSVCFormatting : 1;
 
-  // Prints "class" keyword. This is used when printing a function via the
-  // _FUNCTION__ or __FUNC__ macro in MSVC mode.
-  unsigned IncludeKeyword : 1;
-
   /// Whether we should print the constant expressions as written in the
   /// sources.
   ///
@@ -294,6 +290,10 @@ struct PrintingPolicy {
   /// Whether to use type suffixes (eg: 1U) on integral non-type template
   /// parameters.
   unsigned AlwaysIncludeTypeForTemplateArgument : 1;
+
+  // Prints "class" keyword before type template arguments. This is used when
+  // printing a function via the _FUNCTION__ or __func__ macro in MSVC mode.
+  unsigned UseClassForTemplateArgument : 1;
 
   /// Whether to strip underscores when printing reserved parameter names.
   /// e.g. std::vector<class _Tp> becomes std::vector<class Tp>.
