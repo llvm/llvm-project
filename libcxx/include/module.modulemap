@@ -1600,6 +1600,10 @@ module std_private_pstl_backends_libdispatch       [system] {
   header "__pstl/backends/libdispatch.h"
   export *
 }
+module std_private_pstl_backends_openmp            [system] {
+  header "__pstl/backends/openmp.h"
+  export *
+}
 module std_private_pstl_backends_serial            [system] {
   header "__pstl/backends/serial.h"
   export *

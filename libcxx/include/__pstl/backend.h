@@ -28,6 +28,10 @@ _LIBCPP_PUSH_MACROS
 #elif defined(_LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 #  include <__pstl/backends/default.h>
 #  include <__pstl/backends/libdispatch.h>
+#elif defined(_LIBCPP_PSTL_BACKEND_OPENMP)
+#  include <__pstl/backends/default.h>
+#  include <__pstl/backends/openmp.h>
+#  include <__pstl/backends/std_thread.h>
 #endif
 
 _LIBCPP_POP_MACROS

@@ -359,6 +359,7 @@ macros = {
     "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
+    "_LIBCPP_PSTL_BACKEND_OPENMP": "openmp_pstl_backend",
 }
 for macro, feature in macros.items():
     DEFAULT_FEATURES.append(
@@ -368,6 +369,27 @@ for macro, feature in macros.items():
         )
     )
 
+DEFAULT_FEATURES.append(
+    Feature(
+        name="libcpp-pstl-backend-openmp",
+        when=lambda cfg: "_LIBCPP_PSTL_BACKEND_OPENMP" in compilerMacros(cfg),
+        actions=[
+            AddFlagIfSupported("-fopenmp"),
+            # The linker needs to find the correct version of libomptarget
+            AddLinkFlag("-Wl,-rpath,%{lib-dir}"),
+            # The preprocessor needs to find the omp.h header. If OpenMP was
+            # installed as a project, the header lives in the following
+            # directory
+            AddFlag("-I %{lib-dir}/../../projects/openmp/runtime/src/"),
+            # And if it was installed as a runtime it lives in the following:
+            AddFlag("-I %{lib-dir}/../../runtimes/runtimes-bins/openmp/runtime/src"),
+            # TODO: Add conditional to test if a GPU target has been detected.
+            # For now, we only offload to the host in this test configuration.
+            # If a GPU were present, we should instead pass --offload-arch=native.
+            AddFlagIfSupported("-fopenmp-targets=%{triple}"),
+        ],
+    )
+)
 
 # Mapping from canonical locale names (used in the tests) to possible locale
 # names on various systems. Each locale is considered supported if any of the

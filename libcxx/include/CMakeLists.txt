@@ -579,6 +579,7 @@ set(files
   __pstl/backend_fwd.h
   __pstl/backends/default.h
   __pstl/backends/libdispatch.h
+  __pstl/backends/openmp.h
   __pstl/backends/serial.h
   __pstl/backends/std_thread.h
   __pstl/cpu_algos/any_of.h
