@@ -3,18 +3,24 @@
 #define MACRO_A "defining macros outside namespace is valid"
 
 class ClassB;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be declared within the 'LIBC_NAMESPACE' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be enclosed within the 'LIBC_NAMESPACE' namespace
 struct StructC {};
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration must be declared within the 'LIBC_NAMESPACE' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration must be enclosed within the 'LIBC_NAMESPACE' namespace
 char *VarD = MACRO_A;
-// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be declared within the 'LIBC_NAMESPACE' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: declaration must be enclosed within the 'LIBC_NAMESPACE' namespace
 typedef int typeE;
-// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: declaration must be declared within the 'LIBC_NAMESPACE' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: declaration must be enclosed within the 'LIBC_NAMESPACE' namespace
 void funcF() {}
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: declaration must be declared within the 'LIBC_NAMESPACE' namespace
+// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: declaration must be enclosed within the 'LIBC_NAMESPACE' namespace
 
 namespace outer_most {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the outermost namespace should be the 'LIBC_NAMESPACE' macro
+ class A {};
+}
+
+// Wrapped in anonymous namespace.
+namespace {
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: declaration must be enclosed within the 'LIBC_NAMESPACE' namespace
  class A {};
 }
 
@@ -34,7 +40,7 @@ void funcF() {}
 // Wrapped in macro namespace but with an incorrect name
 #define LIBC_NAMESPACE custom_namespace
 namespace LIBC_NAMESPACE {
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the outermost namespace should start with '__llvm_libc'
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: the 'LIBC_NAMESPACE' macro should start with '__llvm_libc'
 namespace namespaceH {
 class ClassB;
 } // namespace namespaceH
