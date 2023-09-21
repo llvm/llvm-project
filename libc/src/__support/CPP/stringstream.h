@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H
 
 #include "span.h"
 #include "string_view.h"
@@ -92,4 +92,4 @@ public:
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRINGSTREAM_H

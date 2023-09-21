@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
@@ -227,4 +227,4 @@ LIBC_INLINE string to_string(unsigned long long value) {
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_STRING_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_STRING_H

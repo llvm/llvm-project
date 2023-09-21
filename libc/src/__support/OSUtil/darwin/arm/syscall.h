@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
 
 #include "src/__support/common.h"
 
@@ -109,4 +109,4 @@ LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
 #undef REGISTER_CONSTRAINT_5
 #undef REGISTER_CONSTRAINT_6
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_DARWIN_ARM_SYSCALL_H
