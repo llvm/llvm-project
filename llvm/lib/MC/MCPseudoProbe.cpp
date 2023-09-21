@@ -10,6 +10,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFragment.h"
@@ -213,7 +214,12 @@ void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
   Vec.reserve(MCProbeDivisions.size());
   for (auto &ProbeSec : MCProbeDivisions)
     Vec.emplace_back(ProbeSec.first, &ProbeSec.second);
-  llvm::sort(Vec, [](auto A, auto B) { return A.second->Guid < B.second->Guid; });
+  for (auto I : llvm::enumerate(MCOS->getAssembler()))
+    I.value().setOrdinal(I.index());
+  llvm::sort(Vec, [](auto A, auto B) {
+    return A.first->getSection().getOrdinal() <
+           B.first->getSection().getOrdinal();
+  });
   for (auto [FuncSym, RootPtr] : Vec) {
     const auto &Root = *RootPtr;
     if (auto *S = Ctx.getObjectFileInfo()->getPseudoProbeSection(
