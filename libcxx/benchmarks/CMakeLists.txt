@@ -81,7 +81,7 @@ add_library(               cxx-benchmarks-flags INTERFACE)
 # requesting `cxx_std_23` results in an error -- somehow CMake fails to
 # translate the `c++23` flag into `c++latest`, and the highest numbered C++
 # version that MSVC flags support is C++20.
-if (MSVC OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (MSVC)
   add_compile_options(/std:c++latest)
 # ibm-clang does not recognize the cxx_std_32 flag, so use this as a temporary
 # workaround on AIX as well.
