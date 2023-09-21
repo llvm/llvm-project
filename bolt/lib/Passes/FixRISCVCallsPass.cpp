@@ -19,7 +19,7 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 
-        auto OldCall = *II;
+        MCInst OldCall = *II;
         auto L = BC.scopeLock();
 
         if (MIB->isTailCall(*II))
@@ -41,7 +41,7 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 
-        auto OldCall = *NextII;
+        MCInst OldCall = *NextII;
         auto L = BC.scopeLock();
         MIB->createCall(*II, Target, Ctx);
         MIB->moveAnnotations(std::move(OldCall), *II);
@@ -49,7 +49,7 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         // The original offset was set on the jalr of the auipc+jalr pair. Since
         // the whole pair is replaced by a call, adjust the offset by -4 (the
         // size of a auipc).
-        if (auto Offset = MIB->getOffset(*II)) {
+        if (std::optional<uint32_t> Offset = MIB->getOffset(*II)) {
           assert(*Offset >= 4 && "Illegal jalr offset");
           MIB->setOffset(*II, *Offset - 4);
         }
