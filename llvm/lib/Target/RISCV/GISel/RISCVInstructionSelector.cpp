@@ -58,6 +58,8 @@ private:
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
+  void renderImmPlus1(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                      int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -251,6 +253,15 @@ void RISCVInstructionSelector::renderNegImm(MachineInstrBuilder &MIB,
          "Expected G_CONSTANT");
   int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
   MIB.addImm(-CstVal);
+}
+
+void RISCVInstructionSelector::renderImmPlus1(MachineInstrBuilder &MIB,
+                                           const MachineInstr &MI,
+                                           int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  int64_t CstVal = MI.getOperand(1).getCImm()->getSExtValue();
+  MIB.addImm(CstVal + 1);
 }
 
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
