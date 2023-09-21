@@ -49,7 +49,7 @@ func.func @entry() {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.masked_vectorize %0 vector_sizes [[4]] : !transform.any_op
+  transform.structured.vectorize %0 vector_sizes [[4]] : !transform.any_op
 }
 
 llvm.func @printCString(!llvm.ptr<i8>)
