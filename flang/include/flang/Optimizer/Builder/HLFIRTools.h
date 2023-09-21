@@ -35,37 +35,6 @@ class ElementalOpInterface;
 class ElementalAddrOp;
 class YieldElementOp;
 
-/// Is this an SSA value type for the value of a Fortran procedure
-/// designator ?
-inline bool isFortranProcedureValue(mlir::Type type) {
-  return type.isa<fir::BoxProcType>() ||
-         (type.isa<mlir::TupleType>() &&
-          fir::isCharacterProcedureTuple(type, /*acceptRawFunc=*/false));
-}
-
-/// Is this an SSA value type for the value of a Fortran expression?
-inline bool isFortranValueType(mlir::Type type) {
-  return type.isa<hlfir::ExprType>() || fir::isa_trivial(type) ||
-         isFortranProcedureValue(type);
-}
-
-/// Is this the value of a Fortran expression in an SSA value form?
-inline bool isFortranValue(mlir::Value value) {
-  return isFortranValueType(value.getType());
-}
-
-/// Is this a Fortran variable?
-/// Note that by "variable", it must be understood that the mlir::Value is
-/// a memory value of a storage that can be reason about as a Fortran object
-/// (its bounds, shape, and type parameters, if any, are retrievable).
-/// This does not imply that the mlir::Value points to a variable from the
-/// original source or can be legally defined: temporaries created to store
-/// expression values are considered to be variables, and so are PARAMETERs
-/// global constant address.
-inline bool isFortranEntity(mlir::Value value) {
-  return isFortranValue(value) || isFortranVariableType(value.getType());
-}
-
 /// Is this a Fortran variable for which the defining op carrying the Fortran
 /// attributes is visible?
 inline bool isFortranVariableWithAttributes(mlir::Value value) {

@@ -1172,3 +1172,12 @@ func.func @destroy_with_finalize(%expr: !hlfir.expr<?xi32>) {
   hlfir.destroy %expr finalize : !hlfir.expr<?xi32>
   return
 }
+
+// -----
+
+func.func @end_associate_with_alloc_comp(%var: !hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, %shape: !fir.shape<1>) {
+  %4:3 = hlfir.associate %var(%shape) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>, !fir.shape<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1)
+// expected-error@+1 {{'hlfir.end_associate' op that requires components deallocation must have var operand that is a Fortran entity}}
+  hlfir.end_associate %4#1, %4#2 : !fir.ref<!fir.array<?x!fir.type<_QMtypesTt{x:!fir.box<!fir.heap<f32>>}>>>, i1
+  return
+}

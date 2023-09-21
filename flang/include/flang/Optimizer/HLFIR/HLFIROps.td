@@ -705,6 +705,8 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
 
   let description = [{
     Mark the end of life of a variable associated to an expression.
+    If the expression has a derived type that may contain allocatable
+    components, the variable operand must be a Fortran entity.
   }];
 
   let arguments = (ins AnyRefOrBoxLike:$var,
@@ -715,6 +717,7 @@ def hlfir_EndAssociateOp : hlfir_Op<"end_associate", [MemoryEffects<[MemFree]>]>
   }];
 
   let builders = [OpBuilder<(ins "hlfir::AssociateOp":$associate)>];
+  let hasVerifier = 1;
 }
 
 def hlfir_AsExprOp : hlfir_Op<"as_expr",
