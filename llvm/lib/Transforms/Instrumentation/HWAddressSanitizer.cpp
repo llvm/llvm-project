@@ -1535,10 +1535,10 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
                    Mapping.WithFrameRecord &&
                    !SInfo.AllocasToInstrument.empty());
 
+  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   if (!SInfo.AllocasToInstrument.empty()) {
-    const DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-    const PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-    const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
     Value *StackTag = getStackBaseTag(EntryIRB);
     Value *UARTag = getUARTag(EntryIRB);
     instrumentStack(SInfo, StackTag, UARTag, DT, PDT, LI);
@@ -1557,10 +1557,7 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     }
   }
 
-  DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  PostDominatorTree &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
-  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   for (auto &Operand : OperandsToInstrument)
     instrumentMemAccess(Operand, &DTU, &LI);
   DTU.flush();
