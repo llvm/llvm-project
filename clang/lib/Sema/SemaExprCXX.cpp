@@ -9191,14 +9191,14 @@ void Sema::ActOnFinishRequiresExpr() {
   assert(CurContext && "Popped translation unit!");
 }
 
-ExprResult
-Sema::ActOnRequiresExpr(SourceLocation RequiresKWLoc,
-                        RequiresExprBodyDecl *Body,
-                        ArrayRef<ParmVarDecl *> LocalParameters,
-                        ArrayRef<concepts::Requirement *> Requirements,
-                        SourceLocation ClosingBraceLoc) {
-  auto *RE = RequiresExpr::Create(Context, RequiresKWLoc, Body, LocalParameters,
-                                  Requirements, ClosingBraceLoc);
+ExprResult Sema::ActOnRequiresExpr(
+    SourceLocation RequiresKWLoc, RequiresExprBodyDecl *Body,
+    SourceLocation LParenLoc, ArrayRef<ParmVarDecl *> LocalParameters,
+    SourceLocation RParenLoc, ArrayRef<concepts::Requirement *> Requirements,
+    SourceLocation ClosingBraceLoc) {
+  auto *RE = RequiresExpr::Create(Context, RequiresKWLoc, Body, LParenLoc,
+                                  LocalParameters, RParenLoc, Requirements,
+                                  ClosingBraceLoc);
   if (DiagnoseUnexpandedParameterPackInRequiresExpr(RE))
     return ExprError();
   return RE;

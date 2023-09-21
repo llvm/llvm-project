@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_FIXEDVECTOR_H
-#define LLVM_LIBC_SUPPORT_FIXEDVECTOR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H
+#define LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H
 
 #include "src/__support/CPP/array.h"
 
@@ -59,4 +59,4 @@ public:
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SUPPORT_FIXEDVECTOR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H

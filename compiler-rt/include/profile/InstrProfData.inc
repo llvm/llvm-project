@@ -76,7 +76,6 @@ INSTR_PROF_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
                 ConstantInt::get(llvm::Type::getInt64Ty(Ctx), \
                 Inc->getHash()->getZExtValue()))
 INSTR_PROF_DATA(const IntPtrT, IntPtrTy, CounterPtr, RelativeCounterPtr)
-INSTR_PROF_DATA(const IntPtrT, IntPtrTy, BitmapPtr, RelativeBitmapPtr)
 /* This is used to map function pointers for the indirect call targets to
  * function name hashes during the conversion from raw to merged profile
  * data.
@@ -88,9 +87,7 @@ INSTR_PROF_DATA(IntPtrT, llvm::Type::getInt8PtrTy(Ctx), Values, \
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
 INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
-                ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
-                ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
 
@@ -135,13 +132,9 @@ INSTR_PROF_RAW_HEADER(uint64_t, NumData, NumData)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, NumCounters, NumCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
-INSTR_PROF_RAW_HEADER(uint64_t, NumBitmapBytes, NumBitmapBytes)
-INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterBitmapBytes, PaddingBytesAfterBitmapBytes)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
                       (uintptr_t)CountersBegin - (uintptr_t)DataBegin)
-INSTR_PROF_RAW_HEADER(uint64_t, BitmapDelta,
-                      (uintptr_t)BitmapBegin - (uintptr_t)DataBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesDelta, (uintptr_t)NamesBegin)
 INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #undef INSTR_PROF_RAW_HEADER
@@ -274,9 +267,6 @@ INSTR_PROF_SECT_ENTRY(IPSK_data, \
 INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
                       INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
                       INSTR_PROF_CNTS_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
-                      INSTR_PROF_BITS_COFF, "__DATA,")
 INSTR_PROF_SECT_ENTRY(IPSK_name, \
                       INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
                       INSTR_PROF_NAME_COFF, "__DATA,")
@@ -656,11 +646,11 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 
 /* FIXME: Please remedy the fixme in the header before bumping the version. */
 /* Raw profile format version (start from 1). */
-#define INSTR_PROF_RAW_VERSION 9
+#define INSTR_PROF_RAW_VERSION 8
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 11
+#define INSTR_PROF_INDEX_VERSION 10
 /* Coverage mapping format version (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 6
+#define INSTR_PROF_COVMAP_VERSION 5
 
 /* Profile version is always of type uint64_t. Reserve the upper 8 bits in the
  * version for other variants of profile. We set the lowest bit of the upper 8
@@ -697,7 +687,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_DATA_COMMON __llvm_prf_data
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
-#define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
 #define INSTR_PROF_COVMAP_COMMON __llvm_covmap
@@ -709,7 +698,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_DATA_COFF ".lprfd$M"
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
-#define INSTR_PROF_BITS_COFF ".lprfb$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
 #define INSTR_PROF_COVMAP_COFF ".lcovmap$M"
@@ -721,7 +709,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_DATA_COFF
 #define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_NAME_COFF
 #define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_CNTS_COFF
-#define INSTR_PROF_BITS_SECT_NAME INSTR_PROF_BITS_COFF
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */
@@ -736,7 +723,6 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_DATA_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON)
 #define INSTR_PROF_NAME_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON)
 #define INSTR_PROF_CNTS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON)
-#define INSTR_PROF_BITS_SECT_NAME INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON)
 /* Array of pointers. Each pointer points to a list
  * of value nodes associated with one value site.
  */

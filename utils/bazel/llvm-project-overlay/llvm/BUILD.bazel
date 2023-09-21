@@ -2049,7 +2049,6 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-compress-inst-emitter", "lib/Target/RISCV/RISCVGenCompressInstEmitter.inc"),
             ("-gen-dag-isel", "lib/Target/RISCV/RISCVGenDAGISel.inc"),
             ("-gen-disassembler", "lib/Target/RISCV/RISCVGenDisassemblerTables.inc"),
-            ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
             ("-gen-instr-info", "lib/Target/RISCV/RISCVGenInstrInfo.inc"),
             ("-gen-emitter", "lib/Target/RISCV/RISCVGenMCCodeEmitter.inc"),
             ("-gen-pseudo-lowering", "lib/Target/RISCV/RISCVGenMCPseudoLowering.inc"),
@@ -2190,6 +2189,7 @@ gentbl(
     name = "riscv_isel_target_gen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = [
+      ("-gen-global-isel", "lib/Target/RISCV/RISCVGenGlobalISel.inc"),
       ("-gen-global-isel-combiner -combiners=RISCVO0PreLegalizerCombiner", "lib/Target/RISCV/RISCVGenO0PreLegalizeGICombiner.inc"),
       ("-gen-global-isel-combiner -combiners=RISCVPreLegalizerCombiner", "lib/Target/RISCV/RISCVGenPreLegalizeGICombiner.inc"),
     ],

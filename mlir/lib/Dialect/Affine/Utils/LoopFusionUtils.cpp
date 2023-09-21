@@ -361,7 +361,7 @@ static LogicalResult promoteSingleIterReductionLoop(AffineForOp forOp,
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
-  auto iterOperands = forOp.getIterOperands();
+  auto iterOperands = forOp.getInits();
   auto *parentOp = forOp->getParentOp();
   if (!isa<AffineForOp>(parentOp))
     return failure();

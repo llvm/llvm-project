@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRMaskableOpInterfaceIncGen
   MLIRMaskingOpInterfaceIncGen
   MLIRVectorOpsIncGen
-  MLIRVectorOpsEnumsIncGen
+  MLIRVectorAttributesIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

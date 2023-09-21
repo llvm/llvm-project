@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_GPU_NVPTX_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_GPU_NVPTX_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
 
 #include "src/__support/common.h"
 
