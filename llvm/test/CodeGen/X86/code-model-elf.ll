@@ -10,8 +10,6 @@
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=medium | FileCheck %s --check-prefix=CHECK --check-prefix=MEDIUM-PIC
 ; RUN: llc -verify-machineinstrs < %s -relocation-model=pic    -code-model=large  | FileCheck %s --check-prefix=CHECK --check-prefix=LARGE-PIC
 
-; FIXME: small pic and medium pic w/ big enough large data threshold should be equivalent
-
 ; Generated from this C source:
 ;
 ; static int static_data[10];
