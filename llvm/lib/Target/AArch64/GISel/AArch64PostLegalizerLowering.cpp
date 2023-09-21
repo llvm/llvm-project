@@ -1123,12 +1123,10 @@ bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI) {
 
   if (DstTy.isVector()) {
     // If the source operands were EXTENDED before, then {U/S}MULL can be used
-    unsigned I1Opcode = I1->getOpcode();
-    unsigned I2Opcode = I2->getOpcode();
-    if (((I1Opcode == TargetOpcode::G_ZEXT &&
-          I2Opcode == TargetOpcode::G_ZEXT) ||
-         (I1Opcode == TargetOpcode::G_SEXT &&
-          I2Opcode == TargetOpcode::G_SEXT)) &&
+    unsigned I1Opc = I1->getOpcode();
+    unsigned I2Opc = I2->getOpcode();
+    if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
+         (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
         (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
          MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
         (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
@@ -1154,11 +1152,10 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineInstr *I2 = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
 
   // If the source operands were EXTENDED before, then {U/S}MULL can be used
-  unsigned I1Opcode = I1->getOpcode();
-  unsigned I2Opcode = I2->getOpcode();
-  if (((I1Opcode == TargetOpcode::G_ZEXT && I2Opcode == TargetOpcode::G_ZEXT) ||
-       (I1Opcode == TargetOpcode::G_SEXT &&
-        I2Opcode == TargetOpcode::G_SEXT)) &&
+  unsigned I1Opc = I1->getOpcode();
+  unsigned I2Opc = I2->getOpcode();
+  if (((I1Opc == TargetOpcode::G_ZEXT && I2Opc == TargetOpcode::G_ZEXT) ||
+       (I1Opc == TargetOpcode::G_SEXT && I2Opc == TargetOpcode::G_SEXT)) &&
       (MRI.getType(I1->getOperand(0).getReg()).getScalarSizeInBits() ==
        MRI.getType(I1->getOperand(1).getReg()).getScalarSizeInBits() * 2) &&
       (MRI.getType(I2->getOperand(0).getReg()).getScalarSizeInBits() ==
