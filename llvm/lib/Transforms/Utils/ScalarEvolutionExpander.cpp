@@ -456,8 +456,6 @@ public:
 }
 
 Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
-  Type *Ty = SE.getEffectiveSCEVType(S->getType());
-
   // Collect all the add operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal, and
   // so that pointer operands are inserted first, which the code below relies on
@@ -497,18 +495,17 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
+      Type *Ty = SE.getEffectiveSCEVType(S->getType());
       Sum = expandAddToGEP(SE.getAddExpr(NewOps), Ty, Sum);
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
-      Value *W = expandCodeFor(SE.getNegativeSCEV(Op), Ty);
-      Sum = InsertNoopCastOfTo(Sum, Ty);
+      Value *W = expand(SE.getNegativeSCEV(Op));
       Sum = InsertBinop(Instruction::Sub, Sum, W, SCEV::FlagAnyWrap,
                         /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple add.
-      Value *W = expandCodeFor(Op, Ty);
-      Sum = InsertNoopCastOfTo(Sum, Ty);
+      Value *W = expand(Op);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Sum))
         std::swap(Sum, W);
@@ -522,7 +519,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
 }
 
 Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
-  Type *Ty = SE.getEffectiveSCEVType(S->getType());
+  Type *Ty = S->getType();
 
   // Collect all the mul operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal.
@@ -541,7 +538,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
   // Expand the calculation of X pow N in the following manner:
   // Let N = P1 + P2 + ... + PK, where all P are powers of 2. Then:
   // X pow N = (X pow P1) * (X pow P2) * ... * (X pow PK).
-  const auto ExpandOpBinPowN = [this, &I, &OpsAndLoops, &Ty]() {
+  const auto ExpandOpBinPowN = [this, &I, &OpsAndLoops]() {
     auto E = I;
     // Calculate how many times the same operand from the same loop is included
     // into this power.
@@ -559,7 +556,7 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
 
     // Calculate powers with exponents 1, 2, 4, 8 etc. and include those of them
     // that are needed into the result.
-    Value *P = expandCodeFor(I->second, Ty);
+    Value *P = expand(I->second);
     Value *Result = nullptr;
     if (Exponent & 1)
       Result = P;
@@ -584,14 +581,12 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
       Prod = ExpandOpBinPowN();
     } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
-      Prod = InsertNoopCastOfTo(Prod, Ty);
       Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
       ++I;
     } else {
       // A simple mul.
       Value *W = ExpandOpBinPowN();
-      Prod = InsertNoopCastOfTo(Prod, Ty);
       // Canonicalize a constant to the RHS.
       if (isa<Constant>(Prod)) std::swap(Prod, W);
       const APInt *RHS;
@@ -616,18 +611,16 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
 }
 
 Value *SCEVExpander::visitUDivExpr(const SCEVUDivExpr *S) {
-  Type *Ty = SE.getEffectiveSCEVType(S->getType());
-
-  Value *LHS = expandCodeFor(S->getLHS(), Ty);
+  Value *LHS = expand(S->getLHS());
   if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(S->getRHS())) {
     const APInt &RHS = SC->getAPInt();
     if (RHS.isPowerOf2())
       return InsertBinop(Instruction::LShr, LHS,
-                         ConstantInt::get(Ty, RHS.logBase2()),
+                         ConstantInt::get(SC->getType(), RHS.logBase2()),
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
   }
 
-  Value *RHS = expandCodeFor(S->getRHS(), Ty);
+  Value *RHS = expand(S->getRHS());
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagAnyWrap,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
 }
@@ -1358,30 +1351,24 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 }
 
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
-  Value *V = expandCodeFor(S->getOperand(), S->getOperand()->getType());
+  Value *V = expand(S->getOperand());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
                            GetOptimalInsertionPointForCastOf(V));
 }
 
 Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
-  Type *Ty = SE.getEffectiveSCEVType(S->getType());
-  Value *V = expandCodeFor(S->getOperand(),
-                           SE.getEffectiveSCEVType(S->getOperand()->getType()));
-  return Builder.CreateTrunc(V, Ty);
+  Value *V = expand(S->getOperand());
+  return Builder.CreateTrunc(V, S->getType());
 }
 
 Value *SCEVExpander::visitZeroExtendExpr(const SCEVZeroExtendExpr *S) {
-  Type *Ty = SE.getEffectiveSCEVType(S->getType());
-  Value *V = expandCodeFor(S->getOperand(),
-                           SE.getEffectiveSCEVType(S->getOperand()->getType()));
-  return Builder.CreateZExt(V, Ty);
+  Value *V = expand(S->getOperand());
+  return Builder.CreateZExt(V, S->getType());
 }
 
 Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
-  Type *Ty = SE.getEffectiveSCEVType(S->getType());
-  Value *V = expandCodeFor(S->getOperand(),
-                           SE.getEffectiveSCEVType(S->getOperand()->getType()));
-  return Builder.CreateSExt(V, Ty);
+  Value *V = expand(S->getOperand());
+  return Builder.CreateSExt(V, S->getType());
 }
 
 Value *SCEVExpander::expandMinMaxExpr(const SCEVNAryExpr *S,
