@@ -34,16 +34,9 @@ struct Server {
   Server(std::unique_ptr<rpc::Server<lane_size>> &&server)
       : server(std::move(server)) {}
 
-  uint64_t allocation_size(uint64_t port_count) {
-    uint64_t ret = 0;
-    std::visit([&](auto &server) { ret = server->allocation_size(port_count); },
-               server);
-    return ret;
-  }
-
   rpc_status_t handle_server(
-      std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-      std::unordered_map<rpc_opcode_t, void *> &callback_data) {
+      const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
+      const std::unordered_map<rpc_opcode_t, void *> &callback_data) {
     rpc_status_t ret = RPC_STATUS_SUCCESS;
     std::visit(
         [&](auto &server) {
@@ -57,8 +50,8 @@ private:
   template <uint32_t lane_size>
   rpc_status_t handle_server(
       rpc::Server<lane_size> &server,
-      std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
-      std::unordered_map<rpc_opcode_t, void *> &callback_data) {
+      const std::unordered_map<rpc_opcode_t, rpc_opcode_callback_ty> &callbacks,
+      const std::unordered_map<rpc_opcode_t, void *> &callback_data) {
     auto port = server.try_open();
     if (!port)
       return RPC_STATUS_SUCCESS;
