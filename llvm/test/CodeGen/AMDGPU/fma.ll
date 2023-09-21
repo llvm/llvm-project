@@ -159,15 +159,14 @@ define float @fold_fmul_distributive(float %x, float %y) {
 define amdgpu_kernel void @vec_mul_scalar_add_fma(<2 x float> %a, <2 x float> %b, float %c1, ptr addrspace(1) %inptr) {
 ; GFX906-LABEL: vec_mul_scalar_add_fma:
 ; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_load_dword s8, s[0:1], 0x34
 ; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    s_load_dword s5, s[0:1], 0x34
 ; GFX906-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x3c
 ; GFX906-NEXT:    v_mov_b32_e32 v0, 0
-; GFX906-NEXT:    v_mov_b32_e32 v1, s6
-; GFX906-NEXT:    v_mul_f32_e32 v1, s4, v1
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    v_add_f32_e32 v1, s5, v1
+; GFX906-NEXT:    v_mov_b32_e32 v1, s8
+; GFX906-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-NEXT:    v_fmac_f32_e32 v1, s4, v2
 ; GFX906-NEXT:    global_store_dword v0, v1, s[2:3] offset:4
 ; GFX906-NEXT:    s_endpgm
   %gep = getelementptr float, ptr addrspace(1) %inptr, i32 1
