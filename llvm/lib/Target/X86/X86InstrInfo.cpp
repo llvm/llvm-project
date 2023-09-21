@@ -9804,6 +9804,10 @@ void X86InstrInfo::buildClearRegister(Register Reg,
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
+  if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
+    // FIXME: Ignore MMX registers?
+    return;
+
   if (TRI.isGeneralPurposeRegister(MF, Reg)) {
     BuildMI(MBB, Iter, DL, get(X86::XOR32rr), Reg)
       .addReg(Reg, RegState::Undef)

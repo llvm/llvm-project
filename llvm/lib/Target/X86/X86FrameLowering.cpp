@@ -567,13 +567,8 @@ void X86FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
     TII.buildClearRegister(Reg, MBB, MBBI, DL);
 
   // Zero out the remaining registers.
-  for (MCRegister Reg : RegsToZero.set_bits()) {
-    if (ST.hasMMX() && X86::VR64RegClass.contains(Reg))
-      // FIXME: Ignore MMX registers?
-      continue;
-
+  for (MCRegister Reg : RegsToZero.set_bits())
     TII.buildClearRegister(Reg, MBB, MBBI, DL);
-  }
 }
 
 void X86FrameLowering::emitStackProbe(
