@@ -96,7 +96,7 @@ class TestWatchTaggedAddresses(TestBase):
         self.expect(
             "watchpoint set expression -s 4 -- tagged_ptr",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = rw"],
+            substrs=["Watchpoint created", "size = 4", "type = m"],
         )
 
         self.verify_watch_hits()
