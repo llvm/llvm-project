@@ -136,9 +136,6 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::count_mismatch:
     OS << "function basic block count change detected (counter mismatch)";
     break;
-  case instrprof_error::bitmap_mismatch:
-    OS << "function bitmap size change detected (bitmap size mismatch)";
-    break;
   case instrprof_error::counter_overflow:
     OS << "counter overflow";
     break;
@@ -805,18 +802,6 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
-  }
-
-  // If the number of bitmap bytes doesn't match we either have bad data
-  // or a hash collision.
-  if (BitmapBytes.size() != Other.BitmapBytes.size()) {
-    Warn(instrprof_error::bitmap_mismatch);
-    return;
-  }
-
-  // Bitmap bytes are merged by simply ORing them together.
-  for (size_t I = 0, E = Other.BitmapBytes.size(); I < E; ++I) {
-    BitmapBytes[I] = Other.BitmapBytes[I] | BitmapBytes[I];
   }
 
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
@@ -1491,11 +1476,9 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
-  case 11ull:
-    [[fallthrough]];
   case 10ull:
     H.TemporalProfTracesOffset =
         read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
@@ -1519,12 +1502,10 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version11,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
-  case 11ull:
-    [[fallthrough]];
   case 10ull:
     return offsetOf(&Header::TemporalProfTracesOffset) +
            sizeof(Header::TemporalProfTracesOffset);
