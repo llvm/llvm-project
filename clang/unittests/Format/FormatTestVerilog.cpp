@@ -1253,7 +1253,7 @@ TEST_F(FormatTestVerilog, StringLiteral) {
    "xxxx"});)",
                R"(x({"xxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxx ", "xxxx"});)",
                getStyleWithColumns(getDefaultStyle(), 23));
-  // "DPI"/"DPI-C" in imports cannot be split.
+  // import "DPI"/"DPI-C" cannot be split.
   verifyFormat(R"(import
     "DPI-C" function t foo
     ();)",
