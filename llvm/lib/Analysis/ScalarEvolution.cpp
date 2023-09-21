@@ -3671,8 +3671,8 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
     assert(!Operands[i]->getType()->isPointerTy() && "Step must be integer");
   }
   for (unsigned i = 0, e = Operands.size(); i != e; ++i)
-    assert(isLoopInvariant(Operands[i], L) &&
-           "SCEVAddRecExpr operand is not loop-invariant!");
+    assert(isAvailableAtLoopEntry(Operands[i], L) &&
+           "SCEVAddRecExpr operand is not available at loop entry!");
 #endif
 
   if (Operands.back()->isZero()) {

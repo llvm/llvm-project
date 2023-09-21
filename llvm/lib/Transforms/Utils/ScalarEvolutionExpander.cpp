@@ -1074,40 +1074,14 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
         normalizeForPostIncUse(S, Loops, SE, /*CheckInvertible=*/false));
   }
 
-  // Strip off any non-loop-dominating component from the addrec start.
   const SCEV *Start = Normalized->getStart();
-  const SCEV *PostLoopOffset = nullptr;
-  if (!SE.properlyDominates(Start, L->getHeader())) {
-    PostLoopOffset = Start;
-    Start = SE.getConstant(Normalized->getType(), 0);
-    Normalized = cast<SCEVAddRecExpr>(
-      SE.getAddRecExpr(Start, Normalized->getStepRecurrence(SE),
-                       Normalized->getLoop(),
-                       Normalized->getNoWrapFlags(SCEV::FlagNW)));
-  }
-
-  // Strip off any non-loop-dominating component from the addrec step.
   const SCEV *Step = Normalized->getStepRecurrence(SE);
-  const SCEV *PostLoopScale = nullptr;
-  if (!SE.dominates(Step, L->getHeader())) {
-    PostLoopScale = Step;
-    Step = SE.getConstant(Normalized->getType(), 1);
-    if (!Start->isZero()) {
-        // The normalization below assumes that Start is constant zero, so if
-        // it isn't re-associate Start to PostLoopOffset.
-        assert(!PostLoopOffset && "Start not-null but PostLoopOffset set?");
-        PostLoopOffset = Start;
-        Start = SE.getConstant(Normalized->getType(), 0);
-    }
-    Normalized =
-      cast<SCEVAddRecExpr>(SE.getAddRecExpr(
-                             Start, Step, Normalized->getLoop(),
-                             Normalized->getNoWrapFlags(SCEV::FlagNW)));
-  }
+  assert(SE.properlyDominates(Start, L->getHeader()) &&
+         "Start does not properly dominate loop header");
+  assert(SE.dominates(Step, L->getHeader()) && "Step not dominate loop header");
 
-  // Expand the core addrec. If we need post-loop scaling, force it to
-  // expand to an integer type to avoid the need for additional casting.
-  Type *ExpandTy = PostLoopScale ? IntTy : STy;
+  // Expand the core addrec.
+  Type *ExpandTy = STy;
   // We can't use a pointer type for the addrec if the pointer type is
   // non-integral.
   Type *AddRecPHIExpandTy =
@@ -1186,28 +1160,6 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
     if (InvertStep)
       Result = Builder.CreateSub(expandCodeFor(Normalized->getStart(), TruncTy),
                                  Result);
-  }
-
-  // Re-apply any non-loop-dominating scale.
-  if (PostLoopScale) {
-    assert(S->isAffine() && "Can't linearly scale non-affine recurrences.");
-    Result = InsertNoopCastOfTo(Result, IntTy);
-    Result = Builder.CreateMul(Result, expandCodeFor(PostLoopScale, IntTy));
-  }
-
-  // Re-apply any non-loop-dominating offset.
-  if (PostLoopOffset) {
-    if (isa<PointerType>(ExpandTy)) {
-      if (Result->getType()->isIntegerTy()) {
-        Value *Base = expandCodeFor(PostLoopOffset, ExpandTy);
-        Result = expandAddToGEP(SE.getUnknown(Result), Base);
-      } else {
-        Result = expandAddToGEP(PostLoopOffset, Result);
-      }
-    } else {
-      Result = InsertNoopCastOfTo(Result, IntTy);
-      Result = Builder.CreateAdd(Result, expandCodeFor(PostLoopOffset, IntTy));
-    }
   }
 
   return Result;
@@ -2339,12 +2291,6 @@ struct SCEVFindUnsafe {
       }
     }
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
-      const SCEV *Step = AR->getStepRecurrence(SE);
-      if (!AR->isAffine() && !SE.dominates(Step, AR->getLoop()->getHeader())) {
-        IsUnsafe = true;
-        return false;
-      }
-
       // For non-affine addrecs or in non-canonical mode we need a preheader
       // to insert into.
       if (!AR->getLoop()->getLoopPreheader() &&
