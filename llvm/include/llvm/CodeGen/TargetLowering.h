@@ -4820,7 +4820,7 @@ public:
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
 
-  using ConstraintPair = std::pair<std::string, TargetLowering::ConstraintType>;
+  using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
   using ConstraintGroup = SmallVector<ConstraintPair>;
   /// Given an OpInfo with list of constraints codes as strings, return a
   /// sorted Vector of pairs of constraint codes and their types in priority of
@@ -4862,7 +4862,8 @@ public:
 
   /// Lower the specified operand into the Ops vector.  If it is invalid, don't
   /// add anything to Ops.
-  virtual void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+  virtual void LowerAsmOperandForConstraint(SDValue Op,
+                                            const StringRef Constraint,
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 
