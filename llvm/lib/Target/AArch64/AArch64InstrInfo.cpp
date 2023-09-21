@@ -878,93 +878,40 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       .addImm(CC);
 }
 
-/// Returns true if a MOVi32imm or MOVi64imm can be expanded to an  ORRxx.
-static bool canBeExpandedToORR(const MachineInstr &MI, unsigned BitSize) {
-  uint64_t Imm = MI.getOperand(1).getImm();
-  uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
-  uint64_t Encoding;
-  return AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding);
+// Return true if Imm can be loaded into a register by a "cheap" sequence of
+// instructions. For now, "cheap" means at most two instructions.
+static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
+  if (BitSize == 32)
+    return true;
+
+  assert(BitSize == 64 && "Only bit sizes of 32 or 64 allowed");
+  uint64_t Imm = static_cast<uint64_t>(MI.getOperand(1).getImm());
+  SmallVector<AArch64_IMM::ImmInsnModel, 4> Is;
+  AArch64_IMM::expandMOVImm(Imm, BitSize, Is);
+
+  return Is.size() <= 2;
 }
 
 // FIXME: this implementation should be micro-architecture dependent, so a
 // micro-architecture target hook should be introduced here in future.
 bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
-  if (!Subtarget.hasCustomCheapAsMoveHandling())
-    return MI.isAsCheapAsAMove();
-
-  const unsigned Opcode = MI.getOpcode();
-
-  // Firstly, check cases gated by features.
-
-  if (Subtarget.hasZeroCycleZeroingFP()) {
-    if (Opcode == AArch64::FMOVH0 ||
-        Opcode == AArch64::FMOVS0 ||
-        Opcode == AArch64::FMOVD0)
-      return true;
-  }
-
-  if (Subtarget.hasZeroCycleZeroingGP()) {
-    if (Opcode == TargetOpcode::COPY &&
-        (MI.getOperand(1).getReg() == AArch64::WZR ||
-         MI.getOperand(1).getReg() == AArch64::XZR))
-      return true;
-  }
-
-  // Secondly, check cases specific to sub-targets.
-
   if (Subtarget.hasExynosCheapAsMoveHandling()) {
     if (isExynosCheapAsMove(MI))
       return true;
-
     return MI.isAsCheapAsAMove();
   }
 
-  // Finally, check generic cases.
-
-  switch (Opcode) {
+  switch (MI.getOpcode()) {
   default:
-    return false;
-
-  // add/sub on register without shift
-  case AArch64::ADDWri:
-  case AArch64::ADDXri:
-  case AArch64::SUBWri:
-  case AArch64::SUBXri:
-    return (MI.getOperand(3).getImm() == 0);
-
-  // logical ops on immediate
-  case AArch64::ANDWri:
-  case AArch64::ANDXri:
-  case AArch64::EORWri:
-  case AArch64::EORXri:
-  case AArch64::ORRWri:
-  case AArch64::ORRXri:
-    return true;
-
-  // logical ops on register without shift
-  case AArch64::ANDWrr:
-  case AArch64::ANDXrr:
-  case AArch64::BICWrr:
-  case AArch64::BICXrr:
-  case AArch64::EONWrr:
-  case AArch64::EONXrr:
-  case AArch64::EORWrr:
-  case AArch64::EORXrr:
-  case AArch64::ORNWrr:
-  case AArch64::ORNXrr:
-  case AArch64::ORRWrr:
-  case AArch64::ORRXrr:
-    return true;
-
+    return MI.isAsCheapAsAMove();
   // If MOVi32imm or MOVi64imm can be expanded into ORRWri or
-  // ORRXri, it is as cheap as MOV
+  // ORRXri, it is as cheap as MOV.
+  // Likewise if it can be expanded to MOVZ/MOVN/MOVK.
   case AArch64::MOVi32imm:
-    return canBeExpandedToORR(MI, 32);
+    return isCheapImmediate(MI, 32);
   case AArch64::MOVi64imm:
-    return canBeExpandedToORR(MI, 64);
+    return isCheapImmediate(MI, 64);
   }
-
-  llvm_unreachable("Unknown opcode to check as cheap as a move!");
 }
 
 bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) {
