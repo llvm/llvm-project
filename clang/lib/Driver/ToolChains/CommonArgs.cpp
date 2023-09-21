@@ -2323,7 +2323,7 @@ getAMDGPUCodeObjectArgument(const Driver &D, const llvm::opt::ArgList &Args) {
 
 void tools::checkAMDGPUCodeObjectVersion(const Driver &D,
                                          const llvm::opt::ArgList &Args) {
-  const unsigned MinCodeObjVer = 2;
+  const unsigned MinCodeObjVer = 3;
   const unsigned MaxCodeObjVer = 5;
 
   if (auto *CodeObjArg = getAMDGPUCodeObjectArgument(D, Args)) {
