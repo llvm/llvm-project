@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H
 
 #include "PlatformDefs.h"
 
@@ -239,4 +239,4 @@ template <typename T> struct FPBits {
 #include "x86_64/LongDoubleBits.h"
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FP_BITS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H

@@ -118,13 +118,16 @@ namespace llvm {
 
 namespace AMDGPU {
 
+/// \returns True if \p STI is AMDHSA.
+bool isHsaAbi(const MCSubtargetInfo &STI) {
+  return STI.getTargetTriple().getOS() == Triple::AMDHSA;
+}
+
 std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
   if (STI && STI->getTargetTriple().getOS() != Triple::AMDHSA)
     return std::nullopt;
 
   switch (AmdhsaCodeObjectVersion) {
-  case 2:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   case 3:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   case 4:
@@ -135,12 +138,6 @@ std::optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
                        Twine(AmdhsaCodeObjectVersion));
   }
-}
-
-bool isHsaAbiVersion2(const MCSubtargetInfo *STI) {
-  if (std::optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
-    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
-  return false;
 }
 
 bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
@@ -161,11 +158,6 @@ bool isHsaAbiVersion5(const MCSubtargetInfo *STI) {
   return false;
 }
 
-bool isHsaAbiVersion3AndAbove(const MCSubtargetInfo *STI) {
-  return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI) ||
-         isHsaAbiVersion5(STI);
-}
-
 unsigned getAmdhsaCodeObjectVersion() {
   return AmdhsaCodeObjectVersion;
 }
@@ -182,7 +174,6 @@ unsigned getCodeObjectVersion(const Module &M) {
 
 unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV2:
   case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 48;
@@ -197,7 +188,6 @@ unsigned getMultigridSyncArgImplicitArgPosition(unsigned CodeObjectVersion) {
 // central TD file.
 unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV2:
   case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 24;
@@ -209,7 +199,6 @@ unsigned getHostcallImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV2:
   case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 32;
@@ -221,7 +210,6 @@ unsigned getDefaultQueueImplicitArgPosition(unsigned CodeObjectVersion) {
 
 unsigned getCompletionActionImplicitArgPosition(unsigned CodeObjectVersion) {
   switch (CodeObjectVersion) {
-  case AMDHSA_COV2:
   case AMDHSA_COV3:
   case AMDHSA_COV4:
     return 40;
@@ -786,54 +774,6 @@ std::string AMDGPUTargetID::toString() const {
   std::string Features;
   if (STI.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
-    case AMDGPU::AMDHSA_COV2:
-      // Code object V2 only supported specific processors and had fixed
-      // settings for the XNACK.
-      if (Processor == "gfx600") {
-      } else if (Processor == "gfx601") {
-      } else if (Processor == "gfx602") {
-      } else if (Processor == "gfx700") {
-      } else if (Processor == "gfx701") {
-      } else if (Processor == "gfx702") {
-      } else if (Processor == "gfx703") {
-      } else if (Processor == "gfx704") {
-      } else if (Processor == "gfx705") {
-      } else if (Processor == "gfx801") {
-        if (!isXnackOnOrAny())
-          report_fatal_error(
-              "AMD GPU code object V2 does not support processor " +
-              Twine(Processor) + " without XNACK");
-      } else if (Processor == "gfx802") {
-      } else if (Processor == "gfx803") {
-      } else if (Processor == "gfx805") {
-      } else if (Processor == "gfx810") {
-        if (!isXnackOnOrAny())
-          report_fatal_error(
-              "AMD GPU code object V2 does not support processor " +
-              Twine(Processor) + " without XNACK");
-      } else if (Processor == "gfx900") {
-        if (isXnackOnOrAny())
-          Processor = "gfx901";
-      } else if (Processor == "gfx902") {
-        if (isXnackOnOrAny())
-          Processor = "gfx903";
-      } else if (Processor == "gfx904") {
-        if (isXnackOnOrAny())
-          Processor = "gfx905";
-      } else if (Processor == "gfx906") {
-        if (isXnackOnOrAny())
-          Processor = "gfx907";
-      } else if (Processor == "gfx90c") {
-        if (isXnackOnOrAny())
-          report_fatal_error(
-              "AMD GPU code object V2 does not support processor " +
-              Twine(Processor) + " with XNACK being ON or ANY");
-      } else {
-        report_fatal_error(
-            "AMD GPU code object V2 does not support processor " +
-            Twine(Processor));
-      }
-      break;
     case AMDGPU::AMDHSA_COV3:
       // xnack.
       if (isXnackOnOrAny())

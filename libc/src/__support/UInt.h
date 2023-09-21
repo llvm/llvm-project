@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_UINT_H
-#define LLVM_LIBC_SRC_SUPPORT_UINT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_UINT_H
+#define LLVM_LIBC_SRC___SUPPORT_UINT_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/limits.h"
@@ -929,4 +929,4 @@ struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SRC_SUPPORT_UINT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_UINT_H

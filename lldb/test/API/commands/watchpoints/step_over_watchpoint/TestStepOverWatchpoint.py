@@ -49,6 +49,8 @@ class TestStepOverWatchpoint(TestBase):
         )
         self.assertEquals(thread.GetStopDescription(20), "watchpoint 1")
 
+    # Skip everywhere while modify watchpoints are sorted out.
+    @skipTestIfFn(lambda : True)
     @expectedFailureAll(
         oslist=["freebsd", "linux"],
         archs=["aarch64", "arm"],

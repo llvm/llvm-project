@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_IO_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_IO_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_IO_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_IO_H
 
 #include "src/__support/CPP/string_view.h"
 #include "syscall.h" // For internal syscall function.
@@ -23,4 +23,4 @@ LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_IO_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_IO_H

@@ -38,12 +38,12 @@ public:
                                       bool NeedExecCopyReservedReg) const;
   void emitCSRSpillStores(MachineFunction &MF, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-                          LivePhysRegs &LiveRegs, Register FrameReg,
+                          LiveRegUnits &LiveUnits, Register FrameReg,
                           Register FramePtrRegScratchCopy,
                           const bool NeedsFrameMoves) const;
   void emitCSRSpillRestores(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI, DebugLoc &DL,
-                            LivePhysRegs &LiveRegs, Register FrameReg,
+                            LiveRegUnits &LiveUnits, Register FrameReg,
                             Register FramePtrRegScratchCopy) const;
   bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
@@ -105,7 +105,7 @@ public:
   /// a free VGPR (lanes) or memory and corresponding CFI rules.
   void emitCFISavedRegSpills(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
-                             LivePhysRegs &LiveRegs,
+                             LiveRegUnits &LiveRegs,
                              bool emitSpillsToMem) const;
 
   /// Create a CFI index for CFIInst and build a MachineInstr around it.

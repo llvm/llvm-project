@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
-#define LLVM_LIBC_SUPPORT_CPP_BIT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h"
@@ -61,4 +61,4 @@ LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
 
 } // namespace __llvm_libc::cpp
 
-#endif // LLVM_LIBC_SUPPORT_CPP_BIT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

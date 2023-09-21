@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_NEW_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_NEW_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
 #include "src/__support/common.h"
 
@@ -99,4 +99,4 @@ void operator delete[](void *, size_t) noexcept
 void operator delete[](void *, size_t, std::align_val_t) noexcept
     __asm__("__llvm_libc_delete_array_sized_aligned");
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_NEW_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H

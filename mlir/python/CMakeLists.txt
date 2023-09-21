@@ -381,7 +381,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/VectorOps.td
   SOURCES dialects/vector.py
   DIALECT_NAME vector
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS_TD_FILE
+    "dialects/VectorAttributes.td")
 
 ################################################################################
 # Python extensions.

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
@@ -319,4 +319,4 @@ public:
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMOD_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMOD_H

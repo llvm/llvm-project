@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
@@ -285,4 +285,4 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_AARCH64_FENV_DARWIN_IMPL_H
