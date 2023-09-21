@@ -49,7 +49,7 @@ entry:
 ; CHECK: {{%[0-9]+}} = OpInBoundsAccessChain [[ptr_uint]] [[tmp]] [[uint_2]] [[uint_1]]
 
   %9 = getelementptr %B, ptr %0, i32 0, i32 2
-	%10 = getelementptr %A, ptr %9, i32 0, i32 1
+  %10 = getelementptr %A, ptr %9, i32 0, i32 1
 ; CHECK: [[x:%[0-9]+]] = OpAccessChain [[ptr_A]] [[tmp]] [[uint_2]]
 ; CHECK:   {{%[0-9]+}} = OpAccessChain [[ptr_uint]] [[x]] [[uint_1]]
 
