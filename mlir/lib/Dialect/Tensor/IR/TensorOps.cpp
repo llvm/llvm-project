@@ -3971,6 +3971,8 @@ struct FoldTensorCastProducerOp
     if (isa<InsertSliceOp>(op.getOperation()))
       return failure();
 
+    // scf::ForallOp also has its own folding logic taking the Types of its
+    // BlockArguments into consideration.
     if (isa<scf::ForallOp>(op.getOperation()))
       return failure();
 
