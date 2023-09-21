@@ -21,7 +21,7 @@ namespace scanf_core {
 
 int scanf_main(Reader *reader, const char *__restrict str,
                internal::ArgList &args) {
-  Parser parser(str, args);
+  Parser<internal::ArgList> parser(str, args);
   int ret_val = READ_OK;
   int conversions = 0;
   for (FormatSection cur_section = parser.get_next_section();

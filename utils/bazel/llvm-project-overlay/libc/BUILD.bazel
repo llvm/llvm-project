@@ -2692,7 +2692,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_parser",
-    srcs = ["src/stdio/printf_core/parser.cpp"],
     hdrs = ["src/stdio/printf_core/parser.h"],
     defines = PRINTF_COPTS,
     deps = [
@@ -2714,7 +2713,6 @@ libc_support_library(
 # Only used for testing.
 libc_support_library(
     name = "printf_mock_parser",
-    srcs = ["src/stdio/printf_core/parser.cpp"],
     hdrs = ["src/stdio/printf_core/parser.h"],
     defines = PRINTF_COPTS + ["LIBC_COPT_MOCK_ARG_LIST"],
     deps = [

@@ -17,24 +17,25 @@
 #include "test/UnitTest/Test.h"
 
 using __llvm_libc::cpp::string_view;
+using __llvm_libc::internal::ArgList;
 
 void init(const char *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
-  __llvm_libc::internal::ArgList v(vlist);
+  ArgList v(vlist);
   va_end(vlist);
 
-  __llvm_libc::printf_core::Parser parser(str, v);
+  __llvm_libc::printf_core::Parser<ArgList> parser(str, v);
 }
 
 void evaluate(__llvm_libc::printf_core::FormatSection *format_arr,
               const char *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
-  __llvm_libc::internal::ArgList v(vlist);
+  ArgList v(vlist);
   va_end(vlist);
 
-  __llvm_libc::printf_core::Parser parser(str, v);
+  __llvm_libc::printf_core::Parser<ArgList> parser(str, v);
 
   for (auto cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
