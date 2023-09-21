@@ -4824,7 +4824,7 @@ public:
   using ConstraintGroup = SmallVector<ConstraintPair>;
   /// Given an OpInfo with list of constraints codes as strings, return a
   /// sorted Vector of pairs of constraint codes and their types in priority of
-  /// what we'd prefer to lower them as. This may contains immediates that
+  /// what we'd prefer to lower them as. This may contain immediates that
   /// cannot be lowered, but it is meant to be a machine agnostic order of
   /// preferences.
   ConstraintGroup getConstraintPreferences(AsmOperandInfo &OpInfo) const;
