@@ -564,3 +564,11 @@ func.func @castu_to_index() -> index {
   %1 = index.castu %0 : i48 to index
   return %1 : index
 }
+
+// CHECK-LABEL: @casts_to_index
+func.func @casts_to_index() -> index {
+  // CHECK: index.constant -1000
+  %0 = arith.constant -1000 : i48
+  %1 = index.casts %0 : i48 to index
+  return %1 : index
+}
