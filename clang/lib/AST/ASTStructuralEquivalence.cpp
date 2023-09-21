@@ -277,6 +277,17 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const Stmt *S1, const Stmt *S2) { return true; }
 
+  bool IsStmtEquivalent(const GotoStmt *S1, const GotoStmt *S2) {
+    LabelDecl *L1 = S1->getLabel();
+    LabelDecl *L2 = S2->getLabel();
+    if (!L1 || !L2)
+      return L1 == L2;
+
+    IdentifierInfo *Name1 = L1->getIdentifier();
+    IdentifierInfo *Name2 = L2->getIdentifier();
+    return ::IsStructurallyEquivalent(Name1, Name2);
+  }
+
   bool IsStmtEquivalent(const SourceLocExpr *E1, const SourceLocExpr *E2) {
     return E1->getIdentKind() == E2->getIdentKind();
   }
@@ -1293,6 +1304,22 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   } // end switch
 
   return true;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     VarDecl *D1, VarDecl *D2) {
+  if (D1->getStorageClass() != D2->getStorageClass())
+    return false;
+
+  IdentifierInfo *Name1 = D1->getIdentifier();
+  IdentifierInfo *Name2 = D2->getIdentifier();
+  if (!::IsStructurallyEquivalent(Name1, Name2))
+    return false;
+
+  if (!IsStructurallyEquivalent(Context, D1->getType(), D2->getType()))
+    return false;
+
+  return IsStructurallyEquivalent(Context, D1->getInit(), D2->getInit());
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,

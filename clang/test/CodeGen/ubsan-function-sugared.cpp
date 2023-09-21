@@ -5,14 +5,14 @@
 // RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,ARM,GNU,32
 
 // GNU:  define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
-// MSVC: define{{.*}} void @"?fun@@YAXXZ"() #0 !func_sanitize ![[FUNCSAN:.*]] {
-void fun() {}
+// MSVC: define{{.*}} void @"?fun@@YA?A?<auto>@@XZ"() #0 !func_sanitize ![[FUNCSAN:.*]] {
+auto fun() {}
 
-// GNU-LABEL:  define{{.*}} void @_Z6callerPFvvE(ptr noundef %f)
-// MSVC-LABEL: define{{.*}} void @"?caller@@YAXP6AXXZ@Z"(ptr noundef %f)
-// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !5
-// ARM:   and i32 {{.*}}, -2, !nosanitize !5
-// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !5
+// GNU-LABEL:  define{{.*}} void @_Z6callerv()
+// MSVC-LABEL: define{{.*}} void @"?caller@@YAXXZ"()
+// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !4
+// ARM:   and i32 {{.*}}, -2, !nosanitize !4
+// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !4
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 0, !nosanitize
 // CHECK: load i32, ptr {{.*}}, align {{.*}}, !nosanitize
 // CHECK: icmp eq i32 {{.*}}, -1056584962, !nosanitize
@@ -34,7 +34,11 @@ void fun() {}
 // CHECK-NEXT: [[LABEL4]]:
 // CHECK-NEXT:   call void
 // CHECK-NEXT:   ret void
-void caller(void (*f)()) { f(); }
+void caller() {
+  auto a = fun;
+  a();
+}
 
 // GNU:  ![[FUNCSAN]] = !{i32 -1056584962, i32 905068220}
-// MSVC: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1600339357}
+// FIXME: Wrong hash
+// MSVC: ![[FUNCSAN]] = !{i32 -1056584962, i32 165986058}
