@@ -2188,7 +2188,7 @@ LogicalResult transform::SequenceOp::verify() {
     }
   }
 
-  if (!getBodyBlock()->hasTerminator())
+  if (!getBodyBlock()->mightHaveTerminator())
     return emitOpError() << "expects to have a terminator in the body";
 
   if (getBodyBlock()->getTerminator()->getOperandTypes() !=
