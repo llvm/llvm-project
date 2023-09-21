@@ -496,20 +496,3 @@ let AddedComplexity = 19 in {
   defm : VecROStoreLane64_0Pat<ro16, store, v4i16, i16, hsub, STRHroW, STRHroX>;
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
 }
-
-def : Pat<(v8i8 (AArch64dup (i8 (load (am_indexed8 GPR64sp:$Rn))))),
-          (LD1Rv8b GPR64sp:$Rn)>;
-def : Pat<(v16i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
-          (LD1Rv16b GPR64sp:$Rn)>;
-def : Pat<(v4i16 (AArch64dup (i16 (load GPR64sp:$Rn)))),
-          (LD1Rv4h GPR64sp:$Rn)>;
-def : Pat<(v8i16 (AArch64dup (i16 (load GPR64sp:$Rn)))),
-          (LD1Rv8h GPR64sp:$Rn)>;
-def : Pat<(v2i32 (AArch64dup (i32 (load GPR64sp:$Rn)))),
-          (LD1Rv2s GPR64sp:$Rn)>;
-def : Pat<(v4i32 (AArch64dup (i32 (load GPR64sp:$Rn)))),
-          (LD1Rv4s GPR64sp:$Rn)>;
-def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
-          (LD1Rv2d GPR64sp:$Rn)>;
-def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
-          (LD1Rv1d GPR64sp:$Rn)>;
