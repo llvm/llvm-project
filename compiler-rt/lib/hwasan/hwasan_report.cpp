@@ -1014,7 +1014,8 @@ void ReportRegisters(const uptr *frame, uptr pc) {
        frame[0], frame[1], frame[2], frame[3]);
 #elif SANITIZER_RISCV64
   Printf("    sp  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
-         reinterpret_cast<u8 *>(frame) + 256, frame[1], frame[2], frame[3]);
+         reinterpret_cast<const u8 *>(frame) + 256, frame[1], frame[2],
+         frame[3]);
 #endif
   Printf("    x4  %016llx  x5  %016llx  x6  %016llx  x7  %016llx\n",
        frame[4], frame[5], frame[6], frame[7]);
@@ -1032,7 +1033,7 @@ void ReportRegisters(const uptr *frame, uptr pc) {
   // passes it to this function.
 #if defined(__aarch64__)
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx   sp %016llx\n", frame[28],
-         frame[29], frame[30], reinterpret_cast<u8 *>(frame) + 256);
+         frame[29], frame[30], reinterpret_cast<const u8 *>(frame) + 256);
 #elif SANITIZER_RISCV64
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx  x31 %016llx\n", frame[28],
          frame[29], frame[30], frame[31]);
