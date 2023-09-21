@@ -2806,14 +2806,16 @@ LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.
 static bool functionsHaveCompatibleAttributes(
-    Function *Caller, Function *Callee,
+    Function *Caller, Function *Callee, TargetTransformInfo &TTI,
     function_ref<const TargetLibraryInfo &(Function &)> &GetTLI) {
   // Note that CalleeTLI must be a copy not a reference. The legacy pass manager
   // caches the most recently created TLI in the TargetLibraryInfoWrapperPass
   // object, and always returns the same object (which is overwritten on each
   // GetTLI call). Therefore we copy the first result.
   auto CalleeTLI = GetTLI(*Callee);
-  return GetTLI(*Caller).areInlineCompatible(CalleeTLI,
+  return (IgnoreTTIInlineCompatible ||
+          TTI.areInlineCompatible(Caller, Callee)) &&
+         GetTLI(*Caller).areInlineCompatible(CalleeTLI,
                                              InlineCallerSupersetNoBuiltin) &&
          AttributeFuncs::areInlineCompatible(*Caller, *Callee);
 }
@@ -2929,12 +2931,6 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
                                      " address space");
     }
 
-  // Never inline functions with conflicting target attributes.
-  Function *Caller = Call.getCaller();
-  if (!IgnoreTTIInlineCompatible &&
-      !CalleeTTI.areInlineCompatible(Caller, Callee))
-    return InlineResult::failure("conflicting target attributes");
-
   // Calls to functions with always-inline attributes should be inlined
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
@@ -2949,12 +2945,8 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
 
   // Never inline functions with conflicting attributes (unless callee has
   // always-inline attribute).
-  // FIXME: functionsHaveCompatibleAttributes below checks for compatibilities
-  // of different kinds of function attributes -- sanitizer-related ones,
-  // checkDenormMode, no-builtin-memcpy, etc.  It's unclear if we really want
-  // the always-inline attribute to take precedence over these different types
-  // of function attributes.
-  if (!functionsHaveCompatibleAttributes(Caller, Callee, GetTLI))
+  Function *Caller = Call.getCaller();
+  if (!functionsHaveCompatibleAttributes(Caller, Callee, CalleeTTI, GetTLI))
     return InlineResult::failure("conflicting attributes");
 
   // Don't inline this call if the caller has the optnone attribute.
