@@ -1490,6 +1490,28 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : NVVM_Op<"cp.async.bulk.tenso
   let hasVerifier = 1;
 }
 
+def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : NVVM_Op<"cp.async.bulk.tensor.global.shared.cta", [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Arguments<(ins  LLVM_i64ptr_any:$tmaDescriptor,
+                  LLVM_i64ptr_shared:$srcMem,
+                  Variadic<I32>:$coordinates)> {
+  let assemblyFormat = "$tmaDescriptor `,` $srcMem `,` `box` `[`$coordinates `]` attr-dict  `:` type(operands)";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      int dim = getCoordinates().size();
+      std::string ptx = "cp.async.bulk.tensor.";
+      ptx += std::to_string(dim) + "d.";
+      ptx += "global.shared::cta.bulk_group";
+      if(dim == 1) ptx += " [%0, {%2} ], [%1];";
+      if(dim == 2) ptx += " [%0, {%2, %3} ], [%1];";
+      if(dim == 3) ptx += " [%0, {%2, %3, %4} ], [%1];";
+      if(dim == 4) ptx += " [%0, {%2, %3, %4, %5} ], [%1];";
+      if(dim == 5) ptx += " [%0, {%2, %3, %4, %5, %6} ], [%1];";
+      return ptx;
+    }
+  }];
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
