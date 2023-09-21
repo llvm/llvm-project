@@ -2273,14 +2273,11 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     // The "DPI"/"DPI-C" in SystemVerilog direct programming interface imports
     // cannot be split, e.g.
     // `import "DPI" function foo();`
-    StringRef Text = Current.TokenText;
-    if (Style.isVerilog()) {
-      const FormatToken *Prev = Current.getPreviousNonComment();
-      if (Prev && Prev == State.Line->getFirstNonComment() &&
-          Prev->TokenText == "import") {
-        return nullptr;
-      }
+    if (Style.isVerilog() && Current.Previous &&
+        Current.Previous->isOneOf(tok::kw_export, Keywords.kw_import)) {
+      return nullptr;
     }
+    StringRef Text = Current.TokenText;
 
     // We need this to address the case where there is an unbreakable tail only
     // if certain other formatting decisions have been taken. The
