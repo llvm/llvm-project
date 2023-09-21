@@ -28,15 +28,13 @@ define i32 @reduce_and4(i32 %acc, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <
 ;
 ; SSE42-LABEL: @reduce_and4(
 ; SSE42-NEXT:  entry:
-; SSE42-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V4:%.*]])
-; SSE42-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V3:%.*]])
-; SSE42-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP0]], [[TMP1]]
-; SSE42-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V2:%.*]])
-; SSE42-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[TMP2]]
-; SSE42-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V1:%.*]])
-; SSE42-NEXT:    [[OP_RDX2:%.*]] = and i32 [[OP_RDX1]], [[TMP3]]
-; SSE42-NEXT:    [[OP_RDX3:%.*]] = and i32 [[OP_RDX2]], [[ACC:%.*]]
-; SSE42-NEXT:    ret i32 [[OP_RDX3]]
+; SSE42-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
+; SSE42-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 5, i32 4, i32 6, i32 7>
+; SSE42-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP1]])
+; SSE42-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP0]])
+; SSE42-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; SSE42-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[ACC:%.*]]
+; SSE42-NEXT:    ret i32 [[OP_RDX1]]
 ;
 ; AVX-LABEL: @reduce_and4(
 ; AVX-NEXT:  entry:
@@ -103,15 +101,13 @@ define i32 @reduce_and4_transpose(i32 %acc, <4 x i32> %v1, <4 x i32> %v2, <4 x i
 ; SSE2-NEXT:    ret i32 [[OP_RDX1]]
 ;
 ; SSE42-LABEL: @reduce_and4_transpose(
-; SSE42-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V4:%.*]])
-; SSE42-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V3:%.*]])
-; SSE42-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP1]], [[TMP2]]
-; SSE42-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V2:%.*]])
-; SSE42-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[TMP3]]
-; SSE42-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[V1:%.*]])
-; SSE42-NEXT:    [[OP_RDX2:%.*]] = and i32 [[OP_RDX1]], [[TMP4]]
-; SSE42-NEXT:    [[OP_RDX3:%.*]] = and i32 [[OP_RDX2]], [[ACC:%.*]]
-; SSE42-NEXT:    ret i32 [[OP_RDX3]]
+; SSE42-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; SSE42-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[V4:%.*]], <4 x i32> [[V3:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+; SSE42-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP2]])
+; SSE42-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP1]])
+; SSE42-NEXT:    [[OP_RDX:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; SSE42-NEXT:    [[OP_RDX1:%.*]] = and i32 [[OP_RDX]], [[ACC:%.*]]
+; SSE42-NEXT:    ret i32 [[OP_RDX1]]
 ;
 ; AVX-LABEL: @reduce_and4_transpose(
 ; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[V2:%.*]], <4 x i32> [[V1:%.*]], <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
