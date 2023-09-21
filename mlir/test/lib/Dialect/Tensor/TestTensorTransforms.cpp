@@ -32,8 +32,8 @@ struct TestTensorTransforms
   TestTensorTransforms(const TestTensorTransforms &pass) : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<arith::ArithDialect, scf::SCFDialect, linalg::LinalgDialect>();
+    registry.insert<arith::ArithDialect, scf::SCFDialect, linalg::LinalgDialect,
+                    transform::TransformDialect>();
   }
 
   StringRef getArgument() const final {
@@ -352,8 +352,17 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
   transform::TransformState transformState =
       transform::detail::makeTransformStateForTesting(/*region=*/nullptr,
                                                       /*payloadRoot=*/nullptr);
-  DummyTrackingListener listener(transformState,
-                                 transform::TransformOpInterface());
+  MLIRContext *context = rootOp->getContext();
+  OpBuilder builder(context);
+  auto transformOp = builder.create<transform::NamedSequenceOp>(
+      rootOp->getLoc(),
+      /*sym_name=*/"test_sequence",
+      /*function_type=*/
+      TypeAttr::get(FunctionType::get(context, TypeRange{}, TypeRange{})),
+      /*sym_visibility*/ StringAttr::get(context, "public"),
+      /*arg_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()),
+      /*res_attrs=*/ArrayAttr::get(context, ArrayRef<Attribute>()));
+  DummyTrackingListener listener(transformState, transformOp);
   Operation *replacement = listener.getReplacementOp(replaced, replacements);
   if (!replacement) {
     replaced->emitError("listener could not find replacement op");
