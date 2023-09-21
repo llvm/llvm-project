@@ -8,10 +8,8 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_object_library(
+add_header_library(
   parser
-  SRCS
-    parser.cpp
   HDRS
     parser.h
   DEPENDS
@@ -24,26 +22,6 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
-)
-
-add_object_library(
-  mock_parser
-  SRCS
-    parser.cpp
-  HDRS
-    parser.h
-  DEPENDS
-    .core_structs
-    libc.src.__support.arg_list
-    libc.src.__support.ctype_utils
-    libc.src.__support.str_to_integer
-    libc.src.__support.CPP.bit
-    libc.src.__support.CPP.optional
-    libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.type_traits
-    libc.src.__support.common
-  COMPILE_OPTIONS
-    -DLIBC_COPT_MOCK_ARG_LIST
 )
 
 add_object_library(
