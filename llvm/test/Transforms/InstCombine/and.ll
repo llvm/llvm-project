@@ -2537,10 +2537,7 @@ define i32 @and_zext_eq_zero(i32 %A, i32 %C)  {
 ; CHECK-LABEL: @and_zext_eq_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[A]], [[C:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i32 [[TMP5]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %1 = icmp eq i32 %A, 0
   %2 = zext i1 %1 to i32
