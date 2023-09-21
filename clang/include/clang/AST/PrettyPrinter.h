@@ -72,7 +72,7 @@ struct PrintingPolicy {
         SplitTemplateClosers(!LO.CPlusPlus11), TerseOutput(false),
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
-        MSVCFormatting(false), ConstantsAsWritten(false),
+        MSVCFormatting(false), IncludeKeyword(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
         PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
@@ -249,6 +249,10 @@ struct PrintingPolicy {
   /// anonymous namespaces as `anonymous namespace' and does not insert spaces
   /// after template arguments.
   unsigned MSVCFormatting : 1;
+
+  // Prints "class" keyword. This is used when printing a function via the
+  // _FUNCTION__ or __FUNC__ macro in MSVC mode.
+  unsigned IncludeKeyword : 1;
 
   /// Whether we should print the constant expressions as written in the
   /// sources.
