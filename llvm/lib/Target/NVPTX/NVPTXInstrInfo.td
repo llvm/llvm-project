@@ -1713,33 +1713,55 @@ def FUNSHFRCLAMP :
 // BFE - bit-field extract
 //
 
-// Template for BFE instructions.  Takes four args,
-//   [dest (reg), src (reg), start (reg or imm), end (reg or imm)].
+// Template for BFE/BFI instructions.
+// Args: [dest (reg), src (reg), start (reg or imm), end (reg or imm)].
 // Start may be an imm only if end is also an imm.  FIXME: Is this a
 // restriction in PTX?
 //
 // dest and src may be int32 or int64, but start and end are always int32.
-multiclass BFE<string TyStr, RegisterClass RC> {
+multiclass BFX<string Instr, RegisterClass RC> {
   def rrr
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, Int32Regs:$b, Int32Regs:$c),
-                !strconcat("bfe.", TyStr, " \t$d, $a, $b, $c;"), []>;
+                !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
   def rri
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, Int32Regs:$b, i32imm:$c),
-                !strconcat("bfe.", TyStr, " \t$d, $a, $b, $c;"), []>;
+                !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
   def rii
     : NVPTXInst<(outs RC:$d),
                 (ins RC:$a, i32imm:$b, i32imm:$c),
-                !strconcat("bfe.", TyStr, " \t$d, $a, $b, $c;"), []>;
+                !strconcat(Instr, " \t$d, $a, $b, $c;"), []>;
 }
 
 let hasSideEffects = false in {
-  defm BFE_S32 : BFE<"s32", Int32Regs>;
-  defm BFE_U32 : BFE<"u32", Int32Regs>;
-  defm BFE_S64 : BFE<"s64", Int64Regs>;
-  defm BFE_U64 : BFE<"u64", Int64Regs>;
+  defm BFE_S32 : BFX<"bfe.s32", Int32Regs>;
+  defm BFE_U32 : BFX<"bfe.u32", Int32Regs>;
+  defm BFE_S64 : BFX<"bfe.s64", Int64Regs>;
+  defm BFE_U64 : BFX<"bfe.u64", Int64Regs>;
+
+  defm BFI_S32 : BFX<"bfi.s32", Int32Regs>;
+  defm BFI_U32 : BFX<"bfi.u32", Int32Regs>;
+  defm BFI_S64 : BFX<"bfi.s64", Int64Regs>;
+  defm BFI_U64 : BFX<"bfi.u64", Int64Regs>;
 }
+
+// Common byte extraction patterns
+def : Pat<(i16 (sext_inreg (trunc Int32Regs:$s), i8)),
+          (CVT_s8_s32 Int32Regs:$s, CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc (srl (i32 Int32Regs:$s),  (i32 imm:$o))), i8)),
+          (CVT_s8_s32 (BFE_S32rii Int32Regs:$s, imm:$o, 8), CvtNONE)>;
+def : Pat<(sext_inreg (srl (i32 Int32Regs:$s),  (i32 imm:$o)), i8),
+          (BFE_S32rii Int32Regs:$s, imm:$o, 8)>;
+def : Pat<(i16 (sra (i16 (trunc Int32Regs:$s)), (i32 8))),
+          (CVT_s8_s32 (BFE_S32rii Int32Regs:$s, 8, 8), CvtNONE)>;
+
+def : Pat<(sext_inreg (srl (i64 Int64Regs:$s),  (i32 imm:$o)), i8),
+          (BFE_S64rii Int64Regs:$s, imm:$o, 8)>;
+def : Pat<(i16 (sext_inreg (trunc Int64Regs:$s), i8)),
+          (CVT_s8_s64 Int64Regs:$s, CvtNONE)>;
+def : Pat<(i16 (sext_inreg (trunc (srl (i64 Int64Regs:$s),  (i32 imm:$o))), i8)),
+          (CVT_s8_s64 (BFE_S64rii Int64Regs:$s, imm:$o, 8), CvtNONE)>;
 
 //-----------------------------------
 // Comparison instructions (setp, set)
