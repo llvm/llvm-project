@@ -2918,7 +2918,7 @@ private:
                "Scalar already in tree!");
         if (TE) {
           if (TE != Last)
-            MultiNodeScalars.insert(V);
+            MultiNodeScalars.try_emplace(V).first->getSecond().push_back(Last);
           continue;
         }
         ScalarToTreeEntry[V] = Last;
@@ -2979,8 +2979,9 @@ private:
   /// Maps a specific scalar to its tree entry.
   SmallDenseMap<Value *, TreeEntry *> ScalarToTreeEntry;
 
-  /// List of scalars, used in several vectorize nodes.
-  SmallDenseSet<Value *> MultiNodeScalars;
+  /// List of scalars, used in several vectorize nodes, and the list of the
+  /// nodes.
+  SmallDenseMap<Value *, SmallVector<TreeEntry *>> MultiNodeScalars;
 
   /// Maps a value to the proposed vectorizable size.
   SmallDenseMap<Value *, unsigned> InstrElementSize;
@@ -9866,15 +9867,16 @@ Value *BoUpSLP::vectorizeOperand(TreeEntry *E, unsigned NodeIdx) {
     };
     TreeEntry *VE = getTreeEntry(S.OpValue);
     bool IsSameVE = VE && CheckSameVE(VE);
-    if (!IsSameVE && MultiNodeScalars.contains(S.OpValue)) {
-      auto *I =
-          find_if(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
-            return TE->State != TreeEntry::NeedToGather && TE.get() != VE &&
-                   CheckSameVE(TE.get());
-          });
-      if (I != VectorizableTree.end()) {
-        VE = I->get();
-        IsSameVE = true;
+    if (!IsSameVE) {
+      auto It = MultiNodeScalars.find(S.OpValue);
+      if (It != MultiNodeScalars.end()) {
+        auto *I = find_if(It->getSecond(), [&](const TreeEntry *TE) {
+          return TE != VE && CheckSameVE(TE);
+        });
+        if (I != It->getSecond().end()) {
+          VE = *I;
+          IsSameVE = true;
+        }
       }
     }
     if (IsSameVE) {
