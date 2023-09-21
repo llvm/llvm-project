@@ -112,20 +112,20 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     In this encoding, we use `dimension` to refer to the axes of the semantic tensor,
     and `level` to refer to the axes of the actual storage format, i.e., the
     operational representation of the sparse tensor in memory. The number of
-    dimensions is usually the same as the number of levels (e.g. CSR storage format).
+    dimensions is usually the same as the number of levels (such as CSR storage format).
     However, the encoding can also map dimensions to higher-order levels (for example,
     to encode a block-sparse BSR storage format) or to lower-order levels
-    (for example, to linearize dimensions in the storage).
+    (for example, to linearize dimensions as a single level in the storage).
 
     The encoding contains a `map` that provides the following:
 
     - An ordered sequence of dimension specifications, each of which defines:
-      - the the dimension-size (implicit from the tensor’s dimension-shape)
-      - an optional **dimension-expression**
+      - the dimension-size (implicit from the tensor’s dimension-shape)
+      - a **dimension-expression**
     - An ordered sequence of level specifications, each of which includes a required
       **level-type**, which defines how the level should be stored. Each level-type
       consists of:
-      - a required **level-format**
+      - a **level-format**
       - a collection of **level-properties** that apply to the level-format
       - a **level-expression**, which defines what is stored
 
