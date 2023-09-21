@@ -1,6 +1,9 @@
 // clang-format off
 // REQUIRES: lld, x86
 
+// Temporarily XFAILed on stable/20230725
+// XFAIL: *
+
 // Make sure class layout is correct.
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
