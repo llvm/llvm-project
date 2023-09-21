@@ -113,6 +113,12 @@ func.func @genx.atomic.rmw.i32(%ptr : !llvm.ptr<i32>, %val : i32) {
   llvm.return  
 }
 
+func.func @genx.2Dblockload1x4.32.1.0.0(%ptr : !llvm.ptr<i32>, %base_width : i32, %base_height : i32, %base_pitch : i32, %x : i32, %y : i32) {
+  // CHECK: genx.matrix.2Dblockload<1 x 4> 32 1 false false %arg0, %arg1, %arg2, %arg3, %arg4, %arg5 : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
+  %0 = genx.matrix.2Dblockload<1 x 4> 32 1 false false %ptr, %base_width, %base_height, %base_pitch, %x, %y : (!llvm.ptr<i32>, i32, i32, i32, i32, i32) -> vector<4xi32>
+  llvm.return
+}
+
 func.func @genx.matrix.load(%ptr : !llvm.ptr<vector<4xi32>>, %stride : index) {
   // CHECK-LABEL: genx.matrix.load
   // CHECK: %0 = genx.matrix.load <Subgroup> <RowMajor> %arg0, %arg1 {memory_access = #genx.memory_access<Volatile>} : (!llvm.ptr<vector<4xi32>>, index) -> !genx.jointmatrix<8x16xi32, RowMajor>

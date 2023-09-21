@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides registration calls for ROCDL dialect to LLVM IR translation.
+// This provides registration calls for GENX dialect to LLVM IR translation.
 //
 //===----------------------------------------------------------------------===//
 

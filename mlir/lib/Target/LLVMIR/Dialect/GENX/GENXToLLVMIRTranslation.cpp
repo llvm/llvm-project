@@ -15,6 +15,7 @@
 #include "mlir/Dialect/LLVMIR/GENXDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Target/LLVMIR/Dialect/GENX/GenIntrinsics.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
 #include "llvm/IR/DerivedTypes.h"
@@ -200,6 +201,54 @@ static llvm::Value *createAtomicRMW(llvm::IRBuilderBase &builder,
 
   return createDeviceFunctionCall(builder, fnName, retType,
                                   {ptr->getType(), val->getType()}, {ptr, val});
+}
+
+// Create a call to GenISA_LSC2DBlockRead for loading a 2D submatrix
+static llvm::Value *createGenISA2DBlockRead(
+    llvm::IRBuilderBase &builder, llvm::Value *ptr, llvm::Value *baseWidth,
+    llvm::Value *baseHeight, llvm::Value *basePitch, llvm::Value *x,
+    llvm::Value *y, uint32_t elemSizeInBits, uint32_t tileWidth,
+    uint32_t tileHeight, uint32_t vBlocks, uint32_t transpose,
+    uint32_t vnniTransform, ArrayRef<llvm::Type *> retTys) {
+  assert(isa<llvm::PointerType>(ptr->getType()) && "Expecting a pointer type");
+  llvm::ConstantInt *width = dyn_cast<llvm::ConstantInt>(baseWidth);
+  llvm::ConstantInt *pitch = dyn_cast<llvm::ConstantInt>(basePitch);
+  assert((!width || !pitch || width->getZExtValue() <= pitch->getZExtValue()) &&
+         "Base pitch should be >= base width");
+  assert(((elemSizeInBits == 8) || (elemSizeInBits == 16) ||
+          (elemSizeInBits == 32)) &&
+         "Unexpected element size");
+  assert(!(transpose && vnniTransform) &&
+         "Transpose and vnni transform are mutually exclusive");
+
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Function *fn = llvm::GenISAIntrinsic::getDeclaration(
+      module, llvm::GenISAIntrinsic::GenISA_LSC2DBlockRead, retTys);
+  assert(fn && "GenISAIntrinsic::getDeclaration() returns NULL");
+  // Temporary workaround: IGC library build LLVM version (LLVM 14) has
+  // different Attribute enum. Remove after building IGC library with the LLVM
+  // mainline
+  fn->removeFnAttr(llvm::Attribute::NoUndef);
+  fn->setDoesNotThrow();
+
+  // The IGC intrinsic requires the first argument be int64
+  auto base = builder.CreatePointerCast(ptr, builder.getInt64Ty());
+  auto int32Ty = builder.getInt32Ty();
+  auto int1Ty = builder.getInt1Ty();
+  llvm::SmallVector<llvm::Value *, 12> args;
+  args.push_back(base);
+  args.push_back(baseWidth);
+  args.push_back(baseHeight);
+  args.push_back(basePitch);
+  args.push_back(x);
+  args.push_back(y);
+  args.push_back(llvm::ConstantInt::get(int32Ty, elemSizeInBits));
+  args.push_back(llvm::ConstantInt::get(int32Ty, tileWidth));
+  args.push_back(llvm::ConstantInt::get(int32Ty, tileHeight));
+  args.push_back(llvm::ConstantInt::get(int32Ty, vBlocks));
+  args.push_back(llvm::ConstantInt::get(int1Ty, transpose));
+  args.push_back(llvm::ConstantInt::get(int1Ty, vnniTransform));
+  return builder.CreateCall(fn, args);
 }
 
 // Create a call to SPIR function for loading a joint matrix.
