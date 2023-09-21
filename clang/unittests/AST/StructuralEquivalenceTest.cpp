@@ -2393,5 +2393,14 @@ TEST_F(StructuralEquivalenceCacheTest, GotoStmtNoEq) {
   EXPECT_FALSE(testStructuralMatch(S));
 }
 
+TEST_F(StructuralEquivalenceStmtTest, DeclRefExpr) {
+  std::string Prefix = "enum Test { AAA, BBB };";
+  auto t = makeStmts(
+      Prefix + "void foo(int i) {if (i > 0) {i = AAA;} else {i = BBB;}}",
+      Prefix + "void foo(int i) {if (i > 0) {i = BBB;} else {i = AAA;}}",
+      Lang_CXX03, ifStmt());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang
