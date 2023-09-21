@@ -3,30 +3,29 @@
 
 target datalayout = "n8:16:32:64"
 
-; FIXME: This is a miscompile.
 ; The udiv should not get hoisted into the preheader (past a conditional).
 define i32 @test(i1 %c, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i1 [[C:%.*]], i32 [[ARG1:%.*]], i32 [[ARG2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 [[ARG1]], [[ARG2]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[ADD9:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label [[IF:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[UDIV:%.*]] = udiv i32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[UDIV]], [[PHI]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[PHI6:%.*]] = phi i64 [ [[ADD7:%.*]], [[LOOP2]] ], [ 0, [[IF]] ]
 ; CHECK-NEXT:    [[ADD7]] = add nuw nsw i64 [[PHI6]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[INDVARS_IV]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[ADD7]], [[TMP2]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP2]], label [[LOOP_LATCH_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[PHI6]], [[ZEXT]]
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP2]], label [[LOOP_LATCH_LOOPEXIT:%.*]]
 ; CHECK:       loop.latch.loopexit:
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[ADD9]] = add i32 [[PHI]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
