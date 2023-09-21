@@ -13,6 +13,7 @@
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/sort.h>
+#include <__assert>
 #include <__config>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
