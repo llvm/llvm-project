@@ -3109,14 +3109,16 @@ static GDBStoppointType GetGDBStoppointType(Watchpoint *wp) {
   assert(wp);
   bool watch_read = wp->WatchpointRead();
   bool watch_write = wp->WatchpointWrite();
+  bool watch_modify = wp->WatchpointModify();
 
-  // watch_read and watch_write cannot both be false.
-  assert(watch_read || watch_write);
-  if (watch_read && watch_write)
+  // watch_read, watch_write, watch_modify cannot all be false.
+  assert((watch_read || watch_write || watch_modify) &&
+         "watch_read, watch_write, watch_modify cannot all be false.");
+  if (watch_read && (watch_write || watch_modify))
     return eWatchpointReadWrite;
   else if (watch_read)
     return eWatchpointRead;
-  else // Must be watch_write, then.
+  else // Must be watch_write or watch_modify, then.
     return eWatchpointWrite;
 }
 
