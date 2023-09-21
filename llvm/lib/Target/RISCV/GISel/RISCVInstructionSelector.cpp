@@ -45,10 +45,16 @@ private:
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB,
                            bool GetAllRegSet = false) const;
 
+  // tblgen-erated 'select' implementation, used as the initial selector for
+  // the patterns that don't require complex C++.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
+
+  // Custom selection methods
   bool selectCopy(MachineInstr &MI, MachineRegisterInfo &MRI) const;
   bool selectConstant(MachineInstr &MI, MachineIRBuilder &MIB,
                       MachineRegisterInfo &MRI) const;
+  bool selectSelect(MachineInstr &MI, MachineIRBuilder &MIB,
+                    MachineRegisterInfo &MRI) const;
 
   bool earlySelectShift(unsigned Opc, MachineInstr &I, MachineIRBuilder &MIB,
                         const MachineRegisterInfo &MRI);
@@ -207,6 +213,10 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     if (!selectConstant(MI, MIB, MRI))
       return false;
     break;
+  case TargetOpcode::G_SELECT:
+    if (!selectSelect(MI, MIB, MRI))
+      return false;
+    break;
   default:
     return false;
   }
@@ -336,6 +346,20 @@ bool RISCVInstructionSelector::selectConstant(MachineInstr &MI,
   }
 
   return true;
+}
+
+bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
+                                            MachineIRBuilder &MIB,
+                                            MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
+                             .addDef(MI.getOperand(0).getReg())
+                             .addReg(MI.getOperand(1).getReg())
+                             .addReg(RISCV::X0)
+                             .addImm(RISCVCC::COND_NE)
+                             .addReg(MI.getOperand(2).getReg())
+                             .addReg(MI.getOperand(3).getReg());
+  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 }
 
 namespace llvm {
