@@ -920,19 +920,19 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
 def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm_li:$imm), [],
                       "li", "$rd, $imm">;
 
-def PseudoLB  : PseudoLoad<"lb">;
-def PseudoLBU : PseudoLoad<"lbu">;
-def PseudoLH  : PseudoLoad<"lh">;
-def PseudoLHU : PseudoLoad<"lhu">;
-def PseudoLW  : PseudoLoad<"lw">;
+def PseudoLB  : PseudoIntLoad<"lb">;
+def PseudoLBU : PseudoIntLoad<"lbu">;
+def PseudoLH  : PseudoIntLoad<"lh">;
+def PseudoLHU : PseudoIntLoad<"lhu">;
+def PseudoLW  : PseudoIntLoad<"lw">;
 
 def PseudoSB  : PseudoStore<"sb">;
 def PseudoSH  : PseudoStore<"sh">;
 def PseudoSW  : PseudoStore<"sw">;
 
 let Predicates = [IsRV64] in {
-def PseudoLWU : PseudoLoad<"lwu">;
-def PseudoLD  : PseudoLoad<"ld">;
+def PseudoLWU : PseudoIntLoad<"lwu">;
+def PseudoLD  : PseudoIntLoad<"ld">;
 def PseudoSD  : PseudoStore<"sd">;
 } // Predicates = [IsRV64]
 
