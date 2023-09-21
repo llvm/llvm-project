@@ -698,6 +698,14 @@ struct PreparedDummyArgument {
     cleanups.emplace_back(
         CallCleanUp{CallCleanUp::ExprAssociate{tempVar, wasCopied}});
   }
+  void pushExprAssociateCleanUp(hlfir::AssociateOp associate) {
+    mlir::Value hlfirBase = associate.getBase();
+    mlir::Value firBase = associate.getFirBase();
+    cleanups.emplace_back(CallCleanUp{CallCleanUp::ExprAssociate{
+        hlfir::mayHaveAllocatableComponent(hlfirBase.getType()) ? hlfirBase
+                                                                : firBase,
+        associate.getMustFreeStrorageFlag()}});
+  }
 
   mlir::Value dummy;
   // NOTE: the clean-ups are executed in reverse order.
@@ -902,8 +910,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
           loc, builder, hlfir::Entity{copy}, storageType, "adapt.valuebyref");
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
-      preparedDummy.pushExprAssociateCleanUp(
-          associate.getFirBase(), associate.getMustFreeStrorageFlag());
+      preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
       assert(entity.getType().isa<fir::BaseBoxType>() &&
@@ -930,8 +937,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, entity, storageType, "adapt.valuebyref");
     entity = hlfir::Entity{associate.getBase()};
-    preparedDummy.pushExprAssociateCleanUp(associate.getFirBase(),
-                                           associate.getMustFreeStrorageFlag());
+    preparedDummy.pushExprAssociateCleanUp(associate);
     if (mustSetDynamicTypeToDummyType) {
       // Rebox the actual argument to the dummy argument's type, and make
       // sure that we pass a contiguous entity (i.e. make copy-in,
