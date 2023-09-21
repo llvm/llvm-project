@@ -450,6 +450,7 @@ class BaseReport {
   OverflowCandidate FindBufferOverflowCandidate() const;
   void PrintAddressDescription() const;
   void PrintHeapOrGlobalCandidate() const;
+  void PrintTags(uptr addr) const;
 
   SavedStackAllocations stack_allocations_storage[16];
   HeapAllocation heap_allocations_storage[256];
@@ -765,6 +766,14 @@ void BaseReport::PrintAddressDescription() const {
   }
 }
 
+void BaseReport::PrintTags(uptr addr) const {
+  if (shadow.addr) {
+    PrintTagsAroundAddr(
+        addr, [&](uptr addr) { return GetTagCopy(addr); },
+        [&](uptr addr) { return GetShortTagCopy(addr); });
+  }
+}
+
 class InvalidFreeReport : public BaseReport {
  public:
   InvalidFreeReport(StackTrace *stack, uptr tagged_addr)
@@ -797,13 +806,7 @@ InvalidFreeReport::~InvalidFreeReport() {
   stack->Print();
 
   PrintAddressDescription();
-
-  if (shadow.addr) {
-    PrintTagsAroundAddr(
-        untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
-        [&](uptr addr) { return GetShortTagCopy(addr); });
-  }
-
+  PrintTags(untagged_addr);
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
@@ -883,11 +886,7 @@ TailOverwrittenReport::~TailOverwrittenReport() {
       kShadowAlignment, SanitizerToolName);
   Printf("%s", s.data());
   GetCurrentThread()->Announce();
-
-  PrintTagsAroundAddr(
-      untagged_addr, [&](uptr addr) { return GetTagCopy(addr); },
-      [&](uptr addr) { return GetShortTagCopy(addr); });
-
+  PrintTags(untagged_addr);
   MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
@@ -963,9 +962,7 @@ TagMismatchReport::~TagMismatchReport() {
   PrintAddressDescription();
   t->Announce();
 
-  PrintTagsAroundAddr(
-      untagged_addr + offset, [&](uptr addr) { return GetTagCopy(addr); },
-      [&](uptr addr) { return GetShortTagCopy(addr); });
+  PrintTags(untagged_addr + offset);
 
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
