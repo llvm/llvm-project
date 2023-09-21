@@ -387,14 +387,10 @@ class BaseReport {
         tagged_addr(tagged_addr),
         access_size(access_size),
         untagged_addr(UntagAddr(tagged_addr)),
-        ptr_tag(GetTagFromPointer(tagged_addr)) {
-    if (MemIsShadow(untagged_addr))
-      return;
-
-    CopyHeapChunk();
-    CopyAllocations();
-    candidate = FindBufferOverflowCandidate();
-  }
+        ptr_tag(GetTagFromPointer(tagged_addr)),
+        heap(CopyHeapChunk()),
+        allocations(CopyAllocations()),
+        candidate(FindBufferOverflowCandidate()) {}
 
  protected:
   struct OverflowCandidate {
@@ -411,11 +407,34 @@ class BaseReport {
     } heap;
   };
 
-  void CopyHeapChunk();
-  void CopyAllocations();
+  struct HeapAllocation {
+    HeapAllocationRecord har = {};
+    uptr ring_index = 0;
+    uptr num_matching_addrs = 0;
+    uptr num_matching_addrs_4b = 0;
+    u32 free_thread_id = 0;
+  };
+
+  struct Allocations {
+    ArrayRef<SavedStackAllocations> stack;
+    ArrayRef<HeapAllocation> heap;
+  };
+
+  struct HeapChunk {
+    uptr begin = 0;
+    uptr size = 0;
+    bool from_small_heap = false;
+    bool is_allocated = false;
+  };
+
+  HeapChunk CopyHeapChunk() const;
+  Allocations CopyAllocations();
   OverflowCandidate FindBufferOverflowCandidate() const;
   void PrintAddressDescription() const;
   void PrintHeapOrGlobalCandidate() const;
+
+  SavedStackAllocations stack_allocations_storage[16];
+  HeapAllocation heap_allocations_storage[256];
 
   const ScopedReport scoped_report;
   const StackTrace *stack = nullptr;
@@ -424,53 +443,44 @@ class BaseReport {
   const uptr untagged_addr = 0;
   const tag_t ptr_tag = 0;
 
-  uptr stack_allocations_count = 0;
-  SavedStackAllocations stack_allocations[16];
-
-  struct {
-    uptr begin = 0;
-    uptr size = 0;
-    bool from_small_heap = false;
-    bool is_allocated = false;
-  } heap;
-
-  OverflowCandidate candidate;
-
-  uptr heap_allocations_count = 0;
-  struct {
-    HeapAllocationRecord har = {};
-    uptr ring_index = 0;
-    uptr num_matching_addrs = 0;
-    uptr num_matching_addrs_4b = 0;
-    u32 free_thread_id = 0;
-  } heap_allocations[256];
+  const HeapChunk heap;
+  const Allocations allocations;
+  const OverflowCandidate candidate;
 };
 
-void BaseReport::CopyHeapChunk() {
+BaseReport::HeapChunk BaseReport::CopyHeapChunk() const {
+  HeapChunk result = {};
+  if (MemIsShadow(untagged_addr))
+    return result;
   HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
-  heap.begin = chunk.Beg();
-  if (heap.begin) {
-    heap.size = chunk.ActualSize();
-    heap.from_small_heap = chunk.FromSmallHeap();
-    heap.is_allocated = chunk.IsAllocated();
+  result.begin = chunk.Beg();
+  if (result.begin) {
+    result.size = chunk.ActualSize();
+    result.from_small_heap = chunk.FromSmallHeap();
+    result.is_allocated = chunk.IsAllocated();
   }
+  return result;
 }
 
-void BaseReport::CopyAllocations() {
+BaseReport::Allocations BaseReport::CopyAllocations() {
+  if (MemIsShadow(untagged_addr))
+    return {};
+  uptr stack_allocations_count = 0;
+  uptr heap_allocations_count = 0;
   hwasanThreadList().VisitAllLiveThreads([&](Thread *t) {
-    if (stack_allocations_count < ARRAY_SIZE(stack_allocations) &&
+    if (stack_allocations_count < ARRAY_SIZE(stack_allocations_storage) &&
         t->AddrIsInStack(untagged_addr)) {
-      stack_allocations[stack_allocations_count++].CopyFrom(t);
+      stack_allocations_storage[stack_allocations_count++].CopyFrom(t);
     }
 
-    if (heap_allocations_count < ARRAY_SIZE(heap_allocations)) {
+    if (heap_allocations_count < ARRAY_SIZE(heap_allocations_storage)) {
       // Scan all threads' ring buffers to find if it's a heap-use-after-free.
       HeapAllocationRecord har;
       uptr ring_index, num_matching_addrs, num_matching_addrs_4b;
       if (FindHeapAllocation(t->heap_allocations(), tagged_addr, &har,
                              &ring_index, &num_matching_addrs,
                              &num_matching_addrs_4b)) {
-        auto &ha = heap_allocations[heap_allocations_count++];
+        auto &ha = heap_allocations_storage[heap_allocations_count++];
         ha.har = har;
         ha.ring_index = ring_index;
         ha.num_matching_addrs = num_matching_addrs;
@@ -479,9 +489,15 @@ void BaseReport::CopyAllocations() {
       }
     }
   });
+
+  return {{stack_allocations_storage, stack_allocations_count},
+          {heap_allocations_storage, heap_allocations_count}};
 }
 
 BaseReport::OverflowCandidate BaseReport::FindBufferOverflowCandidate() const {
+  OverflowCandidate result = {};
+  if (MemIsShadow(untagged_addr))
+    return result;
   // Check if this looks like a heap buffer overflow by scanning
   // the shadow left and right and looking for the first adjacent
   // object with a different memory tag. If that tag matches ptr_tag,
@@ -503,7 +519,6 @@ BaseReport::OverflowCandidate BaseReport::FindBufferOverflowCandidate() const {
     ++right;
   }
 
-  OverflowCandidate result = {};
   constexpr auto kCloseCandidateDistance = 1;
   result.is_close = candidate_distance <= kCloseCandidateDistance;
 
@@ -621,29 +636,27 @@ void BaseReport::PrintAddressDescription() const {
 
   // Check stack first. If the address is on the stack of a live thread, we
   // know it cannot be a heap / global overflow.
-  for (uptr i = 0; i < stack_allocations_count; ++i) {
-    const auto &allocations = stack_allocations[i];
+  for (const auto &sa : allocations.stack) {
     // TODO(fmayer): figure out how to distinguish use-after-return and
     // stack-buffer-overflow.
     Printf("%s", d.Error());
     Printf("\nCause: stack tag-mismatch\n");
     Printf("%s", d.Location());
     Printf("Address %p is located in stack of thread T%zd\n", untagged_addr,
-           allocations.thread_id());
+           sa.thread_id());
     Printf("%s", d.Default());
-    announce_by_id(allocations.thread_id());
-    PrintStackAllocations(allocations.get(), ptr_tag, untagged_addr);
+    announce_by_id(sa.thread_id());
+    PrintStackAllocations(sa.get(), ptr_tag, untagged_addr);
     num_descriptions_printed++;
   }
 
-  if (!stack_allocations_count && candidate.untagged_addr &&
+  if (allocations.stack.empty() && candidate.untagged_addr &&
       candidate.is_close) {
     PrintHeapOrGlobalCandidate();
     num_descriptions_printed++;
   }
 
-  for (uptr i = 0; i < heap_allocations_count; ++i) {
-    const auto &ha = heap_allocations[i];
+  for (const auto &ha : allocations.heap) {
     const HeapAllocationRecord har = ha.har;
 
     Printf("%s", d.Error());
