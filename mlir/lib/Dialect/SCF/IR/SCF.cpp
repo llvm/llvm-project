@@ -532,6 +532,8 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
 SmallVector<Region *> ForOp::getLoopRegions() { return {&getRegion()}; }
 
+OperandRange ForOp::getInits() { return getInitArgs(); }
+
 ForOp mlir::scf::getForInductionVarOwner(Value val) {
   auto ivArg = llvm::dyn_cast<BlockArgument>(val);
   if (!ivArg)
@@ -3181,6 +3183,10 @@ Block::BlockArgListType WhileOp::getBeforeArguments() {
 
 Block::BlockArgListType WhileOp::getAfterArguments() {
   return getAfterBody()->getArguments();
+}
+
+Block::BlockArgListType WhileOp::getRegionIterArgs() {
+  return getBeforeArguments();
 }
 
 void WhileOp::getSuccessorRegions(RegionBranchPoint point,
