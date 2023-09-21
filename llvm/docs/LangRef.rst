@@ -9149,6 +9149,9 @@ Semantics:
 """"""""""
 
 The value produced is a copy of the operand with its sign bit flipped.
+The value is otherwise completely identical; in particular, if the input is a
+NaN, then the quiet/signaling bit and payload are perfectly preserved.
+
 This instruction can also take any number of :ref:`fast-math
 flags <fastmath>`, which are optimization hints to enable otherwise
 unsafe floating-point optimizations:
@@ -15156,6 +15159,9 @@ Semantics:
 
 This function returns the same values as the libm ``fabs`` functions
 would, and handles error conditions in the same way.
+The returned value is completely identical to the input except for the sign bit;
+in particular, if the input is a NaN, then the quiet/signaling bit and payload
+are perfectly preserved.
 
 .. _i_minnum:
 
@@ -15371,6 +15377,9 @@ Semantics:
 
 This function returns the same values as the libm ``copysign``
 functions would, and handles error conditions in the same way.
+The returned value is completely identical to the first operand except for the
+sign bit; in particular, if the input is a NaN, then the quiet/signaling bit and
+payload are perfectly preserved.
 
 .. _int_floor:
 
