@@ -179,6 +179,8 @@ def testVectorizeNoArgs(target):
     # CHECK-NOT:     vector_sizes
 
 
+@run
+@create_sequence
 def testVectorizeStatic(target):
     structured.VectorizeOp(target, [16, 4])
     # CHECK-LABEL: TEST: testVectorizeStatic
