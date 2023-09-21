@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize -split-input-file -verify-diagnostics | FileCheck %s
 
-// Test conversion of higher-level ArmSME ops to LLVM intrinsics.
+// Test conversion of ArmSME ops to LLVM intrinsics.
 
 //===----------------------------------------------------------------------===//
 // arm_sme.load_tile_slice
