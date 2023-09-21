@@ -109,11 +109,11 @@ REGISTER_MAP_WITH_PROGRAMSTATE(PreviousCallResultMap, const FunctionDecl *,
 void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
                                              CheckerContext &C) const {
   StringRef FunctionName = Call.getCalleeIdentifier()->getName();
-  ProgramStateRef State = C.getState();
 
-  auto PlaceInvalidationNote = [&C, FunctionName,
-                                &State](const MemRegion *Region,
-                                        StringRef Message, ExplodedNode *Pred) {
+  auto PlaceInvalidationNote = [&C, FunctionName](ProgramStateRef State,
+                                                  const MemRegion *Region,
+                                                  StringRef Message,
+                                                  ExplodedNode *Pred) {
     State = State->add<InvalidMemoryRegions>(Region);
 
     // Make copy of string data for the time when notes are *actually* created.
@@ -128,16 +128,18 @@ void InvalidPtrChecker::EnvpInvalidatingCall(const CallEvent &Call,
     return C.addTransition(State, Pred, Note);
   };
 
+  ProgramStateRef State = C.getState();
   ExplodedNode *CurrentChainEnd = C.getPredecessor();
 
   if (const MemRegion *MainEnvPtr = State->get<MainEnvPtrRegion>())
     CurrentChainEnd = PlaceInvalidationNote(
-        MainEnvPtr, "call may invalidate the environment parameter of 'main'",
+        State, MainEnvPtr,
+        "call may invalidate the environment parameter of 'main'",
         CurrentChainEnd);
 
   for (const MemRegion *EnvPtr : State->get<GetenvEnvPtrRegions>())
     CurrentChainEnd = PlaceInvalidationNote(
-        EnvPtr, "call may invalidate the environment returned by getenv",
+        State, EnvPtr, "call may invalidate the environment returned by getenv",
         CurrentChainEnd);
 }
 
