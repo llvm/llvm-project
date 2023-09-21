@@ -438,9 +438,11 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
     HWASan.sanitizeFunction(F, FAM);
 
   PreservedAnalyses PA = PreservedAnalyses::none();
-  // DominatorTreeAnalysis and LoopAnalysis are incrementally updated
-  // throughout this pass whenever SplitBlockAndInsertIfThen is called.
+  // DominatorTreeAnalysis, PostDominatorTreeAnalysis, and LoopAnalysis
+  // are incrementally updated throughout this pass whenever
+  // SplitBlockAndInsertIfThen is called.
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   // GlobalsAA is considered stateless and does not get invalidated unless
   // explicitly invalidated; PreservedAnalyses::none() is not enough. Sanitizers
