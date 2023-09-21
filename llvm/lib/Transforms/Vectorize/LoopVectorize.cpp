@@ -3832,9 +3832,6 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
       assert(Sel && "Reduction exit feeds no select");
       State.reset(LoopExitInstDef, Sel, Part);
 
-      if (isa<FPMathOperator>(Sel))
-        Sel->setFastMathFlags(RdxDesc.getFastMathFlags());
-
       // If the target can create a predicated operator for the reduction at no
       // extra cost in the loop (for example a predicated vadd), it can be
       // cheaper for the select to remain in the loop than be sunk out of it,
@@ -9162,12 +9159,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
       if (!PhiR || PhiR->isInLoop())
         continue;
+      const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
       VPValue *Cond =
           RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), *Plan);
       VPValue *Red = PhiR->getBackedgeValue();
       assert(Red->getDefiningRecipe()->getParent() != LatchVPBB &&
              "reduction recipe must be defined before latch");
-      Builder.createNaryOp(Instruction::Select, {Cond, Red, PhiR});
+      FastMathFlags FMFs = RdxDesc.getFastMathFlags();
+      Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
+      auto *Select =
+          PhiTy->isFloatingPointTy()
+              ? new VPInstruction(Instruction::Select, {Cond, Red, PhiR}, FMFs)
+              : new VPInstruction(Instruction::Select, {Cond, Red, PhiR});
+      Select->insertBefore(&*Builder.getInsertPoint());
     }
   }
 
