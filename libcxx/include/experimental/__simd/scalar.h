@@ -27,11 +27,11 @@ template <class _Tp>
 struct __simd_storage<_Tp, simd_abi::__scalar> {
   _Tp __data;
 
-  _Tp __get([[maybe_unused]] size_t __idx) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI _Tp __get([[maybe_unused]] size_t __idx) const noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(__idx == 0, "Index is out of bounds");
     return __data;
   }
-  void __set([[maybe_unused]] size_t __idx, _Tp __v) noexcept {
+  _LIBCPP_HIDE_FROM_ABI void __set([[maybe_unused]] size_t __idx, _Tp __v) noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(__idx == 0, "Index is out of bounds");
     __data = __v;
   }
@@ -45,14 +45,14 @@ struct __simd_operations<_Tp, simd_abi::__scalar> {
   using _SimdStorage = __simd_storage<_Tp, simd_abi::__scalar>;
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
 
-  static _SimdStorage __broadcast(_Tp __v) noexcept { return {__v}; }
+  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept { return {__v}; }
 };
 
 template <class _Tp>
 struct __mask_operations<_Tp, simd_abi::__scalar> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
 
-  static _MaskStorage __broadcast(bool __v) noexcept { return {__v}; }
+  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept { return {__v}; }
 };
 
 } // namespace parallelism_v2
