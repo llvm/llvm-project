@@ -17,7 +17,7 @@
 
 // wistream wcin;
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 // RUN: %{build}
 // RUN: echo -n 1234 | %{exec} %t.exe
