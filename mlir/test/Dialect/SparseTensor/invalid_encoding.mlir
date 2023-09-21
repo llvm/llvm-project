@@ -36,13 +36,13 @@ func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{expected valid keyword}}
+// expected-error@+1 {{expected valid level format (e.g. dense, compressed or singleton)}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0:)}>
 func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{expected valid keyword}}
+// expected-error@+1 {{expected valid level format (e.g. dense, compressed or singleton)}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0 : (compressed))}>
 func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 
@@ -90,13 +90,13 @@ func.func private @tensor_value_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{expected valid keyword, such as compressed without quotes}}
+// expected-error@+1 {{expected valid level format (e.g. dense, compressed or singleton)}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0 : "wrong")}>
 func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-// expected-error@+1 {{expected valid keyword, such as nonordered without quotes}}
+// expected-error@+1 {{expected valid level property (e.g. nonordered, nonunique or high)}}
 #a = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed("wrong"))}>
 func.func private @tensor_dimtolvl_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 

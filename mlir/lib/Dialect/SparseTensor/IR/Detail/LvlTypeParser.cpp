@@ -51,7 +51,7 @@ FailureOr<uint8_t> LvlTypeParser::parseLvlType(AsmParser &parser) const {
   StringRef base;
   const auto loc = parser.getCurrentLocation();
   ERROR_IF(failed(parser.parseOptionalKeyword(&base)),
-           "expected valid keyword, such as compressed without quotes")
+           "expected valid level format (e.g. dense, compressed or singleton)")
   uint8_t properties = 0;
 
   ParseResult res = parser.parseCommaSeparatedList(
@@ -88,7 +88,7 @@ ParseResult LvlTypeParser::parseProperty(AsmParser &parser,
   StringRef strVal;
   auto loc = parser.getCurrentLocation();
   ERROR_IF(failed(parser.parseOptionalKeyword(&strVal)),
-           "expected valid keyword, such as nonordered without quotes.")
+           "expected valid level property (e.g. nonordered, nonunique or high)")
   if (strVal.compare("nonunique") == 0) {
     *properties |= static_cast<uint8_t>(LevelNondefaultProperty::Nonunique);
   } else if (strVal.compare("nonordered") == 0) {
